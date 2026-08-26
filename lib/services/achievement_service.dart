@@ -92,7 +92,7 @@ class AchievementService {
 
   // Achievement definitions
   static const Map<AchievementType, AchievementDefinition>
-      achievementDefinitions = {
+  achievementDefinitions = {
     // Discovery achievements
     AchievementType.firstDiscovery: AchievementDefinition(
       type: AchievementType.firstDiscovery,
@@ -160,12 +160,12 @@ class AchievementService {
       rarity: CollectibleRarity.epic,
     ),
 
-    // Digital archive object achievements
+    // Digital edition achievements
     AchievementType.firstNFTMint: AchievementDefinition(
       type: AchievementType.firstNFTMint,
       id: 'first_nft_mint',
-      title: 'Archive Object Creator',
-      description: 'Created your first digital archive object',
+      title: 'Digital Edition Creator',
+      description: 'Created your first digital edition',
       tokenReward: 25,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -174,7 +174,7 @@ class AchievementService {
       type: AchievementType.nftCollector,
       id: 'nft_collector',
       title: 'Archive Collector',
-      description: 'Hold 10 digital archive objects',
+      description: 'Hold 10 digital editions',
       tokenReward: 150,
       requiredCount: 10,
       rarity: CollectibleRarity.rare,
@@ -183,7 +183,7 @@ class AchievementService {
       type: AchievementType.nftTrader,
       id: 'nft_trader',
       title: 'Archive Supporter',
-      description: 'Completed 5 digital archive object interactions',
+      description: 'Completed 5 digital edition interactions',
       tokenReward: 100,
       requiredCount: 5,
       rarity: CollectibleRarity.rare,
@@ -261,7 +261,7 @@ class AchievementService {
       type: AchievementType.firstTrade,
       id: 'first_trade',
       title: 'First Archive Exchange',
-      description: 'Completed your first archive object exchange',
+      description: 'Completed your first digital edition exchange',
       tokenReward: 20,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -402,14 +402,15 @@ class AchievementService {
         return;
       }
 
-      final subjectId = (data?['subjectId'] ??
-              data?['subject_id'] ??
-              data?['markerId'] ??
-              data?['marker_id'] ??
-              data?['artworkId'] ??
-              data?['artwork_id'])
-          ?.toString()
-          .trim();
+      final subjectId =
+          (data?['subjectId'] ??
+                  data?['subject_id'] ??
+                  data?['markerId'] ??
+                  data?['marker_id'] ??
+                  data?['artworkId'] ??
+                  data?['artwork_id'])
+              ?.toString()
+              .trim();
       if (subjectId == null || subjectId.isEmpty) {
         AppConfig.debugPrint(
           'AchievementService: missing subject id for client-reported action: $action',
@@ -483,13 +484,15 @@ class AchievementService {
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: trackPublicStreetArtMarkerAdded failed: $e');
+        'AchievementService: trackPublicStreetArtMarkerAdded failed: $e',
+      );
     }
   }
 
   /// Get user's unlocked achievements
   Future<List<AchievementDefinition>> getUnlockedAchievements(
-      String userId) async {
+    String userId,
+  ) async {
     try {
       final data = await _backendApi.getUserAchievements(userId);
       final unlockedRaw =
@@ -502,7 +505,8 @@ class AchievementService {
           final resolved = _resolveAchievementId(item, knownIds);
           if (resolved != null) unlockedIds.add(resolved);
         } else if (item is Map) {
-          final resolved = _resolveAchievementId(
+          final resolved =
+              _resolveAchievementId(
                 item['type'] ??
                     item['code'] ??
                     item['achievementType'] ??
@@ -522,7 +526,8 @@ class AchievementService {
           .toList();
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getUnlockedAchievements failed: $e');
+        'AchievementService: getUnlockedAchievements failed: $e',
+      );
       return [];
     }
   }
@@ -531,11 +536,12 @@ class AchievementService {
   Future<int> getTotalEarnedTokens() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final wallet = (prefs.getString('wallet_address') ??
-              prefs.getString('wallet') ??
-              prefs.getString('walletAddress') ??
-              prefs.getString('user_id'))
-          ?.trim();
+      final wallet =
+          (prefs.getString('wallet_address') ??
+                  prefs.getString('wallet') ??
+                  prefs.getString('walletAddress') ??
+                  prefs.getString('user_id'))
+              ?.trim();
       if (wallet == null || wallet.isEmpty) return 0;
 
       final data = await _backendApi.getUserAchievements(wallet);
@@ -545,29 +551,32 @@ class AchievementService {
       return int.tryParse(raw.toString()) ?? 0;
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getTotalEarnedTokens failed: $e');
+        'AchievementService: getTotalEarnedTokens failed: $e',
+      );
       return 0;
     }
   }
 
   Future<backend_achievements.UserAchievementsSummary>
-      getMyAchievements() async {
+  getMyAchievements() async {
     final data = await _backendApi.getMyAchievements();
     if (data['success'] == true) {
       return backend_achievements.UserAchievementsSummary.fromJson(data);
     }
     return backend_achievements.UserAchievementsSummary(
       definitions: achievementDefinitions.values
-          .map((def) => backend_achievements.AchievementDefinition(
-                code: def.id,
-                title: def.title,
-                description: def.description,
-                category: _categoryForType(def.type),
-                rarity: def.rarity.name,
-                isPoap: def.isPOAP,
-                requiredCount: def.requiredCount,
-                kub8Reward: def.tokenReward.toDouble(),
-              ))
+          .map(
+            (def) => backend_achievements.AchievementDefinition(
+              code: def.id,
+              title: def.title,
+              description: def.description,
+              category: _categoryForType(def.type),
+              rarity: def.rarity.name,
+              isPoap: def.isPOAP,
+              requiredCount: def.requiredCount,
+              kub8Reward: def.tokenReward.toDouble(),
+            ),
+          )
           .toList(growable: false),
     );
   }
@@ -606,7 +615,8 @@ class AchievementService {
       for (final item in progressList) {
         if (item is! Map) continue;
 
-        final achievementId = _resolveAchievementId(
+        final achievementId =
+            _resolveAchievementId(
               item['type'] ??
                   item['code'] ??
                   item['achievementType'] ??
@@ -632,7 +642,8 @@ class AchievementService {
       return progressMap;
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getAchievementProgress failed: $e');
+        'AchievementService: getAchievementProgress failed: $e',
+      );
       return {};
     }
   }
@@ -641,7 +652,7 @@ class AchievementService {
   ///
   /// Static definitions are used only when the backend list is unavailable.
   Future<List<backend_achievements.AchievementDefinition>>
-      getAllAchievements() async {
+  getAllAchievements() async {
     try {
       final achievementsData = await _backendApi.getAchievements();
       final backendDefinitions = achievementsData
@@ -659,18 +670,20 @@ class AchievementService {
   }
 
   List<backend_achievements.AchievementDefinition>
-      _fallbackBackendDefinitions() {
+  _fallbackBackendDefinitions() {
     return achievementDefinitions.values
-        .map((def) => backend_achievements.AchievementDefinition(
-              code: def.id,
-              title: def.title,
-              description: def.description,
-              category: _categoryForType(def.type),
-              rarity: def.rarity.name,
-              isPoap: def.isPOAP,
-              requiredCount: def.requiredCount,
-              kub8Reward: def.tokenReward.toDouble(),
-            ))
+        .map(
+          (def) => backend_achievements.AchievementDefinition(
+            code: def.id,
+            title: def.title,
+            description: def.description,
+            category: _categoryForType(def.type),
+            rarity: def.rarity.name,
+            isPoap: def.isPOAP,
+            requiredCount: def.requiredCount,
+            kub8Reward: def.tokenReward.toDouble(),
+          ),
+        )
         .toList(growable: false);
   }
 

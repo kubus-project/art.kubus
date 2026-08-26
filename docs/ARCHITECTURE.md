@@ -252,7 +252,7 @@ Never hardcode IPFS gateways. Use resolution helpers:
 ### Local Storage
 
 - **SharedPreferences** — User preferences, flags
-- **CollectiblesStorage** — NFT cache
+- **CollectiblesStorage** — internal digital-edition cache
 - **InstitutionStorage** — Institution data
 - **TileDiskCache** — Map tiles
 

@@ -34,18 +34,18 @@ class _NFTGalleryState extends State<NFTGallery> {
     if (!provider.isLoading &&
         provider.allSeries.isEmpty &&
         provider.allCollectibles.isEmpty) {
-      unawaited(
-        provider.initialize(),
-      );
+      unawaited(provider.initialize());
     }
 
     final walletAddress =
-        (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
+        (Provider.of<WalletProvider>(
+                  context,
+                  listen: false,
+                ).currentWalletAddress ??
+                '')
             .trim();
     if (walletAddress.isNotEmpty) {
-      unawaited(
-        provider.refreshWalletCollectibleIndex(walletAddress),
-      );
+      unawaited(provider.refreshWalletCollectibleIndex(walletAddress));
     }
   }
 
@@ -77,17 +77,24 @@ class _NFTGalleryState extends State<NFTGallery> {
           IconButton(
             icon: Icon(Icons.refresh, color: scheme.onSurface),
             onPressed: () {
-              final provider =
-                  Provider.of<CollectiblesProvider>(context, listen: false);
-              unawaited(
-                provider.initialize(),
+              final provider = Provider.of<CollectiblesProvider>(
+                context,
+                listen: false,
               );
+              unawaited(provider.initialize());
               final walletAddress =
-                  (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
+                  (Provider.of<WalletProvider>(
+                            context,
+                            listen: false,
+                          ).currentWalletAddress ??
+                          '')
                       .trim();
               if (walletAddress.isNotEmpty) {
                 unawaited(
-                  provider.refreshWalletCollectibleIndex(walletAddress, force: true),
+                  provider.refreshWalletCollectibleIndex(
+                    walletAddress,
+                    force: true,
+                  ),
                 );
               }
             },
@@ -97,8 +104,8 @@ class _NFTGalleryState extends State<NFTGallery> {
       ),
       body: Consumer2<WalletProvider, CollectiblesProvider>(
         builder: (context, walletProvider, collectiblesProvider, _) {
-          final walletAddress =
-              (walletProvider.currentWalletAddress ?? '').trim();
+          final walletAddress = (walletProvider.currentWalletAddress ?? '')
+              .trim();
           if (walletAddress.isEmpty) {
             return Center(
               child: Padding(
@@ -128,8 +135,9 @@ class _NFTGalleryState extends State<NFTGallery> {
             return const AppLoading();
           }
 
-          final owned =
-              collectiblesProvider.getCollectiblesByOwner(walletAddress);
+          final owned = collectiblesProvider.getCollectiblesByOwner(
+            walletAddress,
+          );
           if (owned.isEmpty) {
             return Center(
               child: Padding(
@@ -141,9 +149,8 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.diamond_outlined,
-                    title: 'No digital editions yet',
-                    description:
-                        'Create digital archive objects from artworks to see them here.',
+                    title: l10n.walletHomeNoCollectiblesTitle,
+                    description: l10n.walletHomeNoCollectiblesDescription,
                     showAction: false,
                   ),
                 ),
@@ -180,7 +187,11 @@ class _NFTGalleryState extends State<NFTGallery> {
                   final collectible = owned[index];
                   final series = seriesById[collectible.seriesId];
                   return _buildCollectibleCard(
-                      context, collectible, series, isSmallScreen);
+                    context,
+                    collectible,
+                    series,
+                    isSmallScreen,
+                  );
                 },
               );
             },
@@ -219,7 +230,8 @@ class _NFTGalleryState extends State<NFTGallery> {
             flex: 3,
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg)),
+                top: Radius.circular(KubusRadius.lg),
+              ),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -244,7 +256,8 @@ class _NFTGalleryState extends State<NFTGallery> {
                         color: scheme.surface.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(KubusRadius.sm),
                         border: Border.all(
-                            color: scheme.outline.withValues(alpha: 0.2)),
+                          color: scheme.outline.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Text(
                         collectible.status.name.toUpperCase(),

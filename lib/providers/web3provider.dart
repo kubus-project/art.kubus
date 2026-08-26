@@ -16,7 +16,7 @@ class Web3Provider extends ChangeNotifier {
   String? _initializeError;
 
   Web3Provider({SolanaWalletService? solanaWalletService})
-      : _solanaService = solanaWalletService ?? SolanaWalletService();
+    : _solanaService = solanaWalletService ?? SolanaWalletService();
 
   void bindWalletProvider(WalletProvider walletProvider) {
     if (identical(_walletProvider, walletProvider)) return;
@@ -134,10 +134,7 @@ class Web3Provider extends ChangeNotifier {
         pathType: resolvedPath,
       );
       final hdKeyPair = await (resolvedPath == DerivationPathType.legacy
-          ? Ed25519HDKeyPair.fromMnemonic(
-              mnemonic,
-              account: resolvedAccount,
-            )
+          ? Ed25519HDKeyPair.fromMnemonic(mnemonic, account: resolvedAccount)
           : Ed25519HDKeyPair.fromMnemonic(
               mnemonic,
               account: resolvedAccount,
@@ -202,10 +199,10 @@ class Web3Provider extends ChangeNotifier {
 
   Future<String> mintArtworkNFT(Map<String, dynamic> metadata) async {
     if (!_boundWalletProvider.authority.canTransact) {
-      throw Exception('Wallet signer required for archive object creation');
+      throw Exception('Wallet signer required for digital edition creation');
     }
     if (!_boundWalletProvider.hasLocalSigner) {
-      throw Exception('Local signer required for archive object creation');
+      throw Exception('Local signer required for digital edition creation');
     }
     return _boundWalletProvider.solanaWalletService.mintNft(metadata: metadata);
   }

@@ -12,8 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTagline => 'kubus - your art companion.';
 
   @override
-  String get appTaglineSupport =>
-      'Discover public art, artists, institutions and community stories on an open cultural map.';
+  String get appTaglineSupport => 'Discover public art, artists, institutions and community stories on an open cultural map.';
 
   @override
   String get exploreOnlyAppTitle => 'art.kubus - Explore';
@@ -22,8 +21,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyConnectWalletAction => 'Connect wallet';
 
   @override
-  String get exploreOnlyModeBanner =>
-      'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.';
+  String get exploreOnlyModeBanner => 'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for digital editions and governance.';
 
   @override
   String get exploreOnlyDiscoverTitle => 'Discover art';
@@ -32,51 +30,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyCollectionsTitle => 'Browse collections';
 
   @override
-  String get exploreOnlyCollectionsDescription =>
-      'Explore artworks, public-space stories and cultural archive records.';
+  String get exploreOnlyCollectionsDescription => 'Explore artworks, public-space stories and cultural archive records.';
 
   @override
   String get exploreOnlyArTitle => 'AR layers';
 
   @override
-  String get exploreOnlyArDescription =>
-      'View AR layers when artists or institutions enable them.';
+  String get exploreOnlyArDescription => 'View AR layers when artists or institutions enable them.';
 
   @override
   String get exploreOnlyCommunityTitle => 'Community';
 
   @override
-  String get exploreOnlyCommunityDescription =>
-      'Follow artists, institutions and discussions around public art.';
+  String get exploreOnlyCommunityDescription => 'Follow artists, institutions and discussions around public art.';
 
   @override
   String get exploreOnlyArtifactsTitle => 'Digital editions';
 
   @override
-  String get exploreOnlyArtifactsDescription =>
-      'Discover archive records and digital editions connected to artworks.';
+  String get exploreOnlyArtifactsDescription => 'Discover digital editions connected to artworks.';
 
   @override
   String get walletPromptTitle => 'Connect wallet';
 
   @override
-  String get walletPromptBody =>
-      'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.';
+  String get walletPromptBody => 'A wallet supports attribution, digital editions and governance. Discovery and community remain open without it.';
 
   @override
   String get walletPromptIntro => 'Connect a wallet for:';
 
   @override
-  String get walletPromptFeatureArchiveObjects =>
-      'Archive records and digital editions';
+  String get walletPromptFeatureArchiveObjects => 'Digital editions';
 
   @override
-  String get walletPromptFeatureCreateArtworks =>
-      'Create and document artworks';
+  String get walletPromptFeatureCreateArtworks => 'Create and document artworks';
 
   @override
-  String get walletPromptFeatureCommunity =>
-      'Participation and governance records';
+  String get walletPromptFeatureCommunity => 'Participation and governance records';
 
   @override
   String get walletPromptMaybeLater => 'Maybe later';
@@ -85,14 +75,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptSetUpAction => 'Set up wallet';
 
   @override
-  String get walletHomeArchiveObjectFallbackTitle => 'Archive record';
+  String get walletHomeArchiveObjectFallbackTitle => 'Digital edition';
 
   @override
   String get walletHomeCollectibleFallbackTitle => 'Digital edition';
 
   @override
-  String get walletHomeConnectWalletToFetchCollectibles =>
-      'Connect your wallet to load digital editions.';
+  String get walletHomeConnectWalletToFetchCollectibles => 'Connect your wallet to load digital editions.';
 
   @override
   String get artworkDraftCoverRequired => 'Cover image is required.';
@@ -101,84 +90,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkDraftCoverUploadFailed => 'Failed to upload cover image.';
 
   @override
-  String get artworkDraftGalleryUploadFailed =>
-      'Failed to upload a gallery image. Please try again.';
+  String get artworkDraftGalleryUploadFailed => 'Failed to upload a gallery image. Please try again.';
 
   @override
-  String get artworkDraftTitleDescriptionRequired =>
-      'Title and description are required.';
+  String get artworkDraftTitleDescriptionRequired => 'Title and description are required.';
 
   @override
-  String get artworkDraftAttendanceUnavailable =>
-      'Attendance records are currently unavailable.';
+  String get artworkDraftAttendanceUnavailable => 'Attendance records are currently unavailable.';
 
   @override
-  String get artworkDraftAttendanceIdOrUrlRequired =>
-      'Please provide an attendance event ID or record URL.';
+  String get artworkDraftAttendanceIdOrUrlRequired => 'Please provide an attendance event ID or record URL.';
 
   @override
-  String get artworkDraftCoordinatesRequired =>
-      'Please provide both latitude and longitude (or leave both empty).';
+  String get artworkDraftCoordinatesRequired => 'Please provide both latitude and longitude (or leave both empty).';
 
   @override
-  String get artworkDraftCoordinatesInvalid =>
-      'Location coordinates are invalid.';
+  String get artworkDraftCoordinatesInvalid => 'Location coordinates are invalid.';
 
   @override
-  String get artworkDraftAttendanceImageUploadFailed =>
-      'Failed to upload attendance record image. Please try again.';
+  String get artworkDraftAttendanceImageUploadFailed => 'Failed to upload attendance record image. Please try again.';
 
   @override
-  String get artworkDraftPublishFailed =>
-      'Failed to publish artwork. Please try again.';
+  String get artworkDraftPublishFailed => 'Failed to publish artwork. Please try again.';
 
   @override
-  String get archiveObjectCreatedToast => 'Archive record created.';
+  String get archiveObjectCreatedToast => 'Digital edition created.';
 
   @override
-  String get archiveObjectCreateFailed => 'Failed to create archive record.';
+  String get archiveObjectCreateFailed => 'Failed to create digital edition.';
 
   @override
   String get archiveObjectCreationPleaseWait => 'This may take a few moments.';
 
   @override
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName) {
-    return 'Archive records for $artworkTitle by $artistName';
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName) {
+    return 'Digital editions of $artworkTitle by $artistName';
   }
 
   @override
-  String get archiveObjectSeriesCreateFailed =>
-      'Failed to create archive record series';
+  String get archiveObjectSeriesCreateFailed => 'Failed to create digital edition series';
 
   @override
-  String get archiveObjectSeriesNotFound => 'Archive record series not found';
+  String get archiveObjectSeriesNotFound => 'Digital edition series not found';
 
   @override
   String get archiveObjectSeriesSoldOut => 'Series is sold out';
 
   @override
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
-    return 'Created archive record for \"$artworkTitle\" (edition #$tokenId)';
+    return 'Created digital edition of \"$artworkTitle\" (edition #$tokenId)';
   }
 
   @override
-  String get artworkCreatorAttendanceRecordUrlOptionalLabel =>
-      'Attendance record URL';
+  String get artworkCreatorAttendanceRecordUrlOptionalLabel => 'Attendance record URL';
 
   @override
   String archiveObjectCreateFailedWithError(Object error) {
-    return 'Failed to create archive record: $error';
+    return 'Failed to create digital edition: $error';
   }
 
   @override
   String archiveObjectCreateError(Object error) {
-    return 'Error creating archive record: $error';
+    return 'Error creating digital edition: $error';
   }
 
   @override
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency) {
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency) {
     return 'Achievement unlocked\n$title$extra\n+$amount $currency recognition';
   }
 
@@ -198,12 +175,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markerInfoDetailKicker => 'Marker information';
 
   @override
-  String get markerInfoDetailNoDescription =>
-      'This marker has no description yet.';
+  String get markerInfoDetailNoDescription => 'This marker has no description yet.';
 
   @override
-  String get markerInfoDetailUnlinkedNotice =>
-      'The linked entry for this marker is not available, so the details below come from the marker itself.';
+  String get markerInfoDetailUnlinkedNotice => 'The linked entry for this marker is not available, so the details below come from the marker itself.';
 
   @override
   String markerInfoDetailUnlinkedTypedNotice(String subjectType) {
@@ -214,7 +189,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recentActivityRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get recentActivityArchiveObjectUpdateTitle => 'Archive record update';
+  String get recentActivityArchiveObjectUpdateTitle => 'Digital edition update';
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
@@ -222,13 +197,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get recentActivityNewRecognitionDescription =>
-      'You have new recognition';
+  String get recentActivityNewRecognitionDescription => 'You have new recognition';
 
   @override
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title) {
-    return 'Archive record $status for $title';
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title) {
+    return 'Digital edition $status for $title';
   }
 
   @override
@@ -244,19 +217,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get pushArchiveObjectCreatingTitle => 'Creating archive record...';
+  String get pushArchiveObjectCreatingTitle => 'Creating digital edition...';
 
   @override
   String pushArchiveObjectCreatingBody(Object artworkTitle) {
-    return 'Creating archive record for \"$artworkTitle\"';
+    return 'Creating a digital edition of \"$artworkTitle\"';
   }
 
   @override
-  String get pushArchiveObjectCreatedTitle => 'Archive record created';
+  String get pushArchiveObjectCreatedTitle => 'Digital edition created';
 
   @override
   String pushArchiveObjectCreatedBody(Object artworkTitle) {
-    return '\"$artworkTitle\" now has an archive record';
+    return 'A digital edition of \"$artworkTitle\" is ready';
   }
 
   @override
@@ -264,49 +237,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
-    return 'Could not create an archive record for \"$artworkTitle\". Please try again.';
+    return 'Could not create a digital edition of \"$artworkTitle\". Please try again.';
   }
 
   @override
-  String get pushArchiveObjectCreationChannelName => 'Archive record creation';
+  String get pushArchiveObjectCreationChannelName => 'Digital edition creation';
 
   @override
-  String get pushArchiveObjectCreationChannelDescription =>
-      'Notifications for archive record creation';
+  String get pushArchiveObjectCreationChannelDescription => 'Notifications for digital edition creation';
 
   @override
   String get pushRecognitionChannelName => 'Recognition';
 
   @override
-  String get pushRecognitionChannelDescription =>
-      'Notifications for contribution recognition';
+  String get pushRecognitionChannelDescription => 'Notifications for contribution recognition';
 
   @override
-  String get analyticsMetricArchiveObjectsCreatedLabel =>
-      'Archive records created';
+  String get analyticsMetricArchiveObjectsCreatedLabel => 'Digital editions created';
 
   @override
-  String get analyticsMetricArchiveObjectsCreatedDescription =>
-      'Archive records connected to artworks.';
+  String get analyticsMetricArchiveObjectsCreatedDescription => 'Digital editions connected to artworks.';
 
   @override
   String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
 
   @override
-  String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8 recorded through contribution recognition.';
+  String get analyticsMetricKub8RecognitionDescription => 'KUB8 recorded through contribution recognition.';
 
   @override
-  String get analyticsPresetArtistSubtitle =>
-      'Artwork reach, community response, AR activity, and recognition.';
+  String get analyticsPresetArtistSubtitle => 'Artwork reach, community response, AR activity, and recognition.';
 
   @override
-  String get analyticsPresetInstitutionSubtitle =>
-      'Visitor reach, hosted programs, exhibitions, and recognition.';
+  String get analyticsPresetInstitutionSubtitle => 'Visitor reach, hosted programs, exhibitions, and recognition.';
 
   @override
-  String get analyticsExportNoDataToast =>
-      'No analytics data available to export.';
+  String get analyticsExportNoDataToast => 'No analytics data available to export.';
 
   @override
   String get analyticsExportFailedToast => 'Unable to export analytics.';
@@ -323,12 +288,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectiblesInvalidListingPrice => 'Invalid listing price';
 
   @override
-  String get collectiblesArtworkProviderUnavailable =>
-      'Artwork provider is unavailable';
+  String get collectiblesArtworkProviderUnavailable => 'Artwork provider is unavailable';
 
   @override
-  String get collectiblesListingUpdateFailed =>
-      'Failed to update listing on canonical artwork record';
+  String get collectiblesListingUpdateFailed => 'Failed to update listing on canonical artwork record';
 
   @override
   String collectiblesListFailed(Object error) {
@@ -341,15 +304,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get collectiblesMockDataDisabled =>
-      'Mock digital edition data is disabled in canonical mode. Use indexed artwork mint records.';
+  String get collectiblesMockDataDisabled => 'Mock digital edition data is disabled in canonical mode. Use indexed artwork mint records.';
 
   @override
   String get appTitle => 'art.kubus';
 
   @override
-  String get appExitConfirmBackHint =>
-      'Swipe or press back again to exit the app.';
+  String get appExitConfirmBackHint => 'Swipe or press back again to exit the app.';
 
   @override
   String get commonCancel => 'Cancel';
@@ -370,16 +331,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonContinue => 'Continue';
 
   @override
-  String get activationGateSaveArtworkTitle =>
-      'Save this artwork to your collection';
+  String get activationGateSaveArtworkTitle => 'Save this artwork to your collection';
 
   @override
-  String get activationGateSaveEventTitle =>
-      'Save this event to your collection';
+  String get activationGateSaveEventTitle => 'Save this event to your collection';
 
   @override
-  String get activationGateSaveExhibitionTitle =>
-      'Add this place to your collection';
+  String get activationGateSaveExhibitionTitle => 'Add this place to your collection';
 
   @override
   String get activationGateSavePostTitle => 'Save this post to your collection';
@@ -394,8 +352,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationGateCommentTitle => 'Join this discussion';
 
   @override
-  String get activationGateContributeTitle =>
-      'Contribute to the public art map';
+  String get activationGateContributeTitle => 'Contribute to the public art map';
 
   @override
   String activationGateGenericTitle(String action) {
@@ -403,12 +360,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get activationGateBody =>
-      'Create a free account to save artworks, follow artists and return to places you want to visit.';
+  String get activationGateBody => 'Create a free account to save artworks, follow artists and return to places you want to visit.';
 
   @override
-  String get activationGateKeepBrowsingHint =>
-      'The public map stays open — an account only adds your own collection.';
+  String get activationGateKeepBrowsingHint => 'The public map stays open — an account only adds your own collection.';
 
   @override
   String get activationGateContinueWithGoogle => 'Continue with Google';
@@ -465,23 +420,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationActionFollowedToast => 'Following';
 
   @override
-  String get activationActionTargetUnavailableToast =>
-      'This is no longer available. It may have been removed or made private.';
+  String get activationActionTargetUnavailableToast => 'This is no longer available. It may have been removed or made private.';
 
   @override
-  String get activationActionUnauthorizedToast =>
-      'You don\'t have permission to do that.';
+  String get activationActionUnauthorizedToast => 'You don\'t have permission to do that.';
 
   @override
-  String get activationActionFailedToast =>
-      'That didn\'t work. Please try again.';
+  String get activationActionFailedToast => 'That didn\'t work. Please try again.';
 
   @override
   String get activationPromptTitle => 'Build your own art map';
 
   @override
-  String get activationPromptBody =>
-      'Save artworks, follow local artists and return to places you want to visit.';
+  String get activationPromptBody => 'Save artworks, follow local artists and return to places you want to visit.';
 
   @override
   String get activationPromptCta => 'Create a free account';
@@ -514,12 +465,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportTicketSubmittedToast => 'Support request sent.';
 
   @override
-  String get supportTicketReceiptEmailToast =>
-      'Support request sent. We\'ll email a receipt to the address you provided.';
+  String get supportTicketReceiptEmailToast => 'Support request sent. We\'ll email a receipt to the address you provided.';
 
   @override
-  String get commonActionFailedToast =>
-      'Something went wrong. Please try again.';
+  String get commonActionFailedToast => 'Something went wrong. Please try again.';
 
   @override
   String get commonNetworkErrorToast => 'Network error. Please try again.';
@@ -722,22 +671,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commentUpdatedToast => 'Comment updated';
 
   @override
-  String get commentEditFailedToast =>
-      'Failed to update comment. Please try again.';
+  String get commentEditFailedToast => 'Failed to update comment. Please try again.';
 
   @override
   String get commentDeleteConfirmTitle => 'Delete comment?';
 
   @override
-  String get commentDeleteConfirmMessage =>
-      'This will delete the comment and all replies.';
+  String get commentDeleteConfirmMessage => 'This will delete the comment and all replies.';
 
   @override
   String get commentDeletedToast => 'Comment deleted';
 
   @override
-  String get commentDeleteFailedToast =>
-      'Failed to delete comment. Please try again.';
+  String get commentDeleteFailedToast => 'Failed to delete comment. Please try again.';
 
   @override
   String get commonEmail => 'Email';
@@ -761,29 +707,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaOnboardingTitle => 'How should kubus guide you?';
 
   @override
-  String get personaOnboardingSubtitle =>
-      'Choose what you are here for. This only changes what we highlight, not what you can access.';
+  String get personaOnboardingSubtitle => 'Choose what you are here for. This only changes what we highlight, not what you can access.';
 
   @override
   String get personaOptionLoverTitle => 'Art lover';
 
   @override
-  String get personaOptionLoverSubtitle =>
-      'Discover nearby artworks, exhibitions, public works, and community updates.';
+  String get personaOptionLoverSubtitle => 'Discover nearby artworks, exhibitions, public works, and community updates.';
 
   @override
   String get personaOptionCreatorTitle => 'Artist / collective';
 
   @override
-  String get personaOptionCreatorSubtitle =>
-      'Share your practice, add context, publish works, and build community.';
+  String get personaOptionCreatorSubtitle => 'Share your practice, add context, publish works, and build community.';
 
   @override
   String get personaOptionInstitutionTitle => 'Institution / gallery';
 
   @override
-  String get personaOptionInstitutionSubtitle =>
-      'Connect programmes, exhibitions, artists, and public archive context.';
+  String get personaOptionInstitutionSubtitle => 'Connect programmes, exhibitions, artists, and public archive context.';
 
   @override
   String get exhibitionCreatorAppBarTitle => 'Create exhibition';
@@ -792,8 +734,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorDisabledAppBarTitle => 'Exhibition';
 
   @override
-  String get exhibitionCreatorDisabledMessage =>
-      'Exhibitions are currently disabled.';
+  String get exhibitionCreatorDisabledMessage => 'Exhibitions are currently disabled.';
 
   @override
   String get exhibitionCreatorBasicsTitle => 'Basics';
@@ -832,8 +773,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorPublishDraft => 'Save as draft';
 
   @override
-  String get exhibitionCreatorCollabHint =>
-      'After creating, you can invite collaborators from the exhibition detail screen.';
+  String get exhibitionCreatorCollabHint => 'After creating, you can invite collaborators from the exhibition detail screen.';
 
   @override
   String get exhibitionDetailInvitesTooltip => 'Invites';
@@ -848,30 +788,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailArtworksTitle => 'Artworks';
 
   @override
-  String get exhibitionDetailArtworksManageHint =>
-      'Link artworks so visitors can discover them from this exhibition.';
+  String get exhibitionDetailArtworksManageHint => 'Link artworks so visitors can discover them from this exhibition.';
 
   @override
-  String get exhibitionDetailArtworksViewHint =>
-      'Artworks linked to this exhibition will appear here.';
+  String get exhibitionDetailArtworksViewHint => 'Artworks linked to this exhibition will appear here.';
 
   @override
   String get exhibitionDetailNoArtworksLinkedYet => 'No artworks linked yet.';
 
   @override
-  String get exhibitionDetailNoArtworksAvailableToLinkToast =>
-      'No artworks available to link.';
+  String get exhibitionDetailNoArtworksAvailableToLinkToast => 'No artworks available to link.';
 
   @override
   String get exhibitionDetailAddArtworksDialogTitle => 'Add artworks';
 
   @override
-  String get exhibitionDetailArtworksLinkedToast =>
-      'Artworks linked to exhibition.';
+  String get exhibitionDetailArtworksLinkedToast => 'Artworks linked to exhibition.';
 
   @override
-  String get exhibitionDetailLinkArtworksFailedToast =>
-      'Failed to link artworks. Please try again.';
+  String get exhibitionDetailLinkArtworksFailedToast => 'Failed to link artworks. Please try again.';
 
   @override
   String get exhibitionDetailDeleteDialogTitle => 'Delete exhibition?';
@@ -899,45 +834,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailBadgeNotClaimed => 'Not recorded';
 
   @override
-  String get exhibitionCreatorEndDateAfterStartError =>
-      'End date must be after start date.';
+  String get exhibitionCreatorEndDateAfterStartError => 'End date must be after start date.';
 
   @override
   String get exhibitionCreatorCreateFailed => 'Failed to create exhibition.';
 
   @override
-  String get exhibitionCreatorCreateFailedWithError =>
-      'Failed to create exhibition. Please try again.';
+  String get exhibitionCreatorCreateFailedWithError => 'Failed to create exhibition. Please try again.';
 
   @override
-  String get exhibitionCreatorSavedInfoBox =>
-      'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.';
+  String get exhibitionCreatorSavedInfoBox => 'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.';
 
   @override
-  String get exhibitionCreatorShellDraftSubtitle =>
-      'Curate the exhibition, then save it to unlock collaboration.';
+  String get exhibitionCreatorShellDraftSubtitle => 'Curate the exhibition, then save it to unlock collaboration.';
 
   @override
-  String get exhibitionCreatorShellSavedSubtitle =>
-      'Exhibition saved. Keep refining or open the detail view from the sidebar.';
+  String get exhibitionCreatorShellSavedSubtitle => 'Exhibition saved. Keep refining or open the detail view from the sidebar.';
 
   @override
   String get exhibitionCreatorReadyBasicsLabel => 'Basics complete';
 
   @override
-  String get exhibitionCreatorReadyBasicsDescription =>
-      'Title, description, and location are filled in.';
+  String get exhibitionCreatorReadyBasicsDescription => 'Title, description, and location are filled in.';
 
   @override
   String get exhibitionCreatorReadyDatesLabel => 'Date range set';
 
   @override
-  String get exhibitionCreatorReadyDatesComplete =>
-      'The exhibition has a start and end date.';
+  String get exhibitionCreatorReadyDatesComplete => 'The exhibition has a start and end date.';
 
   @override
-  String get exhibitionCreatorReadyDatesPending =>
-      'Set both dates before saving.';
+  String get exhibitionCreatorReadyDatesPending => 'Set both dates before saving.';
 
   @override
   String get exhibitionCreatorReadyCoverLabel => 'Cover image added';
@@ -946,19 +873,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorReadyCoverComplete => 'Cover image is ready.';
 
   @override
-  String get exhibitionCreatorReadyCoverPending =>
-      'Optional, but it improves the showcase.';
+  String get exhibitionCreatorReadyCoverPending => 'Optional, but it improves the showcase.';
 
   @override
   String get exhibitionCreatorReadyVisibilityLabel => 'Visibility chosen';
 
   @override
-  String get exhibitionCreatorReadyVisibilityPublic =>
-      'Public exhibition will be discoverable.';
+  String get exhibitionCreatorReadyVisibilityPublic => 'Public exhibition will be discoverable.';
 
   @override
-  String get exhibitionCreatorReadyVisibilityPrivate =>
-      'Private exhibitions stay restricted.';
+  String get exhibitionCreatorReadyVisibilityPrivate => 'Private exhibitions stay restricted.';
 
   @override
   String get exhibitionCreatorStatusDraftSubtitle => 'Draft in progress';
@@ -988,15 +912,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorReadinessTitle => 'Readiness';
 
   @override
-  String get exhibitionCreatorReadinessSubtitle =>
-      'A quick sanity check before saving.';
+  String get exhibitionCreatorReadinessSubtitle => 'A quick sanity check before saving.';
 
   @override
   String get exhibitionCreatorQuickActionsTitle => 'Quick actions';
 
   @override
-  String get exhibitionCreatorQuickActionsSubtitle =>
-      'Stay inside the creator while you work.';
+  String get exhibitionCreatorQuickActionsSubtitle => 'Stay inside the creator while you work.';
 
   @override
   String get exhibitionCreatorQuickActionSave => 'Save exhibition';
@@ -1011,23 +933,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorCollaborationTitle => 'Collaboration';
 
   @override
-  String get exhibitionCreatorCollaborationReadySubtitle =>
-      'Invite co-curators without leaving the workspace.';
+  String get exhibitionCreatorCollaborationReadySubtitle => 'Invite co-curators without leaving the workspace.';
 
   @override
-  String get exhibitionCreatorCollaborationLockedSubtitle =>
-      'Save once to unlock collaboration.';
+  String get exhibitionCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
 
   @override
-  String get exhibitionCreatorCollaborationLockedMessage =>
-      'Once saved, collaborators can be invited here so curation stays in context.';
+  String get exhibitionCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so curation stays in context.';
 
   @override
   String get lockAppLockedTitle => 'App locked';
 
   @override
-  String get lockAppLockedDescription =>
-      'Authenticate to unlock wallet access.';
+  String get lockAppLockedDescription => 'Authenticate to unlock wallet access.';
 
   @override
   String get lockEnterPinTitle => 'Enter PIN to unlock';
@@ -1042,15 +960,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignInTitle => 'Sign in to art.kubus';
 
   @override
-  String get authSignInSubtitle =>
-      'Start with art discovery, artists, institutions, and community. Add Wallet when you need archive records, editions, or governance.';
+  String get authSignInSubtitle => 'Start with art discovery, artists, institutions and community. Add a wallet later for digital editions or governance.';
 
   @override
   String get authRegisterTitle => 'Create your account';
 
   @override
-  String get authRegisterSubtitle =>
-      'Create a profile first. Discovery, community, and local art access work without a wallet.';
+  String get authRegisterSubtitle => 'Create a profile first. Discovery, community, and local art access work without a wallet.';
 
   @override
   String get authHighlightSignInMethods => 'Email, Google, or wallet sign-in';
@@ -1059,23 +975,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authHighlightNoFees => 'No fee is required to sign in';
 
   @override
-  String get authHighlightControl =>
-      'Explore art and community without a wallet';
+  String get authHighlightControl => 'Explore art and community without a wallet';
 
   @override
-  String get authHighlightOnboardingOptions =>
-      'Choose email, Google, or wallet sign-in';
+  String get authHighlightOnboardingOptions => 'Choose email, Google, or wallet sign-in';
 
   @override
   String get authHighlightKeysLocal => 'Private keys stay with you';
 
   @override
-  String get authHighlightOptionalWeb3 =>
-      'Wallet, editions, and governance when needed';
+  String get authHighlightOptionalWeb3 => 'Wallet, editions, and governance when needed';
 
   @override
-  String get authSignedInProfileRefreshSoon =>
-      'Signed in. Your profile will refresh shortly.';
+  String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
 
   @override
   String get postAuthPreparingSession => 'Preparing session';
@@ -1096,24 +1008,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postAuthOpeningWorkspace => 'Opening workspace';
 
   @override
-  String get postAuthPreparingSessionBody =>
-      'Finalizing your sign-in and preparing the workspace.';
+  String get postAuthPreparingSessionBody => 'Finalizing your sign-in and preparing the workspace.';
 
   @override
-  String get postAuthSecuringWalletBody =>
-      'Verifying wallet access and device security.';
+  String get postAuthSecuringWalletBody => 'Verifying wallet access and device security.';
 
   @override
-  String get postAuthLoadingProfileBody =>
-      'Loading your account profile and preferences.';
+  String get postAuthLoadingProfileBody => 'Loading your account profile and preferences.';
 
   @override
-  String get postAuthSyncingSavedItemsBody =>
-      'Refreshing bookmarks and saved state from the backend.';
+  String get postAuthSyncingSavedItemsBody => 'Refreshing bookmarks and saved state from the backend.';
 
   @override
-  String get postAuthCheckingOnboardingBody =>
-      'Checking whether anything still needs your attention.';
+  String get postAuthCheckingOnboardingBody => 'Checking whether anything still needs your attention.';
 
   @override
   String get postAuthOpeningWorkspaceBody => 'Bringing your workspace online.';
@@ -1122,8 +1029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postAuthFailedTitle => 'We couldn\'t finish signing you in';
 
   @override
-  String get postAuthFailedBody =>
-      'Something interrupted the post-auth flow. You can retry or return to sign-in.';
+  String get postAuthFailedBody => 'Something interrupted the post-auth flow. You can retry or return to sign-in.';
 
   @override
   String get postAuthRetry => 'Retry';
@@ -1135,12 +1041,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authReauthDialogTitle => 'Sign in again';
 
   @override
-  String get authReauthDialogMessage =>
-      'Your session has expired. Sign in again to continue.';
+  String get authReauthDialogMessage => 'Your session has expired. Sign in again to continue.';
 
   @override
-  String get authAccountCreatedProfileLoading =>
-      'Account created. Loading your profile in the background.';
+  String get authAccountCreatedProfileLoading => 'Account created. Loading your profile in the background.';
 
   @override
   String get authEmailSignInDisabled => 'Email sign-in is disabled.';
@@ -1152,8 +1056,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authGoogleSignInDisabled => 'Google sign-in is disabled.';
 
   @override
-  String get authGoogleUnavailableError =>
-      'Google sign-in was cancelled or is unavailable right now.';
+  String get authGoogleUnavailableError => 'Google sign-in was cancelled or is unavailable right now.';
 
   @override
   String get authGoogleConnectingLabel => 'Connecting…';
@@ -1162,48 +1065,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authContinueWithGoogleLabel => 'Continue with Google';
 
   @override
-  String get authWalletConnectionDisabled =>
-      'Wallet connection is disabled right now.';
+  String get authWalletConnectionDisabled => 'Wallet connection is disabled right now.';
 
   @override
-  String get authEnterValidEmailPassword =>
-      'Enter a valid email and an 8+ character password.';
+  String get authEnterValidEmailPassword => 'Enter a valid email and an 8+ character password.';
 
   @override
   String get authEnterValidEmailInline => 'Enter a valid email address.';
 
   @override
-  String get authPasswordPolicyError =>
-      'Password must be at least 8 characters and include a letter and a number.';
+  String get authPasswordPolicyError => 'Password must be at least 8 characters and include a letter and a number.';
 
   @override
   String get authPasswordMismatchInline => 'Passwords do not match.';
 
   @override
-  String get authAccountAlreadyExistsToast =>
-      'An account with this email already exists. Sign in instead.';
+  String get authAccountAlreadyExistsToast => 'An account with this email already exists. Sign in instead.';
 
   @override
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
 
   @override
-  String get authWalletSignInFailed =>
-      'Wallet sign-in failed. Please try again.';
+  String get authWalletSignInFailed => 'Wallet sign-in failed. Please try again.';
 
   @override
-  String get authWalletOnlyAccountSignInHint =>
-      'This account uses wallet sign-in. Connect the original wallet to continue.';
+  String get authWalletOnlyAccountSignInHint => 'This account uses wallet sign-in. Connect the original wallet to continue.';
 
   @override
   String get authRegistrationFailed => 'Registration failed. Please try again.';
 
   @override
-  String get authVerifyEmailRegistrationToast =>
-      'Registration successful. Check your email to verify your account.';
+  String get authVerifyEmailRegistrationToast => 'Registration successful. Check your email to verify your account.';
 
   @override
-  String get authEmailNotVerifiedToast =>
-      'Email not verified. Check your inbox to continue.';
+  String get authEmailNotVerifiedToast => 'Email not verified. Check your inbox to continue.';
 
   @override
   String get authEmailNotVerifiedBadge => 'Email not verified';
@@ -1215,16 +1110,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailTitle => 'Verify your email';
 
   @override
-  String get authVerifyEmailSubtitle =>
-      'We sent a verification link. Tap it to finish setting up your account.';
+  String get authVerifyEmailSubtitle => 'We sent a verification link. Tap it to finish setting up your account.';
 
   @override
-  String get authVerifyEmailHighlightInbox =>
-      'Open your email app and find our message';
+  String get authVerifyEmailHighlightInbox => 'Open your email app and find our message';
 
   @override
-  String get authVerifyEmailHighlightSpam =>
-      'Check spam/junk if you don\'t see it';
+  String get authVerifyEmailHighlightSpam => 'Check spam/junk if you don\'t see it';
 
   @override
   String get authVerifyEmailHighlightSecure => 'Links expire for security';
@@ -1242,39 +1134,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailResendButton => 'Resend verification email';
 
   @override
-  String get authVerifyEmailEnterEmailInline =>
-      'Enter your email to resend verification.';
+  String get authVerifyEmailEnterEmailInline => 'Enter your email to resend verification.';
 
   @override
-  String get authVerifyEmailResendToast =>
-      'If an account exists for this email, a verification email will be sent shortly.';
+  String get authVerifyEmailResendToast => 'If an account exists for this email, a verification email will be sent shortly.';
 
   @override
-  String get authVerifyEmailResendFailedInline =>
-      'Could not resend verification email. Please try again.';
+  String get authVerifyEmailResendFailedInline => 'Could not resend verification email. Please try again.';
 
   @override
-  String get authVerifyEmailFailedInline =>
-      'This verification link is invalid or expired.';
+  String get authVerifyEmailFailedInline => 'This verification link is invalid or expired.';
 
   @override
-  String get authVerifyEmailSuccessToast =>
-      'Email verified. You can now sign in.';
+  String get authVerifyEmailSuccessToast => 'Email verified. You can now sign in.';
 
   @override
-  String get authVerifyEmailSignInHint =>
-      'After verifying, return here to sign in.';
+  String get authVerifyEmailSignInHint => 'After verifying, return here to sign in.';
 
   @override
   String get authForgotPasswordTitle => 'Reset your password';
 
   @override
-  String get authForgotPasswordSubtitle =>
-      'Enter your email and we\'ll send a reset link.';
+  String get authForgotPasswordSubtitle => 'Enter your email and we\'ll send a reset link.';
 
   @override
-  String get authForgotPasswordHighlightOne =>
-      'We never reveal whether an email exists';
+  String get authForgotPasswordHighlightOne => 'We never reveal whether an email exists';
 
   @override
   String get authForgotPasswordHighlightTwo => 'Reset links expire quickly';
@@ -1286,19 +1170,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authForgotPasswordSendButton => 'Send reset link';
 
   @override
-  String get authForgotPasswordSentToast =>
-      'If an account exists for this email, a reset link will be sent shortly.';
+  String get authForgotPasswordSentToast => 'If an account exists for this email, a reset link will be sent shortly.';
 
   @override
-  String get authForgotPasswordFailedInline =>
-      'Could not request a reset link. Please try again.';
+  String get authForgotPasswordFailedInline => 'Could not request a reset link. Please try again.';
 
   @override
   String get authResetPasswordTitle => 'Choose a new password';
 
   @override
-  String get authResetPasswordSubtitle =>
-      'Create a new password for your account.';
+  String get authResetPasswordSubtitle => 'Create a new password for your account.';
 
   @override
   String get authResetPasswordHighlightOne => 'Use a strong password';
@@ -1307,27 +1188,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authResetPasswordHighlightTwo => 'Reset links are single-use';
 
   @override
-  String get authResetPasswordMissingTokenInline =>
-      'This reset link is missing a token.';
+  String get authResetPasswordMissingTokenInline => 'This reset link is missing a token.';
 
   @override
   String get authResetPasswordSubmitButton => 'Reset password';
 
   @override
-  String get authResetPasswordSuccessToast =>
-      'Password updated. You can now sign in.';
+  String get authResetPasswordSuccessToast => 'Password updated. You can now sign in.';
 
   @override
-  String get authResetPasswordFailedInline =>
-      'Could not reset your password. The link may be invalid or expired.';
+  String get authResetPasswordFailedInline => 'Could not reset your password. The link may be invalid or expired.';
 
   @override
-  String get authGoogleSignInFailed =>
-      'Google sign-in failed. Please try again.';
+  String get authGoogleSignInFailed => 'Google sign-in failed. Please try again.';
 
   @override
-  String get authSignerProvisioningFailed =>
-      'Unable to prepare wallet access on this device.';
+  String get authSignerProvisioningFailed => 'Unable to prepare wallet access on this device.';
 
   @override
   String authGoogleRateLimitedRetryIn(Object duration) {
@@ -1341,19 +1217,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authUseWalletInstead => 'Use wallet';
 
   @override
-  String get authSelfCustodyWalletHint =>
-      'Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.';
+  String get authSelfCustodyWalletHint => 'Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.';
 
   @override
   String get authConnectWalletModalTitle => 'Connect wallet';
 
   @override
-  String get authConnectWalletModalDescriptionSignIn =>
-      'Approve a signature to use Wallet on this device. Sign-in itself has no fee.';
+  String get authConnectWalletModalDescriptionSignIn => 'Approve a signature to use Wallet on this device. Sign-in itself has no fee.';
 
   @override
-  String get authConnectWalletModalDescriptionRegister =>
-      'Approve a signature to use Wallet after creating your profile. No fee is required.';
+  String get authConnectWalletModalDescriptionRegister => 'Approve a signature to use Wallet after creating your profile. No fee is required.';
 
   @override
   String get authWalletOptionWalletConnect => 'WalletConnect';
@@ -1362,8 +1235,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authWalletOptionOtherWallets => 'Other wallets';
 
   @override
-  String get authOrLogInWithEmailOrUsername =>
-      'Or sign in with your email or username';
+  String get authOrLogInWithEmailOrUsername => 'Or sign in with your email or username';
 
   @override
   String get authOrUseEmail => 'Or use email';
@@ -1390,8 +1262,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountPasskeySectionTitle => 'Account sign-in passkeys';
 
   @override
-  String get accountPasskeySectionBody =>
-      'Sign in without a password using a passkey on this device or browser.';
+  String get accountPasskeySectionBody => 'Sign in without a password using a passkey on this device or browser.';
 
   @override
   String get accountPasskeyCreateAction => 'Create a passkey';
@@ -1421,20 +1292,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passkeyProtectionEnableAction => 'Enable passkey protection';
 
   @override
-  String get passkeyProtectionWalletRecoveryReady =>
-      'Wallet recovery with passkey ready';
+  String get passkeyProtectionWalletRecoveryReady => 'Wallet recovery with passkey ready';
 
   @override
-  String get passkeyProtectionSignInOnlyMessage =>
-      'Passkey sign-in ready. Wallet recovery still needs your recovery password or recovery phrase on this device.';
+  String get passkeyProtectionSignInOnlyMessage => 'Passkey sign-in ready. Wallet recovery still needs your recovery password or recovery phrase on this device.';
 
   @override
-  String get passkeyProtectionPrfUnsupportedMessage =>
-      'This device supports passkey sign-in, but not passkey wallet recovery.';
+  String get passkeyProtectionPrfUnsupportedMessage => 'This device supports passkey sign-in, but not passkey wallet recovery.';
 
   @override
-  String get passkeyProtectionWalletRecoveryUnavailable =>
-      'Passkey wallet recovery is unavailable';
+  String get passkeyProtectionWalletRecoveryUnavailable => 'Passkey wallet recovery is unavailable';
 
   @override
   String get authShowOtherOptions => 'Show other options';
@@ -1449,12 +1316,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRestoreWalletTitle => 'Restore wallet from encrypted backup';
 
   @override
-  String get authRestoreWalletBeforeSignInDescription =>
-      'Enter the recovery password to restore wallet access on this device before sign-in completes.';
+  String get authRestoreWalletBeforeSignInDescription => 'Enter the recovery password to restore wallet access on this device before sign-in completes.';
 
   @override
-  String get authRestoreWalletForAccountDescription =>
-      'Enter the recovery password to restore wallet access for this account on this device.';
+  String get authRestoreWalletForAccountDescription => 'Enter the recovery password to restore wallet access for this account on this device.';
 
   @override
   String get authRestoreWalletAction => 'Restore wallet';
@@ -1472,51 +1337,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSecureAccountAddPasswordButton => 'Add password';
 
   @override
-  String get authSecureAccountPasswordAddedToast =>
-      'Password added to your account.';
+  String get authSecureAccountPasswordAddedToast => 'Password added to your account.';
 
   @override
-  String get authSecureAccountVerificationSentTitle =>
-      'Verification email sent';
+  String get authSecureAccountVerificationSentTitle => 'Verification email sent';
 
   @override
-  String get authSecureAccountVerificationSentSubtitle =>
-      'You\'re still signed in. Verify when you can.';
+  String get authSecureAccountVerificationSentSubtitle => 'You\'re still signed in. Verify when you can.';
 
   @override
   String get authSecureAccountSecuredTitle => 'Account secured';
 
   @override
-  String get authSecureAccountSecuredVerifiedSubtitle =>
-      'Your email and password are ready for recovery sign-in.';
+  String get authSecureAccountSecuredVerifiedSubtitle => 'Your email and password are ready for recovery sign-in.';
 
   @override
-  String get authSecureAccountSecuredUnverifiedSubtitle =>
-      'Your password is set. Verify your email to finish securing this account.';
+  String get authSecureAccountSecuredUnverifiedSubtitle => 'Your password is set. Verify your email to finish securing this account.';
 
   @override
-  String get authSecureAccountFormAddPasswordSubtitle =>
-      'Your signed-in email is already attached. Add a password for recovery without changing the Google sign-in.';
+  String get authSecureAccountFormAddPasswordSubtitle => 'Your signed-in email is already attached. Add a password for recovery without changing the Google sign-in.';
 
   @override
-  String get authSecureAccountFormDefaultSubtitle =>
-      'Add email + password so you can recover this account if you lose your device. You can verify email later.';
+  String get authSecureAccountFormDefaultSubtitle => 'Add email + password so you can recover this account if you lose your device. You can verify email later.';
 
   @override
-  String get authSecureAccountPromptAddPasswordBody =>
-      'Your Google account is ready. Add a password now so you can recover this account even without Google.';
+  String get authSecureAccountPromptAddPasswordBody => 'Your Google account is ready. Add a password now so you can recover this account even without Google.';
 
   @override
-  String get authSecureAccountBannerAddPasswordSubtitle =>
-      'Your email is already attached. Add a password for recovery.';
+  String get authSecureAccountBannerAddPasswordSubtitle => 'Your email is already attached. Add a password for recovery.';
 
   @override
-  String get authSecureAccountSettingsAddPasswordSubtitle =>
-      'Add a password for recovery';
+  String get authSecureAccountSettingsAddPasswordSubtitle => 'Add a password for recovery';
 
   @override
-  String get authSecureAccountSettingsAddEmailPasswordSubtitle =>
-      'Add email + password for recovery';
+  String get authSecureAccountSettingsAddEmailPasswordSubtitle => 'Add email + password for recovery';
 
   @override
   String get commonEnable => 'Enable';
@@ -1534,35 +1388,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWelcomeTitle => 'art.kubus is an open art platform.';
 
   @override
-  String get onboardingFlowWelcomeBody =>
-      'Start with art, places, and community. Account setup and wallet tools can wait.';
+  String get onboardingFlowWelcomeBody => 'Start with art, places, and community. Account setup and wallet tools can wait.';
 
   @override
-  String get onboardingFlowWelcomeInfoAccount =>
-      'Create a profile when you want a personal feed, follows, and community participation.';
+  String get onboardingFlowWelcomeInfoAccount => 'Create a profile when you want a personal feed, follows, and community participation.';
 
   @override
-  String get onboardingFlowWelcomeInfoCreate =>
-      'Share artworks, add cultural context, or keep exploring the open art map.';
+  String get onboardingFlowWelcomeInfoCreate => 'Share artworks, add cultural context, or keep exploring the open art map.';
 
   @override
-  String get onboardingFlowWelcomeInfoFollow =>
-      'Follow artists, institutions, exhibitions, and public-space art.';
+  String get onboardingFlowWelcomeInfoFollow => 'Follow artists, institutions, exhibitions, and public-space art.';
 
   @override
-  String get onboardingFlowWelcomeInfoTime =>
-      'Most people finish this in about 2 minutes.';
+  String get onboardingFlowWelcomeInfoTime => 'Most people finish this in about 2 minutes.';
 
   @override
   String get onboardingFlowAccountTitle => 'Create your profile first';
 
   @override
-  String get onboardingFlowAccountBody =>
-      'Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.';
+  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.';
 
   @override
-  String get onboardingFlowAccountVerifyHint =>
-      'If you registered with email, verify your email before signing in.';
+  String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
 
   @override
   String get onboardingFlowCreateAccount => 'Create account';
@@ -1571,19 +1418,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowOpenVerification => 'Open email verification';
 
   @override
-  String get onboardingFlowVerifyLastTitle =>
-      'One last step: verify your email';
+  String get onboardingFlowVerifyLastTitle => 'One last step: verify your email';
 
   @override
-  String get onboardingFlowVerifyLastBody =>
-      'Check your inbox and verify your email to finish creating your account.';
+  String get onboardingFlowVerifyLastBody => 'Check your inbox and verify your email to finish creating your account.';
 
   @override
   String get onboardingFlowProfileTitle => 'Create your profile';
 
   @override
-  String get onboardingFlowProfileBody =>
-      'Add a name and a photo so people can recognize you.';
+  String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
   String get onboardingStepWalletSetupTitle => 'Set up your wallet';
@@ -1595,52 +1439,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupIntroTitle => 'Wallet backup';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody =>
-      'Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.';
+  String get onboardingFlowWalletBackupIntroBody => 'A wallet supports attribution, digital editions and future participation. Public discovery and community access remain available without one.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning =>
-      'Discovery, profiles, and community do not require connecting a wallet.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Discovery, profiles, and community do not require connecting a wallet.';
 
   @override
-  String get onboardingFlowWalletBackupIntroSecretWarning =>
-      'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.';
+  String get onboardingFlowWalletBackupIntroSecretWarning => 'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.';
 
   @override
-  String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel =>
-      'Recovery phrase';
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel => 'Recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody =>
-      'Copy the recovery phrase and store it safely offline. It is the only way to restore this wallet if you lose the device.';
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody => 'Copy the recovery phrase and store it safely offline. It is the only way to restore this wallet if you lose the device.';
 
   @override
-  String get onboardingFlowWalletBackupIntroEncryptedBackupLabel =>
-      'Encrypted server backup';
+  String get onboardingFlowWalletBackupIntroEncryptedBackupLabel => 'Encrypted server backup';
 
   @override
-  String get onboardingFlowWalletBackupIntroEncryptedBackupBody =>
-      'Create an encrypted server backup as a second recovery path, then store the recovery password separately and just as carefully.';
+  String get onboardingFlowWalletBackupIntroEncryptedBackupBody => 'Create an encrypted server backup as a second recovery path, then store the recovery password separately and just as carefully.';
 
   @override
-  String get onboardingFlowWalletBackupIntroPasskeyLabel =>
-      'Passkey protection';
+  String get onboardingFlowWalletBackupIntroPasskeyLabel => 'Passkey protection';
 
   @override
-  String get onboardingFlowWalletBackupIntroPasskeyBody =>
-      'On supported browsers, add a passkey after creating the encrypted backup for stronger protection.';
+  String get onboardingFlowWalletBackupIntroPasskeyBody => 'On supported browsers, add a passkey after creating the encrypted backup for stronger protection.';
 
   @override
-  String get onboardingFlowWalletBackupIntroRevealAction =>
-      'Reveal & copy phrase';
+  String get onboardingFlowWalletBackupIntroRevealAction => 'Reveal & copy phrase';
 
   @override
-  String get onboardingFlowWalletBackupIntroEncryptedAction =>
-      'Create encrypted backup';
+  String get onboardingFlowWalletBackupIntroEncryptedAction => 'Create encrypted backup';
 
   @override
-  String get onboardingFlowWalletBackupIntroEncryptedDone =>
-      'Encrypted backup ready';
+  String get onboardingFlowWalletBackupIntroEncryptedDone => 'Encrypted backup ready';
 
   @override
   String get onboardingFlowWalletBackupIntroPasskeyAction => 'Add passkey';
@@ -1652,56 +1484,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupBody =>
-      'This phrase restores wallet access for digital ownership, archive records and future participation on a new device.';
+  String get onboardingFlowWalletBackupBody => 'This phrase restores wallet access for digital editions and future participation on a new device.';
 
   @override
-  String get onboardingFlowWalletBackupPrivacyWarning =>
-      'Keep it private. Anyone with this phrase can fully control your wallet.';
+  String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
 
   @override
-  String get onboardingFlowWalletBackupLossWarning =>
-      'If you lose it, we cannot restore wallet-linked access for you. Public discovery and community browsing still work.';
+  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, we cannot restore wallet-linked access for you. Public discovery and community browsing still work.';
 
   @override
   String get onboardingFlowWalletBackupAction => 'Reveal and confirm backup';
 
   @override
-  String get onboardingFlowWalletBackupCompleted =>
-      'Recovery phrase backup confirmed.';
+  String get onboardingFlowWalletBackupCompleted => 'Recovery phrase backup confirmed.';
 
   @override
-  String get onboardingFlowWalletBackupNoWallet =>
-      'No wallet is available for backup yet.';
+  String get onboardingFlowWalletBackupNoWallet => 'No wallet is available for backup yet.';
 
   @override
-  String get onboardingFlowWalletBackupContinueHint =>
-      'Reveal your phrase and confirm the backup to continue.';
+  String get onboardingFlowWalletBackupContinueHint => 'Reveal your phrase and confirm the backup to continue.';
 
   @override
   String get onboardingFlowRoleTitle => 'Pick your role';
 
   @override
-  String get onboardingFlowRoleBody =>
-      'Choose the highlights you want. You can change this later in Settings.';
+  String get onboardingFlowRoleBody => 'Choose the highlights you want. You can change this later in Settings.';
 
   @override
-  String get onboardingFlowRoleRequiredHint =>
-      'Choose how you want to use art.kubus before continuing.';
+  String get onboardingFlowRoleRequiredHint => 'Choose how you want to use art.kubus before continuing.';
 
   @override
   String get onboardingFlowRoleSaving => 'Saving your role...';
 
   @override
-  String get onboardingFlowRoleSaveFailed =>
-      'We could not save your role. Please try again.';
+  String get onboardingFlowRoleSaveFailed => 'We could not save your role. Please try again.';
 
   @override
   String get onboardingFlowPermissionsTitle => 'Choose what to enable';
 
   @override
-  String get onboardingFlowPermissionsBody =>
-      'Enable location for nearby public art, camera for AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.';
+  String get onboardingFlowPermissionsBody => 'Enable location for nearby public art, camera for AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.';
 
   @override
   String get onboardingFlowContinueWithoutPermissions => 'Continue';
@@ -1710,22 +1532,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowArtworkTitle => 'Create your first artwork';
 
   @override
-  String get onboardingFlowArtworkBody =>
-      'Start with one piece. Drafts are fine, and you can refine it anytime.';
+  String get onboardingFlowArtworkBody => 'Start with one piece. Drafts are fine, and you can refine it anytime.';
 
   @override
   String get onboardingFlowFollowTitle => 'Follow a few artists';
 
   @override
-  String get onboardingFlowFollowBody =>
-      'Pick a few creators to personalize your feed.';
+  String get onboardingFlowFollowBody => 'Pick a few creators to personalize your feed.';
 
   @override
   String get onboardingFlowDoneTitle => 'You\'re all set';
 
   @override
-  String get onboardingFlowDoneBody =>
-      'Your space is ready. Start discovering public art, artists, institutions, and community activity.';
+  String get onboardingFlowDoneBody => 'Your space is ready. Start discovering public art, artists, institutions, and community activity.';
 
   @override
   String get onboardingFlowOpenProfile => 'Open profile setup';
@@ -1743,37 +1562,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowCreateArtwork => 'Create artwork';
 
   @override
-  String get onboardingFlowNoSuggestions =>
-      'No suggestions yet. You can follow artists from Community anytime.';
+  String get onboardingFlowNoSuggestions => 'No suggestions yet. You can follow artists from Community anytime.';
 
   @override
   String get onboardingFlowUnknownArtist => 'Artist';
 
   @override
-  String get onboardingFlowFollowFailed =>
-      'Couldn\'t update follow status. Please try again.';
+  String get onboardingFlowFollowFailed => 'Couldn\'t update follow status. Please try again.';
 
   @override
   String get onboardingFlowVerifyContinue => 'I verified / Continue';
 
   @override
-  String get onboardingFlowWelcomeDecisionHint =>
-      'Choose one path to get started.';
+  String get onboardingFlowWelcomeDecisionHint => 'Choose one path to get started.';
 
   @override
-  String get onboardingFlowVerifySignInPrompt =>
-      'Verified - please enter password to finish signing in';
+  String get onboardingFlowVerifySignInPrompt => 'Verified - please enter password to finish signing in';
 
   @override
   String get onboardingFlowVerifySigningIn => 'Verified - signing you in...';
 
   @override
-  String get onboardingFlowVerifySignedInSuccess =>
-      'Verified account signed in successfully.';
+  String get onboardingFlowVerifySignedInSuccess => 'Verified account signed in successfully.';
 
   @override
-  String get onboardingFlowVerifySessionMismatch =>
-      'Sign-in session mismatch. Please sign in with your verified email.';
+  String get onboardingFlowVerifySessionMismatch => 'Sign-in session mismatch. Please sign in with your verified email.';
 
   @override
   String onboardingFlowVerificationDifferentAccountWarning(Object email) {
@@ -1781,60 +1594,49 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowProfileRefreshPending =>
-      'Signed in, but profile refresh is still syncing. Please continue.';
+  String get onboardingFlowProfileRefreshPending => 'Signed in, but profile refresh is still syncing. Please continue.';
 
   @override
-  String get onboardingFlowSignedInFinishing =>
-      'Signed in. Finishing onboarding...';
+  String get onboardingFlowSignedInFinishing => 'Signed in. Finishing onboarding...';
 
   @override
-  String get onboardingFlowVerifyEmailConfirmedHint =>
-      'Email confirmed. Continue to finish onboarding.';
+  String get onboardingFlowVerifyEmailConfirmedHint => 'Email confirmed. Continue to finish onboarding.';
 
   @override
   String get onboardingFlowVerifySignInTitle => 'Sign in to finish';
 
   @override
-  String get onboardingFlowVerifySignInDescription =>
-      'Use your verified email and password to finish onboarding.';
+  String get onboardingFlowVerifySignInDescription => 'Use your verified email and password to finish onboarding.';
 
   @override
-  String get onboardingFlowProfileAvatarPickFailed =>
-      'Unable to select avatar right now.';
+  String get onboardingFlowProfileAvatarPickFailed => 'Unable to select avatar right now.';
 
   @override
-  String get onboardingFlowProfileInstitutionIntro =>
-      'Add the organization details people should see first. Community governance review comes right after this.';
+  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. Community governance review comes right after this.';
 
   @override
-  String get onboardingFlowProfileCreatorIntro =>
-      'Set up your public creator profile now so your review submission has the right context.';
+  String get onboardingFlowProfileCreatorIntro => 'Set up your public creator profile now so your review submission has the right context.';
 
   @override
   String get onboardingFlowProfileOrganizationNameLabel => 'Organization name';
 
   @override
-  String get onboardingFlowProfileInstitutionBioLabel =>
-      'About your institution';
+  String get onboardingFlowProfileInstitutionBioLabel => 'About your institution';
 
   @override
   String get onboardingFlowProfileSelectingAvatar => 'Selecting...';
 
   @override
-  String get onboardingFlowWalletBackupCreateEncryptedTitle =>
-      'Create encrypted server backup';
+  String get onboardingFlowWalletBackupCreateEncryptedTitle => 'Create encrypted server backup';
 
   @override
-  String get onboardingFlowWalletBackupCreateEncryptedDescription =>
-      'Choose a recovery password and store it separately from your recovery phrase.';
+  String get onboardingFlowWalletBackupCreateEncryptedDescription => 'Choose a recovery password and store it separately from your recovery phrase.';
 
   @override
   String get onboardingFlowWalletBackupCreateEncryptedAction => 'Create backup';
 
   @override
-  String get onboardingFlowWalletBackupEncryptedSaved =>
-      'Encrypted server backup saved.';
+  String get onboardingFlowWalletBackupEncryptedSaved => 'Encrypted server backup saved.';
 
   @override
   String get onboardingFlowWalletBackupPasskeyDialogTitle => 'Add a passkey';
@@ -1843,12 +1645,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupPasskeyDialogLabel => 'Passkey name';
 
   @override
-  String get onboardingFlowWalletBackupPasskeyDialogDescription =>
-      'Add a passkey to protect the encrypted server backup on this browser or device.';
+  String get onboardingFlowWalletBackupPasskeyDialogDescription => 'Add a passkey to protect the encrypted server backup on this browser or device.';
 
   @override
-  String get onboardingFlowWalletBackupPasskeyDialogDefaultName =>
-      'This device';
+  String get onboardingFlowWalletBackupPasskeyDialogDefaultName => 'This device';
 
   @override
   String get onboardingFlowWalletBackupPasskeyDialogAction => 'Add passkey';
@@ -1862,20 +1662,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewTitle => 'Governance review';
 
   @override
-  String get onboardingFlowDaoReviewInstitutionBody =>
-      'Submit your institution details for community governance review before account setup is completed.';
+  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for community governance review before account setup is completed.';
 
   @override
-  String get onboardingFlowDaoReviewArtistBody =>
-      'Submit your practice for community governance review before account setup is completed.';
+  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for community governance review before account setup is completed.';
 
   @override
-  String get onboardingFlowDaoReviewCompleteFormError =>
-      'Complete the review form before continuing.';
+  String get onboardingFlowDaoReviewCompleteFormError => 'Complete the review form before continuing.';
 
   @override
-  String get onboardingFlowDaoReviewSubmitFailed =>
-      'Unable to submit the governance review right now.';
+  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the governance review right now.';
 
   @override
   String onboardingFlowDaoReviewStatus(Object status) {
@@ -1892,8 +1688,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewPortfolioLabel => 'Portfolio URL';
 
   @override
-  String get onboardingFlowDaoReviewInstitutionFocusLabel =>
-      'Institution focus';
+  String get onboardingFlowDaoReviewInstitutionFocusLabel => 'Institution focus';
 
   @override
   String get onboardingFlowDaoReviewPrimaryMediumLabel => 'Primary medium';
@@ -1908,8 +1703,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewReviewerNotes => 'Reviewer notes';
 
   @override
-  String get onboardingFlowDaoReviewSubmitAction =>
-      'Submit for governance review';
+  String get onboardingFlowDaoReviewSubmitAction => 'Submit for governance review';
 
   @override
   String get onboardingWelcomeTitle => 'art.kubus is an open art platform.';
@@ -1918,15 +1712,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'Community-first cultural discovery';
 
   @override
-  String get onboardingWelcomeDescription =>
-      'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.';
+  String get onboardingWelcomeDescription => 'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.';
 
   @override
   String get alphaNoticeTitle => 'You are entering the art.kubus alpha';
 
   @override
-  String get alphaNoticeBody =>
-      'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.';
+  String get alphaNoticeBody => 'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.';
 
   @override
   String get alphaNoticeContinue => 'Continue to onboarding';
@@ -1941,8 +1733,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingExploreSubtitle => 'Discover local and public-space art';
 
   @override
-  String get onboardingExploreDescription =>
-      'Use the community-generated cultural map to find artworks, exhibitions, institutions, artists, and public-space stories nearby.';
+  String get onboardingExploreDescription => 'Use the community-generated cultural map to find artworks, exhibitions, institutions, artists, and public-space stories nearby.';
 
   @override
   String get onboardingCreateTitle => 'Share art and context';
@@ -1951,31 +1742,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCreateSubtitle => 'Contribute to the cultural archive';
 
   @override
-  String get onboardingCreateDescription =>
-      'Publish artworks, document practice, add context, and prepare AR layers when they support the work.';
+  String get onboardingCreateDescription => 'Publish artworks, document practice, add context, and prepare AR layers when they support the work.';
 
   @override
   String get onboardingCommunityTitle => 'Join the art community';
 
   @override
-  String get onboardingCommunitySubtitle =>
-      'Community, collaboration and governance';
+  String get onboardingCommunitySubtitle => 'Community, collaboration and governance';
 
   @override
-  String get onboardingCommunityDescription =>
-      'Follow artists and institutions, discuss works, collaborate and take part in shaping the platform.';
+  String get onboardingCommunityDescription => 'Follow artists and institutions, discuss works, collaborate and take part in shaping the platform.';
 
   @override
-  String get onboardingCollectiblesTitle =>
-      'Archive records and digital editions';
+  String get onboardingCollectiblesTitle => 'Digital editions and attendance records';
 
   @override
-  String get onboardingCollectiblesSubtitle =>
-      'Cultural memory, visits and ownership';
+  String get onboardingCollectiblesSubtitle => 'Cultural memory, visits and ownership';
 
   @override
-  String get onboardingCollectiblesDescription =>
-      'When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.';
+  String get onboardingCollectiblesDescription => 'Attendance records can document a visit. Artists can create digital editions connected to an artwork. Discovery and community remain open without a wallet.';
 
   @override
   String get onboardingGrantPermissions => 'Grant permissions';
@@ -1993,8 +1778,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsBenefitsTitle => 'What you can do:';
 
   @override
-  String get permissionsPrivacyNote =>
-      'Your privacy matters. Permissions are used only for the features you enable, and you can change them anytime.';
+  String get permissionsPrivacyNote => 'Your privacy matters. Permissions are used only for the features you enable, and you can change them anytime.';
 
   @override
   String get permissionsGrantedLabel => 'Permission granted';
@@ -2034,15 +1818,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsLocationSubtitle => 'Nearby artworks and places';
 
   @override
-  String get permissionsLocationDescription =>
-      'We use your location to show nearby artworks, markers, and exhibitions. You can still browse without it.';
+  String get permissionsLocationDescription => 'We use your location to show nearby artworks, markers, and exhibitions. You can still browse without it.';
 
   @override
   String get permissionsLocationBenefit1 => 'Find artworks near you';
 
   @override
-  String get permissionsLocationBenefit2 =>
-      'Discover local galleries and exhibitions';
+  String get permissionsLocationBenefit2 => 'Discover local galleries and exhibitions';
 
   @override
   String get permissionsLocationBenefit3 => 'Get updates about nearby events';
@@ -2057,12 +1839,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsCameraSubtitle => 'AR pilots in development';
 
   @override
-  String get permissionsCameraDescription =>
-      'Camera access supports AR layers in development, including previews, placement, and capture when pilots are available.';
+  String get permissionsCameraDescription => 'Camera access supports AR layers in development, including previews, placement, and capture when pilots are available.';
 
   @override
-  String get permissionsCameraBenefit1 =>
-      'Preview AR layers when pilots are available';
+  String get permissionsCameraBenefit1 => 'Preview AR layers when pilots are available';
 
   @override
   String get permissionsCameraBenefit2 => 'Prepare virtual placements';
@@ -2080,8 +1860,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Stay connected';
 
   @override
-  String get permissionsNotificationsDescription =>
-      'Get updates about new artworks, exhibitions, events, community activity and participation records.';
+  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events, community activity and participation records.';
 
   @override
   String get permissionsNotificationsBenefit1 => 'New artwork updates';
@@ -2090,8 +1869,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsBenefit2 => 'Progress and recognition';
 
   @override
-  String get permissionsNotificationsBenefit3 =>
-      'Participation records and exhibition updates';
+  String get permissionsNotificationsBenefit3 => 'Participation records and exhibition updates';
 
   @override
   String get permissionsNotificationsBenefit4 => 'Community event reminders';
@@ -2103,12 +1881,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsPhotosSubtitle => 'Save your creations';
 
   @override
-  String get permissionsPhotosDescription =>
-      'Save AR pilot screenshots and downloads to your photo library when those features are available.';
+  String get permissionsPhotosDescription => 'Save AR pilot screenshots and downloads to your photo library when those features are available.';
 
   @override
-  String get permissionsPhotosBenefit1 =>
-      'Save AR pilot screenshots to your photos';
+  String get permissionsPhotosBenefit1 => 'Save AR pilot screenshots to your photos';
 
   @override
   String get permissionsPhotosBenefit2 => 'Download artwork images';
@@ -2156,8 +1932,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsGuestUserName => 'Guest user';
 
   @override
-  String get desktopSettingsProfileSectionSubtitle =>
-      'Update your profile information visible to other users';
+  String get desktopSettingsProfileSectionSubtitle => 'Update your profile information visible to other users';
 
   @override
   String get desktopSettingsDisplayNameLabel => 'Display name';
@@ -2190,8 +1965,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsLocationHint => 'City, Country';
 
   @override
-  String get desktopSettingsWalletSectionSubtitle =>
-      'Manage wallet access, recovery and ownership tools.';
+  String get desktopSettingsWalletSectionSubtitle => 'Manage wallet access, recovery and ownership tools.';
 
   @override
   String get desktopSettingsViewWalletButton => 'View wallet';
@@ -2203,15 +1977,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsDisconnectWalletTileTitle => 'Disconnect wallet';
 
   @override
-  String get desktopSettingsDisconnectWalletTileSubtitle =>
-      'Disconnect this device from your account wallet';
+  String get desktopSettingsDisconnectWalletTileSubtitle => 'Disconnect this device from your account wallet';
 
   @override
   String get desktopSettingsDisconnectWalletDialogTitle => 'Disconnect wallet';
 
   @override
-  String get desktopSettingsDisconnectWalletDialogBody =>
-      'Disconnect your wallet from this device? You can reconnect anytime.';
+  String get desktopSettingsDisconnectWalletDialogBody => 'Disconnect your wallet from this device? You can reconnect anytime.';
 
   @override
   String get desktopSettingsWalletDisconnectedToast => 'Wallet disconnected';
@@ -2223,8 +1995,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsExportingDataToast => 'Exporting data…';
 
   @override
-  String get desktopSettingsPlatformSubtitle =>
-      'Check which capabilities are available on this device';
+  String get desktopSettingsPlatformSubtitle => 'Check which capabilities are available on this device';
 
   @override
   String get desktopSettingsAppearanceSubtitle => 'Customize the look and feel';
@@ -2233,37 +2004,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsShowFriendsTitle => 'Show friends';
 
   @override
-  String get desktopSettingsShowFriendsSubtitle =>
-      'Display your friends list on your profile';
+  String get desktopSettingsShowFriendsSubtitle => 'Display your friends list on your profile';
 
   @override
   String get desktopSettingsShowAchievementsTitle => 'Show achievements';
 
   @override
-  String get desktopSettingsShowAchievementsSubtitle =>
-      'Display your achievements on your profile';
+  String get desktopSettingsShowAchievementsSubtitle => 'Display your achievements on your profile';
 
   @override
   String get desktopSettingsAllowMessagesTitle => 'Allow messages';
 
   @override
-  String get desktopSettingsAllowMessagesSubtitle =>
-      'Allow others to message you';
+  String get desktopSettingsAllowMessagesSubtitle => 'Allow others to message you';
 
   @override
-  String get desktopSettingsDangerZoneSubtitle =>
-      'Irreversible actions that require caution';
+  String get desktopSettingsDangerZoneSubtitle => 'Irreversible actions that require caution';
 
   @override
   String get desktopSettingsAchievementsTitle => 'Achievements & recognition';
 
   @override
-  String get desktopSettingsAchievementsSubtitle =>
-      'Track milestones and signals of participation without presenting them as financial incentives';
+  String get desktopSettingsAchievementsSubtitle => 'Track milestones and signals of participation without presenting them as financial incentives';
 
   @override
-  String get desktopSettingsAchievementsStatArtworksDiscovered =>
-      'Artworks discovered';
+  String get desktopSettingsAchievementsStatArtworksDiscovered => 'Artworks discovered';
 
   @override
   String get desktopSettingsAchievementsStatArViews => 'AR views';
@@ -2272,52 +2037,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsAchievementsStatEventsAttended => 'Events attended';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned =>
-      'Contribution recognition';
+  String get desktopSettingsAchievementsStatKub8PointsEarned => 'Contribution recognition';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'First discovery';
 
   @override
-  String get desktopSettingsAchievementFirstDiscoveryDescription =>
-      'Discover your first public artwork';
+  String get desktopSettingsAchievementFirstDiscoveryDescription => 'Discover your first public artwork';
 
   @override
   String get desktopSettingsAchievementArtCollectorTitle => 'Art explorer';
 
   @override
-  String get desktopSettingsAchievementArtCollectorDescription =>
-      'Discover 10 artworks or AR layers.';
+  String get desktopSettingsAchievementArtCollectorDescription => 'Discover 10 artworks or AR layers.';
 
   @override
-  String get desktopSettingsAchievementCommunityMemberTitle =>
-      'Community member';
+  String get desktopSettingsAchievementCommunityMemberTitle => 'Community member';
 
   @override
-  String get desktopSettingsAchievementCommunityMemberDescription =>
-      'Join 3 community groups';
+  String get desktopSettingsAchievementCommunityMemberDescription => 'Join 3 community groups';
 
   @override
   String get desktopSettingsAchievementEventExplorerTitle => 'Event explorer';
 
   @override
-  String get desktopSettingsAchievementEventExplorerDescription =>
-      'Attend 5 art events';
+  String get desktopSettingsAchievementEventExplorerDescription => 'Attend 5 art events';
 
   @override
-  String get desktopSettingsAchievementNftCreatorTitle =>
-      'First digital edition';
+  String get desktopSettingsAchievementNftCreatorTitle => 'First digital edition';
 
   @override
-  String get desktopSettingsAchievementNftCreatorDescription =>
-      'Create your first digital edition';
+  String get desktopSettingsAchievementNftCreatorDescription => 'Create your first digital edition';
 
   @override
   String get desktopSettingsHelpSupportTitle => 'Help & support';
 
   @override
-  String get desktopSettingsHelpSupportSubtitle =>
-      'Get help and find answers to common questions';
+  String get desktopSettingsHelpSupportSubtitle => 'Get help and find answers to common questions';
 
   @override
   String get desktopSettingsFaqTileTitle => 'FAQ';
@@ -2326,8 +2082,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsFaqTileSubtitle => 'Frequently asked questions';
 
   @override
-  String get desktopSettingsContactSupportTileSubtitle =>
-      'Get help from our team';
+  String get desktopSettingsContactSupportTileSubtitle => 'Get help from our team';
 
   @override
   String get desktopSettingsReportBugTileTitle => 'Report a bug';
@@ -2339,48 +2094,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsOpeningBugReportToast => 'Opening bug report form…';
 
   @override
-  String get desktopSettingsAboutSubtitle =>
-      'Open art platform connecting artists, institutions, and public space';
+  String get desktopSettingsAboutSubtitle => 'Open art platform connecting artists, institutions, and public space';
 
   @override
   String get desktopSettingsFeaturesSectionTitle => 'Features';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryTitle =>
-      'AR layers in development';
+  String get desktopSettingsFeatureArDiscoveryTitle => 'AR layers in development';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryDescription =>
-      'Prepare AR previews as pilots become available.';
+  String get desktopSettingsFeatureArDiscoveryDescription => 'Prepare AR previews as pilots become available.';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationTitle =>
-      'Wallet and Web3 access';
+  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Wallet and Web3 access';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationDescription =>
-      'Connect Wallet for attribution, archive records, digital editions, or future participation tools. Basic discovery and community do not require it.';
+  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Connect a wallet for attribution, digital editions or future participation tools. Basic discovery and community do not require it.';
 
   @override
   String get desktopSettingsFeatureNftMintingTitle => 'Digital editions';
 
   @override
-  String get desktopSettingsFeatureNftMintingDescription =>
-      'Create and manage digital records connected to artworks, visits or contributions.';
+  String get desktopSettingsFeatureNftMintingDescription => 'Create and manage digital records connected to artworks, visits or contributions.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Community';
 
   @override
-  String get desktopSettingsFeatureCommunityDescription =>
-      'Connect with artists, institutions, and art lovers';
+  String get desktopSettingsFeatureCommunityDescription => 'Connect with artists, institutions, and art lovers';
 
   @override
   String get desktopSettingsFeatureInstitutionsTitle => 'Institutions';
 
   @override
-  String get desktopSettingsFeatureInstitutionsDescription =>
-      'Partner with galleries and museums';
+  String get desktopSettingsFeatureInstitutionsDescription => 'Partner with galleries and museums';
 
   @override
   String get desktopSettingsLegalSectionTitle => 'Legal';
@@ -2424,12 +2171,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeveloperClearQuickActionsTitle => 'Clear quick actions';
 
   @override
-  String get settingsDeveloperClearQuickActionsSubtitle =>
-      'Reset recently visited screens';
+  String get settingsDeveloperClearQuickActionsSubtitle => 'Reset recently visited screens';
 
   @override
-  String get settingsDeveloperQuickActionsClearedToast =>
-      'Quick actions cleared';
+  String get settingsDeveloperQuickActionsClearedToast => 'Quick actions cleared';
 
   @override
   String get settingsCapabilityCamera => 'Camera access (QR scanner, AR)';
@@ -2471,22 +2216,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsProfileVisibilityPublicLabel => 'Public';
 
   @override
-  String get settingsProfileVisibilityPublicDescription =>
-      'Anyone can see your profile';
+  String get settingsProfileVisibilityPublicDescription => 'Anyone can see your profile';
 
   @override
   String get settingsProfileVisibilityPrivateLabel => 'Private';
 
   @override
-  String get settingsProfileVisibilityPrivateDescription =>
-      'Only you can see your profile';
+  String get settingsProfileVisibilityPrivateDescription => 'Only you can see your profile';
 
   @override
   String get settingsProfileVisibilityFriendsOnlyLabel => 'Friends only';
 
   @override
-  String get settingsProfileVisibilityFriendsOnlyDescription =>
-      'Only friends can see your profile';
+  String get settingsProfileVisibilityFriendsOnlyDescription => 'Only friends can see your profile';
 
   @override
   String get settingsProfileVisibilityTileTitle => 'Profile visibility';
@@ -2516,8 +2258,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEditProfileTileTitle => 'Edit profile';
 
   @override
-  String get settingsEditProfileTileSubtitle =>
-      'Update your username, bio, and avatar';
+  String get settingsEditProfileTileSubtitle => 'Update your username, bio, and avatar';
 
   @override
   String get settingsAccountManagementTileTitle => 'Account management';
@@ -2539,22 +2280,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoleSimulationSheetTitle => 'Role simulation';
 
   @override
-  String get settingsRoleSimulationSheetSubtitle =>
-      'Toggle roles to preview profile layouts locally. Changes are local to this device.';
+  String get settingsRoleSimulationSheetSubtitle => 'Toggle roles to preview profile layouts locally. Changes are local to this device.';
 
   @override
   String get settingsRoleArtistTitle => 'Artist profile';
 
   @override
-  String get settingsRoleArtistSubtitle =>
-      'Show artist sections (artworks, collections)';
+  String get settingsRoleArtistSubtitle => 'Show artist sections (artworks, collections)';
 
   @override
   String get settingsRoleInstitutionTitle => 'Institution profile';
 
   @override
-  String get settingsRoleInstitutionSubtitle =>
-      'Show institution sections (events, collections)';
+  String get settingsRoleInstitutionSubtitle => 'Show institution sections (events, collections)';
 
   @override
   String get settingsWalletSectionTitle => 'Wallet';
@@ -2581,8 +2319,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSessionSignerMissing => 'Signing unavailable on this device';
 
   @override
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus) {
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus) {
     return 'Account: $accountStatus · Wallet: $walletStatus · Access: $signerStatus';
   }
 
@@ -2590,24 +2327,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletActionSignInRequiredToast => 'Sign in to continue.';
 
   @override
-  String get walletActionConnectWalletRequiredToast =>
-      'Connect a wallet to continue with this wallet-linked action.';
+  String get walletActionConnectWalletRequiredToast => 'Connect a wallet to continue with this wallet-linked action.';
 
   @override
-  String get walletActionAccountShellNeedsWalletToast =>
-      'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
+  String get walletActionAccountShellNeedsWalletToast => 'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
 
   @override
-  String get walletActionEncryptedBackupRestoreToast =>
-      'An encrypted backup is available. Restore wallet access on this device before continuing.';
+  String get walletActionEncryptedBackupRestoreToast => 'An encrypted backup is available. Restore wallet access on this device before continuing.';
 
   @override
-  String get walletActionRecoveryNeededToast =>
-      'Restore wallet access on this device before continuing.';
+  String get walletActionRecoveryNeededToast => 'Restore wallet access on this device before continuing.';
 
   @override
-  String get walletActionReadOnlyReconnectToast =>
-      'Reconnect with your wallet provider or restore wallet access on this device before continuing.';
+  String get walletActionReadOnlyReconnectToast => 'Reconnect with your wallet provider or restore wallet access on this device before continuing.';
 
   @override
   String get settingsNetworkTileTitle => 'Network';
@@ -2635,47 +2367,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'No wallet connected yet';
 
   @override
-  String get settingsBackupStatusAccountShellOnly =>
-      'Account wallet has not been restored on this device yet';
+  String get settingsBackupStatusAccountShellOnly => 'Account wallet has not been restored on this device yet';
 
   @override
-  String get settingsBackupStatusNoBackup =>
-      'No backup protection configured yet';
+  String get settingsBackupStatusNoBackup => 'No backup protection configured yet';
 
   @override
-  String get settingsBackupStatusRecoveryPhraseRequired =>
-      'Recovery phrase backup still required';
+  String get settingsBackupStatusRecoveryPhraseRequired => 'Recovery phrase backup still required';
 
   @override
-  String get settingsBackupStatusEncryptedServerBackup =>
-      'Encrypted server backup configured';
+  String get settingsBackupStatusEncryptedServerBackup => 'Encrypted server backup configured';
 
   @override
-  String get settingsBackupStatusPasskeyProtection =>
-      'Passkey-protected server backup configured';
+  String get settingsBackupStatusPasskeyProtection => 'Passkey-protected server backup configured';
 
   @override
-  String get settingsBackupStatusReadOnly =>
-      'Read-only wallet session on this device';
+  String get settingsBackupStatusReadOnly => 'Read-only wallet session on this device';
 
   @override
-  String get settingsBackupStatusEncryptedBackupRestoreAvailable =>
-      'Encrypted backup available to restore signing on this device';
+  String get settingsBackupStatusEncryptedBackupRestoreAvailable => 'Encrypted backup available to restore signing on this device';
 
   @override
   String get settingsExportRecoveryPhraseTileTitle => 'Export recovery phrase';
 
   @override
-  String get settingsExportRecoveryPhraseTileSubtitle =>
-      'Back up your wallet (sensitive)';
+  String get settingsExportRecoveryPhraseTileSubtitle => 'Back up your wallet (sensitive)';
 
   @override
-  String get settingsImportWalletTileTitle =>
-      'Import existing wallet (advanced)';
+  String get settingsImportWalletTileTitle => 'Import existing wallet (advanced)';
 
   @override
-  String get settingsImportWalletTileSubtitle =>
-      'Use a recovery phrase you already have';
+  String get settingsImportWalletTileSubtitle => 'Use a recovery phrase you already have';
 
   @override
   String get settingsSecurityPrivacySectionTitle => 'Security & privacy';
@@ -2690,8 +2412,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsUseBiometricsOnUnlockTitle => 'Use biometrics on unlock';
 
   @override
-  String get settingsUseBiometricsOnUnlockSubtitle =>
-      'Prefer biometrics when unlocking the app';
+  String get settingsUseBiometricsOnUnlockSubtitle => 'Prefer biometrics when unlocking the app';
 
   @override
   String get settingsRequirePinTileTitle => 'Require PIN';
@@ -2736,15 +2457,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCrashReportingTileTitle => 'Crash reporting';
 
   @override
-  String get settingsCrashReportingTileSubtitle =>
-      'Send crash reports automatically';
+  String get settingsCrashReportingTileSubtitle => 'Send crash reports automatically';
 
   @override
   String get settingsSkipOnboardingTileTitle => 'Skip onboarding';
 
   @override
-  String get settingsSkipOnboardingTileSubtitle =>
-      'Skip welcome screens for returning users';
+  String get settingsSkipOnboardingTileSubtitle => 'Skip welcome screens for returning users';
 
   @override
   String get settingsDataExportTileTitle => 'Data export';
@@ -2756,8 +2475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetPermissionFlagsTileTitle => 'Reset permission flags';
 
   @override
-  String get settingsResetPermissionFlagsTileSubtitle =>
-      'Clear saved permission/service prompts';
+  String get settingsResetPermissionFlagsTileSubtitle => 'Clear saved permission/service prompts';
 
   @override
   String get settingsAboutSectionTitle => 'About';
@@ -2802,8 +2520,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLogoutTileTitle => 'Log out';
 
   @override
-  String get settingsLogoutTileSubtitle =>
-      'Sign out and clear this device session';
+  String get settingsLogoutTileSubtitle => 'Sign out and clear this device session';
 
   @override
   String get settingsResetAppTileTitle => 'Reset app';
@@ -2815,8 +2532,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteAccountTileTitle => 'Delete account';
 
   @override
-  String get settingsDeleteAccountTileSubtitle =>
-      'Permanently delete your account';
+  String get settingsDeleteAccountTileSubtitle => 'Permanently delete your account';
 
   @override
   String get settingsSelectNetworkDialogTitle => 'Select network';
@@ -2825,12 +2541,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNetworkMainnetDescription => 'Live Solana network';
 
   @override
-  String get settingsNetworkDevnetDescription =>
-      'Development network for testing';
+  String get settingsNetworkDevnetDescription => 'Development network for testing';
 
   @override
-  String get settingsNetworkTestnetDescription =>
-      'Test network for development';
+  String get settingsNetworkTestnetDescription => 'Test network for development';
 
   @override
   String settingsSwitchedToNetworkToast(Object network) {
@@ -2838,26 +2552,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsConnectWalletFirstToast =>
-      'Please connect your wallet first';
+  String get settingsConnectWalletFirstToast => 'Please connect your wallet first';
 
   @override
   String get settingsBackupWalletDialogTitle => 'Back up recovery phrase';
 
   @override
-  String get settingsBackupWalletDialogIntro =>
-      'This will reveal your recovery phrase. Anyone who sees it can control this wallet.';
+  String get settingsBackupWalletDialogIntro => 'This will reveal your recovery phrase. Anyone who sees it can control this wallet.';
 
   @override
   String get settingsSecurityWarningTitle => 'Security warning';
 
   @override
-  String get settingsSecurityWarningBullets =>
-      '• Make sure you are in a private place\n• Never share your recovery phrase or recovery password\n• Store them separately and safely offline';
+  String get settingsSecurityWarningBullets => '• Make sure you are in a private place\n• Never share your recovery phrase or recovery password\n• Store them separately and safely offline';
 
   @override
-  String get settingsConnectOrCreateWalletFirstToast =>
-      'Connect or create a wallet first.';
+  String get settingsConnectOrCreateWalletFirstToast => 'Connect or create a wallet first.';
 
   @override
   String get settingsAutoLockImmediately => 'Immediately';
@@ -2907,23 +2617,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsBiometricUnavailableToast =>
-      'Biometric unlock not available on this device.';
+  String get settingsBiometricUnavailableToast => 'Biometric unlock not available on this device.';
 
   @override
   String get settingsBiometricFailedToast => 'Biometric authentication failed.';
 
   @override
-  String get settingsExportRecoveryPhraseDialogTitle =>
-      'Export recovery phrase';
+  String get settingsExportRecoveryPhraseDialogTitle => 'Export recovery phrase';
 
   @override
-  String get settingsExportRecoveryPhraseDialogBody =>
-      'Only view your phrase in private. We never store it, and anyone with it can move your assets.';
+  String get settingsExportRecoveryPhraseDialogBody => 'Only view your phrase in private. We never store it, and anyone with it can move your assets.';
 
   @override
-  String get settingsExportRecoveryPhraseDialogConfirm =>
-      'Confirm you are ready before revealing the words.';
+  String get settingsExportRecoveryPhraseDialogConfirm => 'Confirm you are ready before revealing the words.';
 
   @override
   String get settingsShowPhraseButton => 'Show phrase';
@@ -2932,12 +2638,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsImportWalletDialogTitle => 'Import existing wallet';
 
   @override
-  String get settingsImportWalletDialogBody =>
-      'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi, shared screens, and anyone looking over your shoulder while importing.';
+  String get settingsImportWalletDialogBody => 'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi, shared screens, and anyone looking over your shoulder while importing.';
 
   @override
-  String get settingsImportWalletDialogConfirm =>
-      'We never store your recovery phrase. The wallet and its recovery stay in your hands.';
+  String get settingsImportWalletDialogConfirm => 'We never store your recovery phrase. The wallet and its recovery stay in your hands.';
 
   @override
   String get settingsSetPinDialogTitle => 'Set app PIN';
@@ -2967,8 +2671,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsClearCacheDialogTitle => 'Clear cache';
 
   @override
-  String get settingsClearCacheDialogBody =>
-      'This will clear temporary files and may improve performance.';
+  String get settingsClearCacheDialogBody => 'This will clear temporary files and may improve performance.';
 
   @override
   String get settingsCacheClearedToast => 'Cache cleared successfully';
@@ -2977,12 +2680,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsClearButton => 'Clear';
 
   @override
-  String get settingsResetPermissionFlagsDialogTitle =>
-      'Reset permission flags';
+  String get settingsResetPermissionFlagsDialogTitle => 'Reset permission flags';
 
   @override
-  String get settingsResetPermissionFlagsDialogBody =>
-      'This will clear the app\'s stored permission and service request flags. Use this to re-trigger permission prompts if needed.';
+  String get settingsResetPermissionFlagsDialogBody => 'This will clear the app\'s stored permission and service request flags. Use this to re-trigger permission prompts if needed.';
 
   @override
   String get settingsPermissionFlagsResetToast => 'Permission flags reset';
@@ -2994,8 +2695,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsExportDataDialogTitle => 'Export data';
 
   @override
-  String get settingsExportDataDialogBody =>
-      'This will create a file with your app data (excluding private keys).';
+  String get settingsExportDataDialogBody => 'This will create a file with your app data (excluding private keys).';
 
   @override
   String settingsDataExportedToast(Object count) {
@@ -3009,51 +2709,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetAppDialogTitle => 'Reset app';
 
   @override
-  String get settingsResetAppDialogBody =>
-      'This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.';
+  String get settingsResetAppDialogBody => 'This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.';
 
   @override
-  String get settingsAppResetSuccessToast =>
-      'App reset successfully. Please restart the app.';
+  String get settingsAppResetSuccessToast => 'App reset successfully. Please restart the app.';
 
   @override
   String get settingsDeleteAccountDialogTitle => 'Delete account';
 
   @override
-  String get settingsDeleteAccountDialogBody =>
-      'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.';
+  String get settingsDeleteAccountDialogBody => 'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Final confirmation';
 
   @override
-  String get settingsDeleteAccountFinalConfirmationBody =>
-      'Are you absolutely sure you want to delete your account? This action cannot be undone.';
+  String get settingsDeleteAccountFinalConfirmationBody => 'Are you absolutely sure you want to delete your account? This action cannot be undone.';
 
   @override
   String get settingsConfirmButton => 'Confirm';
 
   @override
-  String get settingsDeleteAccountBackendFailedToast =>
-      'Backend deletion failed. Please try again.';
+  String get settingsDeleteAccountBackendFailedToast => 'Backend deletion failed. Please try again.';
 
   @override
-  String get settingsAccountDeletedToast =>
-      'Account deleted. All data has been removed.';
+  String get settingsAccountDeletedToast => 'Account deleted. All data has been removed.';
 
   @override
   String get settingsDeleteForeverButton => 'Delete forever';
 
   @override
-  String get settingsEnableNotificationsInSystemToast =>
-      'Enable notifications in system settings to receive alerts.';
+  String get settingsEnableNotificationsInSystemToast => 'Enable notifications in system settings to receive alerts.';
 
   @override
   String get settingsLogoutDialogTitle => 'Log out';
 
   @override
-  String get settingsLogoutDialogBody =>
-      'Disconnect your wallet and clear your session on this device?';
+  String get settingsLogoutDialogBody => 'Disconnect your wallet and clear your session on this device?';
 
   @override
   String get settingsLogoutButton => 'Log out';
@@ -3068,8 +2760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNoTransactionsTitle => 'No transactions found';
 
   @override
-  String get settingsNoTransactionsDescription =>
-      'Your transaction history will appear here when you start making transactions.';
+  String get settingsNoTransactionsDescription => 'Your transaction history will appear here when you start making transactions.';
 
   @override
   String get settingsTxReceivedLabel => 'Received';
@@ -3113,15 +2804,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTermsDialogTitle => 'Terms of service';
 
   @override
-  String get settingsTermsDialogBody =>
-      'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
+  String get settingsTermsDialogBody => 'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Privacy policy';
 
   @override
-  String get settingsPrivacyPolicyDialogBody =>
-      'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
+  String get settingsPrivacyPolicyDialogBody => 'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
 
   @override
   String get settingsSupportDialogTitle => 'Support';
@@ -3145,8 +2834,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLicensesDialogTitle => 'Open source licenses';
 
   @override
-  String get settingsLicensesDialogBody =>
-      'This app uses the following open source libraries:\n\n• Flutter SDK (BSD License)\n• Material Design Icons (Apache 2.0)\n• SharedPreferences (BSD License)\n• HTTP (BSD License)\n• Path Provider (BSD License)\n\nFull license texts are available in the app repository.';
+  String get settingsLicensesDialogBody => 'This app uses the following open source libraries:\n\n• Flutter SDK (BSD License)\n• Material Design Icons (Apache 2.0)\n• SharedPreferences (BSD License)\n• HTTP (BSD License)\n• Path Provider (BSD License)\n\nFull license texts are available in the app repository.';
 
   @override
   String get settingsRateAppDialogTitle => 'Rate art.kubus';
@@ -3155,8 +2843,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRateAppDialogBodyTitle => 'Enjoying the app?';
 
   @override
-  String get settingsRateAppDialogBodySubtitle =>
-      'Please consider rating us on the app store!';
+  String get settingsRateAppDialogBodySubtitle => 'Please consider rating us on the app store!';
 
   @override
   String get settingsMaybeLaterButton => 'Maybe later';
@@ -3189,12 +2876,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeactivateAccountDialogTitle => 'Deactivate account';
 
   @override
-  String get settingsDeactivateAccountDialogBodyTitle =>
-      'Are you sure you want to deactivate your account?';
+  String get settingsDeactivateAccountDialogBodyTitle => 'Are you sure you want to deactivate your account?';
 
   @override
-  String get settingsDeactivateAccountDialogBodySubtitle =>
-      'You can reactivate it later by logging in.';
+  String get settingsDeactivateAccountDialogBodySubtitle => 'You can reactivate it later by logging in.';
 
   @override
   String get settingsAccountDeactivatedToast => 'Account deactivated';
@@ -3217,29 +2902,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPrivacyDataCollectionTitle => 'Data collection';
 
   @override
-  String get settingsPrivacyDataCollectionSubtitle =>
-      'Allow app to collect usage data';
+  String get settingsPrivacyDataCollectionSubtitle => 'Allow app to collect usage data';
 
   @override
   String get settingsPrivacyPersonalizedAdsTitle => 'Personalized ads';
 
   @override
-  String get settingsPrivacyPersonalizedAdsSubtitle =>
-      'Show ads based on your interests';
+  String get settingsPrivacyPersonalizedAdsSubtitle => 'Show ads based on your interests';
 
   @override
   String get settingsPrivacyLocationTrackingTitle => 'Location tracking';
 
   @override
-  String get settingsPrivacyLocationTrackingSubtitle =>
-      'Allow location-based features';
+  String get settingsPrivacyLocationTrackingSubtitle => 'Allow location-based features';
 
   @override
   String get settingsPrivacyDataRetentionTitle => 'Data retention';
 
   @override
-  String get settingsPrivacyDataRetentionSubtitle =>
-      'How long to keep your data';
+  String get settingsPrivacyDataRetentionSubtitle => 'How long to keep your data';
 
   @override
   String get settingsRetention3Months => '3 months';
@@ -3266,8 +2947,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsChangePasswordTileTitle => 'Change password';
 
   @override
-  String get settingsChangePasswordTileSubtitle =>
-      'Update your account password';
+  String get settingsChangePasswordTileSubtitle => 'Update your account password';
 
   @override
   String get settingsTwoFactorTitle => 'Two-factor authentication';
@@ -3279,8 +2959,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSessionTimeoutTitle => 'Session timeout';
 
   @override
-  String get settingsSessionTimeoutSubtitle =>
-      'Automatically sign out when idle';
+  String get settingsSessionTimeoutSubtitle => 'Automatically sign out when idle';
 
   @override
   String get settingsAutoLockTimeTitle => 'Auto-lock time';
@@ -3292,12 +2971,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLoginNotificationsTitle => 'Login notifications';
 
   @override
-  String get settingsLoginNotificationsSubtitle =>
-      'Get notified of new sign-ins';
+  String get settingsLoginNotificationsSubtitle => 'Get notified of new sign-ins';
 
   @override
-  String get settingsSecuritySettingsUpdatedToast =>
-      'Security settings updated';
+  String get settingsSecuritySettingsUpdatedToast => 'Security settings updated';
 
   @override
   String get settingsAccountManagementDialogTitle => 'Account management';
@@ -3312,8 +2989,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPushNotificationsTitle => 'Push notifications';
 
   @override
-  String get settingsPushNotificationsSubtitle =>
-      'Get notifications on your device';
+  String get settingsPushNotificationsSubtitle => 'Get notifications on your device';
 
   @override
   String get settingsMarketingEmailsTitle => 'Marketing emails';
@@ -3325,169 +3001,136 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEmailPreferencesSectionTitle => 'Email preferences';
 
   @override
-  String get settingsEmailPreferencesTransactionalNote =>
-      'Critical account and wallet security emails are always enabled.';
+  String get settingsEmailPreferencesTransactionalNote => 'Critical account and wallet security emails are always enabled.';
 
   @override
   String get settingsEmailPreferencesProductUpdatesTitle => 'Product updates';
 
   @override
-  String get settingsEmailPreferencesProductUpdatesSubtitle =>
-      'Occasional announcements about new features';
+  String get settingsEmailPreferencesProductUpdatesSubtitle => 'Occasional announcements about new features';
 
   @override
   String get settingsEmailPreferencesNewsletterTitle => 'Newsletter';
 
   @override
-  String get settingsEmailPreferencesNewsletterSubtitle =>
-      'News and highlights from art.kubus';
+  String get settingsEmailPreferencesNewsletterSubtitle => 'News and highlights from art.kubus';
 
   @override
   String get settingsEmailPreferencesCommunityDigestTitle => 'Community digest';
 
   @override
-  String get settingsEmailPreferencesCommunityDigestSubtitle =>
-      'Periodic summary of community activity';
+  String get settingsEmailPreferencesCommunityDigestSubtitle => 'Periodic summary of community activity';
 
   @override
   String get settingsEmailPreferencesActivityArtTitle => 'Artwork activity';
 
   @override
-  String get settingsEmailPreferencesActivityArtSubtitle =>
-      'Updates about your artworks, collections, and related activity';
+  String get settingsEmailPreferencesActivityArtSubtitle => 'Updates about your artworks, collections, and related activity';
 
   @override
-  String get settingsEmailPreferencesActivityCommunityTitle =>
-      'Community activity';
+  String get settingsEmailPreferencesActivityCommunityTitle => 'Community activity';
 
   @override
-  String get settingsEmailPreferencesActivityCommunitySubtitle =>
-      'Replies, mentions, and updates from community spaces';
+  String get settingsEmailPreferencesActivityCommunitySubtitle => 'Replies, mentions, and updates from community spaces';
 
   @override
   String get settingsEmailPreferencesActivityDaoTitle => 'Governance activity';
 
   @override
-  String get settingsEmailPreferencesActivityDaoSubtitle =>
-      'Updates about governance review, proposals, and community participation';
+  String get settingsEmailPreferencesActivityDaoSubtitle => 'Updates about governance review, proposals, and community participation';
 
   @override
-  String get settingsEmailPreferencesActivityArtistHubTitle =>
-      'Artist Hub activity';
+  String get settingsEmailPreferencesActivityArtistHubTitle => 'Artist Hub activity';
 
   @override
-  String get settingsEmailPreferencesActivityArtistHubSubtitle =>
-      'Updates from Artist Hub features and workflows';
+  String get settingsEmailPreferencesActivityArtistHubSubtitle => 'Updates from Artist Hub features and workflows';
 
   @override
-  String get settingsEmailPreferencesActivityInstitutionHubTitle =>
-      'Institution Hub activity';
+  String get settingsEmailPreferencesActivityInstitutionHubTitle => 'Institution Hub activity';
 
   @override
-  String get settingsEmailPreferencesActivityInstitutionHubSubtitle =>
-      'Updates from Institution Hub features and collaborations';
+  String get settingsEmailPreferencesActivityInstitutionHubSubtitle => 'Updates from Institution Hub features and collaborations';
 
   @override
-  String get settingsEmailPreferencesActivityPromotionTitle =>
-      'Promotion activity';
+  String get settingsEmailPreferencesActivityPromotionTitle => 'Promotion activity';
 
   @override
-  String get settingsEmailPreferencesActivityPromotionSubtitle =>
-      'Status changes and lifecycle updates for your promotions';
+  String get settingsEmailPreferencesActivityPromotionSubtitle => 'Status changes and lifecycle updates for your promotions';
 
   @override
   String get settingsEmailPreferencesSecurityAlertsTitle => 'Security alerts';
 
   @override
-  String get settingsEmailPreferencesSecurityAlertsSubtitle =>
-      'Important account security notifications';
+  String get settingsEmailPreferencesSecurityAlertsSubtitle => 'Important account security notifications';
 
   @override
-  String get settingsEmailPreferencesCriticalAccountSecurityTitle =>
-      'Critical account security';
+  String get settingsEmailPreferencesCriticalAccountSecurityTitle => 'Critical account security';
 
   @override
-  String get settingsEmailPreferencesCriticalAccountSecuritySubtitle =>
-      'Account security alerts and suspicious activity notices (always on)';
+  String get settingsEmailPreferencesCriticalAccountSecuritySubtitle => 'Account security alerts and suspicious activity notices (always on)';
 
   @override
-  String get settingsEmailPreferencesCriticalWalletSecurityTitle =>
-      'Critical wallet security';
+  String get settingsEmailPreferencesCriticalWalletSecurityTitle => 'Critical wallet security';
 
   @override
-  String get settingsEmailPreferencesCriticalWalletSecuritySubtitle =>
-      'Wallet and custody security alerts (always on)';
+  String get settingsEmailPreferencesCriticalWalletSecuritySubtitle => 'Wallet and custody security alerts (always on)';
 
   @override
   String get settingsEmailPreferencesTransactionalTitle => 'Account emails';
 
   @override
-  String get settingsEmailPreferencesTransactionalSubtitle =>
-      'Transactional emails (verification, reset, and recovery) are always enabled';
+  String get settingsEmailPreferencesTransactionalSubtitle => 'Transactional emails (verification, reset, and recovery) are always enabled';
 
   @override
-  String get settingsEmailPreferencesUpdateFailedToast =>
-      'Could not update email preferences. Please try again.';
+  String get settingsEmailPreferencesUpdateFailedToast => 'Could not update email preferences. Please try again.';
 
   @override
   String get settingsInAppNotificationsMasterTitle => 'All app notifications';
 
   @override
-  String get settingsInAppNotificationsMasterSubtitle =>
-      'Master switch for in-app and push notification categories.';
+  String get settingsInAppNotificationsMasterSubtitle => 'Master switch for in-app and push notification categories.';
 
   @override
   String get settingsInAppNotificationsArtTitle => 'Art notifications';
 
   @override
-  String get settingsInAppNotificationsArtSubtitle =>
-      'In-app notifications for artwork activity and achievements.';
+  String get settingsInAppNotificationsArtSubtitle => 'In-app notifications for artwork activity and achievements.';
 
   @override
-  String get settingsInAppNotificationsCommunityTitle =>
-      'Community notifications';
+  String get settingsInAppNotificationsCommunityTitle => 'Community notifications';
 
   @override
-  String get settingsInAppNotificationsCommunitySubtitle =>
-      'In-app notifications for comments, likes, follows, and shares.';
+  String get settingsInAppNotificationsCommunitySubtitle => 'In-app notifications for comments, likes, follows, and shares.';
 
   @override
   String get settingsInAppNotificationsDaoTitle => 'Governance notifications';
 
   @override
-  String get settingsInAppNotificationsDaoSubtitle =>
-      'In-app notifications for governance review and platform decisions.';
+  String get settingsInAppNotificationsDaoSubtitle => 'In-app notifications for governance review and platform decisions.';
 
   @override
-  String get settingsInAppNotificationsArtistHubTitle =>
-      'Artist hub notifications';
+  String get settingsInAppNotificationsArtistHubTitle => 'Artist hub notifications';
 
   @override
-  String get settingsInAppNotificationsArtistHubSubtitle =>
-      'In-app notifications for artist workflow and studio updates.';
+  String get settingsInAppNotificationsArtistHubSubtitle => 'In-app notifications for artist workflow and studio updates.';
 
   @override
-  String get settingsInAppNotificationsInstitutionHubTitle =>
-      'Institution hub notifications';
+  String get settingsInAppNotificationsInstitutionHubTitle => 'Institution hub notifications';
 
   @override
-  String get settingsInAppNotificationsInstitutionHubSubtitle =>
-      'In-app notifications for institution workflow and review updates.';
+  String get settingsInAppNotificationsInstitutionHubSubtitle => 'In-app notifications for institution workflow and review updates.';
 
   @override
   String get settingsInAppNotificationsAccountTitle => 'Account notifications';
 
   @override
-  String get settingsInAppNotificationsAccountSubtitle =>
-      'In-app notifications for security, access, and account updates.';
+  String get settingsInAppNotificationsAccountSubtitle => 'In-app notifications for security, access, and account updates.';
 
   @override
-  String get settingsInAppNotificationsPromotionTitle =>
-      'Promotion notifications';
+  String get settingsInAppNotificationsPromotionTitle => 'Promotion notifications';
 
   @override
-  String get settingsInAppNotificationsPromotionSubtitle =>
-      'In-app notifications for promotion outcomes and upcoming campaign milestones.';
+  String get settingsInAppNotificationsPromotionSubtitle => 'In-app notifications for promotion outcomes and upcoming campaign milestones.';
 
   @override
   String get settingsAccountTypeTitle => 'Account type';
@@ -3508,8 +3151,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPublicProfileTitle => 'Public profile';
 
   @override
-  String get settingsPublicProfileSubtitle =>
-      'Allow others to find your profile';
+  String get settingsPublicProfileSubtitle => 'Allow others to find your profile';
 
   @override
   String get settingsProfilePrivacySectionTitle => 'Profile privacy';
@@ -3518,44 +3160,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPrivateProfileTitle => 'Private profile';
 
   @override
-  String get settingsPrivateProfileSubtitle =>
-      'Only approved followers can see your posts';
+  String get settingsPrivateProfileSubtitle => 'Only approved followers can see your posts';
 
   @override
   String get settingsShowActivityStatusTitle => 'Show activity status';
 
   @override
-  String get settingsShowActivityStatusSubtitle =>
-      'Let others see when you\'re online';
+  String get settingsShowActivityStatusSubtitle => 'Let others see when you\'re online';
 
   @override
-  String get settingsShareLastVisitedLocationTitle =>
-      'Share last visited location';
+  String get settingsShareLastVisitedLocationTitle => 'Share last visited location';
 
   @override
-  String get settingsShareLastVisitedLocationSubtitle =>
-      'Let others see what you last visited';
+  String get settingsShareLastVisitedLocationSubtitle => 'Let others see what you last visited';
 
   @override
-  String get settingsShowCollectionTitle => 'Show cultural artifacts';
+  String get settingsShowCollectionTitle => 'Show digital editions';
 
   @override
-  String get settingsShowCollectionSubtitle =>
-      'Show your digital cultural artifacts publicly on your profile';
+  String get settingsShowCollectionSubtitle => 'Show your digital editions publicly on your profile';
 
   @override
   String get settingsAllowMessagesTitle => 'Allow messages';
 
   @override
-  String get settingsAllowMessagesSubtitle =>
-      'Receive direct messages from others';
+  String get settingsAllowMessagesSubtitle => 'Receive direct messages from others';
 
   @override
   String get settingsDeactivateAccountTileTitle => 'Deactivate account';
 
   @override
-  String get settingsDeactivateAccountTileSubtitle =>
-      'Temporarily disable your account';
+  String get settingsDeactivateAccountTileSubtitle => 'Temporarily disable your account';
 
   @override
   String get settingsAccountSettingsUpdatedToast => 'Account settings updated';
@@ -3587,8 +3222,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP1Title => 'Community governance';
 
   @override
-  String get web3DaoP1Description =>
-      'Take part in experimental community decision-making that helps shape art.kubus. It is participation infrastructure, not a financial product.';
+  String get web3DaoP1Description => 'Take part in experimental community decision-making that helps shape art.kubus. It is participation infrastructure, not a financial product.';
 
   @override
   String get web3DaoP1Feature1 => 'Review community proposals';
@@ -3606,8 +3240,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP2Title => 'Participation signals';
 
   @override
-  String get web3DaoP2Description =>
-      'Participation signals can reflect Season 0 recognition. They acknowledge contribution and visibility, not financial value.';
+  String get web3DaoP2Description => 'Participation signals can reflect Season 0 recognition. They acknowledge contribution and visibility, not financial value.';
 
   @override
   String get web3DaoP2Feature1 => 'Signals can follow KUB8 recognition';
@@ -3625,8 +3258,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP3Title => 'Submit community proposals';
 
   @override
-  String get web3DaoP3Description =>
-      'Have an idea for the platform or community? Submit a proposal with clear context, goals, and impact.';
+  String get web3DaoP3Description => 'Have an idea for the platform or community? Submit a proposal with clear context, goals, and impact.';
 
   @override
   String get web3DaoP3Feature1 => 'Write clear proposals with context';
@@ -3644,8 +3276,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP4Title => 'Ready to contribute';
 
   @override
-  String get web3DaoP4Description =>
-      'Review proposals, follow the discussion, and participate when you are ready.';
+  String get web3DaoP4Description => 'Review proposals, follow the discussion, and participate when you are ready.';
 
   @override
   String get web3DaoP4Feature1 => 'Browse and vote on proposals';
@@ -3663,8 +3294,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP1Title => 'Welcome to artist studio';
 
   @override
-  String get web3ArtistStudioP1Description =>
-      'Your workspace for managing artworks, creating AR markers, and tracking your progress.';
+  String get web3ArtistStudioP1Description => 'Your workspace for managing artworks, creating AR markers, and tracking your progress.';
 
   @override
   String get web3ArtistStudioP1Feature1 => 'Manage your artwork collection';
@@ -3676,15 +3306,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP1Feature3 => 'Track performance insights';
 
   @override
-  String get web3ArtistStudioP1Feature4 =>
-      'Showcase and share with the community';
+  String get web3ArtistStudioP1Feature4 => 'Showcase and share with the community';
 
   @override
   String get web3ArtistStudioP2Title => 'Artwork gallery';
 
   @override
-  String get web3ArtistStudioP2Description =>
-      'Present artworks and digital cultural artifacts. Upload, organize, and describe your practice.';
+  String get web3ArtistStudioP2Description => 'Present artworks and digital editions. Upload, organise and describe your practice.';
 
   @override
   String get web3ArtistStudioP2Feature1 => 'Upload and organize artworks';
@@ -3702,8 +3330,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP3Title => 'AR marker creator';
 
   @override
-  String get web3ArtistStudioP3Description =>
-      'Turn artworks into AR experiences. Place markers in real-world locations for others to discover.';
+  String get web3ArtistStudioP3Description => 'Turn artworks into AR experiences. Place markers in real-world locations for others to discover.';
 
   @override
   String get web3ArtistStudioP3Feature1 => 'Create geo-located markers';
@@ -3721,8 +3348,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP4Title => 'Insights dashboard';
 
   @override
-  String get web3ArtistStudioP4Description =>
-      'Track performance with insights on views, discoveries, and community engagement.';
+  String get web3ArtistStudioP4Description => 'Track performance with insights on views, discoveries, and community engagement.';
 
   @override
   String get web3ArtistStudioP4Feature1 => 'Monitor artwork performance';
@@ -3740,8 +3366,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP5Title => 'Start creating';
 
   @override
-  String get web3ArtistStudioP5Description =>
-      'Your studio is ready. Upload your first artwork or create an AR marker to share with the community.';
+  String get web3ArtistStudioP5Description => 'Your studio is ready. Upload your first artwork or create an AR marker to share with the community.';
 
   @override
   String get web3ArtistStudioP5Feature1 => 'Upload your first artwork';
@@ -3759,8 +3384,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP1Title => 'Welcome to institution hub';
 
   @override
-  String get web3InstitutionHubP1Description =>
-      'Manage events, exhibitions, and educational programs. Connect your institution with the art community.';
+  String get web3InstitutionHubP1Description => 'Manage events, exhibitions, and educational programs. Connect your institution with the art community.';
 
   @override
   String get web3InstitutionHubP1Feature1 => 'Create and manage events';
@@ -3778,12 +3402,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP2Title => 'Event management';
 
   @override
-  String get web3InstitutionHubP2Description =>
-      'Organize exhibitions, workshops, and events. Manage scheduling, registrations, and updates.';
+  String get web3InstitutionHubP2Description => 'Organize exhibitions, workshops, and events. Manage scheduling, registrations, and updates.';
 
   @override
-  String get web3InstitutionHubP2Feature1 =>
-      'Schedule exhibitions and workshops';
+  String get web3InstitutionHubP2Feature1 => 'Schedule exhibitions and workshops';
 
   @override
   String get web3InstitutionHubP2Feature2 => 'Manage registrations';
@@ -3798,8 +3420,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP3Title => 'Event creation tools';
 
   @override
-  String get web3InstitutionHubP3Description =>
-      'Create event pages with rich descriptions and media to help people join.';
+  String get web3InstitutionHubP3Description => 'Create event pages with rich descriptions and media to help people join.';
 
   @override
   String get web3InstitutionHubP3Feature1 => 'Design event pages with media';
@@ -3817,8 +3438,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP4Title => 'Analytics & insights';
 
   @override
-  String get web3InstitutionHubP4Description =>
-      'Measure success with insights on attendance, engagement, and community impact.';
+  String get web3InstitutionHubP4Description => 'Measure success with insights on attendance, engagement, and community impact.';
 
   @override
   String get web3InstitutionHubP4Feature1 => 'Track attendance and engagement';
@@ -3836,8 +3456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP5Title => 'Launch your events';
 
   @override
-  String get web3InstitutionHubP5Description =>
-      'Ready to connect with the art community? Create your first event or explore ongoing exhibitions.';
+  String get web3InstitutionHubP5Description => 'Ready to connect with the art community? Create your first event or explore ongoing exhibitions.';
 
   @override
   String get web3InstitutionHubP5Feature1 => 'Create your first event';
@@ -3867,8 +3486,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubTabAnalytics => 'Analytics';
 
   @override
-  String get institutionHubSeparateWalletsTip =>
-      'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.';
+  String get institutionHubSeparateWalletsTip => 'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.';
 
   @override
   String get institutionHubApplyForReviewAction => 'Apply for review';
@@ -3877,30 +3495,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubArtistBadgeActiveTitle => 'Artist badge active';
 
   @override
-  String get institutionHubArtistBadgeActiveDescription =>
-      'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.';
+  String get institutionHubArtistBadgeActiveDescription => 'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.';
 
   @override
-  String get institutionHubArtistReviewInProgressTitle =>
-      'Artist review in progress';
+  String get institutionHubArtistReviewInProgressTitle => 'Artist review in progress';
 
   @override
-  String get institutionHubArtistReviewInProgressDescription =>
-      'You have an active artist application. Wait for that decision or reset it before continuing as an institution.';
+  String get institutionHubArtistReviewInProgressDescription => 'You have an active artist application. Wait for that decision or reset it before continuing as an institution.';
 
   @override
   String get institutionHubApplicationTitle => 'Institution application';
 
   @override
-  String get institutionHubApplicationSubtitle =>
-      'Share your mission, programming focus, and how you plan to collaborate with the community.';
+  String get institutionHubApplicationSubtitle => 'Share your mission, programming focus, and how you plan to collaborate with the community.';
 
   @override
   String get institutionHubApplicationOrganizationLabel => 'Organization name';
 
   @override
-  String get institutionHubApplicationContactLabel =>
-      'Website or contact email';
+  String get institutionHubApplicationContactLabel => 'Website or contact email';
 
   @override
   String get institutionHubApplicationFocusLabel => 'Curation focus';
@@ -3909,32 +3522,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubApplicationMissionLabel => 'Mission and goals';
 
   @override
-  String get institutionHubApplicationOrganizationRequired =>
-      'Please provide your organization name.';
+  String get institutionHubApplicationOrganizationRequired => 'Please provide your organization name.';
 
   @override
-  String get institutionHubApplicationContactRequired =>
-      'Share a website or contact email.';
+  String get institutionHubApplicationContactRequired => 'Share a website or contact email.';
 
   @override
-  String get institutionHubApplicationFocusRequired =>
-      'Let us know your programming focus.';
+  String get institutionHubApplicationFocusRequired => 'Let us know your programming focus.';
 
   @override
-  String get institutionHubApplicationMissionRequired =>
-      'Describe your mission in at least 20 characters.';
+  String get institutionHubApplicationMissionRequired => 'Describe your mission in at least 20 characters.';
 
   @override
-  String get institutionHubApplicationWalletRequired =>
-      'Connect a wallet before submitting.';
+  String get institutionHubApplicationWalletRequired => 'Connect a wallet before submitting.';
 
   @override
-  String get institutionHubApplicationSubmittedToast =>
-      'Application submitted for governance review.';
+  String get institutionHubApplicationSubmittedToast => 'Application submitted for governance review.';
 
   @override
-  String get institutionHubApplicationSubmitUnavailableToast =>
-      'Unable to submit application right now.';
+  String get institutionHubApplicationSubmitUnavailableToast => 'Unable to submit application right now.';
 
   @override
   String institutionHubApplicationSubmitFailedToast(Object error) {
@@ -3948,20 +3554,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubCrossRoleConflictTitle => 'Role conflict detected';
 
   @override
-  String get institutionHubArtistWalletSwitchDescription =>
-      'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.';
+  String get institutionHubArtistWalletSwitchDescription => 'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.';
 
   @override
-  String get institutionHubArtistReviewPendingResetDescription =>
-      'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.';
+  String get institutionHubArtistReviewPendingResetDescription => 'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.';
 
   @override
-  String get institutionHubArtistSubmissionConflictDescription =>
-      'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
+  String get institutionHubArtistSubmissionConflictDescription => 'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
 
   @override
-  String get institutionHubApplicationCardSubtitle =>
-      'Submit your organization for governance review and unlock institutional tooling.';
+  String get institutionHubApplicationCardSubtitle => 'Submit your organization for governance review and unlock institutional tooling.';
 
   @override
   String get institutionHubDaoStatusApproved => 'APPROVED';
@@ -3988,30 +3590,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubCtaConnectWalletToApply => 'Connect wallet to apply';
 
   @override
-  String get institutionHubDaoStatusSyncedLabel =>
-      'Status synced from governance review';
+  String get institutionHubDaoStatusSyncedLabel => 'Status synced from governance review';
 
   @override
-  String get institutionHubDaoReviewQueueMessage =>
-      'Your submission is in the governance review queue.';
+  String get institutionHubDaoReviewQueueMessage => 'Your submission is in the governance review queue.';
 
   @override
-  String get institutionHubApprovedToolsMessage =>
-      'Congratulations! Approved for institution tools.';
+  String get institutionHubApprovedToolsMessage => 'Congratulations! Approved for institution tools.';
 
   @override
-  String get institutionHubRejectedResubmitMessage =>
-      'Your last submission was rejected. You can resubmit with updates.';
+  String get institutionHubRejectedResubmitMessage => 'Your last submission was rejected. You can resubmit with updates.';
 
   @override
-  String get web3MarketplaceP1Title => 'Digital cultural artifacts';
+  String get web3MarketplaceP1Title => 'Digital editions';
 
   @override
-  String get web3MarketplaceP1Description =>
-      'Archive records and digital editions connect artworks with provenance, visits and cultural memory.';
+  String get web3MarketplaceP1Description => 'Digital editions connect artworks with provenance.';
 
   @override
-  String get web3MarketplaceP1Feature1 => 'Browse cultural artifacts';
+  String get web3MarketplaceP1Feature1 => 'Browse digital editions';
 
   @override
   String get web3MarketplaceP1Feature2 => 'See artist and artwork context';
@@ -4026,8 +3623,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP2Title => 'Discover with context';
 
   @override
-  String get web3MarketplaceP2Description =>
-      'Explore artifacts through artists, institutions, exhibitions, and public-space stories instead of trading hype.';
+  String get web3MarketplaceP2Description => 'Explore digital editions through artists, institutions, exhibitions and public-space stories.';
 
   @override
   String get web3MarketplaceP2Feature1 => 'Filter by category and rarity';
@@ -4045,8 +3641,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP3Title => 'Support artists carefully';
 
   @override
-  String get web3MarketplaceP3Description =>
-      'When enabled, offers and listings support artist projects and cultural archiving. They are not the core app experience.';
+  String get web3MarketplaceP3Description => 'When enabled, offers and listings support artist projects and cultural archiving. They are not the core app experience.';
 
   @override
   String get web3MarketplaceP3Feature1 => 'Upload your digital artwork';
@@ -4064,8 +3659,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP4Title => 'Digital editions';
 
   @override
-  String get web3MarketplaceP4Description =>
-      'Collecting is a supporting layer. You can use art.kubus for discovery, community, and cultural access without collecting.';
+  String get web3MarketplaceP4Description => 'Collecting is a supporting layer. You can use art.kubus for discovery, community, and cultural access without collecting.';
 
   @override
   String get web3MarketplaceP4Feature1 => 'Explore featured collections';
@@ -4083,15 +3677,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP1Title => 'Wallet account';
 
   @override
-  String get web3FeaturesP1Description =>
-      'A wallet can support long-term access, attribution, digital ownership, and future participation. Basic discovery and community do not start with Wallet.';
+  String get web3FeaturesP1Description => 'A wallet can support long-term access, attribution, digital ownership, and future participation. Basic discovery and community do not start with Wallet.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Long-term account continuity';
 
   @override
-  String get web3FeaturesP1Feature2 =>
-      'Digital editions, visit proofs, and future rights research';
+  String get web3FeaturesP1Feature2 => 'Digital editions, visit proofs, and future rights research';
 
   @override
   String get web3FeaturesP1Feature3 => 'Keys stay with you';
@@ -4103,11 +3695,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP2Title => 'Digital edition catalog';
 
   @override
-  String get web3FeaturesP2Description =>
-      'Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.';
+  String get web3FeaturesP2Description => 'Browse digital editions connected to artists, artworks, institutions and provenance.';
 
   @override
-  String get web3FeaturesP2Feature1 => 'Browse featured cultural artifacts';
+  String get web3FeaturesP2Feature1 => 'Browse featured digital editions';
 
   @override
   String get web3FeaturesP2Feature2 => 'Search by artist, artwork, or context';
@@ -4125,8 +3716,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP3Title => 'Artist studio';
 
   @override
-  String get web3FeaturesP3Description =>
-      'Create and manage artworks, build your portfolio, and publish digital editions when a project calls for them.';
+  String get web3FeaturesP3Description => 'Create and manage artworks, build your portfolio, and publish digital editions when a project calls for them.';
 
   @override
   String get web3FeaturesP3Feature1 => 'Upload and organize artworks';
@@ -4147,8 +3737,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP4Title => 'Future community governance';
 
   @override
-  String get web3FeaturesP4Description =>
-      'Governance is developing as a transparent way for the community to help shape platform priorities. It is not required for discovery.';
+  String get web3FeaturesP4Description => 'Governance is developing as a transparent way for the community to help shape platform priorities. It is not required for discovery.';
 
   @override
   String get web3FeaturesP4Feature1 => 'Review proposals';
@@ -4169,8 +3758,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP5Title => 'Institution hub';
 
   @override
-  String get web3FeaturesP5Description =>
-      'Work with galleries and cultural institutions on events, exhibitions, and longer-term programs.';
+  String get web3FeaturesP5Description => 'Work with galleries and cultural institutions on events, exhibitions, and longer-term programs.';
 
   @override
   String get web3FeaturesP5Feature1 => 'Partner with verified institutions';
@@ -4191,23 +3779,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP6Title => 'Contribution recognition';
 
   @override
-  String get web3FeaturesP6Description =>
-      'KUB8 records Season 0 participation and recognition. They are not money, not a tradable asset, and not a live payment promise.';
+  String get web3FeaturesP6Description => 'KUB8 records Season 0 participation and recognition. They are not money, not a tradable asset, and not a live payment promise.';
 
   @override
   String get web3FeaturesP6Feature1 => 'Record participation and discoveries';
 
   @override
-  String get web3FeaturesP6Feature2 =>
-      'Track contribution progress over the season';
+  String get web3FeaturesP6Feature2 => 'Track contribution progress over the season';
 
   @override
-  String get web3FeaturesP6Feature3 =>
-      'Unlock badges and community recognition';
+  String get web3FeaturesP6Feature3 => 'Unlock badges and community recognition';
 
   @override
-  String get web3FeaturesP6Feature4 =>
-      'Recognition comes through access and visibility';
+  String get web3FeaturesP6Feature4 => 'Recognition comes through access and visibility';
 
   @override
   String get web3FeaturesP6Feature5 => 'Non-transferable participation records';
@@ -4279,8 +3863,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeStatusTravelling => 'You are travelling';
 
   @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Travel mode is on - showing markers in view';
+  String get mapTravelModeStatusTravellingTooltip => 'Travel mode is on - showing markers in view';
 
   @override
   String get mapArArtworkNearbyTitle => 'Artwork nearby';
@@ -4297,27 +3880,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerCreatedToast => 'Marker created successfully!';
 
   @override
-  String get mapMarkerCreateFailedToast =>
-      'Failed to create marker. Please try again.';
+  String get mapMarkerCreateFailedToast => 'Failed to create marker. Please try again.';
 
   @override
-  String get mapLocationUnavailableToast =>
-      'Unable to determine your location.';
+  String get mapLocationUnavailableToast => 'Unable to determine your location.';
 
   @override
-  String get mapTargetMarkerUnavailableToast =>
-      'No map marker is available for this item. Showing its saved location instead.';
+  String get mapTargetMarkerUnavailableToast => 'No map marker is available for this item. Showing its saved location instead.';
 
   @override
   String get mapTargetNotFoundToast => 'This item is not available on the map.';
 
   @override
-  String get mapMarkerCreateWalletRequired =>
-      'Create a profile and Wallet access before placing a marker tied to your own artwork.';
+  String get mapMarkerCreateWalletRequired => 'Create a profile and Wallet access before placing a marker tied to your own artwork.';
 
   @override
-  String get mapMarkerCreateNoArArtworks =>
-      'No map-ready artworks are linked to this account yet. Create an artwork first, then place it on the open art map.';
+  String get mapMarkerCreateNoArArtworks => 'No map-ready artworks are linked to this account yet. Create an artwork first, then place it on the open art map.';
 
   @override
   String get mapMarkerDialogTitle => 'Add to open art map';
@@ -4326,8 +3904,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogRefreshSubjectsTooltip => 'Refresh subjects';
 
   @override
-  String get mapMarkerDialogAttachHint =>
-      'Attach an existing artwork, institution, exhibition, or AR asset to this location.';
+  String get mapMarkerDialogAttachHint => 'Attach an existing artwork, institution, exhibition, or AR asset to this location.';
 
   @override
   String get mapMarkerDialogSubjectTypeLabel => 'Subject type';
@@ -4348,15 +3925,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mapMarkerDialogMiscHint =>
-      'Misc markers do not need a linked subject. Provide a custom title and description below.';
+  String get mapMarkerDialogMiscHint => 'Misc markers do not need a linked subject. Provide a custom title and description below.';
 
   @override
   String get mapMarkerDialogLinkedArAssetTitle => 'Linked AR asset';
 
   @override
-  String get mapMarkerDialogNoArEnabledArtworksHint =>
-      'No AR-enabled artworks available. Create one first.';
+  String get mapMarkerDialogNoArEnabledArtworksHint => 'No AR-enabled artworks available. Create one first.';
 
   @override
   String get mapMarkerDialogMarkerTitleLabel => 'Marker title *';
@@ -4374,8 +3949,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogPublicMarkerTitle => 'Public cultural marker';
 
   @override
-  String get mapMarkerDialogPublicMarkerSubtitle =>
-      'Visible to all explorers on the map';
+  String get mapMarkerDialogPublicMarkerSubtitle => 'Visible to all explorers on the map';
 
   @override
   String get mapMarkerDialogLatitudeLabel => 'Latitude *';
@@ -4390,12 +3964,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogCreateButton => 'Create marker';
 
   @override
-  String get mapMarkerDialogSelectSubjectToast =>
-      'Select a subject to continue';
+  String get mapMarkerDialogSelectSubjectToast => 'Select a subject to continue';
 
   @override
-  String get mapMarkerDialogSelectArArtworkToast =>
-      'Select an AR-enabled artwork to link';
+  String get mapMarkerDialogSelectArArtworkToast => 'Select an AR-enabled artwork to link';
 
   @override
   String get mapMarkerDialogEnterTitleError => 'Please enter a title';
@@ -4406,8 +3978,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mapMarkerDialogEnterDescriptionError =>
-      'Please enter a description';
+  String get mapMarkerDialogEnterDescriptionError => 'Please enter a description';
 
   @override
   String mapMarkerDialogDescriptionMinLengthError(Object min) {
@@ -4421,8 +3992,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogValidLongitudeError => 'Enter a valid longitude';
 
   @override
-  String get mapMarkerDialogStreetArtHint =>
-      'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.';
+  String get mapMarkerDialogStreetArtHint => 'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.';
 
   @override
   String get mapMarkerDialogCoverImageTitle => 'Cover image *';
@@ -4437,12 +4007,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogRemoveCoverTooltip => 'Remove cover';
 
   @override
-  String get mapMarkerDialogStreetArtCoverRequiredHint =>
-      'Street art markers require a cover image.';
+  String get mapMarkerDialogStreetArtCoverRequiredHint => 'Street art markers require a cover image.';
 
   @override
-  String get mapMarkerDialogStreetArtCoverRequiredError =>
-      'Add a cover image for this street art marker.';
+  String get mapMarkerDialogStreetArtCoverRequiredError => 'Add a cover image for this street art marker.';
 
   @override
   String get mapMarkerDialogAttributionSectionTitle => 'Attribution';
@@ -4460,8 +4028,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogImageAuthorHint => 'Who took the photo?';
 
   @override
-  String get mapMarkerDialogImageAuthorRequiredError =>
-      'Photo author is required for street art.';
+  String get mapMarkerDialogImageAuthorRequiredError => 'Photo author is required for street art.';
 
   @override
   String get mapMarkerDialogImageLicenseLabel => 'Photo license';
@@ -4470,8 +4037,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogImageLicenseHint => 'e.g. CC BY-SA 4.0';
 
   @override
-  String get mapMarkerDialogImageLicenseRequiredError =>
-      'Photo license is required for street art.';
+  String get mapMarkerDialogImageLicenseRequiredError => 'Photo license is required for street art.';
 
   @override
   String get markerAttributionArtistLabel => 'Artist';
@@ -4537,19 +4103,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimNoteLabel => 'Note (optional)';
 
   @override
-  String get mapMarkerClaimSubmittedToast =>
-      'Street art ownership request submitted.';
+  String get mapMarkerClaimSubmittedToast => 'Street art ownership request submitted.';
 
   @override
   String get mapMarkerClaimActionSuccessToast => 'Claim updated.';
 
   @override
-  String get mapMarkerClaimNotEligibleToast =>
-      'Only verified artists can submit ownership requests.';
+  String get mapMarkerClaimNotEligibleToast => 'Only verified artists can submit ownership requests.';
 
   @override
-  String get mapMarkerClaimAlreadyActiveToast =>
-      'You already have an active request for this marker.';
+  String get mapMarkerClaimAlreadyActiveToast => 'You already have an active request for this marker.';
 
   @override
   String mapMarkerClaimReasonMinError(Object min) {
@@ -4560,8 +4123,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimStatusPendingOwnerReview => 'Pending owner review';
 
   @override
-  String get mapMarkerClaimStatusPendingDaoReview =>
-      'Pending governance review';
+  String get mapMarkerClaimStatusPendingDaoReview => 'Pending governance review';
 
   @override
   String get mapMarkerClaimStatusApproved => 'Approved';
@@ -4773,90 +4335,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapResetBearingTooltip => 'Point north';
 
   @override
-  String get mapExhibitionsUnavailableToast =>
-      'Exhibitions are currently unavailable.';
+  String get mapExhibitionsUnavailableToast => 'Exhibitions are currently unavailable.';
 
   @override
   String get mapTutorialStepMapTitle => 'Open art map';
 
   @override
-  String get mapTutorialStepMapBody =>
-      'Discover public-space art, exhibitions, institutions, and artist stories on a community-generated cultural map.';
+  String get mapTutorialStepMapBody => 'Discover public-space art, exhibitions, institutions, and artist stories on a community-generated cultural map.';
 
   @override
   String get mapTutorialStepMarkersTitle => 'Cultural markers';
 
   @override
-  String get mapTutorialStepMarkersBody =>
-      'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what\'s what.';
+  String get mapTutorialStepMarkersBody => 'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what\'s what.';
 
   @override
   String get mapTutorialStepCreateMarkerTitle => 'Add a marker';
 
   @override
-  String get mapTutorialStepCreateMarkerBody =>
-      'Tap this to add a marker at the current location (or the last long-press point).';
+  String get mapTutorialStepCreateMarkerBody => 'Tap this to add a marker at the current location (or the last long-press point).';
 
   @override
   String get mapTutorialStepNearbyTitle => 'Nearby art and places';
 
   @override
-  String get mapTutorialStepNearbyBody =>
-      'Browse artworks near you. The list updates as you move and as filters change.';
+  String get mapTutorialStepNearbyBody => 'Browse artworks near you. The list updates as you move and as filters change.';
 
   @override
-  String get mapTutorialStepNearbyDesktopBody =>
-      'Open the Nearby panel to browse results near your current area and see details faster.';
+  String get mapTutorialStepNearbyDesktopBody => 'Open the Nearby panel to browse results near your current area and see details faster.';
 
   @override
   String get mapTutorialStepTypesTitle => 'Marker types';
 
   @override
-  String get mapTutorialStepTypesDesktopBody =>
-      'Use these chips to quickly focus on a category (artworks, events, institutions…).';
+  String get mapTutorialStepTypesDesktopBody => 'Use these chips to quickly focus on a category (artworks, events, institutions…).';
 
   @override
   String get mapTutorialStepFiltersTitle => 'Filters';
 
   @override
-  String get mapTutorialStepFiltersBody =>
-      'Use filters to narrow down what you see on the map and in the list.';
+  String get mapTutorialStepFiltersBody => 'Use filters to narrow down what you see on the map and in the list.';
 
   @override
-  String get mapTutorialStepFiltersDesktopBody =>
-      'Open the Filters panel to refine results (type, distance, discovery status, and more).';
+  String get mapTutorialStepFiltersDesktopBody => 'Open the Filters panel to refine results (type, distance, discovery status, and more).';
 
   @override
   String get mapTutorialStepTravelTitle => 'Travel mode';
 
   @override
-  String get mapTutorialStepTravelBody =>
-      'Travel mode loads markers for the visible map area so you can explore anywhere.';
+  String get mapTutorialStepTravelBody => 'Travel mode loads markers for the visible map area so you can explore anywhere.';
 
   @override
   String get mapTutorialStepRecenterTitle => 'Recenter';
 
   @override
-  String get mapTutorialStepRecenterBody =>
-      'Tap to jump back to your location and keep following you.';
+  String get mapTutorialStepRecenterBody => 'Tap to jump back to your location and keep following you.';
 
   @override
   String get mapTutorialStepSearchTitle => 'Search';
 
   @override
-  String get mapTutorialStepSearchBody =>
-      'Search for artworks, artists, institutions, or places to jump to them quickly.';
+  String get mapTutorialStepSearchBody => 'Search for artworks, artists, institutions, or places to jump to them quickly.';
 
   @override
   String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
 
   @override
-  String get mapTravelModeTutorialBody =>
-      'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.';
+  String get mapTravelModeTutorialBody => 'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.';
 
   @override
-  String get mapTravelModeTutorialHint =>
-      'Tip: Pan and zoom - markers refresh to match the viewport.';
+  String get mapTravelModeTutorialHint => 'Tip: Pan and zoom - markers refresh to match the viewport.';
 
   @override
   String get mapTravelModeTutorialGotIt => 'Got it';
@@ -4876,8 +4424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapEmptyNoArtworksTitle => 'No nearby cultural markers';
 
   @override
-  String get mapEmptyNoArtworksDescription =>
-      'Explore different areas or adjust your filters to discover art around you.';
+  String get mapEmptyNoArtworksDescription => 'Explore different areas or adjust your filters to discover art around you.';
 
   @override
   String get mapEmptyZoomOutAction => 'Zoom out';
@@ -4886,8 +4433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapEmptyAdjustFiltersAction => 'Adjust filters';
 
   @override
-  String get mapNoLinkedArtworkForMarker =>
-      'No linked artwork found for this marker yet.';
+  String get mapNoLinkedArtworkForMarker => 'No linked artwork found for this marker yet.';
 
   @override
   String get mapCreateMarkerHereTooltip => 'Create marker here';
@@ -4905,8 +4451,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonGetDirections => 'Get directions';
 
   @override
-  String get desktopMapNoArAssetToast =>
-      'No AR asset available for this artwork.';
+  String get desktopMapNoArAssetToast => 'No AR asset available for this artwork.';
 
   @override
   String get desktopMapArtworkTypeTitle => 'Artwork type';
@@ -4915,7 +4460,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopMapArtworkTypeArArt => 'AR art';
 
   @override
-  String get desktopMapArtworkTypeNfts => 'Archive records';
+  String get desktopMapArtworkTypeNfts => 'Digital editions';
 
   @override
   String get desktopMapArtworkTypeModels3d => '3D models';
@@ -5001,8 +4546,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arWebFallbackFeature => 'AR experience';
 
   @override
-  String get arWebFallbackDescription =>
-      'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.';
+  String get arWebFallbackDescription => 'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.';
 
   @override
   String get arModeScanName => 'Scan';
@@ -5017,20 +4561,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arModeCreateName => 'Create';
 
   @override
-  String get arModeScanDescription =>
-      'Scan AR markers to discover artworks around you.';
+  String get arModeScanDescription => 'Scan AR markers to discover artworks around you.';
 
   @override
-  String get arModePlaceDescription =>
-      'Place digital artworks into your space.';
+  String get arModePlaceDescription => 'Place digital artworks into your space.';
 
   @override
-  String get arModeViewDescription =>
-      'View your placed artworks and revisit them.';
+  String get arModeViewDescription => 'View your placed artworks and revisit them.';
 
   @override
-  String get arModeCreateDescription =>
-      'Create and experiment with AR placements.';
+  String get arModeCreateDescription => 'Create and experiment with AR placements.';
 
   @override
   String arMarkerNearbyToast(Object name) {
@@ -5050,15 +4590,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arNoArtworksYetTitle => 'No artworks yet';
 
   @override
-  String get arNoArtworksYetDescription =>
-      'Scan a marker or place an artwork to start building your AR view.';
+  String get arNoArtworksYetDescription => 'Scan a marker or place an artwork to start building your AR view.';
 
   @override
   String get arModelLoadedToast => 'AR model loaded';
 
   @override
-  String get arModelLoadFailedToast =>
-      'Failed to load AR model. Please try again.';
+  String get arModelLoadFailedToast => 'Failed to load AR model. Please try again.';
 
   @override
   String arPlacingTitle(Object title) {
@@ -5074,8 +4612,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get arPlaceArtworkFailedToast =>
-      'Failed to place artwork. Please try again.';
+  String get arPlaceArtworkFailedToast => 'Failed to place artwork. Please try again.';
 
   @override
   String get arActionScan => 'Scan for artwork';
@@ -5101,12 +4638,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get arSelectArtworkBeforePlacingToast =>
-      'Select or create an artwork before placing it.';
+  String get arSelectArtworkBeforePlacingToast => 'Select or create an artwork before placing it.';
 
   @override
-  String get arNoPlacedArtworksToast =>
-      'No artworks placed yet. Try placing some first!';
+  String get arNoPlacedArtworksToast => 'No artworks placed yet. Try placing some first!';
 
   @override
   String arPlacedArtworksTitle(Object count) {
@@ -5117,38 +4652,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arArtworkRemovedToast => 'Artwork removed';
 
   @override
-  String get arLocationUnavailableToast =>
-      'Current location unavailable. Move your device to calibrate AR tracking.';
+  String get arLocationUnavailableToast => 'Current location unavailable. Move your device to calibrate AR tracking.';
 
   @override
-  String get arUnableToReadFileError =>
-      'Unable to read file data. Please try another file.';
+  String get arUnableToReadFileError => 'Unable to read file data. Please try another file.';
 
   @override
-  String get arFileSelectionFailedError =>
-      'File selection failed. Please try again.';
+  String get arFileSelectionFailedError => 'File selection failed. Please try again.';
 
   @override
-  String get arSelectSubjectBeforeMarkerToast =>
-      'Select a subject before creating the marker.';
+  String get arSelectSubjectBeforeMarkerToast => 'Select a subject before creating the marker.';
 
   @override
   String get arAttach3dModelError => 'Attach a 3D model before continuing.';
 
   @override
-  String get arSelectedArtworkUnavailableToast =>
-      'Selected artwork is no longer available. Refresh data and try again.';
+  String get arSelectedArtworkUnavailableToast => 'Selected artwork is no longer available. Refresh data and try again.';
 
   @override
   String get arUploadFailedToast => 'Upload failed. Please try again.';
 
   @override
-  String get arMarkerCreatedSwitchToPlaceToast =>
-      'AR asset uploaded and marker created. Switching to Place mode.';
+  String get arMarkerCreatedSwitchToPlaceToast => 'AR asset uploaded and marker created. Switching to Place mode.';
 
   @override
-  String get arCreateMarkerFailedToast =>
-      'Failed to create AR marker. Please try again.';
+  String get arCreateMarkerFailedToast => 'Failed to create AR marker. Please try again.';
 
   @override
   String arShareText(Object title, Object artist) {
@@ -5278,8 +4806,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesEmptyNoConversationsTitle => 'No conversations';
 
   @override
-  String get messagesEmptyNoConversationsDescription =>
-      'Start a conversation using the chat button below.';
+  String get messagesEmptyNoConversationsDescription => 'Start a conversation using the chat button below.';
 
   @override
   String get messagesEmptyStartChatAction => 'Start a chat';
@@ -5288,8 +4815,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesListHeaderTitle => 'Conversations';
 
   @override
-  String get messagesListHeaderDescription =>
-      'Pick up direct chats and group threads with artists, collectors, and institutions.';
+  String get messagesListHeaderDescription => 'Pick up direct chats and group threads with artists, collectors, and institutions.';
 
   @override
   String get messagesFallbackGroupTitle => 'Group';
@@ -5307,12 +4833,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesCreateConversationTitleOptionalLabel => 'Title (optional)';
 
   @override
-  String get messagesCreateConversationMembersLabel =>
-      'Members (username or wallet)';
+  String get messagesCreateConversationMembersLabel => 'Members (username or wallet)';
 
   @override
-  String get messagesCreateConversationGroupAvatarOptionalLabel =>
-      'Group avatar (optional)';
+  String get messagesCreateConversationGroupAvatarOptionalLabel => 'Group avatar (optional)';
 
   @override
   String get messagesCreateConversationIsGroupLabel => 'Group';
@@ -5332,8 +4856,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesAvatarUpdatedToast => 'Avatar updated.';
 
   @override
-  String get messagesUpdateAvatarFailedToast =>
-      'Unable to update avatar right now.';
+  String get messagesUpdateAvatarFailedToast => 'Unable to update avatar right now.';
 
   @override
   String get messagesMenuAddMember => 'Add member';
@@ -5348,22 +4871,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesMenuDeleteConversation => 'Delete conversation';
 
   @override
-  String get messagesMessageCopiedToClipboardToast =>
-      'Message copied to clipboard';
+  String get messagesMessageCopiedToClipboardToast => 'Message copied to clipboard';
 
   @override
   String get messagesDeleteConversationTitle => 'Delete conversation';
 
   @override
-  String get messagesDeleteConversationBody =>
-      'Are you sure you want to delete this conversation? This removes it from your conversations list.';
+  String get messagesDeleteConversationBody => 'Are you sure you want to delete this conversation? This removes it from your conversations list.';
 
   @override
   String get messagesDeleteConversationSuccessToast => 'Conversation deleted.';
 
   @override
-  String get messagesDeleteConversationFailedToast =>
-      'Unable to delete conversation right now.';
+  String get messagesDeleteConversationFailedToast => 'Unable to delete conversation right now.';
 
   @override
   String get messagesAttachmentDefaultFilename => 'attachment';
@@ -5393,8 +4913,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesAddMemberDialogLoadFailedTitle => 'Unable to load member';
 
   @override
-  String get messagesAddMemberDialogLoadFailedBody =>
-      'We couldn\'t load this user right now. Please try again.';
+  String get messagesAddMemberDialogLoadFailedBody => 'We couldn\'t load this user right now. Please try again.';
 
   @override
   String get messagesConversationMembersTitle => 'Conversation members';
@@ -5449,8 +4968,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileNotFound => 'User not found';
 
   @override
-  String get userProfileNotFoundDescription =>
-      'This profile may have been deleted or doesn\'t exist.';
+  String get userProfileNotFoundDescription => 'This profile may have been deleted or doesn\'t exist.';
 
   @override
   String get userProfileShareTooltip => 'Share';
@@ -5473,23 +4991,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileArtistPortfolioTitle => 'Artist portfolio';
 
   @override
-  String get userProfileInstitutionHighlightsDesktopSubtitle =>
-      'Featured exhibitions and programs';
+  String get userProfileInstitutionHighlightsDesktopSubtitle => 'Featured exhibitions and programs';
 
   @override
-  String get userProfileArtistPortfolioDesktopSubtitle =>
-      'Latest artworks and collections';
+  String get userProfileArtistPortfolioDesktopSubtitle => 'Latest artworks and collections';
 
   @override
   String get userProfileNoCreatorContentTitle => 'No content available';
 
   @override
-  String get userProfileNoInstitutionContentDescription =>
-      'No exhibitions or programs to display yet';
+  String get userProfileNoInstitutionContentDescription => 'No exhibitions or programs to display yet';
 
   @override
-  String get userProfileNoArtistContentDescription =>
-      'No artworks or collections to display yet';
+  String get userProfileNoArtistContentDescription => 'No artworks or collections to display yet';
 
   @override
   String get userProfileFollowButton => 'Follow';
@@ -5498,12 +5012,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileFollowingButton => 'Following';
 
   @override
-  String get userProfileSignInToFollowToast =>
-      'Please sign in to follow creators.';
+  String get userProfileSignInToFollowToast => 'Please sign in to follow creators.';
 
   @override
-  String get userProfileFollowUpdateFailedToast =>
-      'Could not update follow status. Please try again.';
+  String get userProfileFollowUpdateFailedToast => 'Could not update follow status. Please try again.';
 
   @override
   String userProfileNowFollowingToast(Object name) {
@@ -5528,35 +5040,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileNoFollowersTitle => 'No followers yet';
 
   @override
-  String get userProfileNoFollowersDescription =>
-      'Share your profile to gain followers';
+  String get userProfileNoFollowersDescription => 'Share your profile to gain followers';
 
   @override
-  String get userProfileFollowersLoadFailedMessage =>
-      'Failed to load followers.';
+  String get userProfileFollowersLoadFailedMessage => 'Failed to load followers.';
 
   @override
   String get userProfileNoFollowingTitle => 'Not following anyone';
 
   @override
-  String get userProfileNoFollowingDescription =>
-      'Discover artists in the Community tab';
+  String get userProfileNoFollowingDescription => 'Discover artists in the Community tab';
 
   @override
-  String get userProfileFollowingLoadFailedMessage =>
-      'Failed to load following.';
+  String get userProfileFollowingLoadFailedMessage => 'Failed to load following.';
 
   @override
-  String get userProfileMessageLoginRequiredToast =>
-      'Please log in to message this user.';
+  String get userProfileMessageLoginRequiredToast => 'Please log in to message this user.';
 
   @override
-  String get userProfileConversationOpenFailedToast =>
-      'Could not open conversation.';
+  String get userProfileConversationOpenFailedToast => 'Could not open conversation.';
 
   @override
-  String get userProfileConversationOpenGenericErrorToast =>
-      'Failed to open conversation. Please try again.';
+  String get userProfileConversationOpenGenericErrorToast => 'Failed to open conversation. Please try again.';
 
   @override
   String get userProfileAchievementsTitle => 'Achievements';
@@ -5565,22 +5070,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBadgesVerificationTitle => 'Profile badges';
 
   @override
-  String get profileBadgesVerificationSubtitle =>
-      'Role, verification and participation signals for this profile.';
+  String get profileBadgesVerificationSubtitle => 'Role, verification and participation signals for this profile.';
 
   @override
   String get walletBadgesVerificationTitle => 'Wallet badges';
 
   @override
-  String get walletBadgesVerificationSubtitle =>
-      'Badges linked to this wallet and its activity on art.kubus.';
+  String get walletBadgesVerificationSubtitle => 'Badges linked to this wallet and its activity on art.kubus.';
 
   @override
   String get profileAchievementsPreviewTitle => 'Achievements';
 
   @override
-  String get profileAchievementsPreviewSubtitle =>
-      'Milestones recognized through activity across art.kubus.';
+  String get profileAchievementsPreviewSubtitle => 'Milestones recognized through activity across art.kubus.';
 
   @override
   String userProfileAchievementsProgressLabel(Object completed, Object total) {
@@ -5593,8 +5095,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get userProfileAchievementsEmptyDescription =>
-      'Start exploring to unlock achievements';
+  String get userProfileAchievementsEmptyDescription => 'Start exploring to unlock achievements';
 
   @override
   String get userProfileAchievementCompletedLabel => 'Completed';
@@ -5614,8 +5115,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfilePostsLoadFailedDescription => 'Failed to load posts.';
 
   @override
-  String get userProfilePostsLoadMoreFailedDescription =>
-      'Failed to load more posts.';
+  String get userProfilePostsLoadMoreFailedDescription => 'Failed to load more posts.';
 
   @override
   String get userProfileNoPostsTitle => 'No posts yet';
@@ -5721,12 +5221,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCreateOptionArtworkTitle => 'Create artwork';
 
   @override
-  String get artistStudioCreateOptionArtworkSubtitle =>
-      'Upload media, set details, and publish.';
+  String get artistStudioCreateOptionArtworkSubtitle => 'Upload media, set details, and publish.';
 
   @override
-  String get artworkCreatorInviteSentSingular =>
-      'Artwork created. 1 invite sent.';
+  String get artworkCreatorInviteSentSingular => 'Artwork created. 1 invite sent.';
 
   @override
   String artworkCreatorInviteSentPlural(int count) {
@@ -5734,8 +5232,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get artworkCreatorInviteFailedSingular =>
-      'Artwork created. 1 invite could not be sent.';
+  String get artworkCreatorInviteFailedSingular => 'Artwork created. 1 invite could not be sent.';
 
   @override
   String artworkCreatorInviteFailedPlural(int count) {
@@ -5748,20 +5245,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get artworkCreatorCollaborationQueuedSubtitle =>
-      'Queue invites before publishing.';
+  String get artworkCreatorCollaborationQueuedSubtitle => 'Queue invites before publishing.';
 
   @override
-  String get artworkCreatorCollaborationManageSubtitle =>
-      'Manage collaborators without leaving the creator.';
+  String get artworkCreatorCollaborationManageSubtitle => 'Manage collaborators without leaving the creator.';
 
   @override
-  String get artworkCreatorCollaborationUnavailableSubtitle =>
-      'Collaboration is unavailable.';
+  String get artworkCreatorCollaborationUnavailableSubtitle => 'Collaboration is unavailable.';
 
   @override
-  String get artworkCreatorCollaborationLockedMessage =>
-      'Once the artwork is saved, collaborators can be invited here without leaving the creator.';
+  String get artworkCreatorCollaborationLockedMessage => 'Once the artwork is saved, collaborators can be invited here without leaving the creator.';
 
   @override
   String get artworkCreatorOpenArSetup => 'Open AR setup';
@@ -5773,66 +5266,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkCreatorDraftSavedBadge => 'Draft saved';
 
   @override
-  String get artworkCreatorSavedWorkspaceSubtitle =>
-      'Draft saved. Collaboration and AR are available in-context.';
+  String get artworkCreatorSavedWorkspaceSubtitle => 'Draft saved. Collaboration and AR are available in-context.';
 
   @override
   String get artworkCreatorArSetupAction => 'AR setup';
 
   @override
-  String get artworkCreatorShellDraftSubtitle =>
-      'Compose the artwork, then unlock collaboration and AR from the sidebar.';
+  String get artworkCreatorShellDraftSubtitle => 'Compose the artwork, then unlock collaboration and AR from the sidebar.';
 
   @override
-  String get artworkCreatorLiveWorkspaceSubtitle =>
-      'The artwork is live and can still be refined from this workspace.';
+  String get artworkCreatorLiveWorkspaceSubtitle => 'The artwork is live and can still be refined from this workspace.';
 
   @override
   String get artistStudioCreateOptionCollectionTitle => 'Create collection';
 
   @override
-  String get artistStudioCreateOptionCollectionSubtitle =>
-      'Curate a set of artworks into a collection.';
+  String get artistStudioCreateOptionCollectionSubtitle => 'Curate a set of artworks into a collection.';
 
   @override
   String get collectionCreatorTitle => 'Create collection';
 
   @override
-  String get collectionCreatorNameRequiredError =>
-      'Collection name is required';
+  String get collectionCreatorNameRequiredError => 'Collection name is required';
 
   @override
   String get collectionCreatorCreateFailed => 'Failed to create collection.';
 
   @override
-  String get collectionCreatorCreateFailedWithError =>
-      'Failed to create collection. Please try again.';
+  String get collectionCreatorCreateFailedWithError => 'Failed to create collection. Please try again.';
 
   @override
-  String get collectionCreatorShellDraftSubtitle =>
-      'Shape the collection, then save it to unlock collaboration.';
+  String get collectionCreatorShellDraftSubtitle => 'Shape the collection, then save it to unlock collaboration.';
 
   @override
-  String get collectionCreatorShellSavedSubtitle =>
-      'Collection saved. Keep curating or invite collaborators in-context.';
+  String get collectionCreatorShellSavedSubtitle => 'Collection saved. Keep curating or invite collaborators in-context.';
 
   @override
   String get collectionCreatorReadyBasicsLabel => 'Basics complete';
 
   @override
-  String get collectionCreatorReadyBasicsDescription =>
-      'Name and description are filled in.';
+  String get collectionCreatorReadyBasicsDescription => 'Name and description are filled in.';
 
   @override
   String get collectionCreatorReadyCoverLabel => 'Cover image added';
 
   @override
-  String get collectionCreatorReadyCoverComplete =>
-      'Collection cover is ready.';
+  String get collectionCreatorReadyCoverComplete => 'Collection cover is ready.';
 
   @override
-  String get collectionCreatorReadyCoverPending =>
-      'Optional, but strongly recommended on desktop.';
+  String get collectionCreatorReadyCoverPending => 'Optional, but strongly recommended on desktop.';
 
   @override
   String get collectionCreatorReadySelectionLabel => 'Artwork selection ready';
@@ -5843,19 +5325,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get collectionCreatorReadySelectionPending =>
-      'Choose artworks to anchor the collection.';
+  String get collectionCreatorReadySelectionPending => 'Choose artworks to anchor the collection.';
 
   @override
   String get collectionCreatorReadyVisibilityLabel => 'Visibility chosen';
 
   @override
-  String get collectionCreatorReadyVisibilityPublic =>
-      'Public collection visible to everyone.';
+  String get collectionCreatorReadyVisibilityPublic => 'Public collection visible to everyone.';
 
   @override
-  String get collectionCreatorReadyVisibilityPrivate =>
-      'Private collection is still available to collaborators.';
+  String get collectionCreatorReadyVisibilityPrivate => 'Private collection is still available to collaborators.';
 
   @override
   String get collectionCreatorStatusSavedSubtitle => 'Saved collection';
@@ -5870,8 +5349,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorSummaryNotCreatedYet => 'Not created yet';
 
   @override
-  String get collectionCreatorSummarySelectedArtworksLabel =>
-      'Selected artworks';
+  String get collectionCreatorSummarySelectedArtworksLabel => 'Selected artworks';
 
   @override
   String get collectionCreatorSummaryVisibilityLabel => 'Visibility';
@@ -5880,15 +5358,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorReadinessTitle => 'Readiness';
 
   @override
-  String get collectionCreatorReadinessSubtitle =>
-      'A quick sanity check before saving.';
+  String get collectionCreatorReadinessSubtitle => 'A quick sanity check before saving.';
 
   @override
   String get collectionCreatorQuickActionsTitle => 'Quick actions';
 
   @override
-  String get collectionCreatorQuickActionsSubtitle =>
-      'Keep the workflow in this creator.';
+  String get collectionCreatorQuickActionsSubtitle => 'Keep the workflow in this creator.';
 
   @override
   String get collectionCreatorQuickActionUpdate => 'Update collection';
@@ -5900,48 +5376,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorQuickActionOpen => 'Open collection';
 
   @override
-  String get collectionCreatorCollaborationReadySubtitle =>
-      'Invite co-curators without leaving the workspace.';
+  String get collectionCreatorCollaborationReadySubtitle => 'Invite co-curators without leaving the workspace.';
 
   @override
-  String get collectionCreatorCollaborationLockedSubtitle =>
-      'Save once to unlock collaboration.';
+  String get collectionCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
 
   @override
-  String get collectionCreatorCollaborationLockedMessage =>
-      'Once saved, collaborators can be invited here so curation stays in context.';
+  String get collectionCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so curation stays in context.';
 
   @override
-  String get collectionCreatorSavedInfoBox =>
-      'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
+  String get collectionCreatorSavedInfoBox => 'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
 
   @override
-  String get collectionCreatorPartialSuccessToast =>
-      'The collection may have been created, but it could not be resolved locally yet. Refresh your collections before adding artworks.';
+  String get collectionCreatorPartialSuccessToast => 'The collection may have been created, but it could not be resolved locally yet. Refresh your collections before adding artworks.';
 
   @override
-  String get collectionCreatorPartialSuccessInfoBox =>
-      'The server accepted the collection, but no collection ID was returned. Check your collections or refresh before attaching artworks.';
+  String get collectionCreatorPartialSuccessInfoBox => 'The server accepted the collection, but no collection ID was returned. Check your collections or refresh before attaching artworks.';
 
   @override
-  String get collectionCreatorPartialSuccessArtworkAttachmentInfo =>
-      'Selected artworks were not attached because the collection ID is not available yet.';
+  String get collectionCreatorPartialSuccessArtworkAttachmentInfo => 'Selected artworks were not attached because the collection ID is not available yet.';
 
   @override
-  String get collectionCreatorPartialSuccessArtworkAttachmentFailedToast =>
-      'Collection saved, but selected artworks could not be attached. Open the collection and try adding them again.';
+  String get collectionCreatorPartialSuccessArtworkAttachmentFailedToast => 'Collection saved, but selected artworks could not be attached. Open the collection and try adding them again.';
 
   @override
-  String get collectionCreatorConnectWalletLabel =>
-      'Connect a wallet to load and curate your artwork library inside this collection creator.';
+  String get collectionCreatorConnectWalletLabel => 'Connect a wallet to load and curate your artwork library inside this collection creator.';
 
   @override
-  String get collectionCreatorArtworkLibraryLoadingLabel =>
-      'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.';
+  String get collectionCreatorArtworkLibraryLoadingLabel => 'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.';
 
   @override
-  String get collectionCreatorArtworkLibraryPlaceholderLabel =>
-      'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.';
+  String get collectionCreatorArtworkLibraryPlaceholderLabel => 'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.';
 
   @override
   String get collectionCreatorLoadingLibraryLabel => 'Loading library…';
@@ -5956,23 +5421,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorArtworkAddLabel => 'Add';
 
   @override
-  String get collectionCreatorNoArtworksAvailable =>
-      'No artworks available matching your search.';
+  String get collectionCreatorConnectWalletToLoad => 'Connect a wallet to load and curate your artwork library in this creator.';
+
+  @override
+  String get collectionCreatorLoadingLibrary => 'Loading library…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibrary => 'Load artwork library';
+
+  @override
+  String get collectionCreatorLibraryStillLoading => 'Your artwork library is still loading. You can continue with the collection details and return here later.';
+
+  @override
+  String get collectionCreatorLoadBeforeSave => 'Load your artwork library to select pieces for this collection.';
+
+  @override
+  String get collectionCreatorArtworkSelected => 'Selected';
+
+  @override
+  String get collectionCreatorArtworkAdd => 'Add';
+
+  @override
+  String get collectionCreatorNoArtworksAvailable => 'No artworks available matching your search.';
 
   @override
   String get collectionCreatorSearchArtworksLabel => 'Search';
 
   @override
-  String get collectionCreatorSearchArtworksHint =>
-      'Find artworks by title or description...';
+  String get collectionCreatorSearchArtworksHint => 'Find artworks by title or description...';
 
   @override
-  String get collectionCreatorAddArtworksTitle =>
-      'Add artworks to your collection';
+  String get collectionCreatorAddArtworksTitle => 'Add artworks to your collection';
 
   @override
-  String get collectionDetailLoadFailedMessage =>
-      'Failed to load collection details. Please try again.';
+  String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
 
   @override
   String get collectionDetailNoArtworksYet => 'No artworks yet.';
@@ -5996,16 +5478,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionDetailSharingToast => 'Sharing collection...';
 
   @override
-  String get collectionDetailOpeningEditorToast =>
-      'Opening collection editor...';
+  String get collectionDetailOpeningEditorToast => 'Opening collection editor...';
 
   @override
-  String get collectionDetailAddArtworkFailedToast =>
-      'Failed to add artwork to collection. Please try again.';
+  String get collectionDetailAddArtworkFailedToast => 'Failed to add artwork to collection. Please try again.';
 
   @override
-  String get collectionDetailRemoveArtworkFailedToast =>
-      'Failed to remove artwork from collection. Please try again.';
+  String get collectionDetailRemoveArtworkFailedToast => 'Failed to remove artwork from collection. Please try again.';
 
   @override
   String get collectionSettingsBasicInfo => 'Basic Information';
@@ -6032,8 +5511,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionSettingsPublic => 'Public Collection';
 
   @override
-  String get collectionSettingsPublicSubtitle =>
-      'Make this collection visible to everyone';
+  String get collectionSettingsPublicSubtitle => 'Make this collection visible to everyone';
 
   @override
   String get collectionSettingsCollaboration => 'Collaboration';
@@ -6042,8 +5520,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionSettingsAllowContributions => 'Allow Contributions';
 
   @override
-  String get collectionSettingsAllowContributionsSubtitle =>
-      'Let other artists contribute to this collection';
+  String get collectionSettingsAllowContributionsSubtitle => 'Let other artists contribute to this collection';
 
   @override
   String get collectionSettingsNotifications => 'Notifications';
@@ -6052,8 +5529,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionSettingsUpdates => 'Collection Updates';
 
   @override
-  String get collectionSettingsUpdatesSubtitle =>
-      'Get notified when artworks are added or removed';
+  String get collectionSettingsUpdatesSubtitle => 'Get notified when artworks are added or removed';
 
   @override
   String get collectionSettingsDangerZone => 'Danger Zone';
@@ -6062,8 +5538,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionSettingsDeleteTitle => 'Delete Collection';
 
   @override
-  String get collectionSettingsDeleteWarning =>
-      'Once you delete a collection, there is no going back. This action cannot be undone.';
+  String get collectionSettingsDeleteWarning => 'Once you delete a collection, there is no going back. This action cannot be undone.';
 
   @override
   String get collectionSettingsDeleteButton => 'Delete Collection';
@@ -6074,8 +5549,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get collectionSettingsSaveFailedToast =>
-      'Failed to save collection settings. Please try again.';
+  String get collectionSettingsSaveFailedToast => 'Failed to save collection settings. Please try again.';
 
   @override
   String get collectionSettingsDeleteDialogTitle => 'Delete Collection';
@@ -6106,15 +5580,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get userProfileBlockDialogDescription =>
-      'They won\'t be able to see your profile or posts.';
+  String get userProfileBlockDialogDescription => 'They won\'t be able to see your profile or posts.';
 
   @override
   String get userProfileUnableToBlockToast => 'Unable to block user.';
 
   @override
-  String get userProfileBlockFailedToast =>
-      'Failed to block user. Please try again.';
+  String get userProfileBlockFailedToast => 'Failed to block user. Please try again.';
 
   @override
   String userProfileBlockedToast(Object name) {
@@ -6130,8 +5602,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get userProfileReportDialogQuestion =>
-      'Why are you reporting this user?';
+  String get userProfileReportDialogQuestion => 'Why are you reporting this user?';
 
   @override
   String get userProfileReportReasonSpam => 'Spam';
@@ -6146,8 +5617,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileReportReasonOther => 'Other';
 
   @override
-  String get userProfileReportSubmittedToast =>
-      'Report submitted. Thank you for your feedback.';
+  String get userProfileReportSubmittedToast => 'Report submitted. Thank you for your feedback.';
 
   @override
   String get arDetailModelLabel => 'Model';
@@ -6189,15 +5659,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arNotSupportedTitle => 'AR not supported';
 
   @override
-  String get arNotSupportedMessage =>
-      'Your device does not support AR features. AR requires ARCore (Android) or ARKit (iOS).';
+  String get arNotSupportedMessage => 'Your device does not support AR features. AR requires ARCore (Android) or ARKit (iOS).';
 
   @override
   String get arInitializationFailedTitle => 'AR initialization failed';
 
   @override
-  String get arInitializationFailedMessage =>
-      'Could not initialize AR. Please check camera permissions and try again.';
+  String get arInitializationFailedMessage => 'Could not initialize AR. Please check camera permissions and try again.';
 
   @override
   String get commonRequired => 'required';
@@ -6216,8 +5684,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arCreateUploadTitle => 'Upload AR asset';
 
   @override
-  String get arCreateUploadSubtitle =>
-      'Link an existing artwork, upload a 3D model (GLB/GLTF/USDZ), and we\'ll enrich its AR marker.';
+  String get arCreateUploadSubtitle => 'Link an existing artwork, upload a 3D model (GLB/GLTF/USDZ), and we\'ll enrich its AR marker.';
 
   @override
   String get arCreateSubjectTypeLabel => 'Subject type';
@@ -6244,8 +5711,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arCreateTitleRequiredError => 'Title is required';
 
   @override
-  String get arCreateTitleMinLengthError =>
-      'Title must be at least 3 characters';
+  String get arCreateTitleMinLengthError => 'Title must be at least 3 characters';
 
   @override
   String get arCreateDescriptionLabel => 'Description *';
@@ -6254,8 +5720,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arCreateDescriptionRequiredError => 'Description is required';
 
   @override
-  String get arCreateDescriptionMinLengthError =>
-      'Describe the experience in at least 10 characters';
+  String get arCreateDescriptionMinLengthError => 'Describe the experience in at least 10 characters';
 
   @override
   String get arCreateCategoryLabel => 'Category';
@@ -6291,8 +5756,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arFlashControlTitle => 'Flash control';
 
   @override
-  String get arFlashNotAvailableToast =>
-      'Flash is not available on this device.';
+  String get arFlashNotAvailableToast => 'Flash is not available on this device.';
 
   @override
   String get arScannerOverlayTitle => 'Scanner overlay';
@@ -6301,8 +5765,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arScannerOverlaySubtitle => 'Show/hide scanner guide';
 
   @override
-  String get arScannerOverlayResetToast =>
-      'Scanner overlay resets automatically after 3 seconds.';
+  String get arScannerOverlayResetToast => 'Scanner overlay resets automatically after 3 seconds.';
 
   @override
   String get arDisplayTitle => 'AR display';
@@ -6311,8 +5774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arShowFeaturePointsTitle => 'Show feature points';
 
   @override
-  String get arShowFeaturePointsSubtitle =>
-      'Display tracking points on surfaces';
+  String get arShowFeaturePointsSubtitle => 'Display tracking points on surfaces';
 
   @override
   String get arShowPlanesTitle => 'Show planes';
@@ -6324,8 +5786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arAutoDetectSurfacesTitle => 'Auto-detect surfaces';
 
   @override
-  String get arAutoDetectSurfacesSubtitle =>
-      'Automatically detect flat surfaces';
+  String get arAutoDetectSurfacesSubtitle => 'Automatically detect flat surfaces';
 
   @override
   String get arDebugInfoTitle => 'Debug info';
@@ -6363,29 +5824,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletChooseTitle => 'Connect wallet';
 
   @override
-  String get connectWalletChooseDescription =>
-      'Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.';
+  String get connectWalletChooseDescription => 'Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.';
 
   @override
   String get connectWalletOptionWalletConnectTitle => 'Connect external wallet';
 
   @override
-  String get connectWalletOptionWalletConnectDescription =>
-      'Use Phantom, Solflare, Backpack, or another compatible Solana wallet without importing a recovery phrase';
+  String get connectWalletOptionWalletConnectDescription => 'Use Phantom, Solflare, Backpack, or another compatible Solana wallet without importing a recovery phrase';
 
   @override
   String get connectWalletOptionSignInTitle => 'Sign in';
 
   @override
-  String get connectWalletOptionSignInDescription =>
-      'Sign in with your e-mail and password';
+  String get connectWalletOptionSignInDescription => 'Sign in with your e-mail and password';
 
   @override
   String get connectWalletOptionRegisterTitle => 'Register account';
 
   @override
-  String get connectWalletOptionRegisterDescription =>
-      'Register with your e-mail or Google account';
+  String get connectWalletOptionRegisterDescription => 'Register with your e-mail or Google account';
 
   @override
   String get connectWalletHybridHelpLink => 'What\'s WalletConnect?';
@@ -6400,22 +5857,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletImportTitle => 'Import wallet';
 
   @override
-  String get connectWalletImportDescription =>
-      'Enter the 12-word recovery phrase to restore a wallet from another device and reconnect your art.kubus account.';
+  String get connectWalletImportDescription => 'Enter the 12-word recovery phrase to restore a wallet from another device and reconnect your art.kubus account.';
 
   @override
   String get connectWalletImportHint => 'Enter 12 words separated by spaces';
 
   @override
-  String get connectWalletImportWarning =>
-      'Never share your recovery phrase. Anyone with it can take control of your wallet and the access tied to it.';
+  String get connectWalletImportWarning => 'Never share your recovery phrase. Anyone with it can take control of your wallet and the access tied to it.';
 
   @override
   String get connectWalletImportButton => 'Import wallet';
 
   @override
-  String get connectWalletImportEmptyMnemonicError =>
-      'Please enter your recovery phrase';
+  String get connectWalletImportEmptyMnemonicError => 'Please enter your recovery phrase';
 
   @override
   String connectWalletImportInvalidMnemonicWordCountError(Object count) {
@@ -6428,63 +5882,52 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get connectWalletImportFailedToast =>
-      'Wallet import failed. Please try again.';
+  String get connectWalletImportFailedToast => 'Wallet import failed. Please try again.';
 
   @override
   String get connectWalletCreateTitle => 'Create a new wallet';
 
   @override
-  String get connectWalletCreateDescription =>
-      'We will create a new wallet you control on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
+  String get connectWalletCreateDescription => 'We will create a new wallet you control on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
 
   @override
-  String get connectWalletCreateMissingBackupError =>
-      'Created wallet is missing backup details.';
+  String get connectWalletCreateMissingBackupError => 'Created wallet is missing backup details.';
 
   @override
   String get connectWalletCreateInfoTitle => 'Important';
 
   @override
-  String get connectWalletCreateInfoBody =>
-      'Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.';
+  String get connectWalletCreateInfoBody => 'Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.';
 
   @override
-  String get connectWalletCreateWarning =>
-      'By continuing, you confirm that you understand how important the recovery phrase is.';
+  String get connectWalletCreateWarning => 'By continuing, you confirm that you understand how important the recovery phrase is.';
 
   @override
   String get connectWalletCreateGenerateButton => 'Generate wallet';
 
   @override
-  String get connectWalletCreateAlreadyHaveWalletPrefix =>
-      'Already have a wallet?';
+  String get connectWalletCreateAlreadyHaveWalletPrefix => 'Already have a wallet?';
 
   @override
   String get connectWalletCreateAlreadyHaveWalletLink => 'Import it';
 
   @override
-  String get connectWalletCreateSuccessToast =>
-      'Wallet created and profile set up.';
+  String get connectWalletCreateSuccessToast => 'Wallet created and profile set up.';
 
   @override
-  String get connectWalletCreateFailedToast =>
-      'Failed to create wallet. Please try again.';
+  String get connectWalletCreateFailedToast => 'Failed to create wallet. Please try again.';
 
   @override
   String get connectWalletMnemonicDialogTitle => 'Save your recovery phrase';
 
   @override
-  String get connectWalletMnemonicDialogWarning =>
-      'Write this down and keep it safe!';
+  String get connectWalletMnemonicDialogWarning => 'Write this down and keep it safe!';
 
   @override
-  String get connectWalletMnemonicDialogConfirmPrompt =>
-      'Confirm by typing your recovery phrase:';
+  String get connectWalletMnemonicDialogConfirmPrompt => 'Confirm by typing your recovery phrase:';
 
   @override
-  String get connectWalletMnemonicDialogConfirmHint =>
-      'Paste or type your recovery phrase';
+  String get connectWalletMnemonicDialogConfirmHint => 'Paste or type your recovery phrase';
 
   @override
   String connectWalletMnemonicDialogAddressLabel(Object address) {
@@ -6498,8 +5941,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletConnectedTitle => 'Wallet connected';
 
   @override
-  String get connectWalletConnectedDescription =>
-      'Your account wallet is now connected to art.kubus. It supports long-term access, digital ownership, and upcoming features for artists, institutions, and community participation.';
+  String get connectWalletConnectedDescription => 'Your account wallet is now connected to art.kubus. It supports long-term access, digital ownership, and upcoming features for artists, institutions, and community participation.';
 
   @override
   String get connectWalletConnectedStartExploringButton => 'Start exploring';
@@ -6511,36 +5953,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideTitle => 'What\'s a wallet?';
 
   @override
-  String get connectWalletWeb3GuideDescription =>
-      'Your account wallet keeps access and ownership in your hands. It also enables features that need proof of ownership, without giving your keys to us:';
+  String get connectWalletWeb3GuideDescription => 'Your account wallet keeps access and ownership in your hands. It also enables features that need proof of ownership, without giving your keys to us:';
 
   @override
   String get connectWalletWeb3GuideFeatureSecureTitle => 'You stay in control';
 
   @override
-  String get connectWalletWeb3GuideFeatureSecureDescription =>
-      'You control the keys, not us';
+  String get connectWalletWeb3GuideFeatureSecureDescription => 'You control the keys, not us';
 
   @override
   String get connectWalletWeb3GuideFeatureNftsTitle => 'Digital editions';
 
   @override
-  String get connectWalletWeb3GuideFeatureNftsDescription =>
-      'Collect and keep digital works connected to artists and places';
+  String get connectWalletWeb3GuideFeatureNftsDescription => 'Collect and keep digital works connected to artists and places';
 
   @override
   String get connectWalletWeb3GuideFeatureGovernanceTitle => 'Community';
 
   @override
-  String get connectWalletWeb3GuideFeatureGovernanceDescription =>
-      'Take part in community decisions and future platform rights';
+  String get connectWalletWeb3GuideFeatureGovernanceDescription => 'Take part in community decisions and future platform rights';
 
   @override
   String get connectWalletWeb3GuideFeatureDefiTitle => 'Portable access';
 
   @override
-  String get connectWalletWeb3GuideFeatureDefiDescription =>
-      'Use the same wallet across future art.kubus and compatible ecosystem features';
+  String get connectWalletWeb3GuideFeatureDefiDescription => 'Use the same wallet across future art.kubus and compatible ecosystem features';
 
   @override
   String get connectWalletWeb3GuideGotItButton => 'Got it!';
@@ -6549,15 +5986,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectTitle => 'Connect external wallet';
 
   @override
-  String get connectWalletWalletConnectDescription =>
-      'Connect a Solana wallet for signing. On web, compatible browser wallets are preferred automatically before falling back to the full Reown wallet list.';
+  String get connectWalletWalletConnectDescription => 'Connect a Solana wallet for signing. On web, compatible browser wallets are preferred automatically before falling back to the full Reown wallet list.';
 
   @override
   String get connectWalletWalletConnectSupportedTitle => 'Supported wallets';
 
   @override
-  String get connectWalletWalletConnectSupportedList =>
-      'Phantom, Solflare, Backpack, and other compatible Solana wallets';
+  String get connectWalletWalletConnectSupportedList => 'Phantom, Solflare, Backpack, and other compatible Solana wallets';
 
   @override
   String get connectWalletWalletConnectHowToTitle => 'How it works';
@@ -6572,16 +6007,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectStep3 => 'Return to art.kubus to finish';
 
   @override
-  String get connectWalletBrowserWalletChooserTitle =>
-      'Choose a browser wallet';
+  String get connectWalletBrowserWalletChooserTitle => 'Choose a browser wallet';
 
   @override
-  String get connectWalletBrowserWalletChooserDescription =>
-      'Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.';
+  String get connectWalletBrowserWalletChooserDescription => 'Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.';
 
   @override
-  String get connectWalletBrowserWalletChooserLocalDescription =>
-      'Choose a compatible Solana wallet detected in this browser.';
+  String get connectWalletBrowserWalletChooserLocalDescription => 'Choose a compatible Solana wallet detected in this browser.';
 
   @override
   String connectWalletBrowserWalletAutoPrompt(Object walletName) {
@@ -6594,16 +6026,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get connectWalletBrowserWalletNoWalletTitle =>
-      'No compatible browser wallet detected';
+  String get connectWalletBrowserWalletNoWalletTitle => 'No compatible browser wallet detected';
 
   @override
-  String get connectWalletBrowserWalletNoWalletDescription =>
-      'Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.';
+  String get connectWalletBrowserWalletNoWalletDescription => 'Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.';
 
   @override
-  String get connectWalletBrowserWalletNoWalletLocalDescription =>
-      'Install or enable MetaMask, Phantom, or another compatible Solana browser wallet, then rescan.';
+  String get connectWalletBrowserWalletNoWalletLocalDescription => 'Install or enable MetaMask, Phantom, or another compatible Solana browser wallet, then rescan.';
 
   @override
   String get connectWalletBrowserWalletFallbackButton => 'Open all wallets';
@@ -6612,22 +6041,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletBrowserWalletRescanButton => 'Rescan browser wallets';
 
   @override
-  String get connectWalletReownUnavailableDescription =>
-      'The all-wallets QR flow is not configured in this build. Use a compatible browser wallet on web, or choose another wallet setup option.';
+  String get connectWalletReownUnavailableDescription => 'The all-wallets QR flow is not configured in this build. Use a compatible browser wallet on web, or choose another wallet setup option.';
 
   @override
   String get connectWalletWalletConnectConnectingLabel => 'Connecting…';
 
   @override
-  String get connectWalletWalletConnectQuickConnectLabel =>
-      'Open wallet picker';
+  String get connectWalletWalletConnectQuickConnectLabel => 'Open wallet picker';
 
   @override
   String get connectWalletWalletConnectUriHint => 'External wallet session';
 
   @override
-  String get connectWalletWalletConnectSecurityNote =>
-      'External wallets sign in their own app. The encrypted backup supports recovery; it is not custody.';
+  String get connectWalletWalletConnectSecurityNote => 'External wallets sign in their own app. The encrypted backup supports recovery; it is not custody.';
 
   @override
   String get connectWalletWalletConnectScanQrButton => 'Scan QR code';
@@ -6636,31 +6062,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectConnectButton => 'Connect';
 
   @override
-  String get connectWalletWalletConnectNoWalletPrefix =>
-      'Don\'t have a wallet yet?';
+  String get connectWalletWalletConnectNoWalletPrefix => 'Don\'t have a wallet yet?';
 
   @override
   String get connectWalletWalletConnectNoWalletLink => 'Create one';
 
   @override
-  String get connectWalletWalletConnectScanQrTitle =>
-      'Scan WalletConnect QR code';
+  String get connectWalletWalletConnectScanQrTitle => 'Scan WalletConnect QR code';
 
   @override
-  String get connectWalletWalletConnectScanQrHint =>
-      'Position the QR code within the frame';
+  String get connectWalletWalletConnectScanQrHint => 'Position the QR code within the frame';
 
   @override
-  String get connectWalletWalletConnectUriRequiredToast =>
-      'Please enter a WalletConnect URI';
+  String get connectWalletWalletConnectUriRequiredToast => 'Please enter a WalletConnect URI';
 
   @override
-  String get connectWalletWalletConnectInvalidUriToast =>
-      'Invalid WalletConnect URI';
+  String get connectWalletWalletConnectInvalidUriToast => 'Invalid WalletConnect URI';
 
   @override
-  String get connectWalletWalletConnectNeedsLocalWalletToast =>
-      'Choose an external wallet to continue';
+  String get connectWalletWalletConnectNeedsLocalWalletToast => 'Choose an external wallet to continue';
 
   @override
   String connectWalletWalletConnectConnectedToast(Object address) {
@@ -6668,16 +6088,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get connectWalletWalletConnectConnectionErrorToast =>
-      'Connection error. Please try again.';
+  String get connectWalletWalletConnectConnectionErrorToast => 'Connection error. Please try again.';
 
   @override
-  String get connectWalletWalletConnectWaitingApprovalToast =>
-      'Waiting for external wallet approval…';
+  String get connectWalletWalletConnectWaitingApprovalToast => 'Waiting for external wallet approval…';
 
   @override
-  String get connectWalletWalletConnectFailedToast =>
-      'Failed to connect external wallet';
+  String get connectWalletWalletConnectFailedToast => 'Failed to connect external wallet';
 
   @override
   String get walletHomeTitle => 'Wallet';
@@ -6686,23 +6103,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeLoadingLabel => 'Loading your wallet…';
 
   @override
-  String get walletHomeNoWalletDescription =>
-      'Connect or restore a wallet when you need digital ownership, attribution, or participation tools.';
+  String get walletHomeNoWalletDescription => 'Connect or restore a wallet when you need digital ownership, attribution, or participation tools.';
 
   @override
   String get walletHomeSignedOutTitle => 'Wallet not connected';
 
   @override
-  String get walletHomeSignedOutDescription =>
-      'Sign in to use your profile. Connect or restore a wallet when you want balances, digital editions, or wallet-protected actions.';
+  String get walletHomeSignedOutDescription => 'Sign in to use your profile. Connect or restore a wallet when you want balances, digital editions, or wallet-protected actions.';
 
   @override
-  String get walletHomeAccountShellTitle =>
-      'Profile active, wallet not restored';
+  String get walletHomeAccountShellTitle => 'Profile active, wallet not restored';
 
   @override
-  String get walletHomeAccountShellDescription =>
-      'Your account session is available. This device needs Wallet only for ownership and participation actions.';
+  String get walletHomeAccountShellDescription => 'Your account session is available. This device needs Wallet only for ownership and participation actions.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Restore wallet';
@@ -6746,8 +6159,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeQuickActionsTitle => 'Wallet actions';
 
   @override
-  String get walletHomeQuickActionsSubtitle =>
-      'Send, receive, swap, or open digital editions from one place when wallet tools are enabled.';
+  String get walletHomeQuickActionsSubtitle => 'Send, receive, swap, or open digital editions from one place when wallet tools are enabled.';
 
   @override
   String get walletHomeSendAction => 'Send';
@@ -6768,12 +6180,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeDesktopSwapSubtitle => 'Exchange tokens';
 
   @override
-  String get walletHomeDesktopNftsSubtitle =>
-      'Open digital editions and account-linked pieces';
+  String get walletHomeDesktopNftsSubtitle => 'Open digital editions and account-linked pieces';
 
   @override
-  String get walletHomeDesktopRailSubtitle =>
-      'Wallet status, activity, and balances stay visible while you work.';
+  String get walletHomeDesktopRailSubtitle => 'Wallet status, activity, and balances stay visible while you work.';
 
   @override
   String get walletHomeSecureWalletAction => 'Secure wallet';
@@ -6785,30 +6195,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeNavTitle => 'Availability Node';
 
   @override
-  String get availabilityNodeNavSubtitle =>
-      'Create and manage scoped node operator tokens.';
+  String get availabilityNodeNavSubtitle => 'Create and manage scoped node operator tokens.';
 
   @override
-  String get availabilityNodeSubtitle =>
-      'Create and manage scoped node operator tokens.';
+  String get availabilityNodeSubtitle => 'Create and manage scoped node operator tokens.';
 
   @override
   String get availabilityNodeWhatIsTitle => 'What this does';
 
   @override
-  String get availabilityNodeIntro =>
-      'This token lets your node register, send heartbeats, commit to CIDs, and read recognition status. It does not control your wallet or spend funds.';
+  String get availabilityNodeIntro => 'This token lets your node register, send heartbeats, commit to CIDs, and read recognition status. It does not control your wallet or spend funds.';
 
   @override
-  String get availabilityNodeDescription =>
-      'Availability nodes let trusted operators report backend availability from their own infrastructure.';
+  String get availabilityNodeDescription => 'Availability nodes let trusted operators report backend availability from their own infrastructure.';
 
   @override
   String get availabilityNodeWalletLabel => 'Operator wallet';
 
   @override
-  String get availabilityNodeSecurityNote =>
-      'Store it like a password. You can revoke it at any time.';
+  String get availabilityNodeSecurityNote => 'Store it like a password. You can revoke it at any time.';
 
   @override
   String get availabilityNodeCreateTitle => 'Create operator token';
@@ -6843,8 +6248,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeCreatedTitle => 'Operator token created';
 
   @override
-  String get availabilityNodeCreatedBody =>
-      'Copy the token now. You will not be able to see it again.';
+  String get availabilityNodeCreatedBody => 'Copy the token now. You will not be able to see it again.';
 
   @override
   String get availabilityNodeEnvSnippetLabel => '.env snippet';
@@ -6862,15 +6266,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeSnippetCopiedToast => '.env snippet copied';
 
   @override
-  String get availabilityNodeCreateFailedToast =>
-      'Failed to create operator token';
+  String get availabilityNodeCreateFailedToast => 'Failed to create operator token';
 
   @override
   String get availabilityNodeConnectWalletToast => 'Connect a wallet first';
 
   @override
-  String get availabilityNodeSigningRequiredToast =>
-      'A wallet-signed session is required to create an operator token.';
+  String get availabilityNodeSigningRequiredToast => 'A wallet-signed session is required to create an operator token.';
 
   @override
   String get availabilityNodeRevokeTitle => 'Revoke token?';
@@ -6887,8 +6289,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeNoNodeTitle => 'No node is registered yet.';
 
   @override
-  String get availabilityNodeRunNodeCta =>
-      'Run a node to start contributing to the public art archive.';
+  String get availabilityNodeRunNodeCta => 'Run a node to start contributing to the public art archive.';
 
   @override
   String get availabilityNodeUptimeTodayLabel => 'Uptime today';
@@ -6903,16 +6304,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodePendingKub8Label => 'Pending KUB8';
 
   @override
-  String get availabilityNodePublicCidsPinnedLabel =>
-      'Public archive records pinned';
+  String get availabilityNodePublicCidsPinnedLabel => 'Public archive records pinned';
 
   @override
-  String get availabilityNodeRewardableCidsPinnedLabel =>
-      'Priority archive records pinned';
+  String get availabilityNodeRewardableCidsPinnedLabel => 'Priority archive records pinned';
 
   @override
-  String get availabilityNodeFormulaExplanation =>
-      'Public archive replication is the base contribution. Priority archive records add bonus weight. Rewards are pending records until settlement exists.';
+  String get availabilityNodeFormulaExplanation => 'Public archive replication is the base contribution. Priority archive records add bonus weight. Rewards are pending records until settlement exists.';
 
   @override
   String get availabilityNodeCopyGuiUrlButton => 'Copy node GUI URL';
@@ -6921,29 +6319,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecurityTitle => 'Secure your wallet';
 
   @override
-  String get walletHomeSecuritySubtitle =>
-      'Backup, wallet access, and recovery status stay together here.';
+  String get walletHomeSecuritySubtitle => 'Backup, wallet access, and recovery status stay together here.';
 
   @override
   String get walletHomeYourTokensTitle => 'Wallet tokens';
 
   @override
-  String get walletHomeYourTokensSubtitle =>
-      'Balances currently associated with this wallet.';
+  String get walletHomeYourTokensSubtitle => 'Balances currently associated with this wallet.';
 
   @override
   String get walletHomeNoTokensTitle => 'No tokens yet';
 
   @override
-  String get walletHomeNoTokensDescription =>
-      'Token balances will appear if this wallet receives assets.';
+  String get walletHomeNoTokensDescription => 'Token balances will appear if this wallet receives assets.';
 
   @override
   String get walletHomeRecentTransactionsTitle => 'Wallet activity';
 
   @override
-  String get walletHomeRecentTransactionsSubtitle =>
-      'Latest wallet activity and confirmations.';
+  String get walletHomeRecentTransactionsSubtitle => 'Latest wallet activity and confirmations.';
 
   @override
   String get walletHomeDesktopRecentActivityTitle => 'Recent activity';
@@ -6964,8 +6358,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeNftLoadFailedTitle => 'Could not load digital editions';
 
   @override
-  String get walletHomeNoCollectiblesDescription =>
-      'Digital editions will appear here when they are linked to this wallet.';
+  String get walletHomeNoCollectiblesDescription => 'Digital editions will appear here when they are linked to this wallet.';
+
+  @override
+  String get walletHomeNoCollectiblesTitle => 'No digital editions yet';
 
   @override
   String walletHomeCollectibleByline(Object creator) {
@@ -6984,8 +6380,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeStakeTitle => 'Fee support setup';
 
   @override
-  String get walletHomeStakeDescription =>
-      'Prepare SOL for future transaction fees when publishing or artifact actions require it.';
+  String get walletHomeStakeDescription => 'Prepare SOL for future transaction fees when publishing or digital edition actions require it.';
 
   @override
   String get walletHomeStakeAction => 'Set up support';
@@ -7040,8 +6435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveTokenQrError => 'QR error\nGeneration failed';
 
   @override
-  String get receiveTokenQrRequiresWallet =>
-      'Create or import a wallet\nto generate a QR code';
+  String get receiveTokenQrRequiresWallet => 'Create or import a wallet\nto generate a QR code';
 
   @override
   String receiveTokenScanToSend(Object token) {
@@ -7054,8 +6448,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get receiveTokenFinishSetupToShare =>
-      'Finish wallet setup to share your address';
+  String get receiveTokenFinishSetupToShare => 'Finish wallet setup to share your address';
 
   @override
   String receiveTokenYourAddressTitle(Object token) {
@@ -7069,8 +6462,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveTokenCopyAddressTooltip => 'Copy address';
 
   @override
-  String get receiveTokenRequiresWalletToReceive =>
-      'Create or import a wallet to receive tokens';
+  String get receiveTokenRequiresWalletToReceive => 'Create or import a wallet to receive tokens';
 
   @override
   String get receiveTokenCopyAddressButton => 'Copy address';
@@ -7092,15 +6484,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveTokenStep2Title => 'Or show QR code';
 
   @override
-  String get receiveTokenStep2Description =>
-      'Let them scan the QR code above with their wallet app';
+  String get receiveTokenStep2Description => 'Let them scan the QR code above with their wallet app';
 
   @override
   String get receiveTokenStep3Title => 'Receive tokens';
 
   @override
-  String get receiveTokenStep3Description =>
-      'Tokens will appear in your wallet once the transaction is confirmed';
+  String get receiveTokenStep3Description => 'Tokens will appear in your wallet once the transaction is confirmed';
 
   @override
   String receiveTokenWarningOnlySend(Object token) {
@@ -7108,8 +6498,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get receiveTokenNoWalletAddressToast =>
-      'No wallet address available yet';
+  String get receiveTokenNoWalletAddressToast => 'No wallet address available yet';
 
   @override
   String receiveTokenShareText(Object token, Object address, Object payload) {
@@ -7117,15 +6506,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get receiveTokenNoTokensMessage =>
-      'Connect or import a wallet to display available tokens.';
+  String get receiveTokenNoTokensMessage => 'Connect or import a wallet to display available tokens.';
 
   @override
   String get receiveTokenSidebarShareTitle => 'Share your receive details';
 
   @override
-  String get receiveTokenSidebarShareSubtitle =>
-      'Copy the address or share the QR-ready payload.';
+  String get receiveTokenSidebarShareSubtitle => 'Copy the address or share the QR-ready payload.';
 
   @override
   String get receiveTokenSidebarShareAction => 'Share';
@@ -7134,19 +6521,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveTokenSidebarActivityTitle => 'Recent inbound';
 
   @override
-  String get receiveTokenSidebarActivitySubtitle =>
-      'Recent counterparties can be reused or verified here.';
+  String get receiveTokenSidebarActivitySubtitle => 'Recent counterparties can be reused or verified here.';
 
   @override
   String get receiveTokenSidebarNoActivityTitle => 'No inbound activity';
 
   @override
-  String get receiveTokenSidebarNoActivityDescription =>
-      'Incoming transfers will appear here once this wallet receives funds.';
+  String get receiveTokenSidebarNoActivityDescription => 'Incoming transfers will appear here once this wallet receives funds.';
 
   @override
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date) {
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7189,19 +6573,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenSidebarRecipientsTitle => 'Recent recipients';
 
   @override
-  String get sendTokenSidebarRecipientsSubtitle =>
-      'Reuse recent destinations without leaving this flow.';
+  String get sendTokenSidebarRecipientsSubtitle => 'Reuse recent destinations without leaving this flow.';
 
   @override
   String get sendTokenSidebarNoRecipientsTitle => 'No recent recipients';
 
   @override
-  String get sendTokenSidebarNoRecipientsDescription =>
-      'Recent send destinations will appear here after you transfer tokens.';
+  String get sendTokenSidebarNoRecipientsDescription => 'Recent send destinations will appear here after you transfer tokens.';
 
   @override
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date) {
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7209,12 +6590,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenSidebarSummaryTitle => 'Send context';
 
   @override
-  String get sendTokenSidebarSummarySubtitle =>
-      'Review available balance, fee estimate, and destination at a glance.';
+  String get sendTokenSidebarSummarySubtitle => 'Review available balance, fee estimate, and destination at a glance.';
 
   @override
-  String get sendTokenSidebarSecuritySubtitle =>
-      'Wallet access and recovery status for this transfer.';
+  String get sendTokenSidebarSecuritySubtitle => 'Wallet access and recovery status for this transfer.';
 
   @override
   String get sendTokenSummaryAmountLabel => 'Amount';
@@ -7234,12 +6613,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenSummaryNetworkFeeLabel => 'Network fee';
 
   @override
-  String get sendTokenNetworkFeeNote =>
-      'Network fees are paid in SOL. Keep a small SOL balance for gas.';
+  String get sendTokenNetworkFeeNote => 'Network fees are paid in SOL. Keep a small SOL balance for gas.';
 
   @override
-  String get sendTokenNoTokensMessage =>
-      'Connect or create a wallet to select tokens for sending.';
+  String get sendTokenNoTokensMessage => 'Connect or create a wallet to select tokens for sending.';
 
   @override
   String sendTokenButtonLabel(Object token) {
@@ -7256,8 +6633,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenAmountRequiredError => 'Amount is required';
 
   @override
-  String get sendTokenAmountGreaterThanZeroError =>
-      'Amount must be greater than 0';
+  String get sendTokenAmountGreaterThanZeroError => 'Amount must be greater than 0';
 
   @override
   String get sendTokenInsufficientBalanceError => 'Insufficient balance';
@@ -7266,27 +6642,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenNoBalanceToast => 'No balance available for this token';
 
   @override
-  String get sendTokenMaxAmountComputeFailedToast =>
-      'Unable to compute max amount. Keep some balance for fees.';
+  String get sendTokenMaxAmountComputeFailedToast => 'Unable to compute max amount. Keep some balance for fees.';
 
   @override
-  String get sendTokenQrScannerUnsupportedWeb =>
-      'QR code scanning is not available on web browsers. Please use the mobile or desktop app for this feature.';
+  String get sendTokenQrScannerUnsupportedWeb => 'QR code scanning is not available on web browsers. Please use the mobile or desktop app for this feature.';
 
   @override
-  String get sendTokenQrScannerUnsupportedDesktop =>
-      'QR code scanning is not available on desktop platforms. Please use the mobile app for this feature.';
+  String get sendTokenQrScannerUnsupportedDesktop => 'QR code scanning is not available on desktop platforms. Please use the mobile app for this feature.';
 
   @override
-  String get sendTokenQrScannerUnsupportedPlatform =>
-      'QR code scanning is not supported on this platform.';
+  String get sendTokenQrScannerUnsupportedPlatform => 'QR code scanning is not supported on this platform.';
 
   @override
   String get sendTokenQrUnreadableToast => 'Unable to read QR code payload.';
 
   @override
-  String get sendTokenQrInvalidAddressToast =>
-      'QR code did not include a valid address.';
+  String get sendTokenQrInvalidAddressToast => 'QR code did not include a valid address.';
 
   @override
   String get sendTokenQrScannedAddressLabel => 'Address scanned';
@@ -7302,8 +6673,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sendTokenQrScanErrorToast =>
-      'Error scanning QR code. Please try again.';
+  String get sendTokenQrScanErrorToast => 'Error scanning QR code. Please try again.';
 
   @override
   String sendTokenSendSuccessToast(Object amount, Object token) {
@@ -7311,30 +6681,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature) {
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature) {
     return '$amount $token submitted. Tx: $signature';
   }
 
   @override
-  String get sendTokenSendFailedToast =>
-      'Failed to send tokens. Please try again.';
+  String get sendTokenSendFailedToast => 'Failed to send tokens. Please try again.';
 
   @override
-  String get sendTokenInsufficientAfterFeesToast =>
-      'Insufficient balance after protocol fees. Reduce the amount or top up your wallet.';
+  String get sendTokenInsufficientAfterFeesToast => 'Insufficient balance after protocol fees. Reduce the amount or top up your wallet.';
 
   @override
-  String get sendTokenNoKeypairToast =>
-      'No wallet keypair available. Reconnect or re-import your wallet.';
+  String get sendTokenNoKeypairToast => 'No wallet keypair available. Reconnect or re-import your wallet.';
 
   @override
-  String get sendTokenInvalidAddressBeforeSendToast =>
-      'Enter a valid Solana address before sending.';
+  String get sendTokenInvalidAddressBeforeSendToast => 'Enter a valid Solana address before sending.';
 
   @override
-  String get sendTokenConnectWalletBeforeSendToast =>
-      'Connect your wallet before sending tokens.';
+  String get sendTokenConnectWalletBeforeSendToast => 'Connect your wallet before sending tokens.';
 
   @override
   String get qrScannerTitle => 'Scan QR code';
@@ -7343,8 +6707,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerWebUnavailableTitle => 'QR scanner not available';
 
   @override
-  String get qrScannerWebUnavailableDescription =>
-      'Camera-based QR scanning is not supported on web browsers. Please paste or type the address manually instead.';
+  String get qrScannerWebUnavailableDescription => 'Camera-based QR scanning is not supported on web browsers. Please paste or type the address manually instead.';
 
   @override
   String get qrScannerGoBackButton => 'Go back';
@@ -7356,8 +6719,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerPermissionNeededTitle => 'Camera permission needed';
 
   @override
-  String get qrScannerPermissionNeededDescription =>
-      'Enable camera access to scan wallet QR codes securely.';
+  String get qrScannerPermissionNeededDescription => 'Enable camera access to scan wallet QR codes securely.';
 
   @override
   String get qrScannerOpenSettingsButton => 'Open settings';
@@ -7369,8 +6731,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerCameraErrorTitle => 'Camera error';
 
   @override
-  String get qrScannerCameraErrorDescription =>
-      'Unable to start camera. Please check permissions and try again.';
+  String get qrScannerCameraErrorDescription => 'Unable to start camera. Please check permissions and try again.';
 
   @override
   String get qrScannerStatusAddressCapturedTitle => 'Address captured';
@@ -7379,15 +6740,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerStatusUnsupportedQrTitle => 'Unsupported QR code';
 
   @override
-  String get qrScannerStatusUnsupportedQrDescription =>
-      'This QR code does not include a valid Solana address.';
+  String get qrScannerStatusUnsupportedQrDescription => 'This QR code does not include a valid Solana address.';
 
   @override
   String get qrScannerStatusReadyTitle => 'Ready to scan';
 
   @override
-  String get qrScannerStatusReadyDescription =>
-      'Align the QR code inside the frame to capture a Solana address.';
+  String get qrScannerStatusReadyDescription => 'Align the QR code inside the frame to capture a Solana address.';
 
   @override
   String get qrScannerMetaAmountLabel => 'Amount';
@@ -7399,8 +6758,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerInvalidQrToast => 'Please scan a Solana wallet QR code.';
 
   @override
-  String get qrScannerTorchNotSupportedToast =>
-      'Torch toggle not supported on this device.';
+  String get qrScannerTorchNotSupportedToast => 'Torch toggle not supported on this device.';
 
   @override
   String get qrScannerSwitchCameraFailedToast => 'Unable to switch camera.';
@@ -7418,8 +6776,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailTitle => 'Artwork';
 
   @override
-  String get artDetailLoadFailedMessage =>
-      'Failed to load artwork details. Please try again.';
+  String get artDetailLoadFailedMessage => 'Failed to load artwork details. Please try again.';
 
   @override
   String get artDetailArStatusReady => 'AR: Ready';
@@ -7454,19 +6811,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walkingNavigationBeta => 'Beta';
 
   @override
-  String get walkingNavigationPreviewNotice =>
-      'On-device walking preview. Routes may be incomplete; stay aware of your surroundings.';
+  String get walkingNavigationPreviewNotice => 'On-device walking preview. Routes may be incomplete; stay aware of your surroundings.';
 
   @override
   String get walkingNavigationWaitingForLocation => 'Finding your location…';
 
   @override
-  String get walkingNavigationRequestingPermission =>
-      'Requesting location access…';
+  String get walkingNavigationRequestingPermission => 'Requesting location access…';
 
   @override
-  String get walkingNavigationCalculating =>
-      'Calculating a pedestrian route on this device…';
+  String get walkingNavigationCalculating => 'Calculating a pedestrian route on this device…';
 
   @override
   String get walkingNavigationRerouting => 'Updating your walking route…';
@@ -7475,48 +6829,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walkingNavigationArrived => 'You have arrived';
 
   @override
-  String get walkingNavigationRouteUnavailable =>
-      'A walkable route could not be calculated.';
+  String get walkingNavigationRouteUnavailable => 'A walkable route could not be calculated.';
 
   @override
-  String get walkingNavigationPermissionDenied =>
-      'Location access is needed to start walking navigation.';
+  String get walkingNavigationPermissionDenied => 'Location access is needed to start walking navigation.';
 
   @override
-  String get walkingNavigationPermissionDeniedPermanently =>
-      'Location access is blocked for art.kubus. Enable it in app settings.';
+  String get walkingNavigationPermissionDeniedPermanently => 'Location access is blocked for art.kubus. Enable it in app settings.';
 
   @override
-  String get walkingNavigationServicesDisabled =>
-      'Turn on location services to start walking navigation.';
+  String get walkingNavigationServicesDisabled => 'Turn on location services to start walking navigation.';
 
   @override
-  String get walkingNavigationLocationUnavailable =>
-      'A live location fix is not available yet.';
+  String get walkingNavigationLocationUnavailable => 'A live location fix is not available yet.';
 
   @override
-  String get walkingNavigationLocationTimedOut =>
-      'Finding your live location took too long.';
+  String get walkingNavigationLocationTimedOut => 'Finding your live location took too long.';
 
   @override
-  String get walkingNavigationNoRoute =>
-      'No connected pedestrian route was found.';
+  String get walkingNavigationNoRoute => 'No connected pedestrian route was found.';
 
   @override
-  String get walkingNavigationRouteTooLong =>
-      'This destination is outside the supported walking-navigation distance.';
+  String get walkingNavigationRouteTooLong => 'This destination is outside the supported walking-navigation distance.';
 
   @override
-  String get walkingNavigationRouteSourceTimeout =>
-      'The walking route source timed out.';
+  String get walkingNavigationRouteSourceTimeout => 'The walking route source timed out.';
 
   @override
-  String get walkingNavigationRouteNetworkFailure =>
-      'The walking route source could not be reached.';
+  String get walkingNavigationRouteNetworkFailure => 'The walking route source could not be reached.';
 
   @override
-  String get walkingNavigationRouteMalformed =>
-      'The walking route source returned an invalid response.';
+  String get walkingNavigationRouteMalformed => 'The walking route source returned an invalid response.';
 
   @override
   String get walkingNavigationRetry => 'Retry';
@@ -7560,8 +6903,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get walkingNavigationRouteAttribution =>
-      'Route data © OpenStreetMap contributors';
+  String get walkingNavigationRouteAttribution => 'Route data © OpenStreetMap contributors';
 
   @override
   String get artDetailNavigationGoogleMaps => 'Google Maps';
@@ -7579,20 +6921,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailNavigationCopyCoordinates => 'Copy coordinates';
 
   @override
-  String get artDetailNavigationCouldNotCopyCoordinates =>
-      'Could not copy coordinates';
+  String get artDetailNavigationCouldNotCopyCoordinates => 'Could not copy coordinates';
 
   @override
-  String get artDetailNavigationCouldNotOpenGoogleMaps =>
-      'Could not open Google Maps';
+  String get artDetailNavigationCouldNotOpenGoogleMaps => 'Could not open Google Maps';
 
   @override
-  String get artDetailNavigationCouldNotOpenAppleMaps =>
-      'Could not open Apple Maps';
+  String get artDetailNavigationCouldNotOpenAppleMaps => 'Could not open Apple Maps';
 
   @override
-  String get artDetailNavigationCouldNotOpenMaps =>
-      'Could not open maps application';
+  String get artDetailNavigationCouldNotOpenMaps => 'Could not open maps application';
 
   @override
   String artDetailNavigationErrorOpeningGoogleMaps(Object error) {
@@ -7627,11 +6965,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkDetailHideComments => 'Hide comments';
 
   @override
-  String get artworkDetailMintNft => 'Create archive record';
+  String get artworkDetailMintNft => 'Create digital edition';
 
   @override
-  String get eventCreatorNoInstitutionAvailableMessage =>
-      'No institution is available for this event yet.';
+  String get eventCreatorNoInstitutionAvailableMessage => 'No institution is available for this event yet.';
 
   @override
   String get eventCreatorInstitutionLabel => 'Institution';
@@ -7688,8 +7025,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorHelpTitle => 'Event creator help';
 
   @override
-  String get eventCreatorHelpBody =>
-      'Fill in the basics, choose the date and time, then review everything before saving. Collaboration unlocks after the event is created.';
+  String get eventCreatorHelpBody => 'Fill in the basics, choose the date and time, then review everything before saving. Collaboration unlocks after the event is created.';
 
   @override
   String get eventCreatorCapacityLabel => 'Capacity';
@@ -7710,26 +7046,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorPublicEventTitle => 'Public event';
 
   @override
-  String get eventCreatorPublicEventSubtitle =>
-      'Make this event visible to everyone';
+  String get eventCreatorPublicEventSubtitle => 'Make this event visible to everyone';
 
   @override
   String get eventCreatorAllowRegistrationTitle => 'Allow registration';
 
   @override
-  String get eventCreatorAllowRegistrationSubtitle =>
-      'Let attendees register for this event';
+  String get eventCreatorAllowRegistrationSubtitle => 'Let attendees register for this event';
 
   @override
   String get eventCreatorReviewTitle => 'Review';
 
   @override
-  String get eventCreatorSavedCollaborationHint =>
-      'Event saved. You can now manage collaboration from the sidebar.';
+  String get eventCreatorSavedCollaborationHint => 'Event saved. You can now manage collaboration from the sidebar.';
 
   @override
-  String get eventCreatorReviewNotice =>
-      'Please review all details before saving.';
+  String get eventCreatorReviewNotice => 'Please review all details before saving.';
 
   @override
   String get eventCreatorBasicsTitle => 'Basics';
@@ -7744,8 +7076,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorDescriptionHint => 'Describe the event...';
 
   @override
-  String get eventCreatorDescriptionRequiredError =>
-      'Event description is required';
+  String get eventCreatorDescriptionRequiredError => 'Event description is required';
 
   @override
   String get eventCreatorTitleLabel => 'Title';
@@ -7814,23 +7145,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorReviewRegistrationLabel => 'Registration';
 
   @override
-  String get eventCreatorSelectStartEndDatesToast =>
-      'Please select start and end dates';
+  String get eventCreatorSelectStartEndDatesToast => 'Please select start and end dates';
 
   @override
   String get eventCreatorEnterCapacityToast => 'Please enter event capacity';
 
   @override
-  String get eventCreatorNoInstitutionAvailableToast =>
-      'No institution available for this event';
+  String get eventCreatorNoInstitutionAvailableToast => 'No institution available for this event';
 
   @override
-  String get eventCreatorSelectedInstitutionNotFoundToast =>
-      'Selected institution not found';
+  String get eventCreatorSelectedInstitutionNotFoundToast => 'Selected institution not found';
 
   @override
-  String get eventCreatorEndTimeAfterStartToast =>
-      'End time must be after start time';
+  String get eventCreatorEndTimeAfterStartToast => 'End time must be after start time';
 
   @override
   String get eventCreatorEventUpdatedTitle => 'Event updated';
@@ -7839,19 +7166,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorEventCreatedTitle => 'Event created';
 
   @override
-  String get eventCreatorEventUpdatedBody =>
-      'Your event has been updated successfully.';
+  String get eventCreatorEventUpdatedBody => 'Your event has been updated successfully.';
 
   @override
-  String get eventCreatorEventCreatedBody =>
-      'Your event has been created successfully.';
+  String get eventCreatorEventCreatedBody => 'Your event has been created successfully.';
 
   @override
   String get eventCreatorCreateAnotherButton => 'Create another';
 
   @override
-  String get eventCreatorSaveFailedToast =>
-      'Failed to save event. Please try again.';
+  String get eventCreatorSaveFailedToast => 'Failed to save event. Please try again.';
 
   @override
   String get eventCreatorShellEditTitle => 'Edit Event';
@@ -7860,12 +7184,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorShellCreateTitle => 'Create New Event';
 
   @override
-  String get eventCreatorShellDraftSubtitle =>
-      'Complete the wizard here, then save to unlock collaboration.';
+  String get eventCreatorShellDraftSubtitle => 'Complete the wizard here, then save to unlock collaboration.';
 
   @override
-  String get eventCreatorShellSavedSubtitle =>
-      'Event saved. Keep refining or open collaboration from the sidebar.';
+  String get eventCreatorShellSavedSubtitle => 'Event saved. Keep refining or open collaboration from the sidebar.';
 
   @override
   String eventCreatorStepBadge(int step) {
@@ -7884,15 +7206,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get eventCreatorReadyInstitutionPending =>
-      'Choose the institution first.';
+  String get eventCreatorReadyInstitutionPending => 'Choose the institution first.';
 
   @override
   String get eventCreatorReadyBasicsLabel => 'Basics complete';
 
   @override
-  String get eventCreatorReadyBasicsDescription =>
-      'Title, description, and event type are in place.';
+  String get eventCreatorReadyBasicsDescription => 'Title, description, and event type are in place.';
 
   @override
   String get eventCreatorReadyDatesLabel => 'Dates selected';
@@ -7907,12 +7227,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorReadyCapacityLabel => 'Capacity set';
 
   @override
-  String get eventCreatorReadyCapacityComplete =>
-      'Registration limit is ready.';
+  String get eventCreatorReadyCapacityComplete => 'Registration limit is ready.';
 
   @override
-  String get eventCreatorReadyCapacityPending =>
-      'Add a capacity to complete the setup.';
+  String get eventCreatorReadyCapacityPending => 'Add a capacity to complete the setup.';
 
   @override
   String get eventCreatorStatusDraftSubtitle => 'Draft in progress';
@@ -7936,15 +7254,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorReadinessTitle => 'Readiness';
 
   @override
-  String get eventCreatorReadinessSubtitle =>
-      'A quick sanity check before saving.';
+  String get eventCreatorReadinessSubtitle => 'A quick sanity check before saving.';
 
   @override
   String get eventCreatorQuickActionsTitle => 'Quick actions';
 
   @override
-  String get eventCreatorQuickActionsSubtitle =>
-      'Keep the whole workflow in one workspace.';
+  String get eventCreatorQuickActionsSubtitle => 'Keep the whole workflow in one workspace.';
 
   @override
   String get eventCreatorQuickActionNextStep => 'Next step';
@@ -7959,16 +7275,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorQuickActionOpenEvent => 'Open event';
 
   @override
-  String get eventCreatorCollaborationReadySubtitle =>
-      'Invite collaborators without leaving the creator.';
+  String get eventCreatorCollaborationReadySubtitle => 'Invite collaborators without leaving the creator.';
 
   @override
-  String get eventCreatorCollaborationLockedSubtitle =>
-      'Save once to unlock collaboration.';
+  String get eventCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
 
   @override
-  String get eventCreatorCollaborationLockedMessage =>
-      'Once saved, collaborators can be invited here so event planning stays in context.';
+  String get eventCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so event planning stays in context.';
 
   @override
   String eventCreatorStepLabel(int step) {
@@ -7976,8 +7289,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get activityNavigationUnableToOpenToast =>
-      'Unable to open this activity right now.';
+  String get activityNavigationUnableToOpenToast => 'Unable to open this activity right now.';
 
   @override
   String navigationUnableToNavigateToScreen(Object screenName) {
@@ -8002,19 +7314,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arMarkerScannerLaunchViewerPrompt => 'Launch AR viewer?';
 
   @override
-  String get arMarkerScannerLaunchFailedInstallPrompt =>
-      'Failed to launch AR viewer. Install Google ARCore?';
+  String get arMarkerScannerLaunchFailedInstallPrompt => 'Failed to launch AR viewer. Install Google ARCore?';
 
   @override
-  String get arMarkerScannerProcessingFailedToast =>
-      'Failed to process QR code. Please try again.';
+  String get arMarkerScannerProcessingFailedToast => 'Failed to process QR code. Please try again.';
 
   @override
   String get arMarkerScannerProcessingQrLabel => 'Processing QR code…';
 
   @override
-  String get arMarkerScannerPointCameraLabel =>
-      'Point camera at QR code to discover AR artwork';
+  String get arMarkerScannerPointCameraLabel => 'Point camera at QR code to discover AR artwork';
 
   @override
   String get arMarkerScannerLaunchingViewerLabel => 'Launching AR viewer…';
@@ -8079,8 +7388,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistGalleryCreateNewTitle => 'Create new artwork';
 
   @override
-  String get artistGalleryCreateNewDescription =>
-      'Navigate to the Create tab to upload and create your new artwork.';
+  String get artistGalleryCreateNewDescription => 'Navigate to the Create tab to upload and create your new artwork.';
 
   @override
   String get artistGalleryGoToCreateButton => 'Go to Create';
@@ -8089,8 +7397,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistGalleryEmptyTitle => 'No artworks yet';
 
   @override
-  String get artistGalleryEmptyDescription =>
-      'Create your first artwork to get started.';
+  String get artistGalleryEmptyDescription => 'Create your first artwork to get started.';
 
   @override
   String get artistGalleryCreateArtworkButton => 'Create artwork';
@@ -8134,8 +7441,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistGalleryDeleteArtworkTitle => 'Delete artwork';
 
   @override
-  String get artistGalleryPromoteUnavailableToast =>
-      'Only active public artworks can be promoted.';
+  String get artistGalleryPromoteUnavailableToast => 'Only active public artworks can be promoted.';
 
   @override
   String artistGalleryDeleteConfirmBody(Object title) {
@@ -8149,67 +7455,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistCreatorCoverSelectedToast => 'Cover selected';
 
   @override
-  String get artistCreatorPickImageFailedToast =>
-      'Failed to pick an image. Please try again.';
+  String get artistCreatorPickImageFailedToast => 'Failed to pick an image. Please try again.';
 
   @override
   String get artistCreatorModelSelectedToast => '3D model selected';
 
   @override
-  String get artistCreatorPickModelFailedToast =>
-      'Failed to pick a 3D model. Please try again.';
+  String get artistCreatorPickModelFailedToast => 'Failed to pick a 3D model. Please try again.';
 
   @override
   String get artistCreatorSelectImageToast => 'Please select an image';
 
   @override
-  String get artistCreatorConnectWalletToPublishToast =>
-      'Connect a wallet to publish wallet-linked artwork.';
+  String get artistCreatorConnectWalletToPublishToast => 'Connect a wallet to publish wallet-linked artwork.';
 
   @override
-  String get artistCreatorSelectCoverImageToast =>
-      'Please select a cover image.';
+  String get artistCreatorSelectCoverImageToast => 'Please select a cover image.';
 
   @override
-  String get artistCreatorUploadModelToEnableArToast =>
-      'Upload a 3D model to enable AR.';
+  String get artistCreatorUploadModelToEnableArToast => 'Upload a 3D model to enable AR.';
 
   @override
-  String get artistCreatorEnterLatLngOrDisableToast =>
-      'Enter both latitude and longitude or disable coordinates.';
+  String get artistCreatorEnterLatLngOrDisableToast => 'Enter both latitude and longitude or disable coordinates.';
 
   @override
-  String get artistCreatorInvalidCoordinatesToast =>
-      'Coordinates must be valid latitude/longitude values.';
+  String get artistCreatorInvalidCoordinatesToast => 'Coordinates must be valid latitude/longitude values.';
 
   @override
-  String get artistCreatorCoverUrlMissingToast =>
-      'Upload succeeded but cover URL is missing.';
+  String get artistCreatorCoverUrlMissingToast => 'Upload succeeded but cover URL is missing.';
 
   @override
-  String get artistCreatorSubmittedPendingToast =>
-      'Artwork submitted. Backend response pending.';
+  String get artistCreatorSubmittedPendingToast => 'Artwork submitted. Backend response pending.';
 
   @override
   String get artistCreatorSuccessTitle => 'Success!';
 
   @override
-  String get artistCreatorSuccessBody =>
-      'Your artwork has been created successfully!';
+  String get artistCreatorSuccessBody => 'Your artwork has been created successfully!';
 
   @override
   String get artistCreatorViewGalleryButton => 'View gallery';
 
   @override
-  String get artistCreatorCreateFailedToast =>
-      'Failed to create artwork. Please try again.';
+  String get artistCreatorCreateFailedToast => 'Failed to create artwork. Please try again.';
 
   @override
   String get artistCreatorHelpTitle => 'AR marker creation';
 
   @override
-  String get artistCreatorHelpBody =>
-      'Follow the 4-step process to create your AR artwork:\n\n1. Upload: Select your artwork image\n2. Details: Enter title, description, and pricing\n3. Settings: Configure location and features\n4. Review: Confirm and publish your artwork';
+  String get artistCreatorHelpBody => 'Follow the 4-step process to create your AR artwork:\n\n1. Upload: Select your artwork image\n2. Details: Enter title, description, and pricing\n3. Settings: Configure location and features\n4. Review: Confirm and publish your artwork';
 
   @override
   String get artistStudioTitle => 'Artist Studio';
@@ -8218,55 +7512,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioHeaderWelcome => 'Welcome to your Studio';
 
   @override
-  String get artistStudioHeaderSubtitle =>
-      'Create AR markers for your artwork and share them with the world';
+  String get artistStudioHeaderSubtitle => 'Create AR markers for your artwork and share them with the world';
 
   @override
-  String get artistStudioInstitutionRoleActiveTitle =>
-      'Institution role active';
+  String get artistStudioInstitutionRoleActiveTitle => 'Institution role active';
 
   @override
-  String get artistStudioInstitutionReviewInProgressTitle =>
-      'Institution review in progress';
+  String get artistStudioInstitutionReviewInProgressTitle => 'Institution review in progress';
 
   @override
-  String get artistStudioInstitutionRoleActiveDescription =>
-      'Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.';
+  String get artistStudioInstitutionRoleActiveDescription => 'Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.';
 
   @override
-  String get artistStudioInstitutionReviewInProgressDescription =>
-      'You have an institution application pending. Complete or withdraw it before switching to an artist review.';
+  String get artistStudioInstitutionReviewInProgressDescription => 'You have an institution application pending. Complete or withdraw it before switching to an artist review.';
 
   @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveTitle =>
-      'Institution badge active';
+  String get artistStudioCrossRoleInstitutionBadgeActiveTitle => 'Institution badge active';
 
   @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveDescription =>
-      'Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.';
+  String get artistStudioCrossRoleInstitutionBadgeActiveDescription => 'Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.';
 
   @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressTitle =>
-      'Institution review in progress';
+  String get artistStudioCrossRoleInstitutionReviewInProgressTitle => 'Institution review in progress';
 
   @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressDescription =>
-      'You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.';
+  String get artistStudioCrossRoleInstitutionReviewInProgressDescription => 'You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.';
 
   @override
   String get artistStudioCrossRoleConflictTitle => 'Role conflict detected';
 
   @override
-  String get artistStudioCrossRoleConflictDescription =>
-      'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.';
+  String get artistStudioCrossRoleConflictDescription => 'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.';
 
   @override
-  String get artistStudioDaoCardTitle =>
-      'Artist application (governance review)';
+  String get artistStudioDaoCardTitle => 'Artist application (governance review)';
 
   @override
-  String get artistStudioDaoCardSubtitle =>
-      'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.';
+  String get artistStudioDaoCardSubtitle => 'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.';
 
   @override
   String get artistStudioDaoStatusApproved => 'APPROVED';
@@ -8281,24 +7563,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioDaoStatusNotApplied => 'NOT APPLIED';
 
   @override
-  String get artistStudioStatusSyncedFromDao =>
-      'Status synced from governance review';
+  String get artistStudioStatusSyncedFromDao => 'Status synced from governance review';
 
   @override
-  String get artistStudioReviewPendingInfo =>
-      'Your submission is in the governance review queue. We will let you know when the review is complete.';
+  String get artistStudioReviewPendingInfo => 'Your submission is in the governance review queue. We will let you know when the review is complete.';
 
   @override
-  String get artistStudioReviewApprovedInfo =>
-      'Your practice has been approved through governance review. Studio tools are ready.';
+  String get artistStudioReviewApprovedInfo => 'Your practice has been approved through governance review. Studio tools are ready.';
 
   @override
-  String get artistStudioReviewRejectedInfo =>
-      'Your last submission was rejected. You can resubmit with updates.';
+  String get artistStudioReviewRejectedInfo => 'Your last submission was rejected. You can resubmit with updates.';
 
   @override
-  String get artistStudioConnectWalletToSubmitForDaoReview =>
-      'Connect a wallet before submitting for governance review.';
+  String get artistStudioConnectWalletToSubmitForDaoReview => 'Connect a wallet before submitting for governance review.';
 
   @override
   String get artistStudioCtaConnectWalletToApply => 'Connect a wallet to apply';
@@ -8316,16 +7593,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCtaApplyForDaoReview => 'Apply for governance review';
 
   @override
-  String get artistPromotionRequiresWalletReason =>
-      'Connect an approved artist wallet to request profile promotion.';
+  String get artistPromotionRequiresWalletReason => 'Connect an approved artist wallet to request profile promotion.';
 
   @override
-  String get artistPromotionConflictWithInstitutionReason =>
-      'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
+  String get artistPromotionConflictWithInstitutionReason => 'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
 
   @override
-  String get artistPromotionRequiresApprovalReason =>
-      'Profile promotion is available only for approved artist wallets.';
+  String get artistPromotionRequiresApprovalReason => 'Profile promotion is available only for approved artist wallets.';
 
   @override
   String get artistStudioPromoteAction => 'Promote';
@@ -8343,8 +7617,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioPromoteCollection => 'Promote collection';
 
   @override
-  String get artistStudioPromoteComingSoon =>
-      'Promotion tools are coming soon.';
+  String get artistStudioPromoteComingSoon => 'Promotion tools are coming soon.';
 
   @override
   String get artistStudioTabGallery => 'Gallery';
@@ -8359,19 +7632,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioTabAnalytics => 'Analytics';
 
   @override
-  String get artistStudioUnlocksAfterDaoApprovalToast =>
-      'Artist Studio unlocks after governance review approval.';
+  String get artistStudioUnlocksAfterDaoApprovalToast => 'Artist Studio unlocks after governance review approval.';
 
   @override
-  String get artistStudioSeparateWalletsTip =>
-      'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.';
+  String get artistStudioSeparateWalletsTip => 'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.';
 
   @override
   String get artistStudioLockedTitle => 'Artist Studio is locked';
 
   @override
-  String get artistStudioLockedDescription =>
-      'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
+  String get artistStudioLockedDescription => 'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
 
   @override
   String get artistStudioSettingsTitle => 'Studio Settings';
@@ -8380,27 +7650,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioApplicationModalTitle => 'Artist application';
 
   @override
-  String get artistStudioApplicationModalSubtitle =>
-      'Share a snapshot of your practice. Submissions are routed to the governance review queue.';
+  String get artistStudioApplicationModalSubtitle => 'Share a snapshot of your practice. Submissions are routed to the governance review queue.';
 
   @override
-  String get artistStudioApplicationFieldPortfolioLabel =>
-      'Portfolio or website';
+  String get artistStudioApplicationFieldPortfolioLabel => 'Portfolio or website';
 
   @override
-  String get artistStudioApplicationFieldMediumLabel =>
-      'Primary medium or focus';
+  String get artistStudioApplicationFieldMediumLabel => 'Primary medium or focus';
 
   @override
   String get artistStudioApplicationFieldStatementLabel => 'Artist statement';
 
   @override
-  String get artistStudioApplicationValidationPortfolio =>
-      'Please provide a link to your work';
+  String get artistStudioApplicationValidationPortfolio => 'Please provide a link to your work';
 
   @override
-  String get artistStudioApplicationValidationMedium =>
-      'Let reviewers know what you create';
+  String get artistStudioApplicationValidationMedium => 'Let reviewers know what you create';
 
   @override
   String artistStudioApplicationValidationStatementMinChars(Object min) {
@@ -8408,23 +7673,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get artistStudioApplicationWalletRequiredToast =>
-      'Connect a wallet before submitting for review.';
+  String get artistStudioApplicationWalletRequiredToast => 'Connect a wallet before submitting for review.';
 
   @override
   String get artistStudioApplicationReviewTitle => 'Artist application';
 
   @override
-  String get artistStudioApplicationSubmittedToast =>
-      'Application submitted to governance reviewers.';
+  String get artistStudioApplicationSubmittedToast => 'Application submitted to governance reviewers.';
 
   @override
-  String get artistStudioApplicationUnableToSubmitToast =>
-      'Unable to submit application right now.';
+  String get artistStudioApplicationUnableToSubmitToast => 'Unable to submit application right now.';
 
   @override
-  String get artistStudioApplicationSubmissionFailedToast =>
-      'Submission failed. Please try again.';
+  String get artistStudioApplicationSubmissionFailedToast => 'Submission failed. Please try again.';
 
   @override
   String get artistStudioApplicationSubmitButton => 'Submit application';
@@ -8439,45 +7700,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioQuickActionInvitesTitle => 'Invites';
 
   @override
-  String get desktopArtistStudioQuickActionInvitesSubtitle =>
-      'View collaboration invites';
+  String get desktopArtistStudioQuickActionInvitesSubtitle => 'View collaboration invites';
 
   @override
-  String get desktopArtistStudioQuickActionInvitesPendingSubtitle =>
-      'You have pending collaboration invites';
+  String get desktopArtistStudioQuickActionInvitesPendingSubtitle => 'You have pending collaboration invites';
 
   @override
-  String get desktopArtistStudioQuickActionCollaborationInvitesTitle =>
-      'Collaboration Invites';
+  String get desktopArtistStudioQuickActionCollaborationInvitesTitle => 'Collaboration Invites';
 
   @override
   String get desktopArtistStudioQuickActionExhibitionsTitle => 'My Exhibitions';
 
   @override
-  String get desktopArtistStudioQuickActionExhibitionsSubtitle =>
-      'View exhibitions you collaborate on';
+  String get desktopArtistStudioQuickActionExhibitionsSubtitle => 'View exhibitions you collaborate on';
 
   @override
-  String get desktopArtistStudioQuickActionCreateArtworkTitle =>
-      'Create Artwork';
+  String get desktopArtistStudioQuickActionCreateArtworkTitle => 'Create Artwork';
 
   @override
-  String get desktopArtistStudioQuickActionCreateArtworkSubtitle =>
-      'Upload and publish new work';
+  String get desktopArtistStudioQuickActionCreateArtworkSubtitle => 'Upload and publish new work';
 
   @override
   String get desktopArtistStudioQuickActionMyGalleryTitle => 'My Gallery';
 
   @override
-  String get desktopArtistStudioQuickActionMyGallerySubtitle =>
-      'View all artworks';
+  String get desktopArtistStudioQuickActionMyGallerySubtitle => 'View all artworks';
 
   @override
   String get desktopArtistStudioQuickActionAnalyticsTitle => 'Analytics';
 
   @override
-  String get desktopArtistStudioQuickActionAnalyticsSubtitle =>
-      'View performance stats';
+  String get desktopArtistStudioQuickActionAnalyticsSubtitle => 'View performance stats';
 
   @override
   String get desktopArtistStudioStatisticsTitle => 'Studio Statistics';
@@ -8492,12 +7745,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioPromoteProfileTitle => 'Promote Profile';
 
   @override
-  String get desktopArtistStudioPromoteProfileSubtitle =>
-      'Boost profile visibility with priority placement';
+  String get desktopArtistStudioPromoteProfileSubtitle => 'Boost profile visibility with priority placement';
 
   @override
-  String get desktopArtistStudioCreatorWorkspaceSubtitle =>
-      'Open a dedicated creator workspace and stay in flow.';
+  String get desktopArtistStudioCreatorWorkspaceSubtitle => 'Open a dedicated creator workspace and stay in flow.';
 
   @override
   String get desktopArtistStudioMyProfile => 'my profile';
@@ -8506,41 +7757,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioVerificationNotAppliedTitle => 'Not Applied';
 
   @override
-  String get desktopArtistStudioVerificationNotAppliedDescription =>
-      'Apply for artist verification';
+  String get desktopArtistStudioVerificationNotAppliedDescription => 'Apply for artist verification';
 
   @override
   String get desktopArtistStudioVerificationLoadingTitle => 'Loading…';
 
   @override
-  String get desktopArtistStudioVerificationLoadingDescription =>
-      'Checking verification status';
+  String get desktopArtistStudioVerificationLoadingDescription => 'Checking verification status';
 
   @override
   String get desktopArtistStudioVerificationApprovedTitle => 'Verified Artist';
 
   @override
-  String get desktopArtistStudioVerificationApprovedDescription =>
-      'Your studio is verified';
+  String get desktopArtistStudioVerificationApprovedDescription => 'Your studio is verified';
 
   @override
   String get desktopArtistStudioVerificationPendingTitle => 'Pending Review';
 
   @override
-  String get desktopArtistStudioVerificationPendingDescription =>
-      'Application under review';
+  String get desktopArtistStudioVerificationPendingDescription => 'Application under review';
 
   @override
-  String get desktopArtistStudioVerificationRejectedTitle =>
-      'Application Rejected';
+  String get desktopArtistStudioVerificationRejectedTitle => 'Application Rejected';
 
   @override
-  String get desktopArtistStudioVerificationRejectedDescription =>
-      'Please resubmit with improvements';
+  String get desktopArtistStudioVerificationRejectedDescription => 'Please resubmit with improvements';
 
   @override
-  String get desktopArtistStudioApplyForVerificationButton =>
-      'Apply for Verification';
+  String get desktopArtistStudioApplyForVerificationButton => 'Apply for Verification';
 
   @override
   String get desktopArtistStudioStatArtworks => 'Artworks';
@@ -8555,52 +7799,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioStatSales => 'Sales';
 
   @override
-  String get desktopInstitutionPromotionWalletRequiredReason =>
-      'Connect a wallet to create promotions.';
+  String get desktopInstitutionPromotionWalletRequiredReason => 'Connect a wallet to create promotions.';
 
   @override
-  String get desktopInstitutionPromotionArtistConflictReason =>
-      'This wallet is verified as an artist. Use an institution wallet to promote institution content.';
+  String get desktopInstitutionPromotionArtistConflictReason => 'This wallet is verified as an artist. Use an institution wallet to promote institution content.';
 
   @override
-  String get desktopInstitutionPromotionRequiresApprovalReason =>
-      'Institution approval is required before creating promotions.';
+  String get desktopInstitutionPromotionRequiresApprovalReason => 'Institution approval is required before creating promotions.';
 
   @override
   String get desktopInstitutionPromoteProfileTitle => 'Promote Institution';
 
   @override
-  String get desktopInstitutionPromoteProfileSubtitle =>
-      'Boost institution visibility with priority placement';
+  String get desktopInstitutionPromoteProfileSubtitle => 'Boost institution visibility with priority placement';
 
   @override
-  String get desktopInstitutionCreatorWorkspaceSubtitle =>
-      'Launch institution creator workspaces as dedicated desktop flows.';
+  String get desktopInstitutionCreatorWorkspaceSubtitle => 'Launch institution creator workspaces as dedicated desktop flows.';
 
   @override
   String get desktopInstitutionCreateEventTitle => 'Create Event';
 
   @override
-  String get desktopInstitutionCreateEventSubtitle =>
-      'Schedule and publish institution events';
+  String get desktopInstitutionCreateEventSubtitle => 'Schedule and publish institution events';
 
   @override
-  String get desktopInstitutionCreateExhibitionSubtitle =>
-      'Create a curated exhibition experience';
+  String get desktopInstitutionCreateExhibitionSubtitle => 'Create a curated exhibition experience';
 
   @override
   String get desktopInstitutionManageEventsTitle => 'Manage Events';
 
   @override
-  String get desktopInstitutionManageEventsSubtitle =>
-      'Edit upcoming events and attendance details';
+  String get desktopInstitutionManageEventsSubtitle => 'Edit upcoming events and attendance details';
 
   @override
   String get desktopInstitutionMyExhibitionsTitle => 'My Exhibitions';
 
   @override
-  String get desktopInstitutionMyExhibitionsSubtitle =>
-      'Review and update institution exhibitions';
+  String get desktopInstitutionMyExhibitionsSubtitle => 'Review and update institution exhibitions';
 
   @override
   String get desktopInstitutionStatsTitle => 'Institution Stats';
@@ -8609,20 +7844,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopInstitutionVerificationNotAppliedTitle => 'Not Applied';
 
   @override
-  String get desktopInstitutionVerificationNotAppliedDescription =>
-      'Apply for institution verification';
+  String get desktopInstitutionVerificationNotAppliedDescription => 'Apply for institution verification';
 
   @override
-  String get desktopInstitutionVerificationApprovedDescription =>
-      'Your institution is verified';
+  String get desktopInstitutionVerificationApprovedDescription => 'Your institution is verified';
 
   @override
-  String get desktopInstitutionVerificationPendingDescription =>
-      'Application under review';
+  String get desktopInstitutionVerificationPendingDescription => 'Application under review';
 
   @override
-  String get desktopInstitutionVerificationApplyHint =>
-      'Verification unlocks institution publishing tools and promotions.';
+  String get desktopInstitutionVerificationApplyHint => 'Verification unlocks institution publishing tools and promotions.';
 
   @override
   String get desktopInstitutionStatVisitors => 'Visitors';
@@ -8661,8 +7892,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventManagerEmptyTitle => 'No events found';
 
   @override
-  String get eventManagerEmptyDescription =>
-      'Create your first event to get started';
+  String get eventManagerEmptyDescription => 'Create your first event to get started';
 
   @override
   String eventManagerOccupancyLabel(Object current, Object capacity) {
@@ -8755,8 +7985,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionListDisabledTitle => 'Exhibitions are not enabled';
 
   @override
-  String get exhibitionListDisabledSubtitle =>
-      'This feature is currently disabled.';
+  String get exhibitionListDisabledSubtitle => 'This feature is currently disabled.';
 
   @override
   String get exhibitionListMyExhibitionsTab => 'My Exhibitions';
@@ -8768,8 +7997,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionListCreateTitle => 'Create Exhibition';
 
   @override
-  String get exhibitionListCreateSubtitle =>
-      'Curate artworks and invite collaborators';
+  String get exhibitionListCreateSubtitle => 'Curate artworks and invite collaborators';
 
   @override
   String get exhibitionListCreateNewButton => 'New';
@@ -8778,12 +8006,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionListEmptyMineTitle => 'No exhibitions yet';
 
   @override
-  String get exhibitionListEmptyMineDescriptionCanCreate =>
-      'Create your first exhibition to showcase artworks and invite collaborators.';
+  String get exhibitionListEmptyMineDescriptionCanCreate => 'Create your first exhibition to showcase artworks and invite collaborators.';
 
   @override
-  String get exhibitionListEmptyMineDescriptionReadonly =>
-      'Your hosted exhibitions will appear here.';
+  String get exhibitionListEmptyMineDescriptionReadonly => 'Your hosted exhibitions will appear here.';
 
   @override
   String get exhibitionListRoleHost => 'Host';
@@ -8792,22 +8018,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionListEmptyCollaboratingTitle => 'No collaborations yet';
 
   @override
-  String get exhibitionListEmptyCollaboratingDescription =>
-      'When someone invites you to collaborate on an exhibition, it will appear here.';
+  String get exhibitionListEmptyCollaboratingDescription => 'When someone invites you to collaborate on an exhibition, it will appear here.';
 
   @override
   String get exhibitionListRoleCollaborator => 'Collaborator';
 
   @override
-  String get collabPanelNoInvitePermission =>
-      'You do not have permission to invite collaborators.';
+  String get collabPanelNoInvitePermission => 'You do not have permission to invite collaborators.';
 
   @override
   String get collabPanelEnterUsernameOrEmail => 'Enter a username or email.';
 
   @override
-  String get collabPanelUseUsernameOrEmail =>
-      'Use a username or email to invite someone.';
+  String get collabPanelUseUsernameOrEmail => 'Use a username or email to invite someone.';
 
   @override
   String get collabPanelInviteSent => 'Invite sent.';
@@ -8851,8 +8074,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collabPanelUsernameOrEmailHint => 'Username or email';
 
   @override
-  String get collabPanelInviteHint =>
-      'Invite collaborators by username or email.';
+  String get collabPanelInviteHint => 'Invite collaborators by username or email.';
 
   @override
   String marketplaceNetworkLabel(Object network) {
@@ -8868,15 +8090,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceConnectWalletTitle => 'Wallet connection';
 
   @override
-  String get marketplaceConnectWalletDescription =>
-      'Connect a Solana wallet to view digital editions linked to your account.';
+  String get marketplaceConnectWalletDescription => 'Connect a Solana wallet to view digital editions linked to your account.';
 
   @override
   String get marketplaceSettingsShowArOnlyTitle => 'Show AR-only collections';
 
   @override
-  String get marketplaceSettingsShowArOnlyDescription =>
-      'Filter collections that require AR interaction.';
+  String get marketplaceSettingsShowArOnlyDescription => 'Filter collections that require AR interaction.';
 
   @override
   String get marketplaceFeaturedTab => 'Featured';
@@ -8891,37 +8111,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceFeaturedCollectionsTitle => 'Featured collections';
 
   @override
-  String get marketplaceFeaturedCollectionsSubtitle =>
-      'Curated digital editions and AR-ready series from the community.';
+  String get marketplaceFeaturedCollectionsSubtitle => 'Curated digital editions and AR-ready series from the community.';
 
   @override
-  String get marketplaceNoMintedNftsTitle =>
-      'No digital editions available yet';
+  String get marketplaceNoMintedNftsTitle => 'No digital editions available yet';
 
   @override
-  String get marketplaceNoMintedNftsDescription =>
-      'Listings appear once an artwork is issued as a digital cultural object.';
+  String get marketplaceNoMintedNftsDescription => 'Listings appear once an artwork has a digital edition.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'Active this week';
 
   @override
-  String get marketplaceTrendingThisWeekSubtitle =>
-      'Artifacts with recent community attention.';
+  String get marketplaceTrendingThisWeekSubtitle => 'Digital editions with recent community attention.';
 
   @override
-  String get marketplaceNoTrendingNftsTitle => 'No active artifacts yet';
+  String get marketplaceNoTrendingNftsTitle => 'No active digital editions yet';
 
   @override
-  String get marketplaceNoTrendingNftsDescription =>
-      'Check back later as cultural artifact activity grows.';
+  String get marketplaceNoTrendingNftsDescription => 'Check back later as digital edition activity grows.';
 
   @override
   String get marketplaceMyCollectionTitle => 'My digital editions';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
-    return '$count artifacts';
+    return '$count digital editions';
   }
 
   @override
@@ -8952,56 +8167,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceRarityLabel => 'Rarity';
 
   @override
-  String get marketplaceOwnedNftStatus => 'Owned artifact';
+  String get marketplaceOwnedNftStatus => 'Owned digital edition';
 
   @override
-  String get marketplaceOwnedNftListedStatus => 'Owned artifact - Listed';
+  String get marketplaceOwnedNftListedStatus => 'Owned digital edition, listed';
 
   @override
   String get marketplaceEmptyCollectionTitle => 'No digital editions yet';
 
   @override
-  String get marketplaceEmptyCollectionDescription =>
-      'Create digital editions from artworks and keep them here.';
+  String get marketplaceEmptyCollectionDescription => 'Create digital editions from artworks and keep them here.';
 
   @override
   String get marketplaceExploreArArtButton => 'Explore art map';
 
   @override
-  String get marketplaceListForSaleButton => 'List artifact';
+  String get marketplaceListForSaleButton => 'List digital edition';
 
   @override
   String get marketplaceListForSaleSuccessToast => 'Listed for sale.';
 
   @override
-  String get marketplaceListForSaleFailedToast =>
-      'Unable to list artifact right now.';
+  String get marketplaceListForSaleFailedToast => 'Unable to list this digital edition right now.';
 
   @override
   String get marketplaceRemoveFromSaleTitle => 'Remove from sale';
 
   @override
-  String get marketplaceRemoveFromSaleConfirmBody =>
-      'Remove this digital edition from listings?';
+  String get marketplaceRemoveFromSaleConfirmBody => 'Remove this digital edition from listings?';
 
   @override
-  String get marketplaceRemoveFromSaleSuccessToast =>
-      'Artifact removed from listing.';
+  String get marketplaceRemoveFromSaleSuccessToast => 'Digital edition removed from listing.';
 
   @override
-  String get marketplaceMintConnectWalletTitle =>
-      'Wallet required for digital editions';
+  String get marketplaceMintConnectWalletTitle => 'Wallet required for digital editions';
 
   @override
-  String get marketplaceMintConnectWalletDescription =>
-      'Connect a wallet only if you want to create digital cultural artifacts from artworks.';
+  String get marketplaceMintConnectWalletDescription => 'Connect a wallet only if you want to create digital editions from artworks.';
 
   @override
-  String get marketplaceMintSuccessTitle => 'Digital artifact created';
+  String get marketplaceMintSuccessTitle => 'Digital edition created';
 
   @override
-  String get marketplaceMintSuccessDescription =>
-      'Your digital edition is ready. You can view it in your wallet.';
+  String get marketplaceMintSuccessDescription => 'Your digital edition is ready. You can view it in your wallet.';
 
   @override
   String get marketplaceViewInWalletButton => 'View in wallet';
@@ -9010,8 +8218,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceMintFailedTitle => 'Creation failed';
 
   @override
-  String get marketplaceMintFailedDescription =>
-      'The digital edition could not be created right now. Please try again.';
+  String get marketplaceMintFailedDescription => 'The digital edition could not be created right now. Please try again.';
 
   @override
   String get marketplaceArBadgeLabel => 'AR';
@@ -9032,7 +8239,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceCardActionListed => 'Listed';
 
   @override
-  String get marketplaceCardActionMint => 'Mint';
+  String get marketplaceCardActionMint => 'Create edition';
 
   @override
   String get marketplaceCardActionView => 'View';
@@ -9041,24 +8248,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceNftArtworkStatus => 'Digital edition artwork';
 
   @override
-  String get marketplaceNftArtworkStatusArEnabled =>
-      'Digital edition artwork - AR enabled';
+  String get marketplaceNftArtworkStatusArEnabled => 'Digital edition artwork - AR enabled';
 
   @override
-  String get marketplaceMintUnavailableLabel => 'Mint unavailable';
+  String get marketplaceMintUnavailableLabel => 'Edition creation unavailable';
 
   @override
   String get marketplaceSoldOutLabel => 'Sold out';
 
   @override
-  String get marketplaceMintNftButtonLabel => 'Create artifact';
+  String get marketplaceMintNftButtonLabel => 'Create digital edition';
 
   @override
   String get marketplaceArRequiredTitle => 'Location visit required';
 
   @override
-  String get marketplaceArRequiredDescription =>
-      'This artifact requires interaction with the physical artwork location. Visit the artwork and use the AR scanner if the artist enabled it.';
+  String get marketplaceArRequiredDescription => 'This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.';
 
   @override
   String get marketplaceGoToArButton => 'Go to AR';
@@ -9072,10 +8277,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get marketplaceMintPriceLabel => 'Mint price:';
+  String get marketplaceMintPriceLabel => 'Edition price:';
 
   @override
-  String get marketplaceConfirmMintButton => 'Confirm Mint';
+  String get marketplaceConfirmMintButton => 'Create digital edition';
 
   @override
   String marketplaceTokenNumberLabel(String tokenId) {
@@ -9094,8 +8299,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId) {
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId) {
     return 'Open details for $title, token $tokenId';
   }
 
@@ -9109,8 +8313,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceRemoveFromSaleTooltip => 'Remove from sale';
 
   @override
-  String get marketplaceRemoveFromSaleFailedToast =>
-      'Unable to remove this digital edition from listing right now.';
+  String get marketplaceRemoveFromSaleFailedToast => 'Unable to remove this digital edition from listing right now.';
 
   @override
   String get marketplaceValueNotListedLabel => 'Not listed';
@@ -9119,24 +8322,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceValueLastSaleLabel => 'Last sale';
 
   @override
-  String get marketplaceValueMintPriceLabel => 'Mint price';
+  String get marketplaceValueMintPriceLabel => 'Edition price';
 
   @override
   String get marketplaceOwnedCollectionTitle => 'Owned collection';
 
   @override
-  String get marketplaceOwnedCollectionSubtitle =>
-      'Digital editions currently held by this wallet.';
+  String get marketplaceOwnedCollectionSubtitle => 'Digital editions currently held by this wallet.';
 
   @override
-  String get marketplaceListedForSaleSubtitle =>
-      'Digital editions currently visible to marketplace buyers.';
+  String get marketplaceListedForSaleSubtitle => 'Digital editions currently visible to marketplace buyers.';
 
   @override
   String get marketplaceArOnlyFilterActiveLabel => 'AR only';
 
   @override
-  String get marketplaceArOnlyFilterInactiveLabel => 'All mints';
+  String get marketplaceArOnlyFilterInactiveLabel => 'All editions';
 
   @override
   String marketplaceListingDialogDescription(Object title) {
@@ -9177,7 +8378,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectibleRarityMythic => 'Mythic';
 
   @override
-  String get collectibleStatusMinted => 'Issued as archive record';
+  String get collectibleStatusMinted => 'Issued as digital edition';
 
   @override
   String get collectibleStatusListed => 'Listed';
@@ -9209,8 +8410,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get daoModerationDecisionDialogDescription =>
-      'Provide optional reviewer notes for the applicant.';
+  String get daoModerationDecisionDialogDescription => 'Provide optional reviewer notes for the applicant.';
 
   @override
   String get daoModerationReviewerNotesLabel => 'Reviewer notes (optional)';
@@ -9231,12 +8431,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoModerationDisabledToast => 'Review moderation is disabled.';
 
   @override
-  String get daoModerationWalletRequiredToast =>
-      'Connect a wallet to moderate submissions.';
+  String get daoModerationWalletRequiredToast => 'Connect a wallet to moderate submissions.';
 
   @override
-  String get daoModerationSelfNotAllowedToast =>
-      'You cannot moderate your own submission.';
+  String get daoModerationSelfNotAllowedToast => 'You cannot moderate your own submission.';
 
   @override
   String get daoModerationSubmissionApprovedToast => 'Submission approved';
@@ -9248,39 +8446,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoModerationNoChangesSavedToast => 'No changes saved';
 
   @override
-  String get daoModerationUpdateFailedToast =>
-      'Unable to update review right now.';
+  String get daoModerationUpdateFailedToast => 'Unable to update review right now.';
 
   @override
-  String get daoReviewDetailsVotingDisabledForApplicant =>
-      'Voting disabled for the applicant profile.';
+  String get daoReviewDetailsVotingDisabledForApplicant => 'Voting disabled for the applicant profile.';
 
   @override
-  String get daoReviewDetailsVotingDisabledForSubmission =>
-      'Voting is disabled for this submission.';
+  String get daoReviewDetailsVotingDisabledForSubmission => 'Voting is disabled for this submission.';
 
   @override
-  String get daoReviewDetailsVotingManagedByDao =>
-      'Review decisions are managed by the DAO review process.';
+  String get daoReviewDetailsVotingManagedByDao => 'Review decisions are managed by the DAO review process.';
 
   @override
   String get daoReviewQueueTitle => 'Governance review queue';
 
   @override
-  String get daoReviewVotingHandledByDaoHelper =>
-      'Voting is handled directly by the DAO; use proposals to decide.';
+  String get daoReviewVotingHandledByDaoHelper => 'Voting is handled directly by the DAO; use proposals to decide.';
 
   @override
-  String get daoReviewCannotVoteOwnSubmissionHelper =>
-      'You cannot vote on your own submission';
+  String get daoReviewCannotVoteOwnSubmissionHelper => 'You cannot vote on your own submission';
 
   @override
-  String get daoReviewVotingDisabledSubmissionHelper =>
-      'Voting is disabled for this submission';
+  String get daoReviewVotingDisabledSubmissionHelper => 'Voting is disabled for this submission';
 
   @override
-  String get daoReviewVotingOpensAfterReviewHelper =>
-      'Voting opens after review';
+  String get daoReviewVotingOpensAfterReviewHelper => 'Voting opens after review';
 
   @override
   String daoReviewDecisionRecordedHelper(Object status) {
@@ -9354,34 +8544,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoProposalRequirementsTitle => 'Proposal Requirements';
 
   @override
-  String get daoProposalRequirementWalletConnected =>
-      'Wallet connection required to submit';
+  String get daoProposalRequirementWalletConnected => 'Wallet connection required to submit';
 
   @override
-  String get daoProposalRequirementClearlyDefined =>
-      'Proposal must be clearly defined';
+  String get daoProposalRequirementClearlyDefined => 'Proposal must be clearly defined';
 
   @override
   String get daoProposalRequirementVotingPeriod => 'Voting period: 3-14 days';
 
   @override
-  String get daoProposalRequirementQuorumTargets =>
-      'Quorum targets are enforced by DAO config';
+  String get daoProposalRequirementQuorumTargets => 'Quorum targets are enforced by DAO config';
 
   @override
-  String get daoProposalFillRequiredFieldsToast =>
-      'Please fill in all required fields';
+  String get daoProposalFillRequiredFieldsToast => 'Please fill in all required fields';
 
   @override
-  String get daoProposalWalletRequiredToast =>
-      'Connect a wallet to submit proposals.';
+  String get daoProposalWalletRequiredToast => 'Connect a wallet to submit proposals.';
 
   @override
   String get daoProposalSubmittedToast => 'Proposal submitted to DAO';
 
   @override
-  String get daoProposalSubmitFailedToast =>
-      'Unable to submit proposal right now.';
+  String get daoProposalSubmitFailedToast => 'Unable to submit proposal right now.';
 
   @override
   String get daoQuorumReached => 'Quorum reached';
@@ -9449,22 +8633,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoVotingHistoryEmptyTitle => 'No voting history yet';
 
   @override
-  String get daoVotingHistoryEmptyDescription =>
-      'Cast your first vote on an active proposal';
+  String get daoVotingHistoryEmptyDescription => 'Cast your first vote on an active proposal';
 
   @override
   String get daoActiveProposalsEmptyTitle => 'No active proposals';
 
   @override
-  String get daoActiveProposalsEmptyDescription =>
-      'Submit a proposal or review to get governance moving.';
+  String get daoActiveProposalsEmptyDescription => 'Submit a proposal or review to get governance moving.';
 
   @override
   String get daoTreasuryTitle => 'DAO Treasury';
 
   @override
-  String get daoTreasurySubtitle =>
-      'Community-controlled funds for platform development';
+  String get daoTreasurySubtitle => 'Community-controlled funds for platform development';
 
   @override
   String get daoTreasuryInflowLabel => 'Inflow';
@@ -9503,8 +8684,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoTreasuryProposalsEmptyTitle => 'No treasury proposals yet';
 
   @override
-  String get daoTreasuryProposalsEmptyDescription =>
-      'Create a treasury request to allocate KUB8 to initiatives.';
+  String get daoTreasuryProposalsEmptyDescription => 'Create a treasury request to allocate KUB8 to initiatives.';
 
   @override
   String get daoTreasuryProposalsTitle => 'Treasury Proposals';
@@ -9516,8 +8696,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoVoteDelegationTitle => 'Vote Delegation';
 
   @override
-  String get daoVoteDelegationSubtitle =>
-      'Delegate your voting power to trusted community members';
+  String get daoVoteDelegationSubtitle => 'Delegate your voting power to trusted community members';
 
   @override
   String get daoTopDelegatesTitle => 'Top Delegates';
@@ -9526,8 +8705,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoTopDelegatesEmptyTitle => 'No delegates yet';
 
   @override
-  String get daoTopDelegatesEmptyDescription =>
-      'No delegates have been registered yet.';
+  String get daoTopDelegatesEmptyDescription => 'No delegates have been registered yet.';
 
   @override
   String get daoDelegateActiveLabel => 'Active';
@@ -9539,8 +8717,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoDelegationActionsTitle => 'Delegation Actions';
 
   @override
-  String get daoDelegationActionsSubtitle =>
-      'Choose how to use your voting power';
+  String get daoDelegationActionsSubtitle => 'Choose how to use your voting power';
 
   @override
   String get daoDelegateToTrustedMembersButton => 'Delegate to Trusted Members';
@@ -9555,8 +8732,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoDelegateVotingPowerDialogTitle => 'Delegate Voting Power';
 
   @override
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName) {
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName) {
     return 'Are you sure you want to delegate your $votingPower voting power to $delegateName?';
   }
 
@@ -9564,8 +8740,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoDelegationBenefitsTitle => 'Delegation Benefits';
 
   @override
-  String get daoDelegationBenefitsBody =>
-      '• Your delegate will vote on your behalf\n• You can revoke delegation anytime\n• Your voting power remains yours';
+  String get daoDelegationBenefitsBody => '• Your delegate will vote on your behalf\n• You can revoke delegation anytime\n• Your voting power remains yours';
 
   @override
   String get daoConfirmDelegationButton => 'Confirm Delegation';
@@ -9576,8 +8751,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get daoDelegationFailedToast =>
-      'Unable to save the delegation. Try again.';
+  String get daoDelegationFailedToast => 'Unable to save the delegation. Try again.';
 
   @override
   String get daoViewDelegationDetailsAction => 'View Details';
@@ -9712,8 +8886,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailReportPostDialogTitle => 'Report post';
 
   @override
-  String get postDetailReportPostDialogQuestion =>
-      'Why are you reporting this post?';
+  String get postDetailReportPostDialogQuestion => 'Why are you reporting this post?';
 
   @override
   String get postDetailEditPostTitle => 'Edit post';
@@ -9728,8 +8901,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailDeletePostTitle => 'Delete post';
 
   @override
-  String get postDetailDeletePostBody =>
-      'Are you sure you want to delete this post? This action cannot be undone.';
+  String get postDetailDeletePostBody => 'Are you sure you want to delete this post? This action cannot be undone.';
 
   @override
   String get postDetailPostDeletedToast => 'Post deleted';
@@ -9789,8 +8961,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailNoProfilesFoundTitle => 'No profiles found';
 
   @override
-  String get postDetailNoProfilesFoundDescription =>
-      'Try a different search term';
+  String get postDetailNoProfilesFoundDescription => 'Try a different search term';
 
   @override
   String get postDetailShareDmDefaultMessage => 'Check out this post!';
@@ -9813,8 +8984,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailRepostSuccessToast => 'Reposted!';
 
   @override
-  String get postDetailRepostWithCommentSuccessToast =>
-      'Reposted with comment!';
+  String get postDetailRepostWithCommentSuccessToast => 'Reposted with comment!';
 
   @override
   String get postDetailRepostFailedToast => 'Failed to repost.';
@@ -9829,8 +8999,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailNoCommentsTitle => 'No comments yet';
 
   @override
-  String get postDetailNoCommentsDescription =>
-      'Be the first to start the conversation';
+  String get postDetailNoCommentsDescription => 'Be the first to start the conversation';
 
   @override
   String postDetailReplyingToLabel(Object author) {
@@ -9844,15 +9013,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailLinkedArtworkLabel => 'Linked artwork';
 
   @override
-  String get postDetailOriginalUnavailableMessage =>
-      'Original post is no longer available';
+  String get postDetailOriginalUnavailableMessage => 'Original post is no longer available';
 
   @override
   String get communityGroupsRefreshFailedToast => 'Could not refresh groups.';
 
   @override
-  String get communityGroupMembershipUpdateFailedToast =>
-      'Could not update group membership.';
+  String get communityGroupMembershipUpdateFailedToast => 'Could not update group membership.';
 
   @override
   String get communityGroupNoDescription => 'No description provided.';
@@ -9864,39 +9031,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityOpenGroupFeedButton => 'Open group feed';
 
   @override
-  String get communityLocationEnableServicesToast =>
-      'Enable location services to attach your location.';
+  String get communityLocationEnableServicesToast => 'Enable location services to attach your location.';
 
   @override
-  String get communityLocationPermissionRequiredToast =>
-      'Location permission is required.';
+  String get communityLocationPermissionRequiredToast => 'Location permission is required.';
 
   @override
-  String get communityLocationUnableToDetermineToast =>
-      'Unable to determine your location.';
+  String get communityLocationUnableToDetermineToast => 'Unable to determine your location.';
 
   @override
-  String get communityLocationUnableToAccessToast =>
-      'Unable to access your location.';
+  String get communityLocationUnableToAccessToast => 'Unable to access your location.';
 
   @override
-  String get communityArtFeedLocationPermissionRequiredError =>
-      'Location permission is required for the art feed.';
+  String get communityArtFeedLocationPermissionRequiredError => 'Location permission is required for the art feed.';
 
   @override
   String get communityArtFeedLoadFailedError => 'Unable to load the art feed.';
 
   @override
-  String get communityArtFeedLoadFailedToast =>
-      'Unable to load the art feed right now.';
+  String get communityArtFeedLoadFailedToast => 'Unable to load the art feed right now.';
 
   @override
-  String get communityFollowingFeedUnavailableToast =>
-      'Following feed is unavailable. Please try again later.';
+  String get communityFollowingFeedUnavailableToast => 'Following feed is unavailable. Please try again later.';
 
   @override
-  String get communityDiscoverFeedUnavailableToast =>
-      'Discover feed is unavailable. Please try again later.';
+  String get communityDiscoverFeedUnavailableToast => 'Discover feed is unavailable. Please try again later.';
 
   @override
   String get communityScreenTitle => 'Community';
@@ -9917,15 +9076,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityFeedEmptyTitle => 'No posts yet';
 
   @override
-  String get communityFeedEmptyDescription =>
-      'Follow artists, institutions, and groups to see updates here.';
+  String get communityFeedEmptyDescription => 'Follow artists, institutions, and groups to see updates here.';
 
   @override
   String get communityDiscoverEmptyTitle => 'Nothing to discover yet';
 
   @override
-  String get communityDiscoverEmptyDescription =>
-      'New discussions, artworks, and cultural updates will appear here.';
+  String get communityDiscoverEmptyDescription => 'New discussions, artworks, and cultural updates will appear here.';
 
   @override
   String communityNewPostsBanner(num count) {
@@ -9942,8 +9099,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityGroupsEmptyTitle => 'No groups yet';
 
   @override
-  String get communityGroupsEmptyDescription =>
-      'Create a group or join one to start collaborating.';
+  String get communityGroupsEmptyDescription => 'Create a group or join one to start collaborating.';
 
   @override
   String communityGroupsEmptySearchDescription(Object query) {
@@ -9960,8 +9116,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityGroupsDirectoryTitle => 'Group directory';
 
   @override
-  String get communityGroupsDirectoryDescription =>
-      'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
+  String get communityGroupsDirectoryDescription => 'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
 
   @override
   String get communityClearSearchTooltip => 'Clear search';
@@ -10009,8 +9164,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityCreateGroupButton => 'Create group';
 
   @override
-  String get communityCreateGroupFailedToast =>
-      'Unable to create group right now.';
+  String get communityCreateGroupFailedToast => 'Unable to create group right now.';
 
   @override
   String communityGroupCreatedToast(Object name) {
@@ -10060,8 +9214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySearchSheetHintTags => 'Search tags…';
 
   @override
-  String get communitySearchSheetHintProfiles =>
-      'Search users by name or @handle…';
+  String get communitySearchSheetHintProfiles => 'Search users by name or @handle…';
 
   @override
   String get communitySearchSheetHintArtworks => 'Search artworks…';
@@ -10102,15 +9255,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerTitle => 'Compose';
 
   @override
-  String get communityComposerTextHint =>
-      'Share what you are discovering, making, documenting, or discussing...';
+  String get communityComposerTextHint => 'Share what you are discovering, making, documenting, or discussing...';
 
   @override
   String get communityComposerTagsLabel => 'Tags';
 
   @override
-  String get communityComposerTagsHint =>
-      'Add topic (e.g. public-art, archive)';
+  String get communityComposerTagsHint => 'Add topic (e.g. public-art, archive)';
 
   @override
   String get communityComposerMentionsLabel => 'Mentions';
@@ -10135,8 +9286,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerTargetGroupLabel => 'Target group';
 
   @override
-  String get communityComposerGroupOptionalHelper =>
-      'Optional - Join a group to unlock focused community discussions.';
+  String get communityComposerGroupOptionalHelper => 'Optional - Join a group to unlock focused community discussions.';
 
   @override
   String communityComposerPostingInGroupHelper(Object groupName) {
@@ -10150,8 +9300,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerLinkArtworkTitle => 'Link artwork';
 
   @override
-  String get communityComposerLinkArtworkDescription =>
-      'Choose an artwork to attach to your post.';
+  String get communityComposerLinkArtworkDescription => 'Choose an artwork to attach to your post.';
 
   @override
   String communityComposerArtworkAttachedDescription(Object title) {
@@ -10162,8 +9311,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerRemoveArtworkTooltip => 'Remove artwork';
 
   @override
-  String get communityComposerAttachCurrentLocationButton =>
-      'Attach current location';
+  String get communityComposerAttachCurrentLocationButton => 'Attach current location';
 
   @override
   String get communityComposerAttachedLocationLabel => 'Attached location';
@@ -10190,43 +9338,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerCategoryPostLabel => 'Post';
 
   @override
-  String get communityComposerCategoryPostDescription =>
-      'Share an update with the art community';
+  String get communityComposerCategoryPostDescription => 'Share an update with the art community';
 
   @override
   String get communityComposerCategoryArtDropLabel => 'Share artwork';
 
   @override
-  String get communityComposerCategoryArtDropDescription =>
-      'Share a new artwork, exhibition, or collection';
+  String get communityComposerCategoryArtDropDescription => 'Share a new artwork, exhibition, or collection';
 
   @override
   String get communityComposerCategoryArtReviewLabel => 'Art review';
 
   @override
-  String get communityComposerCategoryArtReviewDescription =>
-      'Share a review, context, or critique';
+  String get communityComposerCategoryArtReviewDescription => 'Share a review, context, or critique';
 
   @override
   String get communityComposerCategoryEventLabel => 'Event';
 
   @override
-  String get communityComposerCategoryEventDescription =>
-      'Announce an exhibition, workshop, or public event';
+  String get communityComposerCategoryEventDescription => 'Announce an exhibition, workshop, or public event';
 
   @override
   String get communityComposerCategoryQuestionLabel => 'Question';
 
   @override
-  String get communityComposerCategoryQuestionDescription =>
-      'Ask the community';
+  String get communityComposerCategoryQuestionDescription => 'Ask the community';
 
   @override
   String get communityGroupFeedEmptyTitle => 'No posts in this group yet';
 
   @override
-  String get communityGroupFeedEmptyDescription =>
-      'Be the first to start the conversation.';
+  String get communityGroupFeedEmptyDescription => 'Be the first to start the conversation.';
 
   @override
   String communityGroupFeedShareText(Object authorName, Object groupName) {
@@ -10247,23 +9389,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityArtFeedEnablePreciseLocationHint =>
-      'Enable precise location for better results.';
+  String get communityArtFeedEnablePreciseLocationHint => 'Enable precise location for better results.';
 
   @override
   String get communityArtFeedLocationNeededTitle => 'Location needed';
 
   @override
-  String get communityArtFeedLocationNeededDescription =>
-      'Enable location to see public art and activations near you.';
+  String get communityArtFeedLocationNeededDescription => 'Enable location to see public art and activations near you.';
 
   @override
-  String get communityArtFeedNoNearbyActivationsTitle =>
-      'No nearby public art activations';
+  String get communityArtFeedNoNearbyActivationsTitle => 'No nearby public art activations';
 
   @override
-  String get communityArtFeedNoNearbyActivationsDescription =>
-      'Try refreshing your location or increasing the radius.';
+  String get communityArtFeedNoNearbyActivationsDescription => 'Try refreshing your location or increasing the radius.';
 
   @override
   String get communityArtFeedRefreshLocationButton => 'Refresh location';
@@ -10272,8 +9410,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityArtFeedAboutTitle => 'About the art feed';
 
   @override
-  String get communityArtFeedAboutBody =>
-      'The art feed shows location-based artworks, exhibitions, and cultural activations shared by the community near you.';
+  String get communityArtFeedAboutBody => 'The art feed shows location-based artworks, exhibitions, and cultural activations shared by the community near you.';
 
   @override
   String get communityArtFeedAboutButton => 'About';
@@ -10290,16 +9427,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityNamePlaceHint => 'e.g. City park';
 
   @override
-  String get communityConnectWalletFirstToast =>
-      'Sign in first; wallet access is only needed for wallet-linked actions.';
+  String get communityConnectWalletFirstToast => 'Sign in first; wallet access is only needed for wallet-linked actions.';
 
   @override
-  String get communityUnableToAuthenticateToast =>
-      'Unable to authenticate. Please try again.';
+  String get communityUnableToAuthenticateToast => 'Unable to authenticate. Please try again.';
 
   @override
-  String get communityComposerAddContentToast =>
-      'Add text, an image, or a video.';
+  String get communityComposerAddContentToast => 'Add text, an image, or a video.';
 
   @override
   String communityComposerSharedInGroupToast(Object groupName) {
@@ -10313,8 +9447,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityGroupPickerTitle => 'Select group';
 
   @override
-  String get communityGroupPickerJoinFirstToast =>
-      'Join a group to target your drop.';
+  String get communityGroupPickerJoinFirstToast => 'Join a group to target your drop.';
 
   @override
   String get communityComposerPostCreatedToast => 'Post created';
@@ -10417,8 +9550,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get downloadAppDefaultDescription =>
-      'Mobile AR pilots are in development.';
+  String get downloadAppDefaultDescription => 'Mobile AR pilots are in development.';
 
   @override
   String get downloadAppFeatureViewInAr => 'Preview AR layers when available';
@@ -10439,8 +9571,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadAppScanQrTitle => 'Scan QR code';
 
   @override
-  String get downloadAppScanQrSubtitle =>
-      'Open this page on your phone to download the app.';
+  String get downloadAppScanQrSubtitle => 'Open this page on your phone to download the app.';
 
   @override
   String get downloadAppContinueBrowsingButton => 'Continue browsing';
@@ -10449,8 +9580,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultDisplayName => 'there';
 
   @override
-  String get homeWelcomeSubtitle =>
-      'Open art platform for discovery, artists, institutions, and community.';
+  String get homeWelcomeSubtitle => 'Open art platform for discovery, artists, institutions, and community.';
 
   @override
   String get homeExploreWeb3Button => 'Wallet and Web3 access';
@@ -10462,8 +9592,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentlyUsedLabel => 'Recently Used';
 
   @override
-  String get homeQuickActionsEmptyDescription =>
-      'Start exploring and kubus will keep your useful shortcuts here.';
+  String get homeQuickActionsEmptyDescription => 'Start exploring and kubus will keep your useful shortcuts here.';
 
   @override
   String get homeYourStatsTitle => 'Your Cultural Activity';
@@ -10472,8 +9601,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoStatsAvailableTitle => 'Start discovering local art.';
 
   @override
-  String get homeNoStatsAvailableDescription =>
-      'Open the art map, follow artists, or explore institutions to build your cultural activity.';
+  String get homeNoStatsAvailableDescription => 'Open the art map, follow artists, or explore institutions to build your cultural activity.';
 
   @override
   String get homeStatArtworks => 'Artworks shared';
@@ -10564,8 +9692,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoRecentActivityTitle => 'Start with the open art map.';
 
   @override
-  String get homeNoRecentActivityDescription =>
-      'Discover local art, follow artists, and contribute to the community archive.';
+  String get homeNoRecentActivityDescription => 'Discover local art, follow artists, and contribute to the community archive.';
 
   @override
   String get homeUnableToLoadActivityTitle => 'Unable to load activity';
@@ -10577,8 +9704,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoFeaturedArtworksTitle => 'No featured artworks';
 
   @override
-  String get homeNoFeaturedArtworksDescription =>
-      'Check back soon for curated picks.';
+  String get homeNoFeaturedArtworksDescription => 'Check back soon for curated picks.';
 
   @override
   String get homeActivityTitle => 'Community Activity';
@@ -10587,8 +9713,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMarkAllReadButton => 'Mark all read';
 
   @override
-  String get homeUnableToLoadNotificationsTitle =>
-      'Unable to load notifications';
+  String get homeUnableToLoadNotificationsTitle => 'Unable to load notifications';
 
   @override
   String get homeNoNotificationsTitle => 'No notifications';
@@ -10600,22 +9725,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMockNotificationNewArtworkTitle => 'New artwork added';
 
   @override
-  String get homeMockNotificationNewArtworkBody =>
-      'A new piece has been added to the gallery.';
+  String get homeMockNotificationNewArtworkBody => 'A new piece has been added to the gallery.';
 
   @override
   String get homeMockNotificationCommunityTitle => 'Community update';
 
   @override
-  String get homeMockNotificationCommunityBody =>
-      'New posts are waiting in the community.';
+  String get homeMockNotificationCommunityBody => 'New posts are waiting in the community.';
 
   @override
   String get homeMockNotificationRewardsTitle => 'New recognition';
 
   @override
-  String get homeMockNotificationRewardsBody =>
-      'You have new participation recognition to review.';
+  String get homeMockNotificationRewardsBody => 'You have new participation recognition to review.';
 
   @override
   String get commonExplore => 'Explore';
@@ -10633,15 +9755,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeDiscoverArtTitle => 'Open art platform.';
 
   @override
-  String get desktopHomeDiscoverArtDescription =>
-      'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are available when needed, and AR layers are in development.';
+  String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are available when needed, and AR layers are in development.';
 
   @override
   String get desktopHomeYourActivityTitle => 'Your Activity';
 
   @override
-  String get desktopHomeYourActivitySubtitle =>
-      'Track your progress and engagement';
+  String get desktopHomeYourActivitySubtitle => 'Track your progress and engagement';
 
   @override
   String get desktopHomeStatArtworksDiscovered => 'Artworks Discovered';
@@ -10659,26 +9779,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeQuickActionsSubtitle => 'Based on your recent visits';
 
   @override
-  String get desktopHomeQuickActionsEmptySubtitle =>
-      'Start exploring to see your recent screens here';
+  String get desktopHomeQuickActionsEmptySubtitle => 'Start exploring to see your recent screens here';
 
   @override
   String get desktopHomeQuickActionsEmptyTitle => 'No recent visits yet';
 
   @override
-  String get desktopHomeQuickActionsEmptyDescription =>
-      'Navigate to different screens and they\'ll appear here for quick access. Cards disappear after 24 hours of inactivity.';
+  String get desktopHomeQuickActionsEmptyDescription => 'Navigate to different screens and they\'ll appear here for quick access. Cards disappear after 24 hours of inactivity.';
 
   @override
-  String get desktopHomeFeaturedArtworksSubtitle =>
-      'Discover featured art and future AR layers';
+  String get desktopHomeFeaturedArtworksSubtitle => 'Discover featured art and future AR layers';
 
   @override
   String get desktopHomeWeb3HubTitle => 'Wallet features';
 
   @override
-  String get desktopHomeWeb3HubSubtitle =>
-      'Wallet access, continuity, and future participation';
+  String get desktopHomeWeb3HubSubtitle => 'Wallet access, continuity, and future participation';
 
   @override
   String get desktopHomeTrendingArtTitle => 'Trending Art';
@@ -10687,8 +9803,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeTrendingArtLoadFailed => 'Unable to load trending art.';
 
   @override
-  String get desktopHomeTrendingArtEmpty =>
-      'Trending artworks will appear here';
+  String get desktopHomeTrendingArtEmpty => 'Trending artworks will appear here';
 
   @override
   String get desktopHomeTopCreatorsTitle => 'Top Creators';
@@ -10706,15 +9821,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRailsUnavailableTitle => 'Home rails unavailable';
 
   @override
-  String get homeRailsUnavailableDescription =>
-      'We could not load ranked home rails right now.';
+  String get homeRailsUnavailableDescription => 'We could not load ranked home rails right now.';
 
   @override
   String get homeRailsWarmingTitle => 'Discovery rails are warming up';
 
   @override
-  String get homeRailsWarmingDescription =>
-      'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.';
+  String get homeRailsWarmingDescription => 'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.';
 
   @override
   String get homeRailArtworksTitle => 'Artworks';
@@ -10746,8 +9859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomePlatformStatsTitle => 'Platform Stats';
 
   @override
-  String get desktopHomePlatformStatsLoadFailed =>
-      'Unable to load community stats.';
+  String get desktopHomePlatformStatsLoadFailed => 'Unable to load community stats.';
 
   @override
   String get desktopHomePlatformStatsTotalArtworks => 'Total Artworks';
@@ -10798,15 +9910,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMockNotificationFriendRequestTitle => 'New friend request';
 
   @override
-  String get homeMockNotificationFriendRequestBody =>
-      'Someone sent you a friend request.';
+  String get homeMockNotificationFriendRequestBody => 'Someone sent you a friend request.';
 
   @override
   String get homeMockNotificationFeaturedTitle => 'Featured today';
 
   @override
-  String get homeMockNotificationFeaturedBody =>
-      'Check out today\'s featured artwork.';
+  String get homeMockNotificationFeaturedBody => 'Check out today\'s featured artwork.';
 
   @override
   String get commonReset => 'Reset';
@@ -10824,8 +9934,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get season0ScreenSubtitle => 'Ljubljana beta launch';
 
   @override
-  String get season0ScreenDescription =>
-      'Join the founding program of art.kubus in Ljubljana. Apply as an artist or institution to shape the first season of the platform.';
+  String get season0ScreenDescription => 'Join the founding program of art.kubus in Ljubljana. Apply as an artist or institution to shape the first season of the platform.';
 
   @override
   String get season0ApplyArtistCta => 'Apply as artist';
@@ -10837,8 +9946,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get season0ApplyInstitutionCta => 'Apply as institution';
 
   @override
-  String get season0ApplyInstitutionSubtitle =>
-      'Register your gallery or space';
+  String get season0ApplyInstitutionSubtitle => 'Register your gallery or space';
 
   @override
   String get season0NewsletterCta => 'Subscribe to newsletter';
@@ -10853,19 +9961,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get season0PointsTooltip => 'Off-chain progress points';
 
   @override
-  String get season0OnChainNote =>
-      'On-chain features available on dev-net for now';
+  String get season0OnChainNote => 'On-chain features available on dev-net for now';
 
   @override
   String get mnemonicRevealTitle => 'Reveal Recovery Phrase';
 
   @override
-  String get mnemonicRevealPrivacyWarning =>
-      'Your recovery phrase (keep it private)';
+  String get mnemonicRevealPrivacyWarning => 'Your recovery phrase (keep it private)';
 
   @override
-  String get mnemonicRevealBiometricUnavailable =>
-      'Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.';
+  String get mnemonicRevealBiometricUnavailable => 'Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.';
 
   @override
   String get mnemonicRevealPinError => 'PIN must be at least 4 digits';
@@ -10896,72 +10001,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupConfirmAction => 'I backed it up safely';
 
   @override
-  String get walletBackupMarkedCompleteToast =>
-      'Recovery phrase backup marked as complete.';
+  String get walletBackupMarkedCompleteToast => 'Recovery phrase backup marked as complete.';
 
   @override
-  String get walletBackupProtectionNoWalletHeadline =>
-      'No wallet is connected on this device yet.';
+  String get walletBackupProtectionNoWalletHeadline => 'No wallet is connected on this device yet.';
 
   @override
-  String get walletBackupProtectionNoWalletBody =>
-      'Connect or restore the wallet on this device before managing backup protection.';
+  String get walletBackupProtectionNoWalletBody => 'Connect or restore the wallet on this device before managing backup protection.';
 
   @override
-  String get walletBackupProtectionAccountShellHeadline =>
-      'Your account is ready, but this device does not have wallet access yet.';
+  String get walletBackupProtectionAccountShellHeadline => 'Your account is ready, but this device does not have wallet access yet.';
 
   @override
-  String get walletBackupProtectionAccountShellBody =>
-      'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
+  String get walletBackupProtectionAccountShellBody => 'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
 
   @override
-  String get walletBackupProtectionNoBackupHeadline =>
-      'No encrypted server backup is configured yet.';
+  String get walletBackupProtectionNoBackupHeadline => 'No encrypted server backup is configured yet.';
 
   @override
-  String get walletBackupProtectionNoBackupBody =>
-      'Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.';
+  String get walletBackupProtectionNoBackupBody => 'Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.';
 
   @override
-  String get walletBackupProtectionRecoveryPhraseHeadline =>
-      'Recovery phrase backup is still required.';
+  String get walletBackupProtectionRecoveryPhraseHeadline => 'Recovery phrase backup is still required.';
 
   @override
-  String get walletBackupProtectionRecoveryPhraseBody =>
-      'Store the recovery phrase offline so you do not lose access to this wallet, account continuity, digital editions, points, and future rights tied to it.';
+  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline so you do not lose access to this wallet, account continuity, digital editions, points, and future rights tied to it.';
 
   @override
-  String get walletBackupProtectionEncryptedHeadline =>
-      'Encrypted server backup is configured.';
+  String get walletBackupProtectionEncryptedHeadline => 'Encrypted server backup is configured.';
 
   @override
-  String get walletBackupProtectionEncryptedBody =>
-      'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.';
+  String get walletBackupProtectionEncryptedBody => 'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.';
 
   @override
-  String get walletBackupProtectionEncryptedRestoreHeadline =>
-      'Encrypted backup is available, but signing is not restored on this device.';
+  String get walletBackupProtectionEncryptedRestoreHeadline => 'Encrypted backup is available, but signing is not restored on this device.';
 
   @override
-  String get walletBackupProtectionEncryptedRestoreBody =>
-      'Use the encrypted backup to restore wallet access on this device before transfers and other wallet-protected actions.';
+  String get walletBackupProtectionEncryptedRestoreBody => 'Use the encrypted backup to restore wallet access on this device before transfers and other wallet-protected actions.';
 
   @override
-  String get walletBackupProtectionPasskeyHeadline =>
-      'Passkey-protected server backup is configured.';
+  String get walletBackupProtectionPasskeyHeadline => 'Passkey-protected server backup is configured.';
 
   @override
-  String get walletBackupProtectionPasskeyBody =>
-      'This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.';
+  String get walletBackupProtectionPasskeyBody => 'This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.';
 
   @override
-  String get walletBackupProtectionReadOnlyHeadline =>
-      'This device has read-only wallet access.';
+  String get walletBackupProtectionReadOnlyHeadline => 'This device has read-only wallet access.';
 
   @override
-  String get walletBackupProtectionReadOnlyBody =>
-      'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
+  String get walletBackupProtectionReadOnlyBody => 'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
 
   @override
   String get walletSessionStateAccountShellOnly => 'Account shell only';
@@ -10970,8 +10058,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSessionStateWalletReadOnly => 'Wallet identity, read-only';
 
   @override
-  String get walletSessionStateLocalSignerReady =>
-      'Wallet access ready on this device';
+  String get walletSessionStateLocalSignerReady => 'Wallet access ready on this device';
 
   @override
   String get walletSessionStateExternalWalletReady => 'External wallet ready';
@@ -10980,8 +10067,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSessionStateRecoveryNeeded => 'Recovery needed';
 
   @override
-  String get walletSessionStateEncryptedBackupAvailable =>
-      'Encrypted backup available';
+  String get walletSessionStateEncryptedBackupAvailable => 'Encrypted backup available';
 
   @override
   String get walletSecurityStatusTitle => 'Wallet security status';
@@ -11011,8 +10097,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityRecoveryNeededLabel => 'Recovery';
 
   @override
-  String get walletSecurityBackendBackupClarifier =>
-      'Email or Google sign-in can restore account access only. Transfers still require Wallet access on this device or a connected external wallet. Encrypted backend backup supports recovery and never gives the backend control of your wallet.';
+  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require Wallet access on this device or a connected external wallet. Encrypted backend backup supports recovery and never gives the backend control of your wallet.';
 
   @override
   String get walletSecuritySignedOutMethod => 'Signed out';
@@ -11067,19 +10152,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityLocalSignerReadyValue => 'Present and ready';
 
   @override
-  String get walletSecurityLocalSignerMissingValue =>
-      'Not restored on this device';
+  String get walletSecurityLocalSignerMissingValue => 'Not restored on this device';
 
   @override
-  String get walletSecuritySignerLocalReadyValue =>
-      'Wallet access ready on this device';
+  String get walletSecuritySignerLocalReadyValue => 'Wallet access ready on this device';
 
   @override
   String get walletSecuritySignerExternalReadyValue => 'External wallet ready';
 
   @override
-  String get walletSecuritySignerRestoreAvailableValue =>
-      'Restore available from encrypted backup';
+  String get walletSecuritySignerRestoreAvailableValue => 'Restore available from encrypted backup';
 
   @override
   String get walletSecuritySignerMissingValue => 'Wallet access missing';
@@ -11127,15 +10209,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionFeatureLabel => 'Wallet backup';
 
   @override
-  String get walletBackupProtectionUnavailableTitle =>
-      'Wallet backup unavailable';
+  String get walletBackupProtectionUnavailableTitle => 'Wallet backup unavailable';
 
   @override
   String get walletBackupProtectionCurrentWalletLabel => 'Current wallet';
 
   @override
-  String get walletBackupProtectionOfflineReminder =>
-      'Back up the recovery phrase offline and store the encrypted backup recovery password separately.';
+  String get walletBackupProtectionOfflineReminder => 'Back up the recovery phrase offline and store the encrypted backup recovery password separately.';
 
   @override
   String walletBackupProtectionLastVerifiedLabel(Object date) {
@@ -11143,106 +10223,82 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get walletBackupProtectionCreateBackupTitle =>
-      'Create encrypted backup';
+  String get walletBackupProtectionCreateBackupTitle => 'Create encrypted backup';
 
   @override
-  String get walletBackupProtectionCreateBackupDescription =>
-      'Choose a recovery password. This password decrypts the wallet backup on a new device.';
+  String get walletBackupProtectionCreateBackupDescription => 'Choose a recovery password. This password decrypts the wallet backup on a new device.';
 
   @override
   String get walletBackupProtectionCreateBackupAction => 'Create backup';
 
   @override
-  String get walletBackupProtectionBackupSavedToast =>
-      'Encrypted wallet backup saved.';
+  String get walletBackupProtectionBackupSavedToast => 'Encrypted wallet backup saved.';
 
   @override
-  String get walletBackupProtectionVerifyBackupTitle =>
-      'Verify encrypted backup';
+  String get walletBackupProtectionVerifyBackupTitle => 'Verify encrypted backup';
 
   @override
-  String get walletBackupProtectionVerifyBackupDescription =>
-      'Enter the recovery password to verify the encrypted backup can be decrypted locally.';
+  String get walletBackupProtectionVerifyBackupDescription => 'Enter the recovery password to verify the encrypted backup can be decrypted locally.';
 
   @override
-  String get walletBackupProtectionVerifyBackupAction =>
-      'Verify encrypted backup';
+  String get walletBackupProtectionVerifyBackupAction => 'Verify encrypted backup';
 
   @override
-  String get walletBackupProtectionBackupVerifiedToast =>
-      'Encrypted backup verified.';
+  String get walletBackupProtectionBackupVerifiedToast => 'Encrypted backup verified.';
 
   @override
-  String get walletBackupProtectionDeleteBackupTitle =>
-      'Delete encrypted backup?';
+  String get walletBackupProtectionDeleteBackupTitle => 'Delete encrypted backup?';
 
   @override
-  String get walletBackupProtectionDeleteBackupBody =>
-      'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.';
+  String get walletBackupProtectionDeleteBackupBody => 'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.';
 
   @override
-  String get walletBackupProtectionDeleteBackupAction =>
-      'Delete encrypted backup';
+  String get walletBackupProtectionDeleteBackupAction => 'Delete encrypted backup';
 
   @override
-  String get walletBackupProtectionBackupDeletedToast =>
-      'Encrypted wallet backup deleted.';
+  String get walletBackupProtectionBackupDeletedToast => 'Encrypted wallet backup deleted.';
 
   @override
-  String get walletBackupProtectionRestoreSignerTitle =>
-      'Restore wallet access';
+  String get walletBackupProtectionRestoreSignerTitle => 'Restore wallet access';
 
   @override
-  String get walletBackupProtectionRestoreSignerDescription =>
-      'Restore signing access on this device. Passkey recovery is tried first when available; recovery password is the fallback.';
+  String get walletBackupProtectionRestoreSignerDescription => 'Restore signing access on this device. Passkey recovery is tried first when available; recovery password is the fallback.';
 
   @override
-  String get walletBackupProtectionRestoreSignerAction =>
-      'Restore wallet access';
+  String get walletBackupProtectionRestoreSignerAction => 'Restore wallet access';
 
   @override
-  String get walletBackupProtectionSignerRestoredToast =>
-      'Wallet access restored on this device.';
+  String get walletBackupProtectionSignerRestoredToast => 'Wallet access restored on this device.';
 
   @override
-  String get walletBackupProtectionSignerRestoredWithPasskeyToast =>
-      'Wallet access restored with passkey.';
+  String get walletBackupProtectionSignerRestoredWithPasskeyToast => 'Wallet access restored with passkey.';
 
   @override
-  String get walletBackupProtectionSignerRestoredWithPasswordToast =>
-      'Wallet access restored with recovery password.';
+  String get walletBackupProtectionSignerRestoredWithPasswordToast => 'Wallet access restored with recovery password.';
 
   @override
-  String get walletBackupProtectionSignerStillMissingToast =>
-      'Wallet access is still read-only on this device.';
+  String get walletBackupProtectionSignerStillMissingToast => 'Wallet access is still read-only on this device.';
 
   @override
-  String get walletBackupProtectionRecoveryCancelledToast =>
-      'Wallet recovery cancelled.';
+  String get walletBackupProtectionRecoveryCancelledToast => 'Wallet recovery cancelled.';
 
   @override
-  String get walletBackupProtectionSignerRestoreFailedToast =>
-      'Unable to restore wallet access.';
+  String get walletBackupProtectionSignerRestoreFailedToast => 'Unable to restore wallet access.';
 
   @override
-  String get walletBackupProtectionUpdateEncryptedBackupButton =>
-      'Update encrypted backup';
+  String get walletBackupProtectionUpdateEncryptedBackupButton => 'Update encrypted backup';
 
   @override
-  String get walletBackupProtectionCreateEncryptedBackupButton =>
-      'Create encrypted backup';
+  String get walletBackupProtectionCreateEncryptedBackupButton => 'Create encrypted backup';
 
   @override
-  String get walletBackupProtectionRevealRecoveryPhraseButton =>
-      'Reveal and copy recovery phrase';
+  String get walletBackupProtectionRevealRecoveryPhraseButton => 'Reveal and copy recovery phrase';
 
   @override
   String get walletBackupProtectionPasskeysTitle => 'Passkeys';
 
   @override
-  String get walletBackupProtectionPasskeysBody =>
-      'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.';
+  String get walletBackupProtectionPasskeysBody => 'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.';
 
   @override
   String get securityHubAccountSecurity => 'Account security';
@@ -11257,8 +10313,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityHubAccountSignInPasskey => 'Account sign-in passkey';
 
   @override
-  String get securityHubWalletRecoveryPasskey =>
-      'Wallet recovery / unlock passkey';
+  String get securityHubWalletRecoveryPasskey => 'Wallet recovery / unlock passkey';
 
   @override
   String get securityHubEncryptedServerBackup => 'Encrypted server backup';
@@ -11267,32 +10322,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityHubRecoveryPhrase => 'Recovery phrase';
 
   @override
-  String get securityHubAddWalletRecoveryPasskey =>
-      'Add wallet recovery passkey';
+  String get securityHubAddWalletRecoveryPasskey => 'Add wallet recovery passkey';
 
   @override
-  String get securityHubManageWalletRecoveryPasskeys =>
-      'Manage wallet recovery passkeys';
+  String get securityHubManageWalletRecoveryPasskeys => 'Manage wallet recovery passkeys';
 
   @override
-  String get securityHubRemoveWalletRecoveryPasskeyTitle =>
-      'Remove wallet recovery passkey?';
+  String get securityHubRemoveWalletRecoveryPasskeyTitle => 'Remove wallet recovery passkey?';
 
   @override
-  String get securityHubWalletRecoveryPasskeyRemovedToast =>
-      'Wallet recovery passkey removed.';
+  String get securityHubWalletRecoveryPasskeyRemovedToast => 'Wallet recovery passkey removed.';
 
   @override
-  String get securityHubWalletRecoveryPasskeyRemoveFailedToast =>
-      'Could not remove wallet recovery passkey. Try again.';
+  String get securityHubWalletRecoveryPasskeyRemoveFailedToast => 'Could not remove wallet recovery passkey. Try again.';
 
   @override
-  String get securityHubPasskeyAlreadyRegistered =>
-      'This passkey is already registered.';
+  String get securityHubPasskeyAlreadyRegistered => 'This passkey is already registered.';
 
   @override
-  String get securityHubBrowserPromptCancelledOrTimedOut =>
-      'Browser prompt cancelled or timed out.';
+  String get securityHubBrowserPromptCancelledOrTimedOut => 'Browser prompt cancelled or timed out.';
 
   @override
   String get walletRecoveryFallbackTitle => 'Restore wallet access';
@@ -11301,8 +10349,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletRecoveryPasskeyFailedTitle => 'Passkey recovery failed';
 
   @override
-  String get walletRecoveryPasskeyUnavailableTitle =>
-      'Passkey recovery unavailable';
+  String get walletRecoveryPasskeyUnavailableTitle => 'Passkey recovery unavailable';
 
   @override
   String get walletRecoveryPasswordFailedTitle => 'Recovery password failed';
@@ -11311,12 +10358,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletRecoveryNoBackupTitle => 'No encrypted backup found';
 
   @override
-  String get walletRecoveryFallbackDescription =>
-      'Choose another way to restore wallet signing on this device.';
+  String get walletRecoveryFallbackDescription => 'Choose another way to restore wallet signing on this device.';
 
   @override
-  String get walletRecoveryPasskeyUnavailableDeviceDescription =>
-      'Passkey recovery is unavailable on this device. Use the recovery password or recovery phrase to restore wallet access.';
+  String get walletRecoveryPasskeyUnavailableDeviceDescription => 'Passkey recovery is unavailable on this device. Use the recovery password or recovery phrase to restore wallet access.';
 
   @override
   String get walletRecoveryUsePasswordAction => 'Use recovery password';
@@ -11328,12 +10373,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletRecoveryContinueReadOnlyAction => 'Continue without wallet';
 
   @override
-  String get walletRecoveryReadOnlyDescription =>
-      'You can still browse your account, but wallet actions will stay locked until you restore the signer.';
+  String get walletRecoveryReadOnlyDescription => 'You can still browse your account, but wallet actions will stay locked until you restore the signer.';
 
   @override
-  String get walletRecoveryPhraseMustMatchDescription =>
-      'The imported recovery phrase must match your account wallet.';
+  String get walletRecoveryPhraseMustMatchDescription => 'The imported recovery phrase must match your account wallet.';
 
   @override
   String get walletRecoveryPhraseLabel => 'Recovery phrase';
@@ -11345,8 +10388,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionPasskeyNameLabel => 'Passkey name';
 
   @override
-  String get walletBackupProtectionAddPasskeyDescription =>
-      'Give this passkey a label so you can recognize the device or browser later.';
+  String get walletBackupProtectionAddPasskeyDescription => 'Give this passkey a label so you can recognize the device or browser later.';
 
   @override
   String get walletBackupProtectionDefaultPasskeyName => 'This device';
@@ -11371,8 +10413,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupBannerTitle => 'Back up your recovery phrase';
 
   @override
-  String get walletBackupBannerSubtitle =>
-      'Store it safely offline. You need it to restore this wallet and keep long-term access.';
+  String get walletBackupBannerSubtitle => 'Store it safely offline. You need it to restore this wallet and keep long-term access.';
 
   @override
   String get walletBackupBannerAction => 'Back up now';
@@ -11381,23 +10422,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletReconnectSuccessToast => 'Wallet session restored.';
 
   @override
-  String get walletReconnectReadOnlyToast =>
-      'Session refreshed. Signing is still unavailable on this device.';
+  String get walletReconnectReadOnlyToast => 'Session refreshed. Signing is still unavailable on this device.';
 
   @override
-  String get walletReconnectManualRequiredToast =>
-      'Reconnect with your wallet provider to enable signing.';
+  String get walletReconnectManualRequiredToast => 'Reconnect with your wallet provider to enable signing.';
 
   @override
   String get walletSwapTitle => 'Token swap';
 
   @override
-  String get walletSwapTemporarilyDisabledTitle =>
-      'Swap is temporarily unavailable';
+  String get walletSwapTemporarilyDisabledTitle => 'Swap is temporarily unavailable';
 
   @override
-  String get walletSwapTemporarilyDisabledDescription =>
-      'Token swapping is turned off in this app build. You can still use Send and Receive, and the full swap flow can be restored later.';
+  String get walletSwapTemporarilyDisabledDescription => 'Token swapping is turned off in this app build. You can still use Send and Receive, and the full swap flow can be restored later.';
 
   @override
   String get walletSwapSwitchTokensTooltip => 'Switch tokens';
@@ -11406,8 +10443,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSwapNoTokensTitle => 'No tradable tokens yet';
 
   @override
-  String get walletSwapNoTokensDescription =>
-      'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.';
+  String get walletSwapNoTokensDescription => 'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.';
 
   @override
   String get walletSwapYouPayLabel => 'You pay';
@@ -11436,15 +10472,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSwapRouteUnavailableTitle => 'Unable to fetch route';
 
   @override
-  String get walletSwapSearchingRouteLabel =>
-      'Searching best route on Jupiter…';
+  String get walletSwapSearchingRouteLabel => 'Searching best route on Jupiter…';
 
   @override
   String get walletSwapEnterAmountTitle => 'Enter an amount';
 
   @override
-  String get walletSwapEnterAmountDescription =>
-      'We will fetch live quotes with fees and minimum received once you type an amount.';
+  String get walletSwapEnterAmountDescription => 'We will fetch live quotes with fees and minimum received once you type an amount.';
 
   @override
   String get walletSwapQuotePreviewTitle => 'Quote preview';
@@ -11453,15 +10487,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSwapQuoteSidebarTitle => 'Quote details';
 
   @override
-  String get walletSwapQuoteSidebarSubtitle =>
-      'Route, slippage, and output update with every amount change.';
+  String get walletSwapQuoteSidebarSubtitle => 'Route, slippage, and output update with every amount change.';
 
   @override
   String get walletSwapRecentPairsTitle => 'Recent pairs';
 
   @override
-  String get walletSwapRecentPairsSubtitle =>
-      'Jump back into recent routes without rebuilding the form.';
+  String get walletSwapRecentPairsSubtitle => 'Jump back into recent routes without rebuilding the form.';
 
   @override
   String walletSwapRecentPairSubtitle(Object amount, Object date) {
@@ -11469,8 +10501,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get walletSwapSecuritySubtitle =>
-      'Swap execution still depends on wallet access and recovery status.';
+  String get walletSwapSecuritySubtitle => 'Swap execution still depends on wallet access and recovery status.';
 
   @override
   String get walletSwapEstimatedOutputLabel => 'Estimated output';
@@ -11510,15 +10541,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSwapNoHistoryTitle => 'No swaps yet';
 
   @override
-  String get walletSwapNoHistoryDescription =>
-      'Executed swaps will appear here with detailed status once completed.';
+  String get walletSwapNoHistoryDescription => 'Executed swaps will appear here with detailed status once completed.';
 
   @override
   String get walletSwapPositiveAmountError => 'Enter a positive amount';
 
   @override
-  String get walletSwapPositiveAmountDetailedError =>
-      'Enter an amount greater than zero';
+  String get walletSwapPositiveAmountDetailedError => 'Enter an amount greater than zero';
 
   @override
   String get walletSwapSelectTokensError => 'Select both tokens to continue';
@@ -11532,8 +10561,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature) {
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature) {
     return 'Swap submitted: $fromToken ? $toToken. Tx: $signature';
   }
 
@@ -11576,8 +10604,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletTransactionCopiedToast => 'Transaction ID copied.';
 
   @override
-  String get walletTransactionExplorerUnavailableToast =>
-      'Unable to open explorer.';
+  String get walletTransactionExplorerUnavailableToast => 'Unable to open explorer.';
 
   @override
   String get walletTransactionFeeTransferTitle => 'Fee transfer';
@@ -11634,12 +10661,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageMarkersTitle => 'Manage markers';
 
   @override
-  String get manageMarkersCardSubtitle =>
-      'Create, publish, and edit your map markers';
+  String get manageMarkersCardSubtitle => 'Create, publish, and edit your map markers';
 
   @override
-  String get manageMarkersQuickActionSubtitle =>
-      'Create, publish, and edit markers';
+  String get manageMarkersQuickActionSubtitle => 'Create, publish, and edit markers';
 
   @override
   String get manageMarkersSearchHint => 'Search markers';
@@ -11660,22 +10685,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageMarkersEmptyTitle => 'No markers yet';
 
   @override
-  String get manageMarkersEmptySubtitle =>
-      'Create your first marker to place an AR experience on the map.';
+  String get manageMarkersEmptySubtitle => 'Create your first marker to place an AR experience on the map.';
 
   @override
   String get manageMarkersSelectTitle => 'Select a marker';
 
   @override
-  String get manageMarkersSelectSubtitle =>
-      'Pick a marker from the list or create a new one.';
+  String get manageMarkersSelectSubtitle => 'Pick a marker from the list or create a new one.';
 
   @override
   String get manageMarkersLoadFailedTitle => 'Couldn\'t load markers';
 
   @override
-  String get manageMarkersLoadFailedSubtitle =>
-      'Check your connection and try again.';
+  String get manageMarkersLoadFailedSubtitle => 'Check your connection and try again.';
 
   @override
   String get manageMarkersRetryButton => 'Retry';
@@ -11732,8 +10754,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageMarkersRequiresProximityTitle => 'Requires proximity';
 
   @override
-  String get manageMarkersRequiresProximitySubtitle =>
-      'Require users to be near the marker to activate AR';
+  String get manageMarkersRequiresProximitySubtitle => 'Require users to be near the marker to activate AR';
 
   @override
   String get manageMarkersSearchNoResults => 'No results';
@@ -11762,8 +10783,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkCommentAddTitle => 'Add Comment';
 
   @override
-  String get artworkCommentAddHint =>
-      'Share your thoughts about this artwork...';
+  String get artworkCommentAddHint => 'Share your thoughts about this artwork...';
 
   @override
   String get artworkCommentPostButton => 'Post Comment';
@@ -11833,8 +10853,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySubjectPickerSearchHint => 'Search by name';
 
   @override
-  String get communitySubjectPickerSearchPrompt =>
-      'Start typing to search institutions';
+  String get communitySubjectPickerSearchPrompt => 'Start typing to search institutions';
 
   @override
   String get communitySubjectPickerLoadFailed => 'Unable to load subjects.';
@@ -11855,8 +10874,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportSectionTitle => 'Support';
 
   @override
-  String get supportSectionSubtitle =>
-      'Help us keep building art.kubus - every donation helps.';
+  String get supportSectionSubtitle => 'Help us keep building art.kubus - every donation helps.';
 
   @override
   String get supportSectionMoreInfo => 'More info';
@@ -11883,8 +10901,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportDialogTitle => 'What your support enables';
 
   @override
-  String get supportDialogSubtitle =>
-      'Three tiers - all meaningful. Thank you for helping us keep building.';
+  String get supportDialogSubtitle => 'Three tiers - all meaningful. Thank you for helping us keep building.';
 
   @override
   String get supportTier5Amount => '€5';
@@ -11902,8 +10919,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportTier50Amount => '€50';
 
   @override
-  String get supportTier50Body =>
-      'Funds one focused development session (new feature / fixes / content updates).';
+  String get supportTier50Body => 'Funds one focused development session (new feature / fixes / content updates).';
 
   @override
   String get commonChange => 'Change';
@@ -11933,7 +10949,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavGovern => 'Govern';
 
   @override
-  String get desktopShellNavTrade => 'Artifacts';
+  String get desktopShellNavTrade => 'Digital editions';
 
   @override
   String get desktopShellNavWeb3 => 'Infrastructure';
@@ -11987,15 +11003,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labsMarketplaceSemanticLabel => 'Digital Editions';
 
   @override
-  String get daoHubHeaderSubtitle =>
-      'Experimental community governance for artists, institutions, and cultural participation';
+  String get daoHubHeaderSubtitle => 'Experimental community governance for artists, institutions, and cultural participation';
 
   @override
   String get daoHubInfoDialogTitle => 'How community governance works';
 
   @override
-  String get daoHubInfoDialogBody =>
-      'This lab gives the community a transparent way to propose, review, and discuss platform decisions. KUB8 records participation and recognition; it is not financial value.';
+  String get daoHubInfoDialogBody => 'This lab gives the community a transparent way to propose, review, and discuss platform decisions. KUB8 records participation and recognition; it is not financial value.';
 
   @override
   String get daoHubTabActiveProposals => 'Proposals';
@@ -12016,26 +11030,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoCreateProposalTitle => 'Create new proposal';
 
   @override
-  String get daoCreateProposalSubtitle =>
-      'Submit a proposal for governance review';
+  String get daoCreateProposalSubtitle => 'Submit a proposal for governance review';
 
   @override
   String get daoCreateProposalFieldTitleLabel => 'Proposal title';
 
   @override
-  String get daoCreateProposalFieldTitleHint =>
-      'Enter a clear, descriptive title';
+  String get daoCreateProposalFieldTitleHint => 'Enter a clear, descriptive title';
 
   @override
-  String get daoCreateProposalFieldDescriptionHint =>
-      'Provide detailed explanation of your proposal';
+  String get daoCreateProposalFieldDescriptionHint => 'Provide detailed explanation of your proposal';
 
   @override
   String get daoCreateProposalFieldVotingPeriodLabel => 'Voting period (days)';
 
   @override
-  String get daoCreateProposalFieldVotingPeriodHint =>
-      'How many days should voting be open?';
+  String get daoCreateProposalFieldVotingPeriodHint => 'How many days should voting be open?';
 
   @override
   String get daoCreateProposalSubmitButtonLabel => 'Submit proposal';
@@ -12083,12 +11093,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopGovernanceSidebarQuickActionsTitle => 'Quick Actions';
 
   @override
-  String get desktopGovernanceQuickActionCreateProposalTitle =>
-      'Create proposal';
+  String get desktopGovernanceQuickActionCreateProposalTitle => 'Create proposal';
 
   @override
-  String get desktopGovernanceQuickActionCreateProposalSubtitle =>
-      'Submit new governance idea';
+  String get desktopGovernanceQuickActionCreateProposalSubtitle => 'Submit new governance idea';
 
   @override
   String get desktopGovernanceQuickActionVoteTitle => 'Review proposals';
@@ -12100,8 +11108,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopGovernanceQuickActionAnalyticsTitle => 'Analytics';
 
   @override
-  String get desktopGovernanceQuickActionAnalyticsSubtitle =>
-      'View participation signals';
+  String get desktopGovernanceQuickActionAnalyticsSubtitle => 'View participation signals';
 
   @override
   String get desktopGovernanceAnalyticsScreenTitle => 'Governance Analytics';
@@ -12113,8 +11120,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopGovernanceSidebarRecentActivityTitle => 'Recent Activity';
 
   @override
-  String get desktopGovernanceAcquireKub8Hint =>
-      'Build participation and recognition to take part in governance';
+  String get desktopGovernanceAcquireKub8Hint => 'Build participation and recognition to take part in governance';
 
   @override
   String get profileEditTitle => 'Edit profile';
@@ -12123,8 +11129,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditSaveChanges => 'Save changes';
 
   @override
-  String get profileEditCoverImageClickToUpload =>
-      'Click to upload cover image';
+  String get profileEditCoverImageClickToUpload => 'Click to upload cover image';
 
   @override
   String get profileEditCoverImageTapToAdd => 'Tap to add cover image';
@@ -12147,8 +11152,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditBasicInformationTitle => 'Basic information';
 
   @override
-  String get profileEditPublicProfileDetailsSubtitle =>
-      'Your public profile details';
+  String get profileEditPublicProfileDetailsSubtitle => 'Your public profile details';
 
   @override
   String get profileEditUsernameLabel => 'Username';
@@ -12160,20 +11164,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditUsernameRequiredError => 'Username is required';
 
   @override
-  String get profileEditUsernameMinLengthError =>
-      'Username must be at least 3 characters';
+  String get profileEditUsernameMinLengthError => 'Username must be at least 3 characters';
 
   @override
-  String get profileEditUsernameMaxLengthError =>
-      'Username must be 50 characters or fewer';
+  String get profileEditUsernameMaxLengthError => 'Username must be 50 characters or fewer';
 
   @override
-  String get profileEditUsernameReservedError =>
-      'That username is reserved. Please pick a different one.';
+  String get profileEditUsernameReservedError => 'That username is reserved. Please pick a different one.';
 
   @override
-  String get profileEditUsernameWalletLikeError =>
-      'That looks like a wallet address. Please pick a readable username.';
+  String get profileEditUsernameWalletLikeError => 'That looks like a wallet address. Please pick a readable username.';
 
   @override
   String get authUsernameAlreadyTaken => 'Username already taken';
@@ -12212,8 +11212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditSocialWebsiteLabel => 'Website';
 
   @override
-  String get profileEditSocialWebsiteHint =>
-      'example.com or https://example.com';
+  String get profileEditSocialWebsiteHint => 'example.com or https://example.com';
 
   @override
   String get profileEditSocialUrlInvalidError => 'Enter a valid website URL';
@@ -12225,35 +11224,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditArtistSpecialtiesLabel => 'Specialties';
 
   @override
-  String get profileEditArtistSpecialtiesHint =>
-      'e.g., Digital Art, Sculpture, Photography';
+  String get profileEditArtistSpecialtiesHint => 'e.g., Digital Art, Sculpture, Photography';
 
   @override
-  String get profileEditArtistSpecialtiesHelper =>
-      'Separate multiple specialties with commas';
+  String get profileEditArtistSpecialtiesHelper => 'Separate multiple specialties with commas';
 
   @override
   String get profileEditArtistYearsActiveLabel => 'Years active';
 
   @override
-  String get profileEditArtistYearsActiveHint =>
-      'How many years have you been creating art?';
+  String get profileEditArtistYearsActiveHint => 'How many years have you been creating art?';
 
   @override
-  String get profileEditArtistYearsActiveInvalidError =>
-      'Please enter a valid number';
+  String get profileEditArtistYearsActiveInvalidError => 'Please enter a valid number';
 
   @override
-  String get profileEditInstitutionInformationTitle =>
-      'Institution information';
+  String get profileEditInstitutionInformationTitle => 'Institution information';
 
   @override
-  String get profileEditInstitutionDetailsSubtitle =>
-      'Information about your institution';
+  String get profileEditInstitutionDetailsSubtitle => 'Information about your institution';
 
   @override
-  String get profileEditArtistDetailsSubtitle =>
-      'Additional details about your artistic practice';
+  String get profileEditArtistDetailsSubtitle => 'Additional details about your artistic practice';
 
   @override
   String get profileEditInstitutionFocusAreasLabel => 'Focus areas';
@@ -12265,15 +11257,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditPrivacyVisibilityTitle => 'Privacy & visibility';
 
   @override
-  String get profileEditPrivacyVisibilitySubtitle =>
-      'Control who can see your content';
+  String get profileEditPrivacyVisibilitySubtitle => 'Control who can see your content';
 
   @override
   String get profileEditInstitutionAboutTitle => 'About your institution';
 
   @override
-  String get profileEditInstitutionAboutBody =>
-      'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.';
+  String get profileEditInstitutionAboutBody => 'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.';
 
   @override
   String get profileEditVerifiedStatusTitle => 'Verified status';
@@ -12285,12 +11275,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditVerifiedInstitutionTitle => 'Verified institution';
 
   @override
-  String get profileEditVerifiedArtistSubtitle =>
-      'Your artist status is verified through governance review';
+  String get profileEditVerifiedArtistSubtitle => 'Your artist status is verified through governance review';
 
   @override
-  String get profileEditVerifiedInstitutionSubtitle =>
-      'Your institution status is verified through governance review';
+  String get profileEditVerifiedInstitutionSubtitle => 'Your institution status is verified through governance review';
 
   @override
   String get profileEditProfileUpdatedToast => 'Profile updated successfully!';
@@ -12299,62 +11287,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditErrorToast => 'Something went wrong. Please try again.';
 
   @override
-  String get profileEditNoWalletUploadAvatarToast =>
-      'Sign in first; wallet access is only needed for wallet-linked profile actions.';
+  String get profileEditNoWalletUploadAvatarToast => 'Sign in first; wallet access is only needed for wallet-linked profile actions.';
 
   @override
-  String get profileEditNoWalletUploadCoverToast =>
-      'Sign in first; wallet access is only needed for wallet-linked profile actions.';
+  String get profileEditNoWalletUploadCoverToast => 'Sign in first; wallet access is only needed for wallet-linked profile actions.';
 
   @override
-  String get profileEditAvatarCopiedToClipboardToast =>
-      'Copied avatar URL to clipboard';
+  String get profileEditAvatarCopiedToClipboardToast => 'Copied avatar URL to clipboard';
 
   @override
-  String get profileEditAvatarUploadedSavedToast =>
-      'Avatar uploaded and saved!';
+  String get profileEditAvatarUploadedSavedToast => 'Avatar uploaded and saved!';
 
   @override
-  String get profileEditAvatarUploadedLocalToast =>
-      'Avatar uploaded locally (save failed)';
+  String get profileEditAvatarUploadedLocalToast => 'Avatar uploaded locally (save failed)';
 
   @override
-  String get profileEditAvatarUploadFailedToast =>
-      'Avatar upload failed. Please try again.';
+  String get profileEditAvatarUploadFailedToast => 'Avatar upload failed. Please try again.';
 
   @override
-  String get profileEditAvatarUploadTimeoutToast =>
-      'Profile image upload timed out. Please try a smaller image or retry.';
+  String get profileEditAvatarUploadTimeoutToast => 'Profile image upload timed out. Please try a smaller image or retry.';
 
   @override
   String get profileEditCoverUploadedSavedToast => 'Cover image uploaded!';
 
   @override
-  String get profileEditCoverUploadedLocalToast =>
-      'Cover image uploaded locally';
+  String get profileEditCoverUploadedLocalToast => 'Cover image uploaded locally';
 
   @override
-  String get profileEditCoverUploadFailedToast =>
-      'Cover image upload failed. Please try again.';
+  String get profileEditCoverUploadFailedToast => 'Cover image upload failed. Please try again.';
 
   @override
-  String get profileEditCoverUploadTimeoutToast =>
-      'Cover image upload timed out. Please try a smaller image or retry.';
+  String get profileEditCoverUploadTimeoutToast => 'Cover image upload timed out. Please try a smaller image or retry.';
 
   @override
-  String get profileEditSaveTimeoutToast =>
-      'Profile save timed out. Your connection may be slow. Please retry.';
+  String get profileEditSaveTimeoutToast => 'Profile save timed out. Your connection may be slow. Please retry.';
 
   @override
-  String get profileEditPickImageFailedToast =>
-      'Could not select the image. Please try again.';
+  String get profileEditPickImageFailedToast => 'Could not select the image. Please try again.';
 
   @override
   String get profileEditUploadDebugInfoTitle => 'Upload debug info';
 
   @override
-  String get profileEditUploadDebugInfoCopiedToast =>
-      'Debug info copied to clipboard';
+  String get profileEditUploadDebugInfoCopiedToast => 'Debug info copied to clipboard';
 
   @override
   String get desktopCommunityTabDiscover => 'Discover';
@@ -12372,15 +11347,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityHeaderTitle => 'Community';
 
   @override
-  String get desktopCommunityHeaderSubtitle =>
-      'Connect with artists and collectors';
+  String get desktopCommunityHeaderSubtitle => 'Connect with artists and collectors';
 
   @override
   String get desktopCommunitySearchHint => 'Search posts, users, tags...';
 
   @override
-  String get desktopCommunitySearchMinCharsHint =>
-      'Type at least 2 characters to search';
+  String get desktopCommunitySearchMinCharsHint => 'Type at least 2 characters to search';
 
   @override
   String get desktopCommunitySearchNoResults => 'No results found';
@@ -12416,8 +11389,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityBackToFeedTooltip => 'Back to feed';
 
   @override
-  String get desktopCommunitySortedByPopularityTooltip =>
-      'Sorted by popularity';
+  String get desktopCommunitySortedByPopularityTooltip => 'Sorted by popularity';
 
   @override
   String get desktopCommunitySortedByRecentTooltip => 'Sorted by recent';
@@ -12431,8 +11403,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityTagUnavailableTitle => 'Tag unavailable';
 
   @override
-  String get desktopCommunityTagUnavailableBody =>
-      'We could not open that tag. It may have been removed or is not available right now.';
+  String get desktopCommunityTagUnavailableBody => 'We could not open that tag. It may have been removed or is not available right now.';
 
   @override
   String desktopCommunityPopularForTagTitle(String tag) {
@@ -12446,19 +11417,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityEmptyDiscoverTitle => 'No posts yet';
 
   @override
-  String get desktopCommunityEmptyDiscoverBody =>
-      'Posts from creators around the world will appear here.';
+  String get desktopCommunityEmptyDiscoverBody => 'Posts from creators around the world will appear here.';
 
   @override
   String get desktopCommunityEmptySearchBody => 'No posts match your search.';
 
   @override
-  String get desktopCommunityEmptyFollowingTitle =>
-      'No posts from followed creators';
+  String get desktopCommunityEmptyFollowingTitle => 'No posts from followed creators';
 
   @override
-  String get desktopCommunityEmptyFollowingBody =>
-      'Follow artists and creators to see their updates here.';
+  String get desktopCommunityEmptyFollowingBody => 'Follow artists and creators to see their updates here.';
 
   @override
   String get desktopCommunityLoadingNearbyArtLabel => 'Loading nearby art...';
@@ -12467,15 +11435,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityEmptyNearbyArtTitle => 'No nearby art found';
 
   @override
-  String get desktopCommunityEmptyNearbyArtBody =>
-      'Explore your surroundings to discover location-based art.';
+  String get desktopCommunityEmptyNearbyArtBody => 'Explore your surroundings to discover location-based art.';
 
   @override
   String get desktopCommunityEmptySearchTitle => 'No posts match your search';
 
   @override
-  String get desktopCommunityEmptySearchSubtitle =>
-      'Try adjusting your keywords to find relevant art posts.';
+  String get desktopCommunityEmptySearchSubtitle => 'Try adjusting your keywords to find relevant art posts.';
 
   @override
   String get desktopCommunityLoadingGroupsLabel => 'Loading groups...';
@@ -12484,8 +11450,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityEmptyGroupsTitle => 'No groups yet';
 
   @override
-  String get desktopCommunityEmptyGroupsBody =>
-      'Join or create groups to connect with like-minded art enthusiasts.';
+  String get desktopCommunityEmptyGroupsBody => 'Join or create groups to connect with like-minded art enthusiasts.';
 
   @override
   String get desktopCommunityCreateFabLabel => 'Create';
@@ -12512,36 +11477,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityComposerTypePostLabel => 'Post';
 
   @override
-  String get desktopCommunityComposerTypePostDescription =>
-      'Share an update with the community';
+  String get desktopCommunityComposerTypePostDescription => 'Share an update with the community';
 
   @override
   String get desktopCommunityComposerTypeArtDropLabel => 'Art drop';
 
   @override
-  String get desktopCommunityComposerTypeArtDropDescription =>
-      'Highlight a location-based activation';
+  String get desktopCommunityComposerTypeArtDropDescription => 'Highlight a location-based activation';
 
   @override
   String get desktopCommunityComposerTypeArtReviewLabel => 'Art review';
 
   @override
-  String get desktopCommunityComposerTypeArtReviewDescription =>
-      'Share your thoughts on an artwork';
+  String get desktopCommunityComposerTypeArtReviewDescription => 'Share your thoughts on an artwork';
 
   @override
   String get desktopCommunityComposerTypeEventLabel => 'Event';
 
   @override
-  String get desktopCommunityComposerTypeEventDescription =>
-      'Announce meetups and gatherings';
+  String get desktopCommunityComposerTypeEventDescription => 'Announce meetups and gatherings';
 
   @override
   String get desktopCommunityComposerTypeQuestionLabel => 'Question';
 
   @override
-  String get desktopCommunityComposerTypeQuestionDescription =>
-      'Ask the community for feedback';
+  String get desktopCommunityComposerTypeQuestionDescription => 'Ask the community for feedback';
 
   @override
   String get desktopNavigationExpandTooltip => 'Expand navigation';
@@ -12565,7 +11525,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementCategoryAr => 'AR';
 
   @override
-  String get userProfileAchievementCategoryNft => 'Archive records';
+  String get userProfileAchievementCategoryNft => 'Digital editions';
 
   @override
   String get userProfileAchievementCategoryCommunity => 'Community';
@@ -12710,22 +11670,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunitySearchUsersHint => 'Search users...';
 
   @override
-  String get desktopCommunitySearchUsersToMessageHint =>
-      'Search for users to message';
+  String get desktopCommunitySearchUsersToMessageHint => 'Search for users to message';
 
   @override
   String get desktopCommunityNewMessageTitle => 'New message';
 
   @override
-  String get desktopCommunitySearchFailedTryAgain =>
-      'Search failed. Try again.';
+  String get desktopCommunitySearchFailedTryAgain => 'Search failed. Try again.';
 
   @override
   String get desktopCommunityMessagesEmptyTitle => 'No messages yet';
 
   @override
-  String get desktopCommunityMessagesEmptySubtitle =>
-      'Start a conversation with an artist';
+  String get desktopCommunityMessagesEmptySubtitle => 'Start a conversation with an artist';
 
   @override
   String get desktopCommunityMessagesNoMatchesTitle => 'No matches found';
@@ -12753,8 +11710,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityAddTagDialogTitle => 'Add tag';
 
   @override
-  String get desktopCommunityAddTagDialogHint =>
-      'Enter tag (e.g., art, photography)';
+  String get desktopCommunityAddTagDialogHint => 'Enter tag (e.g., art, photography)';
 
   @override
   String get desktopCommunityAddTagHint => 'Add tag';
@@ -12763,8 +11719,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityMentionDialogTitle => 'Mention someone';
 
   @override
-  String get desktopCommunitySearchPeopleHint =>
-      'Search artists, collectors, or wallets';
+  String get desktopCommunitySearchPeopleHint => 'Search artists, collectors, or wallets';
 
   @override
   String get desktopCommunityMentionHint => 'Mention';
@@ -12794,12 +11749,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityJoinGroupToPostToast => 'Join a group to post.';
 
   @override
-  String get desktopCommunityTargetCommunityOptionalTitle =>
-      'Target a community (optional)';
+  String get desktopCommunityTargetCommunityOptionalTitle => 'Target a community (optional)';
 
   @override
-  String get desktopCommunityTargetCommunityNoGroupHint =>
-      'Posts shared to groups notify members instantly.';
+  String get desktopCommunityTargetCommunityNoGroupHint => 'Posts shared to groups notify members instantly.';
 
   @override
   String desktopCommunityTargetCommunityPostingToLabel(Object groupName) {
@@ -12813,8 +11766,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityArAttachmentsTitle => 'AR attachments';
 
   @override
-  String get desktopCommunityArAttachmentsBody =>
-      'Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.';
+  String get desktopCommunityArAttachmentsBody => 'Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.';
 
   @override
   String get desktopCommunityDownloadAppTitle => 'Download app';
@@ -12832,8 +11784,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityPostPublishFailedToast => 'Failed to post.';
 
   @override
-  String get desktopCommunityPostCreatedSuccessToast =>
-      'Post created successfully!';
+  String get desktopCommunityPostCreatedSuccessToast => 'Post created successfully!';
 
   @override
   String get desktopCommunityPostCreateFailedToast => 'Failed to create post.';
@@ -12842,8 +11793,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityCreatePostTitle => 'Create post';
 
   @override
-  String get desktopCommunityComposerPromptHint =>
-      'Share what you\'re building, discovering, or thinking...';
+  String get desktopCommunityComposerPromptHint => 'Share what you\'re building, discovering, or thinking...';
 
   @override
   String get desktopCommunityComposerWhatsHappeningHint => 'What\'s happening?';
@@ -12879,8 +11829,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityCreateGroupNameLabel => 'Group name';
 
   @override
-  String get desktopCommunityCreateGroupDescriptionLabel =>
-      'Description (optional)';
+  String get desktopCommunityCreateGroupDescriptionLabel => 'Description (optional)';
 
   @override
   String get desktopCommunityArtUseCurrentAreaButton => 'Use current area';
@@ -12920,8 +11869,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get desktopCommunityTagFeedSortedByPopularityDescription =>
-      'Sorted by popularity (likes, shares, comments, and views).';
+  String get desktopCommunityTagFeedSortedByPopularityDescription => 'Sorted by popularity (likes, shares, comments, and views).';
 
   @override
   String desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel(num count) {
@@ -12938,34 +11886,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityTrendingTitle => 'Trending';
 
   @override
-  String get desktopCommunityTrendingLoadFailedTapToRetry =>
-      'Could not load trending topics. Tap to retry.';
+  String get desktopCommunityTrendingLoadFailedTapToRetry => 'Could not load trending topics. Tap to retry.';
 
   @override
-  String get desktopCommunityTrendingEmptyLabel =>
-      'No trending tags yet. Engage with the community to surface trends.';
+  String get desktopCommunityTrendingEmptyLabel => 'No trending tags yet. Engage with the community to surface trends.';
 
   @override
-  String get desktopCommunityTrendingBasedOnRecentPostsLabel =>
-      'Based on recent posts';
+  String get desktopCommunityTrendingBasedOnRecentPostsLabel => 'Based on recent posts';
 
   @override
   String get desktopCommunityWhoToFollowTitle => 'Who to follow';
 
   @override
-  String get desktopCommunitySuggestionsLoadFailedTapToRetry =>
-      'Unable to load suggestions. Tap to retry.';
+  String get desktopCommunitySuggestionsLoadFailedTapToRetry => 'Unable to load suggestions. Tap to retry.';
 
   @override
-  String get desktopCommunitySuggestionsEmptyLabel =>
-      'Follow artists to personalize your feed.';
+  String get desktopCommunitySuggestionsEmptyLabel => 'Follow artists to personalize your feed.';
 
   @override
   String get profileInvitesTooltip => 'Invites';
 
   @override
-  String get profileConnectWalletToSeeProfileLabel =>
-      'Connect wallet to see profile';
+  String get profileConnectWalletToSeeProfileLabel => 'Connect wallet to see profile';
 
   @override
   String get profileMoreOptionsTitle => 'More options';
@@ -12974,43 +11916,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoBioYetTitle => 'No bio yet';
 
   @override
-  String get profileNoBioYetDescription =>
-      'Tap \"Edit Profile\" to add a short bio about yourself.';
+  String get profileNoBioYetDescription => 'Tap \"Edit Profile\" to add a short bio about yourself.';
 
   @override
-  String get profileNoPostsYetDescription =>
-      'Share your perspective with the community to see it here.';
+  String get profileNoPostsYetDescription => 'Share your perspective with the community to see it here.';
 
   @override
   String get profileUpcomingEventsTitle => 'Upcoming events';
 
   @override
-  String get profileUpcomingEventsEmptyLabel =>
-      'Plan an event or workshop to engage your audience.';
+  String get profileUpcomingEventsEmptyLabel => 'Plan an event or workshop to engage your audience.';
 
   @override
-  String get profileArtistHighlightsSubtitle =>
-      'Keep your artworks and collections front and center.';
+  String get profileArtistHighlightsSubtitle => 'Keep your artworks and collections front and center.';
 
   @override
-  String get profileArtistArtworksEmptyLabel =>
-      'Upload your first artwork to showcase it here.';
+  String get profileArtistArtworksEmptyLabel => 'Upload your first artwork to showcase it here.';
 
   @override
-  String get profileArtistCollectionsEmptyLabel =>
-      'Create a collection to curate your story.';
+  String get profileArtistCollectionsEmptyLabel => 'Create a collection to curate your story.';
 
   @override
-  String get profileInstitutionHighlightsSubtitle =>
-      'Promote upcoming programs and featured collections.';
+  String get profileInstitutionHighlightsSubtitle => 'Promote upcoming programs and featured collections.';
 
   @override
-  String get profileInstitutionEventsEmptyLabel =>
-      'Share your next exhibition or gathering here.';
+  String get profileInstitutionEventsEmptyLabel => 'Share your next exhibition or gathering here.';
 
   @override
-  String get profileInstitutionCollectionsEmptyLabel =>
-      'Curate institutional collections to highlight.';
+  String get profileInstitutionCollectionsEmptyLabel => 'Curate institutional collections to highlight.';
 
   @override
   String profileShowcaseEmptyTitle(Object title) {
@@ -13048,8 +11981,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePerformanceCreatedOwnedTitle => 'Created / owned';
 
   @override
-  String get profilePerformanceFollowersFollowingTitle =>
-      'Followers / following';
+  String get profilePerformanceFollowersFollowingTitle => 'Followers / following';
 
   @override
   String get profilePerformancePublicStreetArtAddedTitle => 'Added Public Art';
@@ -13058,8 +11990,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileMenuSavedItemsTitle => 'Saved items';
 
   @override
-  String get savedItemsSummarySubtitleEmpty =>
-      'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.';
+  String get savedItemsSummarySubtitleEmpty => 'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.';
 
   @override
   String savedItemsSummarySubtitleLastSaved(Object timestamp) {
@@ -13084,8 +12015,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savedItemsClearAllDialogTitle => 'Clear all saved items?';
 
   @override
-  String get savedItemsClearAllDialogMessage =>
-      'This removes every saved item from this device. You can save them again later.';
+  String get savedItemsClearAllDialogMessage => 'This removes every saved item from this device. You can save them again later.';
 
   @override
   String get savedItemsClearAllDialogAction => 'Clear all';
@@ -13097,8 +12027,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savedItemsRemoveDialogTitle => 'Remove saved item?';
 
   @override
-  String get savedItemsRemoveDialogMessage =>
-      'Remove this saved item from your saved items?';
+  String get savedItemsRemoveDialogMessage => 'Remove this saved item from your saved items?';
 
   @override
   String get savedItemsRemoveDialogAction => 'Remove';
@@ -13169,8 +12098,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileContactSupportLiveChatLabel => 'Live chat';
 
   @override
-  String get profileContactSupportLiveChatAvailability =>
-      'Available Mon-Fri 9AM-5PM';
+  String get profileContactSupportLiveChatAvailability => 'Available Mon-Fri 9AM-5PM';
 
   @override
   String get profileContactSupportWebsiteLabel => 'Website';
@@ -13202,8 +12130,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileAboutDescription =>
-      'Open art platform for discovering public art and connecting artists, institutions, and communities. AR layers are in development.';
+  String get profileAboutDescription => 'Open art platform for discovering public art and connecting artists, institutions, and communities. AR layers are in development.';
 
   @override
   String get profileAboutCopyright => 'Copyright (c) 2024 kubus Project';
@@ -13218,8 +12145,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsDisabledTitle => 'Analytics disabled';
 
   @override
-  String get analyticsDisabledDescription =>
-      'This feature is currently turned off.';
+  String get analyticsDisabledDescription => 'This feature is currently turned off.';
 
   @override
   String get analyticsNoProfileSelectedTitle => 'No profile selected';
@@ -13231,8 +12157,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPausedTitle => 'Analytics paused';
 
   @override
-  String get analyticsPausedDescription =>
-      'Enable analytics in Settings to load charts.';
+  String get analyticsPausedDescription => 'Enable analytics in Settings to load charts.';
 
   @override
   String get analyticsUnableToLoadTitle => 'Unable to load';
@@ -13244,8 +12169,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsNoDataYetTitle => 'No data yet';
 
   @override
-  String get analyticsNoDataYetDescription =>
-      'This chart will populate as activity happens.';
+  String get analyticsNoDataYetDescription => 'This chart will populate as activity happens.';
 
   @override
   String get analyticsTimeframeLabel => 'Timeframe';
@@ -13290,16 +12214,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsHomeContextLabel => 'Home';
 
   @override
-  String get analyticsHomeSubtitle =>
-      'Unified personal analytics for reach, activity, and momentum across the app.';
+  String get analyticsHomeSubtitle => 'Unified personal analytics for reach, activity, and momentum across the app.';
 
   @override
-  String get analyticsProfileSubtitle =>
-      'A single profile-focused analytics surface with public and owner-aware metrics.';
+  String get analyticsProfileSubtitle => 'A single profile-focused analytics surface with public and owner-aware metrics.';
 
   @override
-  String get analyticsCommunitySubtitle =>
-      'The same analytics system, configured around community posting and response signals.';
+  String get analyticsCommunitySubtitle => 'The same analytics system, configured around community posting and response signals.';
 
   @override
   String get analyticsShowFiltersAction => 'Show filters';
@@ -13358,15 +12279,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsNotEnoughDataTitle => 'Not enough data';
 
   @override
-  String get analyticsSeasonalityEmptyDescription =>
-      'Seasonality becomes available after more activity is recorded.';
+  String get analyticsSeasonalityEmptyDescription => 'Seasonality becomes available after more activity is recorded.';
 
   @override
   String get analyticsSectionGrowthProjections => 'Growth projections';
 
   @override
-  String get analyticsGrowthProjectionEmptyDescription =>
-      'Projections require enough historical data in the selected range.';
+  String get analyticsGrowthProjectionEmptyDescription => 'Projections require enough historical data in the selected range.';
 
   @override
   String get analyticsSectionInsights => 'Insights';
@@ -13375,8 +12294,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsInsightsEmptyTitle => 'No insights yet';
 
   @override
-  String get analyticsInsightsEmptyDescription =>
-      'Interact with the platform to start generating analytics.';
+  String get analyticsInsightsEmptyDescription => 'Interact with the platform to start generating analytics.';
 
   @override
   String get analyticsSectionPerformanceBreakdown => 'Performance breakdown';
@@ -13385,29 +12303,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsSectionRecommendations => 'Recommendations';
 
   @override
-  String get analyticsRecommendationsEmptyDescription =>
-      'Recommendations appear once enough analytics data is available.';
+  String get analyticsRecommendationsEmptyDescription => 'Recommendations appear once enough analytics data is available.';
 
   @override
   String get analyticsSectionPeriodComparison => 'Period comparison';
 
   @override
-  String get analyticsComparisonsEmptyDescription =>
-      'Comparisons require enough analytics data.';
+  String get analyticsComparisonsEmptyDescription => 'Comparisons require enough analytics data.';
 
   @override
   String get analyticsSectionPeerAnalysis => 'Peer analysis';
 
   @override
-  String get analyticsPeerAnalysisEmptyDescription =>
-      'Peer benchmarking requires aggregate platform data.';
+  String get analyticsPeerAnalysisEmptyDescription => 'Peer benchmarking requires aggregate platform data.';
 
   @override
   String get analyticsSectionMarketPosition => 'Market position';
 
   @override
-  String get analyticsMarketPositionEmptyDescription =>
-      'Market position insights require aggregate platform data.';
+  String get analyticsMarketPositionEmptyDescription => 'Market position insights require aggregate platform data.';
 
   @override
   String get analyticsTrendStable => 'Stable';
@@ -13482,8 +12396,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsRecommendationImproveConsistency => 'Improve consistency';
 
   @override
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets) {
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets) {
     return 'Activity was recorded on $activeBuckets of $totalBuckets buckets.';
   }
 
@@ -13491,15 +12404,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsRecommendationReverseDecline => 'Reverse the decline';
 
   @override
-  String get analyticsRecommendationReverseDeclineDescription =>
-      'This period is down vs the previous period.';
+  String get analyticsRecommendationReverseDeclineDescription => 'This period is down vs the previous period.';
 
   @override
   String get analyticsRecommendationMaintainMomentum => 'Maintain momentum';
 
   @override
-  String get analyticsRecommendationMaintainMomentumDescription =>
-      'This period is up vs the previous period.';
+  String get analyticsRecommendationMaintainMomentumDescription => 'This period is up vs the previous period.';
 
   @override
   String get analyticsComparisonTotal => 'Total';
@@ -13526,8 +12437,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get analyticsShareUnavailable =>
-      'Unable to share analytics on this device.';
+  String get analyticsShareUnavailable => 'Unable to share analytics on this device.';
 
   @override
   String get analyticsBucketHour => 'hour';
@@ -13542,8 +12452,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileNoCollectionsTitle => 'No collections yet';
 
   @override
-  String get userProfileNoCollectionsDescription =>
-      'Your collections will appear here';
+  String get userProfileNoCollectionsDescription => 'Your collections will appear here';
 
   @override
   String get desktopProfileHeaderSubtitle => 'Manage your identity and content';
@@ -13555,12 +12464,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopProfilePortfolioTitle => 'Portfolio';
 
   @override
-  String get desktopProfilePortfolioSubtitle =>
-      'Your artworks and creative works';
+  String get desktopProfilePortfolioSubtitle => 'Your artworks and creative works';
 
   @override
-  String get desktopProfileNoCollectionsDescription =>
-      'Create collections to organize and curate your work.';
+  String get desktopProfileNoCollectionsDescription => 'Create collections to organize and curate your work.';
 
   @override
   String get desktopProfileEventsTitle => 'Events & Exhibitions';
@@ -13572,68 +12479,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopProfileNoEventsTitle => 'No events yet';
 
   @override
-  String get desktopProfileNoEventsDescription =>
-      'Plan exhibitions, workshops, or meetups to engage with collectors.';
+  String get desktopProfileNoEventsDescription => 'Plan exhibitions, workshops, or meetups to engage with collectors.';
 
   @override
   String get desktopProfileInstitutionProgramsTitle => 'Exhibitions & Programs';
 
   @override
-  String get desktopProfileInstitutionProgramsSubtitle =>
-      'Your featured exhibitions and events';
+  String get desktopProfileInstitutionProgramsSubtitle => 'Your featured exhibitions and events';
 
   @override
   String get desktopProfileNoExhibitionsTitle => 'No exhibitions yet';
 
   @override
-  String get desktopProfileNoExhibitionsDescription =>
-      'Create exhibitions and programs to showcase your institutional activities.';
+  String get desktopProfileNoExhibitionsDescription => 'Create exhibitions and programs to showcase your institutional activities.';
 
   @override
   String get desktopProfilePermanentCollectionTitle => 'Permanent Collection';
 
   @override
-  String get desktopProfilePermanentCollectionSubtitle =>
-      'Featured works in your collection';
+  String get desktopProfilePermanentCollectionSubtitle => 'Featured works in your collection';
 
   @override
-  String get desktopProfilePermanentCollectionEmptyDescription =>
-      'Curate collections to highlight your institutional holdings.';
+  String get desktopProfilePermanentCollectionEmptyDescription => 'Curate collections to highlight your institutional holdings.';
 
   @override
   String get desktopProfileRecentlyViewedTitle => 'Recently Viewed';
 
   @override
-  String get desktopProfileRecentlyViewedSubtitle =>
-      'Artworks you\'ve discovered';
+  String get desktopProfileRecentlyViewedSubtitle => 'Artworks you\'ve discovered';
 
   @override
   String get desktopProfileNoViewedArtworksTitle => 'No viewed artworks yet';
 
   @override
-  String get desktopProfileNoViewedArtworksDescription =>
-      'Explore the map to discover artworks and build your viewing history.';
+  String get desktopProfileNoViewedArtworksDescription => 'Explore the map to discover artworks and build your viewing history.';
 
   @override
-  String get desktopProfilePerformanceSubtitle =>
-      'Your activity and engagement metrics';
+  String get desktopProfilePerformanceSubtitle => 'Your activity and engagement metrics';
 
   @override
   String get desktopProfilePerformanceCreatedTitle => 'Created';
 
   @override
-  String get desktopProfilePerformanceNftsOwnedTitle => 'Archive records held';
+  String get desktopProfilePerformanceNftsOwnedTitle => 'Digital editions held';
 
   @override
-  String get desktopProfileAchievementsSubtitle =>
-      'Your progress and milestones';
+  String get desktopProfileAchievementsSubtitle => 'Your progress and milestones';
 
   @override
   String get desktopProfileYourPostsTitle => 'Your posts';
 
   @override
-  String get desktopProfileYourPostsSubtitle =>
-      'Content you\'ve shared with the community';
+  String get desktopProfileYourPostsSubtitle => 'Content you\'ve shared with the community';
 
   @override
   String get commonUnknownArtist => 'Unknown artist';
@@ -13660,8 +12557,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoDelegationSelectDelegateTitle => 'Select a Delegate';
 
   @override
-  String get daoDelegationSelectDelegateSubtitle =>
-      'Choose a trusted community member to vote on your behalf';
+  String get daoDelegationSelectDelegateSubtitle => 'Choose a trusted community member to vote on your behalf';
 
   @override
   String daoDelegationDelegatorsCountLabel(num count) {
@@ -13680,8 +12576,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct) {
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct) {
     return '$totalVotes votes · $supportPct% support';
   }
 
@@ -13692,22 +12587,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeDiscoverTitle => 'Discover art with kubus';
 
   @override
-  String get onboardingWelcomeDiscoverBody =>
-      'Explore artworks, exhibitions, public works, institutions, and creative spaces on the open art map.';
+  String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, public works, institutions, and creative spaces on the open art map.';
 
   @override
   String get onboardingWelcomeCreateTitle => 'Contribute to the archive';
 
   @override
-  String get onboardingWelcomeCreateBody =>
-      'Share practice, publish artworks, add context, and take part in a community-driven cultural archive.';
+  String get onboardingWelcomeCreateBody => 'Share practice, publish artworks, add context, and take part in a community-driven cultural archive.';
 
   @override
   String get onboardingWelcomeJoinTitle => 'Ready to begin?';
 
   @override
-  String get onboardingWelcomeJoinBody =>
-      'Start exploring, then create a profile when you want to participate.';
+  String get onboardingWelcomeJoinBody => 'Start exploring, then create a profile when you want to participate.';
 
   @override
   String get promotionBuilderTitle => 'Boost Visibility';
@@ -13719,22 +12611,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promotionBuilderTierPremium => 'Premium Spot';
 
   @override
-  String get promotionBuilderTierPremiumDesc =>
-      'Top 3 guaranteed positions on home screen';
+  String get promotionBuilderTierPremiumDesc => 'Top 3 guaranteed positions on home screen';
 
   @override
   String get promotionBuilderTierFeatured => 'Featured';
 
   @override
-  String get promotionBuilderTierFeaturedDesc =>
-      'Priority placement after premium slots';
+  String get promotionBuilderTierFeaturedDesc => 'Priority placement after premium slots';
 
   @override
   String get promotionBuilderTierBoost => 'Boost';
 
   @override
-  String get promotionBuilderTierBoostDesc =>
-      'Increased rotation in discovery feeds';
+  String get promotionBuilderTierBoostDesc => 'Increased rotation in discovery feeds';
 
   @override
   String promotionBuilderPerDay(Object price) {
@@ -13838,8 +12727,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get promotionBuilderCancellationNote =>
-      'Full refund if cancelled 24+ hours before start';
+  String get promotionBuilderCancellationNote => 'Full refund if cancelled 24+ hours before start';
 
   @override
   String get promotionBuilderSubmitButton => 'Submit for Review';
@@ -13851,15 +12739,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promotionBuilderSubmitSuccess => 'Promotion request submitted!';
 
   @override
-  String get promotionBuilderSubmitError =>
-      'Failed to submit. Please try again.';
+  String get promotionBuilderSubmitError => 'Failed to submit. Please try again.';
 
   @override
   String get promotionBuilderLoadingRates => 'Loading promotion options...';
 
   @override
-  String get promotionBuilderNoRatesAvailable =>
-      'No promotion options available for this item type.';
+  String get promotionBuilderNoRatesAvailable => 'No promotion options available for this item type.';
 
   @override
   String promotionBuilderPromoteEntityTitle(Object entityLabel) {
@@ -13867,19 +12753,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get promotionBuilderHeaderSubtitle =>
-      'Choose your promotion tier, duration, and payment method';
+  String get promotionBuilderHeaderSubtitle => 'Choose your promotion tier, duration, and payment method';
 
   @override
-  String get promotionBuilderSelectedSlotUnavailable =>
-      'Selected slot is not available';
+  String get promotionBuilderSelectedSlotUnavailable => 'Selected slot is not available';
 
   @override
   String get promotionBuilderOpeningCheckout => 'Opening payment checkout...';
 
   @override
-  String get promotionBuilderCheckoutOpenFailed =>
-      'Request created but checkout could not be opened. Please try again.';
+  String get promotionBuilderCheckoutOpenFailed => 'Request created but checkout could not be opened. Please try again.';
 
   @override
   String get promotionBuilderContinuePayment => 'Continue to payment';
@@ -13891,8 +12774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promotionBuilderCancelDialogTitle => 'Cancel Promotion?';
 
   @override
-  String get promotionBuilderCancelDialogBody =>
-      'Are you sure you want to cancel this promotion? A full refund will be issued if cancelled 24+ hours before start.';
+  String get promotionBuilderCancelDialogBody => 'Are you sure you want to cancel this promotion? A full refund will be issued if cancelled 24+ hours before start.';
 
   @override
   String get promotionBuilderCancelKeepAction => 'Keep';
@@ -13901,8 +12783,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promotionBuilderCancelConfirmAction => 'Cancel Promotion';
 
   @override
-  String get promotionBuilderCancelRefundProcessed =>
-      'Cancelled and refund processed';
+  String get promotionBuilderCancelRefundProcessed => 'Cancelled and refund processed';
 
   @override
   String get promotionBuilderCancelSuccess => 'Promotion cancelled';
@@ -13919,16 +12800,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promotionBuilderCancelTooltip => 'Cancel promotion';
 
   @override
-  String get promotionBuilderPremiumSlotsHint =>
-      'Premium slots are guaranteed top positions';
+  String get promotionBuilderPremiumSlotsHint => 'Premium slots are guaranteed top positions';
 
   @override
-  String get promotionBuilderNoAlternativeDates =>
-      'No available dates within the booking window';
+  String get promotionBuilderNoAlternativeDates => 'No available dates within the booking window';
 
   @override
-  String get promotionBuilderNoRefundNote =>
-      'No refund available (starts soon)';
+  String get promotionBuilderNoRefundNote => 'No refund available (starts soon)';
 
   @override
   String promotionBuilderInsufficientKub8Balance(Object amount) {
@@ -13947,27 +12825,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get promotionBuilderQuoteExpired =>
-      'This quote expired. We refreshed the price for you.';
+  String get promotionBuilderQuoteExpired => 'This quote expired. We refreshed the price for you.';
 
   @override
-  String get promotionBuilderPaymentConfirming =>
-      'Payment sent. Waiting for the network to confirm it.';
+  String get promotionBuilderPaymentConfirming => 'Payment sent. Waiting for the network to confirm it.';
 
   @override
   String get promotionBuilderVerifyPayment => 'Check payment';
 
   @override
-  String get promotionBuilderWalletSessionMismatch =>
-      'Your connected wallet changed. Reconnect it and try again.';
+  String get promotionBuilderWalletSessionMismatch => 'Your connected wallet changed. Reconnect it and try again.';
 
   @override
-  String get promotionBuilderConnectWalletForKub8 =>
-      'Connect a wallet that can sign to pay with KUB8.';
+  String get promotionBuilderConnectWalletForKub8 => 'Connect a wallet that can sign to pay with KUB8.';
 
   @override
-  String get promotionBuilderKub8Unavailable =>
-      'KUB8 payments are unavailable right now.';
+  String get promotionBuilderKub8Unavailable => 'KUB8 payments are unavailable right now.';
 
   @override
   String get promotionBuilderKub8Required => 'Required';
@@ -13997,16 +12870,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAchievementsUnavailableTitle => 'Achievements unavailable';
 
   @override
-  String get profileAchievementsUnavailableDescription =>
-      'Achievement details could not be loaded right now.';
+  String get profileAchievementsUnavailableDescription => 'Achievement details could not be loaded right now.';
 
   @override
-  String get recognitionBadgePanelLoadFailed =>
-      'Could not load recognition right now.';
+  String get recognitionBadgePanelLoadFailed => 'Could not load recognition right now.';
 
   @override
-  String get recognitionBadgePanelEmpty =>
-      'No recognition yet. Visit events and take part in approvals to receive badges.';
+  String get recognitionBadgePanelEmpty => 'No recognition yet. Visit events and take part in approvals to receive badges.';
 
   @override
   String get recognitionBadgePanelAttendance => 'Visits';
@@ -14048,8 +12918,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventDetailLinkedExhibitionsLabel => 'Linked exhibitions';
 
   @override
-  String get eventDetailLinkedExhibitionsEmpty =>
-      'No exhibitions are linked to this event yet.';
+  String get eventDetailLinkedExhibitionsEmpty => 'No exhibitions are linked to this event yet.';
 
   @override
   String eventDetailLinkedExhibitionsSummary(Object count) {
@@ -14057,8 +12926,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get eventDetailPoapAggregationHint =>
-      'Claims are handled on the linked exhibition cards below.';
+  String get eventDetailPoapAggregationHint => 'Claims are handled on the linked exhibition cards below.';
 
   @override
   String exhibitionDetailHostedBy(Object name) {
@@ -14072,8 +12940,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapTitle => 'Attendance record';
 
   @override
-  String get exhibitionDetailPoapDescription =>
-      'Claim this proof of visit to add it to your recognition history.';
+  String get exhibitionDetailPoapDescription => 'Claim this proof of visit to add it to your recognition history.';
 
   @override
   String get exhibitionDetailPoapClaimedStatus => 'Claimed';
@@ -14082,8 +12949,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapNotClaimedStatus => 'Ready to record';
 
   @override
-  String get exhibitionDetailPoapSignedOutHint =>
-      'Sign in to record this proof of visit badge.';
+  String get exhibitionDetailPoapSignedOutHint => 'Sign in to record this proof of visit badge.';
 
   @override
   String get exhibitionDetailPoapClaimAction => 'Claim badge';
@@ -14092,12 +12958,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapClaimingAction => 'Claiming…';
 
   @override
-  String get exhibitionDetailPoapClaimSuccessToast =>
-      'Attendance record saved.';
+  String get exhibitionDetailPoapClaimSuccessToast => 'Attendance record saved.';
 
   @override
-  String get exhibitionDetailPoapClaimFailedToast =>
-      'Unable to save attendance record right now.';
+  String get exhibitionDetailPoapClaimFailedToast => 'Unable to save attendance record right now.';
 
   @override
   String get scanProofDetectedToast => 'Scan detected.';
@@ -14115,8 +12979,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanProofExpiredToast => 'Proof expired. Scan again.';
 
   @override
-  String get exhibitionDetailPoapAttendanceHint =>
-      'Attendance verification appears below for live events.';
+  String get exhibitionDetailPoapAttendanceHint => 'Attendance verification appears below for live events.';
 
   @override
   String get exhibitionDetailPoapEligibilityClaimed => 'Already recorded';
@@ -14131,35 +12994,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapEligibilitySignedOut => 'Sign in required';
 
   @override
-  String get exhibitionDetailPoapEligibilityClaimReadyHint =>
-      'Your attendance is verified. You can save this badge now.';
+  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Your attendance is verified. You can save this badge now.';
 
   @override
   String get exhibitionDetailPoapEligibilityNotPublished => 'Not published';
 
   @override
-  String get exhibitionDetailPoapEligibilityNotPublishedHint =>
-      'Publish this exhibition before attendees can save the badge.';
+  String get exhibitionDetailPoapEligibilityNotPublishedHint => 'Publish this exhibition before attendees can save the badge.';
 
   @override
-  String get exhibitionDetailPoapEligibilityMarkerLinkRequired =>
-      'Marker link required';
+  String get exhibitionDetailPoapEligibilityMarkerLinkRequired => 'Marker link required';
 
   @override
-  String get exhibitionDetailPoapEligibilityMarkerLinkHint =>
-      'Open the linked marker or QR path to unlock badge eligibility.';
+  String get exhibitionDetailPoapEligibilityMarkerLinkHint => 'Open the linked marker or QR path to unlock badge eligibility.';
 
   @override
-  String get exhibitionDetailPoapEligibilityAttendanceRequired =>
-      'Attendance required';
+  String get exhibitionDetailPoapEligibilityAttendanceRequired => 'Attendance required';
 
   @override
-  String get exhibitionDetailPoapEligibilityAttendanceHint =>
-      'Visit the exhibition marker to verify attendance before saving.';
+  String get exhibitionDetailPoapEligibilityAttendanceHint => 'Visit the exhibition marker to verify attendance before saving.';
 
   @override
-  String get exhibitionDetailPoapProofTypeMarkerAttendance =>
-      'Marker attendance';
+  String get exhibitionDetailPoapProofTypeMarkerAttendance => 'Marker attendance';
 
   @override
   String get exhibitionDetailPoapLinkedMarkersLabel => 'Linked markers';
@@ -14177,20 +13033,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailAttendanceAlreadyCheckedIn => 'Already checked in';
 
   @override
-  String get exhibitionDetailAttendanceMoveCloserHint =>
-      'Move closer to confirm attendance.';
+  String get exhibitionDetailAttendanceMoveCloserHint => 'Move closer to confirm attendance.';
 
   @override
-  String get exhibitionDetailAttendanceConfirmedToast =>
-      'Attendance confirmed.';
+  String get exhibitionDetailAttendanceConfirmedToast => 'Attendance confirmed.';
 
   @override
-  String get exhibitionDetailAttendanceAlreadyCheckedInToast =>
-      'Already checked in.';
+  String get exhibitionDetailAttendanceAlreadyCheckedInToast => 'Already checked in.';
 
   @override
-  String get exhibitionDetailAttendanceUnableToConfirmToast =>
-      'Unable to confirm attendance.';
+  String get exhibitionDetailAttendanceUnableToConfirmToast => 'Unable to confirm attendance.';
 
   @override
   String exhibitionDetailAttendanceRewardPending(Object amount) {
@@ -14210,8 +13062,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailProgramTitle => 'Program';
 
   @override
-  String get exhibitionDetailProgramEmpty =>
-      'No events linked to this exhibition yet.';
+  String get exhibitionDetailProgramEmpty => 'No events linked to this exhibition yet.';
 
   @override
   String get exhibitionDetailProgramOpenEvent => 'Open event';
@@ -14229,8 +13080,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailProgramRemoveEvent => 'Remove from program';
 
   @override
-  String get exhibitionDetailPoapNoneConfiguredOwnerHint =>
-      'No POAP badge is configured yet. Enable one in the exhibition editor.';
+  String get exhibitionDetailPoapNoneConfiguredOwnerHint => 'No POAP badge is configured yet. Enable one in the exhibition editor.';
 
   @override
   String get eventRelationTypeOpening => 'Opening';
@@ -14281,30 +13131,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventDetailPoapTitle => 'Event POAP';
 
   @override
-  String get eventDetailPoapDescription =>
-      'Proof-of-attendance badge for this event.';
+  String get eventDetailPoapDescription => 'Proof-of-attendance badge for this event.';
 
   @override
   String get eventDetailPoapEligibilityNotPublished => 'Event not published';
 
   @override
-  String get eventDetailPoapEligibilityNotPublishedHint =>
-      'The event POAP can be claimed once the event is published.';
+  String get eventDetailPoapEligibilityNotPublishedHint => 'The event POAP can be claimed once the event is published.';
 
   @override
   String get eventDetailPoapScanProofRequired => 'Scan proof required';
 
   @override
-  String get eventDetailPoapScanProofRequiredHint =>
-      'Scan the QR code at the event to claim this badge.';
+  String get eventDetailPoapScanProofRequiredHint => 'Scan the QR code at the event to claim this badge.';
 
   @override
-  String get eventDetailPoapCheckInFirstHint =>
-      'Check in at the event location to claim this badge.';
+  String get eventDetailPoapCheckInFirstHint => 'Check in at the event location to claim this badge.';
 
   @override
-  String get eventDetailPoapClaimFailedToast =>
-      'Could not claim the event POAP. Please try again.';
+  String get eventDetailPoapClaimFailedToast => 'Could not claim the event POAP. Please try again.';
 
   @override
   String get eventDetailPoapClaimSuccessToast => 'Event POAP claimed!';
@@ -14313,15 +13158,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatorPoapSectionTitle => 'POAP badge';
 
   @override
-  String get creatorPoapSectionSubtitle =>
-      'Reward attendees with a proof-of-attendance badge.';
+  String get creatorPoapSectionSubtitle => 'Reward attendees with a proof-of-attendance badge.';
 
   @override
   String get creatorPoapEnableTitle => 'Enable POAP badge';
 
   @override
-  String get creatorPoapEnableSubtitle =>
-      'Visitors can claim a proof-of-attendance badge.';
+  String get creatorPoapEnableSubtitle => 'Visitors can claim a proof-of-attendance badge.';
 
   @override
   String get creatorPoapTitleLabel => 'Badge title';
@@ -14354,24 +13197,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatorPoapTitleRequired => 'Badge title is required';
 
   @override
-  String get creatorPoapSyncFailedWarning =>
-      'Saved, but the POAP badge could not be updated. Try again from the editor.';
+  String get creatorPoapSyncFailedWarning => 'Saved, but the POAP badge could not be updated. Try again from the editor.';
 
   @override
-  String get creatorRelationSyncFailedWarning =>
-      'Saved, but linking could not be completed. Try again from the editor.';
+  String get creatorRelationSyncFailedWarning => 'Saved, but linking could not be completed. Try again from the editor.';
 
   @override
-  String get creatorDescriptionTooLongError =>
-      'Description is too long (maximum 10,000 characters).';
+  String get creatorDescriptionTooLongError => 'Description is too long (maximum 10,000 characters).';
 
   @override
-  String get markerEditorSavedLinkSyncingToast =>
-      'Marker saved, syncing exhibition link…';
+  String get markerEditorSavedLinkSyncingToast => 'Marker saved, syncing exhibition link…';
 
   @override
-  String get markerEditorLinkSyncFailedWarning =>
-      'Marker saved, but the exhibition link could not be synced. Try again from the editor.';
+  String get markerEditorLinkSyncFailedWarning => 'Marker saved, but the exhibition link could not be synced. Try again from the editor.';
 
   @override
   String exhibitionCreatorProgramLinkedCount(Object count) {
@@ -14397,8 +13235,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorLinkedExhibitionsTitle => 'Linked exhibitions';
 
   @override
-  String get eventCreatorLinkedExhibitionsSubtitle =>
-      'Attach this event to one or more exhibitions.';
+  String get eventCreatorLinkedExhibitionsSubtitle => 'Attach this event to one or more exhibitions.';
 
   @override
   String get eventCreatorLinkedExhibitionsEmpty => 'No exhibitions selected.';
@@ -14407,19 +13244,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorAddExhibition => 'Link exhibition';
 
   @override
-  String get eventCreatorCreateExhibitionForEvent =>
-      'Create exhibition for this event';
+  String get eventCreatorCreateExhibitionForEvent => 'Create exhibition for this event';
 
   @override
-  String get eventCreatorNoExhibitionsToLink =>
-      'You don\'t manage any exhibitions yet.';
+  String get eventCreatorNoExhibitionsToLink => 'You don\'t manage any exhibitions yet.';
 
   @override
   String get exhibitionCreatorProgramTitle => 'Program / linked events';
 
   @override
-  String get exhibitionCreatorProgramSubtitle =>
-      'Add openings, talks, tours and other events to this exhibition.';
+  String get exhibitionCreatorProgramSubtitle => 'Add openings, talks, tours and other events to this exhibition.';
 
   @override
   String get exhibitionCreatorProgramEmpty => 'No events linked yet.';
@@ -14431,8 +13265,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorCreateEventForExhibition => 'Create event';
 
   @override
-  String get exhibitionCreatorNoEventsToLink =>
-      'You don\'t manage any events yet.';
+  String get exhibitionCreatorNoEventsToLink => 'You don\'t manage any events yet.';
 
   @override
   String get exhibitionCreatorRelationTypeLabel => 'Relation type';
@@ -14447,8 +13280,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailSuccessTitle => 'Email confirmed';
 
   @override
-  String get authVerifyEmailSuccessBodyAutoContinue =>
-      'Opening your art.kubus workspace…';
+  String get authVerifyEmailSuccessBodyAutoContinue => 'Opening your art.kubus workspace…';
 
   @override
   String authVerifyEmailSuccessBodyAutoContinueWithEmail(String email) {
@@ -14456,8 +13288,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get authVerifyEmailSuccessBodyManual =>
-      'Your email address is verified. Continue to finish your art.kubus setup.';
+  String get authVerifyEmailSuccessBodyManual => 'Your email address is verified. Continue to finish your art.kubus setup.';
 
   @override
   String authVerifyEmailSuccessBodyManualWithEmail(String email) {
@@ -14471,8 +13302,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailContinue => 'Continue';
 
   @override
-  String get authVerifyEmailSessionFailed =>
-      'Could not continue from verification. Try again.';
+  String get authVerifyEmailSessionFailed => 'Could not continue from verification. Try again.';
 
   @override
   String get walletSetupTitle => 'Secure your art.kubus identity';
@@ -14481,15 +13311,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupSubtitle => 'Create your wallet. You stay in control.';
 
   @override
-  String get walletSetupAccountNote =>
-      'You keep signing in with your account — the wallet becomes your public identity.';
+  String get walletSetupAccountNote => 'You keep signing in with your account — the wallet becomes your public identity.';
 
   @override
   String get walletSetupCreateTitle => 'Create new art.kubus wallet';
 
   @override
-  String get walletSetupCreateBody =>
-      'Generate a new wallet and link it to the account you just created.';
+  String get walletSetupCreateBody => 'Generate a new wallet and link it to the account you just created.';
 
   @override
   String get walletSetupCreateAction => 'Create wallet';
@@ -14506,8 +13334,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupImportTitle => 'Import existing wallet';
 
   @override
-  String get walletSetupImportBody =>
-      'Use a recovery phrase for a wallet you already control.';
+  String get walletSetupImportBody => 'Use a recovery phrase for a wallet you already control.';
 
   @override
   String get walletSetupImportAction => 'Import wallet';
@@ -14519,8 +13346,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupConnectTitle => 'Connect external wallet';
 
   @override
-  String get walletSetupConnectBody =>
-      'Connect a browser or mobile wallet you already use.';
+  String get walletSetupConnectBody => 'Connect a browser or mobile wallet you already use.';
 
   @override
   String get walletSetupConnectAction => 'Connect wallet';
@@ -14529,16 +13355,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupRecoveryPhraseLabel => 'Recovery phrase';
 
   @override
-  String get walletSetupEnterRecoveryPhraseInline =>
-      'Enter your recovery phrase to import a wallet.';
+  String get walletSetupEnterRecoveryPhraseInline => 'Enter your recovery phrase to import a wallet.';
 
   @override
-  String get walletSetupDisabledError =>
-      'Wallet connection is disabled right now.';
+  String get walletSetupDisabledError => 'Wallet connection is disabled right now.';
 
   @override
-  String get walletSetupSessionMissingError =>
-      'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.';
+  String get walletSetupSessionMissingError => 'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.';
 
   @override
   String get walletSetupGenericLinkError => 'Wallet linking failed. Try again.';
@@ -14575,19 +13398,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupPhaseCreating => 'Creating local wallet…';
 
   @override
-  String get walletSetupPhaseWalletReady =>
-      'Local wallet ready — preparing account link.';
+  String get walletSetupPhaseWalletReady => 'Local wallet ready — preparing account link.';
 
   @override
-  String get walletSetupPhaseLinking =>
-      'Linking wallet to your account and verifying…';
+  String get walletSetupPhaseLinking => 'Linking wallet to your account and verifying…';
 
   @override
   String get walletSetupPhaseLinked => 'Wallet linked to this account.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Wallet link failed. Your account was not changed.';
+  String get walletSetupPhaseFailed => 'Wallet link failed. Your account was not changed.';
 
   @override
   String get onboardingStageWelcome => 'Welcome';
@@ -14616,136 +13436,115 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsMetricFollowersLabel => 'Followers';
 
   @override
-  String get analyticsMetricFollowersDescription =>
-      'People following this profile.';
+  String get analyticsMetricFollowersDescription => 'People following this profile.';
 
   @override
   String get analyticsMetricFollowingLabel => 'Following';
 
   @override
-  String get analyticsMetricFollowingDescription =>
-      'Profiles followed by this wallet.';
+  String get analyticsMetricFollowingDescription => 'Profiles followed by this wallet.';
 
   @override
   String get analyticsMetricPostsLabel => 'Posts';
 
   @override
-  String get analyticsMetricPostsDescription =>
-      'Community posts published by this profile.';
+  String get analyticsMetricPostsDescription => 'Community posts published by this profile.';
 
   @override
   String get analyticsMetricCommentsLabel => 'Comments';
 
   @override
-  String get analyticsMetricCommentsDescription =>
-      'Comments written by this profile.';
+  String get analyticsMetricCommentsDescription => 'Comments written by this profile.';
 
   @override
   String get analyticsMetricArtworksLabel => 'Artworks';
 
   @override
-  String get analyticsMetricArtworksDescription =>
-      'Active artworks attributed to this profile.';
+  String get analyticsMetricArtworksDescription => 'Active artworks attributed to this profile.';
 
   @override
   String get analyticsMetricPublicStreetArtAddedLabel => 'Street art';
 
   @override
-  String get analyticsMetricPublicStreetArtAddedDescription =>
-      'Public street art markers added by this profile.';
+  String get analyticsMetricPublicStreetArtAddedDescription => 'Public street art markers added by this profile.';
 
   @override
   String get analyticsMetricArEnabledArtworksLabel => 'AR artworks';
 
   @override
-  String get analyticsMetricArEnabledArtworksDescription =>
-      'Published artworks with AR enabled.';
+  String get analyticsMetricArEnabledArtworksDescription => 'Published artworks with AR enabled.';
 
   @override
   String get analyticsMetricCollectionsLabel => 'Collections';
 
   @override
-  String get analyticsMetricCollectionsDescription =>
-      'Collections created by this profile.';
+  String get analyticsMetricCollectionsDescription => 'Collections created by this profile.';
 
   @override
   String get analyticsMetricLikesGivenLabel => 'Likes given';
 
   @override
-  String get analyticsMetricLikesGivenDescription =>
-      'Likes this profile has sent.';
+  String get analyticsMetricLikesGivenDescription => 'Likes this profile has sent.';
 
   @override
   String get analyticsMetricAchievementsUnlockedLabel => 'Achievements';
 
   @override
-  String get analyticsMetricAchievementsUnlockedDescription =>
-      'Unlocked achievements.';
+  String get analyticsMetricAchievementsUnlockedDescription => 'Unlocked achievements.';
 
   @override
-  String get analyticsMetricLikesReceivedDescription =>
-      'Likes received across public work and posts.';
+  String get analyticsMetricLikesReceivedDescription => 'Likes received across public work and posts.';
 
   @override
-  String get analyticsMetricViewsReceivedDescription =>
-      'Views across public work, posts, events, and exhibitions.';
+  String get analyticsMetricViewsReceivedDescription => 'Views across public work, posts, events, and exhibitions.';
 
   @override
   String get analyticsMetricEventsHostedLabel => 'Events hosted';
 
   @override
-  String get analyticsMetricEventsHostedDescription =>
-      'Events owned or hosted by this profile.';
+  String get analyticsMetricEventsHostedDescription => 'Events owned or hosted by this profile.';
 
   @override
   String get analyticsMetricVisitorsReceivedLabel => 'Visitors';
 
   @override
-  String get analyticsMetricVisitorsReceivedDescription =>
-      'Views on hosted events and exhibitions.';
+  String get analyticsMetricVisitorsReceivedDescription => 'Views on hosted events and exhibitions.';
 
   @override
   String get analyticsMetricExhibitionsLabel => 'Exhibitions';
 
   @override
-  String get analyticsMetricExhibitionsDescription =>
-      'Exhibitions this profile participates in.';
+  String get analyticsMetricExhibitionsDescription => 'Exhibitions this profile participates in.';
 
   @override
   String get analyticsMetricExhibitionArtworksLabel => 'Exhibition artworks';
 
   @override
-  String get analyticsMetricExhibitionArtworksDescription =>
-      'Artworks included in owned exhibitions.';
+  String get analyticsMetricExhibitionArtworksDescription => 'Artworks included in owned exhibitions.';
 
   @override
   String get analyticsMetricArtworksDiscoveredLabel => 'Discoveries';
 
   @override
-  String get analyticsMetricArtworksDiscoveredDescription =>
-      'Artworks discovered by this profile.';
+  String get analyticsMetricArtworksDiscoveredDescription => 'Artworks discovered by this profile.';
 
   @override
   String get analyticsMetricArSessionsLabel => 'AR sessions';
 
   @override
-  String get analyticsMetricArSessionsDescription =>
-      'AR sessions started by this profile.';
+  String get analyticsMetricArSessionsDescription => 'AR sessions started by this profile.';
 
   @override
-  String get analyticsMetricViewsGivenDescription =>
-      'Content views by this profile.';
+  String get analyticsMetricViewsGivenDescription => 'Content views by this profile.';
 
   @override
-  String get analyticsMetricEngagementDescription =>
-      'Weighted likes, comments, shares, and saves.';
+  String get analyticsMetricEngagementDescription => 'Weighted likes, comments, shares, and saves.';
 
   @override
   String get analyticsMetricViewsLabel => 'Views';
 
   @override
-  String get analyticsMetricViewsDescription =>
-      'View events for the selected entity.';
+  String get analyticsMetricViewsDescription => 'View events for the selected entity.';
 
   @override
   String get analyticsMetricLikesLabel => 'Likes';
@@ -14757,15 +13556,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsMetricSharesLabel => 'Shares';
 
   @override
-  String get analyticsMetricSharesDescription =>
-      'Share events for the selected entity.';
+  String get analyticsMetricSharesDescription => 'Share events for the selected entity.';
 
   @override
   String get analyticsMetricSavesLabel => 'Saves';
 
   @override
-  String get analyticsMetricSavesDescription =>
-      'Saved bookmarks for the selected entity.';
+  String get analyticsMetricSavesDescription => 'Saved bookmarks for the selected entity.';
 
   @override
   String get analyticsMetricUsersLabel => 'Users';
@@ -14789,71 +13586,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsMetricFollowsLabel => 'Follows';
 
   @override
-  String get analyticsMetricFollowsDescription =>
-      'Follow relationships across the platform.';
+  String get analyticsMetricFollowsDescription => 'Follow relationships across the platform.';
 
   @override
   String get analyticsMetricDaoTotalProposalsLabel => 'Total proposals';
 
   @override
-  String get analyticsMetricDaoTotalProposalsDescription =>
-      'Governance proposals created in the DAO.';
+  String get analyticsMetricDaoTotalProposalsDescription => 'Governance proposals created in the DAO.';
 
   @override
   String get analyticsMetricDaoActiveProposalsLabel => 'Active proposals';
 
   @override
-  String get analyticsMetricDaoActiveProposalsDescription =>
-      'Proposals currently open for governance action.';
+  String get analyticsMetricDaoActiveProposalsDescription => 'Proposals currently open for governance action.';
 
   @override
   String get analyticsMetricDaoVotesCastLabel => 'Votes cast';
 
   @override
-  String get analyticsMetricDaoVotesCastDescription =>
-      'Votes submitted across DAO proposals.';
+  String get analyticsMetricDaoVotesCastDescription => 'Votes submitted across DAO proposals.';
 
   @override
   String get analyticsMetricDaoDelegatesLabel => 'Delegates';
 
   @override
-  String get analyticsMetricDaoDelegatesDescription =>
-      'Delegates available for voting power delegation.';
+  String get analyticsMetricDaoDelegatesDescription => 'Delegates available for voting power delegation.';
 
   @override
   String get analyticsMetricDaoAverageVotingPowerLabel => 'Avg voting power';
 
   @override
-  String get analyticsMetricDaoAverageVotingPowerDescription =>
-      'Average voting power across delegates.';
+  String get analyticsMetricDaoAverageVotingPowerDescription => 'Average voting power across delegates.';
 
   @override
   String get analyticsMetricDaoTreasuryAmountLabel => 'Treasury';
 
   @override
-  String get analyticsMetricDaoTreasuryAmountDescription =>
-      'Current DAO treasury value.';
+  String get analyticsMetricDaoTreasuryAmountDescription => 'Current DAO treasury value.';
 
   @override
   String get analyticsMetricDaoTreasuryInflowLabel => 'Treasury inflow';
 
   @override
-  String get analyticsMetricDaoTreasuryInflowDescription =>
-      'Positive treasury transactions.';
+  String get analyticsMetricDaoTreasuryInflowDescription => 'Positive treasury transactions.';
 
   @override
   String get analyticsMetricDaoTreasuryOutflowLabel => 'Treasury outflow';
 
   @override
-  String get analyticsMetricDaoTreasuryOutflowDescription =>
-      'Outgoing treasury transactions.';
+  String get analyticsMetricDaoTreasuryOutflowDescription => 'Outgoing treasury transactions.';
 
   @override
   String get analyticsMetricDaoRecentTransactionsLabel => 'Recent transactions';
 
   @override
-  String get analyticsMetricDaoRecentTransactionsDescription =>
-      'Recent DAO treasury and execution activity.';
+  String get analyticsMetricDaoRecentTransactionsDescription => 'Recent DAO treasury and execution activity.';
 
   @override
   String get analyticsPresetProfileTitle => 'Profile analytics';
@@ -14862,8 +13649,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPresetProfileScopeLabel => 'Profile';
 
   @override
-  String get analyticsPresetProfileSubtitle =>
-      'Audience, publishing, and profile engagement.';
+  String get analyticsPresetProfileSubtitle => 'Audience, publishing, and profile engagement.';
 
   @override
   String get analyticsPresetCommunityTitle => 'Community analytics';
@@ -14872,8 +13658,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPresetCommunityScopeLabel => 'Community';
 
   @override
-  String get analyticsPresetCommunitySubtitle =>
-      'Posting, conversation, and community response.';
+  String get analyticsPresetCommunitySubtitle => 'Posting, conversation, and community response.';
 
   @override
   String get analyticsPresetArtistTitle => 'Artist analytics';
@@ -14894,8 +13679,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPresetPlatformScopeLabel => 'Platform';
 
   @override
-  String get analyticsPresetPlatformSubtitle =>
-      'Admin-only platform health and usage.';
+  String get analyticsPresetPlatformSubtitle => 'Admin-only platform health and usage.';
 
   @override
   String get analyticsPresetDaoTitle => 'DAO analytics';
@@ -14904,8 +13688,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPresetDaoScopeLabel => 'DAO';
 
   @override
-  String get analyticsPresetDaoSubtitle =>
-      'Governance proposals, voting, delegates, and treasury flow.';
+  String get analyticsPresetDaoSubtitle => 'Governance proposals, voting, delegates, and treasury flow.';
 
   @override
   String get analyticsScopePublicLabel => 'Public';
@@ -14917,112 +13700,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsBlockedWalletRequiredTitle => 'Connect your wallet';
 
   @override
-  String get analyticsBlockedWalletRequiredDescription =>
-      'Analytics are available after a wallet is connected.';
+  String get analyticsBlockedWalletRequiredDescription => 'Analytics are available after a wallet is connected.';
 
   @override
   String get analyticsBlockedDisabledTitle => 'Analytics disabled';
 
   @override
-  String get analyticsBlockedDisabledDescription =>
-      'Enable analytics in Settings to view charts and insights.';
+  String get analyticsBlockedDisabledDescription => 'Enable analytics in Settings to view charts and insights.';
 
   @override
   String get analyticsBlockedAdminRequiredTitle => 'Admin analytics';
 
   @override
-  String get analyticsBlockedAdminRequiredDescription =>
-      'Platform analytics require an admin session.';
+  String get analyticsBlockedAdminRequiredDescription => 'Platform analytics require an admin session.';
 
   @override
   String get analyticsBlockedOwnerRequiredTitle => 'Private analytics';
 
   @override
-  String get analyticsBlockedOwnerRequiredDescription =>
-      'Use the wallet that owns this workspace.';
+  String get analyticsBlockedOwnerRequiredDescription => 'Use the wallet that owns this workspace.';
 
   @override
   String get analyticsBlockedPrivateOnlyTitle => 'Private analytics';
 
   @override
-  String get analyticsBlockedPrivateOnlyDescription =>
-      'This analytics workspace is available to its owner only.';
+  String get analyticsBlockedPrivateOnlyDescription => 'This analytics workspace is available to its owner only.';
 
   @override
   String get analyticsBlockedArtistPendingTitle => 'Artist review pending';
 
   @override
-  String get analyticsBlockedArtistPendingDescription =>
-      'Artist analytics unlock after DAO approval.';
+  String get analyticsBlockedArtistPendingDescription => 'Artist analytics unlock after DAO approval.';
 
   @override
   String get analyticsBlockedArtistRejectedTitle => 'Artist review rejected';
 
   @override
-  String get analyticsBlockedArtistRejectedDescription =>
-      'Submit an approved artist review before using artist analytics.';
+  String get analyticsBlockedArtistRejectedDescription => 'Submit an approved artist review before using artist analytics.';
 
   @override
-  String get analyticsBlockedArtistRoleMismatchTitle =>
-      'Artist analytics unavailable';
+  String get analyticsBlockedArtistRoleMismatchTitle => 'Artist analytics unavailable';
 
   @override
-  String get analyticsBlockedArtistRoleMismatchDescription =>
-      'Use an approved artist wallet for artist analytics.';
+  String get analyticsBlockedArtistRoleMismatchDescription => 'Use an approved artist wallet for artist analytics.';
 
   @override
-  String get analyticsBlockedArtistApprovalRequiredTitle =>
-      'Artist approval required';
+  String get analyticsBlockedArtistApprovalRequiredTitle => 'Artist approval required';
 
   @override
-  String get analyticsBlockedArtistApprovalRequiredDescription =>
-      'Apply for DAO artist review to unlock artist analytics.';
+  String get analyticsBlockedArtistApprovalRequiredDescription => 'Apply for DAO artist review to unlock artist analytics.';
 
   @override
-  String get analyticsBlockedInstitutionPendingTitle =>
-      'Institution review pending';
+  String get analyticsBlockedInstitutionPendingTitle => 'Institution review pending';
 
   @override
-  String get analyticsBlockedInstitutionPendingDescription =>
-      'Institution analytics unlock after DAO approval.';
+  String get analyticsBlockedInstitutionPendingDescription => 'Institution analytics unlock after DAO approval.';
 
   @override
-  String get analyticsBlockedInstitutionRejectedTitle =>
-      'Institution review rejected';
+  String get analyticsBlockedInstitutionRejectedTitle => 'Institution review rejected';
 
   @override
-  String get analyticsBlockedInstitutionRejectedDescription =>
-      'Submit an approved institution review before using analytics.';
+  String get analyticsBlockedInstitutionRejectedDescription => 'Submit an approved institution review before using analytics.';
 
   @override
-  String get analyticsBlockedInstitutionRoleMismatchTitle =>
-      'Institution analytics unavailable';
+  String get analyticsBlockedInstitutionRoleMismatchTitle => 'Institution analytics unavailable';
 
   @override
-  String get analyticsBlockedInstitutionRoleMismatchDescription =>
-      'Use an approved institution wallet for institution analytics.';
+  String get analyticsBlockedInstitutionRoleMismatchDescription => 'Use an approved institution wallet for institution analytics.';
 
   @override
-  String get analyticsBlockedInstitutionApprovalRequiredTitle =>
-      'Institution approval required';
+  String get analyticsBlockedInstitutionApprovalRequiredTitle => 'Institution approval required';
 
   @override
-  String get analyticsBlockedInstitutionApprovalRequiredDescription =>
-      'Apply for DAO institution review to unlock institution analytics.';
+  String get analyticsBlockedInstitutionApprovalRequiredDescription => 'Apply for DAO institution review to unlock institution analytics.';
 
   @override
   String get analyticsNoMetricsTitle => 'No supported metrics';
 
   @override
-  String get analyticsNoMetricsDescription =>
-      'This analytics preset has no metrics for the current scope.';
+  String get analyticsNoMetricsDescription => 'This analytics preset has no metrics for the current scope.';
 
   @override
   String get analyticsSeriesUnavailableTitle => 'Series unavailable';
 
   @override
-  String get analyticsSeriesUnavailableDescription =>
-      'This metric is available as a snapshot only.';
+  String get analyticsSeriesUnavailableDescription => 'This metric is available as a snapshot only.';
 
   @override
   String get analyticsLoadingLabel => 'Loading analytics';
@@ -15047,8 +13809,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsTrendErrorTitle => 'Unable to load trend';
 
   @override
-  String get analyticsTrendErrorDescription =>
-      'Try a different metric or timeframe.';
+  String get analyticsTrendErrorDescription => 'Try a different metric or timeframe.';
 
   @override
   String get analyticsSeriesCurrentLabel => 'Current';
@@ -15082,8 +13843,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric) {
+  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric) {
     return '$activeBuckets of $totalBuckets intervals recorded $metric.';
   }
 
@@ -15151,16 +13911,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsTimeframeLabel1y => 'Last year';
 
   @override
-  String get desktopProfileAnalyticsDialogIntro =>
-      'Open the unified analytics experience and start in the context you want to review.';
+  String get desktopProfileAnalyticsDialogIntro => 'Open the unified analytics experience and start in the context you want to review.';
 
   @override
-  String get desktopProfileAnalyticsProfileSubtitle =>
-      'Profile reach, follower growth, views, and owned signals.';
+  String get desktopProfileAnalyticsProfileSubtitle => 'Profile reach, follower growth, views, and owned signals.';
 
   @override
-  String get desktopProfileAnalyticsCommunitySubtitle =>
-      'Community posting, likes, and engagement in the same analytics UI.';
+  String get desktopProfileAnalyticsCommunitySubtitle => 'Community posting, likes, and engagement in the same analytics UI.';
 
   @override
   String get profileAccountHealthTitle => 'Account health';
@@ -15176,4 +13933,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Secure';
+
+  @override
+  String get artworkCreatorOptionalExtensionsDescription => 'Publish the artwork first, then add AR or spatial layers, attendance records, or digital editions when they support the work.';
+
+  @override
+  String get artworkCreatorCreateDigitalEdition => 'Create digital edition';
+
+  @override
+  String get artworkCreatorDigitalEditionUnavailable => 'Digital edition creation is currently unavailable.';
+
+  @override
+  String get artworkCreatorCreateEditionSeries => 'Create edition series';
+
+  @override
+  String get artworkEditionSeriesDialogTitle => 'Create edition series';
+
+  @override
+  String get artworkEditionSeriesDialogDescription => 'Create a digital edition series for this artwork.';
+
+  @override
+  String get artworkEditionSeriesNameLabel => 'Series name';
+
+  @override
+  String get artworkEditionSizeLabel => 'Edition size';
+
+  @override
+  String get artworkEditionPriceLabel => 'Edition price (SOL)';
+
+  @override
+  String get artworkEditionCreateAction => 'Create digital edition';
 }

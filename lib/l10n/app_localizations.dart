@@ -62,17 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _safeCanonicalizedLocale(locale);
-
-  // Hand-applied after every `flutter gen-l10n`: the generator emits a bare
-  // `Intl.canonicalizedLocale(locale)`, which does not guard the temporary
-  // empty/"undefined" locale the web shell can provide during startup.
-  static String _safeCanonicalizedLocale(String locale) {
-    final raw = locale.trim();
-    if (raw.isEmpty || raw == 'undefined' || raw == 'null') return 'sl';
-    return intl.Intl.canonicalizedLocale(raw);
-  }
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -80,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -93,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -134,7 +122,7 @@ abstract class AppLocalizations {
   /// No description provided for @exploreOnlyModeBanner.
   ///
   /// In en, this message translates to:
-  /// **'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.'**
+  /// **'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for digital editions and governance.'**
   String get exploreOnlyModeBanner;
 
   /// No description provided for @exploreOnlyDiscoverTitle.
@@ -188,7 +176,7 @@ abstract class AppLocalizations {
   /// No description provided for @exploreOnlyArtifactsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover archive records and digital editions connected to artworks.'**
+  /// **'Discover digital editions connected to artworks.'**
   String get exploreOnlyArtifactsDescription;
 
   /// No description provided for @walletPromptTitle.
@@ -200,7 +188,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletPromptBody.
   ///
   /// In en, this message translates to:
-  /// **'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.'**
+  /// **'A wallet supports attribution, digital editions and governance. Discovery and community remain open without it.'**
   String get walletPromptBody;
 
   /// No description provided for @walletPromptIntro.
@@ -212,7 +200,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletPromptFeatureArchiveObjects.
   ///
   /// In en, this message translates to:
-  /// **'Archive records and digital editions'**
+  /// **'Digital editions'**
   String get walletPromptFeatureArchiveObjects;
 
   /// No description provided for @walletPromptFeatureCreateArtworks.
@@ -242,7 +230,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeArchiveObjectFallbackTitle.
   ///
   /// In en, this message translates to:
-  /// **'Archive record'**
+  /// **'Digital edition'**
   String get walletHomeArchiveObjectFallbackTitle;
 
   /// No description provided for @walletHomeCollectibleFallbackTitle.
@@ -320,13 +308,13 @@ abstract class AppLocalizations {
   /// No description provided for @archiveObjectCreatedToast.
   ///
   /// In en, this message translates to:
-  /// **'Archive record created.'**
+  /// **'Digital edition created.'**
   String get archiveObjectCreatedToast;
 
   /// No description provided for @archiveObjectCreateFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to create archive record.'**
+  /// **'Failed to create digital edition.'**
   String get archiveObjectCreateFailed;
 
   /// No description provided for @archiveObjectCreationPleaseWait.
@@ -338,20 +326,19 @@ abstract class AppLocalizations {
   /// No description provided for @archiveObjectSeriesDefaultDescription.
   ///
   /// In en, this message translates to:
-  /// **'Archive records for {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+  /// **'Digital editions of {artworkTitle} by {artistName}'**
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to create archive record series'**
+  /// **'Failed to create digital edition series'**
   String get archiveObjectSeriesCreateFailed;
 
   /// No description provided for @archiveObjectSeriesNotFound.
   ///
   /// In en, this message translates to:
-  /// **'Archive record series not found'**
+  /// **'Digital edition series not found'**
   String get archiveObjectSeriesNotFound;
 
   /// No description provided for @archiveObjectSeriesSoldOut.
@@ -363,7 +350,7 @@ abstract class AppLocalizations {
   /// No description provided for @archiveObjectCreatedReason.
   ///
   /// In en, this message translates to:
-  /// **'Created archive record for \"{artworkTitle}\" (edition #{tokenId})'**
+  /// **'Created digital edition of \"{artworkTitle}\" (edition #{tokenId})'**
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId);
 
   /// No description provided for @artworkCreatorAttendanceRecordUrlOptionalLabel.
@@ -375,21 +362,20 @@ abstract class AppLocalizations {
   /// No description provided for @archiveObjectCreateFailedWithError.
   ///
   /// In en, this message translates to:
-  /// **'Failed to create archive record: {error}'**
+  /// **'Failed to create digital edition: {error}'**
   String archiveObjectCreateFailedWithError(Object error);
 
   /// No description provided for @archiveObjectCreateError.
   ///
   /// In en, this message translates to:
-  /// **'Error creating archive record: {error}'**
+  /// **'Error creating digital edition: {error}'**
   String archiveObjectCreateError(Object error);
 
   /// No description provided for @communityAchievementUnlockedToast.
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -448,7 +434,7 @@ abstract class AppLocalizations {
   /// No description provided for @recentActivityArchiveObjectUpdateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Archive record update'**
+  /// **'Digital edition update'**
   String get recentActivityArchiveObjectUpdateTitle;
 
   /// No description provided for @recentActivityRecognitionAmountDescription.
@@ -466,9 +452,8 @@ abstract class AppLocalizations {
   /// No description provided for @recentActivityArchiveObjectStatusDescription.
   ///
   /// In en, this message translates to:
-  /// **'Archive record {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+  /// **'Digital edition {status} for {title}'**
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -497,25 +482,25 @@ abstract class AppLocalizations {
   /// No description provided for @pushArchiveObjectCreatingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Creating archive record...'**
+  /// **'Creating digital edition...'**
   String get pushArchiveObjectCreatingTitle;
 
   /// No description provided for @pushArchiveObjectCreatingBody.
   ///
   /// In en, this message translates to:
-  /// **'Creating archive record for \"{artworkTitle}\"'**
+  /// **'Creating a digital edition of \"{artworkTitle}\"'**
   String pushArchiveObjectCreatingBody(Object artworkTitle);
 
   /// No description provided for @pushArchiveObjectCreatedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Archive record created'**
+  /// **'Digital edition created'**
   String get pushArchiveObjectCreatedTitle;
 
   /// No description provided for @pushArchiveObjectCreatedBody.
   ///
   /// In en, this message translates to:
-  /// **'\"{artworkTitle}\" now has an archive record'**
+  /// **'A digital edition of \"{artworkTitle}\" is ready'**
   String pushArchiveObjectCreatedBody(Object artworkTitle);
 
   /// No description provided for @pushArchiveObjectCreationFailedTitle.
@@ -527,19 +512,19 @@ abstract class AppLocalizations {
   /// No description provided for @pushArchiveObjectCreationFailedBody.
   ///
   /// In en, this message translates to:
-  /// **'Could not create an archive record for \"{artworkTitle}\". Please try again.'**
+  /// **'Could not create a digital edition of \"{artworkTitle}\". Please try again.'**
   String pushArchiveObjectCreationFailedBody(Object artworkTitle);
 
   /// No description provided for @pushArchiveObjectCreationChannelName.
   ///
   /// In en, this message translates to:
-  /// **'Archive record creation'**
+  /// **'Digital edition creation'**
   String get pushArchiveObjectCreationChannelName;
 
   /// No description provided for @pushArchiveObjectCreationChannelDescription.
   ///
   /// In en, this message translates to:
-  /// **'Notifications for archive record creation'**
+  /// **'Notifications for digital edition creation'**
   String get pushArchiveObjectCreationChannelDescription;
 
   /// No description provided for @pushRecognitionChannelName.
@@ -557,13 +542,13 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsMetricArchiveObjectsCreatedLabel.
   ///
   /// In en, this message translates to:
-  /// **'Archive records created'**
+  /// **'Digital editions created'**
   String get analyticsMetricArchiveObjectsCreatedLabel;
 
   /// No description provided for @analyticsMetricArchiveObjectsCreatedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Archive records connected to artworks.'**
+  /// **'Digital editions connected to artworks.'**
   String get analyticsMetricArchiveObjectsCreatedDescription;
 
   /// No description provided for @analyticsMetricKub8RecognitionLabel.
@@ -1943,7 +1928,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSignInSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Start with art discovery, artists, institutions, and community. Add Wallet when you need archive records, editions, or governance.'**
+  /// **'Start with art discovery, artists, institutions and community. Add a wallet later for digital editions or governance.'**
   String get authSignInSubtitle;
 
   /// No description provided for @authRegisterTitle.
@@ -2897,7 +2882,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.'**
+  /// **'A wallet supports attribution, digital editions and future participation. Public discovery and community access remain available without one.'**
   String get onboardingFlowWalletBackupIntroBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroWeb3Warning.
@@ -2987,7 +2972,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase restores wallet access for digital ownership, archive records and future participation on a new device.'**
+  /// **'This phrase restores wallet access for digital editions and future participation on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -3431,7 +3416,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.'**
+  /// **'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @alphaNoticeTitle.
@@ -3515,7 +3500,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCollectiblesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Archive records and digital editions'**
+  /// **'Digital editions and attendance records'**
   String get onboardingCollectiblesTitle;
 
   /// No description provided for @onboardingCollectiblesSubtitle.
@@ -3527,7 +3512,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCollectiblesDescription.
   ///
   /// In en, this message translates to:
-  /// **'When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.'**
+  /// **'Attendance records can document a visit. Artists can create digital editions connected to an artwork. Discovery and community remain open without a wallet.'**
   String get onboardingCollectiblesDescription;
 
   /// No description provided for @onboardingGrantPermissions.
@@ -4217,7 +4202,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect Wallet for attribution, archive records, digital editions, or future participation tools. Basic discovery and community do not require it.'**
+  /// **'Connect a wallet for attribution, digital editions or future participation tools. Basic discovery and community do not require it.'**
   String get desktopSettingsFeatureWeb3IntegrationDescription;
 
   /// No description provided for @desktopSettingsFeatureNftMintingTitle.
@@ -4614,8 +4599,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -6282,13 +6266,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsShowCollectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Show cultural artifacts'**
+  /// **'Show digital editions'**
   String get settingsShowCollectionTitle;
 
   /// No description provided for @settingsShowCollectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show your digital cultural artifacts publicly on your profile'**
+  /// **'Show your digital editions publicly on your profile'**
   String get settingsShowCollectionSubtitle;
 
   /// No description provided for @settingsAllowMessagesTitle.
@@ -6552,7 +6536,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Present artworks and digital cultural artifacts. Upload, organize, and describe your practice.'**
+  /// **'Present artworks and digital editions. Upload, organise and describe your practice.'**
   String get web3ArtistStudioP2Description;
 
   /// No description provided for @web3ArtistStudioP2Feature1.
@@ -7128,19 +7112,19 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Digital cultural artifacts'**
+  /// **'Digital editions'**
   String get web3MarketplaceP1Title;
 
   /// No description provided for @web3MarketplaceP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Archive records and digital editions connect artworks with provenance, visits and cultural memory.'**
+  /// **'Digital editions connect artworks with provenance.'**
   String get web3MarketplaceP1Description;
 
   /// No description provided for @web3MarketplaceP1Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Browse cultural artifacts'**
+  /// **'Browse digital editions'**
   String get web3MarketplaceP1Feature1;
 
   /// No description provided for @web3MarketplaceP1Feature2.
@@ -7170,7 +7154,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Explore artifacts through artists, institutions, exhibitions, and public-space stories instead of trading hype.'**
+  /// **'Explore digital editions through artists, institutions, exhibitions and public-space stories.'**
   String get web3MarketplaceP2Description;
 
   /// No description provided for @web3MarketplaceP2Feature1.
@@ -7314,13 +7298,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.'**
+  /// **'Browse digital editions connected to artists, artworks, institutions and provenance.'**
   String get web3FeaturesP2Description;
 
   /// No description provided for @web3FeaturesP2Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Browse featured cultural artifacts'**
+  /// **'Browse featured digital editions'**
   String get web3FeaturesP2Feature1;
 
   /// No description provided for @web3FeaturesP2Feature2.
@@ -8772,7 +8756,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopMapArtworkTypeNfts.
   ///
   /// In en, this message translates to:
-  /// **'Archive records'**
+  /// **'Digital editions'**
   String get desktopMapArtworkTypeNfts;
 
   /// No description provided for @desktopMapArtworkTypeModels3d.
@@ -10466,6 +10450,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get collectionCreatorArtworkAddLabel;
+
+  /// No description provided for @collectionCreatorConnectWalletToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet to load and curate your artwork library in this creator.'**
+  String get collectionCreatorConnectWalletToLoad;
+
+  /// No description provided for @collectionCreatorLoadingLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading library…'**
+  String get collectionCreatorLoadingLibrary;
+
+  /// No description provided for @collectionCreatorLoadArtworkLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Load artwork library'**
+  String get collectionCreatorLoadArtworkLibrary;
+
+  /// No description provided for @collectionCreatorLibraryStillLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artwork library is still loading. You can continue with the collection details and return here later.'**
+  String get collectionCreatorLibraryStillLoading;
+
+  /// No description provided for @collectionCreatorLoadBeforeSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Load your artwork library to select pieces for this collection.'**
+  String get collectionCreatorLoadBeforeSave;
+
+  /// No description provided for @collectionCreatorArtworkSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get collectionCreatorArtworkSelected;
+
+  /// No description provided for @collectionCreatorArtworkAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get collectionCreatorArtworkAdd;
 
   /// No description provided for @collectionCreatorNoArtworksAvailable.
   ///
@@ -12225,6 +12251,12 @@ abstract class AppLocalizations {
   /// **'Digital editions will appear here when they are linked to this wallet.'**
   String get walletHomeNoCollectiblesDescription;
 
+  /// No description provided for @walletHomeNoCollectiblesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No digital editions yet'**
+  String get walletHomeNoCollectiblesTitle;
+
   /// No description provided for @walletHomeCollectibleByline.
   ///
   /// In en, this message translates to:
@@ -12252,7 +12284,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeStakeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Prepare SOL for future transaction fees when publishing or artifact actions require it.'**
+  /// **'Prepare SOL for future transaction fees when publishing or digital edition actions require it.'**
   String get walletHomeStakeDescription;
 
   /// No description provided for @walletHomeStakeAction.
@@ -12505,8 +12537,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -12602,8 +12633,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -12777,8 +12807,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -13317,7 +13346,7 @@ abstract class AppLocalizations {
   /// No description provided for @artworkDetailMintNft.
   ///
   /// In en, this message translates to:
-  /// **'Create archive record'**
+  /// **'Create digital edition'**
   String get artworkDetailMintNft;
 
   /// No description provided for @eventCreatorNoInstitutionAvailableMessage.
@@ -15513,7 +15542,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNoMintedNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Listings appear once an artwork is issued as a digital cultural object.'**
+  /// **'Listings appear once an artwork has a digital edition.'**
   String get marketplaceNoMintedNftsDescription;
 
   /// No description provided for @marketplaceTrendingThisWeekTitle.
@@ -15525,19 +15554,19 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceTrendingThisWeekSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts with recent community attention.'**
+  /// **'Digital editions with recent community attention.'**
   String get marketplaceTrendingThisWeekSubtitle;
 
   /// No description provided for @marketplaceNoTrendingNftsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No active artifacts yet'**
+  /// **'No active digital editions yet'**
   String get marketplaceNoTrendingNftsTitle;
 
   /// No description provided for @marketplaceNoTrendingNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check back later as cultural artifact activity grows.'**
+  /// **'Check back later as digital edition activity grows.'**
   String get marketplaceNoTrendingNftsDescription;
 
   /// No description provided for @marketplaceMyCollectionTitle.
@@ -15549,7 +15578,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMyCollectionCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} artifacts'**
+  /// **'{count} digital editions'**
   String marketplaceMyCollectionCount(Object count);
 
   /// No description provided for @marketplaceListedForSaleTitle.
@@ -15609,13 +15638,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceOwnedNftStatus.
   ///
   /// In en, this message translates to:
-  /// **'Owned artifact'**
+  /// **'Owned digital edition'**
   String get marketplaceOwnedNftStatus;
 
   /// No description provided for @marketplaceOwnedNftListedStatus.
   ///
   /// In en, this message translates to:
-  /// **'Owned artifact - Listed'**
+  /// **'Owned digital edition, listed'**
   String get marketplaceOwnedNftListedStatus;
 
   /// No description provided for @marketplaceEmptyCollectionTitle.
@@ -15639,7 +15668,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceListForSaleButton.
   ///
   /// In en, this message translates to:
-  /// **'List artifact'**
+  /// **'List digital edition'**
   String get marketplaceListForSaleButton;
 
   /// No description provided for @marketplaceListForSaleSuccessToast.
@@ -15651,7 +15680,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceListForSaleFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to list artifact right now.'**
+  /// **'Unable to list this digital edition right now.'**
   String get marketplaceListForSaleFailedToast;
 
   /// No description provided for @marketplaceRemoveFromSaleTitle.
@@ -15669,7 +15698,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceRemoveFromSaleSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'Artifact removed from listing.'**
+  /// **'Digital edition removed from listing.'**
   String get marketplaceRemoveFromSaleSuccessToast;
 
   /// No description provided for @marketplaceMintConnectWalletTitle.
@@ -15681,13 +15710,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintConnectWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet only if you want to create digital cultural artifacts from artworks.'**
+  /// **'Connect a wallet only if you want to create digital editions from artworks.'**
   String get marketplaceMintConnectWalletDescription;
 
   /// No description provided for @marketplaceMintSuccessTitle.
   ///
   /// In en, this message translates to:
-  /// **'Digital artifact created'**
+  /// **'Digital edition created'**
   String get marketplaceMintSuccessTitle;
 
   /// No description provided for @marketplaceMintSuccessDescription.
@@ -15753,7 +15782,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceCardActionMint.
   ///
   /// In en, this message translates to:
-  /// **'Mint'**
+  /// **'Create edition'**
   String get marketplaceCardActionMint;
 
   /// No description provided for @marketplaceCardActionView.
@@ -15777,7 +15806,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintUnavailableLabel.
   ///
   /// In en, this message translates to:
-  /// **'Mint unavailable'**
+  /// **'Edition creation unavailable'**
   String get marketplaceMintUnavailableLabel;
 
   /// No description provided for @marketplaceSoldOutLabel.
@@ -15789,7 +15818,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintNftButtonLabel.
   ///
   /// In en, this message translates to:
-  /// **'Create artifact'**
+  /// **'Create digital edition'**
   String get marketplaceMintNftButtonLabel;
 
   /// No description provided for @marketplaceArRequiredTitle.
@@ -15801,7 +15830,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceArRequiredDescription.
   ///
   /// In en, this message translates to:
-  /// **'This artifact requires interaction with the physical artwork location. Visit the artwork and use the AR scanner if the artist enabled it.'**
+  /// **'This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.'**
   String get marketplaceArRequiredDescription;
 
   /// No description provided for @marketplaceGoToArButton.
@@ -15825,13 +15854,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintPriceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Mint price:'**
+  /// **'Edition price:'**
   String get marketplaceMintPriceLabel;
 
   /// No description provided for @marketplaceConfirmMintButton.
   ///
   /// In en, this message translates to:
-  /// **'Confirm Mint'**
+  /// **'Create digital edition'**
   String get marketplaceConfirmMintButton;
 
   /// No description provided for @marketplaceTokenNumberLabel.
@@ -15862,8 +15891,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -15904,7 +15932,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceValueMintPriceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Mint price'**
+  /// **'Edition price'**
   String get marketplaceValueMintPriceLabel;
 
   /// No description provided for @marketplaceOwnedCollectionTitle.
@@ -15934,7 +15962,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceArOnlyFilterInactiveLabel.
   ///
   /// In en, this message translates to:
-  /// **'All mints'**
+  /// **'All editions'**
   String get marketplaceArOnlyFilterInactiveLabel;
 
   /// No description provided for @marketplaceListingDialogDescription.
@@ -16012,7 +16040,7 @@ abstract class AppLocalizations {
   /// No description provided for @collectibleStatusMinted.
   ///
   /// In en, this message translates to:
-  /// **'Issued as archive record'**
+  /// **'Issued as digital edition'**
   String get collectibleStatusMinted;
 
   /// No description provided for @collectibleStatusListed.
@@ -16673,8 +16701,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20100,8 +20127,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -20832,7 +20858,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopShellNavTrade.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts'**
+  /// **'Digital editions'**
   String get desktopShellNavTrade;
 
   /// No description provided for @desktopShellNavWeb3.
@@ -21972,7 +21998,7 @@ abstract class AppLocalizations {
   /// No description provided for @userProfileAchievementCategoryNft.
   ///
   /// In en, this message translates to:
-  /// **'Archive records'**
+  /// **'Digital editions'**
   String get userProfileAchievementCategoryNft;
 
   /// No description provided for @userProfileAchievementCategoryCommunity.
@@ -23515,8 +23541,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -23749,7 +23774,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopProfilePerformanceNftsOwnedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Archive records held'**
+  /// **'Digital editions held'**
   String get desktopProfilePerformanceNftsOwnedTitle;
 
   /// No description provided for @desktopProfileAchievementsSubtitle.
@@ -23840,8 +23865,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26235,8 +26259,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -26387,10 +26410,69 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Secure'**
   String get authSecureAccountBannerCta;
+
+  /// No description provided for @artworkCreatorOptionalExtensionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish the artwork first, then add AR or spatial layers, attendance records, or digital editions when they support the work.'**
+  String get artworkCreatorOptionalExtensionsDescription;
+
+  /// No description provided for @artworkCreatorCreateDigitalEdition.
+  ///
+  /// In en, this message translates to:
+  /// **'Create digital edition'**
+  String get artworkCreatorCreateDigitalEdition;
+
+  /// No description provided for @artworkCreatorDigitalEditionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital edition creation is currently unavailable.'**
+  String get artworkCreatorDigitalEditionUnavailable;
+
+  /// No description provided for @artworkCreatorCreateEditionSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Create edition series'**
+  String get artworkCreatorCreateEditionSeries;
+
+  /// No description provided for @artworkEditionSeriesDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create edition series'**
+  String get artworkEditionSeriesDialogTitle;
+
+  /// No description provided for @artworkEditionSeriesDialogDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a digital edition series for this artwork.'**
+  String get artworkEditionSeriesDialogDescription;
+
+  /// No description provided for @artworkEditionSeriesNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Series name'**
+  String get artworkEditionSeriesNameLabel;
+
+  /// No description provided for @artworkEditionSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edition size'**
+  String get artworkEditionSizeLabel;
+
+  /// No description provided for @artworkEditionPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edition price (SOL)'**
+  String get artworkEditionPriceLabel;
+
+  /// No description provided for @artworkEditionCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create digital edition'**
+  String get artworkEditionCreateAction;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -26399,25 +26481,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }
