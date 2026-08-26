@@ -62,8 +62,15 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
+
+  static String _supportedLocaleName(String locale) {
+    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
+    return switch (localeName) {
+      'en' || 'sl' => localeName,
+      _ => 'sl',
+    };
+  }
 
   final String localeName;
 
