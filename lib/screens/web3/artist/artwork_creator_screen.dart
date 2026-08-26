@@ -686,8 +686,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final seriesDescription = draft.nftSeriesDescription.trim().isNotEmpty
         ? draft.nftSeriesDescription.trim()
         : (draft.description.trim().isNotEmpty
-              ? draft.description.trim()
-              : artwork.description);
+            ? draft.description.trim()
+            : artwork.description);
 
     final supply = draft.nftTotalSupply < 1 ? 1 : draft.nftTotalSupply;
     final double mintPrice = draft.nftMintPrice < 0 ? 0.0 : draft.nftMintPrice;
@@ -828,8 +828,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           onChanged: widget.forceDraftOnly
               ? null
               : (draft.isSubmitting
-                    ? null
-                    : (v) => drafts.updateBasics(
+                  ? null
+                  : (v) => drafts.updateBasics(
                         draftId: widget.draftId,
                         isPublic: v,
                       )),
@@ -911,8 +911,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                         enabled: true,
                         locationName:
                             _locationNameController.text.trim().isEmpty
-                            ? null
-                            : _locationNameController.text.trim(),
+                                ? null
+                                : _locationNameController.text.trim(),
                         latitude: point.latitude,
                         longitude: point.longitude,
                       );
@@ -1051,23 +1051,22 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       onPressed: index == 0 || draft.isSubmitting
                           ? null
                           : () => drafts.reorderGallery(
-                              widget.draftId,
-                              index,
-                              index - 1,
-                            ),
+                                widget.draftId,
+                                index,
+                                index - 1,
+                              ),
                       icon: const Icon(Icons.keyboard_arrow_up),
                     ),
                     IconButton(
                       tooltip: 'Move down',
-                      onPressed:
-                          index == draft.gallery.length - 1 ||
+                      onPressed: index == draft.gallery.length - 1 ||
                               draft.isSubmitting
                           ? null
                           : () => drafts.reorderGallery(
-                              widget.draftId,
-                              index,
-                              index + 2,
-                            ),
+                                widget.draftId,
+                                index,
+                                index + 2,
+                              ),
                       icon: const Icon(Icons.keyboard_arrow_down),
                     ),
                     IconButton(
@@ -1075,7 +1074,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       onPressed: draft.isSubmitting
                           ? null
                           : () =>
-                                drafts.removeGalleryItem(widget.draftId, index),
+                              drafts.removeGalleryItem(widget.draftId, index),
                       icon: const Icon(Icons.delete_outline),
                     ),
                   ],
@@ -1108,20 +1107,18 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         // --- Digital edition toggle ---
         CreatorSwitchTile(
           title: l10n.artworkCreatorCreateDigitalEdition,
-          subtitle:
-              (AppConfig.isFeatureEnabled('web3') &&
+          subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
               ? 'You can create it after publishing (wallet required).'
               : l10n.artworkCreatorDigitalEditionUnavailable,
           value: draft.mintNftAfterPublish,
-          onChanged:
-              (AppConfig.isFeatureEnabled('web3') &&
+          onChanged: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting') &&
                   !draft.isSubmitting)
               ? (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId,
-                  mintNftAfterPublish: v,
-                )
+                    draftId: widget.draftId,
+                    mintNftAfterPublish: v,
+                  )
               : null,
           activeColor: accent,
         ),
@@ -1370,8 +1367,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
-                    child:
-                        (draft.poapImageBytes != null &&
+                    child: (draft.poapImageBytes != null &&
                             draft.poapImageBytes!.isNotEmpty)
                         ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
                         : Icon(
@@ -1456,9 +1452,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           value: draft.arEnabled,
           onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
               ? (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId,
-                  arEnabled: v,
-                )
+                    draftId: widget.draftId,
+                    arEnabled: v,
+                  )
               : null,
           activeColor: accent,
         ),
@@ -1711,8 +1707,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final claimUrl = (_createdArtwork?.poapClaimUrl ?? '').trim();
-    final showClaim =
-        _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap &&
+    final showClaim = _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap &&
         claimUrl.isNotEmpty;
 
     return CreatorSection(
@@ -1806,12 +1801,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final isSignedIn = context.read<ProfileProvider>().isSignedIn == true;
     final persistedArtwork = _createdArtwork;
     final artworkId = persistedArtwork?.id ?? '';
-    final canUseCollab =
-        AppConfig.isFeatureEnabled('collabInvites') &&
+    final canUseCollab = AppConfig.isFeatureEnabled('collabInvites') &&
         isSignedIn &&
         artworkId.isNotEmpty;
-    final canUseAr =
-        AppConfig.isFeatureEnabled('ar') &&
+    final canUseAr = AppConfig.isFeatureEnabled('ar') &&
         artworkId.isNotEmpty &&
         draft.arEnabled;
     final hasCover = draft.coverBytes != null;
@@ -1819,7 +1812,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         draft.title.trim().isNotEmpty && draft.description.trim().isNotEmpty;
     final hasLocation = _isLocationEnabled(draft)
         ? (_latController.text.trim().isNotEmpty &&
-              _lngController.text.trim().isNotEmpty)
+            _lngController.text.trim().isNotEmpty)
         : true;
     final hasGallery = draft.gallery.isNotEmpty;
     final readyItems = <DesktopCreatorReadinessItem>[
@@ -1863,13 +1856,13 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           subtitle: persistedArtwork == null
               ? 'Draft in progress'
               : (persistedArtwork.isPublic
-                    ? 'Published artwork'
-                    : 'Saved draft artwork'),
+                  ? 'Published artwork'
+                  : 'Saved draft artwork'),
           icon: persistedArtwork == null
               ? Icons.edit_outlined
               : (persistedArtwork.isPublic
-                    ? Icons.public_outlined
-                    : Icons.bookmark_outline),
+                  ? Icons.public_outlined
+                  : Icons.bookmark_outline),
           contextType: contextType,
           semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
@@ -1895,9 +1888,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 value: widget.forceDraftOnly
                     ? 'Draft only'
                     : (draft.isPublic ? 'Public' : 'Private'),
-                icon: draft.isPublic
-                    ? Icons.public_outlined
-                    : Icons.lock_outline,
+                icon:
+                    draft.isPublic ? Icons.public_outlined : Icons.lock_outline,
               ),
               DesktopCreatorSummaryRow(
                 label: 'Media',
@@ -1943,8 +1935,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 label: Text(
                   persistedArtwork == null
                       ? (widget.forceDraftOnly
-                            ? 'Save draft'
-                            : 'Publish artwork')
+                          ? 'Save draft'
+                          : 'Publish artwork')
                       : 'Update and republish',
                 ),
               ),
@@ -2007,8 +1999,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           subtitle: _createdArtwork == null
               ? l10n.artworkCreatorCollaborationQueuedSubtitle
               : (canUseCollab
-                    ? l10n.artworkCreatorCollaborationManageSubtitle
-                    : l10n.artworkCreatorCollaborationUnavailableSubtitle),
+                  ? l10n.artworkCreatorCollaborationManageSubtitle
+                  : l10n.artworkCreatorCollaborationUnavailableSubtitle),
           entityType: 'artwork',
           entityId: artworkId,
           enabled: canUseCollab,
@@ -2155,15 +2147,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             subtitle: _createdArtwork == null
                 ? l10n.artworkCreatorShellDraftSubtitle
                 : (_createdArtwork!.isPublic
-                      ? l10n.artworkCreatorLiveWorkspaceSubtitle
-                      : l10n.artworkCreatorSavedWorkspaceSubtitle),
+                    ? l10n.artworkCreatorLiveWorkspaceSubtitle
+                    : l10n.artworkCreatorSavedWorkspaceSubtitle),
             onBack: shellScope?.popScreen,
             headerBadge: CreatorStatusBadge(
               label: _createdArtwork == null
                   ? l10n.commonDraft
                   : (_createdArtwork!.isPublic
-                        ? l10n.commonPublished
-                        : l10n.artworkCreatorDraftSavedBadge),
+                      ? l10n.commonPublished
+                      : l10n.artworkCreatorDraftSavedBadge),
               contextType: DesktopCreatorContextType.artwork,
               semantic: DesktopCreatorSectionSemantic.status,
             ),

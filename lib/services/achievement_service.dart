@@ -92,7 +92,7 @@ class AchievementService {
 
   // Achievement definitions
   static const Map<AchievementType, AchievementDefinition>
-  achievementDefinitions = {
+      achievementDefinitions = {
     // Discovery achievements
     AchievementType.firstDiscovery: AchievementDefinition(
       type: AchievementType.firstDiscovery,
@@ -402,15 +402,14 @@ class AchievementService {
         return;
       }
 
-      final subjectId =
-          (data?['subjectId'] ??
-                  data?['subject_id'] ??
-                  data?['markerId'] ??
-                  data?['marker_id'] ??
-                  data?['artworkId'] ??
-                  data?['artwork_id'])
-              ?.toString()
-              .trim();
+      final subjectId = (data?['subjectId'] ??
+              data?['subject_id'] ??
+              data?['markerId'] ??
+              data?['marker_id'] ??
+              data?['artworkId'] ??
+              data?['artwork_id'])
+          ?.toString()
+          .trim();
       if (subjectId == null || subjectId.isEmpty) {
         AppConfig.debugPrint(
           'AchievementService: missing subject id for client-reported action: $action',
@@ -505,8 +504,7 @@ class AchievementService {
           final resolved = _resolveAchievementId(item, knownIds);
           if (resolved != null) unlockedIds.add(resolved);
         } else if (item is Map) {
-          final resolved =
-              _resolveAchievementId(
+          final resolved = _resolveAchievementId(
                 item['type'] ??
                     item['code'] ??
                     item['achievementType'] ??
@@ -536,12 +534,11 @@ class AchievementService {
   Future<int> getTotalEarnedTokens() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final wallet =
-          (prefs.getString('wallet_address') ??
-                  prefs.getString('wallet') ??
-                  prefs.getString('walletAddress') ??
-                  prefs.getString('user_id'))
-              ?.trim();
+      final wallet = (prefs.getString('wallet_address') ??
+              prefs.getString('wallet') ??
+              prefs.getString('walletAddress') ??
+              prefs.getString('user_id'))
+          ?.trim();
       if (wallet == null || wallet.isEmpty) return 0;
 
       final data = await _backendApi.getUserAchievements(wallet);
@@ -558,7 +555,7 @@ class AchievementService {
   }
 
   Future<backend_achievements.UserAchievementsSummary>
-  getMyAchievements() async {
+      getMyAchievements() async {
     final data = await _backendApi.getMyAchievements();
     if (data['success'] == true) {
       return backend_achievements.UserAchievementsSummary.fromJson(data);
@@ -615,8 +612,7 @@ class AchievementService {
       for (final item in progressList) {
         if (item is! Map) continue;
 
-        final achievementId =
-            _resolveAchievementId(
+        final achievementId = _resolveAchievementId(
               item['type'] ??
                   item['code'] ??
                   item['achievementType'] ??
@@ -652,7 +648,7 @@ class AchievementService {
   ///
   /// Static definitions are used only when the backend list is unavailable.
   Future<List<backend_achievements.AchievementDefinition>>
-  getAllAchievements() async {
+      getAllAchievements() async {
     try {
       final achievementsData = await _backendApi.getAchievements();
       final backendDefinitions = achievementsData
@@ -670,7 +666,7 @@ class AchievementService {
   }
 
   List<backend_achievements.AchievementDefinition>
-  _fallbackBackendDefinitions() {
+      _fallbackBackendDefinitions() {
     return achievementDefinitions.values
         .map(
           (def) => backend_achievements.AchievementDefinition(

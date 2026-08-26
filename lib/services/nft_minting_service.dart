@@ -34,8 +34,8 @@ class NFTMintingService {
   final CollectiblesStorage _collectiblesStorage = CollectiblesStorage();
 
   AppLocalizations get _l10n {
-    final languageCode = ui.PlatformDispatcher.instance.locale.languageCode
-        .toLowerCase();
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
     return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
   }
 
@@ -136,9 +136,8 @@ class NFTMintingService {
 
       // Step 1: Create or get NFT series
       if (seriesId == null || seriesId.isEmpty) {
-        final localExisting = seriesList
-            .where((s) => s.artworkId == artworkId)
-            .toList();
+        final localExisting =
+            seriesList.where((s) => s.artworkId == artworkId).toList();
         if (localExisting.isNotEmpty) {
           finalSeriesId = localExisting.first.id;
           debugPrint(
@@ -148,8 +147,7 @@ class NFTMintingService {
           final seriesResult = await createNFTSeries(
             artworkId: artworkId,
             name: seriesName ?? '$artworkTitle Collection',
-            description:
-                seriesDescription ??
+            description: seriesDescription ??
                 l10n.archiveObjectSeriesDefaultDescription(
                   artworkTitle,
                   artistName,
@@ -213,8 +211,7 @@ class NFTMintingService {
         ownerAddress: ownerAddress,
         status: CollectibleStatus.minted,
         mintedAt: DateTime.now(),
-        properties:
-            properties ??
+        properties: properties ??
             {
               'metadataCID': metadataCID,
               if (imageUrl != null) 'imageUrl': imageUrl,

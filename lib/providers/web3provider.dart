@@ -16,7 +16,7 @@ class Web3Provider extends ChangeNotifier {
   String? _initializeError;
 
   Web3Provider({SolanaWalletService? solanaWalletService})
-    : _solanaService = solanaWalletService ?? SolanaWalletService();
+      : _solanaService = solanaWalletService ?? SolanaWalletService();
 
   void bindWalletProvider(WalletProvider walletProvider) {
     if (identical(_walletProvider, walletProvider)) return;

@@ -37,13 +37,12 @@ class _NFTGalleryState extends State<NFTGallery> {
       unawaited(provider.initialize());
     }
 
-    final walletAddress =
-        (Provider.of<WalletProvider>(
-                  context,
-                  listen: false,
-                ).currentWalletAddress ??
-                '')
-            .trim();
+    final walletAddress = (Provider.of<WalletProvider>(
+              context,
+              listen: false,
+            ).currentWalletAddress ??
+            '')
+        .trim();
     if (walletAddress.isNotEmpty) {
       unawaited(provider.refreshWalletCollectibleIndex(walletAddress));
     }
@@ -82,13 +81,12 @@ class _NFTGalleryState extends State<NFTGallery> {
                 listen: false,
               );
               unawaited(provider.initialize());
-              final walletAddress =
-                  (Provider.of<WalletProvider>(
-                            context,
-                            listen: false,
-                          ).currentWalletAddress ??
-                          '')
-                      .trim();
+              final walletAddress = (Provider.of<WalletProvider>(
+                        context,
+                        listen: false,
+                      ).currentWalletAddress ??
+                      '')
+                  .trim();
               if (walletAddress.isNotEmpty) {
                 unawaited(
                   provider.refreshWalletCollectibleIndex(
@@ -104,8 +102,8 @@ class _NFTGalleryState extends State<NFTGallery> {
       ),
       body: Consumer2<WalletProvider, CollectiblesProvider>(
         builder: (context, walletProvider, collectiblesProvider, _) {
-          final walletAddress = (walletProvider.currentWalletAddress ?? '')
-              .trim();
+          final walletAddress =
+              (walletProvider.currentWalletAddress ?? '').trim();
           if (walletAddress.isEmpty) {
             return Center(
               child: Padding(

@@ -8,7 +8,7 @@ class Task {
   final IconData icon;
   final String category;
   final List<String>
-  achievementIds; // Achievements that contribute to this task
+      achievementIds; // Achievements that contribute to this task
   final int priority; // Lower number = higher priority
   final bool isUnlocked;
   final String? unlockedByTaskId; // Task that unlocks this one
