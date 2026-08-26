@@ -5463,6 +5463,14 @@
       "count": {}
     }
   },
+  "promotionBuilderQuoteExpired": "Ponudba je potekla. Ceno smo osvežili.",
+  "promotionBuilderPaymentConfirming": "Plačilo je poslano. Čakamo na potrditev omrežja.",
+  "promotionBuilderVerifyPayment": "Preveri plačilo",
+  "promotionBuilderWalletSessionMismatch": "Povezana denarnica se je spremenila. Ponovno se povežite in poskusite znova.",
+  "promotionBuilderConnectWalletForKub8": "Za plačilo s KUB8 povežite denarnico, ki lahko podpisuje.",
+  "promotionBuilderKub8Unavailable": "Plačila s KUB8 trenutno niso na voljo.",
+  "promotionBuilderKub8Required": "Potrebno",
+  "promotionBuilderKub8Available": "Na voljo",
   "promotionActionPromote": "Promoviraj",
   "promotionActionBoost": "Pospeši",
   "promotionFeaturedLabel": "Izpostavljeno",

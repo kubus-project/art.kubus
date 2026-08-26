@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/api_keys.dart';
 import '../../models/promotion.dart';
 import '../../providers/promotion_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -90,6 +93,16 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   bool _submitting = false;
   String? _error;
 
+  /// Stable across retries of one submit attempt, so a lost response cannot create a second
+  /// promotion request. Cleared whenever the selection changes or the attempt completes.
+  String? _submitIdempotencyKey;
+
+  /// A KUB8 transfer that is already on chain but not yet verified. While this is set the user
+  /// must retry verification, never sign again.
+  PromotionRequestSubmission? _pendingKub8Submission;
+  String? _pendingKub8Signature;
+  int _quoteRequestGeneration = 0;
+
   @override
   void initState() {
     super.initState();
@@ -99,8 +112,10 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     });
   }
 
-  void _initializeDefaults() {
+  Future<void> _initializeDefaults() async {
     final provider = context.read<PromotionProvider>();
+    await provider.loadConfig();
+    if (!mounted) return;
     final rateCards = provider.rateCardsFor(widget.entityType);
     if (rateCards.isNotEmpty && _selectedRateCard == null) {
       setState(() {
@@ -113,9 +128,25 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     }
   }
 
+  /// Called whenever the selection changes. The previous quote no longer describes what the
+  /// user is looking at, so it is dropped immediately rather than lingering on screen.
+  void _onSelectionChanged(VoidCallback apply) {
+    setState(() {
+      apply();
+      _submitIdempotencyKey = null;
+      _pendingFiatSubmission = null;
+    });
+    context.read<PromotionProvider>().invalidateQuote();
+    _updateQuote();
+  }
+
   Future<void> _updateQuote() async {
     final rateCard = _selectedRateCard;
     if (rateCard == null) return;
+    final generation = ++_quoteRequestGeneration;
+    final durationDays = _durationDays;
+    final startDate = _startDate;
+    final selectedSlot = _selectedSlot;
 
     setState(() {
       _loadingQuote = true;
@@ -125,29 +156,34 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     try {
       final provider = context.read<PromotionProvider>();
 
-      // Check slot availability if premium tier
+      // Check slot availability if premium tier. A stale availability response is dropped by
+      // the provider, so it can never contradict the current selection.
       if (rateCard.isSlotBased && _selectedSlot != null) {
-        final endDate = _startDate.add(Duration(days: _durationDays));
+        final endDate = startDate.add(Duration(days: durationDays));
         await provider.checkSlotAvailability(
           rateCardId: rateCard.id,
-          startDate: _startDate,
+          startDate: startDate,
           endDate: endDate,
         );
       }
+      if (!mounted || generation != _quoteRequestGeneration) return;
 
-      // Calculate price quote
-      await provider.calculateQuote(
+      // Request an immutable quote. Submission references its quoteId, so the price the user
+      // accepts is the price that is charged.
+      await provider.requestQuote(
         rateCardId: rateCard.id,
-        durationDays: _durationDays,
-        slotIndex: rateCard.isSlotBased ? _selectedSlot : null,
-        startDate: _startDate,
+        durationDays: durationDays,
+        entityType: widget.entityType,
+        targetEntityId: widget.entityId,
+        slotIndex: rateCard.isSlotBased ? selectedSlot : null,
+        startDate: startDate,
       );
     } catch (e) {
-      if (mounted) {
+      if (mounted && generation == _quoteRequestGeneration) {
         setState(() => _error = e.toString());
       }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _quoteRequestGeneration) {
         setState(() => _loadingQuote = false);
       }
     }
@@ -172,13 +208,29 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     }
   }
 
+  /// One key per submit attempt, reused across retries of that attempt.
+  String _ensureIdempotencyKey(String quoteId) {
+    final existing = _submitIdempotencyKey;
+    if (existing != null) return existing;
+    final key =
+        'promotion:$quoteId:${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    _submitIdempotencyKey = key;
+    return key;
+  }
+
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
     final rateCard = _selectedRateCard;
     final provider = context.read<PromotionProvider>();
+    final walletProvider = context.read<WalletProvider>();
     final quote = provider.currentQuote;
 
     if (rateCard == null || quote == null) return;
+    if (quote.isExpired) {
+      setState(() => _error = l10n.promotionBuilderQuoteExpired);
+      await _updateQuote();
+      return;
+    }
     if (rateCard.isSlotBased && !quote.slotAvailable) {
       setState(() => _error = l10n.promotionBuilderSelectedSlotUnavailable);
       return;
@@ -191,17 +243,14 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final walletAddress = walletProvider.currentWalletAddress;
 
     try {
-      // Use the new dynamic rate-card-based submission endpoint
       final submission = await provider.submitPromotionRequest(
-        targetEntityId: widget.entityId,
-        entityType: widget.entityType,
-        rateCardId: rateCard.id,
-        durationDays: _durationDays,
+        quoteId: quote.quoteId,
         paymentMethod: _paymentMethod,
-        slotIndex: rateCard.isSlotBased ? _selectedSlot : null,
-        startDate: _startDate,
+        idempotencyKey: _ensureIdempotencyKey(quote.quoteId),
+        walletAddress: walletAddress,
       );
 
       if (!mounted) return;
@@ -211,15 +260,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
         return;
       }
 
-      // Handle payment flow
-      if (_paymentMethod == PromotionPaymentMethod.kub8Balance) {
-        setState(() => _pendingFiatSubmission = null);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.promotionBuilderSubmitSuccess),
-          ),
-        );
-        navigator.pop();
+      if (_paymentMethod.isKub8) {
+        await _settleKub8Payment(submission);
         return;
       }
 
@@ -228,12 +270,16 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
       if (!mounted) return;
 
       if (launched) {
-        setState(() => _pendingFiatSubmission = null);
+        setState(() {
+          _pendingFiatSubmission = null;
+          _submitIdempotencyKey = null;
+        });
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.promotionBuilderOpeningCheckout)),
         );
         navigator.pop();
       } else {
+        // Keep the idempotency key so retrying reuses the same request and checkout session.
         setState(() => _pendingFiatSubmission = submission);
         messenger.showSnackBar(
           SnackBar(
@@ -245,13 +291,144 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        setState(() => _error = _describeSubmitError(e));
       }
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  /// Sign the KUB8 transfer for `submission` and hand the signature to the backend.
+  Future<void> _settleKub8Payment(PromotionRequestSubmission submission) async {
+    final l10n = AppLocalizations.of(context)!;
+    final provider = context.read<PromotionProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final walletAddress = walletProvider.currentWalletAddress;
+    final payment = submission.kub8Payment;
+    if (payment == null ||
+        walletProvider.currentSolanaNetwork.trim().toLowerCase() !=
+            payment.cluster.trim().toLowerCase()) {
+      setState(() =>
+          _error = 'Switch the wallet to the network required by this quote.');
+      return;
+    }
+
+    final outcome = await provider.payPromotionWithKub8(
+      submission: submission,
+      walletAddress: walletAddress,
+      signer: ({
+        required String mintAddress,
+        required String destinationOwner,
+        required BigInt rawAmount,
+        required int decimals,
+      }) async {
+        final record = await walletProvider.sendSplTokenPaymentRaw(
+          mintAddress: mintAddress,
+          toAddress: destinationOwner,
+          rawAmount: rawAmount,
+          decimals: decimals,
+        );
+        return record.signature;
+      },
+    );
+
+    if (!mounted) return;
+
+    if (outcome.isConfirmed) {
+      // The balance really changed, so refresh the wallet before leaving.
+      unawaited(walletProvider.refreshData());
+      setState(() {
+        _pendingKub8Submission = null;
+        _pendingKub8Signature = null;
+        _submitIdempotencyKey = null;
+      });
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.promotionBuilderSubmitSuccess)),
+      );
+      navigator.pop();
+      return;
+    }
+
+    if (outcome.needsVerificationRetry) {
+      // The transfer is on chain. Retrying must verify the existing signature, never sign again.
+      unawaited(walletProvider.refreshData());
+      setState(() {
+        _pendingKub8Submission = submission;
+        _pendingKub8Signature = outcome.signature;
+        _error = outcome.message ?? l10n.promotionBuilderPaymentConfirming;
+      });
+      return;
+    }
+
+    setState(() {
+      _error = outcome.message ?? l10n.promotionBuilderSubmitError;
+    });
+  }
+
+  /// Retry verification of a transfer that is already on chain.
+  Future<void> _retryKub8Verification() async {
+    final provider = context.read<PromotionProvider>();
+    final requestId =
+        provider.pendingKub8RequestId ?? _pendingKub8Submission?.request.id;
+    final signature = provider.pendingKub8Signature ?? _pendingKub8Signature;
+    if (requestId == null || signature == null) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final outcome = await provider.verifyPendingKub8Payment(
+        requestId: requestId,
+        signature: signature,
+        walletAddress: walletProvider.currentWalletAddress,
+      );
+      if (!mounted) return;
+      if (outcome.isConfirmed) {
+        unawaited(walletProvider.refreshData());
+        setState(() {
+          _pendingKub8Submission = null;
+          _pendingKub8Signature = null;
+          _submitIdempotencyKey = null;
+        });
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.promotionBuilderSubmitSuccess)),
+        );
+        navigator.pop();
+        return;
+      }
+      setState(() {
+        _error = outcome.message ?? l10n.promotionBuilderPaymentConfirming;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  String _describeSubmitError(Object error) {
+    final l10n = AppLocalizations.of(context)!;
+    final text = error.toString();
+    if (text.contains('QUOTE_EXPIRED')) {
+      return l10n.promotionBuilderQuoteExpired;
+    }
+    if (text.contains('SLOT_UNAVAILABLE')) {
+      return l10n.promotionBuilderSelectedSlotUnavailable;
+    }
+    if (text.contains('WALLET_SESSION_MISMATCH')) {
+      return l10n.promotionBuilderWalletSessionMismatch;
+    }
+    return text;
   }
 
   Future<void> _retryPendingCheckout() async {
@@ -315,20 +492,48 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
         final availability = promotionProvider.currentSlotAvailability;
         final alternatives = promotionProvider.currentAlternatives;
 
-        final kub8Balance = walletProvider.tokens
-            .where((t) => t.symbol.toUpperCase() == 'KUB8')
-            .fold<double>(0.0, (sum, token) => sum + token.balance);
+        // KUB8 is identified by the canonical mint the backend issued in the quote, never by a
+        // token symbol. A token that calls itself "KUB8" but has a different mint is ignored.
+        final kub8Mint = quote?.kub8?.mintAddress ??
+            promotionProvider.config.kub8MintAddress ??
+            ApiKeys.kub8MintAddress;
+        final kub8Decimals = quote?.kub8?.decimals ??
+            promotionProvider.config.kub8Decimals ??
+            ApiKeys.kub8Decimals;
+        final kub8Token = walletProvider.getTokenByMint(kub8Mint);
+        final kub8Balance = kub8Token?.balance ?? 0.0;
+        final kub8BalanceRaw =
+            walletProvider.kub8RawBalanceForMint(kub8Mint, kub8Decimals);
+        final kub8RequiredRaw = quote?.kub8?.amountRaw;
+
+        final isKub8 = _paymentMethod.isKub8;
+        final kub8Supported = quote?.supportsKub8 ?? false;
+        // Balance gating is UX only: the backend still verifies the real on-chain transfer.
+        final hasEnoughKub8 =
+            kub8RequiredRaw == null ? false : kub8BalanceRaw >= kub8RequiredRaw;
+        final canSignKub8 = walletProvider.canTransact;
 
         final hasPendingFiatCheckout =
             _paymentMethod == PromotionPaymentMethod.fiatCard &&
                 _pendingFiatSubmission != null;
+        final hasPendingKub8Verification = isKub8 &&
+            (promotionProvider.pendingKub8Signature != null ||
+                _pendingKub8Submission != null);
+
+        final quoteUsable = quote != null &&
+            !quote.isExpired &&
+            !_loadingQuote &&
+            !promotionProvider.quoteLoading;
 
         final canSubmit = hasPendingFiatCheckout ||
+            hasPendingKub8Verification ||
             (_selectedRateCard != null &&
-                quote != null &&
-                !_loadingQuote &&
+                quoteUsable &&
                 !_submitting &&
-                (quote.slotAvailable || !_selectedRateCard!.isSlotBased));
+                (quote.slotAvailable || !_selectedRateCard!.isSlotBased) &&
+                quote.allows(_paymentMethod) &&
+                // Fiat submission is never blocked by a KUB8 balance.
+                (!isKub8 || (kub8Supported && canSignKub8 && hasEnoughKub8)));
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
@@ -383,7 +588,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                     rateCard: rateCard,
                     isSelected: _selectedRateCard?.id == rateCard.id,
                     onTap: () {
-                      setState(() {
+                      _onSelectionChanged(() {
                         _selectedRateCard = rateCard;
                         if (rateCard.isSlotBased) {
                           _selectedSlot ??= 1;
@@ -391,7 +596,6 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                           _selectedSlot = null;
                         }
                       });
-                      _updateQuote();
                     },
                   ),
                 );
@@ -407,8 +611,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   discountPercent:
                       _selectedRateCard!.getDiscountPercent(_durationDays),
                   onChanged: (days) {
-                    setState(() => _durationDays = days);
-                    _updateQuote();
+                    _onSelectionChanged(() => _durationDays = days);
                   },
                 ),
                 const SizedBox(height: 24),
@@ -423,8 +626,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   selectedSlot: _selectedSlot,
                   alternatives: alternatives,
                   onSlotSelected: (slot) {
-                    setState(() => _selectedSlot = slot);
                     final promotionProvider = context.read<PromotionProvider>();
+                    _onSelectionChanged(() => _selectedSlot = slot);
                     _updateQuote().then((_) {
                       if (!mounted) return;
                       // If slot is unavailable, load alternatives
@@ -441,10 +644,9 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                     });
                   },
                   onAlternativeSelected: (alt) {
-                    setState(() {
+                    _onSelectionChanged(() {
                       _startDate = DateTime.parse(alt.startDate);
                     });
-                    _updateQuote();
                   },
                 ),
                 const SizedBox(height: 24),
@@ -454,10 +656,11 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
               if (_selectedRateCard != null) ...[
                 _StartDatePicker(
                   startDate: _startDate,
-                  maxDaysAhead: 90, // Match backend MAX_BOOKING_DAYS_AHEAD
+                  // The booking horizon is served by the backend and applies to the START date,
+                  // so a selectable date can never be rejected later for being too far out.
+                  maxDaysAhead: promotionProvider.config.maxBookingDaysAhead,
                   onChanged: (date) {
-                    setState(() => _startDate = date);
-                    _updateQuote();
+                    _onSelectionChanged(() => _startDate = date);
                   },
                 ),
                 const SizedBox(height: 24),
@@ -513,6 +716,21 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                 const SizedBox(height: KubusSpacing.md),
               ],
 
+              // KUB8 payment readiness. The exact required and available amounts are shown so
+              // an insufficient balance is obvious before the user tries to pay.
+              if (isKub8 && quote != null) ...[
+                _Kub8PaymentStatus(
+                  supported: kub8Supported,
+                  canSign: canSignKub8,
+                  hasEnough: hasEnoughKub8,
+                  requiredAmount: quote.kub8?.amount ?? '0',
+                  availableAmount: kub8Balance,
+                  pendingVerification: hasPendingKub8Verification,
+                  stage: promotionProvider.kub8Stage,
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ],
+
               // Submit button
               LiquidGlassCard(
                 padding: const EdgeInsets.all(KubusSpacing.sm),
@@ -521,9 +739,11 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   child: ElevatedButton.icon(
                     key: const Key('promotionBuilderSubmitButton'),
                     onPressed: canSubmit
-                        ? (hasPendingFiatCheckout
-                            ? _retryPendingCheckout
-                            : _submit)
+                        ? (hasPendingKub8Verification
+                            ? _retryKub8Verification
+                            : (hasPendingFiatCheckout
+                                ? _retryPendingCheckout
+                                : _submit))
                         : null,
                     icon: _submitting
                         ? const SizedBox(
@@ -531,15 +751,19 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                             height: 18,
                             child: InlineLoading(tileSize: 4),
                           )
-                        : Icon(hasPendingFiatCheckout
-                            ? Icons.open_in_new
-                            : Icons.campaign_outlined),
+                        : Icon(hasPendingKub8Verification
+                            ? Icons.refresh
+                            : (hasPendingFiatCheckout
+                                ? Icons.open_in_new
+                                : Icons.campaign_outlined)),
                     label: Text(
                       _submitting
                           ? l10n.promotionBuilderSubmitting
-                          : (hasPendingFiatCheckout
-                              ? l10n.promotionBuilderContinuePayment
-                              : l10n.promotionBuilderSubmitButton),
+                          : (hasPendingKub8Verification
+                              ? l10n.promotionBuilderVerifyPayment
+                              : (hasPendingFiatCheckout
+                                  ? l10n.promotionBuilderContinuePayment
+                                  : l10n.promotionBuilderSubmitButton)),
                     ),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -770,6 +994,85 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
 
   String _formatDate(BuildContext context, DateTime date) {
     return MaterialLocalizations.of(context).formatMediumDate(date);
+  }
+}
+
+/// Shows whether this wallet can actually pay the quoted KUB8 amount, and how far off it is.
+///
+/// This is a UX affordance only. The backend verifies the real on-chain transfer before a
+/// promotion is treated as paid, so nothing here is trusted as a financial fact.
+class _Kub8PaymentStatus extends StatelessWidget {
+  const _Kub8PaymentStatus({
+    required this.supported,
+    required this.canSign,
+    required this.hasEnough,
+    required this.requiredAmount,
+    required this.availableAmount,
+    required this.pendingVerification,
+    required this.stage,
+  });
+
+  final bool supported;
+  final bool canSign;
+  final bool hasEnough;
+  final String requiredAmount;
+  final double availableAmount;
+  final bool pendingVerification;
+  final Kub8PaymentStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    String message;
+    IconData icon;
+    Color tint;
+
+    if (!supported) {
+      message = l10n.promotionBuilderKub8Unavailable;
+      icon = Icons.block_outlined;
+      tint = colors.error;
+    } else if (!canSign) {
+      message = l10n.promotionBuilderConnectWalletForKub8;
+      icon = Icons.account_balance_wallet_outlined;
+      tint = roles.warningAction;
+    } else if (pendingVerification || stage == Kub8PaymentStage.submitted) {
+      message = l10n.promotionBuilderPaymentConfirming;
+      icon = Icons.hourglass_bottom;
+      tint = roles.warningAction;
+    } else if (!hasEnough) {
+      message = '${l10n.promotionBuilderKub8Required}: $requiredAmount KUB8 · '
+          '${l10n.promotionBuilderKub8Available}: '
+          '${availableAmount.toStringAsFixed(2)} KUB8';
+      icon = Icons.warning_amber;
+      tint = colors.error;
+    } else {
+      message = '${l10n.promotionBuilderKub8Required}: $requiredAmount KUB8 · '
+          '${l10n.promotionBuilderKub8Available}: '
+          '${availableAmount.toStringAsFixed(2)} KUB8';
+      icon = Icons.check_circle_outline;
+      tint = roles.positiveAction;
+    }
+
+    return FrostedContainer(
+      key: const Key('promotionBuilderKub8Status'),
+      backgroundColor: tint.withValues(alpha: 0.16),
+      child: Row(
+        children: [
+          Icon(icon, color: tint, size: 20),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(color: tint),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
