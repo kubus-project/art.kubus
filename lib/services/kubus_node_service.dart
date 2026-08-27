@@ -655,15 +655,37 @@ class KubusNodeService {
     return probe.whenComplete(() => _probesInFlight.remove(origin));
   }
 
-  /// Asks [endpoint] who it is, and records the answer when it matches.
+  /// Requires [endpoint] to *prove* it is the paired Node, and records it.
   ///
-  /// The request is unauthenticated and carries no body. That is the whole
-  /// point: this is the only thing this app is willing to send to an address
-  /// it has not yet proved, so it must disclose nothing. Attaching the bearer
-  /// credential here would hand the Node credential to whoever answered —
-  /// precisely the disclosure the check exists to prevent — and inspecting the
-  /// response of a request that already carried the credential would be too
-  /// late to matter.
+  /// The request is unauthenticated. That is the whole point: this is the only
+  /// thing this app is willing to send to an address it has not yet proved, so
+  /// it must disclose nothing. Attaching the bearer credential here would hand
+  /// the Node credential to whoever answered — precisely the disclosure this
+  /// check exists to prevent — and inspecting the response of a request that
+  /// already carried the credential would be too late to matter.
+  ///
+  /// ## Why a signature, and not a matching node id or fingerprint
+  ///
+  /// Reading identity fields back from the endpoint and comparing them proves
+  /// nothing. The node id, fingerprint and public key are all printed in the
+  /// pairing QR code, so anyone who has seen it — or seen any earlier answer
+  /// from any endpoint — can repeat all three. Comparing them catches a DHCP
+  /// lease that moved; it does not catch anybody who is trying.
+  ///
+  /// The only thing that distinguishes the real Node is possession of the
+  /// private key whose public half this device recorded at pairing. So this
+  /// picks a fresh random challenge and requires a signature over it, verified
+  /// against the recorded key — the same proof, built by the same canonical
+  /// builder, that the data channel demands after it opens.
+  ///
+  /// A live relay that forwards the challenge to the real Node and returns its
+  /// answer is not defeated by this, and cannot be without binding the proof to
+  /// the channel. On an HTTPS rung TLS already authenticates the host; on a
+  /// cleartext LAN rung the attacker must already be on the network.
+  ///
+  /// The node id and fingerprint are still compared, after the signature: the
+  /// signature settles *who* answered, and those settle that it is the same
+  /// record this device is holding.
   Future<void> _probeEndpointIdentity(
     Uri endpoint, {
     required String expectedNodeId,
@@ -671,13 +693,30 @@ class KubusNodeService {
     String? expectedPublicKey,
   }) async {
     final origin = _originOf(endpoint);
+    // Without the Node's public key there is nothing to verify a signature
+    // against, and this refuses rather than falling back to comparing values
+    // anyone could repeat. A pairing recorded before the Node published its
+    // key has to be made again: "we cannot check" must never read as "it
+    // checked out".
+    final pairedKey = _decodePublicKey(expectedPublicKey ?? '');
+    if (pairedKey == null) throw KubusNodeIdentityException(origin);
+
+    final challenge = NodeIdentityChallenge.generate(
+      sessionId: kHttpIdentitySessionId,
+    );
     // A route that will not answer at all is a transport failure, not an
     // identity failure, and is allowed to propagate as one so the ladder can
     // fail over normally.
-    final response = await _client.get(
-      _resolve(endpoint, '/local/v1/info'),
-      headers: const {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 10));
+    final response = await _client
+        .post(
+          _resolve(endpoint, '/local/v1/identity/proof'),
+          headers: const {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(challenge.toRequestMetadata()),
+        )
+        .timeout(const Duration(seconds: 10));
     Object? body;
     try {
       body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
@@ -692,6 +731,17 @@ class KubusNodeService {
     final info = body['success'] == true && body['data'] is Map<String, dynamic>
         ? body['data'] as Map<String, dynamic>
         : body;
+    try {
+      await verifyNodeIdentityProof(
+        challenge: challenge,
+        response: info,
+        pairedPublicKey: pairedKey,
+      );
+    } on NodeIdentityException {
+      // Deliberately collapsed: the ladder only needs to know this rung is not
+      // the paired Node. Why it failed is a diagnostic, not a routing input.
+      throw KubusNodeIdentityException(origin);
+    }
     if (!_identityMatches(
       info,
       expectedNodeId: expectedNodeId,

@@ -33,6 +33,20 @@ import 'package:cryptography/cryptography.dart';
 /// a signature produced under different rules must never verify under these.
 const String kIdentityProofProtocolVersion = 'kubus-node/1';
 
+/// The session id bound into every identity proof taken over HTTP.
+///
+/// A data-channel proof binds the real signalling session. HTTP has none, so
+/// this constant stands in its place and does the job that still matters: it
+/// keeps the two transports' proofs disjoint, so a proof minted for a data
+/// channel can never be presented as an HTTP proof or the reverse. Freshness
+/// is not its job -- the 32-byte nonce carries that.
+///
+/// Both ends hardcode it. Neither reads it from the other, because a peer that
+/// could choose what gets signed could ask for a proof bound to a session it
+/// does not own. The Node's copy is `HTTP_IDENTITY_SESSION_ID` in
+/// `src/localApi/dispatch.ts`; the two must stay byte-identical.
+const String kHttpIdentitySessionId = 'local-http/v1';
+
 const String _domainSeparator = 'kubus-node-identity-proof/v1';
 const int _nonceLength = 32;
 const int _publicKeyLength = 32;
