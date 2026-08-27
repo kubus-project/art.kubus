@@ -14345,6 +14345,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get promotionBuilderQuoteExpired =>
+      'This quote expired. We refreshed the price for you.';
+
+  @override
+  String get promotionBuilderPaymentConfirming =>
+      'Payment sent. Waiting for the network to confirm it.';
+
+  @override
+  String get promotionBuilderVerifyPayment => 'Check payment';
+
+  @override
+  String get promotionBuilderWalletSessionMismatch =>
+      'Your connected wallet changed. Reconnect it and try again.';
+
+  @override
+  String get promotionBuilderConnectWalletForKub8 =>
+      'Connect a wallet that can sign to pay with KUB8.';
+
+  @override
+  String get promotionBuilderKub8Unavailable =>
+      'KUB8 payments are unavailable right now.';
+
+  @override
+  String get promotionBuilderKub8Required => 'Required';
+
+  @override
+  String get promotionBuilderKub8Available => 'Available';
+
+  @override
   String get promotionActionPromote => 'Promote';
 
   @override
