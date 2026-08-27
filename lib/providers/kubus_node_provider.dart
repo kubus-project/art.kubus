@@ -60,7 +60,7 @@ class KubusNodeProvider extends ChangeNotifier {
       return;
     }
     await refresh();
-    unawaited(_restoreRemoteRoute());
+    unawaited(_restoreRemoteRouteThenRefresh());
   }
 
   Future<void> pair(KubusNodePairingPayload payload) async {
@@ -70,7 +70,7 @@ class KubusNodeProvider extends ChangeNotifier {
     try {
       await service.pair(payload);
       await refresh();
-      unawaited(_restoreRemoteRoute());
+      unawaited(_restoreRemoteRouteThenRefresh());
     } catch (error) {
       _state = KubusNodeConnectionState.error;
       _error = error.toString();
@@ -219,23 +219,53 @@ class KubusNodeProvider extends ChangeNotifier {
   /// Failure is intentionally silent here: this is opportunistic remote
   /// coordination. The following refresh still tests the direct route, so a
   /// signaling or TURN outage never makes a nearby Node look unpaired.
-  Future<void> _restoreRemoteRoute() async {
+  /// Brings up the signalling-backed rung, reporting whether one was installed.
+  Future<bool> _restoreRemoteRoute() async {
     if (!service.supportsRemoteIdentityVerification ||
         (service.nodeId ?? '').isEmpty) {
-      return;
+      return false;
     }
     final backend = BackendApiService();
-    if ((backend.getAuthToken() ?? '').trim().isEmpty) return;
+    if ((backend.getAuthToken() ?? '').trim().isEmpty) return false;
     try {
       await service.connectRemote(
         signalingBaseUrl: backend.baseUrl,
         authToken: () async => backend.getAuthToken(),
         iceConfiguration: _turnCredentialService.loadIceConfiguration,
       );
+      return true;
     } on Object {
       // The resolver retains any working direct rungs. Connection state is set
       // by refresh from an actual Node response, not from this coordination
       // attempt alone.
+      return false;
     }
+  }
+
+  /// Installs the remote rung, then re-reads state if that changed what is
+  /// reachable.
+  ///
+  /// A cold start away from the Node's LAN runs [refresh] while the only rung
+  /// is the LAN one. It fails, and the provider settles on `unavailable`. The
+  /// remote rung then comes up and works — but nothing has asked the Node
+  /// anything since, so every screen keeps showing an unreachable Node until
+  /// some unrelated action happens to refresh. Re-reading here is what turns a
+  /// working transport into state a user can see.
+  ///
+  /// Skipped when the provider is already paired: the LAN rung answered, so a
+  /// second round trip would tell us what we know.
+  Future<void> _restoreRemoteRouteThenRefresh() async =>
+      refreshAfterRouteRestored(await _restoreRemoteRoute());
+
+  /// The half of the above that decides whether to re-read.
+  ///
+  /// Split out so the cold-start-off-LAN case can be tested without standing up
+  /// signalling, TURN and a backend session: what regressed before was this
+  /// decision, not the connection.
+  @visibleForTesting
+  Future<void> refreshAfterRouteRestored(bool installedRoute) async {
+    if (!installedRoute) return;
+    if (_state == KubusNodeConnectionState.paired) return;
+    await refresh();
   }
 }

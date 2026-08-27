@@ -145,6 +145,17 @@ class KubusNodeService {
   /// unpair every existing user until they scanned a new code.
   static const _nodeIdKey = 'kubus_node_id_v2';
   static const _remoteEndpointKey = 'kubus_node_remote_endpoint_v1';
+
+  /// A key this build no longer writes, still deleted on unpair.
+  ///
+  /// Earlier builds persisted the Node's full advertised address list here.
+  /// This one keeps a LAN address and an HTTPS address in their own keys and
+  /// never touches this one — which is exactly why it has to be named: a key
+  /// nothing reads is also a key nothing cleans up, and the list holds the
+  /// user's LAN addresses and internal hostnames. Unpairing is an explicit
+  /// instruction to forget the Node, so it must not leave that behind on a
+  /// device that has upgraded.
+  static const _legacyEndpointsKey = 'kubus_node_endpoints_v2';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
@@ -937,6 +948,7 @@ class KubusNodeService {
       _store.delete(_publicKeyKey),
       _store.delete(_nodeIdKey),
       _store.delete(_remoteEndpointKey),
+      _store.delete(_legacyEndpointsKey),
     ]);
   }
 

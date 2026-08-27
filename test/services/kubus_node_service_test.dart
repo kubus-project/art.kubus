@@ -390,6 +390,39 @@ void main() {
     expect(requests.every((request) => request.url.scheme == 'https'), isTrue);
   });
 
+  test('unpair forgets the address list an earlier build persisted', () async {
+    // A key this build never writes is also a key it never cleans up unless it
+    // is named. The list holds the user's LAN addresses and internal
+    // hostnames, and unpairing is an explicit instruction to forget the Node.
+    final store = _MemoryCredentialStore();
+    await store.write('kubus_node_endpoints_v2', '["http://192.168.1.8:8787"]');
+    final service = KubusNodeService(
+      credentialStore: store,
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    expect(store.values.containsKey('kubus_node_endpoints_v2'), isTrue,
+        reason: 'precondition: the stale key survived the upgrade');
+
+    await service.unpair();
+
+    expect(store.values.containsKey('kubus_node_endpoints_v2'), isFalse);
+    expect(store.values, isEmpty,
+        reason: 'unpair must not leave anything about the Node behind');
+  });
+
   test('rejects an endpoint that echoes the whole pairing QR but cannot sign',
       () async {
     // The attack this exists to stop. Every value in the pairing QR is public
