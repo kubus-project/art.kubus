@@ -171,12 +171,12 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
   // Load all settings
   Future<void> _loadAllSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
     final settings = await SettingsService.loadSettings(
       fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
           ? walletProvider.currentSolanaNetwork
           : null,
     );
-    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
     final hasPin = isSignedIn ? await walletProvider.hasPin() : false;
     final biometricsSupported =
         isSignedIn ? await walletProvider.canUseBiometrics() : false;
