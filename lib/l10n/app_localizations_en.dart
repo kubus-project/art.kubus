@@ -23,7 +23,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exploreOnlyModeBanner =>
-      'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.';
+      'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for digital editions and governance.';
 
   @override
   String get exploreOnlyDiscoverTitle => 'Discover art';
@@ -54,21 +54,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exploreOnlyArtifactsDescription =>
-      'Discover archive records and digital editions connected to artworks.';
+      'Discover digital editions connected to artworks.';
 
   @override
   String get walletPromptTitle => 'Connect wallet';
 
   @override
   String get walletPromptBody =>
-      'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.';
+      'A wallet supports attribution, digital editions and governance. Discovery and community remain open without it.';
 
   @override
   String get walletPromptIntro => 'Connect a wallet for:';
 
   @override
-  String get walletPromptFeatureArchiveObjects =>
-      'Archive records and digital editions';
+  String get walletPromptFeatureArchiveObjects => 'Digital editions';
 
   @override
   String get walletPromptFeatureCreateArtworks =>
@@ -85,7 +84,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptSetUpAction => 'Set up wallet';
 
   @override
-  String get walletHomeArchiveObjectFallbackTitle => 'Archive record';
+  String get walletHomeArchiveObjectFallbackTitle => 'Digital edition';
 
   @override
   String get walletHomeCollectibleFallbackTitle => 'Digital edition';
@@ -133,10 +132,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to publish artwork. Please try again.';
 
   @override
-  String get archiveObjectCreatedToast => 'Archive record created.';
+  String get archiveObjectCreatedToast => 'Digital edition created.';
 
   @override
-  String get archiveObjectCreateFailed => 'Failed to create archive record.';
+  String get archiveObjectCreateFailed => 'Failed to create digital edition.';
 
   @override
   String get archiveObjectCreationPleaseWait => 'This may take a few moments.';
@@ -144,22 +143,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String archiveObjectSeriesDefaultDescription(
       Object artworkTitle, Object artistName) {
-    return 'Archive records for $artworkTitle by $artistName';
+    return 'Digital editions of $artworkTitle by $artistName';
   }
 
   @override
   String get archiveObjectSeriesCreateFailed =>
-      'Failed to create archive record series';
+      'Failed to create digital edition series';
 
   @override
-  String get archiveObjectSeriesNotFound => 'Archive record series not found';
+  String get archiveObjectSeriesNotFound => 'Digital edition series not found';
 
   @override
   String get archiveObjectSeriesSoldOut => 'Series is sold out';
 
   @override
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
-    return 'Created archive record for \"$artworkTitle\" (edition #$tokenId)';
+    return 'Created digital edition of \"$artworkTitle\" (edition #$tokenId)';
   }
 
   @override
@@ -168,12 +167,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String archiveObjectCreateFailedWithError(Object error) {
-    return 'Failed to create archive record: $error';
+    return 'Failed to create digital edition: $error';
   }
 
   @override
   String archiveObjectCreateError(Object error) {
-    return 'Error creating archive record: $error';
+    return 'Error creating digital edition: $error';
   }
 
   @override
@@ -214,7 +213,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recentActivityRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get recentActivityArchiveObjectUpdateTitle => 'Archive record update';
+  String get recentActivityArchiveObjectUpdateTitle => 'Digital edition update';
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
@@ -228,7 +227,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String recentActivityArchiveObjectStatusDescription(
       Object status, Object title) {
-    return 'Archive record $status for $title';
+    return 'Digital edition $status for $title';
   }
 
   @override
@@ -244,19 +243,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get pushArchiveObjectCreatingTitle => 'Creating archive record...';
+  String get pushArchiveObjectCreatingTitle => 'Creating digital edition...';
 
   @override
   String pushArchiveObjectCreatingBody(Object artworkTitle) {
-    return 'Creating archive record for \"$artworkTitle\"';
+    return 'Creating a digital edition of \"$artworkTitle\"';
   }
 
   @override
-  String get pushArchiveObjectCreatedTitle => 'Archive record created';
+  String get pushArchiveObjectCreatedTitle => 'Digital edition created';
 
   @override
   String pushArchiveObjectCreatedBody(Object artworkTitle) {
-    return '\"$artworkTitle\" now has an archive record';
+    return 'A digital edition of \"$artworkTitle\" is ready';
   }
 
   @override
@@ -264,15 +263,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
-    return 'Could not create an archive record for \"$artworkTitle\". Please try again.';
+    return 'Could not create a digital edition of \"$artworkTitle\". Please try again.';
   }
 
   @override
-  String get pushArchiveObjectCreationChannelName => 'Archive record creation';
+  String get pushArchiveObjectCreationChannelName => 'Digital edition creation';
 
   @override
   String get pushArchiveObjectCreationChannelDescription =>
-      'Notifications for archive record creation';
+      'Notifications for digital edition creation';
 
   @override
   String get pushRecognitionChannelName => 'Recognition';
@@ -283,11 +282,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get analyticsMetricArchiveObjectsCreatedLabel =>
-      'Archive records created';
+      'Digital editions created';
 
   @override
   String get analyticsMetricArchiveObjectsCreatedDescription =>
-      'Archive records connected to artworks.';
+      'Digital editions connected to artworks.';
 
   @override
   String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
@@ -1043,7 +1042,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSignInSubtitle =>
-      'Start with art discovery, artists, institutions, and community. Add Wallet when you need archive records, editions, or governance.';
+      'Start with art discovery, artists, institutions and community. Add a wallet later for digital editions or governance.';
 
   @override
   String get authRegisterTitle => 'Create your account';
@@ -1596,7 +1595,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingFlowWalletBackupIntroBody =>
-      'Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.';
+      'A wallet supports attribution, digital editions and future participation. Public discovery and community access remain available without one.';
 
   @override
   String get onboardingFlowWalletBackupIntroWeb3Warning =>
@@ -1653,7 +1652,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingFlowWalletBackupBody =>
-      'This phrase restores wallet access for digital ownership, archive records and future participation on a new device.';
+      'This phrase restores wallet access for digital editions and future participation on a new device.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning =>
@@ -1919,7 +1918,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingWelcomeDescription =>
-      'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.';
+      'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.';
 
   @override
   String get alphaNoticeTitle => 'You are entering the art.kubus alpha';
@@ -1967,7 +1966,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingCollectiblesTitle =>
-      'Archive records and digital editions';
+      'Digital editions and attendance records';
 
   @override
   String get onboardingCollectiblesSubtitle =>
@@ -1975,7 +1974,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingCollectiblesDescription =>
-      'When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.';
+      'Attendance records can document a visit. Artists can create digital editions connected to an artwork. Discovery and community remain open without a wallet.';
 
   @override
   String get onboardingGrantPermissions => 'Grant permissions';
@@ -2359,14 +2358,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationDescription =>
-      'Connect Wallet for attribution, archive records, digital editions, or future participation tools. Basic discovery and community do not require it.';
+      'Connect a wallet for attribution, digital editions or future participation tools. Basic discovery and community do not require it.';
 
   @override
   String get desktopSettingsFeatureNftMintingTitle => 'Digital editions';
 
   @override
   String get desktopSettingsFeatureNftMintingDescription =>
-      'Create and manage digital records connected to artworks, visits or contributions.';
+      'Create and manage digital editions connected to artworks.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Community';
@@ -3537,11 +3536,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Let others see what you last visited';
 
   @override
-  String get settingsShowCollectionTitle => 'Show cultural artifacts';
+  String get settingsShowCollectionTitle => 'Show digital editions';
 
   @override
   String get settingsShowCollectionSubtitle =>
-      'Show your digital cultural artifacts publicly on your profile';
+      'Show your digital editions publicly on your profile';
 
   @override
   String get settingsAllowMessagesTitle => 'Allow messages';
@@ -3684,7 +3683,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get web3ArtistStudioP2Description =>
-      'Present artworks and digital cultural artifacts. Upload, organize, and describe your practice.';
+      'Present artworks and digital editions. Upload, organise and describe your practice.';
 
   @override
   String get web3ArtistStudioP2Feature1 => 'Upload and organize artworks';
@@ -4004,14 +4003,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your last submission was rejected. You can resubmit with updates.';
 
   @override
-  String get web3MarketplaceP1Title => 'Digital cultural artifacts';
+  String get web3MarketplaceP1Title => 'Digital editions';
 
   @override
   String get web3MarketplaceP1Description =>
-      'Archive records and digital editions connect artworks with provenance, visits and cultural memory.';
+      'Digital editions connect artworks with provenance.';
 
   @override
-  String get web3MarketplaceP1Feature1 => 'Browse cultural artifacts';
+  String get web3MarketplaceP1Feature1 => 'Browse digital editions';
 
   @override
   String get web3MarketplaceP1Feature2 => 'See artist and artwork context';
@@ -4027,7 +4026,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get web3MarketplaceP2Description =>
-      'Explore artifacts through artists, institutions, exhibitions, and public-space stories instead of trading hype.';
+      'Explore digital editions through artists, institutions, exhibitions and public-space stories.';
 
   @override
   String get web3MarketplaceP2Feature1 => 'Filter by category and rarity';
@@ -4104,10 +4103,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get web3FeaturesP2Description =>
-      'Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.';
+      'Browse digital editions connected to artists, artworks, institutions and provenance.';
 
   @override
-  String get web3FeaturesP2Feature1 => 'Browse featured cultural artifacts';
+  String get web3FeaturesP2Feature1 => 'Browse featured digital editions';
 
   @override
   String get web3FeaturesP2Feature2 => 'Search by artist, artwork, or context';
@@ -4915,7 +4914,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopMapArtworkTypeArArt => 'AR art';
 
   @override
-  String get desktopMapArtworkTypeNfts => 'Archive records';
+  String get desktopMapArtworkTypeNfts => 'Digital editions';
 
   @override
   String get desktopMapArtworkTypeModels3d => '3D models';
@@ -5956,6 +5955,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorArtworkAddLabel => 'Add';
 
   @override
+  String get collectionCreatorConnectWalletToLoad =>
+      'Connect a wallet to load and curate your artwork library in this creator.';
+
+  @override
+  String get collectionCreatorLoadingLibrary => 'Loading library…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibrary => 'Load artwork library';
+
+  @override
+  String get collectionCreatorLibraryStillLoading =>
+      'Your artwork library is still loading. You can continue with the collection details and return here later.';
+
+  @override
+  String get collectionCreatorLoadBeforeSave =>
+      'Load your artwork library to select pieces for this collection.';
+
+  @override
+  String get collectionCreatorArtworkSelected => 'Selected';
+
+  @override
+  String get collectionCreatorArtworkAdd => 'Add';
+
+  @override
   String get collectionCreatorNoArtworksAvailable =>
       'No artworks available matching your search.';
 
@@ -6968,6 +6991,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digital editions will appear here when they are linked to this wallet.';
 
   @override
+  String get walletHomeNoCollectiblesTitle => 'No digital editions yet';
+
+  @override
   String walletHomeCollectibleByline(Object creator) {
     return 'by $creator';
   }
@@ -6985,7 +7011,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletHomeStakeDescription =>
-      'Prepare SOL for future transaction fees when publishing or artifact actions require it.';
+      'Prepare SOL for future transaction fees when publishing or digital edition actions require it.';
 
   @override
   String get walletHomeStakeAction => 'Set up support';
@@ -7627,7 +7653,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkDetailHideComments => 'Hide comments';
 
   @override
-  String get artworkDetailMintNft => 'Create archive record';
+  String get artworkDetailMintNft => 'Create digital edition';
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
@@ -8900,28 +8926,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get marketplaceNoMintedNftsDescription =>
-      'Listings appear once an artwork is issued as a digital cultural object.';
+      'Listings appear once an artwork has a digital edition.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'Active this week';
 
   @override
   String get marketplaceTrendingThisWeekSubtitle =>
-      'Artifacts with recent community attention.';
+      'Digital editions with recent community attention.';
 
   @override
-  String get marketplaceNoTrendingNftsTitle => 'No active artifacts yet';
+  String get marketplaceNoTrendingNftsTitle => 'No active digital editions yet';
 
   @override
   String get marketplaceNoTrendingNftsDescription =>
-      'Check back later as cultural artifact activity grows.';
+      'Check back later as digital edition activity grows.';
 
   @override
   String get marketplaceMyCollectionTitle => 'My digital editions';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
-    return '$count artifacts';
+    return '$count digital editions';
   }
 
   @override
@@ -8952,10 +8978,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceRarityLabel => 'Rarity';
 
   @override
-  String get marketplaceOwnedNftStatus => 'Owned artifact';
+  String get marketplaceOwnedNftStatus => 'Owned digital edition';
 
   @override
-  String get marketplaceOwnedNftListedStatus => 'Owned artifact - Listed';
+  String get marketplaceOwnedNftListedStatus => 'Owned digital edition, listed';
 
   @override
   String get marketplaceEmptyCollectionTitle => 'No digital editions yet';
@@ -8968,14 +8994,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceExploreArArtButton => 'Explore art map';
 
   @override
-  String get marketplaceListForSaleButton => 'List artifact';
+  String get marketplaceListForSaleButton => 'List digital edition';
 
   @override
   String get marketplaceListForSaleSuccessToast => 'Listed for sale.';
 
   @override
   String get marketplaceListForSaleFailedToast =>
-      'Unable to list artifact right now.';
+      'Unable to list this digital edition right now.';
 
   @override
   String get marketplaceRemoveFromSaleTitle => 'Remove from sale';
@@ -8986,7 +9012,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get marketplaceRemoveFromSaleSuccessToast =>
-      'Artifact removed from listing.';
+      'Digital edition removed from listing.';
 
   @override
   String get marketplaceMintConnectWalletTitle =>
@@ -8994,10 +9020,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get marketplaceMintConnectWalletDescription =>
-      'Connect a wallet only if you want to create digital cultural artifacts from artworks.';
+      'Connect a wallet only if you want to create digital editions from artworks.';
 
   @override
-  String get marketplaceMintSuccessTitle => 'Digital artifact created';
+  String get marketplaceMintSuccessTitle => 'Digital edition created';
 
   @override
   String get marketplaceMintSuccessDescription =>
@@ -9032,7 +9058,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceCardActionListed => 'Listed';
 
   @override
-  String get marketplaceCardActionMint => 'Mint';
+  String get marketplaceCardActionMint => 'Create edition';
 
   @override
   String get marketplaceCardActionView => 'View';
@@ -9045,20 +9071,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digital edition artwork - AR enabled';
 
   @override
-  String get marketplaceMintUnavailableLabel => 'Mint unavailable';
+  String get marketplaceMintUnavailableLabel => 'Edition creation unavailable';
 
   @override
   String get marketplaceSoldOutLabel => 'Sold out';
 
   @override
-  String get marketplaceMintNftButtonLabel => 'Create artifact';
+  String get marketplaceMintNftButtonLabel => 'Create digital edition';
 
   @override
   String get marketplaceArRequiredTitle => 'Location visit required';
 
   @override
   String get marketplaceArRequiredDescription =>
-      'This artifact requires interaction with the physical artwork location. Visit the artwork and use the AR scanner if the artist enabled it.';
+      'This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.';
 
   @override
   String get marketplaceGoToArButton => 'Go to AR';
@@ -9072,10 +9098,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get marketplaceMintPriceLabel => 'Mint price:';
+  String get marketplaceMintPriceLabel => 'Edition price:';
 
   @override
-  String get marketplaceConfirmMintButton => 'Confirm Mint';
+  String get marketplaceConfirmMintButton => 'Create digital edition';
 
   @override
   String marketplaceTokenNumberLabel(String tokenId) {
@@ -9119,7 +9145,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceValueLastSaleLabel => 'Last sale';
 
   @override
-  String get marketplaceValueMintPriceLabel => 'Mint price';
+  String get marketplaceValueMintPriceLabel => 'Edition price';
 
   @override
   String get marketplaceOwnedCollectionTitle => 'Owned collection';
@@ -9136,7 +9162,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceArOnlyFilterActiveLabel => 'AR only';
 
   @override
-  String get marketplaceArOnlyFilterInactiveLabel => 'All mints';
+  String get marketplaceArOnlyFilterInactiveLabel => 'All editions';
 
   @override
   String marketplaceListingDialogDescription(Object title) {
@@ -9177,7 +9203,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectibleRarityMythic => 'Mythic';
 
   @override
-  String get collectibleStatusMinted => 'Issued as archive record';
+  String get collectibleStatusMinted => 'Issued as digital edition';
 
   @override
   String get collectibleStatusListed => 'Listed';
@@ -11933,7 +11959,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavGovern => 'Govern';
 
   @override
-  String get desktopShellNavTrade => 'Artifacts';
+  String get desktopShellNavTrade => 'Digital editions';
 
   @override
   String get desktopShellNavWeb3 => 'Infrastructure';
@@ -12565,7 +12591,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementCategoryAr => 'AR';
 
   @override
-  String get userProfileAchievementCategoryNft => 'Archive records';
+  String get userProfileAchievementCategoryNft => 'Digital editions';
 
   @override
   String get userProfileAchievementCategoryCommunity => 'Community';
@@ -13622,7 +13648,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopProfilePerformanceCreatedTitle => 'Created';
 
   @override
-  String get desktopProfilePerformanceNftsOwnedTitle => 'Archive records held';
+  String get desktopProfilePerformanceNftsOwnedTitle => 'Digital editions held';
 
   @override
   String get desktopProfileAchievementsSubtitle =>
@@ -15176,4 +15202,214 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Secure';
+
+  @override
+  String get artworkCreatorOptionalExtensionsDescription =>
+      'Publish the artwork first, then add AR or spatial layers, attendance records, or digital editions when they support the work.';
+
+  @override
+  String get artworkCreatorCreateDigitalEdition => 'Create digital edition';
+
+  @override
+  String get artworkCreatorDigitalEditionUnavailable =>
+      'Digital edition creation is currently unavailable.';
+
+  @override
+  String get artworkCreatorCreateEditionSeries => 'Create edition series';
+
+  @override
+  String get artworkEditionSeriesDialogTitle => 'Create edition series';
+
+  @override
+  String get artworkEditionSeriesDialogDescription =>
+      'Create a digital edition series for this artwork.';
+
+  @override
+  String get artworkEditionSeriesNameLabel => 'Edition series name';
+
+  @override
+  String get artworkEditionSizeLabel => 'Edition size';
+
+  @override
+  String get artworkEditionPriceLabel => 'Edition price (SOL)';
+
+  @override
+  String get artworkEditionCreateAction => 'Create digital edition';
+
+  @override
+  String get artworkCreatorExtensionsTitle => 'Artwork extensions';
+
+  @override
+  String get artworkCreatorDigitalEditionWalletRequired =>
+      'Create an optional digital edition after publishing. A wallet is required for this feature.';
+
+  @override
+  String get artworkEditionSeriesDescriptionLabel => 'Series description';
+
+  @override
+  String get artworkEditionDefaultsToArtworkTitle =>
+      'Defaults to the artwork title';
+
+  @override
+  String get artworkEditionDefaultsToArtworkDescription =>
+      'Defaults to the artwork description';
+
+  @override
+  String get artworkEditionPriceKub8Label => 'Edition price (KUB8)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyLabel => 'Creator royalty (%)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyHelp => 'Applied to secondary sales';
+
+  @override
+  String get artworkEditionTypeLabel => 'Digital edition type';
+
+  @override
+  String get artworkEditionTypeStandard => 'Standard digital edition';
+
+  @override
+  String get artworkEditionTypeAttendanceRecord => 'Attendance record';
+
+  @override
+  String get artworkEditionTypeAchievement => 'Achievement record';
+
+  @override
+  String get artworkEditionTypeLimited => 'Limited digital edition';
+
+  @override
+  String get artworkCreatorAttendanceRecordsTitle => 'Attendance records';
+
+  @override
+  String get artworkCreatorAttendanceNoneTitle => 'No attendance record';
+
+  @override
+  String get artworkCreatorAttendanceNoneDescription =>
+      'Publish without an attendance record.';
+
+  @override
+  String get artworkCreatorAttendanceExistingTitle =>
+      'Use an existing attendance record';
+
+  @override
+  String get artworkCreatorAttendanceExistingDescription =>
+      'Add an event ID or record link from an existing attendance setup.';
+
+  @override
+  String get artworkCreatorAttendanceCreateTitle => 'Create with art.kubus';
+
+  @override
+  String get artworkCreatorAttendanceCreateDescription =>
+      'art.kubus creates an attendance record link after publication.';
+
+  @override
+  String get artworkCreatorAttendanceEventIdLabel => 'Attendance event ID';
+
+  @override
+  String get artworkCreatorAttendanceEventIdHint =>
+      'Paste an existing event ID.';
+
+  @override
+  String get artworkCreatorAttendanceRecordLinkHint =>
+      'A link visitors can open to save the attendance record.';
+
+  @override
+  String get artworkCreatorAttendanceRecognitionAmountLabel =>
+      'Recognition amount (KUB8)';
+
+  @override
+  String get artworkCreatorAttendanceClaimWindowLabel => 'Claim window (days)';
+
+  @override
+  String get artworkCreatorAttendanceBadgeTitleLabel =>
+      'Attendance record title';
+
+  @override
+  String get artworkCreatorAttendanceBadgeDescriptionLabel =>
+      'Attendance record description';
+
+  @override
+  String get artworkCreatorAttendanceBadgeImageLabel =>
+      'Attendance record image';
+
+  @override
+  String get artworkCreatorAttendanceUsesArtworkCover =>
+      'Uses the artwork cover by default.';
+
+  @override
+  String get artworkCreatorCustomImageLabel => 'Custom image';
+
+  @override
+  String get artworkCreatorAttendanceUseCoverInstead =>
+      'Use artwork cover instead';
+
+  @override
+  String get artworkCreatorAttendanceGeneratedAfterPublish =>
+      'The attendance record link is generated when you publish.';
+
+  @override
+  String get artworkCreatorEnableAr => 'Enable AR';
+
+  @override
+  String get artworkCreatorArAfterPublish =>
+      'Generate or upload a marker after publishing.';
+
+  @override
+  String get artworkCreatorArUnavailable =>
+      'AR is currently unavailable on this platform.';
+
+  @override
+  String get artworkCreatorManageAr => 'Create or manage AR';
+
+  @override
+  String get walletGalleryConnectTitle => 'Connect your wallet';
+
+  @override
+  String get walletGalleryConnectDescription =>
+      'Connect a wallet to view your digital editions.';
+
+  @override
+  String get walletGalleryConnectAction => 'Connect wallet';
+
+  @override
+  String get walletGalleryDigitalEditionFallbackTitle => 'Digital edition';
+
+  @override
+  String walletGalleryTokenId(Object tokenId) {
+    return 'Token #$tokenId';
+  }
+
+  @override
+  String walletGalleryTransaction(Object hash) {
+    return 'Transaction: $hash';
+  }
+
+  @override
+  String get walletGalleryTransactionUnavailable => 'Transaction unavailable';
+
+  @override
+  String get walletGalleryStatusMinted => 'Issued';
+
+  @override
+  String get walletGalleryStatusListed => 'Listed';
+
+  @override
+  String get walletGalleryStatusSold => 'Sold';
+
+  @override
+  String get walletGalleryStatusTransferred => 'Transferred';
+
+  @override
+  String get walletGalleryStatusBurned => 'Retired';
+
+  @override
+  String get artworkCreatorFeeEstimateTitle => 'Estimated network fees';
+
+  @override
+  String get artworkCreatorFeeEstimateUnavailable => 'Unavailable';
+
+  @override
+  String get artworkCreatorAttendanceImageTooSmall =>
+      'The attendance record image must be at least 256 px on its shortest side.';
 }

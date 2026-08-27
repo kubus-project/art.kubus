@@ -1,341 +1,66 @@
 # Features
 
-This document provides detailed documentation for the major features in art.kubus.
+art.kubus is a map-first art platform. Public artworks, their metadata and approved public media form the public cultural archive. A public artwork can be discovered on the map and may be replicated through the platform's publication and availability infrastructure. Draft and private material remain outside that public archive.
 
----
+## Discovery and public artworks
 
-## Table of Contents
+- MapLibre map with artwork, exhibition and place markers.
+- Search, filters, nearby discovery and marker detail views.
+- Artwork pages with media, contextual information, discussion and sharing.
+- Public, private and draft visibility controls. Public is a publication state, not an optional archive action.
+- Profiles, artists, institutions, events and exhibitions provide cultural context around artworks.
 
-1. [Interactive Map](#interactive-map)
-2. [Augmented Reality (AR)](#augmented-reality-ar)
-3. [Community & Social](#community--social)
-4. [Artist Studio](#artist-studio)
-5. [Institutions & Events](#institutions--events)
-6. [Web3 Integration](#web3-integration)
-7. [Achievements & Gamification](#achievements--gamification)
-8. [Offline & Local-First](#offline--local-first)
+## Artwork creation
 
----
+Artist Studio supports artwork drafts and publication. The creator flow separates:
 
-## Interactive Map
+1. Artwork metadata and media.
+2. Visibility and location.
+3. Optional AR or spatial layers.
+4. Optional attendance records.
+5. Optional digital edition series.
 
-The map is the primary discovery interface for finding art in the physical world.
+Creating or publishing an artwork creates its artwork record. A digital edition is optional and never determines whether an artwork belongs to the cultural archive.
 
-### Features
+## AR and spatial layers
 
-- **Artwork Markers** — View art installations on the map with category-colored pins
-- **Exhibition Markers** — Discover exhibitions and events at cultural venues
-- **User Presence** — See other online users in real-time
-- **AR Viewer** — Launch the AR viewer for a marker or artwork (mobile only)
-- **Direction Cone** — Visual compass showing your viewing direction
-- **Clustering** — Markers cluster at low zoom levels for clarity
-- **Search** — Find specific artworks, artists, or locations
+AR and spatial media are optional interpretive layers. The client can open supported AR experiences on mobile devices and exposes configuration only when the relevant feature flags and media are available. AR, ordinary 3D media and spatial captures are distinct from an artwork's archival record.
 
-### How It Works
+Spatial capture and Gaussian processing are coordinated with kubus Node when configured. Private captures and unpublished CID-addressed material are not public archive content. A reviewed, published spatial variant may be included in the public archive according to backend publication policy.
 
-1. Grant location permission when prompted
-2. The map centers on your current location
-3. Nearby markers load automatically
-4. Tap a marker to see details
-5. Tap "AR" to launch the AR viewer (mobile only)
+## Community and participation
 
-### Providers & Services
+- Public profiles, follows, posts, comments and direct messages.
+- Notifications and recent activity.
+- Artwork, event and exhibition context in community views.
+- Attendance records for visits or participation where enabled.
 
-- `MapProvider` — Map state and marker management
-- `MapMarkerService` — Marker fetching and caching
-- `PresenceProvider` — User presence updates
-- `LocationService` — GPS and compass data
+Attendance records are separate from artwork records and digital editions.
 
----
+## Institutions, events and exhibitions
 
-## Augmented Reality (AR)
+Institution and event tools support programme context, exhibitions, events, linked artworks and attendance configuration. Availability depends on feature flags, account permissions and backend support.
 
-Experience art in 3D through your device's camera.
+## Digital editions and wallet tools
 
-In the current implementation, the app launches the platform's external AR
-viewer rather than embedding a custom AR engine inside the Flutter UI.
+Wallet features are optional. They can support digital editions, attribution, operator identity and governance-related tools. A wallet is not needed to browse the map, discover public artworks or take part in ordinary community activity.
 
-### Features
+Digital editions are optional tokenized editions connected to artworks. The current implementation uses internal NFT and collectible identifiers in its services and data model, while user-facing screens call them digital editions. Marketplace availability, transfers, listing and settlement remain feature- and backend-dependent.
 
-- **3D Model Viewing** — Open artwork models in AR using the system viewer
-- **IPFS/HTTP resolution** — Models resolve via the same URL rules as other media
-- **Android Scene Viewer** — Uses ARCore Scene Viewer via an intent URL
-- **iOS Quick Look** — Uses AR Quick Look (local file handoff)
+## Public archive availability
 
-### Requirements
+The public cultural archive contains public artwork records and approved public media or spatial assets. Backend publication state determines canonical public content. kubus Nodes provide optional availability infrastructure through Kubo/IPFS and related replication policy.
 
-- **Android:** ARCore-supported device (Scene Viewer)
-- **iOS:** AR Quick Look capable device (USDZ support)
-- **Web/Desktop:** AR redirects to mobile app download
+Content addressing is not a claim that all platform data is decentralised. Private drafts, profiles, messages, wallet backups and other private account data are not replicated as public archive content.
 
-### How It Works
+## Recognition, contribution and KUB8
 
-1. Tap the AR button on a marker or artwork (mobile)
-2. The app resolves the model URL (including IPFS/relative paths)
-3. Android opens ARCore Scene Viewer; iOS hands off to Quick Look
-4. The system AR viewer renders the model in-camera
+The platform can show contribution, attendance and availability records. KUB8-related values and node rewards are contribution or pending system records unless a settlement feature explicitly states otherwise. They are not described as live payouts or a guaranteed financial return.
 
-### Providers & Services
+## Local-first behaviour
 
-- `ARService` — Launches the platform AR viewer with a resolved model URL
-- `ARManager` / `ARIntegrationService` — Orchestrates AR entry from app surfaces
+The client retains local caches for selected data and can use configured backend and public-data fallbacks. Local cache support does not guarantee offline availability of every artwork, digital edition or media asset.
 
----
+## Feature flags
 
-## Community & Social
-
-Connect with artists and art enthusiasts.
-
-### Features
-
-- **Feed** — Chronological posts from followed users
-- **Posts** — Share text, images, and artwork links
-- **Comments** — Discuss posts and artworks
-- **Groups** — Join interest-based communities
-- **Messaging** — Private conversations
-- **Notifications** — Real-time activity alerts
-- **Following** — Follow artists and collectors
-- **Blocking** — Block unwanted users
-
-### Post Types
-
-- Text posts with optional images
-- Artwork shares (link to art detail)
-- Exhibition announcements
-- Event promotions
-
-### Real-Time Features
-
-Posts, comments, and messages update in real-time via WebSocket connections when the feature is enabled.
-
-### Providers & Services
-
-- `CommunityHubProvider` — Feed and post management
-- `ChatProvider` — Messaging and conversations
-- `NotificationProvider` — Notification handling
-- `PresenceProvider` — Online status
-- `BlockListService` — User blocking (local)
-
----
-
-## Artist Studio
-
-Create and manage your art portfolio.
-
-### Features
-
-- **Portfolio View** — See all your artworks, collections, and exhibitions
-- **Artwork Creator** — Multi-step wizard for new artwork
-- **Collection Creator** — Curate artwork collections
-- **Exhibition Creator** — Plan and publish exhibitions
-- **Marker Management** — Create AR markers for your art
-- **Analytics** — Track views, likes, and engagement
-- **Draft Management** — Work on unpublished content
-
-### Artwork Creation Flow
-
-1. **Basic Info** — Title, description, category
-2. **Media Upload** — Cover image (required), 3D model (optional)
-3. **AR Settings** — Configure AR display options
-4. **Pricing** — Set pricing for marketplace (optional)
-5. **Visibility** — Draft, private, or public
-6. **Publish** — Make it live
-
-### Collections
-
-Group related artworks together:
-- Add/remove artworks
-- Set collection cover
-- Configure privacy
-- Enable collaboration
-
-### Exhibitions
-
-Create time-based art experiences:
-- Set date range
-- Link artworks
-- Configure location/venue
-- Issue POAP collectibles
-
-### Providers & Services
-
-- `ArtworkProvider` — Artwork CRUD operations
-- `CollectionProvider` — Collection management
-- `ExhibitionProvider` — Exhibition handling
-- `StatsProvider` — Analytics data
-
----
-
-## Institutions & Events
-
-Features for museums, galleries, and cultural venues.
-
-### Institution Features
-
-- **Dashboard** — Overview of institution activity
-- **Event Management** — Create and manage events
-- **Exhibition Hosting** — Host exhibitions at your venue
-- **Marker Placement** — Place AR markers at your location
-- **Analytics** — Venue-level engagement metrics
-- **Verification** — Verified institution badge
-
-### Event Creation
-
-1. Basic info (title, description)
-2. Date and time selection
-3. Location configuration
-4. Capacity and pricing
-5. Link to exhibition (optional)
-6. Publish
-
-### Application Process
-
-Non-verified institutions can apply for verification through the Institution Hub application form.
-
-### Providers & Services
-
-- `InstitutionProvider` — Institution data and events
-- `InstitutionStorage` — Local-first caching
-- `EventProvider` — Event management
-
----
-
-## Web3 Integration
-
-Optional blockchain features for digital ownership.
-
-### Wallet
-
-- **Create Wallet** — Generate a new Solana wallet
-- **Import Wallet** — Restore via mnemonic phrase
-- **WalletConnect** — Connect external wallet apps
-- **Send/Receive** — Transfer SOL and tokens
-- **Token Swap** — Exchange tokens in-app
-
-### Supported Tokens
-
-- **SOL** — Solana native token
-- **KUB8** — Platform points token
-- **NFTs** — Artwork collectibles
-
-### Marketplace
-
-- Browse artwork listings
-- Filter by category, price, AR-enabled
-- Purchase with connected wallet
-- List your own artworks for sale
-
-### DAO Governance
-
-- View active proposals
-- Vote on community decisions
-- Delegate voting power
-- Track treasury
-
-### Security
-
-- Mnemonic stored securely on device
-- Biometric/PIN protection for sensitive actions
-- Transaction confirmation dialogs
-
-### Providers & Services
-
-- `WalletProvider` — Wallet state and operations
-- `Web3Provider` — Web3 feature flags
-- `SolanaWalletService` — Blockchain interactions
-- `CollectiblesProvider` — NFT management
-
----
-
-## Achievements & Gamification
-
-Earn recognition for your activity.
-
-### KUB8 Points
-
-**Note:** In the current season, KUB8 is a points system for progression, not a financial instrument.
-
-Earn points by:
-- Completing profile
-- Viewing artworks
-- Posting in community
-- Attending events
-- Scanning AR markers
-- Collecting achievements
-
-### Achievement Categories
-
-- **Explorer** — Discovery and map activities
-- **Creator** — Artwork and content creation
-- **Collector** — NFT and artwork collection
-- **Social** — Community engagement
-- **Event** — Exhibition and event participation
-
-### Rewards
-
-- Achievement badges (displayed on profile)
-- POAP-style collectibles
-- Feature unlocks
-- Leaderboard recognition
-
-### Providers & Services
-
-- `TaskProvider` — Progress tracking
-- `AchievementService` — Reward distribution
-
----
-
-## Offline & Local-First
-
-The app remains functional without network connectivity.
-
-### Cached Content
-
-- Recently viewed artworks
-- Downloaded 3D models
-- Map tiles
-- Profile data
-- NFT metadata
-
-### Local-Only Features
-
-- **Collectibles** — NFT gallery works offline
-- **Blocked Users** — Block list stored locally
-- **View History** — Browsing history local
-- **Saved Items** — Bookmarks stored locally
-
-### Sync Behavior
-
-When connectivity returns:
-- Pending actions sync automatically
-- New content loads progressively
-- Conflicts resolved server-side
-
-### Storage Services
-
-- `CollectiblesStorage` — NFT caching
-- `InstitutionStorage` — Institution data
-- `TileDiskCache` — Map tile caching
-- SharedPreferences — User preferences
-
----
-
-## Feature Flags
-
-Many features are controlled by feature flags and can be enabled/disabled:
-
-```dart
-// Check if feature is enabled
-if (AppConfig.isFeatureEnabled('featureName')) {
-  // Show feature
-}
-```
-
-Common flags:
-- `presence` — Real-time user presence
-- `achievements` — Gamification features
-- `dao` — DAO governance
-- `marketplace` — NFT marketplace
-- `ar` — Augmented reality
-
-This allows gradual rollout and A/B testing of features.
+Many capabilities are gated in `lib/config/config.dart` and by backend configuration. A screen may therefore present a reduced, read-only or unavailable state in a given deployment. See `ARCHITECTURE.md` for the provider and service layout.
