@@ -53,6 +53,7 @@ class PriceSummaryCard extends StatelessWidget {
           _PaymentMethodToggle(
             selectedMethod: selectedPaymentMethod,
             onChanged: onPaymentMethodChanged,
+            kub8Enabled: quote.supportsKub8,
           ),
           const SizedBox(height: KubusSpacing.md),
 
@@ -194,10 +195,14 @@ class _PaymentMethodToggle extends StatelessWidget {
   const _PaymentMethodToggle({
     required this.selectedMethod,
     required this.onChanged,
+    this.kub8Enabled = true,
   });
 
   final PromotionPaymentMethod selectedMethod;
   final ValueChanged<PromotionPaymentMethod> onChanged;
+
+  /// KUB8 is only offered when the quote actually allows it for this environment.
+  final bool kub8Enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -210,9 +215,10 @@ class _PaymentMethodToggle extends StatelessWidget {
           icon: const Icon(Icons.credit_card, size: 18),
         ),
         ButtonSegment<PromotionPaymentMethod>(
-          value: PromotionPaymentMethod.kub8Balance,
+          value: PromotionPaymentMethod.kub8Spl,
           label: Text(l10n.promotionBuilderPaymentKub8),
           icon: const Icon(Icons.token, size: 18),
+          enabled: kub8Enabled,
         ),
       ],
       selected: <PromotionPaymentMethod>{selectedMethod},

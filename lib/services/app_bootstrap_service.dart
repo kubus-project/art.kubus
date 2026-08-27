@@ -19,6 +19,7 @@ import '../providers/marker_management_provider.dart';
 import '../providers/kubus_node_provider.dart';
 import '../providers/spatial_library_provider.dart';
 import '../providers/presence_provider.dart';
+import '../providers/promotion_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/stats_provider.dart';
@@ -66,6 +67,7 @@ class AppBootstrapService {
     final spatialLibraryProvider = context.read<SpatialLibraryProvider>();
     final availabilityOperatorProvider =
         context.read<AvailabilityOperatorProvider>();
+    final promotionProvider = context.read<PromotionProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
     await _runTask('app_mode', appModeProvider.initialize);
@@ -116,6 +118,11 @@ class AppBootstrapService {
     ];
 
     final p1 = <Future<void>>[
+      // Global promotion config, warmed centrally rather than by whichever
+      // widget happens to open first. This also resumes a KUB8 transfer that a
+      // previous run submitted but never got to verify, so the promotion is
+      // never presented as unpaid to someone who already paid for it.
+      _runTask('promotions', promotionProvider.loadConfig),
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask(
         'collectibles',

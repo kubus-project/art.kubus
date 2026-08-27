@@ -1,7 +1,10 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/wallet/kubus_token_identity.dart';
+import 'package:art_kubus/widgets/wallet/kubus_wallet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,6 +34,7 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final roles = KubusColorRoles.of(context);
     final tx = widget.transaction;
     final isCompact = widget.compact;
     final primaryChange = tx.primaryAssetChange;
@@ -55,38 +59,80 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
               children: [
                 _TransactionIconBadge(
                   icon: _iconForTransaction(tx),
-                  color: _colorForTransaction(theme.colorScheme, tx),
+                  color: _colorForTransaction(roles, tx),
+                  tokenSymbol: tx.token,
+                  // Native transactions are SOL itself; everything else is
+                  // identified by its own mint, never by what it calls itself.
+                  tokenMint: tx.assetKind == WalletTransactionAssetKind.native
+                      ? KubusTokenIdentity.nativeSolMint
+                      : tx.tokenMint,
                   compact: isCompact,
                 ),
                 const SizedBox(width: KubusSpacing.md),
+                // Title and amount share one line, status chips get their own,
+                // meta pills get a third. Nothing competes for width inside a
+                // single row, so no label ever breaks mid-word.
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              _titleForTransaction(l10n, tx),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: (isCompact
+                                      ? KubusTextStyles.detailCardTitle
+                                      : KubusTextStyles.sectionTitle)
+                                  .copyWith(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          Expanded(
+                            flex: 2,
+                            child: _TransactionAmount(
+                              transaction: tx,
+                              secondaryChange: secondaryChange,
+                              amountColor: _colorForTransaction(roles, tx),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        _subtitleForTransaction(l10n, tx),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.detailCaption.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.72,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.sm),
                       Wrap(
-                        spacing: KubusSpacing.sm,
+                        spacing: KubusSpacing.xs,
                         runSpacing: KubusSpacing.xs,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(
-                            _titleForTransaction(l10n, tx),
-                            style: (isCompact
-                                    ? KubusTextStyles.detailCardTitle
-                                    : KubusTextStyles.sectionTitle)
-                                .copyWith(
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
                           _StatusChip(
                             label: _statusLabel(l10n, tx.status),
-                            color: _statusColor(theme.colorScheme, tx.status),
+                            color: _statusColor(roles, tx.status),
                           ),
                           if (tx.confirmationCount != null)
                             _StatusChip(
                               label: l10n.walletTransactionConfirmationsLabel(
                                 tx.confirmationCount!,
                               ),
-                              color: theme.colorScheme.secondary,
+                              color: roles.statTeal,
                             )
                           else if (tx.finality !=
                               WalletTransactionFinality.unknown)
@@ -97,16 +143,8 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                         ],
                       ),
                       const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        _subtitleForTransaction(l10n, tx),
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.72),
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
                       Wrap(
-                        spacing: KubusSpacing.sm,
+                        spacing: KubusSpacing.xs,
                         runSpacing: KubusSpacing.xs,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
@@ -132,44 +170,12 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                     ],
                   ),
                 ),
-                const SizedBox(width: KubusSpacing.md),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (tx.type == TransactionType.swap &&
-                        secondaryChange != null &&
-                        secondaryChange.symbol.isNotEmpty) ...[
-                      Text(
-                        '-${tx.amount.toStringAsFixed(4)} ${tx.token}',
-                        style: KubusTextStyles.detailCardTitle.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        '+${secondaryChange.absoluteAmount.toStringAsFixed(4)} ${secondaryChange.symbol}',
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: theme.colorScheme.tertiary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        '${tx.direction == WalletTransactionDirection.incoming ? '+' : tx.direction == WalletTransactionDirection.outgoing ? '-' : ''}${tx.amount.toStringAsFixed(4)} ${tx.token}',
-                        style: KubusTextStyles.detailCardTitle.copyWith(
-                          color: _colorForTransaction(theme.colorScheme, tx),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: KubusSpacing.xs),
-                    Icon(
-                      _expanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.66),
-                    ),
-                  ],
+                const SizedBox(width: KubusSpacing.sm),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.66),
                 ),
               ],
             ),
@@ -256,8 +262,9 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                     Text(
                       l10n.walletTransactionAssetChangesLabel,
                       style: KubusTextStyles.detailLabel.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.72,
+                        ),
                       ),
                     ),
                     const SizedBox(height: KubusSpacing.sm),
@@ -273,8 +280,9 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                     Text(
                       l10n.walletTransactionRelatedActionsLabel,
                       style: KubusTextStyles.detailLabel.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.72,
+                        ),
                       ),
                     ),
                     const SizedBox(height: KubusSpacing.sm),
@@ -284,8 +292,7 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                         child: _RelatedTransactionRow(
                           related: related,
                           statusLabel: _statusLabel(l10n, related.status),
-                          statusColor:
-                              _statusColor(theme.colorScheme, related.status),
+                          statusColor: _statusColor(roles, related.status),
                           onCopy: () =>
                               _copySignature(context, related.signature),
                           onOpen: related.explorerUrl == null
@@ -316,8 +323,9 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:
-            Text(AppLocalizations.of(context)!.walletTransactionCopiedToast),
+        content: Text(
+          AppLocalizations.of(context)!.walletTransactionCopiedToast,
+        ),
       ),
     );
   }
@@ -329,7 +337,9 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)!
+            AppLocalizations.of(
+              context,
+            )!
                 .walletTransactionExplorerUnavailableToast,
           ),
         ),
@@ -361,23 +371,26 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     }
   }
 
-  Color _colorForTransaction(ColorScheme scheme, WalletTransaction tx) {
+  /// Value leaving is warm, value arriving is positive, everything else is a
+  /// distinct neutral — the same mapping the wallet action cards use, so a
+  /// send card and a send transaction read as the same thing.
+  Color _colorForTransaction(KubusColorRoles roles, WalletTransaction tx) {
     if (tx.metadata['isFeeTransfer'] == true) {
-      return scheme.secondary;
+      return roles.statAmber;
     }
     switch (tx.type) {
       case TransactionType.send:
-        return scheme.error;
+        return roles.negativeAction;
       case TransactionType.receive:
-        return scheme.tertiary;
+        return roles.positiveAction;
       case TransactionType.swap:
-        return scheme.primary;
+        return roles.statBlue;
       case TransactionType.stake:
-        return scheme.secondary;
+        return roles.statTeal;
       case TransactionType.unstake:
-        return scheme.primary;
+        return roles.statTeal;
       case TransactionType.governanceVote:
-        return scheme.primary;
+        return roles.statBlue;
     }
   }
 
@@ -407,10 +420,7 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     if (tx.type == TransactionType.swap &&
         tx.swapToToken != null &&
         tx.swapToAmount != null) {
-      return l10n.walletTransactionSwapSubtitle(
-        tx.token,
-        tx.swapToToken!,
-      );
+      return l10n.walletTransactionSwapSubtitle(tx.token, tx.swapToToken!);
     }
     final counterpart = (tx.primaryCounterparty ?? tx.shortAddress).trim();
     if (counterpart.isEmpty) {
@@ -450,18 +460,20 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     }
   }
 
-  Color _statusColor(ColorScheme scheme, TransactionStatus status) {
+  /// Settlement reads as a progression: in flight (blue) → landing (amber) →
+  /// on chain (teal) → irreversible (green), with failure in red.
+  Color _statusColor(KubusColorRoles roles, TransactionStatus status) {
     switch (status) {
       case TransactionStatus.submitted:
-        return scheme.secondary;
+        return roles.statBlue;
       case TransactionStatus.pending:
-        return scheme.primary;
+        return roles.warningAction;
       case TransactionStatus.confirmed:
-        return scheme.tertiary;
+        return roles.statTeal;
       case TransactionStatus.finalized:
-        return scheme.tertiary;
+        return roles.positiveAction;
       case TransactionStatus.failed:
-        return scheme.error;
+        return roles.negativeAction;
     }
   }
 
@@ -501,70 +513,156 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
   }
 }
 
+/// Direction icon carrying the asset's own mark as a corner badge, so a row
+/// says both *what happened* and *which token* before you read a word.
 class _TransactionIconBadge extends StatelessWidget {
   const _TransactionIconBadge({
     required this.icon,
     required this.color,
+    required this.tokenSymbol,
+    this.tokenMint,
     required this.compact,
   });
 
   final IconData icon;
   final Color color;
+  final String tokenSymbol;
+  final String? tokenMint;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: compact ? 42 : 48,
-      height: compact ? 42 : 48,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
+    final scheme = Theme.of(context).colorScheme;
+    final box =
+        compact ? KubusSizes.walletActionIconBox : KubusSizes.tokenAvatarLg;
+    final overhang = KubusSizes.tokenAvatarXs / 2;
+
+    return SizedBox(
+      width: box + overhang,
+      height: box + overhang,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Container(
+            width: box,
+            height: box,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              border: KubusBorders.accentTint(color),
+            ),
+            child: Icon(
+              icon,
+              size: compact
+                  ? KubusSizes.walletActionIcon
+                  : KubusChromeMetrics.navIcon,
+              color: color,
+            ),
+          ),
+          if (tokenSymbol.trim().isNotEmpty)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: KubusTokenAvatar(
+                symbol: tokenSymbol,
+                mint: tokenMint,
+                size: KubusTokenAvatarSize.xs,
+                filled: true,
+                ringColor: scheme.surface,
+              ),
+            ),
+        ],
       ),
-      child: Icon(icon, size: compact ? 20 : 22, color: color),
+    );
+  }
+}
+
+/// Amount block: one line for transfers, two for swaps. Always right-aligned
+/// and always single-line per figure so it can never push the title around.
+class _TransactionAmount extends StatelessWidget {
+  const _TransactionAmount({
+    required this.transaction,
+    required this.secondaryChange,
+    required this.amountColor,
+  });
+
+  final WalletTransaction transaction;
+  final WalletTransactionAssetChange? secondaryChange;
+  final Color amountColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tx = transaction;
+    final isSwap = tx.type == TransactionType.swap &&
+        secondaryChange != null &&
+        secondaryChange!.symbol.isNotEmpty;
+
+    Widget figure(String text, Color color, {bool emphasized = true}) {
+      return Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
+        style: (emphasized
+                ? KubusTextStyles.detailCardTitle
+                : KubusTextStyles.detailCaption)
+            .copyWith(color: color, fontWeight: FontWeight.w700),
+      );
+    }
+
+    if (isSwap) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          figure(
+            '-${tx.amount.toStringAsFixed(4)} ${tx.token}',
+            theme.colorScheme.onSurface,
+          ),
+          const SizedBox(height: KubusSpacing.xxs),
+          figure(
+            '+${secondaryChange!.absoluteAmount.toStringAsFixed(4)} ${secondaryChange!.symbol}',
+            theme.colorScheme.tertiary,
+            emphasized: false,
+          ),
+        ],
+      );
+    }
+
+    final sign = tx.direction == WalletTransactionDirection.incoming
+        ? '+'
+        : tx.direction == WalletTransactionDirection.outgoing
+            ? '-'
+            : '';
+    return figure(
+      '$sign${tx.amount.toStringAsFixed(4)} ${tx.token}',
+      amountColor,
     );
   }
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.label,
-    required this.color,
-  });
+  const _StatusChip({required this.label, required this.color});
 
   final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm,
-        vertical: KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Text(
-        label,
-        style: KubusTextStyles.compactBadge.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return KubusWalletMetaPill(
+      label: label,
+      tintColor: color,
+      tone: KubusWalletPillTone.accent,
+      emphasized: true,
+      dense: true,
     );
   }
 }
 
 class _DetailPill extends StatelessWidget {
-  const _DetailPill({
-    required this.label,
-    this.icon,
-    this.onTap,
-  });
+  const _DetailPill({required this.label, this.icon, this.onTap});
 
   final String label;
   final IconData? icon;
@@ -572,55 +670,19 @@ class _DetailPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm,
-            vertical: KubusSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest
-                .withValues(alpha: 0.28),
-            borderRadius: BorderRadius.circular(KubusRadius.xl),
-            border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.18),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                const SizedBox(width: KubusSpacing.xs),
-              ],
-              Text(
-                label,
-                style: KubusTextStyles.compactBadge.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.74),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return KubusWalletMetaPill(
+      label: label,
+      icon: icon,
+      tintColor: Theme.of(context).colorScheme.outline,
+      dense: true,
+      onTap: onTap,
+      maxLabelWidth: KubusSizes.addressValueMaxWidth,
     );
   }
 }
 
 class _DetailGrid extends StatelessWidget {
-  const _DetailGrid({
-    required this.rows,
-    required this.compact,
-  });
+  const _DetailGrid({required this.rows, required this.compact});
 
   final List<_DetailRowData> rows;
   final bool compact;
@@ -643,11 +705,7 @@ class _DetailGrid extends StatelessWidget {
 }
 
 class _DetailRowData {
-  const _DetailRowData({
-    required this.label,
-    required this.value,
-    this.onTap,
-  });
+  const _DetailRowData({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
@@ -655,19 +713,54 @@ class _DetailRowData {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.row,
-  });
+  const _DetailRow({required this.row});
 
   final _DetailRowData row;
+
+  /// Signatures and addresses are unbreakable strings — wrapping them tears a
+  /// hash across three ragged lines. Show head and tail on one monospaced
+  /// line instead; the full value stays available on tap (copy) and hover.
+  static const int _monoTruncateThreshold = 22;
+
+  bool get _isHashLike =>
+      row.value.length > _monoTruncateThreshold && !row.value.contains(' ');
+
+  String get _displayValue {
+    if (!_isHashLike) return row.value;
+    return '${row.value.substring(0, 8)}…${row.value.substring(row.value.length - 8)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final valueStyle = _isHashLike
+        ? KubusTypography.mono(
+            fontSize: KubusChromeMetrics.navMetaLabel,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          )
+        : KubusTextStyles.detailBody.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          );
+
+    Widget value = Text(
+      _displayValue,
+      textAlign: TextAlign.end,
+      maxLines: _isHashLike ? 1 : 2,
+      softWrap: !_isHashLike,
+      overflow: TextOverflow.ellipsis,
+      style: valueStyle,
+    );
+    if (_isHashLike) {
+      value = Tooltip(message: row.value, child: value);
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
+          flex: 3,
           child: Text(
             row.label,
             style: KubusTextStyles.detailCaption.copyWith(
@@ -676,19 +769,9 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: KubusSpacing.md),
-        Flexible(
-          flex: 2,
-          child: GestureDetector(
-            onTap: row.onTap,
-            child: Text(
-              row.value,
-              textAlign: TextAlign.end,
-              style: KubusTextStyles.detailBody.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+        Expanded(
+          flex: 4,
+          child: GestureDetector(onTap: row.onTap, child: value),
         ),
       ],
     );
@@ -696,9 +779,7 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _AssetChangeRow extends StatelessWidget {
-  const _AssetChangeRow({
-    required this.change,
-  });
+  const _AssetChangeRow({required this.change});
 
   final WalletTransactionAssetChange change;
 
@@ -710,16 +791,28 @@ class _AssetChangeRow extends StatelessWidget {
         : theme.colorScheme.onSurface;
     return Row(
       children: [
+        KubusTokenAvatar(
+          symbol: change.symbol,
+          mint: change.mint,
+          size: KubusTokenAvatarSize.xs,
+        ),
+        const SizedBox(width: KubusSpacing.sm),
         Expanded(
           child: Text(
             change.label ?? change.symbol,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: KubusTextStyles.detailCaption.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.74),
             ),
           ),
         ),
+        const SizedBox(width: KubusSpacing.sm),
         Text(
           '${change.amount >= 0 ? '+' : '-'}${change.absoluteAmount.toStringAsFixed(4)} ${change.symbol}',
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
           style: KubusTextStyles.detailBody.copyWith(
             color: amountColor,
             fontWeight: FontWeight.w700,
@@ -772,16 +865,17 @@ class _RelatedTransactionRow extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    _StatusChip(
-                      label: statusLabel,
-                      color: statusColor,
-                    ),
+                    _StatusChip(label: statusLabel, color: statusColor),
                   ],
                 ),
                 const SizedBox(height: KubusSpacing.xs),
                 Text(
                   related.signature,
-                  style: KubusTextStyles.compactBadge.copyWith(
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTypography.mono(
+                    fontSize: KubusChromeMetrics.navBadgeLabel,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
                   ),
                 ),
@@ -790,9 +884,11 @@ class _RelatedTransactionRow extends StatelessWidget {
           ),
           if (related.amount != null && related.token != null)
             Padding(
-              padding: const EdgeInsets.only(right: KubusSpacing.sm),
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
               child: Text(
                 '${related.amount!.toStringAsFixed(4)} ${related.token}',
+                maxLines: 1,
+                softWrap: false,
                 style: KubusTextStyles.detailCaption.copyWith(
                   color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
@@ -801,16 +897,24 @@ class _RelatedTransactionRow extends StatelessWidget {
             ),
           IconButton(
             onPressed: onCopy,
+            visualDensity: VisualDensity.compact,
+            iconSize: KubusSizes.walletActionIcon,
             icon: const Icon(Icons.copy_rounded),
-            tooltip: AppLocalizations.of(context)!
+            tooltip: AppLocalizations.of(
+              context,
+            )!
                 .walletTransactionCopySignatureTooltip,
           ),
           if (onOpen != null)
             IconButton(
               onPressed: onOpen,
+              visualDensity: VisualDensity.compact,
+              iconSize: KubusSizes.walletActionIcon,
               icon: const Icon(Icons.open_in_new_rounded),
-              tooltip:
-                  AppLocalizations.of(context)!.walletTransactionExplorerAction,
+              tooltip: AppLocalizations.of(
+                context,
+              )!
+                  .walletTransactionExplorerAction,
             ),
         ],
       ),

@@ -72,6 +72,19 @@ part 'backend_api_service_upload_helpers.dart';
 
 /// Exception that preserves HTTP status for callers that want to implement
 /// graceful fallback/backoff behavior (e.g. polling endpoints).
+/// The promotion payment transaction exists but has not confirmed yet.
+///
+/// This is not a failure: the caller should keep polling verification until the cluster
+/// finalises the transfer.
+class PromotionPaymentPendingException implements Exception {
+  const PromotionPaymentPendingException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class BackendApiRequestException implements Exception {
   final int statusCode;
   final String path;
@@ -3470,11 +3483,45 @@ class BackendApiService
     }
   }
 
-  /// Calculate a price quote for a promotion.
+  /// Promotion scheduling and payment policy, so the app never hardcodes the booking horizon,
+  /// the cancellation window or the canonical KUB8 mint.
+  /// GET /api/app/promotion-config
+  Future<PromotionPolicyConfig> getPromotionConfig() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-config');
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] ?? decoded;
+        if (data is Map<String, dynamic>) {
+          return PromotionPolicyConfig.fromJson(data);
+        }
+      }
+      throw Exception('Invalid promotion config response');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getPromotionConfig failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Request an immutable promotion quote.
+  ///
+  /// The returned amounts are frozen server-side. Submission references `quoteId`, so a
+  /// rate-card change between quote and submit cannot alter what the user is charged.
   /// POST /api/app/promotion-price-quote
   Future<PriceQuote> calculatePriceQuote({
     required String rateCardId,
     required int durationDays,
+    required PromotionEntityType entityType,
+    required String targetEntityId,
     int? slotIndex,
     DateTime? startDate,
   }) async {
@@ -3484,6 +3531,8 @@ class BackendApiService
       final payload = <String, dynamic>{
         'rateCardId': rateCardId,
         'durationDays': durationDays,
+        'entityType': entityType.apiValue,
+        'targetEntityId': targetEntityId,
         if (slotIndex != null) 'slotIndex': slotIndex,
         if (startDate != null) 'startDate': startDate.toIso8601String(),
       };
@@ -3551,32 +3600,36 @@ class BackendApiService
   // END PROMOTION RATE CARDS
   // ===========================================================================
 
-  /// Create an app promotion request using rate cards.
+  /// Submit a promotion request against an immutable quote.
+  ///
+  /// [idempotencyKey] must be stable across retries of the same user action: if the response is
+  /// lost, resending with the same key returns the original request rather than creating a
+  /// second one or charging twice.
   /// POST /api/app/promotion-requests
   Future<PromotionRequestSubmission> createPromotionRequest({
-    required String targetEntityId,
-    required PromotionEntityType entityType,
-    required String rateCardId,
-    required int durationDays,
+    required String quoteId,
     required PromotionPaymentMethod paymentMethod,
-    int? slotIndex,
-    DateTime? startDate,
+    required String idempotencyKey,
+    String? walletAddress,
   }) async {
     try {
-      await _ensureAuthBeforeRequest();
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/app/promotion-requests');
       final payload = <String, dynamic>{
-        'targetEntityId': targetEntityId,
-        'entityType': entityType.apiValue,
-        'rateCardId': rateCardId,
-        'durationDays': durationDays,
+        'quoteId': quoteId,
         'paymentMethod': paymentMethod.apiValue,
-        if (slotIndex != null) 'slotIndex': slotIndex,
-        if (startDate != null) 'startDate': startDate.toIso8601String(),
+        'idempotencyKey': idempotencyKey,
+        // Sent so the backend can refuse a submission whose connected wallet has drifted from
+        // the authenticated session, rather than charging the wrong identity.
+        if (walletAddress != null && walletAddress.isNotEmpty)
+          'walletAddress': walletAddress,
       };
       final response = await _post(
         uri,
-        headers: _getHeaders(),
+        headers: <String, String>{
+          ..._getHeaders(),
+          'Idempotency-Key': idempotencyKey,
+        },
         body: jsonEncode(payload),
       );
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -3594,6 +3647,70 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.createPromotionRequest failed: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Hand a signed on-chain KUB8 transfer to the backend for verification.
+  ///
+  /// Safe to retry: the same signature on the same request is a no-op once verified, and the
+  /// backend refuses to let one signature pay for two promotions.
+  ///
+  /// Returns the refreshed request on success. Throws [PromotionPaymentPendingException] while
+  /// the transaction is still confirming, which the caller should retry.
+  /// POST /api/app/promotion-requests/:id/kub8-payment
+  Future<PromotionRequest> attachPromotionKub8Payment({
+    required String requestId,
+    required String signature,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse(
+        '$baseUrl/api/app/promotion-requests/$requestId/kub8-payment',
+      );
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'signature': signature,
+          if (walletAddress != null && walletAddress.isNotEmpty)
+            'walletAddress': walletAddress,
+        }),
+      );
+
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
+      if (response.statusCode == 202) {
+        throw PromotionPaymentPendingException(
+          decoded is Map && decoded['error'] != null
+              ? decoded['error'].toString()
+              : 'Payment transaction is still confirming.',
+        );
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] ?? decoded;
+        if (data is Map<String, dynamic>) {
+          final request = data['request'];
+          if (request is Map<String, dynamic>) {
+            return PromotionRequest.fromJson(request);
+          }
+          return PromotionRequest.fromJson(data);
+        }
+      }
+      throw Exception('Invalid KUB8 payment verification response');
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.attachPromotionKub8Payment failed: $e',
       );
       rethrow;
     }

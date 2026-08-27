@@ -34,19 +34,23 @@ class WalletCustodyStatusPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Container(
-                width: compact ? 38 : 44,
-                height: compact ? 38 : 44,
+                width: compact
+                    ? KubusSizes.walletActionIconBox
+                    : KubusSizes.tokenAvatarLg,
+                height: compact
+                    ? KubusSizes.walletActionIconBox
+                    : KubusSizes.tokenAvatarLg,
                 decoration: BoxDecoration(
                   color: stateColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                    color: stateColor.withValues(alpha: 0.24),
-                  ),
+                  border: KubusBorders.accentTint(stateColor),
                 ),
                 child: Icon(
                   _stateIcon(),
                   color: stateColor,
-                  size: compact ? 20 : 22,
+                  size: compact
+                      ? KubusSizes.walletActionIcon
+                      : KubusChromeMetrics.navIcon,
                 ),
               ),
               const SizedBox(width: KubusSpacing.md),
@@ -56,21 +60,32 @@ class WalletCustodyStatusPanel extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       l10n.walletSecurityStatusTitle,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                          ),
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
                     ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    WalletStatusChip(
-                      label: _stateLabel(l10n),
-                      icon: _stateIcon(),
-                      color: stateColor,
+                    const SizedBox(height: KubusSpacing.sm),
+                    // The state pill sits on its own line: it carries a full
+                    // sentence ("Wallet access ready on this device") and
+                    // must not be squeezed by the title beside it.
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: WalletStatusChip(
+                        label: _stateLabel(l10n),
+                        icon: _stateIcon(),
+                        color: stateColor,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+          SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
+          Divider(
+            height: KubusSizes.hairline,
+            thickness: KubusSizes.hairline,
+            color: scheme.outline.withValues(alpha: 0.18),
           ),
           SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
           _WalletStatusRow(
@@ -82,6 +97,7 @@ class WalletCustodyStatusPanel extends StatelessWidget {
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.walletSecurityWalletAddressLabel,
             value: _walletAddressLabel(l10n),
+            monospaceValue: (authority.walletAddress ?? '').trim().isNotEmpty,
           ),
           _WalletStatusRow(
             icon: Icons.draw_outlined,
@@ -120,6 +136,7 @@ class WalletCustodyStatusPanel extends StatelessWidget {
                 ? l10n.walletSecurityRecoveryNeededValue
                 : l10n.walletSecurityRecoveryNotNeededValue,
             valueColor: authority.recoveryNeeded ? scheme.error : null,
+            isLast: true,
           ),
           const SizedBox(height: KubusSpacing.md),
           Text(
@@ -286,6 +303,11 @@ class WalletCustodyStatusPanel extends StatelessWidget {
   }
 }
 
+/// Full-width state banner for the wallet's custody state.
+///
+/// This carries a whole sentence ("Wallet access ready on this device"), so it
+/// stretches instead of shrink-wrapping — a pill that narrow would break the
+/// sentence into scraps.
 class WalletStatusChip extends StatelessWidget {
   const WalletStatusChip({
     super.key,
@@ -302,28 +324,32 @@ class WalletStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: KubusSizes.chipMinHeight),
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm,
-        vertical: KubusSpacing.xs,
+        vertical: KubusSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(KubusRadius.sm),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
+        border: KubusBorders.accentTint(color),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: KubusSpacing.xs),
-          Flexible(
+          Icon(icon, size: KubusHeaderMetrics.actionIcon, color: color),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
             child: Text(
               label,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: KubusTextStyles.detailLabel.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
             ),
           ),
         ],
@@ -338,6 +364,8 @@ class _WalletStatusRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueColor,
+    this.monospaceValue = false,
+    this.isLast = false,
   });
 
   final IconData icon;
@@ -345,40 +373,57 @@ class _WalletStatusRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
+  /// Addresses read as data, not prose — set for hash-like values.
+  final bool monospaceValue;
+
+  final bool isLast;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final valueStyle = monospaceValue
+        ? KubusTypography.mono(
+            fontSize: KubusChromeMetrics.navMetaLabel,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? scheme.onSurface,
+          )
+        : KubusTextStyles.detailLabel.copyWith(
+            color: valueColor ?? scheme.onSurface,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+          );
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      padding: EdgeInsets.only(
+        bottom: isLast ? KubusSpacing.none : KubusSpacing.sm,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(
             icon,
-            size: 18,
-            color: scheme.onSurface.withValues(alpha: 0.58),
+            size: KubusSizes.chipIcon,
+            color: scheme.onSurface.withValues(alpha: 0.52),
           ),
           const SizedBox(width: KubusSpacing.sm),
           Expanded(
+            flex: 4,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.66),
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.66),
+              ),
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),
-          Flexible(
-            flex: 2,
+          Expanded(
+            flex: 5,
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: valueColor ?? scheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: valueStyle,
             ),
           ),
         ],
