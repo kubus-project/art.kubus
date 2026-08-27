@@ -21,8 +21,9 @@ library;
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+
+import '../../../config/config.dart';
 
 /// Why a session could not be established, in terms the UI can act on.
 enum SignalingFailure {
@@ -251,11 +252,9 @@ class NodeSignalingClient {
       }
     });
     socket.onError((Object? error) {
-      if (kDebugMode) {
-        // Never the payload: an error can echo the message that caused it,
-        // and those carry SDP.
-        debugPrint('NodeSignalingClient: socket error');
-      }
+      // Never the payload: an error can echo the message that caused it,
+      // and those carry SDP.
+      AppConfig.debugPrint('NodeSignalingClient: socket error');
     });
 
     for (final event in const <String>[

@@ -46,6 +46,20 @@ class KubusNodePairingPayload {
   /// Other addresses the same Node answers on, best-effort.
   final List<Uri> alternateEndpoints;
 
+  /// Every address this payload offers, primary first, without repeats.
+  ///
+  /// Pairing walks this list in order, so the Node's own preferred address is
+  /// tried before its alternates. Deduplicated because a Node that advertises
+  /// its primary address again among its alternates should not cost the user a
+  /// second connection attempt on the same host.
+  List<Uri> get endpoints {
+    final ordered = <Uri>[endpoint];
+    for (final alternate in alternateEndpoints) {
+      if (!ordered.contains(alternate)) ordered.add(alternate);
+    }
+    return List<Uri>.unmodifiable(ordered);
+  }
+
   /// Payload schema version. v3 is the first to carry [publicKey].
   final int version;
 
@@ -72,20 +86,24 @@ class KubusNodePairingPayload {
       final endpoint = Uri.tryParse(uri.queryParameters['e'] ?? '');
       final sessionId = (uri.queryParameters['s'] ?? '').trim();
       final secret = (uri.queryParameters['k'] ?? '').trim();
+      final nodeId = (uri.queryParameters['n'] ?? '').trim();
+      final fingerprint = (uri.queryParameters['f'] ?? '').trim();
       if (endpoint == null ||
           !endpoint.hasScheme ||
           !endpoint.hasAuthority ||
           sessionId.isEmpty ||
-          secret.isEmpty) {
+          secret.isEmpty ||
+          nodeId.isEmpty ||
+          fingerprint.isEmpty) {
         throw const FormatException('Invalid pairing code');
       }
       return KubusNodePairingPayload(
         endpoint: endpoint,
         sessionId: sessionId,
         secret: secret,
-        fingerprint: uri.queryParameters['f'],
+        fingerprint: fingerprint,
         label: uri.queryParameters['l'],
-        nodeId: uri.queryParameters['n'],
+        nodeId: nodeId,
         publicKey: uri.queryParameters['pk'],
         alternateEndpoints: uri.queryParametersAll['a']
                 ?.map(Uri.tryParse)
@@ -370,6 +388,7 @@ class SpatialVariant {
     required this.mimeType,
     required this.format,
     required this.storageClass,
+    this.localPath,
   });
   final String role;
   final String cid;
@@ -377,6 +396,24 @@ class SpatialVariant {
   final String mimeType;
   final String format;
   final String storageClass;
+
+  /// Where this variant is cached on the device, once it has been downloaded.
+  ///
+  /// Null until the importer streams it to disk. It is a device-local path, so
+  /// it is never sent back to the Node — only [cid] identifies the object
+  /// there.
+  final String? localPath;
+
+  SpatialVariant copyWith({String? localPath}) => SpatialVariant(
+        role: role,
+        cid: cid,
+        sizeBytes: sizeBytes,
+        mimeType: mimeType,
+        format: format,
+        storageClass: storageClass,
+        localPath: localPath ?? this.localPath,
+      );
+
   factory SpatialVariant.fromJson(Map<String, dynamic> json) => SpatialVariant(
         role: (json['role'] ?? '').toString(),
         cid: (json['cid'] ?? '').toString(),
@@ -384,6 +421,7 @@ class SpatialVariant {
         mimeType: (json['mimeType'] ?? '').toString(),
         format: (json['format'] ?? '').toString(),
         storageClass: (json['storageClass'] ?? '').toString(),
+        localPath: json['localPath']?.toString(),
       );
 }
 

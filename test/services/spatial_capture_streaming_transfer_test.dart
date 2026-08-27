@@ -294,6 +294,9 @@ class _TestNodeProvider implements KubusNodeProvider {
           'artworkId': artworkId,
           if (markerId != null) 'markerId': markerId,
         },
+        // Same durable identity the production caller uses, so the fake
+        // exercises the real idempotency contract.
+        requestId: captureId,
       );
 
   @override

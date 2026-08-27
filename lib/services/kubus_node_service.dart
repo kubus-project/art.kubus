@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/kubus_node_models.dart';
+import 'node/http_node_transport.dart';
 import 'node/kubus_node_transport.dart';
 import 'node/node_identity_proof.dart';
 import 'node/node_idempotency_key.dart';
@@ -51,6 +52,24 @@ class KubusNodeUnsupportedException implements Exception {
   String toString() => 'KubusNodeUnsupportedException($route)';
 }
 
+/// An address answered, but it did not prove it is the paired Node.
+///
+/// Raised *before* anything is sent, so nothing was disclosed: a reachable
+/// address is never enough authority to receive the Node credential or a
+/// private spatial capture. Treat it as a security failure rather than a
+/// transient one — retrying the same address is not a remedy, and failing over
+/// private traffic to it is exactly what must not happen.
+class KubusNodeIdentityException implements Exception {
+  const KubusNodeIdentityException([this.origin]);
+
+  /// The scheme/host/port that failed to prove itself, for diagnostics.
+  final String? origin;
+
+  @override
+  String toString() =>
+      'KubusNodeIdentityException${origin == null ? '' : '($origin)'}';
+}
+
 abstract class KubusNodeCredentialStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
@@ -92,13 +111,17 @@ class KubusNodeService {
         _isWeb = isWeb ?? kIsWeb {
     final resolver = transport == null
         ? NodeTransportFactory.build(
-            endpoint: () => _endpoint!,
+            endpoint: _requireEndpoint,
             credential: () => _credential,
             remoteEndpoint: () => _remoteEndpoint,
             client: _client,
             contextForOperation: () => _network.read(),
           )
         : null;
+    // Every rung is refused until it proves it still reaches the paired Node.
+    // Installed here rather than passed to the factory because the factory
+    // assembles the ladder while this service is still constructing.
+    resolver?.identityGuard = _proveRungBeforeSend;
     _resolver = resolver;
     _transport = transport ?? resolver!;
   }
@@ -114,7 +137,13 @@ class KubusNodeService {
   static const _publicKeyKey = 'kubus_node_public_key_v1';
 
   /// The Node's stable public id, used to reach it via the control plane.
-  static const _nodeIdKey = 'kubus_node_id_v1';
+  ///
+  /// `_v2` is deliberate and must not be lowered: every device already paired
+  /// on a shipped build wrote its node id under this exact name. Reading a
+  /// different key would find nothing, leave [nodeId] null, and — now that a
+  /// missing id makes the identity guard refuse every HTTP rung — silently
+  /// unpair every existing user until they scanned a new code.
+  static const _nodeIdKey = 'kubus_node_id_v2';
   static const _remoteEndpointKey = 'kubus_node_remote_endpoint_v1';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
@@ -140,6 +169,22 @@ class KubusNodeService {
   String? _nodeId;
   Uri? _remoteEndpoint;
   NodeSignalingClient? _signaling;
+
+  /// How long a proved endpoint identity is reused before it is proved again.
+  ///
+  /// See [_proveEndpointIdentity] for the full caching rule.
+  static const Duration _identityVerificationTtl = Duration(minutes: 5);
+
+  /// Origins (scheme, host, port) proved to belong to the paired Node, and
+  /// when. Deliberately in memory only — see [_proveEndpointIdentity].
+  final Map<String, DateTime> _provenOrigins = <String, DateTime>{};
+
+  /// Probes currently in flight, keyed by origin.
+  ///
+  /// [fetchSnapshot] issues five requests at once; without this every one of
+  /// them would open its own identity probe against the same host before the
+  /// first had answered.
+  final Map<String, Future<void>> _probesInFlight = <String, Future<void>>{};
 
   Uri? get endpoint => _endpoint;
   String? get fingerprint => _fingerprint;
@@ -179,24 +224,57 @@ class KubusNodeService {
   bool get isPaired =>
       _endpoint != null && (_credential ?? '').startsWith('kubus_local_');
 
+  /// True when the paired Node is currently reached over the local network.
+  ///
+  /// False for a paired Node reached over remote HTTPS or a WebRTC rung, and
+  /// false when there is no endpoint at all. The distinction matters to the
+  /// user: reaching *their* Node over the LAN and reaching *their* Node over
+  /// the internet are the same trust relationship shown differently, and
+  /// neither is the same as handing the capture to a stranger's GPU.
+  bool get isEndpointOnLocalNetwork {
+    final active = activeTransport;
+    if (active != null && active != KubusNodeTransportKind.localDirect) {
+      return false;
+    }
+    final endpoint = _endpoint;
+    return endpoint != null && isPrivateNetworkHost(endpoint);
+  }
+
   Future<bool> initialize() async {
     // Routing decisions must see a real network class before the first
     // request. A route that failed on the old network is reset immediately on
     // a switch rather than needlessly remaining in cooldown at the new one.
     unawaited(
       _network.start(
-        onChanged: (_) => _resolver?.onNetworkChanged(),
+        onChanged: (_) {
+          // The same address can name a different machine on a different
+          // network, so a proof taken on the old one is worth nothing here.
+          _provenOrigins.clear();
+          _resolver?.onNetworkChanged();
+        },
       ),
     );
-    final rawEndpoint = await _store.read(_endpointKey);
-    _endpoint = Uri.tryParse(rawEndpoint ?? '');
+    _endpoint = _readStoredEndpoint(await _store.read(_endpointKey));
     _credential = await _store.read(_credentialKey);
     _fingerprint = await _store.read(_fingerprintKey);
     _publicKeyBase64Url = await _store.read(_publicKeyKey);
     _nodeId = await _store.read(_nodeIdKey);
-    _remoteEndpoint = Uri.tryParse(await _store.read(_remoteEndpointKey) ?? '');
-    _adoptRemoteHttpsRoute();
+    _remoteEndpoint = _readStoredEndpoint(
+      await _store.read(_remoteEndpointKey),
+    );
+    _syncHttpTransports();
     return isPaired;
+  }
+
+  /// Re-reads a stored address, dropping one this build would refuse to store.
+  ///
+  /// The scheme rule is applied on the way in as well as on the way out: a
+  /// pairing written by an earlier build must not grant a public cleartext
+  /// address the credential just because it is already on disk.
+  static Uri? _readStoredEndpoint(String? raw) {
+    final parsed = Uri.tryParse(raw ?? '');
+    if (parsed == null || !isCredentialSafeEndpoint(parsed)) return null;
+    return parsed;
   }
 
   /// Negotiates and installs a cryptographically verified WebRTC route.
@@ -230,7 +308,10 @@ class KubusNodeService {
         pairedPublicKey: () => pairedPublicKey,
         credential: () => _credential,
       ).connect(nodeId);
-      resolver.adopt(transport);
+      // Only a previous WebRTC rung can be displaced here — kinds match — and
+      // this service built it on a peer connection of its own, so it is this
+      // service's to close.
+      resolver.adopt(transport)?.close();
       return transport.kind;
     } on Object {
       if (identical(_signaling, signaling)) _signaling = null;
@@ -250,101 +331,208 @@ class KubusNodeService {
     KubusNodePairingPayload payload, {
     String label = 'art.kubus app',
   }) async {
-    if (_isWeb && payload.endpoint.scheme != 'https') {
-      throw StateError('A secure HTTPS local node route is required on web.');
+    final candidates = payload.endpoints;
+    // Scheme policy is enforced here, at the transport boundary, and not only
+    // in the QR parser: a caller can build a [KubusNodePairingPayload] by hand,
+    // so the parser is a convenience and this is the boundary. Nothing has
+    // been sent at this point, so a refusal costs the attacker nothing and
+    // discloses nothing.
+    for (final endpoint in candidates) {
+      if (!isCredentialSafeEndpoint(endpoint)) {
+        throw const FormatException(
+          'A kubus Node reached over the public internet must use HTTPS; '
+          'cleartext HTTP is accepted only for a private network address.',
+        );
+      }
+      if (_isWeb && endpoint.scheme != 'https') {
+        throw StateError('A secure HTTPS local node route is required on web.');
+      }
     }
-    final response = await _client
-        .post(
-          _resolve(payload.endpoint, '/local/v1/pairing/exchange'),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'sessionId': payload.sessionId,
-            'secret': payload.secret,
-            'label': label,
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
-    // Pairing deliberately bypasses the transport: it runs against the
-    // endpoint in the scanned payload, before any credential exists to
-    // authenticate a transport with. Its response still goes through the same
-    // protocol decoder, so error semantics are identical everywhere.
-    final data = _decode(
-      KubusNodeResponse(
-        statusCode: response.statusCode,
-        body: response.body,
-        requestPath: response.request?.url.path,
-      ),
-    );
-    final token = (data['token'] ?? '').toString();
-    if (!token.startsWith('kubus_local_')) {
-      throw StateError('Node returned an invalid local credential.');
+    final nodeId = (payload.nodeId ?? '').trim();
+    final fingerprint = (payload.fingerprint ?? '').trim();
+    if (nodeId.isEmpty || fingerprint.isEmpty) {
+      throw const FormatException('Pairing code is missing Node identity.');
     }
     // The Node's public key must match the fingerprint printed beside the QR.
     // If they disagree, the payload was tampered with in transit and the
     // fingerprint the user just compared means nothing — refuse rather than
     // pair against an identity nobody actually verified.
-    final publicKey = payload.publicKey;
-    if (publicKey != null && publicKey.isNotEmpty) {
+    final publicKey = (payload.publicKey ?? '').trim();
+    if (publicKey.isNotEmpty) {
       final decoded = _decodePublicKey(publicKey);
       if (decoded == null) {
         throw StateError('Node returned a malformed identity key.');
       }
-      final derived = nodeFingerprintFromPublicKey(decoded);
-      final claimed = (payload.fingerprint ?? '').toLowerCase();
-      if (claimed.isNotEmpty && claimed != derived) {
+      if (nodeFingerprintFromPublicKey(decoded) != fingerprint.toLowerCase()) {
         throw StateError('Node identity does not match its fingerprint.');
       }
     }
 
-    _endpoint = payload.endpoint;
-    _credential = token;
-    _fingerprint = payload.fingerprint;
-    _publicKeyBase64Url = publicKey;
-    _nodeId = payload.nodeId;
-    _remoteEndpoint = _httpsAlternate(payload.alternateEndpoints);
-    _adoptRemoteHttpsRoute();
-    await _store.write(_endpointKey, payload.endpoint.toString());
-    await _store.write(_credentialKey, token);
-    if ((payload.fingerprint ?? '').isNotEmpty) {
-      await _store.write(_fingerprintKey, payload.fingerprint!);
+    // A proof recorded for a previous pairing says nothing about this one.
+    _provenOrigins.clear();
+
+    Uri? connected;
+    String? token;
+    Object? lastError;
+    for (final endpoint in candidates) {
+      try {
+        // Identity first, secret second. The pairing secret is single-use but
+        // it is still a secret, and an address that cannot show the node id,
+        // fingerprint and public key from the QR has no business receiving it.
+        await _probeEndpointIdentity(
+          endpoint,
+          expectedNodeId: nodeId,
+          expectedFingerprint: fingerprint,
+          expectedPublicKey: publicKey.isEmpty ? null : publicKey,
+        );
+        // Pairing deliberately bypasses the transport: it runs against the
+        // endpoint in the scanned payload, before any credential exists to
+        // authenticate a transport with. Its response still goes through the
+        // same protocol decoder, so error semantics are identical everywhere.
+        final response = await _client
+            .post(
+              _resolve(endpoint, '/local/v1/pairing/exchange'),
+              headers: const {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'sessionId': payload.sessionId,
+                'secret': payload.secret,
+                'label': label,
+              }),
+            )
+            .timeout(const Duration(seconds: 10));
+        final data = _decode(
+          KubusNodeResponse(
+            statusCode: response.statusCode,
+            body: response.body,
+            requestPath: response.request?.url.path,
+          ),
+        );
+        final issued = (data['token'] ?? '').toString();
+        if (!issued.startsWith('kubus_local_')) {
+          throw StateError('Node returned an invalid local credential.');
+        }
+        connected = endpoint;
+        token = issued;
+        break;
+      } on Object catch (error) {
+        lastError = error;
+      }
     }
-    if ((publicKey ?? '').isNotEmpty) {
-      await _store.write(_publicKeyKey, publicKey!);
+    if (connected == null || token == null) {
+      _provenOrigins.clear();
+      throw StateError('Unable to reach this paired kubus Node: $lastError');
+    }
+
+    _endpoint = connected;
+    _credential = token;
+    _fingerprint = fingerprint;
+    _publicKeyBase64Url = publicKey.isEmpty ? null : publicKey;
+    _nodeId = nodeId;
+    _remoteEndpoint = _httpsEndpoint(candidates);
+    _syncHttpTransports();
+    await _store.write(_endpointKey, connected.toString());
+    await _store.write(_credentialKey, token);
+    await _store.write(_fingerprintKey, fingerprint);
+    await _store.write(_nodeIdKey, nodeId);
+    if (publicKey.isNotEmpty) {
+      await _store.write(_publicKeyKey, publicKey);
     } else {
       // An older payload carries no key. Clear any key from a previous pairing
       // rather than leaving a stale one that would verify the wrong Node.
       await _store.delete(_publicKeyKey);
     }
-    if ((payload.nodeId ?? '').isNotEmpty) {
-      await _store.write(_nodeIdKey, payload.nodeId!);
-    } else {
-      await _store.delete(_nodeIdKey);
-    }
-    if (_remoteEndpoint != null) {
-      await _store.write(_remoteEndpointKey, _remoteEndpoint.toString());
+    final remote = _remoteEndpoint;
+    if (remote != null) {
+      await _store.write(_remoteEndpointKey, remote.toString());
     } else {
       await _store.delete(_remoteEndpointKey);
     }
   }
 
-  static Uri? _httpsAlternate(List<Uri> endpoints) {
+  /// The first address in [endpoints] that can work from outside the LAN.
+  static Uri? _httpsEndpoint(List<Uri> endpoints) {
     for (final endpoint in endpoints) {
       if (endpoint.scheme == 'https' && endpoint.hasAuthority) return endpoint;
     }
     return null;
   }
 
-  void _adoptRemoteHttpsRoute() {
-    final endpoint = _remoteEndpoint;
+  /// Rebuilds the HTTP rungs from the pairing this service currently holds.
+  ///
+  /// The single place HTTP routes are installed and removed, so there is one
+  /// answer to "which Node does this rung talk to": whichever one is paired
+  /// right now. Both rungs read [_endpoint] and [_remoteEndpoint] through
+  /// method tear-offs rather than capturing a URL, so no closure can outlive a
+  /// pairing holding the previous Node's address — the defect that let a
+  /// surviving remote rung route Node B's credential to Node A.
+  void _syncHttpTransports() {
     final resolver = _resolver;
-    if (endpoint == null || resolver == null) return;
-    resolver.adopt(
-      NodeTransportFactory.remoteHttps(
-        endpoint: () => _remoteEndpoint ?? endpoint,
-        credential: () => _credential,
-        client: _client,
-      ),
-    );
+    if (resolver == null) return;
+    if (_endpoint == null) {
+      _detachRung(resolver.release(KubusNodeTransportKind.localDirect));
+    } else {
+      _detachRung(
+        resolver.adopt(
+          HttpNodeTransport(
+            endpoint: _requireEndpoint,
+            credential: () => _credential,
+            kind: KubusNodeTransportKind.localDirect,
+            client: _client,
+          ),
+        ),
+      );
+    }
+    if (_remoteEndpoint == null) {
+      _detachRung(resolver.release(KubusNodeTransportKind.remoteHttps));
+    } else {
+      _detachRung(
+        resolver.adopt(
+          NodeTransportFactory.remoteHttps(
+            endpoint: _requireRemoteEndpoint,
+            credential: () => _credential,
+            client: _client,
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Disposes a rung the ladder no longer holds.
+  ///
+  /// Both HTTP rungs are built on [_client], which this service also uses for
+  /// pairing, identity probes and content fetches. `HttpNodeTransport.close()`
+  /// closes the client it was given, so closing one detached HTTP rung would
+  /// close every other HTTP route with it. An HTTP rung owns nothing else —
+  /// two callbacks and a borrowed client — so dropping the reference disposes
+  /// it completely. A WebRTC rung owns a peer connection and a data channel
+  /// and leaks unless it is closed.
+  void _detachRung(KubusNodeTransport? rung) {
+    if (rung == null) return;
+    switch (rung.kind) {
+      case KubusNodeTransportKind.localDirect:
+      case KubusNodeTransportKind.remoteHttps:
+        return;
+      case KubusNodeTransportKind.webRtcDirect:
+      case KubusNodeTransportKind.webRtcRelay:
+        rung.close();
+    }
+  }
+
+  Uri _requireEndpoint() {
+    final endpoint = _endpoint;
+    if (endpoint == null) throw StateError('No kubus Node is paired.');
+    return endpoint;
+  }
+
+  Uri _requireRemoteEndpoint() {
+    final endpoint = _remoteEndpoint;
+    if (endpoint == null) {
+      throw StateError('This kubus Node has no remote HTTPS endpoint.');
+    }
+    return endpoint;
   }
 
   static Uint8List? _decodePublicKey(String encoded) {
@@ -356,17 +544,342 @@ class KubusNodeService {
     }
   }
 
+  // --- Endpoint identity ----------------------------------------------------
+  //
+  // A stored address is a hint about where the Node was, never a statement
+  // about who is there now. DHCP reassigns a LAN lease, a home router's DNS
+  // changes, an operator's ingress is repointed — and the address the app
+  // recorded at pairing keeps resolving, to somebody else. Reachability is not
+  // identity, so every rung proves who it is before it is trusted with the
+  // Node credential or a private capture.
+
+  /// The guard the resolver runs before anything is sent on a rung.
+  ///
+  /// WebRTC rungs are exempt for a real reason rather than convenience: a
+  /// WebRTC rung only exists because the peer signed a challenge with the
+  /// paired Ed25519 private key while the connection was being set up. That is
+  /// a strictly stronger proof than this one, and it is bound to the very
+  /// channel the bytes travel on. Probing an HTTP address would prove nothing
+  /// about it.
+  Future<void> _proveRungBeforeSend(
+    KubusNodeTransport transport,
+    KubusNodeRequest request,
+  ) async {
+    final Uri? endpoint;
+    switch (transport.kind) {
+      case KubusNodeTransportKind.localDirect:
+        endpoint = _endpoint;
+      case KubusNodeTransportKind.remoteHttps:
+        endpoint = _remoteEndpoint;
+      case KubusNodeTransportKind.webRtcDirect:
+      case KubusNodeTransportKind.webRtcRelay:
+        return;
+    }
+    if (endpoint == null) {
+      throw KubusNodeIdentityException(transport.kind.name);
+    }
+    await _proveEndpointIdentity(
+      endpoint,
+      fresh: _carriesPrivatePayload(request),
+    );
+  }
+
+  /// Whether [request] carries — or returns — data that must never reach the
+  /// wrong machine even once.
+  ///
+  /// Capture routes carry the spatial capture itself. Content routes return
+  /// it. Spatial and compute routes carry manifests and the user's backend
+  /// authorization. All of them prove identity again immediately before
+  /// sending rather than trusting a cached verdict, because "verified four
+  /// minutes ago" and "verified now" are different claims and only one of them
+  /// is worth a capture.
+  static bool _carriesPrivatePayload(KubusNodeRequest request) =>
+      request.path.startsWith('/local/v1/captures/') ||
+      request.path.startsWith('/local/v1/content/') ||
+      request.path.startsWith('/local/v1/spatial/') ||
+      request.path.startsWith('/local/v1/compute/');
+
+  /// Proves [endpoint] still belongs to the paired Node.
+  ///
+  /// ## The caching rule
+  ///
+  /// A verdict is cached against the endpoint's *origin* — scheme, host and
+  /// port — because that is exactly what decides which machine receives the
+  /// bytes; a different path on the same origin is the same machine. Four
+  /// rules bound how stale a cached verdict can be:
+  ///
+  ///  * it lives in memory only, so a new process or session starts with
+  ///    nothing proved and re-proves on its first request;
+  ///  * it expires after [_identityVerificationTtl];
+  ///  * a network change clears it outright, because the same address can name
+  ///    a different machine on a different network;
+  ///  * [fresh] bypasses it entirely, and every private transfer sets it.
+  ///
+  /// A resolved endpoint that changes host or port is a different origin with
+  /// no entry of its own, so it is proved before it is used. Concurrent
+  /// callers share one probe rather than opening one each.
+  Future<void> _proveEndpointIdentity(
+    Uri endpoint, {
+    required bool fresh,
+  }) {
+    final origin = _originOf(endpoint);
+    // Joining a probe that is already running is safe even for a fresh check:
+    // it started moments ago and has not answered yet.
+    final inFlight = _probesInFlight[origin];
+    if (inFlight != null) return inFlight;
+    if (!fresh) {
+      final provenAt = _provenOrigins[origin];
+      if (provenAt != null &&
+          DateTime.now().toUtc().difference(provenAt) <
+              _identityVerificationTtl) {
+        return Future<void>.value();
+      }
+    }
+    final nodeId = _nodeId;
+    final fingerprint = _fingerprint;
+    if ((nodeId ?? '').isEmpty || (fingerprint ?? '').isEmpty) {
+      // Nothing to compare against. Refuse rather than treat "we cannot check"
+      // as "it checked out".
+      return Future<void>.error(
+        KubusNodeIdentityException(origin),
+        StackTrace.current,
+      );
+    }
+    final probe = _probeEndpointIdentity(
+      endpoint,
+      expectedNodeId: nodeId!,
+      expectedFingerprint: fingerprint!,
+      expectedPublicKey: _publicKeyBase64Url,
+    );
+    _probesInFlight[origin] = probe;
+    return probe.whenComplete(() => _probesInFlight.remove(origin));
+  }
+
+  /// Asks [endpoint] who it is, and records the answer when it matches.
+  ///
+  /// The request is unauthenticated and carries no body. That is the whole
+  /// point: this is the only thing this app is willing to send to an address
+  /// it has not yet proved, so it must disclose nothing. Attaching the bearer
+  /// credential here would hand the Node credential to whoever answered —
+  /// precisely the disclosure the check exists to prevent — and inspecting the
+  /// response of a request that already carried the credential would be too
+  /// late to matter.
+  Future<void> _probeEndpointIdentity(
+    Uri endpoint, {
+    required String expectedNodeId,
+    required String expectedFingerprint,
+    String? expectedPublicKey,
+  }) async {
+    final origin = _originOf(endpoint);
+    // A route that will not answer at all is a transport failure, not an
+    // identity failure, and is allowed to propagate as one so the ladder can
+    // fail over normally.
+    final response = await _client.get(
+      _resolve(endpoint, '/local/v1/info'),
+      headers: const {'Accept': 'application/json'},
+    ).timeout(const Duration(seconds: 10));
+    Object? body;
+    try {
+      body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
+    } on FormatException {
+      body = null;
+    }
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        body is! Map<String, dynamic>) {
+      throw KubusNodeIdentityException(origin);
+    }
+    final info = body['success'] == true && body['data'] is Map<String, dynamic>
+        ? body['data'] as Map<String, dynamic>
+        : body;
+    if (!_identityMatches(
+      info,
+      expectedNodeId: expectedNodeId,
+      expectedFingerprint: expectedFingerprint,
+      expectedPublicKey: expectedPublicKey,
+    )) {
+      throw KubusNodeIdentityException(origin);
+    }
+    _provenOrigins[origin] = DateTime.now().toUtc();
+  }
+
+  /// Whether an `/local/v1/info` answer is the paired Node's.
+  ///
+  /// The node id and the fingerprint are both compared because they fail
+  /// differently: an id is what the control plane routes on, a fingerprint is
+  /// what a person compared on screen at pairing. When this device also
+  /// recorded the Node's Ed25519 public key, the endpoint must present the
+  /// same key — a v3 pairing means the Node publishes it, so an endpoint that
+  /// cannot show it is not that Node.
+  static bool _identityMatches(
+    Map<String, dynamic> info, {
+    required String expectedNodeId,
+    required String expectedFingerprint,
+    String? expectedPublicKey,
+  }) {
+    if ((info['nodeId'] ?? '').toString().trim() != expectedNodeId) {
+      return false;
+    }
+    if ((info['fingerprint'] ?? '').toString().trim().toLowerCase() !=
+        expectedFingerprint.toLowerCase()) {
+      return false;
+    }
+    if ((expectedPublicKey ?? '').isEmpty) return true;
+    final expected = _decodePublicKey(expectedPublicKey!);
+    final presented = _decodePublicKey((info['publicKey'] ?? '').toString());
+    if (expected == null || presented == null) return false;
+    return listEquals(expected, presented);
+  }
+
+  /// Scheme, host and port — what actually decides which machine is reached.
+  static String _originOf(Uri endpoint) =>
+      '${endpoint.scheme}://${endpoint.host}:${endpoint.port}';
+
+  /// An HTTP endpoint that has just proved it is the paired Node.
+  ///
+  /// Used by the streaming download, which is not yet a transport operation.
+  /// Candidates are proved one at a time and never on each other's authority:
+  /// a failure on the LAN address does not authorize the HTTPS ingress.
+  Future<Uri> _provenHttpEndpoint() async {
+    final seen = <String>{};
+    Object? lastError;
+    StackTrace? lastStack;
+    for (final endpoint
+        in <Uri?>[_endpoint, _remoteEndpoint].whereType<Uri>()) {
+      if (!seen.add(_originOf(endpoint))) continue;
+      try {
+        await _proveEndpointIdentity(endpoint, fresh: true);
+        return endpoint;
+      } on Object catch (error, stack) {
+        lastError = error;
+        lastStack = stack;
+      }
+    }
+    if (lastError != null) {
+      Error.throwWithStackTrace(lastError, lastStack ?? StackTrace.current);
+    }
+    throw const KubusNodeIdentityException();
+  }
+
+  // --- Endpoint address policy ----------------------------------------------
+
+  /// Whether [endpoint] may be trusted with the Node credential.
+  ///
+  /// HTTPS is allowed on ordinary trust rules — the transport authenticates
+  /// the host and encrypts the credential. Cleartext HTTP is allowed only for
+  /// an address that cannot exist outside a private network, because a pairing
+  /// secret or a bearer token sent in the clear across the public internet is
+  /// readable by every hop in between.
+  static bool isCredentialSafeEndpoint(Uri endpoint) {
+    if (!endpoint.hasAuthority || endpoint.host.isEmpty) return false;
+    if (endpoint.scheme == 'https') return true;
+    if (endpoint.scheme != 'http') return false;
+    return isPrivateNetworkHost(endpoint);
+  }
+
+  /// Whether [endpoint] names a host that can only exist on a private network.
+  ///
+  /// Answers the question the scheme rule needs: could these bytes cross the
+  /// public internet? An IP literal is decided by its range; a name is decided
+  /// by whether it belongs to a namespace that cannot be delegated publicly.
+  ///
+  /// Names are matched on whole labels, never as substrings, so
+  /// `192.168.1.1.evil.com` — a perfectly ordinary public name that happens to
+  /// begin with a private address — is rejected, as is `notlocal`.
+  static bool isPrivateNetworkHost(Uri endpoint) {
+    var host = endpoint.host.toLowerCase();
+    if (host.isEmpty) return false;
+    // A fully qualified name may carry a trailing root label.
+    if (host.endsWith('.')) host = host.substring(0, host.length - 1);
+    if (host.isEmpty) return false;
+
+    final address = InternetAddress.tryParse(host);
+    if (address != null) return _isPrivateAddress(address);
+
+    // Not an IP literal, so it is a name.
+    if (host == 'localhost') return true;
+    return host.endsWith('.localhost') ||
+        // mDNS, and the namespaces reserved for names that never leave a site.
+        host.endsWith('.local') ||
+        host.endsWith('.home.arpa') ||
+        host.endsWith('.internal');
+  }
+
+  static bool _isPrivateAddress(InternetAddress address) {
+    final bytes = address.rawAddress;
+    if (address.type == InternetAddressType.IPv4) {
+      return _isPrivateIPv4(bytes);
+    }
+    if (bytes.length != 16) return false;
+    // ::1 — loopback.
+    if (_allZero(bytes, 0, 15) && bytes[15] == 1) return true;
+    // fe80::/10 — link-local.
+    if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80) return true;
+    // fc00::/7 — unique local addresses.
+    if ((bytes[0] & 0xfe) == 0xfc) return true;
+    // ::ffff:a.b.c.d — an IPv4 address wearing an IPv6 shape. Judge it by the
+    // address it actually carries, or a public host reached as
+    // `[::ffff:203.0.113.9]` would slip past every IPv4 rule above.
+    if (_allZero(bytes, 0, 10) && bytes[10] == 0xff && bytes[11] == 0xff) {
+      return _isPrivateIPv4(bytes.sublist(12));
+    }
+    // ::a.b.c.d — the deprecated IPv4-compatible form, judged the same way.
+    // `::` and `::1` are already handled above.
+    if (_allZero(bytes, 0, 12)) return _isPrivateIPv4(bytes.sublist(12));
+    return false;
+  }
+
+  static bool _isPrivateIPv4(List<int> b) {
+    if (b.length != 4) return false;
+    // 10.0.0.0/8
+    if (b[0] == 10) return true;
+    // 127.0.0.0/8 — loopback.
+    if (b[0] == 127) return true;
+    // 169.254.0.0/16 — link-local.
+    if (b[0] == 169 && b[1] == 254) return true;
+    // 172.16.0.0/12
+    if (b[0] == 172 && b[1] >= 16 && b[1] <= 31) return true;
+    // 192.168.0.0/16
+    if (b[0] == 192 && b[1] == 168) return true;
+    // 100.64.0.0/10 — carrier-grade NAT. Not the user's own network, but it is
+    // never routed across the public internet either.
+    if (b[0] == 100 && b[1] >= 64 && b[1] <= 127) return true;
+    return false;
+  }
+
+  static bool _allZero(List<int> bytes, int start, int end) {
+    for (var i = start; i < end; i++) {
+      if (bytes[i] != 0) return false;
+    }
+    return true;
+  }
+
+  /// Forgets the paired Node completely.
+  ///
+  /// Every rung goes, not just the WebRTC ones: a surviving remote HTTPS rung
+  /// kept the previous Node's URL alive, and pairing a second Node then let
+  /// that rung carry the *new* Node's credential, requests and capture uploads
+  /// to the *old* Node's address whenever the LAN route was unavailable. The
+  /// proof cache goes with them, so the next pairing proves every address from
+  /// scratch instead of inheriting a verdict about a Node that is no longer
+  /// paired.
   Future<void> unpair() async {
     await _signaling?.dispose();
     _signaling = null;
-    _resolver?.release(KubusNodeTransportKind.webRtcDirect);
-    _resolver?.release(KubusNodeTransportKind.webRtcRelay);
+    final resolver = _resolver;
+    if (resolver != null) {
+      for (final kind in KubusNodeTransportKind.values) {
+        _detachRung(resolver.release(kind));
+      }
+    }
     _endpoint = null;
     _credential = null;
     _fingerprint = null;
     _publicKeyBase64Url = null;
     _nodeId = null;
     _remoteEndpoint = null;
+    _provenOrigins.clear();
+    _probesInFlight.clear();
     await Future.wait([
       _store.delete(_endpointKey),
       _store.delete(_credentialKey),
@@ -433,12 +946,19 @@ class KubusNodeService {
   /// Throws [KubusNodeUnsupportedException] when the paired node predates the
   /// streaming API, so the caller can ask the user to update it rather than
   /// surfacing a bare 404.
-  /// Opens a draft the capture's files are streamed into.
   ///
   /// [localCaptureId] is the capture's stable client-side identity and is what
   /// the draft is keyed on. It must be the same value across every retry of
   /// the same capture — including after an app restart — or the Node cannot
   /// tell a resumed upload from a second capture of the same scene.
+  ///
+  /// It is required, and cannot be derived from [metadata]. A digest of the
+  /// metadata is not an identity: two genuinely distinct captures of the same
+  /// scene, taken with the same device against the same artwork, produce byte
+  /// identical metadata and would collide onto one idempotency key — the Node
+  /// would answer the second with the first capture's draft and the second
+  /// capture would be silently discarded. Only the caller knows which capture
+  /// this is, so only the caller can name it.
   Future<KubusCaptureDraft> beginCaptureDraft(
     Map<String, dynamic> metadata, {
     required String localCaptureId,
@@ -558,6 +1078,49 @@ class KubusNodeService {
       );
   Future<Map<String, dynamic>> getSpatial(String id) =>
       _get('/local/v1/spatial/${Uri.encodeComponent(id)}');
+
+  /// Streams a private Node content object straight to disk.
+  ///
+  /// Used for processed variants, which are far too large to sit in the Dart
+  /// heap: `bodyBytes` would retain the whole splat until it reached the phone
+  /// library. The bytes go from the socket to the file and are never
+  /// accumulated.
+  ///
+  /// This route still bypasses the transport ladder — it needs a raw streamed
+  /// response, which the ladder does not model yet — so it proves the
+  /// endpoint's identity itself via [_provenHttpEndpoint] rather than relying
+  /// on the resolver's guard. The proof happens *before* the bearer credential
+  /// is attached: a private capture and the Node credential are exactly what
+  /// must not reach a host that turned out to be someone else.
+  Future<void> downloadContentToFile(String cid, File destination) async {
+    if (!isPaired) throw StateError('No kubus Node is paired.');
+    final endpoint = await _provenHttpEndpoint();
+    final path = '/local/v1/content/${Uri.encodeComponent(cid)}';
+    final request = http.Request('GET', _resolve(endpoint, path))
+      ..headers['Authorization'] = 'Bearer $_credential';
+    final response =
+        await _client.send(request).timeout(const Duration(minutes: 5));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      // Lets the shared decoder raise the Node's own error, rather than
+      // inventing a second error vocabulary for this one route. The body is
+      // only drained on the failure path, where it is small.
+      final failure = await http.Response.fromStream(response);
+      _decode(
+        KubusNodeResponse(
+          statusCode: failure.statusCode,
+          body: failure.body,
+          requestPath: path,
+        ),
+      );
+    }
+    await destination.parent.create(recursive: true);
+    final sink = destination.openWrite();
+    try {
+      await sink.addStream(response.stream);
+    } finally {
+      await sink.close();
+    }
+  }
 
   Future<List<KubusComputeCandidate>> findComputeCandidates({
     required String backendAuthorization,
@@ -708,20 +1271,34 @@ class KubusNodeService {
       );
 
   Future<List<KubusContentCandidate>> resolveContentCandidates(
-    String raw,
-  ) async {
+    String raw, {
+    String? localPath,
+  }) async {
+    // A variant already downloaded to this device is offered before any
+    // network route: it is the same object, costs nothing to read, and works
+    // with no connectivity at all. A path that no longer exists is skipped
+    // rather than returned, so a cache the OS reclaimed falls through to the
+    // network instead of failing the load.
+    final local = localPath == null ? null : File(localPath);
+    final localCandidates = <KubusContentCandidate>[];
+    if (local != null && await local.exists()) {
+      localCandidates.add(
+        KubusContentCandidate(uri: local.uri, source: 'spatial_library'),
+      );
+    }
     final cid = _extractCid(raw);
     if (cid == null) {
-      return StorageConfig.resolveAllUrls(raw)
-          .map(
-            (url) => KubusContentCandidate(
-              uri: Uri.parse(url),
-              source: 'configured',
-            ),
-          )
-          .toList(growable: false);
+      return <KubusContentCandidate>[
+        ...localCandidates,
+        ...StorageConfig.resolveAllUrls(raw).map(
+          (url) => KubusContentCandidate(
+            uri: Uri.parse(url),
+            source: 'configured',
+          ),
+        ),
+      ];
     }
-    final candidates = <KubusContentCandidate>[];
+    final candidates = <KubusContentCandidate>[...localCandidates];
     if (!_isWeb && isPaired) {
       candidates.add(
         KubusContentCandidate(

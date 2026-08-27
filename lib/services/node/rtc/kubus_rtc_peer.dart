@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../../config/config.dart';
 import '../kubus_data_channel.dart';
 import '../turn_configuration.dart';
+import 'node_relay_classifier.dart';
 import 'rtc_data_channel_adapter.dart';
 
 /// The sub-protocol label a kubus data channel is opened with.
@@ -59,6 +60,7 @@ class KubusRtcPeer {
     required SdpSink onLocalDescription,
     required CandidateSink onLocalCandidate,
     this.connectTimeout = const Duration(seconds: 30),
+    this.relayStatsTimeout = NodeRelayClassifier.defaultSettleTimeout,
   })  : _iceConfiguration = iceConfiguration,
         _onLocalDescription = onLocalDescription,
         _onLocalCandidate = onLocalCandidate;
@@ -68,9 +70,14 @@ class KubusRtcPeer {
   final CandidateSink _onLocalCandidate;
   final Duration connectTimeout;
 
+  /// How long [settleRouteClass] waits for ICE stats before deciding
+  /// pessimistically.
+  final Duration relayStatsTimeout;
+
   RTCPeerConnection? _connection;
   RTCDataChannel? _channel;
   RtcDataChannelAdapter? _adapter;
+  NodeRelayClassifier? _relay;
   Completer<KubusDataChannel>? _ready;
   bool _closed = false;
 
@@ -83,13 +90,41 @@ class KubusRtcPeer {
   final List<RTCIceCandidate> _pendingRemoteCandidates = <RTCIceCandidate>[];
   bool _remoteDescriptionApplied = false;
 
-  /// Whether the established connection is carried by a relay.
+  /// Last known verdict, kept after the classifier is released on close so
+  /// diagnostics can still report how a finished connection was carried.
+  KubusRtcRouteClass _routeClass = KubusRtcRouteClass.undetermined;
+
+  /// How this connection is carried, as far as ICE stats have proved.
   ///
-  /// Diagnostics only, and not a trust statement: relayed traffic is still
-  /// DTLS-encrypted end to end and the relay holds no key. It is surfaced so a
-  /// user can be told why a transfer is slower than usual.
-  bool get isRelayed => _isRelayed;
-  bool _isRelayed = false;
+  /// Not a trust statement: relayed traffic is still DTLS-encrypted end to end
+  /// and the relay holds no key. It decides routing — a relay is the only rung
+  /// that spends a third party's bandwidth — and it tells a user why a transfer
+  /// is slower than usual.
+  KubusRtcRouteClass get routeClass => _relay?.routeClass ?? _routeClass;
+
+  /// Whether this connection must be treated as relayed.
+  ///
+  /// Pessimistic while stats are still undetermined. Only a proven direct
+  /// candidate pair reads as unrelayed, because a relay mistaken for a direct
+  /// link skips every relay penalty for bulk and metered transfers, while a
+  /// direct link mistaken for a relay only costs some routing preference.
+  bool get isRelayed => routeClass.isRelayed;
+
+  /// Resolves once ICE stats have proved how the connection is carried.
+  ///
+  /// Never resolves to [KubusRtcRouteClass.undetermined]: the wait is bounded
+  /// by [relayStatsTimeout] and ends in [KubusRtcRouteClass.relayed] when stats
+  /// do not answer, so connection setup cannot stall on a platform whose stats
+  /// are broken and cannot be finalised as direct on a guess.
+  Future<KubusRtcRouteClass> settleRouteClass() {
+    final relay = _relay;
+    if (relay == null) {
+      return Future<KubusRtcRouteClass>.value(
+        _routeClass.isSettled ? _routeClass : KubusRtcRouteClass.relayed,
+      );
+    }
+    return relay.settle();
+  }
 
   /// Opens the connection and resolves once the channel is usable.
   ///
@@ -115,6 +150,14 @@ class KubusRtcPeer {
         'iceCandidatePoolSize': 0,
       }, <String, dynamic>{});
       _connection = connection;
+      // Built with the connection so the verdict is already being worked on by
+      // the time the channel opens and the identity proof runs — the window in
+      // which the old code read a default-false flag and called every TURN
+      // connection direct.
+      _relay = NodeRelayClassifier(
+        readStats: connection.getStats,
+        settleTimeout: relayStatsTimeout,
+      );
 
       connection.onIceCandidate = _handleLocalCandidate;
       connection.onConnectionState = _handleConnectionState;
@@ -223,7 +266,10 @@ class KubusRtcPeer {
   void _handleConnectionState(RTCPeerConnectionState state) {
     switch (state) {
       case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
-        unawaited(_refreshRelayFlag());
+        // Starts the stats poll. The verdict is *awaited* later, by
+        // [settleRouteClass], rather than read as whatever happens to be known
+        // at the moment the channel opens.
+        _relay?.start();
       case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
         _failReady(
           const KubusRtcException(KubusRtcFailure.noRouteFound, 'ICE failed'),
@@ -241,47 +287,7 @@ class KubusRtcPeer {
     // Mapped only for diagnostics. ICE state is deliberately not surfaced to
     // the user: "disconnected" here routinely recovers on its own, and showing
     // it as a failure would make a working connection look broken.
-    if (kDebugMode) {
-      debugPrint('KubusRtcPeer: ice state ${state.name}');
-    }
-  }
-
-  /// Reads the selected candidate pair to learn whether a relay is in use.
-  ///
-  /// Best effort: the stats report shape varies between platforms, so a
-  /// missing field means "not known to be relayed" rather than an error.
-  Future<void> _refreshRelayFlag() async {
-    final connection = _connection;
-    if (connection == null) return;
-    try {
-      final reports = await connection.getStats();
-      final pairs = <String, dynamic>{};
-      final candidates = <String, dynamic>{};
-      for (final report in reports) {
-        if (report.type == 'candidate-pair') {
-          pairs[report.id] = report.values;
-        } else if (report.type == 'local-candidate' ||
-            report.type == 'remote-candidate') {
-          candidates[report.id] = report.values;
-        }
-      }
-      for (final pair in pairs.values) {
-        final values = pair as Map<Object?, Object?>;
-        final selected =
-            values['selected'] == true || values['state'] == 'succeeded';
-        if (!selected) continue;
-        for (final key in const ['localCandidateId', 'remoteCandidateId']) {
-          final candidate =
-              candidates[values[key]] as Map<Object?, Object?>? ?? const {};
-          if (candidate['candidateType'] == 'relay') {
-            _isRelayed = true;
-            return;
-          }
-        }
-      }
-    } on Object {
-      // Diagnostics only; never fail a working connection over them.
-    }
+    AppConfig.debugPrint('KubusRtcPeer: ice state ${state.name}');
   }
 
   void _failReady(KubusRtcException error) {
@@ -295,6 +301,15 @@ class KubusRtcPeer {
     _closed = true;
     _failReady(const KubusRtcException(KubusRtcFailure.cancelled));
     _pendingRemoteCandidates.clear();
+    final relay = _relay;
+    if (relay != null) {
+      // Cancels the stats poll and releases anyone still awaiting a verdict for
+      // a connection that is going away. The last verdict is kept so
+      // diagnostics can still say how this connection was carried.
+      relay.dispose();
+      _routeClass = relay.routeClass;
+      _relay = null;
+    }
     await _adapter?.close();
     _adapter = null;
     try {

@@ -21,13 +21,23 @@ class KubusNodeUnreachableException implements Exception {
       'KubusNodeUnreachableException(tried: ${attempted.join(', ')})';
 }
 
+/// Proves that a rung still reaches the paired Node, before anything is sent.
+///
+/// Runs *before* the request is handed to the transport, so a rung that can no
+/// longer prove its identity never receives the Node credential or the request
+/// body. Returning normally authorizes the send; throwing rejects the rung.
+typedef NodeRungIdentityGuard = Future<void> Function(
+  KubusNodeTransport transport,
+  KubusNodeRequest request,
+);
+
 /// Chooses which route carries each Node operation.
 ///
 /// Composite: it *is* a [KubusNodeTransport], so `KubusNodeService` and every
 /// caller above it stay unchanged as rungs are added. The service keeps asking
 /// for `/local/v1/...`; this decides how it gets there.
 ///
-/// Two rules shape the policy:
+/// Three rules shape the policy:
 ///
 /// 1. **A Node error is not a transport failure.** If the Node answers 503,
 ///    the route worked perfectly — it is the Node that is unhappy. Only a
@@ -36,6 +46,21 @@ class KubusNodeUnreachableException implements Exception {
 /// 2. **Failover must never duplicate work.** A request is only retried on
 ///    another route when [KubusNodeRequest.isSafeToRetry] allows it, so a
 ///    switch mid-flight cannot create a second capture or a second job.
+/// 3. **Reachability is not identity.** A stored address can be reassigned by
+///    DHCP or redirected by DNS, so [identityGuard] runs before each attempt
+///    and a rung that fails it is skipped without anything being sent.
+///
+/// ## Resource ownership
+///
+/// A rung is *detached* by [adopt] replacing it or by [release] removing it.
+/// Neither closes it: both hand it back, because the resolver did not build it
+/// and cannot know what it shares. The HTTP rungs are built on one
+/// `http.Client` that `KubusNodeService` also uses for pairing, identity
+/// probes and content fetches, so closing a detached HTTP rung would close
+/// that client and kill every remaining route. Whoever built a rung decides
+/// how it dies. [close] is the one exception: it is whole-ladder teardown
+/// performed by the ladder's owner, who is finished with the shared client at
+/// the same moment.
 class KubusNodeTransportResolver implements KubusNodeTransport {
   KubusNodeTransportResolver({
     required List<KubusNodeTransport> transports,
@@ -80,6 +105,15 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   static TransportSelectionContext _defaultContext() =>
       const TransportSelectionContext();
 
+  /// Proves a rung still reaches the paired Node before anything is sent on it.
+  ///
+  /// Settable rather than constructor-injected because the ladder is assembled
+  /// by `NodeTransportFactory` while the service that owns the paired identity
+  /// is still constructing, so the guard cannot exist at that moment. Left
+  /// null, every rung is trusted — which is only ever correct for a
+  /// test-injected ladder that reaches nothing real.
+  NodeRungIdentityGuard? identityGuard;
+
   final Map<KubusNodeTransportKind, TransportHealthRecord> _health =
       <KubusNodeTransportKind, TransportHealthRecord>{};
 
@@ -114,39 +148,49 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   ///
   /// This is how a verified WebRTC transport joins the ladder: it can only be
   /// built once signalling has run and the Node has proved its identity, which
-  /// is necessarily later than the moment the service was created. A route of
-  /// the same kind is replaced and its predecessor closed, so a reconnect does
-  /// not leave the old peer connection alive behind it.
+  /// is necessarily later than the moment the service was created.
+  ///
+  /// Returns the route of the same kind it displaced, if any, **without
+  /// closing it** — see the ownership note on this class. Closing a displaced
+  /// HTTP rung would close the `http.Client` every other route shares, so the
+  /// caller that built the rung decides how it is disposed.
   ///
   /// Health is deliberately reset for the adopted kind: the new route is a
   /// different connection, and inheriting the failures of the one it replaces
   /// would put a working route straight into cooldown.
-  void adopt(KubusNodeTransport transport) {
+  KubusNodeTransport? adopt(KubusNodeTransport transport) {
+    KubusNodeTransport? displaced;
     final existingIndex =
         _transports.indexWhere((candidate) => candidate.kind == transport.kind);
     if (existingIndex >= 0) {
       final previous = _transports[existingIndex];
       _transports[existingIndex] = transport;
-      if (!identical(previous, transport)) previous.close();
+      if (!identical(previous, transport)) displaced = previous;
     } else {
       _transports.add(transport);
     }
     _health[transport.kind] = TransportHealthRecord(kind: transport.kind);
     if (_activeKind == transport.kind) _activeKind = null;
+    return displaced;
   }
 
-  /// Removes a route that is no longer usable, closing it.
+  /// Removes a route that is no longer usable and returns it.
   ///
-  /// Called when a peer connection drops: leaving a dead transport in the list
-  /// costs every subsequent operation a failed attempt before it falls through
-  /// to a route that works.
-  void release(KubusNodeTransportKind kind) {
+  /// Called when a peer connection drops, and when unpairing: leaving a dead
+  /// transport in the list costs every subsequent operation a failed attempt
+  /// before it falls through to a route that works, and leaving a rung from a
+  /// previous pairing in the list is how the next Node's credential reaches
+  /// the previous Node's address.
+  ///
+  /// The removed rung is returned rather than closed, for the same ownership
+  /// reason as [adopt]. Returns null when no route of [kind] was present.
+  KubusNodeTransport? release(KubusNodeTransportKind kind) {
     final index = _transports.indexWhere((candidate) => candidate.kind == kind);
-    if (index < 0) return;
+    if (index < 0) return null;
     final removed = _transports.removeAt(index);
     _health.remove(kind);
     if (_activeKind == kind) _activeKind = null;
-    removed.close();
+    return removed;
   }
 
   /// Whether a route of this kind is currently part of the ladder.
@@ -249,11 +293,30 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     final attempted = <KubusNodeTransportKind>[];
     Object? lastError;
     StackTrace? lastStack;
+    // Kept separately from [lastError]: a rung the guard rejected never
+    // carried the request, so it says something quite different from a rung
+    // that tried and failed. It is only surfaced when nothing else answered.
+    Object? rejection;
+    StackTrace? rejectionStack;
 
     for (final transport in ordered) {
       final record = _health[transport.kind]!;
       attempted.add(transport.kind);
       record.state = KubusTransportHealth.connecting;
+      final guard = identityGuard;
+      if (guard != null) {
+        try {
+          await guard(transport, request);
+        } on Object catch (error, stack) {
+          // Nothing left the process on this rung — not the credential, not
+          // the body. Demote it and move to the next candidate, which is
+          // proved independently rather than on this one's authority.
+          record.recordFailure(_clock());
+          rejection = error;
+          rejectionStack = stack;
+          continue;
+        }
+      }
       final started = _clock();
       try {
         final response = await operation(transport);
@@ -284,6 +347,15 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     if (lastError != null) {
       Error.throwWithStackTrace(lastError, lastStack ?? StackTrace.current);
     }
+    // Every rung was refused before it could be used. The guard's own reason
+    // is far more useful than "unreachable" — it is the difference between
+    // "your Node is offline" and "something else is answering at its address".
+    if (rejection != null) {
+      Error.throwWithStackTrace(
+        rejection,
+        rejectionStack ?? StackTrace.current,
+      );
+    }
     throw KubusNodeUnreachableException(attempted);
   }
 
@@ -297,6 +369,13 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
       error is KubusDataChannelClosedException ||
       error is KubusNodeUnreachableException;
 
+  /// Terminal teardown of the whole ladder.
+  ///
+  /// Unlike [adopt] and [release], this *does* close every rung, including the
+  /// HTTP ones that borrow a shared `http.Client`. That is only correct
+  /// because the caller closing the ladder is the same owner that is finished
+  /// with the client — closing one rung while the ladder keeps running is what
+  /// [adopt] and [release] deliberately refuse to do.
   @override
   void close() {
     for (final transport in _transports) {

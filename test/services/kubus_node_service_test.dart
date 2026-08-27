@@ -322,7 +322,10 @@ void main() {
     await service.pair(_payload);
     await service.fetchNetwork();
     await expectLater(
-      service.beginCaptureDraft(<String, dynamic>{'schema': 'kubus.capture/1'}),
+      service.beginCaptureDraft(
+        <String, dynamic>{'schema': 'kubus.capture/1'},
+        localCaptureId: 'local-capture-1',
+      ),
       throwsA(isA<KubusNodeIdentityException>()),
     );
 

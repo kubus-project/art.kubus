@@ -1072,7 +1072,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
           'private': true,
           'localCaptureId': record.localSpatialId,
         },
-      });
+      }, localCaptureId: record.localSpatialId);
       draftId = draft.id;
       await source.recordDraftId(draftId);
       await store.recordNodeTransfer(

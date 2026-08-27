@@ -16,15 +16,25 @@ import 'webrtc_frame_stream.dart';
 /// One reliable ordered channel multiplexes every in-flight operation by
 /// `requestId`. See `docs/node/webrtc-protocol.md` for why a single channel
 /// rather than several.
+///
+/// Both directions are bounded by the same mechanism. An upload is framed by
+/// [KubusFrameSplitter] and reassembled by the peer through
+/// [KubusStreamReassembler]; a response is reassembled here by that same class,
+/// the sink being memory instead of disk. The per-frame 64 KiB cap bounds one
+/// frame and says nothing about a peer that sends a hundred thousand valid
+/// ones, so [maxResponseBytes] is the aggregate bound that actually stops it.
 class WebRtcNodeTransport implements KubusNodeTransport {
   WebRtcNodeTransport({
     required KubusDataChannel channel,
     required this.kind,
     String? credential,
     KubusFrameSplitter? splitter,
-  })  : _channel = channel,
+    int maxResponseBytes = defaultMaxResponseBytes,
+  })  : assert(maxResponseBytes > 0),
+        _channel = channel,
         _credential = credential,
-        _splitter = splitter ?? const KubusFrameSplitter() {
+        _splitter = splitter ?? const KubusFrameSplitter(),
+        _maxResponseBytes = maxResponseBytes {
     _subscription = _channel.messages.listen(
       _onMessage,
       onError: _failAll,
@@ -34,15 +44,44 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     );
   }
 
+  /// Ceiling on one reassembled response held in memory.
+  ///
+  /// A [KubusNodeResponse] carries its body as a `String`, so every response on
+  /// this rung is reassembled in RAM. That is right for the JSON envelopes the
+  /// canonical API returns and wrong for anything larger, which is why the
+  /// ceiling is set here rather than raised: a payload that does not fit
+  /// belongs in a sink on disk, the way a capture upload already travels.
+  ///
+  /// 4 MiB is the same in-memory ceiling the upload path applies to bytes it
+  /// has accepted but not yet drained
+  /// ([KubusStreamReassembler.maxBufferedBytes]), so there is one number for
+  /// "how much peer data may sit in memory" rather than two. It is deliberately
+  /// below `TransportSelectionContext.defaultBulkTransferThresholdBytes`:
+  /// anything that size is a bulk transfer by the routing layer's own
+  /// definition, and bulk transfers do not belong in a `String`.
+  static const int defaultMaxResponseBytes = 4 * 1024 * 1024;
+
   final KubusDataChannel _channel;
   final String? _credential;
   final KubusFrameSplitter _splitter;
+  final int _maxResponseBytes;
 
   @override
   final KubusNodeTransportKind kind;
 
+  /// The aggregate response ceiling this transport enforces.
+  int get maxResponseBytes => _maxResponseBytes;
+
   late final StreamSubscription<Uint8List> _subscription;
   final Map<int, _PendingRequest> _pending = <int, _PendingRequest>{};
+
+  /// Inbound frames are handled one at a time, in arrival order.
+  ///
+  /// Reassembly hands each chunk to a sink and *awaits* it — the backpressure
+  /// the upload path already relies on. A listener that returned before its
+  /// chunk had landed would let the next frame overtake it, corrupting both the
+  /// body order and the CRC that exists to prove that order.
+  Future<void> _inbound = Future<void>.value();
 
   /// Odd/even allocation is not needed: both peers key their own tables by the
   /// id they issued, and a response always echoes the request's id.
@@ -72,7 +111,11 @@ class WebRtcNodeTransport implements KubusNodeTransport {
       throw const KubusDataChannelClosedException();
     }
     final id = _allocateRequestId();
-    final pending = _PendingRequest(request.path);
+    final pending = _PendingRequest(
+      requestId: id,
+      path: request.path,
+      maxResponseBytes: _maxResponseBytes,
+    );
     _pending[id] = pending;
 
     try {
@@ -123,7 +166,9 @@ class WebRtcNodeTransport implements KubusNodeTransport {
         },
       );
     } finally {
-      _pending.remove(id);
+      // Removed *and* released: a request abandoned part-way through its
+      // response would otherwise keep that partial body alive.
+      _pending.remove(id)?.release();
     }
   }
 
@@ -149,6 +194,14 @@ class WebRtcNodeTransport implements KubusNodeTransport {
   }
 
   void _onMessage(Uint8List data) {
+    // A failure belonging to one response is routed to that request inside
+    // `_handleFrame`. This guard is for anything that escaped it: an error left
+    // sitting on the chain would stop every later frame from being handled at
+    // all, wedging the channel silently instead of failing loudly.
+    _inbound = _inbound.then((_) => _handleFrame(data)).catchError(_failAll);
+  }
+
+  Future<void> _handleFrame(Uint8List data) async {
     final KubusFrame frame;
     try {
       frame = KubusFrameCodec.decode(data);
@@ -160,52 +213,50 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     }
 
     final pending = _pending[frame.requestId];
-    // A frame for an unknown id is stale (its request already completed,
-    // timed out, or was cancelled). Silently ignored rather than treated as
-    // an error, which would let a peer disrupt live requests.
-    if (pending == null) return;
+    // A frame for an unknown or already-finished id is stale: its request
+    // completed, timed out, or was cancelled. Silently ignored rather than
+    // treated as an error, which would let a peer disrupt live requests.
+    if (pending == null || pending.isCompleted) return;
 
-    switch (frame.type) {
-      case KubusFrameType.responseHead:
-        pending.status = _readStatus(frame.metadata);
-        pending.appendPayload(frame.payload);
-        if (frame.isFinal) _complete(pending, frame);
-      case KubusFrameType.responseChunk:
-        pending.appendPayload(frame.payload);
-        if (frame.isFinal) _complete(pending, frame);
-      case KubusFrameType.error:
-        pending.completeError(
-          KubusFrameException(
-            (frame.metadata?['message'] ?? 'peer reported an error').toString(),
-          ),
-        );
-      case KubusFrameType.cancel:
-        pending.completeError(
-          const KubusFrameException('peer cancelled the request'),
-        );
-      case KubusFrameType.requestHead:
-      case KubusFrameType.requestChunk:
-      case KubusFrameType.windowUpdate:
-        // Not meaningful for a client-issued request; ignored so a confused
-        // or hostile peer cannot desynchronise the table.
-        break;
-    }
-  }
-
-  void _complete(_PendingRequest pending, KubusFrame finalFrame) {
     try {
-      pending.verify(finalFrame.metadata);
+      switch (frame.type) {
+        case KubusFrameType.responseHead:
+          pending.status = _readStatus(frame.metadata);
+          await pending.accept(frame);
+        case KubusFrameType.responseChunk:
+          await pending.accept(frame);
+        case KubusFrameType.error:
+          pending.fail(
+            KubusFrameException(
+              (frame.metadata?['message'] ?? 'peer reported an error')
+                  .toString(),
+            ),
+          );
+        case KubusFrameType.cancel:
+          pending.fail(const KubusFrameException('peer cancelled the request'));
+        case KubusFrameType.requestHead:
+        case KubusFrameType.requestChunk:
+        case KubusFrameType.windowUpdate:
+          // Not meaningful for a client-issued request; ignored so a confused
+          // or hostile peer cannot desynchronise the table.
+          break;
+      }
     } on KubusStreamException catch (error) {
-      pending.completeError(error);
-      return;
+      // Reassembly rejected this response: it breached the aggregate ceiling,
+      // contradicted its own declared length or checksum, or tried to append to
+      // a committed stream. Exactly one request dies, its buffer is dropped
+      // immediately, and the channel keeps carrying everything else.
+      pending.release();
+      // Same reasoning as the timeout path, and in the same order: the peer is
+      // told to stop *before* the failure surfaces locally, so a chunk flood
+      // stops at the ceiling instead of running on while the caller unwinds.
+      // Awaited rather than fire-and-forget because the cancel would otherwise
+      // be queued behind the waiting caller's own continuation, letting the
+      // peer keep generating a response nobody will ever read.
+      // `_sendCancel` swallows its own errors, so this cannot mask `error`.
+      await _sendCancel(frame.requestId);
+      pending.fail(error);
     }
-    pending.completeWith(
-      KubusNodeResponse(
-        statusCode: pending.status ?? 200,
-        body: pending.bodyAsString(),
-        requestPath: pending.path,
-      ),
-    );
   }
 
   static int? _readStatus(Map<String, dynamic>? metadata) {
@@ -217,7 +268,8 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     // A dropped channel fails every in-flight request rather than leaving them
     // to time out one by one, so the resolver can demote this route at once.
     for (final pending in List<_PendingRequest>.from(_pending.values)) {
-      pending.completeError(error);
+      pending.release();
+      pending.fail(error);
     }
     _pending.clear();
   }
@@ -231,42 +283,59 @@ class WebRtcNodeTransport implements KubusNodeTransport {
 }
 
 /// One in-flight request awaiting its response.
+///
+/// Reassembly is delegated to [KubusStreamReassembler] rather than reimplemented
+/// here, so a response is bounded, ordered and integrity-checked by the same
+/// code an upload already is. The one difference between the directions is
+/// where the chunks are handed: a file for an upload, memory for a response.
 class _PendingRequest {
-  _PendingRequest(this.path);
+  _PendingRequest({
+    required int requestId,
+    required this.path,
+    required int maxResponseBytes,
+  }) {
+    _reassembler = KubusStreamReassembler(
+      requestId: requestId,
+      onChunk: (chunk) async => _body.add(chunk),
+      // The aggregate bound. Without it, a peer sending an endless run of
+      // perfectly valid 64 KiB chunks exhausts the process long before the
+      // request's own timeout fires.
+      maxTotalBytes: maxResponseBytes,
+      // Memory drains synchronously, so nothing stays accepted-but-undrained
+      // for longer than a single frame; the total above is the bound that
+      // actually bites.
+      maxBufferedBytes: maxResponseBytes,
+    );
+  }
 
   final String path;
   final Completer<KubusNodeResponse> completer = Completer<KubusNodeResponse>();
   final BytesBuilder _body = BytesBuilder();
-  final Crc32 _crc = Crc32();
+  late final KubusStreamReassembler _reassembler;
 
   int? status;
-  int _received = 0;
 
-  void appendPayload(Uint8List? payload) {
-    if (payload == null || payload.isEmpty) return;
-    _body.add(payload);
-    _crc.add(payload);
-    _received += payload.length;
+  bool get isCompleted => completer.isCompleted;
+
+  /// Feeds one response frame, completing the request on the final one.
+  ///
+  /// Throws [KubusStreamException] when the peer breaches the aggregate
+  /// ceiling or contradicts its own declared length or checksum.
+  Future<void> accept(KubusFrame frame) async {
+    if (!await _reassembler.accept(frame)) return;
+    completeWith(
+      KubusNodeResponse(
+        statusCode: status ?? 200,
+        body: _takeBodyAsString(),
+        requestPath: path,
+      ),
+    );
   }
 
-  /// Applies the integrity metadata a well-behaved peer sends on its final
-  /// frame. Absent metadata is tolerated so a minimal responder stays valid.
-  void verify(Map<String, dynamic>? metadata) {
-    if (metadata == null) return;
-    final declaredLength = metadata['length'];
-    if (declaredLength is int && declaredLength != _received) {
-      throw KubusStreamException(
-        'response length mismatch: expected $declaredLength, '
-        'received $_received',
-      );
-    }
-    final declaredCrc = metadata['crc32'];
-    if (declaredCrc is int && declaredCrc != _crc.value) {
-      throw const KubusStreamException('response checksum mismatch');
-    }
-  }
+  /// Drops whatever has been reassembled so far.
+  void release() => _body.clear();
 
-  String bodyAsString() {
+  String _takeBodyAsString() {
     final bytes = _body.takeBytes();
     if (bytes.isEmpty) return '';
     return utf8.decode(bytes, allowMalformed: true);
@@ -276,7 +345,7 @@ class _PendingRequest {
     if (!completer.isCompleted) completer.complete(response);
   }
 
-  void completeError(Object error) {
+  void fail(Object error) {
     if (!completer.isCompleted) completer.completeError(error);
   }
 }

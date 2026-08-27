@@ -11,6 +11,7 @@ import '../turn_configuration.dart';
 import '../webrtc_frame.dart';
 import '../webrtc_node_transport.dart';
 import 'kubus_rtc_peer.dart';
+import 'node_relay_classifier.dart';
 import 'node_signaling_client.dart';
 
 /// Builds a usable, *verified* WebRTC transport to the paired Node.
@@ -33,12 +34,14 @@ class NodeRtcConnector {
     String? Function()? credential,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration proofTimeout = const Duration(seconds: 10),
+    Duration relayStatsTimeout = NodeRelayClassifier.defaultSettleTimeout,
   })  : _signaling = signaling,
         _iceConfiguration = iceConfiguration,
         _pairedPublicKey = pairedPublicKey,
         _credential = credential ?? _noCredential,
         _connectTimeout = connectTimeout,
-        _proofTimeout = proofTimeout;
+        _proofTimeout = proofTimeout,
+        _relayStatsTimeout = relayStatsTimeout;
 
   /// Request id reserved for the identity challenge.
   ///
@@ -55,6 +58,10 @@ class NodeRtcConnector {
   final Duration _connectTimeout;
   final Duration _proofTimeout;
 
+  /// How long the transport kind waits on ICE stats before being named
+  /// pessimistically. See [NodeRelayClassifier.settle].
+  final Duration _relayStatsTimeout;
+
   /// Negotiates a connection to [nodeId] and returns a verified transport.
   ///
   /// Throws rather than returning an unverified transport. There is no
@@ -70,6 +77,7 @@ class NodeRtcConnector {
       final activePeer = KubusRtcPeer(
         iceConfiguration: ice,
         connectTimeout: _connectTimeout,
+        relayStatsTimeout: _relayStatsTimeout,
         onLocalDescription: (sdp, type) => _signaling.sendOffer(
           session.sessionId,
           sdp,
@@ -95,11 +103,17 @@ class NodeRtcConnector {
       // The channel is open. Nothing has been trusted yet.
       await verifyIdentityOver(channel, session.sessionId);
 
+      // The rung is not named until ICE stats have answered. Reading a relay
+      // flag that merely defaults to false registered TURN-backed connections
+      // as `webRtcDirect`, which skipped every relay penalty for bulk and
+      // metered transfers and misreported diagnostics. The wait is bounded and
+      // ends pessimistically: an unproven route is registered as a relay, which
+      // costs some routing preference rather than a stranger's bandwidth.
+      final routeClass = await activePeer.settleRouteClass();
+
       final transport = WebRtcNodeTransport(
         channel: channel,
-        kind: activePeer.isRelayed
-            ? KubusNodeTransportKind.webRtcRelay
-            : KubusNodeTransportKind.webRtcDirect,
+        kind: routeClass.transportKind,
         // The channel is identity-verified immediately above. Do not capture
         // this credential before that proof succeeds.
         credential: _credential(),

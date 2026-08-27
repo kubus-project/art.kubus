@@ -1,8 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../../config/config.dart';
 import '../kubus_data_channel.dart';
 
 /// Adapts a real `RTCDataChannel` to the small interface the transport needs.
@@ -141,9 +143,8 @@ class RtcDataChannelAdapter implements KubusDataChannel {
     } on Object {
       // A channel already torn down by the peer throws on close. That is the
       // expected path after a disconnect, not a failure worth propagating.
-      if (kDebugMode) {
-        debugPrint('RtcDataChannelAdapter: close ignored a teardown error');
-      }
+      AppConfig.debugPrint(
+          'RtcDataChannelAdapter: close ignored a teardown error');
     }
   }
 }
