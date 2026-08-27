@@ -52,4 +52,23 @@ void main() {
 
     expect(restored.enableAnalytics, isTrue);
   });
+
+  test('legacy analytics preference is removed so reset stays durable',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'analytics': false,
+    });
+    final config = ConfigProvider();
+    await config.initialize();
+
+    expect(config.enableAnalytics, isFalse);
+    expect((await SharedPreferences.getInstance()).containsKey('analytics'),
+        isFalse);
+
+    await config.resetToDefaults();
+    final restored = ConfigProvider();
+    await restored.initialize();
+
+    expect(restored.enableAnalytics, isTrue);
+  });
 }

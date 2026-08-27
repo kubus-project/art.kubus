@@ -47,6 +47,10 @@ class ConfigProvider extends ChangeNotifier {
           legacyCrashReporting != null) {
         await prefs.setBool('enableCrashReporting', legacyCrashReporting);
       }
+      // Once read, aliases must not survive a reset or later canonical write:
+      // otherwise a future initialization could resurrect their stale value.
+      await prefs.remove('analytics');
+      await prefs.remove('crashReporting');
       final rawServerVersion =
           (prefs.getString(_serverVersionKey) ?? '').trim();
       _serverVersion = rawServerVersion.isEmpty ? null : rawServerVersion;
@@ -140,6 +144,8 @@ class ConfigProvider extends ChangeNotifier {
       await prefs.remove('useRealBlockchain');
       await prefs.remove('enableAnalytics');
       await prefs.remove('enableCrashReporting');
+      await prefs.remove('analytics');
+      await prefs.remove('crashReporting');
       await prefs.remove(_serverVersionKey);
       await prefs.remove(_serverVersionFetchedAtKey);
 
