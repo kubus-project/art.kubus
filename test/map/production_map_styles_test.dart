@@ -14,9 +14,28 @@ import 'package:flutter_test/flutter_test.dart';
 /// infrastructure instead. These tests keep the app from silently regressing
 /// back onto the affected raster endpoints.
 void main() {
+  // The bundled styles are always validated: `MapStyleService` falls back to
+  // them whenever the primary style fails to load, so they must stay healthy
+  // no matter what a deployment configures.
+  final bundledAssets = <String, String>{
+    'bundled light': MapStyleService.bundledLightStyleAsset,
+    'bundled dark': MapStyleService.bundledDarkStyleAsset,
+  };
+
+  // `AppConfig` deliberately allows a deployment to point at a different
+  // checked-in style via `--dart-define=MAP_STYLE_{LIGHT,DARK}_ASSET=...`.
+  // Honour that contract instead of pinning the defaults, but pull whatever is
+  // configured into the same validation so an override cannot smuggle the
+  // revoked raster endpoints back into production.
+  final configuredAssets = <String, String>{
+    'configured light': AppConfig.mapStyleLightAsset,
+    'configured dark': AppConfig.mapStyleDarkAsset,
+  };
+
   final styleAssets = <String, String>{
-    'light': MapStyleService.bundledLightStyleAsset,
-    'dark': MapStyleService.bundledDarkStyleAsset,
+    ...bundledAssets,
+    for (final entry in configuredAssets.entries)
+      if (!bundledAssets.containsValue(entry.value)) entry.key: entry.value,
   };
 
   Map<String, dynamic> readStyle(String assetPath) {
@@ -28,23 +47,35 @@ void main() {
     return decoded as Map<String, dynamic>;
   }
 
-  test('the configured production styles are the bundled Kubus styles', () {
-    // If a deployment define ever points somewhere else, that style file still
-    // has to exist in this repository so it is covered by the assertions below.
-    expect(
-      <String>{AppConfig.mapStyleLightAsset, AppConfig.mapStyleDarkAsset},
-      <String>{
-        MapStyleService.bundledLightStyleAsset,
-        MapStyleService.bundledDarkStyleAsset,
-      },
-    );
+  test('every configured production style is a checked-in bundled asset', () {
+    // An override may re-point the map at a different *repository* style, but
+    // not at an unvalidated one: whatever `MAP_STYLE_*` resolves to has to be a
+    // declared `assets/` path that exists here, so the guards below cover it.
+    for (final entry in configuredAssets.entries) {
+      final assetPath = entry.value;
+      expect(
+        assetPath,
+        startsWith('assets/'),
+        reason: '${entry.key} must be a bundled Flutter asset key',
+      );
+      expect(
+        File(assetPath).existsSync(),
+        isTrue,
+        reason: '${entry.key} ("$assetPath") must exist in this repository',
+      );
+      expect(
+        File('pubspec.yaml').readAsStringSync(),
+        contains(assetPath),
+        reason: '${entry.key} ("$assetPath") must be declared in pubspec.yaml',
+      );
+    }
   });
 
   for (final entry in styleAssets.entries) {
     final variant = entry.key;
     final assetPath = entry.value;
 
-    group('bundled $variant map style ($assetPath)', () {
+    group('$variant map style ($assetPath)', () {
       test('is valid JSON using MapLibre Style Specification version 8', () {
         final style = readStyle(assetPath);
         expect(style['version'], 8);
@@ -150,7 +181,7 @@ void main() {
     });
   }
 
-  test('no bundled production map style ships a CARTO API key', () {
+  test('no production map style ships a CARTO API key', () {
     for (final assetPath in styleAssets.values) {
       final raw = File(assetPath).readAsStringSync().toLowerCase();
       expect(raw, isNot(contains('api_key')));
