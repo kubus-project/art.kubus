@@ -361,13 +361,21 @@ class _WalletHomeState extends State<WalletHome> {
 
   Widget _buildTokenAvatar(Token token) {
     final theme = Theme.of(context);
-    final fallback = KubusTokenAvatar(symbol: token.symbol);
+    final fallback = KubusTokenAvatar(
+      symbol: token.symbol,
+      mint: token.contractAddress,
+    );
 
     // KUB8 and SOL have canonical marks — never let a remote logo override the
     // house identity. Everything else may carry its own logo.
-    final symbol = token.symbol.trim().toUpperCase();
-    final hasCanonicalMark = symbol == KubusTokenIdentity.kub8Symbol ||
-        symbol == KubusTokenIdentity.solSymbol;
+    //
+    // The mint decides this, not the symbol. Any SPL token can name itself
+    // KUB8, and one that does must show its own logo rather than be handed
+    // ours: deciding on the symbol meant an airdropped impostor was rendered
+    // with the house mark throughout the wallet list.
+    final hasCanonicalMark =
+        KubusTokenIdentity.isCanonicalKub8(token.contractAddress) ||
+            KubusTokenIdentity.isCanonicalSol(token.contractAddress);
     if (hasCanonicalMark || !_isValidLogoUrl(token.logoUrl)) {
       return fallback;
     }
