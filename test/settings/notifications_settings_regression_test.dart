@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
+import 'package:art_kubus/providers/config_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -33,6 +34,7 @@ Widget _wrapWithApp({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => ConfigProvider()),
       ChangeNotifierProvider.value(value: themeProvider),
       ChangeNotifierProvider.value(value: profileProvider),
       ChangeNotifierProvider.value(value: web3Provider),

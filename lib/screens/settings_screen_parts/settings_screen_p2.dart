@@ -5,6 +5,7 @@ part of '../settings_screen.dart';
 // the State's _applyState shim.
 extension _SettingsScreenStatePart2 on _SettingsScreenState {
   Widget _buildPrivacySection(AppLocalizations l10n) {
+    final configProvider = context.watch<ConfigProvider>();
     return _buildSection(
       l10n.settingsDataAnalyticsSectionTitle,
       Icons.analytics,
@@ -15,13 +16,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           l10n.settingsAnalyticsTileSubtitle,
           Icons.analytics,
           trailing: Switch(
-            value: _analytics,
-            onChanged: (value) {
-              _applyState(() {
-                _analytics = value;
-              });
-              _saveAllSettings();
-            },
+            value: configProvider.enableAnalytics,
+            onChanged: configProvider.setEnableAnalytics,
             activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
@@ -30,13 +26,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           l10n.settingsCrashReportingTileSubtitle,
           Icons.bug_report,
           trailing: Switch(
-            value: _crashReporting,
-            onChanged: (value) {
-              _applyState(() {
-                _crashReporting = value;
-              });
-              _saveAllSettings();
-            },
+            value: configProvider.enableCrashReporting,
+            onChanged: configProvider.setEnableCrashReporting,
             activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),

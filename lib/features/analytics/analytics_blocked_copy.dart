@@ -12,8 +12,10 @@ class AnalyticsBlockedCopy {
     switch (reason) {
       case AnalyticsBlockedReason.walletRequired:
         return l10n.analyticsBlockedWalletRequiredTitle;
-      case AnalyticsBlockedReason.analyticsDisabled:
+      case AnalyticsBlockedReason.analyticsDisabledByPreference:
         return l10n.analyticsBlockedDisabledTitle;
+      case AnalyticsBlockedReason.analyticsUnavailable:
+        return l10n.analyticsBlockedUnavailableTitle;
       case AnalyticsBlockedReason.adminRequired:
         return l10n.analyticsBlockedAdminRequiredTitle;
       case AnalyticsBlockedReason.ownerRequired:
@@ -46,8 +48,10 @@ class AnalyticsBlockedCopy {
     switch (reason) {
       case AnalyticsBlockedReason.walletRequired:
         return l10n.analyticsBlockedWalletRequiredDescription;
-      case AnalyticsBlockedReason.analyticsDisabled:
+      case AnalyticsBlockedReason.analyticsDisabledByPreference:
         return l10n.analyticsBlockedDisabledDescription;
+      case AnalyticsBlockedReason.analyticsUnavailable:
+        return l10n.analyticsBlockedUnavailableDescription;
       case AnalyticsBlockedReason.adminRequired:
         return l10n.analyticsBlockedAdminRequiredDescription;
       case AnalyticsBlockedReason.ownerRequired:

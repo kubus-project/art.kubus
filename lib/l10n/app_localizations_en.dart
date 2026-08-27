@@ -15326,6 +15326,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enable analytics in Settings to view charts and insights.';
 
   @override
+  String get analyticsBlockedOpenSettings => 'Open Settings';
+
+  @override
+  String get analyticsBlockedUnavailableTitle => 'Analytics unavailable';
+
+  @override
+  String get analyticsBlockedUnavailableDescription =>
+      'Analytics are not available in this app build.';
+
+  @override
   String get analyticsBlockedAdminRequiredTitle => 'Admin analytics';
 
   @override

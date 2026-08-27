@@ -5,6 +5,7 @@ import 'package:art_kubus/l10n/app_localizations_en.dart';
 import 'package:art_kubus/models/email_preferences.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
+import 'package:art_kubus/providers/config_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -133,6 +134,7 @@ Widget _buildSettingsApp(
   final content = home ?? const SettingsScreen();
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider<ConfigProvider>(create: (_) => ConfigProvider()),
       ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
       ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
       ChangeNotifierProvider<GlassCapabilitiesProvider>(

@@ -28,8 +28,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
       biometricsDeclined: _biometricsDeclined,
       useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
-      analytics: _analytics,
-      crashReporting: _crashReporting,
       skipOnboarding: _skipOnboardingForReturningUsers,
       networkSelection: _networkSelection,
       autoBackup: _autoBackup,
@@ -178,13 +176,19 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ? walletProvider.currentSolanaNetwork
           : null,
     );
-    final hasPin = await walletProvider.hasPin();
-    final biometricsSupported = await walletProvider.canUseBiometrics();
-    final secureAccountStatus = await _loadSecureAccountStatus();
-    final walletBackupStatus = await WalletBackupStatusResolver.resolve(
-      walletProvider: walletProvider,
-      refreshRemote: true,
-    );
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    final hasPin = isSignedIn ? await walletProvider.hasPin() : false;
+    final biometricsSupported =
+        isSignedIn ? await walletProvider.canUseBiometrics() : false;
+    final secureAccountStatus = isSignedIn
+        ? await _loadSecureAccountStatus()
+        : const <String, dynamic>{};
+    final walletBackupStatus = isSignedIn
+        ? await WalletBackupStatusResolver.resolve(
+            walletProvider: walletProvider,
+            refreshRemote: true,
+          )
+        : const WalletBackupStatusSnapshot.noWallet();
     if (!mounted) return;
 
     _applyState(() {
@@ -209,8 +213,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
       _hasPin = hasPin;
       _biometricsSupported = biometricsSupported;
 
-      _analytics = settings.analytics;
-      _crashReporting = settings.crashReporting;
       _skipOnboardingForReturningUsers = settings.skipOnboarding;
 
       _networkSelection = settings.networkSelection;

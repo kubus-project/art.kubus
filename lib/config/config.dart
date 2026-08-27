@@ -188,7 +188,10 @@ class AppConfig {
   /// Analytics and tracking
   static const bool enableAnalytics = bool.fromEnvironment(
     'ANALYTICS_APP_ENABLED',
-    defaultValue: isProduction,
+    // Public release configuration supplies this explicitly. A true default
+    // keeps local and test builds representative; deployment can still turn
+    // off the capability with a typed dart define.
+    defaultValue: true,
   );
 
   /// Deployment-level kill switch for guest activation prompts.

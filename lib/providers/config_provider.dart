@@ -32,9 +32,23 @@ class ConfigProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
 
       _useRealBlockchain = prefs.getBool('useRealBlockchain') ?? true;
-      _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
-      _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
-      final rawServerVersion = (prefs.getString(_serverVersionKey) ?? '').trim();
+      final legacyAnalytics = prefs.getBool('analytics');
+      final legacyCrashReporting = prefs.getBool('crashReporting');
+      _enableAnalytics =
+          prefs.getBool('enableAnalytics') ?? legacyAnalytics ?? true;
+      _enableCrashReporting =
+          prefs.getBool('enableCrashReporting') ?? legacyCrashReporting ?? true;
+      // Migrate the only legacy aliases while keeping the canonical keys that
+      // ConfigProvider owns. New writes never go through SettingsService.
+      if (!prefs.containsKey('enableAnalytics') && legacyAnalytics != null) {
+        await prefs.setBool('enableAnalytics', legacyAnalytics);
+      }
+      if (!prefs.containsKey('enableCrashReporting') &&
+          legacyCrashReporting != null) {
+        await prefs.setBool('enableCrashReporting', legacyCrashReporting);
+      }
+      final rawServerVersion =
+          (prefs.getString(_serverVersionKey) ?? '').trim();
       _serverVersion = rawServerVersion.isEmpty ? null : rawServerVersion;
       final fetchedAtMs = prefs.getInt(_serverVersionFetchedAtKey);
       _serverVersionFetchedAt = fetchedAtMs == null
@@ -63,8 +77,8 @@ class ConfigProvider extends ChangeNotifier {
   Future<void> setEnableAnalytics(bool value) async {
     if (_enableAnalytics != value) {
       _enableAnalytics = value;
-      await _saveSetting('enableAnalytics', value);
       notifyListeners();
+      await _saveSetting('enableAnalytics', value);
     }
   }
 
@@ -72,8 +86,8 @@ class ConfigProvider extends ChangeNotifier {
   Future<void> setEnableCrashReporting(bool value) async {
     if (_enableCrashReporting != value) {
       _enableCrashReporting = value;
-      await _saveSetting('enableCrashReporting', value);
       notifyListeners();
+      await _saveSetting('enableCrashReporting', value);
     }
   }
 
@@ -128,13 +142,13 @@ class ConfigProvider extends ChangeNotifier {
       await prefs.remove('enableCrashReporting');
       await prefs.remove(_serverVersionKey);
       await prefs.remove(_serverVersionFetchedAtKey);
-      
+
       _useRealBlockchain = true;
       _enableAnalytics = true;
       _enableCrashReporting = true;
       _serverVersion = null;
       _serverVersionFetchedAt = null;
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {

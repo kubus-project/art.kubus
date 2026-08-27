@@ -7,6 +7,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
+import '../providers/config_provider.dart';
 import '../providers/glass_capabilities_provider.dart';
 import '../utils/app_color_utils.dart';
 import '../providers/notification_provider.dart';
@@ -105,8 +106,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _publicProfile = true;
 
   // App settings state
-  bool _analytics = true;
-  bool _crashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
 
   // Wallet settings state
@@ -164,6 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -181,25 +181,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                       padding: const EdgeInsets.all(KubusSpacing.lg),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
-                          _buildUserSection(l10n),
-                          const SizedBox(height: 32),
+                          if (isSignedIn) ...[
+                            _buildUserSection(l10n),
+                            const SizedBox(height: 32),
+                          ],
                           _buildThemeSection(l10n),
                           const SizedBox(height: 24),
                           _buildLanguageSection(l10n),
                           const SizedBox(height: 24),
-                          _buildPlatformCapabilitiesSection(l10n),
-                          const SizedBox(height: 24),
-                          _buildProfileSection(l10n),
-                          const SizedBox(height: 24),
-                          _buildWalletSection(l10n),
-                          const SizedBox(height: 24),
-                          _buildSecuritySection(l10n),
-                          const SizedBox(height: 24),
+                          if (isSignedIn) ...[
+                            _buildPlatformCapabilitiesSection(l10n),
+                            const SizedBox(height: 24),
+                            _buildProfileSection(l10n),
+                            const SizedBox(height: 24),
+                            _buildWalletSection(l10n),
+                            const SizedBox(height: 24),
+                            _buildSecuritySection(l10n),
+                            const SizedBox(height: 24),
+                          ],
                           _buildPrivacySection(l10n),
                           const SizedBox(height: 24),
                           _buildAboutSection(l10n),
                           const SizedBox(height: 24),
-                          _buildDangerZone(l10n),
+                          if (isSignedIn) _buildDangerZone(l10n),
                           const SizedBox(height: 40),
                         ]),
                       ),

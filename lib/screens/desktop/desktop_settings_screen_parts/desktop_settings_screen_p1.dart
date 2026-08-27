@@ -85,8 +85,6 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
       _accountType = settings.accountType;
       _publicProfile = settings.publicProfile;
 
-      _analytics = settings.analytics;
-      _crashReporting = settings.crashReporting;
       _skipOnboardingForReturningUsers = settings.skipOnboarding;
 
       _networkSelection = settings.networkSelection;
@@ -147,8 +145,6 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
       biometricsDeclined: _biometricsDeclined,
       useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
-      analytics: _analytics,
-      crashReporting: _crashReporting,
       skipOnboarding: _skipOnboardingForReturningUsers,
       networkSelection: _networkSelection,
       autoBackup: _autoBackup,
