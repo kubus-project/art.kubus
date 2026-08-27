@@ -10,8 +10,10 @@ import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/providers/spatial_library_provider.dart';
 import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/kubus_node_service.dart';
+import 'package:art_kubus/services/node/node_identity_proof.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:art_kubus/services/spatial_library_store.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A stand-in kubus Node speaking the real `/local/v1/captures/drafts` contract.
@@ -96,9 +98,17 @@ class FakeKubusNode {
 
     if (request.method == 'GET' && path == '/local/v1/info') {
       return _json(request, 200, {
-        'nodeId': 'fake-node-1',
-        'fingerprint': 'fake-node-fingerprint',
+        'nodeId': _nodeIdentity.nodeId,
+        'fingerprint': _nodeIdentity.fingerprint,
       });
+    }
+
+    // The app proves who answered before it sends the credential or a private
+    // capture, and it will not accept a repeated identity string as proof, so
+    // this fake signs the challenge with real key material.
+    if (request.method == 'POST' && path == '/local/v1/identity/proof') {
+      final raw = await utf8.decoder.bind(request).join();
+      return _json(request, 200, await _nodeIdentity.proof(raw));
     }
 
     if (request.method == 'POST' && path == '/local/v1/jobs') {
@@ -294,6 +304,9 @@ class _TestNodeProvider implements KubusNodeProvider {
           'artworkId': artworkId,
           if (markerId != null) 'markerId': markerId,
         },
+        // Same durable identity the production caller uses, so the fake
+        // exercises the real idempotency contract.
+        requestId: captureId,
       );
 
   @override
@@ -379,7 +392,64 @@ Map<String, dynamic> orbitFrame(int index) {
   };
 }
 
+/// Real Ed25519 key material for the fake Node.
+///
+/// The app requires a signature over a nonce it chose before it will trust an
+/// HTTP endpoint with the Node credential or a private capture. The node id and
+/// fingerprint are printed in the pairing QR, so echoing them proves nothing —
+/// only the key does. A fake without one cannot stand in for a Node.
+class _FakeNodeIdentity {
+  _FakeNodeIdentity(this.keyPair, this.publicKey);
+
+  final SimpleKeyPair keyPair;
+  final Uint8List publicKey;
+
+  String get nodeId => 'fake-node-1';
+  String get publicKeyBase64Url => base64Url.encode(publicKey);
+  String get fingerprint => nodeFingerprintFromPublicKey(publicKey);
+
+  static Future<_FakeNodeIdentity> create() async {
+    final keyPair = await Ed25519().newKeyPairFromSeed(
+      List<int>.filled(32, 11),
+    );
+    final key = await keyPair.extractPublicKey();
+    return _FakeNodeIdentity(keyPair, Uint8List.fromList(key.bytes));
+  }
+
+  /// Answers a challenge exactly as `POST /local/v1/identity/proof` does.
+  Future<Map<String, dynamic>> proof(String requestBody) async {
+    final body = jsonDecode(requestBody) as Map<String, dynamic>;
+    final nonce = Uint8List.fromList(
+      base64.decode(base64.normalize(body['nonce'].toString())),
+    );
+    final signature = await Ed25519().sign(
+      buildIdentityProofMessage(
+        protocolVersion: kIdentityProofProtocolVersion,
+        sessionId: kHttpIdentitySessionId,
+        nonce: nonce,
+        publicKey: publicKey,
+        clientRole: 'client',
+      ),
+      keyPair: keyPair,
+    );
+    return <String, dynamic>{
+      'protocolVersion': kIdentityProofProtocolVersion,
+      'sessionId': kHttpIdentitySessionId,
+      'nodeId': nodeId,
+      'fingerprint': fingerprint,
+      'publicKey': publicKeyBase64Url,
+      'signature': base64.encode(signature.bytes),
+    };
+  }
+}
+
+late final _FakeNodeIdentity _nodeIdentity;
+
 void main() {
+  setUpAll(() async {
+    _nodeIdentity = await _FakeNodeIdentity.create();
+  });
+
   late Directory root;
   late FakeKubusNode node;
   late KubusNodeService service;
@@ -403,8 +473,15 @@ void main() {
     final store = _MemoryCredentialStore();
     await store.write('kubus_node_endpoint_v1', node.endpoint.toString());
     await store.write('kubus_node_credential_v1', 'kubus_local_testtoken');
-    await store.write('kubus_node_id_v2', 'fake-node-1');
-    await store.write('kubus_node_fingerprint_v1', 'fake-node-fingerprint');
+    await store.write('kubus_node_id_v2', _nodeIdentity.nodeId);
+    await store.write('kubus_node_fingerprint_v1', _nodeIdentity.fingerprint);
+    // Without the recorded public key there is nothing to verify a signature
+    // against, and the service refuses the endpoint rather than falling back
+    // to comparing values anyone could repeat.
+    await store.write(
+      'kubus_node_public_key_v1',
+      _nodeIdentity.publicKeyBase64Url,
+    );
     service = KubusNodeService(credentialStore: store, isWeb: false);
     await service.initialize();
     return _TestNodeProvider(service);

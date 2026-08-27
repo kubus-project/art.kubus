@@ -3,11 +3,17 @@ import 'package:flutter/foundation.dart';
 import '../models/kubus_node_models.dart';
 import '../services/kubus_node_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/node/turn_credential_service.dart';
 
 class KubusNodeProvider extends ChangeNotifier {
-  KubusNodeProvider({KubusNodeService? service})
-      : service = service ?? KubusNodeService();
+  KubusNodeProvider({
+    KubusNodeService? service,
+    TurnCredentialService? turnCredentialService,
+  })  : service = service ?? KubusNodeService(),
+        _turnCredentialService =
+            turnCredentialService ?? TurnCredentialService();
   final KubusNodeService service;
+  final TurnCredentialService _turnCredentialService;
   KubusNodeConnectionState _state = KubusNodeConnectionState.unpaired;
   KubusNodeSnapshot? _snapshot;
   List<KubusNodeJob> _jobs = const [];
@@ -54,6 +60,7 @@ class KubusNodeProvider extends ChangeNotifier {
       return;
     }
     await refresh();
+    unawaited(_restoreRemoteRouteThenRefresh());
   }
 
   Future<void> pair(KubusNodePairingPayload payload) async {
@@ -63,6 +70,7 @@ class KubusNodeProvider extends ChangeNotifier {
     try {
       await service.pair(payload);
       await refresh();
+      unawaited(_restoreRemoteRouteThenRefresh());
     } catch (error) {
       _state = KubusNodeConnectionState.error;
       _error = error.toString();
@@ -101,6 +109,11 @@ class KubusNodeProvider extends ChangeNotifier {
         'artworkId': artworkId,
         if (markerId != null) 'markerId': markerId,
       },
+      // The capture is this request's durable identity, so a retry after an
+      // ambiguous failure — or a second tap on Process — reaches the same job
+      // instead of queueing the same reconstruction twice. The node releases
+      // the key when a job fails, so a deliberate re-run still starts work.
+      requestId: captureId,
     );
     await refresh();
     return job;
@@ -199,5 +212,60 @@ class KubusNodeProvider extends ChangeNotifier {
     _state = KubusNodeConnectionState.unpaired;
     _error = null;
     notifyListeners();
+  }
+
+  /// Restores the route that survives leaving the Node's LAN.
+  ///
+  /// Failure is intentionally silent here: this is opportunistic remote
+  /// coordination. The following refresh still tests the direct route, so a
+  /// signaling or TURN outage never makes a nearby Node look unpaired.
+  /// Brings up the signalling-backed rung, reporting whether one was installed.
+  Future<bool> _restoreRemoteRoute() async {
+    if (!service.supportsRemoteIdentityVerification ||
+        (service.nodeId ?? '').isEmpty) {
+      return false;
+    }
+    final backend = BackendApiService();
+    if ((backend.getAuthToken() ?? '').trim().isEmpty) return false;
+    try {
+      await service.connectRemote(
+        signalingBaseUrl: backend.baseUrl,
+        authToken: () async => backend.getAuthToken(),
+        iceConfiguration: _turnCredentialService.loadIceConfiguration,
+      );
+      return true;
+    } on Object {
+      // The resolver retains any working direct rungs. Connection state is set
+      // by refresh from an actual Node response, not from this coordination
+      // attempt alone.
+      return false;
+    }
+  }
+
+  /// Installs the remote rung, then re-reads state if that changed what is
+  /// reachable.
+  ///
+  /// A cold start away from the Node's LAN runs [refresh] while the only rung
+  /// is the LAN one. It fails, and the provider settles on `unavailable`. The
+  /// remote rung then comes up and works — but nothing has asked the Node
+  /// anything since, so every screen keeps showing an unreachable Node until
+  /// some unrelated action happens to refresh. Re-reading here is what turns a
+  /// working transport into state a user can see.
+  ///
+  /// Skipped when the provider is already paired: the LAN rung answered, so a
+  /// second round trip would tell us what we know.
+  Future<void> _restoreRemoteRouteThenRefresh() async =>
+      refreshAfterRouteRestored(await _restoreRemoteRoute());
+
+  /// The half of the above that decides whether to re-read.
+  ///
+  /// Split out so the cold-start-off-LAN case can be tested without standing up
+  /// signalling, TURN and a backend session: what regressed before was this
+  /// decision, not the connection.
+  @visibleForTesting
+  Future<void> refreshAfterRouteRestored(bool installedRoute) async {
+    if (!installedRoute) return;
+    if (_state == KubusNodeConnectionState.paired) return;
+    await refresh();
   }
 }

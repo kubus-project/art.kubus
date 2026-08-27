@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "kubus-node/1",
+  "sessionId": "session-cross-language-0001",
+  "nonceBase64": "AwoRGB8mLTQ7QklQV15lbHN6gYiPlp2kq7K5wMfO1dw=",
+  "publicKeyBase64Url": "5oNBtCezuy4ixCID5otETlQpiz1_sndHkJtCSkTcMNs",
+  "fingerprint": "e8a2469d8d2e984e0afa1622303e1237025f208eca1e77b8540e31da9a0aeab6",
+  "signatureBase64": "nFcAbrughA97kTY1NUYbZvNv+AICDT4pLtmq4cbYn177z9SgIYyrM375MTqAHn3hn3zZZQSNU6zWhZw5mffwBw==",
+  "canonicalMessageHex": "6b756275732d6e6f64652d6964656e746974792d70726f6f662f7631006b756275732d6e6f64652f310073657373696f6e2d63726f73732d6c616e67756167652d3030303100030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce68341b427b3bb2e22c42203e68b444e54298b3d7fb27747909b424a44dc30db636c69656e7400",
+  "imposter": {
+    "publicKeyBase64Url": "x-1jQ6SZ1OWUPSh9Q3xz7nniGLjFcP9KPzIE6CMIs-w",
+    "signatureBase64": "sq8lIQNCoJl/J/vXTe80x9zXifnvVbW/MZpNIsgvN2OZDyiuyeyD5wQA3vidf6dlD3n5sjk+s1ZM1dxOd4LoDg=="
+  }
+}

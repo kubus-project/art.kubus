@@ -80,5 +80,7 @@
 		<string>Use Face ID to unlock the app and reveal your recovery phrase securely.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Use the camera to discover, place and capture art with spatial tracking.</string>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>Connect directly to your kubus Node on this Wi-Fi network, so your captures stay on your own network instead of travelling over the internet.</string>
 	</dict>
 </plist>

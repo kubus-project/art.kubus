@@ -40,6 +40,7 @@ import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
 import 'telemetry/telemetry_uuid.dart';
+import 'node/turn_configuration.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
@@ -339,6 +340,56 @@ class BackendApiService
   bool? get institutionsApiAvailable => _institutionsApiAvailable;
   bool? get eventsApiAvailable => _eventsApiAvailable;
   String? get lastRequestId => _lastRequestId;
+
+  /// Obtains an ephemeral relay credential from the authenticated control
+  /// plane. This is deliberately a backend-service concern: providers only
+  /// coordinate state and must never know the TURN endpoint or wire shape.
+  ///
+  /// A relay is optional. Failure therefore returns an empty configuration so
+  /// direct ICE can still be attempted; no permanent credential is cached.
+  Future<IceConfiguration> fetchTurnIceConfiguration() async {
+    if ((_authToken ?? '').trim().isEmpty) return const IceConfiguration();
+    try {
+      final response = await _post(
+        Uri.parse('$baseUrl/api/turn/credentials'),
+        headers: const <String, String>{'Content-Type': 'application/json'},
+        body: jsonEncode(const <String, Object?>{}),
+        timeout: const Duration(seconds: 12),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const IceConfiguration();
+      }
+      final decoded = jsonDecode(response.body);
+      final data = decoded is Map ? decoded['data'] : null;
+      if (data is! Map) return const IceConfiguration();
+      final urls = (data['urls'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(growable: false);
+      final stunUrls = <String>{
+        ...((data['stunUrls'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<String>()),
+        ...urls.where((url) => url.startsWith('stun:')),
+      };
+      final stun = stunUrls.map(StunServer.new).toList(growable: false);
+      final username = data['username'] as String?;
+      final credential = data['credential'] as String?;
+      final expiresAt = DateTime.tryParse(data['expiresAt'] as String? ?? '');
+      if (username == null || credential == null || expiresAt == null) {
+        return IceConfiguration(stun: stun);
+      }
+      final turn = TurnCredentials(
+        urls: urls,
+        username: username,
+        credential: credential,
+        expiresAt: expiresAt,
+      );
+      final now = DateTime.now();
+      turn.validate(now: now, issuedAt: now);
+      return IceConfiguration(stun: stun, turn: turn);
+    } on Object {
+      return const IceConfiguration();
+    }
+  }
 
   /// Whether a backend account session (JWT) is currently loaded.
   ///
