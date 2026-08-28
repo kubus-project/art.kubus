@@ -54,21 +54,20 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get exploreOnlyArtifactsDescription =>
-      'Odkrij arhivske zapise in digitalne izdaje, povezane z umetninami.';
+      'Odkrij digitalne izdaje, povezane z umetninami.';
 
   @override
   String get walletPromptTitle => 'Poveži denarnico';
 
   @override
   String get walletPromptBody =>
-      'Denarnica poveže tvoj profil z atribucijo, arhivskimi zapisi, digitalnimi izdajami in orodji upravljanja. Odkrivanje in skupnost ostajata odprta tudi brez nje.';
+      'Denarnica podpira atribucijo, digitalne izdaje in upravljanje. Odkrivanje in skupnost ostajata odprta tudi brez nje.';
 
   @override
   String get walletPromptIntro => 'Denarnico uporabi za:';
 
   @override
-  String get walletPromptFeatureArchiveObjects =>
-      'Arhivske zapise in digitalne izdaje';
+  String get walletPromptFeatureArchiveObjects => 'Digitalne izdaje';
 
   @override
   String get walletPromptFeatureCreateArtworks =>
@@ -84,7 +83,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletPromptSetUpAction => 'Nastavi denarnico';
 
   @override
-  String get walletHomeArchiveObjectFallbackTitle => 'Arhivski zapis';
+  String get walletHomeArchiveObjectFallbackTitle => 'Digitalna izdaja';
 
   @override
   String get walletHomeCollectibleFallbackTitle => 'Digitalna izdaja';
@@ -133,11 +132,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Umetnine ni bilo mogoče objaviti. Poskusi znova.';
 
   @override
-  String get archiveObjectCreatedToast => 'Arhivski zapis je ustvarjen.';
+  String get archiveObjectCreatedToast => 'Digitalna izdaja je ustvarjena.';
 
   @override
   String get archiveObjectCreateFailed =>
-      'Arhivskega zapisa ni bilo mogoče ustvariti.';
+      'Digitalne izdaje ni bilo mogoče ustvariti.';
 
   @override
   String get archiveObjectCreationPleaseWait =>
@@ -146,23 +145,23 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String archiveObjectSeriesDefaultDescription(
       Object artworkTitle, Object artistName) {
-    return 'Arhivski zapisi za $artworkTitle, avtor: $artistName';
+    return 'Digitalne izdaje umetnine $artworkTitle, avtor: $artistName';
   }
 
   @override
   String get archiveObjectSeriesCreateFailed =>
-      'Serije arhivskih zapisov ni bilo mogoče ustvariti';
+      'Serije digitalnih izdaj ni bilo mogoče ustvariti';
 
   @override
   String get archiveObjectSeriesNotFound =>
-      'Serija arhivskih zapisov ni najdena';
+      'Serija digitalnih izdaj ni najdena';
 
   @override
   String get archiveObjectSeriesSoldOut => 'Serija je razprodana';
 
   @override
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
-    return 'Ustvarjen arhivski zapis za \"$artworkTitle\" (izdaja #$tokenId)';
+    return 'Ustvarjena digitalna izdaja umetnine \"$artworkTitle\" (izdaja #$tokenId)';
   }
 
   @override
@@ -171,12 +170,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String archiveObjectCreateFailedWithError(Object error) {
-    return 'Arhivskega zapisa ni bilo mogoče ustvariti: $error';
+    return 'Digitalne izdaje ni bilo mogoče ustvariti: $error';
   }
 
   @override
   String archiveObjectCreateError(Object error) {
-    return 'Napaka pri ustvarjanju arhivskega zapisa: $error';
+    return 'Napaka pri ustvarjanju digitalne izdaje: $error';
   }
 
   @override
@@ -217,7 +216,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get recentActivityArchiveObjectUpdateTitle =>
-      'Posodobitev arhivskega zapisa';
+      'Posodobitev digitalne izdaje';
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
@@ -230,7 +229,7 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String recentActivityArchiveObjectStatusDescription(
       Object status, Object title) {
-    return 'Arhivski zapis $status za $title';
+    return 'Digitalna izdaja $status za $title';
   }
 
   @override
@@ -247,19 +246,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get pushArchiveObjectCreatingTitle =>
-      'Ustvarjanje arhivskega zapisa ...';
+      'Ustvarjanje digitalne izdaje ...';
 
   @override
   String pushArchiveObjectCreatingBody(Object artworkTitle) {
-    return 'Ustvarjanje arhivskega zapisa za \"$artworkTitle\"';
+    return 'Ustvarjanje digitalne izdaje umetnine \"$artworkTitle\"';
   }
 
   @override
-  String get pushArchiveObjectCreatedTitle => 'Arhivski zapis je ustvarjen';
+  String get pushArchiveObjectCreatedTitle => 'Digitalna izdaja je ustvarjena';
 
   @override
   String pushArchiveObjectCreatedBody(Object artworkTitle) {
-    return '\"$artworkTitle\" ima zdaj arhivski zapis';
+    return 'Digitalna izdaja umetnine \"$artworkTitle\" je pripravljena';
   }
 
   @override
@@ -267,16 +266,16 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
-    return 'Arhivskega zapisa za \"$artworkTitle\" ni bilo mogoče ustvariti. Poskusi znova.';
+    return 'Digitalne izdaje umetnine \"$artworkTitle\" ni bilo mogoče ustvariti. Poskusi znova.';
   }
 
   @override
   String get pushArchiveObjectCreationChannelName =>
-      'Ustvarjanje arhivskih zapisov';
+      'Ustvarjanje digitalnih izdaj';
 
   @override
   String get pushArchiveObjectCreationChannelDescription =>
-      'Obvestila o ustvarjanju arhivskih zapisov';
+      'Obvestila o ustvarjanju digitalnih izdaj';
 
   @override
   String get pushRecognitionChannelName => 'Priznanja';
@@ -287,11 +286,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get analyticsMetricArchiveObjectsCreatedLabel =>
-      'Ustvarjeni arhivski zapisi';
+      'Ustvarjene digitalne izdaje';
 
   @override
   String get analyticsMetricArchiveObjectsCreatedDescription =>
-      'Arhivski zapisi, povezani z umetninami.';
+      'Digitalne izdaje, povezane z umetninami.';
 
   @override
   String get analyticsMetricKub8RecognitionLabel => 'KUB8 priznanja';
@@ -1043,7 +1042,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authSignInSubtitle =>
-      'Začni z odkrivanjem umetnosti, ustvarjalci, institucijami in skupnostjo. Denarnico dodaš, ko potrebuješ arhivske zapise, digitalne izdaje ali upravljanje.';
+      'Začni z odkrivanjem umetnosti, ustvarjalci, institucijami in skupnostjo. Denarnico dodaš pozneje za digitalne izdaje ali upravljanje.';
 
   @override
   String get authRegisterTitle => 'Ustvari račun';
@@ -1606,7 +1605,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingFlowWalletBackupIntroBody =>
-      'Nekateri načini računa ustvarijo denarnico za pripis, arhivske zapise, digitalne izdaje in prihodnje sodelovanje. Javno odkrivanje in skupnost ostaneta dostopna brez denarnice.';
+      'Denarnica podpira atribucijo, digitalne izdaje in prihodnje sodelovanje. Javno odkrivanje in skupnost ostaneta dostopna brez nje.';
 
   @override
   String get onboardingFlowWalletBackupIntroWeb3Warning =>
@@ -1930,7 +1929,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingWelcomeDescription =>
-      'Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus povezuje zemljevid, skupnost, AR, denarnico, arhivske zapise in upravljanje v odprto kulturno infrastrukturo.';
+      'Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus povezuje skupnostni umetniški zemljevid z infrastrukturo javnega kulturnega arhiva.';
 
   @override
   String get alphaNoticeTitle => 'Vstopaš v art.kubus alpha';
@@ -1977,7 +1976,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingCollectiblesTitle =>
-      'Digitalni spominki in zapisi sodelovanja';
+      'Digitalne izdaje in zapisi prisotnosti';
 
   @override
   String get onboardingCollectiblesSubtitle =>
@@ -1985,7 +1984,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingCollectiblesDescription =>
-      'Ko obiščeš ali prispevaš k javni umetnosti, lahko kubus ta kontekst zabeleži kot arhivski zapis ali digitalno izdajo. Odkrivanje umetnosti in skupnost delujeta brez denarnice.';
+      'Zapis prisotnosti lahko dokumentira obisk. Umetniki lahko ustvarijo digitalne izdaje, povezane z umetnino. Odkrivanje umetnosti in skupnost delujeta brez denarnice.';
 
   @override
   String get onboardingGrantPermissions => 'Dovoli dostop';
@@ -2374,14 +2373,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationDescription =>
-      'Denarnico poveži le, če želiš atribucijo, digitalne arhivske objekte ali prihodnja orodja za sodelovanje. Osnovno odkrivanje in skupnost delujeta brez nje.';
+      'Denarnico poveži le, če želiš atribucijo, digitalne izdaje ali prihodnja orodja za sodelovanje. Osnovno odkrivanje in skupnost delujeta brez nje.';
 
   @override
   String get desktopSettingsFeatureNftMintingTitle => 'Digitalne izdaje';
 
   @override
   String get desktopSettingsFeatureNftMintingDescription =>
-      'Ustvarjaj in upravljaj digitalne zapise, povezane z umetninami, obiski ali prispevki.';
+      'Ustvarjaj in upravljaj digitalne izdaje, povezane z umetninami.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Skupnost';
@@ -3712,7 +3711,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get web3ArtistStudioP2Description =>
-      'Predstavi umetnine in digitalne kulturne izdaje. Naloži, organiziraj in opiši svojo prakso.';
+      'Predstavi umetnine in digitalne izdaje. Naloži, organiziraj in opiši svojo prakso.';
 
   @override
   String get web3ArtistStudioP2Feature1 => 'Naloži in organiziraj umetnine';
@@ -4041,7 +4040,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get web3MarketplaceP1Description =>
-      'Arhivski zapisi in digitalne izdaje povezujejo umetnine s provenienco, obiski in kulturnim spominom.';
+      'Digitalne izdaje povezujejo umetnine s provenienco.';
 
   @override
   String get web3MarketplaceP1Feature1 => 'Brskaj po digitalnih izdajah';
@@ -4139,7 +4138,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get web3FeaturesP2Description =>
-      'Brskaj po digitalnih kulturnih izdajah, povezanih z ustvarjalci, umetninami, institucijami in provenienco.';
+      'Brskaj po digitalnih izdajah, povezanih z ustvarjalci, umetninami, institucijami in provenienco.';
 
   @override
   String get web3FeaturesP2Feature1 => 'Brskaj po izpostavljenih izdajah';
@@ -4951,7 +4950,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopMapArtworkTypeArArt => 'AR umetnost';
 
   @override
-  String get desktopMapArtworkTypeNfts => 'Arhivski zapisi';
+  String get desktopMapArtworkTypeNfts => 'Digitalne izdaje';
 
   @override
   String get desktopMapArtworkTypeModels3d => '3D modeli';
@@ -7440,7 +7439,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletHomeStakeDescription =>
-      'Pripravi SOL za prihodnje transakcijske provizije, ko jih bodo zahtevala dejanja objavljanja ali artefaktov.';
+      'Pripravi SOL za prihodnje transakcijske provizije, ko jih bodo zahtevala dejanja objavljanja ali digitalnih izdaj.';
 
   @override
   String get walletHomeStakeAction => 'Nastavi podporo';
@@ -8086,7 +8085,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artworkDetailHideComments => 'Skrij komentarje';
 
   @override
-  String get artworkDetailMintNft => 'Ustvari arhivski zapis';
+  String get artworkDetailMintNft => 'Ustvari digitalno izdajo';
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
@@ -9372,7 +9371,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get marketplaceNoMintedNftsDescription =>
-      'Digitalne izdaje se prikažejo, ko je umetnina izdana kot digitalni kulturni objekt.';
+      'Digitalne izdaje se prikažejo, ko umetnina dobi digitalno izdajo.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'V trendu ta teden';
@@ -9382,18 +9381,19 @@ class AppLocalizationsSl extends AppLocalizations {
       'Objave z največ dejavnosti ta teden.';
 
   @override
-  String get marketplaceNoTrendingNftsTitle => 'Aktivnih artefaktov še ni';
+  String get marketplaceNoTrendingNftsTitle =>
+      'Aktivnih digitalnih izdaj še ni';
 
   @override
   String get marketplaceNoTrendingNftsDescription =>
-      'Preveri pozneje, ko bo dejavnost kulturnih artefaktov zrasla.';
+      'Preveri pozneje, ko bo dejavnost digitalnih izdaj večja.';
 
   @override
   String get marketplaceMyCollectionTitle => 'Moje digitalne izdaje';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
-    return '$count artefaktov';
+    return '$count digitalnih izdaj';
   }
 
   @override
@@ -9424,10 +9424,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceRarityLabel => 'Redkost';
 
   @override
-  String get marketplaceOwnedNftStatus => 'Artefakt v lasti';
+  String get marketplaceOwnedNftStatus => 'Digitalna izdaja v lasti';
 
   @override
-  String get marketplaceOwnedNftListedStatus => 'Artefakt v lasti - objavljen';
+  String get marketplaceOwnedNftListedStatus =>
+      'Digitalna izdaja v lasti, objavljena';
 
   @override
   String get marketplaceEmptyCollectionTitle => 'Digitalnih izdaj še ni';
@@ -9443,11 +9444,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceListForSaleButton => 'Objavi za prodajo';
 
   @override
-  String get marketplaceListForSaleSuccessToast => 'Artefakt je objavljen.';
+  String get marketplaceListForSaleSuccessToast =>
+      'Digitalna izdaja je objavljena.';
 
   @override
   String get marketplaceListForSaleFailedToast =>
-      'Artefakta trenutno ni mogoče objaviti.';
+      'Digitalne izdaje trenutno ni mogoče objaviti.';
 
   @override
   String get marketplaceRemoveFromSaleTitle => 'Odstrani iz prodaje';
@@ -9458,7 +9460,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get marketplaceRemoveFromSaleSuccessToast =>
-      'Artefakt je odstranjen iz objave.';
+      'Digitalna izdaja je odstranjena iz objave.';
 
   @override
   String get marketplaceMintConnectWalletTitle =>
@@ -9523,14 +9525,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Razprodano';
 
   @override
-  String get marketplaceMintNftButtonLabel => 'Ustvari artefakt';
+  String get marketplaceMintNftButtonLabel => 'Ustvari digitalno izdajo';
 
   @override
   String get marketplaceArRequiredTitle => 'AR je obvezen';
 
   @override
   String get marketplaceArRequiredDescription =>
-      'Ta artefakt zahteva interakcijo z lokacijo fizične umetnine. Obišči umetnino in uporabi AR skener, če ga je ustvarjalec omogočil.';
+      'Ta digitalna izdaja zahteva interakcijo z lokacijo umetnine. Obišči umetnino in uporabi AR-skener, če ga je ustvarjalec omogočil.';
 
   @override
   String get marketplaceGoToArButton => 'Pojdi na AR';
@@ -9582,7 +9584,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get marketplaceRemoveFromSaleFailedToast =>
-      'Artefakta trenutno ni mogoče odstraniti iz objave.';
+      'Digitalne izdaje trenutno ni mogoče odstraniti iz objave.';
 
   @override
   String get marketplaceValueNotListedLabel => 'Ni objavljeno';
@@ -9649,7 +9651,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectibleRarityMythic => 'Mitsko';
 
   @override
-  String get collectibleStatusMinted => 'Izdano kot arhivski zapis';
+  String get collectibleStatusMinted => 'Izdano kot digitalna izdaja';
 
   @override
   String get collectibleStatusListed => 'Objavljeno';
@@ -11132,7 +11134,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopHomeDiscoverArtDescription =>
-      'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Orodja denarnice podpirajo atribucijo in arhivske zapise, AR plasti pa so v razvoju.';
+      'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Orodja denarnice podpirajo atribucijo in digitalne izdaje, AR-plasti pa so v razvoju.';
 
   @override
   String get desktopHomeYourActivityTitle => 'Tvoja aktivnost';
@@ -12451,7 +12453,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopShellNavGovern => 'Upravljaj';
 
   @override
-  String get desktopShellNavTrade => 'Artefakti';
+  String get desktopShellNavTrade => 'Digitalne izdaje';
 
   @override
   String get desktopShellNavWeb3 => 'Infrastruktura';
@@ -13090,7 +13092,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileAchievementCategoryAr => 'AR';
 
   @override
-  String get userProfileAchievementCategoryNft => 'Arhivski zapisi';
+  String get userProfileAchievementCategoryNft => 'Digitalne izdaje';
 
   @override
   String get userProfileAchievementCategoryCommunity => 'Skupnost';
@@ -14163,7 +14165,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopProfilePerformanceNftsOwnedTitle =>
-      'Arhivski zapisi v lasti';
+      'Digitalne izdaje v lasti';
 
   @override
   String get desktopProfileAchievementsSubtitle => 'Tvoj napredek in mejniki';
@@ -16650,4 +16652,245 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get spatialCaptureAnotherOpen =>
       'Zajem za drugo umetniško delo je še odprt. Preden začnete novega, ga dokončajte ali zavrzite.';
+
+  @override
+  String get collectionCreatorConnectWalletToLoad =>
+      'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
+
+  @override
+  String get collectionCreatorLoadingLibrary => 'Nalagam knjižnico…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibrary => 'Naloži knjižnico umetnin';
+
+  @override
+  String get collectionCreatorLibraryStillLoading =>
+      'Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem kasneje.';
+
+  @override
+  String get collectionCreatorLoadBeforeSave =>
+      'Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.';
+
+  @override
+  String get collectionCreatorArtworkSelected => 'Izbrano';
+
+  @override
+  String get collectionCreatorArtworkAdd => 'Dodaj';
+
+  @override
+  String get walletHomeNoCollectiblesTitle => 'Digitalnih izdaj še ni';
+
+  @override
+  String get artworkCreatorOptionalExtensionsDescription =>
+      'Umetnino najprej objavi, nato pa po potrebi dodaj AR- ali prostorske plasti, zapise prisotnosti ali digitalne izdaje.';
+
+  @override
+  String get artworkCreatorCreateDigitalEdition => 'Ustvari digitalno izdajo';
+
+  @override
+  String get artworkCreatorDigitalEditionUnavailable =>
+      'Ustvarjanje digitalne izdaje trenutno ni na voljo.';
+
+  @override
+  String get artworkCreatorCreateEditionSeries =>
+      'Ustvari serijo digitalnih izdaj';
+
+  @override
+  String get artworkEditionSeriesDialogTitle =>
+      'Ustvari serijo digitalnih izdaj';
+
+  @override
+  String get artworkEditionSeriesDialogDescription =>
+      'Za to umetnino ustvari serijo digitalnih izdaj.';
+
+  @override
+  String get artworkEditionSeriesNameLabel => 'Ime serije digitalnih izdaj';
+
+  @override
+  String get artworkEditionSizeLabel => 'Velikost izdaje';
+
+  @override
+  String get artworkEditionPriceLabel => 'Cena izdaje (SOL)';
+
+  @override
+  String get artworkEditionCreateAction => 'Ustvari digitalno izdajo';
+
+  @override
+  String get artworkCreatorExtensionsTitle => 'Razširitve umetnine';
+
+  @override
+  String get artworkCreatorDigitalEditionWalletRequired =>
+      'Po objavi lahko ustvariš neobvezno digitalno izdajo. Za to funkcijo potrebuješ denarnico.';
+
+  @override
+  String get artworkEditionSeriesDescriptionLabel => 'Opis serije';
+
+  @override
+  String get artworkEditionDefaultsToArtworkTitle =>
+      'Privzeto se uporabi naslov umetnine';
+
+  @override
+  String get artworkEditionDefaultsToArtworkDescription =>
+      'Privzeto se uporabi opis umetnine';
+
+  @override
+  String get artworkEditionPriceKub8Label => 'Cena izdaje (KUB8)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyLabel => 'Avtorski delež (%)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyHelp =>
+      'Uporabi se pri nadaljnjih prodajah';
+
+  @override
+  String get artworkEditionTypeLabel => 'Vrsta digitalne izdaje';
+
+  @override
+  String get artworkEditionTypeStandard => 'Standardna digitalna izdaja';
+
+  @override
+  String get artworkEditionTypeAttendanceRecord => 'Zapis prisotnosti';
+
+  @override
+  String get artworkEditionTypeAchievement => 'Zapis dosežka';
+
+  @override
+  String get artworkEditionTypeLimited => 'Omejena digitalna izdaja';
+
+  @override
+  String get artworkCreatorAttendanceRecordsTitle => 'Zapisi prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceNoneTitle => 'Brez zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceNoneDescription =>
+      'Objavi brez zapisa prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceExistingTitle =>
+      'Uporabi obstoječi zapis prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceExistingDescription =>
+      'Dodaj ID dogodka ali povezavo do zapisa iz obstoječe nastavitve prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceCreateTitle => 'Ustvari z art.kubus';
+
+  @override
+  String get artworkCreatorAttendanceCreateDescription =>
+      'art.kubus po objavi ustvari povezavo do zapisa prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceEventIdLabel => 'ID dogodka prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceEventIdHint =>
+      'Prilepi obstoječi ID dogodka.';
+
+  @override
+  String get artworkCreatorAttendanceRecordLinkHint =>
+      'Povezava, ki jo lahko obiskovalci odprejo in shranijo zapis prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceRecognitionAmountLabel =>
+      'Količina priznanja (KUB8)';
+
+  @override
+  String get artworkCreatorAttendanceClaimWindowLabel =>
+      'Obdobje prevzema (dni)';
+
+  @override
+  String get artworkCreatorAttendanceBadgeTitleLabel =>
+      'Naslov zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceBadgeDescriptionLabel =>
+      'Opis zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceBadgeImageLabel =>
+      'Slika zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceUsesArtworkCover =>
+      'Privzeto se uporabi naslovna slika umetnine.';
+
+  @override
+  String get artworkCreatorCustomImageLabel => 'Lastna slika';
+
+  @override
+  String get artworkCreatorAttendanceUseCoverInstead =>
+      'Uporabi naslovno sliko umetnine';
+
+  @override
+  String get artworkCreatorAttendanceGeneratedAfterPublish =>
+      'Povezava do zapisa prisotnosti se ustvari ob objavi.';
+
+  @override
+  String get artworkCreatorEnableAr => 'Omogoči AR';
+
+  @override
+  String get artworkCreatorArAfterPublish =>
+      'Po objavi lahko ustvariš ali naložiš oznako.';
+
+  @override
+  String get artworkCreatorArUnavailable =>
+      'AR na tej platformi trenutno ni na voljo.';
+
+  @override
+  String get artworkCreatorManageAr => 'Ustvari ali upravljaj AR';
+
+  @override
+  String get walletGalleryConnectTitle => 'Poveži denarnico';
+
+  @override
+  String get walletGalleryConnectDescription =>
+      'Poveži denarnico za ogled svojih digitalnih izdaj.';
+
+  @override
+  String get walletGalleryConnectAction => 'Poveži denarnico';
+
+  @override
+  String get walletGalleryDigitalEditionFallbackTitle => 'Digitalna izdaja';
+
+  @override
+  String walletGalleryTokenId(Object tokenId) {
+    return 'Žeton št. $tokenId';
+  }
+
+  @override
+  String walletGalleryTransaction(Object hash) {
+    return 'Transakcija: $hash';
+  }
+
+  @override
+  String get walletGalleryTransactionUnavailable => 'Transakcija ni na voljo';
+
+  @override
+  String get walletGalleryStatusMinted => 'Izdana';
+
+  @override
+  String get walletGalleryStatusListed => 'V prodaji';
+
+  @override
+  String get walletGalleryStatusSold => 'Prodana';
+
+  @override
+  String get walletGalleryStatusTransferred => 'Prenesena';
+
+  @override
+  String get walletGalleryStatusBurned => 'Umaknjena';
+
+  @override
+  String get artworkCreatorFeeEstimateTitle => 'Predvideni stroški omrežja';
+
+  @override
+  String get artworkCreatorFeeEstimateUnavailable => 'Ni na voljo';
+
+  @override
+  String get artworkCreatorAttendanceImageTooSmall =>
+      'Slika zapisa prisotnosti mora biti na krajši stranici velika vsaj 256 px.';
 }

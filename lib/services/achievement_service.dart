@@ -160,12 +160,12 @@ class AchievementService {
       rarity: CollectibleRarity.epic,
     ),
 
-    // Digital archive object achievements
+    // Digital edition achievements
     AchievementType.firstNFTMint: AchievementDefinition(
       type: AchievementType.firstNFTMint,
       id: 'first_nft_mint',
-      title: 'Archive Object Creator',
-      description: 'Created your first digital archive object',
+      title: 'Digital Edition Creator',
+      description: 'Created your first digital edition',
       tokenReward: 25,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -174,7 +174,7 @@ class AchievementService {
       type: AchievementType.nftCollector,
       id: 'nft_collector',
       title: 'Archive Collector',
-      description: 'Hold 10 digital archive objects',
+      description: 'Hold 10 digital editions',
       tokenReward: 150,
       requiredCount: 10,
       rarity: CollectibleRarity.rare,
@@ -183,7 +183,7 @@ class AchievementService {
       type: AchievementType.nftTrader,
       id: 'nft_trader',
       title: 'Archive Supporter',
-      description: 'Completed 5 digital archive object interactions',
+      description: 'Completed 5 digital edition interactions',
       tokenReward: 100,
       requiredCount: 5,
       rarity: CollectibleRarity.rare,
@@ -261,7 +261,7 @@ class AchievementService {
       type: AchievementType.firstTrade,
       id: 'first_trade',
       title: 'First Archive Exchange',
-      description: 'Completed your first archive object exchange',
+      description: 'Completed your first digital edition exchange',
       tokenReward: 20,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -483,13 +483,15 @@ class AchievementService {
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: trackPublicStreetArtMarkerAdded failed: $e');
+        'AchievementService: trackPublicStreetArtMarkerAdded failed: $e',
+      );
     }
   }
 
   /// Get user's unlocked achievements
   Future<List<AchievementDefinition>> getUnlockedAchievements(
-      String userId) async {
+    String userId,
+  ) async {
     try {
       final data = await _backendApi.getUserAchievements(userId);
       final unlockedRaw =
@@ -522,7 +524,8 @@ class AchievementService {
           .toList();
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getUnlockedAchievements failed: $e');
+        'AchievementService: getUnlockedAchievements failed: $e',
+      );
       return [];
     }
   }
@@ -545,7 +548,8 @@ class AchievementService {
       return int.tryParse(raw.toString()) ?? 0;
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getTotalEarnedTokens failed: $e');
+        'AchievementService: getTotalEarnedTokens failed: $e',
+      );
       return 0;
     }
   }
@@ -558,16 +562,18 @@ class AchievementService {
     }
     return backend_achievements.UserAchievementsSummary(
       definitions: achievementDefinitions.values
-          .map((def) => backend_achievements.AchievementDefinition(
-                code: def.id,
-                title: def.title,
-                description: def.description,
-                category: _categoryForType(def.type),
-                rarity: def.rarity.name,
-                isPoap: def.isPOAP,
-                requiredCount: def.requiredCount,
-                kub8Reward: def.tokenReward.toDouble(),
-              ))
+          .map(
+            (def) => backend_achievements.AchievementDefinition(
+              code: def.id,
+              title: def.title,
+              description: def.description,
+              category: _categoryForType(def.type),
+              rarity: def.rarity.name,
+              isPoap: def.isPOAP,
+              requiredCount: def.requiredCount,
+              kub8Reward: def.tokenReward.toDouble(),
+            ),
+          )
           .toList(growable: false),
     );
   }
@@ -632,7 +638,8 @@ class AchievementService {
       return progressMap;
     } catch (e) {
       AppConfig.debugPrint(
-          'AchievementService: getAchievementProgress failed: $e');
+        'AchievementService: getAchievementProgress failed: $e',
+      );
       return {};
     }
   }
@@ -661,16 +668,18 @@ class AchievementService {
   List<backend_achievements.AchievementDefinition>
       _fallbackBackendDefinitions() {
     return achievementDefinitions.values
-        .map((def) => backend_achievements.AchievementDefinition(
-              code: def.id,
-              title: def.title,
-              description: def.description,
-              category: _categoryForType(def.type),
-              rarity: def.rarity.name,
-              isPoap: def.isPOAP,
-              requiredCount: def.requiredCount,
-              kub8Reward: def.tokenReward.toDouble(),
-            ))
+        .map(
+          (def) => backend_achievements.AchievementDefinition(
+            code: def.id,
+            title: def.title,
+            description: def.description,
+            category: _categoryForType(def.type),
+            rarity: def.rarity.name,
+            isPoap: def.isPOAP,
+            requiredCount: def.requiredCount,
+            kub8Reward: def.tokenReward.toDouble(),
+          ),
+        )
         .toList(growable: false);
   }
 

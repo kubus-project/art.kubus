@@ -19,7 +19,7 @@ authoritative.
 | --- | --- | --- |
 | Artwork, public artist/profile, institution profile, event, exhibition, collection, post, marker/place | `publicRead` | Open the entity read-only |
 | Follow, save, like, comment, message, contribution, edit, or management entry | `authenticated` | Explain why sign-in is needed and return to the entity |
-| Collectible/NFT wallet surface, DAO action, claim, transfer, or transaction | `walletRequired` | Require the appropriate account and fresh wallet confirmation |
+| Digital-edition wallet surface, DAO action, claim, transfer, or transaction | `walletRequired` | Require the appropriate account and fresh wallet confirmation |
 | Verify-email, password recovery, and other auth-purpose links | Dedicated auth route | Preserve the token-purpose flow |
 
 An exhibition handoff containing claim proof remains a `publicRead`

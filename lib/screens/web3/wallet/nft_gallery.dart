@@ -34,18 +34,17 @@ class _NFTGalleryState extends State<NFTGallery> {
     if (!provider.isLoading &&
         provider.allSeries.isEmpty &&
         provider.allCollectibles.isEmpty) {
-      unawaited(
-        provider.initialize(),
-      );
+      unawaited(provider.initialize());
     }
 
-    final walletAddress =
-        (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
-            .trim();
+    final walletAddress = (Provider.of<WalletProvider>(
+              context,
+              listen: false,
+            ).currentWalletAddress ??
+            '')
+        .trim();
     if (walletAddress.isNotEmpty) {
-      unawaited(
-        provider.refreshWalletCollectibleIndex(walletAddress),
-      );
+      unawaited(provider.refreshWalletCollectibleIndex(walletAddress));
     }
   }
 
@@ -77,17 +76,23 @@ class _NFTGalleryState extends State<NFTGallery> {
           IconButton(
             icon: Icon(Icons.refresh, color: scheme.onSurface),
             onPressed: () {
-              final provider =
-                  Provider.of<CollectiblesProvider>(context, listen: false);
-              unawaited(
-                provider.initialize(),
+              final provider = Provider.of<CollectiblesProvider>(
+                context,
+                listen: false,
               );
-              final walletAddress =
-                  (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
-                      .trim();
+              unawaited(provider.initialize());
+              final walletAddress = (Provider.of<WalletProvider>(
+                        context,
+                        listen: false,
+                      ).currentWalletAddress ??
+                      '')
+                  .trim();
               if (walletAddress.isNotEmpty) {
                 unawaited(
-                  provider.refreshWalletCollectibleIndex(walletAddress, force: true),
+                  provider.refreshWalletCollectibleIndex(
+                    walletAddress,
+                    force: true,
+                  ),
                 );
               }
             },
@@ -110,10 +115,10 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.account_balance_wallet,
-                    title: 'Connect your wallet',
-                    description: 'Connect a wallet to view your collectibles.',
+                    title: l10n.walletGalleryConnectTitle,
+                    description: l10n.walletGalleryConnectDescription,
                     showAction: true,
-                    actionLabel: 'Connect Wallet',
+                    actionLabel: l10n.walletGalleryConnectAction,
                     onAction: () =>
                         Navigator.of(context).pushNamed('/connect-wallet'),
                   ),
@@ -128,8 +133,9 @@ class _NFTGalleryState extends State<NFTGallery> {
             return const AppLoading();
           }
 
-          final owned =
-              collectiblesProvider.getCollectiblesByOwner(walletAddress);
+          final owned = collectiblesProvider.getCollectiblesByOwner(
+            walletAddress,
+          );
           if (owned.isEmpty) {
             return Center(
               child: Padding(
@@ -141,9 +147,8 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.diamond_outlined,
-                    title: 'No digital editions yet',
-                    description:
-                        'Create digital archive objects from artworks to see them here.',
+                    title: l10n.walletHomeNoCollectiblesTitle,
+                    description: l10n.walletHomeNoCollectiblesDescription,
                     showAction: false,
                   ),
                 ),
@@ -180,7 +185,11 @@ class _NFTGalleryState extends State<NFTGallery> {
                   final collectible = owned[index];
                   final series = seriesById[collectible.seriesId];
                   return _buildCollectibleCard(
-                      context, collectible, series, isSmallScreen);
+                    context,
+                    collectible,
+                    series,
+                    isSmallScreen,
+                  );
                 },
               );
             },
@@ -197,7 +206,8 @@ class _NFTGalleryState extends State<NFTGallery> {
     bool isSmallScreen,
   ) {
     final scheme = Theme.of(context).colorScheme;
-    final title = series?.name ?? 'Collectible';
+    final l10n = AppLocalizations.of(context)!;
+    final title = series?.name ?? l10n.walletGalleryDigitalEditionFallbackTitle;
     final rawImage = series?.imageUrl ?? series?.animationUrl;
     final resolvedImage = rawImage == null
         ? null
@@ -219,7 +229,8 @@ class _NFTGalleryState extends State<NFTGallery> {
             flex: 3,
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg)),
+                top: Radius.circular(KubusRadius.lg),
+              ),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -244,10 +255,11 @@ class _NFTGalleryState extends State<NFTGallery> {
                         color: scheme.surface.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(KubusRadius.sm),
                         border: Border.all(
-                            color: scheme.outline.withValues(alpha: 0.2)),
+                          color: scheme.outline.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Text(
-                        collectible.status.name.toUpperCase(),
+                        _collectibleStatusLabel(l10n, collectible.status),
                         style: KubusTypography.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -297,7 +309,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Token #${collectible.tokenId}',
+                          l10n.walletGalleryTokenId(collectible.tokenId),
                           style: KubusTypography.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.7),
@@ -310,8 +322,10 @@ class _NFTGalleryState extends State<NFTGallery> {
                   const Spacer(),
                   Text(
                     (collectible.transactionHash ?? '').isNotEmpty
-                        ? 'Tx: ${_shortenHash(collectible.transactionHash ?? '')}'
-                        : 'Tx: —',
+                        ? l10n.walletGalleryTransaction(
+                            _shortenHash(collectible.transactionHash ?? ''),
+                          )
+                        : l10n.walletGalleryTransactionUnavailable,
                     style: KubusTypography.inter(
                       fontSize: 11,
                       color: scheme.onSurface.withValues(alpha: 0.55),
@@ -326,6 +340,19 @@ class _NFTGalleryState extends State<NFTGallery> {
         ],
       ),
     );
+  }
+
+  String _collectibleStatusLabel(
+    AppLocalizations l10n,
+    CollectibleStatus status,
+  ) {
+    return switch (status) {
+      CollectibleStatus.minted => l10n.walletGalleryStatusMinted,
+      CollectibleStatus.listed => l10n.walletGalleryStatusListed,
+      CollectibleStatus.sold => l10n.walletGalleryStatusSold,
+      CollectibleStatus.transferred => l10n.walletGalleryStatusTransferred,
+      CollectibleStatus.burned => l10n.walletGalleryStatusBurned,
+    };
   }
 
   Widget _imageFallback(Color rarityColor, ColorScheme scheme) {
