@@ -3,6 +3,7 @@ import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
 import 'package:art_kubus/services/pending_action_service.dart';
+import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -170,6 +171,157 @@ void main() {
     expect(
       (onboardingArguments as Map?)?['completionRoute'],
       '/u/profile-1',
+    );
+  });
+
+  testWidgets(
+      'choosing Google forwards a preferred method so the account step does '
+      'not ask again', (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'save',
+            returnRoute: '/a/art-1',
+            actionType: PendingActionType.save,
+            targetType: PendingActionTargetType.artwork,
+            targetId: 'art-1',
+          ),
+          child: const Text('save'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(GoogleSignInButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('onboarding route'), findsOneWidget);
+    expect(
+      (onboardingArguments as Map?)?['preferredAuthMethod'],
+      'google',
+    );
+  });
+
+  testWidgets(
+      'choosing email forwards a preferred method so the account step does '
+      'not ask again', (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'save',
+            returnRoute: '/a/art-1',
+            actionType: PendingActionType.save,
+            targetType: PendingActionTargetType.artwork,
+            targetId: 'art-1',
+          ),
+          child: const Text('save'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with email'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('onboarding route'), findsOneWidget);
+    expect(
+      (onboardingArguments as Map?)?['preferredAuthMethod'],
+      'email',
+    );
+  });
+
+  testWidgets(
+      'choosing wallet forwards a preferred method so the account step does '
+      'not ask again', (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'save',
+            returnRoute: '/a/art-1',
+            actionType: PendingActionType.save,
+            targetType: PendingActionTargetType.artwork,
+            targetId: 'art-1',
+          ),
+          child: const Text('save'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use wallet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('onboarding route'), findsOneWidget);
+    expect(
+      (onboardingArguments as Map?)?['preferredAuthMethod'],
+      'wallet',
+    );
+  });
+
+  testWidgets(
+      'onboarding opened from the gate is flagged to return to origin, not '
+      'duplicate it', (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'save',
+            returnRoute: '/a/art-1',
+            actionType: PendingActionType.save,
+            targetType: PendingActionTargetType.artwork,
+            targetId: 'art-1',
+          ),
+          child: const Text('save'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with email'));
+    await tester.pumpAndSettle();
+
+    expect(
+      (onboardingArguments as Map?)?['completionNavigation'],
+      'returnToOrigin',
     );
   });
 

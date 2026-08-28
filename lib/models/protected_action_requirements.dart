@@ -5,11 +5,8 @@
 class ProtectedActionRequirements {
   const ProtectedActionRequirements({
     this.requiresAccount = true,
-    this.requiresVerifiedIdentity = false,
     this.requiresProfile = true,
     this.requiresWallet = false,
-    this.requiresWalletSecurity = false,
-    this.requiresDaoEligibility = false,
   });
 
   /// Normal community participation: account plus a usable profile, no Web3.
@@ -20,16 +17,12 @@ class ProtectedActionRequirements {
   static const wallet = ProtectedActionRequirements(requiresWallet: true);
 
   /// A governance entry point. It intentionally does not make a vote or
-  /// proposal replayable; those actions must be explicitly re-confirmed.
-  static const dao = ProtectedActionRequirements(
-    requiresWallet: true,
-    requiresDaoEligibility: true,
-  );
+  /// proposal replayable; those actions must be explicitly re-confirmed, and
+  /// DAO role eligibility itself is enforced by the DAO screens/backend, not
+  /// by this UX-only gate.
+  static const dao = ProtectedActionRequirements(requiresWallet: true);
 
   final bool requiresAccount;
-  final bool requiresVerifiedIdentity;
   final bool requiresProfile;
   final bool requiresWallet;
-  final bool requiresWalletSecurity;
-  final bool requiresDaoEligibility;
 }

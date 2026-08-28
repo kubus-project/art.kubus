@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/dao.dart';
+import 'package:art_kubus/models/onboarding_completion_navigation.dart';
+import 'package:art_kubus/models/preferred_auth_method.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
@@ -176,6 +178,9 @@ class OnboardingFlowScreen extends StatefulWidget {
     this.completionRoute,
     this.completionArguments,
     this.requiresWalletSetup = false,
+    this.preferredAuthMethod,
+    this.completionNavigation =
+        OnboardingCompletionNavigation.replaceWithDestination,
   });
 
   final bool forceDesktop;
@@ -186,6 +191,16 @@ class OnboardingFlowScreen extends StatefulWidget {
   /// Wallet capability is requested by the originating protected action.
   /// Account creation itself must not silently turn this on.
   final bool requiresWalletSetup;
+
+  /// Auth method the visitor already chose on the contextual activation
+  /// sheet. When set, the embedded account step enters that method's state
+  /// directly instead of showing the Google/email/wallet choice again.
+  final PreferredAuthMethod? preferredAuthMethod;
+
+  /// Whether completion should reveal the origin route still on the stack
+  /// beneath onboarding, or navigate to [completionRoute] because that
+  /// origin is no longer there. See [OnboardingCompletionNavigation].
+  final OnboardingCompletionNavigation completionNavigation;
 
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -251,6 +266,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   String? _capturedVerificationPassword;
   bool _requiresWalletBackupStep = false;
   String? _flowScopeKey;
+
+  /// Consumed exactly once so navigating away from and back to the account
+  /// step (or a rebuild) does not re-trigger the preferred method's
+  /// auto-entry a second time.
+  PreferredAuthMethod? _pendingPreferredAuthMethod;
   WalletBackupStatusSnapshot _walletBackupStatus =
       const WalletBackupStatusSnapshot.noWallet();
 
@@ -348,6 +368,30 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   String get _completionRoute {
     final route = (widget.completionRoute ?? '').trim();
     return route.isEmpty ? '/main' : route;
+  }
+
+  /// Navigates away from a completed/skipped onboarding without leaving a
+  /// duplicate of the destination route behind.
+  ///
+  /// When onboarding was pushed above the entity/screen that triggered it
+  /// (see [OnboardingCompletionNavigation.returnToOrigin]), that route is
+  /// still directly beneath this one on the stack, so popping reveals it —
+  /// pushing a fresh copy of the same route on top of it is what produced
+  /// the dead first Back press this fixes. Otherwise (the origin route was
+  /// removed by an auth callback, or onboarding was entered directly) there
+  /// is nothing to reveal, so the destination is pushed as before.
+  void _navigateToCompletion() {
+    final navigator = Navigator.of(context);
+    if (widget.completionNavigation ==
+            OnboardingCompletionNavigation.returnToOrigin &&
+        navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(
+      _completionRoute,
+      arguments: widget.completionArguments,
+    );
   }
 
   _OnboardingStep get _currentStep {
@@ -478,6 +522,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _pendingPreferredAuthMethod = widget.preferredAuthMethod;
     unawaited(_bootstrap());
   }
 
@@ -2787,10 +2832,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           .trackOnboardingComplete(reason: 'step_flow_complete'));
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        _completionRoute,
-        arguments: widget.completionArguments,
-      );
+      _navigateToCompletion();
     } finally {
       if (mounted) {
         setState(() => _isFinishingOnboarding = false);
@@ -2817,10 +2859,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        _completionRoute,
-        arguments: widget.completionArguments,
-      );
+      _navigateToCompletion();
     } finally {
       if (mounted) {
         setState(() => _isSkippingFlow = false);
@@ -3065,6 +3104,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onVerificationRequired: _handleEmbeddedVerificationRequired,
           onSignInSuccess: _handleEmbeddedSignInSuccess,
           onSignInNeedsVerification: _handleEmbeddedSignInNeedsVerification,
+          preferredAuthMethod: _pendingPreferredAuthMethod,
+          onPreferredAuthMethodConsumed: () {
+            if (_pendingPreferredAuthMethod == null) return;
+            setState(() => _pendingPreferredAuthMethod = null);
+          },
         );
         break;
       case _OnboardingStep.verifyEmail:
@@ -3862,6 +3906,8 @@ class _AccountStep extends StatefulWidget {
     required this.onVerificationRequired,
     required this.onSignInSuccess,
     required this.onSignInNeedsVerification,
+    this.preferredAuthMethod,
+    this.onPreferredAuthMethodConsumed,
   });
 
   final String title;
@@ -3877,6 +3923,8 @@ class _AccountStep extends StatefulWidget {
   final Future<void> Function(String email) onVerificationRequired;
   final Future<void> Function(Map<String, dynamic>) onSignInSuccess;
   final Future<void> Function(String email) onSignInNeedsVerification;
+  final PreferredAuthMethod? preferredAuthMethod;
+  final VoidCallback? onPreferredAuthMethodConsumed;
 
   @override
   State<_AccountStep> createState() => _AccountStepState();
@@ -3947,6 +3995,9 @@ class _AccountStepState extends State<_AccountStep> {
                       googleAuthOrigin: 'onboarding',
                       onAuthSuccess: widget.onAuthCompleted,
                       requireUsernameForEmailRegistration: true,
+                      preferredAuthMethod: widget.preferredAuthMethod,
+                      onPreferredAuthMethodConsumed:
+                          widget.onPreferredAuthMethodConsumed,
                       preferredEmailGreetingName:
                           widget.profileDisplayName.trim().isEmpty
                               ? null

@@ -649,6 +649,7 @@ class _MarketplaceState extends State<Marketplace>
                     context: context,
                     profileProvider: profileProvider,
                     walletProvider: walletProvider,
+                    returnRoute: '/marketplace',
                   ),
                 ),
               ),
@@ -720,6 +721,7 @@ class _MarketplaceState extends State<Marketplace>
                             context: context,
                             profileProvider: profileProvider,
                             walletProvider: walletProvider,
+                            returnRoute: '/marketplace',
                           );
                         },
                         child:
@@ -1389,6 +1391,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) {
       return;
@@ -1530,6 +1533,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) {
       return;
@@ -1580,6 +1584,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) return;
 

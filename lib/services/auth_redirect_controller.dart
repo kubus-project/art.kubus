@@ -80,8 +80,6 @@ class AuthRedirectController {
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
     bool requiresWalletSetup = false,
-    @Deprecated('Pending actions must not alter onboarding requirements.')
-    bool minimalAccount = false,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -89,8 +87,6 @@ class AuthRedirectController {
       userId: userId,
     );
 
-    // `minimalAccount` is deliberately ignored. Pending work remembers where
-    // to return; it never weakens the normal role/profile capability checks.
     final effectiveRequiresWalletSetup =
         (requiresWalletSetup || _payloadRequiresWalletSetup(payload)) &&
             targetWallet.isEmpty &&

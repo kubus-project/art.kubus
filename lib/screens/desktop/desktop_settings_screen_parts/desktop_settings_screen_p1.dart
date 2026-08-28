@@ -690,6 +690,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                         context: context,
                         profileProvider: context.read<ProfileProvider>(),
                         walletProvider: walletProvider,
+                        returnRoute: '/settings',
                       )
                   : null,
             ),

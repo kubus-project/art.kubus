@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
+import '../models/pending_action_intent.dart';
 import '../providers/pending_action_provider.dart';
 import '../services/meta/meta_conversion_adapter.dart';
 import '../models/user_persona.dart';
@@ -58,7 +59,14 @@ class PostAuthResult {
 }
 
 class PostAuthCoordinator {
-  const PostAuthCoordinator();
+  /// [redirectController] is injectable so tests can verify exactly what
+  /// route/arguments this coordinator asks it to resolve, without needing a
+  /// fully hydrated profile/wallet session.
+  const PostAuthCoordinator({
+    AuthRedirectController redirectController = const AuthRedirectController(),
+  }) : _redirectController = redirectController;
+
+  final AuthRedirectController _redirectController;
 
   Future<PostAuthResult> complete({
     required BuildContext context,
@@ -353,10 +361,11 @@ class PostAuthCoordinator {
       // presence of an intent is what puts this session into minimal-account
       // mode below.
       var hasPendingAction = false;
+      PendingActionIntent? restoredPendingAction;
       if (!modalReauth) {
         try {
-          final restored = await pendingActionProvider?.restore();
-          hasPendingAction = restored != null;
+          restoredPendingAction = await pendingActionProvider?.restore();
+          hasPendingAction = restoredPendingAction != null;
         } catch (e) {
           AppConfig.debugPrint(
             'PostAuthCoordinator: pending action restore skipped/failed: $e',
@@ -365,8 +374,7 @@ class PostAuthCoordinator {
       }
 
       setStage(PostAuthStage.checkingOnboarding);
-      final routeResult =
-          await const AuthRedirectController().resolvePostAuthRedirect(
+      final routeResult = await _redirectController.resolvePostAuthRedirect(
         prefs: prefs,
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
@@ -379,11 +387,15 @@ class PostAuthCoordinator {
         walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
         userId: normalizedUserId.isEmpty ? null : normalizedUserId,
         // A restored intent means the visitor returns to the exact entity that
-        // triggered signup, not to a generic shell.
+        // triggered signup, not to a generic shell. Route and arguments are
+        // paired from the same intent so the destination is never rebuilt
+        // with a mismatched, unrelated set of arguments.
         redirectRoute: hasPendingAction
-            ? (pendingActionProvider?.pending?.returnRoute ?? redirectRoute)
+            ? restoredPendingAction!.returnRoute
             : redirectRoute,
-        redirectArguments: redirectArguments,
+        redirectArguments: hasPendingAction
+            ? Map<String, String>.from(restoredPendingAction!.returnArguments)
+            : redirectArguments,
         heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
         persona: profileProvider.userPersona?.storageValue,
         origin: origin,

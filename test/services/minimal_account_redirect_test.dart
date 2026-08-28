@@ -26,7 +26,6 @@ void main() {
       requiresWalletBackup: false,
       userId: 'user-1',
       redirectRoute: '/a/artwork-1',
-      minimalAccount: true,
     );
 
     expect(result.state, PostAuthRouteState.onboardingRequired);
@@ -51,7 +50,6 @@ void main() {
       hasHydratedProfile: false,
       requiresWalletBackup: false,
       userId: 'user-1',
-      minimalAccount: true,
     );
 
     expect(

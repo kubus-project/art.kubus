@@ -1132,6 +1132,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                   context: context,
                   profileProvider: profileProvider,
                   walletProvider: walletProvider,
+                  returnRoute: '/settings',
                 ),
               );
             }
@@ -1198,6 +1199,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                     context: context,
                     profileProvider: profileProvider,
                     walletProvider: walletProvider,
+                    returnRoute: '/settings',
                   )
               : null,
         ),

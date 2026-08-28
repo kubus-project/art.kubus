@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/preferred_auth_method.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/auth_success_handoff_service.dart';
@@ -58,6 +59,8 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onSwitchToSignIn,
     this.redirectRoute,
     this.redirectArguments,
+    this.preferredAuthMethod,
+    this.onPreferredAuthMethodConsumed,
   });
 
   final bool embedded;
@@ -73,6 +76,15 @@ class AuthMethodsPanel extends StatefulWidget {
   final String googleAuthOrigin;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
+
+  /// Auth method already chosen upstream (e.g. on the contextual activation
+  /// sheet). When set, this panel enters that method's state directly on
+  /// first build instead of showing the Google/email/wallet choice again.
+  final PreferredAuthMethod? preferredAuthMethod;
+
+  /// Called once the preferred method has been acted on, so the caller can
+  /// clear it and avoid re-triggering it on a later rebuild.
+  final VoidCallback? onPreferredAuthMethodConsumed;
 
   /// Where to land after a successful registration.
   ///
@@ -117,6 +129,39 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       widget.googleAuthOrigin == 'onboarding'
           ? AuthOrigin.googleOnboarding
           : AuthOrigin.google;
+
+  @override
+  void initState() {
+    super.initState();
+    final preferred = widget.preferredAuthMethod;
+    if (preferred == null) return;
+    switch (preferred) {
+      case PreferredAuthMethod.email:
+        // No provider popup involved: land in the email form immediately.
+        _showCompactEmailForm = true;
+        _showAlternativeMethods = true;
+        break;
+      case PreferredAuthMethod.wallet:
+      case PreferredAuthMethod.google:
+        // Both open a flow that depends on the widget tree being mounted
+        // (wallet's inline surface, or a native provider popup); deferring to
+        // the first post-frame callback avoids racing that mount.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (preferred == PreferredAuthMethod.wallet) {
+            unawaited(_showConnectWalletModal());
+          } else if (!kIsWeb) {
+            // Web's Google button is a real embedded widget a script cannot
+            // click on the visitor's behalf; on web this stays visible as
+            // the default, requiring one further tap due to browser
+            // security, not a second method choice.
+            unawaited(_registerWithGoogle());
+          }
+        });
+        break;
+    }
+    widget.onPreferredAuthMethodConsumed?.call();
+  }
 
   @override
   void dispose() {
@@ -219,6 +264,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     // For embedded flows, local build() will show PostAuthLoadingScreen
     // because _postAuthActive is true
   }
+
+  @visibleForTesting
+  bool get debugShowCompactEmailForm => _showCompactEmailForm;
+
+  @visibleForTesting
+  bool get debugShowInlineWalletFlow => _showInlineWalletFlow;
 
   @visibleForTesting
   Future<void> debugTriggerAuthSuccess(

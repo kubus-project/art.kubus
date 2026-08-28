@@ -383,6 +383,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
                 context: context,
                 profileProvider: context.read<ProfileProvider>(),
                 walletProvider: context.read<WalletProvider>(),
+                returnRoute: '/governance',
               ),
               child: Text(actionLabel),
             ),
@@ -1973,6 +1974,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;
@@ -2861,6 +2863,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) return;
 
@@ -2916,6 +2919,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;

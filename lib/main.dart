@@ -117,7 +117,9 @@ import 'services/share/share_deep_link_parser.dart';
 import 'features/map/navigation/walking_navigation_debug_harness.dart';
 import 'screens/debug/walking_route_render_harness_screen.dart';
 import 'providers/activation_prompt_provider.dart';
+import 'models/onboarding_completion_navigation.dart';
 import 'models/pending_action_intent.dart';
+import 'models/preferred_auth_method.dart';
 
 /// Global unhandled-error router.
 ///
@@ -1087,6 +1089,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                 args['completionArguments'],
               ),
               requiresWalletSetup: args['requiresWalletSetup'] == true,
+              preferredAuthMethod: PreferredAuthMethod.fromStorage(
+                args['preferredAuthMethod']?.toString(),
+              ),
+              completionNavigation: OnboardingCompletionNavigation.fromStorage(
+                args['completionNavigation']?.toString(),
+              ),
             );
           }
           return OnboardingFlowScreen(

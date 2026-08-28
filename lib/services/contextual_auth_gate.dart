@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/onboarding_completion_navigation.dart';
 import '../models/pending_action_intent.dart';
+import '../models/preferred_auth_method.dart';
 import '../models/protected_action_requirements.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../providers/pending_action_provider.dart';
@@ -18,6 +20,7 @@ import 'backend_api_service.dart';
 // (the community screens) working through their parent's import.
 export '../models/pending_action_intent.dart'
     show PendingActionType, PendingActionTargetType;
+export '../models/preferred_auth_method.dart' show PreferredAuthMethod;
 export '../models/protected_action_requirements.dart';
 
 /// Gates identity-required actions without blocking public content viewing.
@@ -183,13 +186,21 @@ class ContextualAuthGate {
     // Protected acquisition always enters the structured account journey.
     // The account step embeds AuthMethodsPanel, so registration is not a
     // detour through `/register` and wallet auth shares the same post-auth
-    // coordinator as Google and email.
+    // coordinator as Google and email. The method the visitor just chose is
+    // carried along so the account step can enter that method's state
+    // directly instead of asking them to pick Google/email/wallet again.
     await _openOnboarding(
       context,
       initialStepId: missingStep,
       returnRoute: safeReturnRoute,
       returnArguments: returnArguments,
       requiresWalletSetup: requirements.requiresWallet,
+      preferredAuthMethod: switch (choice) {
+        ActivationGateChoice.google => PreferredAuthMethod.google,
+        ActivationGateChoice.email => PreferredAuthMethod.email,
+        ActivationGateChoice.wallet => PreferredAuthMethod.wallet,
+        ActivationGateChoice.signIn || ActivationGateChoice.dismissed => null,
+      },
     );
     return false;
   }
@@ -203,7 +214,12 @@ class ContextualAuthGate {
     required String returnRoute,
     required Map<String, String> returnArguments,
     required bool requiresWalletSetup,
+    PreferredAuthMethod? preferredAuthMethod,
   }) {
+    // Always a push, never a replace: the entity/screen the visitor was on
+    // stays in the stack directly beneath onboarding, so completion can
+    // reveal it instead of pushing a duplicate (see
+    // OnboardingCompletionNavigation.returnToOrigin).
     return Navigator.of(context).pushNamed(
       '/onboarding',
       arguments: <String, Object?>{
@@ -212,6 +228,10 @@ class ContextualAuthGate {
         if (returnArguments.isNotEmpty)
           'completionArguments': Map<String, String>.from(returnArguments),
         'requiresWalletSetup': requiresWalletSetup,
+        if (preferredAuthMethod != null)
+          'preferredAuthMethod': preferredAuthMethod.storageValue,
+        'completionNavigation':
+            OnboardingCompletionNavigation.returnToOrigin.storageValue,
       },
     );
   }

@@ -54,10 +54,8 @@ import '../../utils/user_profile_navigation.dart';
 import '../../utils/profile_identity_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
-import '../web3/wallet/connectwallet_screen.dart';
-import '../onboarding/web3/web3_onboarding.dart' as web3;
-import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/services/contextual_auth_gate.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
 import '../home_screen.dart' show ActivityScreen;
@@ -1741,27 +1739,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
   }
 
-  void _showWalletOnboarding() {
+  // Canonical wallet capability acquisition, shared with the rest of the
+  // app. This used to push an informational Web3 onboarding screen straight
+  // into wallet creation/connection, bypassing the contextual account gate
+  // for guests.
+  Future<void> _showWalletOnboarding() async {
     final l10n = AppLocalizations.of(context)!;
-    final navigator = Navigator.of(context);
-    navigator.push(
-      MaterialPageRoute(
-        builder: (_) => web3.Web3OnboardingScreen(
-          featureKey: Web3FeaturesOnboardingData.featureKey,
-          featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
-          pages: _getWeb3OnboardingPages(l10n),
-          onComplete: () {
-            navigator.push(
-              MaterialPageRoute(builder: (_) => const ConnectWallet()),
-            );
-          },
-        ),
-      ),
+    await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.authConnectWalletButton,
+      returnRoute: '/home',
+      sourceScreen: 'desktop_home_screen',
+      requirements: ProtectedActionRequirements.wallet,
     );
-  }
-
-  List<web3.OnboardingPage> _getWeb3OnboardingPages(AppLocalizations l10n) {
-    return Web3FeaturesOnboardingData.pages(l10n);
   }
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
