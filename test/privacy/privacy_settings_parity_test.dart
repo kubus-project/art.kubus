@@ -35,6 +35,75 @@ UserProfile _signedInProfile() => UserProfile(
       updatedAt: DateTime.now(),
     );
 
+/// Keeps this widget parity test focused on the local preference state.
+///
+/// [ProfileProvider.updatePreferences] persists a signed-in profile to the
+/// backend. A real client never settles under the widget-test HTTP binding,
+/// which made the test time out instead of testing the settings surfaces.
+class _PrivacyProfileApi implements ProfileBackendApi {
+  @override
+  String get baseUrl => 'https://api.kubus.site';
+
+  @override
+  Future<void> followUser(String walletAddress) async {}
+
+  @override
+  Future<Map<String, dynamic>?> getDAOReview({
+    required String idOrWallet,
+  }) async =>
+      null;
+
+  @override
+  Future<Map<String, dynamic>> getMyProfile() async => <String, dynamic>{
+        'success': false,
+        'status': 404,
+      };
+
+  @override
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async =>
+      <String, dynamic>{'walletAddress': walletAddress};
+
+  @override
+  Future<bool> isFollowing(String walletAddress) async => false;
+
+  @override
+  Future<Map<String, dynamic>> registerWallet({
+    required String walletAddress,
+    String? username,
+  }) async =>
+      <String, dynamic>{'success': true};
+
+  @override
+  Future<Map<String, dynamic>> saveProfile(
+    Map<String, dynamic> profileData,
+  ) async =>
+      profileData;
+
+  @override
+  Future<void> unfollowUser(String walletAddress) async {}
+
+  @override
+  Future<Map<String, dynamic>> updateProfile(
+    String walletAddress,
+    Map<String, dynamic> updates,
+  ) async =>
+      <String, dynamic>{'success': true};
+
+  @override
+  Future<Map<String, dynamic>> uploadAvatarToProfile({
+    required List<int> fileBytes,
+    required String fileName,
+    required String fileType,
+    Map<String, String>? metadata,
+  }) async =>
+      <String, dynamic>{
+        'uploadedUrl': '/uploads/profiles/avatars/$fileName',
+      };
+
+  @override
+  Future<bool> verifyImageUrl(String url) async => true;
+}
+
 Widget _wrapWithApp({
   required Widget home,
   required ThemeProvider themeProvider,
@@ -60,8 +129,9 @@ Widget _wrapWithApp({
       ChangeNotifierProvider.value(value: localeProvider),
       ChangeNotifierProvider.value(value: statsProvider),
       ChangeNotifierProvider(
-          create: (_) =>
-              EmailPreferencesProvider(backendApi: BackendApiService())),
+        create: (_) =>
+            EmailPreferencesProvider(backendApi: BackendApiService()),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -76,182 +146,201 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'Mobile privacy toggles persist via ProfileProvider and reflect in Edit Profile',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    BackendApiService().setAuthTokenForTesting(null);
-    tester.view.devicePixelRatio = 1.0;
-    await tester.binding.setSurfaceSize(const Size(1200, 900));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-    addTearDown(tester.view.resetDevicePixelRatio);
+    'Mobile privacy toggles persist via ProfileProvider and reflect in Edit Profile',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      BackendApiService().setAuthTokenForTesting(null);
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final themeProvider = ThemeProvider();
-    final profileProvider = ProfileProvider();
-    await profileProvider.initialize();
-    profileProvider.setCurrentUser(_signedInProfile());
-    await profileProvider.updatePreferences(
-        showActivityStatus: true, shareLastVisitedLocation: true);
+      final themeProvider = ThemeProvider();
+      final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
+      await profileProvider.initialize();
+      profileProvider.setCurrentUser(_signedInProfile());
+      await profileProvider.updatePreferences(
+        showActivityStatus: true,
+        shareLastVisitedLocation: true,
+      );
 
-    final solana = SolanaWalletService();
-    final web3Provider = Web3Provider(solanaWalletService: solana);
-    final walletProvider =
-        WalletProvider(solanaWalletService: solana, deferInit: true);
-    final platformProvider = PlatformProvider();
-    final notificationProvider = NotificationProvider();
-    final navigationProvider = NavigationProvider();
-    final localeProvider = LocaleProvider();
-    final statsProvider = StatsProvider();
+      final solana = SolanaWalletService();
+      final web3Provider = Web3Provider(solanaWalletService: solana);
+      final walletProvider = WalletProvider(
+        solanaWalletService: solana,
+        deferInit: true,
+      );
+      final platformProvider = PlatformProvider();
+      final notificationProvider = NotificationProvider();
+      final navigationProvider = NavigationProvider();
+      final localeProvider = LocaleProvider();
+      final statsProvider = StatsProvider();
 
-    await tester.pumpWidget(
-      _wrapWithApp(
-        home: const SettingsScreen(),
-        themeProvider: themeProvider,
-        profileProvider: profileProvider,
-        web3Provider: web3Provider,
-        walletProvider: walletProvider,
-        platformProvider: platformProvider,
-        notificationProvider: notificationProvider,
-        navigationProvider: navigationProvider,
-        localeProvider: localeProvider,
-        statsProvider: statsProvider,
-      ),
-    );
+      await tester.pumpWidget(
+        _wrapWithApp(
+          home: const SettingsScreen(),
+          themeProvider: themeProvider,
+          profileProvider: profileProvider,
+          web3Provider: web3Provider,
+          walletProvider: walletProvider,
+          platformProvider: platformProvider,
+          notificationProvider: notificationProvider,
+          navigationProvider: navigationProvider,
+          localeProvider: localeProvider,
+          statsProvider: statsProvider,
+        ),
+      );
 
-    // Open Settings -> Privacy settings dialog
-    final privacyTile = find.byKey(const Key('settings_tile_privacy_settings'));
-    await tester.scrollUntilVisible(privacyTile, 500);
-    await tester.tap(privacyTile);
-    await tester.pump(const Duration(milliseconds: 100));
+      // Open Settings -> Privacy settings dialog
+      final privacyTile = find.byKey(
+        const Key('settings_tile_privacy_settings'),
+      );
+      await tester.scrollUntilVisible(privacyTile, 500);
+      await tester.tap(privacyTile);
+      await tester.pump(const Duration(milliseconds: 100));
 
-    // Toggle "Show activity status" off; it should disable and clear "Share last visited location".
-    await tester
-        .tap(find.byKey(const Key('settings_privacy_show_activity_status')));
-    await tester.pump();
+      // Toggle "Show activity status" off; it should disable and clear "Share last visited location".
+      await tester.tap(
+        find.byKey(const Key('settings_privacy_show_activity_status')),
+      );
+      await tester.pump();
 
-    final shareTile = tester.widget<Switch>(
-      find.byKey(const Key('settings_privacy_share_last_visited_location')),
-    );
-    expect(shareTile.value, false);
-    expect(shareTile.onChanged, isNull);
+      final shareTile = tester.widget<Switch>(
+        find.byKey(const Key('settings_privacy_share_last_visited_location')),
+      );
+      expect(shareTile.value, false);
+      expect(shareTile.onChanged, isNull);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
-    await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pump(const Duration(milliseconds: 200));
 
-    expect(profileProvider.preferences.showActivityStatus, false);
-    expect(profileProvider.preferences.shareLastVisitedLocation, false);
+      expect(profileProvider.preferences.showActivityStatus, false);
+      expect(profileProvider.preferences.shareLastVisitedLocation, false);
 
-    // Rebuild the Edit Profile screen and ensure it reflects the same canonical prefs.
-    await tester.pumpWidget(
-      _wrapWithApp(
-        home: const mobile_profile_edit.ProfileEditScreen(),
-        themeProvider: themeProvider,
-        profileProvider: profileProvider,
-        web3Provider: web3Provider,
-        walletProvider: walletProvider,
-        platformProvider: platformProvider,
-        notificationProvider: notificationProvider,
-        navigationProvider: navigationProvider,
-        localeProvider: localeProvider,
-        statsProvider: statsProvider,
-      ),
-    );
-    await tester.pump();
+      // Rebuild the Edit Profile screen and ensure it reflects the same canonical prefs.
+      await tester.pumpWidget(
+        _wrapWithApp(
+          home: const mobile_profile_edit.ProfileEditScreen(),
+          themeProvider: themeProvider,
+          profileProvider: profileProvider,
+          web3Provider: web3Provider,
+          walletProvider: walletProvider,
+          platformProvider: platformProvider,
+          notificationProvider: notificationProvider,
+          navigationProvider: navigationProvider,
+          localeProvider: localeProvider,
+          statsProvider: statsProvider,
+        ),
+      );
+      await tester.pump();
 
-    final activitySwitch = tester.widget<Switch>(
-      find.byKey(const Key('profile_edit_privacy_show_activity_status')),
-    );
-    final shareSwitch = tester.widget<Switch>(
-      find.byKey(const Key('profile_edit_privacy_share_last_visited_location')),
-    );
-    expect(activitySwitch.value, false);
-    expect(shareSwitch.value, false);
-    expect(shareSwitch.onChanged, isNull);
-  });
+      final activitySwitch = tester.widget<Switch>(
+        find.byKey(const Key('profile_edit_privacy_show_activity_status')),
+      );
+      final shareSwitch = tester.widget<Switch>(
+        find.byKey(
+          const Key('profile_edit_privacy_share_last_visited_location'),
+        ),
+      );
+      expect(activitySwitch.value, false);
+      expect(shareSwitch.value, false);
+      expect(shareSwitch.onChanged, isNull);
+    },
+  );
 
   testWidgets(
-      'Desktop privacy toggles persist via ProfileProvider and reflect in Desktop Edit Profile',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    BackendApiService().setAuthTokenForTesting(null);
-    tester.view.devicePixelRatio = 1.0;
-    await tester.binding.setSurfaceSize(const Size(1600, 1200));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-    addTearDown(tester.view.resetDevicePixelRatio);
+    'Desktop privacy toggles persist via ProfileProvider and reflect in Desktop Edit Profile',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      BackendApiService().setAuthTokenForTesting(null);
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(const Size(1600, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final themeProvider = ThemeProvider();
-    final profileProvider = ProfileProvider();
-    await profileProvider.initialize();
-    profileProvider.setCurrentUser(_signedInProfile());
-    await profileProvider.updatePreferences(
-        showActivityStatus: true, shareLastVisitedLocation: true);
+      final themeProvider = ThemeProvider();
+      final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
+      await profileProvider.initialize();
+      profileProvider.setCurrentUser(_signedInProfile());
+      await profileProvider.updatePreferences(
+        showActivityStatus: true,
+        shareLastVisitedLocation: true,
+      );
 
-    final solana = SolanaWalletService();
-    final web3Provider = Web3Provider(solanaWalletService: solana);
-    final walletProvider =
-        WalletProvider(solanaWalletService: solana, deferInit: true);
-    final platformProvider = PlatformProvider();
-    final notificationProvider = NotificationProvider();
-    final navigationProvider = NavigationProvider();
-    final localeProvider = LocaleProvider();
-    final statsProvider = StatsProvider();
+      final solana = SolanaWalletService();
+      final web3Provider = Web3Provider(solanaWalletService: solana);
+      final walletProvider = WalletProvider(
+        solanaWalletService: solana,
+        deferInit: true,
+      );
+      final platformProvider = PlatformProvider();
+      final notificationProvider = NotificationProvider();
+      final navigationProvider = NavigationProvider();
+      final localeProvider = LocaleProvider();
+      final statsProvider = StatsProvider();
 
-    await tester.pumpWidget(
-      _wrapWithApp(
-        home: const DesktopSettingsScreen(),
-        themeProvider: themeProvider,
-        profileProvider: profileProvider,
-        web3Provider: web3Provider,
-        walletProvider: walletProvider,
-        platformProvider: platformProvider,
-        notificationProvider: notificationProvider,
-        navigationProvider: navigationProvider,
-        localeProvider: localeProvider,
-        statsProvider: statsProvider,
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(
+        _wrapWithApp(
+          home: const DesktopSettingsScreen(),
+          themeProvider: themeProvider,
+          profileProvider: profileProvider,
+          web3Provider: web3Provider,
+          walletProvider: walletProvider,
+          platformProvider: platformProvider,
+          notificationProvider: notificationProvider,
+          navigationProvider: navigationProvider,
+          localeProvider: localeProvider,
+          statsProvider: statsProvider,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
 
-    // Select "Privacy settings" on the left navigation.
-    final privacyNav =
-        find.byKey(const ValueKey('desktop_settings_sidebar_item_4'));
-    await tester.tap(privacyNav.first);
-    await tester.pump();
+      // Select "Privacy settings" on the left navigation.
+      final privacyNav = find.byKey(
+        const ValueKey('desktop_settings_sidebar_item_4'),
+      );
+      await tester.tap(privacyNav.first);
+      await tester.pump();
 
-    // Toggle "Show activity status" off.
-    await tester.tap(
-        find.byKey(const Key('desktop_settings_privacy_show_activity_status')));
-    await tester.pump();
+      // Toggle "Show activity status" off.
+      await tester.tap(
+        find.byKey(const Key('desktop_settings_privacy_show_activity_status')),
+      );
+      await tester.pump();
 
-    expect(profileProvider.preferences.showActivityStatus, false);
-    expect(profileProvider.preferences.shareLastVisitedLocation, false);
+      expect(profileProvider.preferences.showActivityStatus, false);
+      expect(profileProvider.preferences.shareLastVisitedLocation, false);
 
-    // Rebuild the Desktop Edit Profile screen and ensure it reflects the same canonical prefs.
-    await tester.pumpWidget(
-      _wrapWithApp(
-        home: const desktop_profile_edit.ProfileEditScreen(),
-        themeProvider: themeProvider,
-        profileProvider: profileProvider,
-        web3Provider: web3Provider,
-        walletProvider: walletProvider,
-        platformProvider: platformProvider,
-        notificationProvider: notificationProvider,
-        navigationProvider: navigationProvider,
-        localeProvider: localeProvider,
-        statsProvider: statsProvider,
-      ),
-    );
-    await tester.pump();
+      // Rebuild the Desktop Edit Profile screen and ensure it reflects the same canonical prefs.
+      await tester.pumpWidget(
+        _wrapWithApp(
+          home: const desktop_profile_edit.ProfileEditScreen(),
+          themeProvider: themeProvider,
+          profileProvider: profileProvider,
+          web3Provider: web3Provider,
+          walletProvider: walletProvider,
+          platformProvider: platformProvider,
+          notificationProvider: notificationProvider,
+          navigationProvider: navigationProvider,
+          localeProvider: localeProvider,
+          statsProvider: statsProvider,
+        ),
+      );
+      await tester.pump();
 
-    final activitySwitch = tester.widget<Switch>(
-      find.byKey(
-          const Key('desktop_profile_edit_privacy_show_activity_status')),
-    );
-    final shareSwitch = tester.widget<Switch>(
-      find.byKey(const Key(
-          'desktop_profile_edit_privacy_share_last_visited_location')),
-    );
-    expect(activitySwitch.value, false);
-    expect(shareSwitch.value, false);
-    expect(shareSwitch.onChanged, isNull);
-  });
+      final activitySwitch = tester.widget<Switch>(
+        find.byKey(
+          const Key('desktop_profile_edit_privacy_show_activity_status'),
+        ),
+      );
+      final shareSwitch = tester.widget<Switch>(
+        find.byKey(
+          const Key('desktop_profile_edit_privacy_share_last_visited_location'),
+        ),
+      );
+      expect(activitySwitch.value, false);
+      expect(shareSwitch.value, false);
+      expect(shareSwitch.onChanged, isNull);
+    },
+  );
 }
