@@ -430,8 +430,8 @@ class _MainAppState extends State<MainApp> {
         break;
       case 4:
         if (!profileProvider.isSignedIn) {
-          name = 'SignIn';
-          route = '/sign-in';
+          name = 'GuestAccount';
+          route = '/main/tab/account';
         } else {
           name = 'MainTabProfile';
           route = '/main/tab/profile';

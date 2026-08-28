@@ -473,7 +473,13 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => PublicEntityTakeoverProvider(),
               ),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
-              ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ChangeNotifierProvider(
+                create: (_) {
+                  final provider = ConfigProvider();
+                  unawaited(provider.initialize());
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => KubusNodeProvider()),
               ChangeNotifierProxyProvider<KubusNodeProvider,
                   SpatialLibraryProvider>(

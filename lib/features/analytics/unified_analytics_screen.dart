@@ -15,6 +15,8 @@ import '../../providers/web3provider.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../screens/settings_screen.dart';
+import '../../screens/desktop/desktop_settings_screen.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import 'analytics_blocked_copy.dart';
 import 'analytics_capability_resolver.dart';
 import 'analytics_entity_registry.dart';
@@ -123,9 +125,18 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
                 ? l10n.analyticsBlockedOpenSettings
                 : null,
         onAction: reason == AnalyticsBlockedReason.analyticsDisabledByPreference
-            ? () => Navigator.of(context).push(
+            ? () {
+                final shellScope = DesktopShellScope.of(context);
+                if (shellScope != null) {
+                  shellScope.pushScreen(
+                    const DesktopSettingsScreen(embeddedInShell: true),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                )
+                );
+              }
             : null,
       );
       if (widget.embedded) return permissionState;
