@@ -201,7 +201,11 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                           )
                       : null,
                   onConnectExternalWallet: !walletProvider.canTransact
-                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                      ? () => WalletActionGuard.ensureSignerAccess(
+                            context: context,
+                            profileProvider: context.read<ProfileProvider>(),
+                            walletProvider: walletProvider,
+                          )
                       : null,
                 ),
                 const SizedBox(height: KubusSpacing.lg),
@@ -401,7 +405,11 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                         )
                     : null,
             onConnectExternalWallet: !walletProvider.canTransact
-                ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                ? () => WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: context.read<ProfileProvider>(),
+                      walletProvider: walletProvider,
+                    )
                 : null,
           ),
         ),

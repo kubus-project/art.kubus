@@ -127,16 +127,17 @@ void main() {
     expect(find.text('Save this artwork to your collection'), findsNothing);
   });
 
-  testWidgets('choosing a method routes to registration with the return route',
+  testWidgets(
+      'choosing a method enters structured onboarding with the return route',
       (tester) async {
     var mutationRuns = 0;
-    Object? registerArguments;
+    Object? onboardingArguments;
 
     await tester.pumpWidget(_harness(
       routes: <String, WidgetBuilder>{
-        '/register': (context) {
-          registerArguments = ModalRoute.of(context)?.settings.arguments;
-          return const Scaffold(body: Text('register route'));
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
         },
       },
       child: Builder(
@@ -163,11 +164,11 @@ void main() {
     await tester.tap(find.text('Continue with email'));
     await tester.pumpAndSettle();
 
-    expect(find.text('register route'), findsOneWidget);
+    expect(find.text('onboarding route'), findsOneWidget);
     // The mutation is deliberately never replayed by the gate itself.
     expect(mutationRuns, 0);
     expect(
-      (registerArguments as Map?)?['redirectRoute'],
+      (onboardingArguments as Map?)?['completionRoute'],
       '/u/profile-1',
     );
   });
@@ -198,6 +199,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('sign-in route'), findsOneWidget);
+  });
+
+  testWidgets(
+      'wallet-required acquisition carries wallet setup into onboarding',
+      (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('wallet onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'infrastructure',
+            returnRoute: '/wallet/availability-node',
+            requirements: ProtectedActionRequirements.wallet,
+          ),
+          child: const Text('open infrastructure'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open infrastructure'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with email'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('wallet onboarding route'), findsOneWidget);
+    expect((onboardingArguments as Map?)?['initialStepId'], 'account');
+    expect((onboardingArguments as Map?)?['requiresWalletSetup'], isTrue);
+    expect(
+      (onboardingArguments as Map?)?['completionRoute'],
+      '/wallet/availability-node',
+    );
   });
 
   testWidgets('the attempted action is captured for later continuation',

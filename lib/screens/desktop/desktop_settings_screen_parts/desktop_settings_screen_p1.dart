@@ -686,7 +686,11 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                           )
                       : null,
               onConnectExternalWallet: !walletProvider.authority.canTransact
-                  ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                  ? () => WalletActionGuard.ensureSignerAccess(
+                        context: context,
+                        profileProvider: context.read<ProfileProvider>(),
+                        walletProvider: walletProvider,
+                      )
                   : null,
             ),
           ],

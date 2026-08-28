@@ -170,23 +170,21 @@ class AuthOnboardingService {
       );
     }
 
-    if (requiresWalletSetup) {
-      return const StructuredOnboardingResumeState(
-        requiresStructuredOnboarding: true,
-        nextStepId: 'walletConnect',
-      );
-    }
-
     if (hasAuthenticatedSession && hasHydratedProfile) {
-      final nextStepId = requiresWalletBackupStep
-          ? 'walletBackupIntro'
-          : (requiresDaoReview ? 'daoReview' : 'accountPermissions');
+      final nextStepId = requiresWalletSetup
+          ? 'walletConnect'
+          : (requiresWalletBackupStep
+              ? 'walletBackupIntro'
+              : (requiresDaoReview ? 'daoReview' : 'accountPermissions'));
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
         nextStepId: nextStepId,
       );
     }
 
+    // Wallet is a progressive capability. For a new/incomplete account its
+    // setup is inserted after the normal role/profile steps, never used as a
+    // shortcut that skips them.
     return StructuredOnboardingResumeState(
       requiresStructuredOnboarding: true,
       nextStepId: hasAuthenticatedSession ? 'role' : 'account',

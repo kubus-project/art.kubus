@@ -379,8 +379,10 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
             ),
             const SizedBox(width: KubusSpacing.md),
             TextButton(
-              onPressed: () => Navigator.of(context).pushNamed(
-                capabilities.hasWalletIdentity ? '/wallet' : '/connect-wallet',
+              onPressed: () => WalletActionGuard.ensureSignerAccess(
+                context: context,
+                profileProvider: context.read<ProfileProvider>(),
+                walletProvider: context.read<WalletProvider>(),
               ),
               child: Text(actionLabel),
             ),

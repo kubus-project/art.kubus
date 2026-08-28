@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/contextual_auth_gate.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 enum WalletSignerActionBlock {
   signInRequired,
@@ -31,8 +31,7 @@ class WalletSessionAccessSnapshot {
       hasWalletIdentity: authority.hasWalletIdentity,
       hasSigner: authority.canTransact,
       authorityState: authority.state,
-      canRestoreFromEncryptedBackup:
-          authority.canRestoreFromEncryptedBackup,
+      canRestoreFromEncryptedBackup: authority.canRestoreFromEncryptedBackup,
     );
   }
 
@@ -127,7 +126,6 @@ class WalletActionGuard {
     bool requireSignedIn = true,
     bool refreshBackendSession = true,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
     final access = WalletSessionAccessSnapshot.fromProviders(
       profileProvider: profileProvider,
       walletProvider: walletProvider,
@@ -146,29 +144,16 @@ class WalletActionGuard {
       return walletProvider.canTransact;
     }
 
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) {
-      return false;
-    }
-
-    final navigator = Navigator.of(context);
-    messenger.showKubusSnackBar(
-      SnackBar(
-        content: Text(access.blockMessage(l10n, block)),
-        action: SnackBarAction(
-          label: block == WalletSignerActionBlock.signInRequired
-              ? l10n.commonSignIn
-              : l10n.authConnectWalletButton,
-          onPressed: () {
-            navigator.pushNamed(
-              block == WalletSignerActionBlock.signInRequired
-                  ? '/sign-in'
-                  : '/connect-wallet',
-            );
-          },
-        ),
-      ),
-      tone: KubusSnackBarTone.warning,
+    // Missing account/wallet capability is acquisition, not signer recovery.
+    // It enters the same contextual account flow as the rest of the app. The
+    // attempted financial operation is intentionally not captured, so it must
+    // be explicitly started again after setup.
+    final requestedRoute = ModalRoute.of(context)?.settings.name;
+    await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.commonContinue,
+      returnRoute: requestedRoute ?? '/wallet',
+      requirements: ProtectedActionRequirements.wallet,
     );
     return false;
   }

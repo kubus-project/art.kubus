@@ -7,10 +7,12 @@ import '../../../utils/design_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/rarity_ui.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../widgets/app_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 
@@ -119,8 +121,11 @@ class _NFTGalleryState extends State<NFTGallery> {
                     description: l10n.walletGalleryConnectDescription,
                     showAction: true,
                     actionLabel: l10n.walletGalleryConnectAction,
-                    onAction: () =>
-                        Navigator.of(context).pushNamed('/connect-wallet'),
+                    onAction: () => WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: context.read<ProfileProvider>(),
+                      walletProvider: walletProvider,
+                    ),
                   ),
                 ),
               ),

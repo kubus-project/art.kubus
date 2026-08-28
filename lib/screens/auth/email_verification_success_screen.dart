@@ -108,11 +108,14 @@ class _EmailVerificationSuccessScreenState
       // continuation is authenticated and must never fall back to /sign-in.
       final hasSession =
           widget.sessionEstablished || await _hasValidSession(prefs);
-      final guardActive =
+      final googleRegistrationGuardActive =
           OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
-                prefs,
-              ) ||
-              OnboardingStateService.hasActiveAccountLinkGuardSync(prefs);
+        prefs,
+      );
+      final accountLinkGuardActive =
+          OnboardingStateService.hasActiveAccountLinkGuardSync(prefs);
+      final guardActive =
+          googleRegistrationGuardActive || accountLinkGuardActive;
 
       if (!mounted) return;
       if (!hasSession && !guardActive) {
@@ -156,7 +159,7 @@ class _EmailVerificationSuccessScreenState
       if (guardActive || hasPendingAuthOnboarding) {
         String initialStepId = 'account';
         if (hasSession) {
-          if (walletAddress.isEmpty) {
+          if (accountLinkGuardActive && walletAddress.isEmpty) {
             initialStepId = 'walletConnect';
           } else {
             final requiresWalletBackup =
@@ -186,6 +189,8 @@ class _EmailVerificationSuccessScreenState
             builder: (_) => OnboardingFlowScreen(
               forceDesktop: isDesktop,
               initialStepId: initialStepId,
+              requiresWalletSetup:
+                  accountLinkGuardActive && walletAddress.isEmpty,
             ),
             settings: const RouteSettings(name: '/onboarding'),
           ),
@@ -266,10 +271,14 @@ class _EmailVerificationSuccessScreenState
                         widget.autoContinue
                             ? (email.isEmpty
                                 ? l10n.authVerifyEmailSuccessBodyAutoContinue
-                                : l10n.authVerifyEmailSuccessBodyAutoContinueWithEmail(email))
+                                : l10n
+                                    .authVerifyEmailSuccessBodyAutoContinueWithEmail(
+                                        email))
                             : (email.isEmpty
                                 ? l10n.authVerifyEmailSuccessBodyManual
-                                : l10n.authVerifyEmailSuccessBodyManualWithEmail(email)),
+                                : l10n
+                                    .authVerifyEmailSuccessBodyManualWithEmail(
+                                        email)),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.74),
@@ -280,7 +289,10 @@ class _EmailVerificationSuccessScreenState
                         const SizedBox(height: KubusSpacing.lg),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                          child: InlineLoading(
+                              height: 4,
+                              borderRadius: BorderRadius.circular(2),
+                              color: scheme.primary),
                         ),
                       ],
                       if (_error != null) ...[
@@ -304,7 +316,9 @@ class _EmailVerificationSuccessScreenState
                               },
                         isLoading: _continuing,
                         icon: _continuing ? null : Icons.arrow_forward_rounded,
-                        label: widget.autoContinue ? l10n.authVerifyEmailContinueNow : l10n.authVerifyEmailContinue,
+                        label: widget.autoContinue
+                            ? l10n.authVerifyEmailContinueNow
+                            : l10n.authVerifyEmailContinue,
                         isFullWidth: true,
                       ),
                     ],

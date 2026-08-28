@@ -82,6 +82,7 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/auth/email_verification_success_screen.dart';
+import 'screens/onboarding/onboarding_flow_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
@@ -1052,6 +1053,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               redirectRoute: redirectRoute,
               redirectArguments: redirectArguments,
               initialEmail: email,
+              requiresWalletSetup: args['requiresWalletSetup'] == true,
             );
           }
           return const SignInScreen();
@@ -1069,6 +1071,27 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             );
           }
           return const RegisterScreen();
+        },
+        '/onboarding': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            return OnboardingFlowScreen(
+              forceDesktop: DesktopBreakpoints.isDesktop(context),
+              initialStepId: args['initialStepId']?.toString(),
+              completionRoute: PendingActionIntent.isSafeInternalRoute(
+                args['completionRoute']?.toString(),
+              )
+                  ? args['completionRoute']!.toString()
+                  : null,
+              completionArguments: PendingActionIntent.sanitizeReturnArguments(
+                args['completionArguments'],
+              ),
+              requiresWalletSetup: args['requiresWalletSetup'] == true,
+            );
+          }
+          return OnboardingFlowScreen(
+            forceDesktop: DesktopBreakpoints.isDesktop(context),
+          );
         },
         '/secure-account': (context) => const SecureAccountScreen(),
         '/verify-email': (context) {

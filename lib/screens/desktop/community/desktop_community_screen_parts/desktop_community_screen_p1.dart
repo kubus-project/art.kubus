@@ -92,15 +92,15 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
     final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.read<ProfileProvider>();
     if (!profileProvider.isSignedIn) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.userProfileSignInToFollowToast),
-          action: SnackBarAction(
-            label: l10n.commonSignIn,
-            onPressed: () => Navigator.of(context).pushNamed('/sign-in'),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
+      await const ContextualAuthGate().ensureAuthenticated(
+        context,
+        actionLabel: l10n.commonFollow,
+        returnRoute: '/community',
+        actionType: PendingActionType.follow,
+        targetType: PendingActionTargetType.user,
+        targetId: walletAddress,
+        targetLabel: displayName,
+        sourceScreen: 'desktop_community_suggestions',
       );
       return;
     }
@@ -1001,7 +1001,8 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
                 ? SizedBox(
                     width: 18,
                     height: 18,
-                    child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
+                    child: InlineLoading(
+                        tileSize: 4, color: themeProvider.accentColor),
                   )
                 : Icon(
                     Icons.refresh,

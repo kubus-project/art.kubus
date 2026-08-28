@@ -174,11 +174,18 @@ class OnboardingFlowScreen extends StatefulWidget {
     this.forceDesktop = false,
     this.initialStepId,
     this.completionRoute,
+    this.completionArguments,
+    this.requiresWalletSetup = false,
   });
 
   final bool forceDesktop;
   final String? initialStepId;
   final String? completionRoute;
+  final Object? completionArguments;
+
+  /// Wallet capability is requested by the originating protected action.
+  /// Account creation itself must not silently turn this on.
+  final bool requiresWalletSetup;
 
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -290,6 +297,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   bool get _accountRequiresWalletSetup {
+    // `walletConnect` is an explicit legacy/deep-link contract for the wallet
+    // setup flow. Preserve it as an intentional capability request while
+    // keeping ordinary account acquisition wallet-optional.
+    final explicitlyRequested =
+        AuthOnboardingService.normalizeStepId(widget.initialStepId) ==
+            'walletConnect';
+    if (!widget.requiresWalletSetup && !explicitlyRequested) return false;
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     if (!profileProvider.isSignedIn) return false;
@@ -2773,7 +2787,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           .trackOnboardingComplete(reason: 'step_flow_complete'));
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(_completionRoute);
+      Navigator.of(context).pushReplacementNamed(
+        _completionRoute,
+        arguments: widget.completionArguments,
+      );
     } finally {
       if (mounted) {
         setState(() => _isFinishingOnboarding = false);
@@ -2800,7 +2817,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(_completionRoute);
+      Navigator.of(context).pushReplacementNamed(
+        _completionRoute,
+        arguments: widget.completionArguments,
+      );
     } finally {
       if (mounted) {
         setState(() => _isSkippingFlow = false);

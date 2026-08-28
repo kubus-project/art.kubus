@@ -41,6 +41,8 @@ class PostAuthResult {
     this.replaceStack = true,
     this.error,
     this.onboardingStepId,
+    this.requiresWalletSetup = false,
+    this.completionRoute,
   });
 
   final bool completed;
@@ -49,6 +51,8 @@ class PostAuthResult {
   final bool replaceStack;
   final Object? error;
   final String? onboardingStepId;
+  final bool requiresWalletSetup;
+  final String? completionRoute;
 
   static const failed = PostAuthResult(completed: false);
 }
@@ -67,6 +71,7 @@ class PostAuthCoordinator {
     bool embedded = false,
     bool modalReauth = false,
     bool requiresWalletBackup = false,
+    bool requiresWalletSetup = false,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {
@@ -366,10 +371,10 @@ class PostAuthCoordinator {
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
         requiresWalletBackup: requiresWalletBackup,
-        // Account-auth sessions without a wallet always enter the dedicated
-        // WalletSetup step; wallet-origin sessions already have one.
+        // Wallet setup is requested by the originating action or a trusted
+        // backend requirement; generic account authentication stays Web3-free.
         requiresWalletSetup: !modalReauth &&
-            (payloadRequiresWalletSetup || isAccountAuth) &&
+            (requiresWalletSetup || payloadRequiresWalletSetup) &&
             walletForProfile.isEmpty,
         walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
         userId: normalizedUserId.isEmpty ? null : normalizedUserId,
@@ -382,7 +387,6 @@ class PostAuthCoordinator {
         heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
         persona: profileProvider.userPersona?.storageValue,
         origin: origin,
-        minimalAccount: hasPendingAction && isNewAccount,
       );
 
       setStage(PostAuthStage.openingWorkspace);
@@ -392,6 +396,8 @@ class PostAuthCoordinator {
         arguments: routeResult.arguments,
         replaceStack: routeResult.removeAuthStack,
         onboardingStepId: routeResult.onboardingStepId,
+        requiresWalletSetup: routeResult.requiresWalletSetup,
+        completionRoute: routeResult.completionRoute,
       );
     } catch (e) {
       AppConfig.debugPrint('PostAuthCoordinator: failed: $e');

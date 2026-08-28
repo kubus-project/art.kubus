@@ -47,6 +47,7 @@ import '../../widgets/glass_components.dart';
 import '../../widgets/wallet_custody_status_panel.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_backup_status.dart';
+import '../../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 

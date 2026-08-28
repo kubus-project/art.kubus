@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/pending_action_intent.dart';
+import '../models/protected_action_requirements.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../providers/pending_action_provider.dart';
+import '../providers/profile_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../widgets/auth/contextual_activation_sheet.dart';
 import 'backend_api_service.dart';
@@ -15,6 +18,7 @@ import 'backend_api_service.dart';
 // (the community screens) working through their parent's import.
 export '../models/pending_action_intent.dart'
     show PendingActionType, PendingActionTargetType;
+export '../models/protected_action_requirements.dart';
 
 /// Gates identity-required actions without blocking public content viewing.
 ///
@@ -49,8 +53,11 @@ class ContextualAuthGate {
     String? markerId,
     String? sourceScreen,
     Map<String, String> returnArguments = const <String, String>{},
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.participant,
   }) async {
-    if (BackendApiService().hasAuthSession) return true;
+    final missingStep = _missingCapabilityStep(context, requirements);
+    if (missingStep == null) return true;
 
     final telemetry = TelemetryService();
     final actionKey = actionType?.storageValue ?? 'other';
@@ -66,10 +73,12 @@ class ContextualAuthGate {
       ),
     );
 
-    // A visitor who already started an account and left it unverified should
-    // finish that account rather than be offered a new one.
-    final resumed = _maybeResumeIncompleteOnboarding(context);
-    if (resumed) return false;
+    // A cold-start visitor with a specifically persisted incomplete account
+    // (not an ordinary map browser) resumes the verified step exactly once.
+    if (!BackendApiService().hasAuthSession &&
+        _maybeResumeIncompleteOnboarding(context)) {
+      return false;
+    }
 
     final intent = _buildIntent(
       actionType: actionType,
@@ -97,6 +106,20 @@ class ContextualAuthGate {
       }
     }
     if (!context.mounted) return false;
+
+    // An authenticated account that still lacks role/profile/wallet capability
+    // resumes exactly that structured step. It is not an acquisition case, so
+    // never show Google/email/wallet choices again.
+    if (BackendApiService().hasAuthSession) {
+      await _openOnboarding(
+        context,
+        initialStepId: missingStep,
+        returnRoute: returnRoute,
+        returnArguments: returnArguments,
+        requiresWalletSetup: requirements.requiresWallet,
+      );
+      return false;
+    }
 
     unawaited(
       telemetry.trackAuthGateViewed(
@@ -130,6 +153,7 @@ class ContextualAuthGate {
         method: switch (choice) {
           ActivationGateChoice.google => 'google',
           ActivationGateChoice.email => 'email',
+          ActivationGateChoice.wallet => 'wallet',
           ActivationGateChoice.signIn => 'existing_account',
           ActivationGateChoice.dismissed => 'none',
         },
@@ -140,35 +164,102 @@ class ContextualAuthGate {
 
     // The same validation the intent gets. Without it an unsafe route that
     // `_buildIntent` already rejected would still reach the navigator.
-    final safeReturnRoute = PendingActionIntent.isSafeInternalRoute(returnRoute)
-        ? returnRoute
-        : '/main';
-    final arguments = <String, Object?>{'redirectRoute': safeReturnRoute};
-    if (returnArguments.isNotEmpty) {
-      arguments['redirectArguments'] = Map<String, String>.from(
-        returnArguments,
+    final safeReturnRoute = _safeReturnRoute(returnRoute);
+    if (choice == ActivationGateChoice.signIn) {
+      // Explicit existing-account sign-in remains a standalone route. Its
+      // post-auth coordinator applies the same capability resolution.
+      await Navigator.of(context).pushNamed(
+        '/sign-in',
+        arguments: <String, Object?>{
+          'redirectRoute': safeReturnRoute,
+          'requiresWalletSetup': requirements.requiresWallet,
+          if (returnArguments.isNotEmpty)
+            'redirectArguments': Map<String, String>.from(returnArguments),
+        },
       );
+      return false;
     }
 
-    // Pushed, not replaced: the browsing stack underneath stays intact so the
-    // system back gesture returns the visitor to the entity they came from.
-    await Navigator.of(context).pushNamed(
-      choice == ActivationGateChoice.signIn ? '/sign-in' : '/register',
-      arguments: arguments,
+    // Protected acquisition always enters the structured account journey.
+    // The account step embeds AuthMethodsPanel, so registration is not a
+    // detour through `/register` and wallet auth shares the same post-auth
+    // coordinator as Google and email.
+    await _openOnboarding(
+      context,
+      initialStepId: missingStep,
+      returnRoute: safeReturnRoute,
+      returnArguments: returnArguments,
+      requiresWalletSetup: requirements.requiresWallet,
     );
     return false;
   }
 
-  /// Resumes a half-finished account instead of offering a fresh one.
+  String _safeReturnRoute(String route) =>
+      PendingActionIntent.isSafeInternalRoute(route) ? route : '/main';
+
+  Future<void> _openOnboarding(
+    BuildContext context, {
+    required String initialStepId,
+    required String returnRoute,
+    required Map<String, String> returnArguments,
+    required bool requiresWalletSetup,
+  }) {
+    return Navigator.of(context).pushNamed(
+      '/onboarding',
+      arguments: <String, Object?>{
+        'initialStepId': initialStepId,
+        'completionRoute': _safeReturnRoute(returnRoute),
+        if (returnArguments.isNotEmpty)
+          'completionArguments': Map<String, String>.from(returnArguments),
+        'requiresWalletSetup': requiresWalletSetup,
+      },
+    );
+  }
+
   bool _maybeResumeIncompleteOnboarding(BuildContext context) {
     try {
-      final deferred = context.read<DeferredOnboardingProvider>();
-      return deferred.maybeShowOnboardingForProtectedAction(context);
+      return context
+          .read<DeferredOnboardingProvider>()
+          .maybeShowOnboardingForProtectedAction(context);
     } catch (_) {
-      // Contexts outside the application provider tree keep the normal
-      // contextual activation behavior.
       return false;
     }
+  }
+
+  /// Resolves the first missing capability. Provider access is intentionally
+  /// best-effort so isolated widgets retain the anonymous account flow.
+  String? _missingCapabilityStep(
+    BuildContext context,
+    ProtectedActionRequirements requirements,
+  ) {
+    if (requirements.requiresAccount && !BackendApiService().hasAuthSession) {
+      return 'account';
+    }
+
+    try {
+      final profile = context.read<ProfileProvider>();
+      if (requirements.requiresProfile) {
+        final hinted = profile.nextStructuredOnboardingStepId;
+        if (hinted == 'verifyEmail' ||
+            hinted == 'role' ||
+            hinted == 'profile') {
+          return hinted;
+        }
+        if (!profile.hasHydratedProfile || profile.currentUser == null) {
+          return 'profile';
+        }
+      }
+      if (requirements.requiresWallet &&
+          !context.read<WalletProvider>().hasWalletIdentity) {
+        // Role/profile checks above win when they are incomplete. Otherwise
+        // resume directly at wallet setup so a complete account is not made to
+        // repeat onboarding it already finished.
+        return 'walletConnect';
+      }
+    } catch (_) {
+      // Provider-less tests and route shells still need account acquisition.
+    }
+    return null;
   }
 
   PendingActionIntent? _buildIntent({

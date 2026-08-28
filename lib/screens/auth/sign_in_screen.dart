@@ -48,6 +48,7 @@ class SignInScreen extends StatefulWidget {
     this.googleAuthOrigin = 'signin',
     this.onVerificationRequired,
     this.onSwitchToRegister,
+    this.requiresWalletSetup = false,
     this.postAuthCoordinator = const PostAuthCoordinator(),
   });
 
@@ -60,6 +61,7 @@ class SignInScreen extends StatefulWidget {
   final String googleAuthOrigin;
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
+  final bool requiresWalletSetup;
   final PostAuthCoordinator postAuthCoordinator;
 
   @override
@@ -733,6 +735,7 @@ class _SignInScreenState extends State<SignInScreen> {
       embedded: widget.embedded,
       modalReauth: false,
       requiresWalletBackup: false,
+      requiresWalletSetup: widget.requiresWalletSetup,
       presentation: presentation,
       onBeforeSavedItemsSync:
           (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)

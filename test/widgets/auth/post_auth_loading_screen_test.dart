@@ -22,6 +22,7 @@ class _FailingPostAuthCoordinator extends PostAuthCoordinator {
     bool embedded = false,
     bool modalReauth = false,
     bool requiresWalletBackup = false,
+    bool requiresWalletSetup = false,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {
@@ -55,6 +56,7 @@ class _BlockingPostAuthCoordinator extends PostAuthCoordinator {
     bool embedded = false,
     bool modalReauth = false,
     bool requiresWalletBackup = false,
+    bool requiresWalletSetup = false,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {
