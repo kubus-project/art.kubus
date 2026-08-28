@@ -23,6 +23,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+UserProfile _signedInProfile() => UserProfile(
+      id: 'privacy-settings-profile',
+      walletAddress: 'privacy-settings-wallet',
+      username: 'tester',
+      displayName: 'Tester',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
 Widget _wrapWithApp({
   required Widget home,
   required ThemeProvider themeProvider,
@@ -76,6 +87,7 @@ void main() {
     final themeProvider = ThemeProvider();
     final profileProvider = ProfileProvider();
     await profileProvider.initialize();
+    profileProvider.setCurrentUser(_signedInProfile());
     await profileProvider.updatePreferences(
         showActivityStatus: true, shareLastVisitedLocation: true);
 
@@ -168,6 +180,7 @@ void main() {
     final themeProvider = ThemeProvider();
     final profileProvider = ProfileProvider();
     await profileProvider.initialize();
+    profileProvider.setCurrentUser(_signedInProfile());
     await profileProvider.updatePreferences(
         showActivityStatus: true, shareLastVisitedLocation: true);
 

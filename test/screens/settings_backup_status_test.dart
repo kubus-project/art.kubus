@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/l10n/app_localizations_en.dart';
 import 'package:art_kubus/models/email_preferences.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
 import 'package:art_kubus/providers/config_provider.dart';
@@ -148,7 +149,21 @@ Widget _buildSettingsApp(
       ChangeNotifierProvider<PlatformProvider>(
         create: (_) => PlatformProvider(),
       ),
-      ChangeNotifierProvider<ProfileProvider>(create: (_) => ProfileProvider()),
+      ChangeNotifierProvider<ProfileProvider>(
+        create: (_) => ProfileProvider()
+          ..setCurrentUser(
+            UserProfile(
+              id: 'settings-backup-profile',
+              walletAddress: 'wallet123',
+              username: 'tester',
+              displayName: 'Tester',
+              bio: '',
+              avatar: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          ),
+      ),
       ChangeNotifierProvider<NavigationProvider>(
         create: (_) => NavigationProvider(),
       ),
