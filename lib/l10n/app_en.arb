@@ -4,7 +4,7 @@
   "appTaglineSupport": "Discover public art, artists, institutions and community stories on an open cultural map.",
   "exploreOnlyAppTitle": "art.kubus - Explore",
   "exploreOnlyConnectWalletAction": "Connect wallet",
-  "exploreOnlyModeBanner": "You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.",
+  "exploreOnlyModeBanner": "You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for digital editions and governance.",
   "exploreOnlyDiscoverTitle": "Discover art",
   "exploreOnlyCollectionsTitle": "Browse collections",
   "exploreOnlyCollectionsDescription": "Explore artworks, public-space stories and cultural archive records.",
@@ -13,16 +13,16 @@
   "exploreOnlyCommunityTitle": "Community",
   "exploreOnlyCommunityDescription": "Follow artists, institutions and discussions around public art.",
   "exploreOnlyArtifactsTitle": "Digital editions",
-  "exploreOnlyArtifactsDescription": "Discover archive records and digital editions connected to artworks.",
+  "exploreOnlyArtifactsDescription": "Discover digital editions connected to artworks.",
   "walletPromptTitle": "Connect wallet",
-  "walletPromptBody": "A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.",
+  "walletPromptBody": "A wallet supports attribution, digital editions and governance. Discovery and community remain open without it.",
   "walletPromptIntro": "Connect a wallet for:",
-  "walletPromptFeatureArchiveObjects": "Archive records and digital editions",
+  "walletPromptFeatureArchiveObjects": "Digital editions",
   "walletPromptFeatureCreateArtworks": "Create and document artworks",
   "walletPromptFeatureCommunity": "Participation and governance records",
   "walletPromptMaybeLater": "Maybe later",
   "walletPromptSetUpAction": "Set up wallet",
-  "walletHomeArchiveObjectFallbackTitle": "Archive record",
+  "walletHomeArchiveObjectFallbackTitle": "Digital edition",
   "walletHomeCollectibleFallbackTitle": "Digital edition",
   "walletHomeConnectWalletToFetchCollectibles": "Connect your wallet to load digital editions.",
   "artworkDraftCoverRequired": "Cover image is required.",
@@ -35,20 +35,20 @@
   "artworkDraftCoordinatesInvalid": "Location coordinates are invalid.",
   "artworkDraftAttendanceImageUploadFailed": "Failed to upload attendance record image. Please try again.",
   "artworkDraftPublishFailed": "Failed to publish artwork. Please try again.",
-  "archiveObjectCreatedToast": "Archive record created.",
-  "archiveObjectCreateFailed": "Failed to create archive record.",
+  "archiveObjectCreatedToast": "Digital edition created.",
+  "archiveObjectCreateFailed": "Failed to create digital edition.",
   "archiveObjectCreationPleaseWait": "This may take a few moments.",
-  "archiveObjectSeriesDefaultDescription": "Archive records for {artworkTitle} by {artistName}",
+  "archiveObjectSeriesDefaultDescription": "Digital editions of {artworkTitle} by {artistName}",
   "@archiveObjectSeriesDefaultDescription": {
     "placeholders": {
       "artworkTitle": {},
       "artistName": {}
     }
   },
-  "archiveObjectSeriesCreateFailed": "Failed to create archive record series",
-  "archiveObjectSeriesNotFound": "Archive record series not found",
+  "archiveObjectSeriesCreateFailed": "Failed to create digital edition series",
+  "archiveObjectSeriesNotFound": "Digital edition series not found",
   "archiveObjectSeriesSoldOut": "Series is sold out",
-  "archiveObjectCreatedReason": "Created archive record for \"{artworkTitle}\" (edition #{tokenId})",
+  "archiveObjectCreatedReason": "Created digital edition of \"{artworkTitle}\" (edition #{tokenId})",
   "@archiveObjectCreatedReason": {
     "placeholders": {
       "artworkTitle": {},
@@ -56,13 +56,13 @@
     }
   },
   "artworkCreatorAttendanceRecordUrlOptionalLabel": "Attendance record URL",
-  "archiveObjectCreateFailedWithError": "Failed to create archive record: {error}",
+  "archiveObjectCreateFailedWithError": "Failed to create digital edition: {error}",
   "@archiveObjectCreateFailedWithError": {
     "placeholders": {
       "error": {}
     }
   },
-  "archiveObjectCreateError": "Error creating archive record: {error}",
+  "archiveObjectCreateError": "Error creating digital edition: {error}",
   "@archiveObjectCreateError": {
     "placeholders": {
       "error": {}
@@ -93,7 +93,7 @@
     }
   },
   "recentActivityRecognitionRecordedTitle": "Recognition recorded",
-  "recentActivityArchiveObjectUpdateTitle": "Archive record update",
+  "recentActivityArchiveObjectUpdateTitle": "Digital edition update",
   "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",
   "@recentActivityRecognitionAmountDescription": {
     "placeholders": {
@@ -101,7 +101,7 @@
     }
   },
   "recentActivityNewRecognitionDescription": "You have new recognition",
-  "recentActivityArchiveObjectStatusDescription": "Archive record {status} for {title}",
+  "recentActivityArchiveObjectStatusDescription": "Digital edition {status} for {title}",
   "@recentActivityArchiveObjectStatusDescription": {
     "placeholders": {
       "status": {},
@@ -112,33 +112,33 @@
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
   "notificationRecognitionRecordedTitle": "Recognition recorded",
-  "pushArchiveObjectCreatingTitle": "Creating archive record...",
-  "pushArchiveObjectCreatingBody": "Creating archive record for \"{artworkTitle}\"",
+  "pushArchiveObjectCreatingTitle": "Creating digital edition...",
+  "pushArchiveObjectCreatingBody": "Creating a digital edition of \"{artworkTitle}\"",
   "@pushArchiveObjectCreatingBody": {
     "placeholders": {
       "artworkTitle": {}
     }
   },
-  "pushArchiveObjectCreatedTitle": "Archive record created",
-  "pushArchiveObjectCreatedBody": "\"{artworkTitle}\" now has an archive record",
+  "pushArchiveObjectCreatedTitle": "Digital edition created",
+  "pushArchiveObjectCreatedBody": "A digital edition of \"{artworkTitle}\" is ready",
   "@pushArchiveObjectCreatedBody": {
     "placeholders": {
       "artworkTitle": {}
     }
   },
   "pushArchiveObjectCreationFailedTitle": "Creation failed",
-  "pushArchiveObjectCreationFailedBody": "Could not create an archive record for \"{artworkTitle}\". Please try again.",
+  "pushArchiveObjectCreationFailedBody": "Could not create a digital edition of \"{artworkTitle}\". Please try again.",
   "@pushArchiveObjectCreationFailedBody": {
     "placeholders": {
       "artworkTitle": {}
     }
   },
-  "pushArchiveObjectCreationChannelName": "Archive record creation",
-  "pushArchiveObjectCreationChannelDescription": "Notifications for archive record creation",
+  "pushArchiveObjectCreationChannelName": "Digital edition creation",
+  "pushArchiveObjectCreationChannelDescription": "Notifications for digital edition creation",
   "pushRecognitionChannelName": "Recognition",
   "pushRecognitionChannelDescription": "Notifications for contribution recognition",
-  "analyticsMetricArchiveObjectsCreatedLabel": "Archive records created",
-  "analyticsMetricArchiveObjectsCreatedDescription": "Archive records connected to artworks.",
+  "analyticsMetricArchiveObjectsCreatedLabel": "Digital editions created",
+  "analyticsMetricArchiveObjectsCreatedDescription": "Digital editions connected to artworks.",
   "analyticsMetricKub8RecognitionLabel": "KUB8 recognition",
   "analyticsMetricKub8RecognitionDescription": "KUB8 recorded through contribution recognition.",
   "analyticsPresetArtistSubtitle": "Artwork reach, community response, AR activity, and recognition.",
@@ -187,7 +187,9 @@
   "activationGateGenericTitle": "Create a free account to {action}",
   "@activationGateGenericTitle": {
     "placeholders": {
-      "action": {"type": "String"}
+      "action": {
+        "type": "String"
+      }
     }
   },
   "activationGateBody": "Create a free account to save artworks, follow artists and return to places you want to visit.",
@@ -409,7 +411,7 @@
   "lockAppUnlockedToast": "App unlocked",
   "lockAuthenticationFailedToast": "Authentication failed",
   "authSignInTitle": "Sign in to art.kubus",
-  "authSignInSubtitle": "Start with art discovery, artists, institutions, and community. Add Wallet when you need archive records, editions, or governance.",
+  "authSignInSubtitle": "Start with art discovery, artists, institutions and community. Add a wallet later for digital editions or governance.",
   "authRegisterTitle": "Create your account",
   "authRegisterSubtitle": "Create a profile first. Discovery, community, and local art access work without a wallet.",
   "authHighlightSignInMethods": "Email, Google, or wallet sign-in",
@@ -579,7 +581,7 @@
   "onboardingStepWalletSetupTitle": "Set up your wallet",
   "onboardingStepWalletSecurityTitle": "Secure your wallet",
   "onboardingFlowWalletBackupIntroTitle": "Wallet backup",
-  "onboardingFlowWalletBackupIntroBody": "Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.",
+  "onboardingFlowWalletBackupIntroBody": "A wallet supports attribution, digital editions and future participation. Public discovery and community access remain available without one.",
   "onboardingFlowWalletBackupIntroWeb3Warning": "Discovery, profiles, and community do not require connecting a wallet.",
   "onboardingFlowWalletBackupIntroSecretWarning": "If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.",
   "onboardingFlowWalletBackupIntroRecoveryPhraseLabel": "Recovery phrase",
@@ -594,7 +596,7 @@
   "onboardingFlowWalletBackupIntroPasskeyAction": "Add passkey",
   "onboardingFlowWalletBackupIntroPasskeyDone": "Passkey added",
   "onboardingFlowWalletBackupTitle": "Back up your recovery phrase",
-  "onboardingFlowWalletBackupBody": "This phrase restores wallet access for digital ownership, archive records and future participation on a new device.",
+  "onboardingFlowWalletBackupBody": "This phrase restores wallet access for digital editions and future participation on a new device.",
   "onboardingFlowWalletBackupPrivacyWarning": "Keep it private. Anyone with this phrase can fully control your wallet.",
   "onboardingFlowWalletBackupLossWarning": "If you lose it, we cannot restore wallet-linked access for you. Public discovery and community browsing still work.",
   "onboardingFlowWalletBackupAction": "Reveal and confirm backup",
@@ -683,7 +685,7 @@
   "onboardingFlowDaoReviewSubmitAction": "Submit for governance review",
   "onboardingWelcomeTitle": "art.kubus is an open art platform.",
   "onboardingWelcomeSubtitle": "Community-first cultural discovery",
-  "onboardingWelcomeDescription": "Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.",
+  "onboardingWelcomeDescription": "Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.",
   "alphaNoticeTitle": "You are entering the art.kubus alpha",
   "alphaNoticeBody": "The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.",
   "alphaNoticeContinue": "Continue to onboarding",
@@ -697,9 +699,9 @@
   "onboardingCommunityTitle": "Join the art community",
   "onboardingCommunitySubtitle": "Community, collaboration and governance",
   "onboardingCommunityDescription": "Follow artists and institutions, discuss works, collaborate and take part in shaping the platform.",
-  "onboardingCollectiblesTitle": "Archive records and digital editions",
+  "onboardingCollectiblesTitle": "Digital editions and attendance records",
   "onboardingCollectiblesSubtitle": "Cultural memory, visits and ownership",
-  "onboardingCollectiblesDescription": "When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.",
+  "onboardingCollectiblesDescription": "Attendance records can document a visit. Artists can create digital editions connected to an artwork. Discovery and community remain open without a wallet.",
   "onboardingGrantPermissions": "Grant permissions",
   "onboardingSkipPermissions": "Skip permissions",
   "permissionsChecking": "Checking permissions…",
@@ -824,9 +826,9 @@
   "desktopSettingsFeatureArDiscoveryTitle": "AR layers in development",
   "desktopSettingsFeatureArDiscoveryDescription": "Prepare AR previews as pilots become available.",
   "desktopSettingsFeatureWeb3IntegrationTitle": "Wallet and Web3 access",
-  "desktopSettingsFeatureWeb3IntegrationDescription": "Connect Wallet for attribution, archive records, digital editions, or future participation tools. Basic discovery and community do not require it.",
+  "desktopSettingsFeatureWeb3IntegrationDescription": "Connect a wallet for attribution, digital editions or future participation tools. Basic discovery and community do not require it.",
   "desktopSettingsFeatureNftMintingTitle": "Digital editions",
-  "desktopSettingsFeatureNftMintingDescription": "Create and manage digital records connected to artworks, visits or contributions.",
+  "desktopSettingsFeatureNftMintingDescription": "Create and manage digital editions connected to artworks.",
   "desktopSettingsFeatureCommunityTitle": "Community",
   "desktopSettingsFeatureCommunityDescription": "Connect with artists, institutions, and art lovers",
   "desktopSettingsFeatureInstitutionsTitle": "Institutions",
@@ -1260,8 +1262,8 @@
   "settingsShowActivityStatusSubtitle": "Let others see when you're online",
   "settingsShareLastVisitedLocationTitle": "Share last visited location",
   "settingsShareLastVisitedLocationSubtitle": "Let others see what you last visited",
-  "settingsShowCollectionTitle": "Show cultural artifacts",
-  "settingsShowCollectionSubtitle": "Show your digital cultural artifacts publicly on your profile",
+  "settingsShowCollectionTitle": "Show digital editions",
+  "settingsShowCollectionSubtitle": "Show your digital editions publicly on your profile",
   "settingsAllowMessagesTitle": "Allow messages",
   "settingsAllowMessagesSubtitle": "Receive direct messages from others",
   "settingsDeactivateAccountTileTitle": "Deactivate account",
@@ -1311,7 +1313,7 @@
   "web3ArtistStudioP1Feature3": "Track performance insights",
   "web3ArtistStudioP1Feature4": "Showcase and share with the community",
   "web3ArtistStudioP2Title": "Artwork gallery",
-  "web3ArtistStudioP2Description": "Present artworks and digital cultural artifacts. Upload, organize, and describe your practice.",
+  "web3ArtistStudioP2Description": "Present artworks and digital editions. Upload, organise and describe your practice.",
   "web3ArtistStudioP2Feature1": "Upload and organize artworks",
   "web3ArtistStudioP2Feature2": "Add titles and descriptions",
   "web3ArtistStudioP2Feature3": "Choose visibility and availability",
@@ -1433,14 +1435,14 @@
   "institutionHubDaoReviewQueueMessage": "Your submission is in the governance review queue.",
   "institutionHubApprovedToolsMessage": "Congratulations! Approved for institution tools.",
   "institutionHubRejectedResubmitMessage": "Your last submission was rejected. You can resubmit with updates.",
-  "web3MarketplaceP1Title": "Digital cultural artifacts",
-  "web3MarketplaceP1Description": "Archive records and digital editions connect artworks with provenance, visits and cultural memory.",
-  "web3MarketplaceP1Feature1": "Browse cultural artifacts",
+  "web3MarketplaceP1Title": "Digital editions",
+  "web3MarketplaceP1Description": "Digital editions connect artworks with provenance.",
+  "web3MarketplaceP1Feature1": "Browse digital editions",
   "web3MarketplaceP1Feature2": "See artist and artwork context",
   "web3MarketplaceP1Feature3": "Understand provenance",
   "web3MarketplaceP1Feature4": "Keep ownership tools clear",
   "web3MarketplaceP2Title": "Discover with context",
-  "web3MarketplaceP2Description": "Explore artifacts through artists, institutions, exhibitions, and public-space stories instead of trading hype.",
+  "web3MarketplaceP2Description": "Explore digital editions through artists, institutions, exhibitions and public-space stories.",
   "web3MarketplaceP2Feature1": "Filter by category and rarity",
   "web3MarketplaceP2Feature2": "View detailed artwork info",
   "web3MarketplaceP2Feature3": "Check provenance and authenticity",
@@ -1464,8 +1466,8 @@
   "web3FeaturesP1Feature3": "Keys stay with you",
   "web3FeaturesP1Feature4": "Access you can restore and move",
   "web3FeaturesP2Title": "Digital edition catalog",
-  "web3FeaturesP2Description": "Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.",
-  "web3FeaturesP2Feature1": "Browse featured cultural artifacts",
+  "web3FeaturesP2Description": "Browse digital editions connected to artists, artworks, institutions and provenance.",
+  "web3FeaturesP2Feature1": "Browse featured digital editions",
   "web3FeaturesP2Feature2": "Search by artist, artwork, or context",
   "web3FeaturesP2Feature3": "View details and provenance",
   "web3FeaturesP2Feature4": "Support artists when enabled",
@@ -1900,7 +1902,7 @@
   "desktopMapNoArAssetToast": "No AR asset available for this artwork.",
   "desktopMapArtworkTypeTitle": "Artwork type",
   "desktopMapArtworkTypeArArt": "AR art",
-  "desktopMapArtworkTypeNfts": "Archive records",
+  "desktopMapArtworkTypeNfts": "Digital editions",
   "desktopMapArtworkTypeModels3d": "3D models",
   "desktopMapArtworkTypeSculptures": "Sculptures",
   "desktopMapSortByTitle": "Sort by",
@@ -2916,7 +2918,7 @@
     }
   },
   "walletHomeStakeTitle": "Fee support setup",
-  "walletHomeStakeDescription": "Prepare SOL for future transaction fees when publishing or artifact actions require it.",
+  "walletHomeStakeDescription": "Prepare SOL for future transaction fees when publishing or digital edition actions require it.",
   "walletHomeStakeAction": "Set up support",
   "walletHomeRefreshRatesAction": "Refresh rates",
   "walletHomeApproxTotalValue": "Approx. {value}",
@@ -3197,8 +3199,12 @@
   "walkingNavigationRemaining": "{distance} · {minutes}",
   "@walkingNavigationRemaining": {
     "placeholders": {
-      "distance": {"type": "String"},
-      "minutes": {"type": "String"}
+      "distance": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
     }
   },
   "walkingNavigationRouteAttribution": "Route data © OpenStreetMap contributors",
@@ -3239,7 +3245,7 @@
   "artworkDetailLike": "Like",
   "artworkDetailLiked": "Liked",
   "artworkDetailHideComments": "Hide comments",
-  "artworkDetailMintNft": "Create archive record",
+  "artworkDetailMintNft": "Create digital edition",
   "eventCreatorNoInstitutionAvailableMessage": "No institution is available for this event yet.",
   "eventCreatorInstitutionLabel": "Institution",
   "eventCreatorSelectDateLabel": "Select date",
@@ -3734,13 +3740,13 @@
   "marketplaceFeaturedCollectionsTitle": "Featured collections",
   "marketplaceFeaturedCollectionsSubtitle": "Curated digital editions and AR-ready series from the community.",
   "marketplaceNoMintedNftsTitle": "No digital editions available yet",
-  "marketplaceNoMintedNftsDescription": "Listings appear once an artwork is issued as a digital cultural object.",
+  "marketplaceNoMintedNftsDescription": "Listings appear once an artwork has a digital edition.",
   "marketplaceTrendingThisWeekTitle": "Active this week",
-  "marketplaceTrendingThisWeekSubtitle": "Artifacts with recent community attention.",
-  "marketplaceNoTrendingNftsTitle": "No active artifacts yet",
-  "marketplaceNoTrendingNftsDescription": "Check back later as cultural artifact activity grows.",
+  "marketplaceTrendingThisWeekSubtitle": "Digital editions with recent community attention.",
+  "marketplaceNoTrendingNftsTitle": "No active digital editions yet",
+  "marketplaceNoTrendingNftsDescription": "Check back later as digital edition activity grows.",
   "marketplaceMyCollectionTitle": "My digital editions",
-  "marketplaceMyCollectionCount": "{count} artifacts",
+  "marketplaceMyCollectionCount": "{count} digital editions",
   "@marketplaceMyCollectionCount": {
     "placeholders": {
       "count": {}
@@ -3755,20 +3761,20 @@
   "marketplaceMintedLabel": "Issued as digital edition",
   "marketplaceTotalSupplyLabel": "Total supply",
   "marketplaceRarityLabel": "Rarity",
-  "marketplaceOwnedNftStatus": "Owned artifact",
-  "marketplaceOwnedNftListedStatus": "Owned artifact - Listed",
+  "marketplaceOwnedNftStatus": "Owned digital edition",
+  "marketplaceOwnedNftListedStatus": "Owned digital edition, listed",
   "marketplaceEmptyCollectionTitle": "No digital editions yet",
   "marketplaceEmptyCollectionDescription": "Create digital editions from artworks and keep them here.",
   "marketplaceExploreArArtButton": "Explore art map",
-  "marketplaceListForSaleButton": "List artifact",
+  "marketplaceListForSaleButton": "List digital edition",
   "marketplaceListForSaleSuccessToast": "Listed for sale.",
-  "marketplaceListForSaleFailedToast": "Unable to list artifact right now.",
+  "marketplaceListForSaleFailedToast": "Unable to list this digital edition right now.",
   "marketplaceRemoveFromSaleTitle": "Remove from sale",
   "marketplaceRemoveFromSaleConfirmBody": "Remove this digital edition from listings?",
-  "marketplaceRemoveFromSaleSuccessToast": "Artifact removed from listing.",
+  "marketplaceRemoveFromSaleSuccessToast": "Digital edition removed from listing.",
   "marketplaceMintConnectWalletTitle": "Wallet required for digital editions",
-  "marketplaceMintConnectWalletDescription": "Connect a wallet only if you want to create digital cultural artifacts from artworks.",
-  "marketplaceMintSuccessTitle": "Digital artifact created",
+  "marketplaceMintConnectWalletDescription": "Connect a wallet only if you want to create digital editions from artworks.",
+  "marketplaceMintSuccessTitle": "Digital edition created",
   "marketplaceMintSuccessDescription": "Your digital edition is ready. You can view it in your wallet.",
   "marketplaceViewInWalletButton": "View in wallet",
   "marketplaceMintFailedTitle": "Creation failed",
@@ -3779,15 +3785,15 @@
   "marketplacePropertiesTitle": "Properties",
   "marketplaceSoldOutBadgeLabel": "SOLD OUT",
   "marketplaceCardActionListed": "Listed",
-  "marketplaceCardActionMint": "Mint",
+  "marketplaceCardActionMint": "Create edition",
   "marketplaceCardActionView": "View",
   "marketplaceNftArtworkStatus": "Digital edition artwork",
   "marketplaceNftArtworkStatusArEnabled": "Digital edition artwork - AR enabled",
-  "marketplaceMintUnavailableLabel": "Mint unavailable",
+  "marketplaceMintUnavailableLabel": "Edition creation unavailable",
   "marketplaceSoldOutLabel": "Sold out",
-  "marketplaceMintNftButtonLabel": "Create artifact",
+  "marketplaceMintNftButtonLabel": "Create digital edition",
   "marketplaceArRequiredTitle": "Location visit required",
-  "marketplaceArRequiredDescription": "This artifact requires interaction with the physical artwork location. Visit the artwork and use the AR scanner if the artist enabled it.",
+  "marketplaceArRequiredDescription": "This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.",
   "marketplaceGoToArButton": "Go to AR",
   "marketplaceMintDialogTitle": "Create digital edition",
   "marketplaceMintConfirmCollectionDescription": "You are creating a digital edition from the \"{collection}\" collection.",
@@ -3796,8 +3802,8 @@
       "collection": {}
     }
   },
-  "marketplaceMintPriceLabel": "Mint price:",
-  "marketplaceConfirmMintButton": "Confirm Mint",
+  "marketplaceMintPriceLabel": "Edition price:",
+  "marketplaceConfirmMintButton": "Create digital edition",
   "marketplaceTokenNumberLabel": "Token #{tokenId}",
   "@marketplaceTokenNumberLabel": {
     "placeholders": {
@@ -3827,12 +3833,12 @@
   "marketplaceRemoveFromSaleFailedToast": "Unable to remove this digital edition from listing right now.",
   "marketplaceValueNotListedLabel": "Not listed",
   "marketplaceValueLastSaleLabel": "Last sale",
-  "marketplaceValueMintPriceLabel": "Mint price",
+  "marketplaceValueMintPriceLabel": "Edition price",
   "marketplaceOwnedCollectionTitle": "Owned collection",
   "marketplaceOwnedCollectionSubtitle": "Digital editions currently held by this wallet.",
   "marketplaceListedForSaleSubtitle": "Digital editions currently visible to marketplace buyers.",
   "marketplaceArOnlyFilterActiveLabel": "AR only",
-  "marketplaceArOnlyFilterInactiveLabel": "All mints",
+  "marketplaceArOnlyFilterInactiveLabel": "All editions",
   "marketplaceListingDialogDescription": "Set a KUB8 sale price for {title}.",
   "@marketplaceListingDialogDescription": {
     "placeholders": {
@@ -3850,7 +3856,7 @@
   "collectibleRarityEpic": "Epic",
   "collectibleRarityLegendary": "Legendary",
   "collectibleRarityMythic": "Mythic",
-  "collectibleStatusMinted": "Issued as archive record",
+  "collectibleStatusMinted": "Issued as digital edition",
   "collectibleStatusListed": "Listed",
   "collectibleStatusSold": "Sold",
   "collectibleStatusTransferred": "Transferred",
@@ -4985,7 +4991,7 @@
   "desktopShellNavCreate": "Create",
   "desktopShellNavOrganize": "Organize",
   "desktopShellNavGovern": "Govern",
-  "desktopShellNavTrade": "Artifacts",
+  "desktopShellNavTrade": "Digital editions",
   "desktopShellNavWeb3": "Infrastructure",
   "navigationScreenCreateAr": "Create AR",
   "navigationScreenExploreMap": "Explore Map",
@@ -5196,7 +5202,7 @@
   "userProfileAchievementCategoryEvents": "Events",
   "userProfileAchievementCategoryDiscovery": "Discovery",
   "userProfileAchievementCategoryAr": "AR",
-  "userProfileAchievementCategoryNft": "Archive records",
+  "userProfileAchievementCategoryNft": "Digital editions",
   "userProfileAchievementCategoryCommunity": "Community",
   "userProfileAchievementCategorySocial": "Social",
   "userProfileAchievementCategoryTrading": "Trading",
@@ -5661,7 +5667,7 @@
   "desktopProfileNoViewedArtworksDescription": "Explore the map to discover artworks and build your viewing history.",
   "desktopProfilePerformanceSubtitle": "Your activity and engagement metrics",
   "desktopProfilePerformanceCreatedTitle": "Created",
-  "desktopProfilePerformanceNftsOwnedTitle": "Archive records held",
+  "desktopProfilePerformanceNftsOwnedTitle": "Digital editions held",
   "desktopProfileAchievementsSubtitle": "Your progress and milestones",
   "desktopProfileYourPostsTitle": "Your posts",
   "desktopProfileYourPostsSubtitle": "Content you've shared with the community",
@@ -5987,26 +5993,28 @@
   "exhibitionCreatorRelationTypeLabel": "Relation type",
   "selectEventsDialogTitle": "Select events",
   "selectExhibitionsDialogTitle": "Select exhibitions",
-
   "authVerifyEmailSuccessTitle": "Email confirmed",
   "authVerifyEmailSuccessBodyAutoContinue": "Opening your art.kubus workspace…",
   "authVerifyEmailSuccessBodyAutoContinueWithEmail": "{email} is verified. Opening your art.kubus workspace…",
   "@authVerifyEmailSuccessBodyAutoContinueWithEmail": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailSuccessBodyManual": "Your email address is verified. Continue to finish your art.kubus setup.",
   "authVerifyEmailSuccessBodyManualWithEmail": "{email} is verified. Continue to finish your art.kubus setup.",
   "@authVerifyEmailSuccessBodyManualWithEmail": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailContinueNow": "Continue now",
   "authVerifyEmailContinue": "Continue",
   "authVerifyEmailSessionFailed": "Could not continue from verification. Try again.",
-
   "walletSetupTitle": "Secure your art.kubus identity",
   "walletSetupSubtitle": "Create your wallet. You stay in control.",
   "walletSetupAccountNote": "You keep signing in with your account — the wallet becomes your public identity.",
@@ -6017,7 +6025,9 @@
   "walletSetupSignedInAs": "Signed in as {name}",
   "@walletSetupSignedInAs": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "walletSetupImportTitle": "Import existing wallet",
@@ -6032,12 +6042,13 @@
   "walletSetupDisabledError": "Wallet connection is disabled right now.",
   "walletSetupSessionMissingError": "Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.",
   "walletSetupGenericLinkError": "Wallet linking failed. Try again.",
-
   "walletSetupStatusLoginAccount": "Login account",
   "walletSetupStatusAccountId": "Account ID {id}",
   "@walletSetupStatusAccountId": {
     "placeholders": {
-      "id": { "type": "String" }
+      "id": {
+        "type": "String"
+      }
     }
   },
   "walletSetupStatusAuthenticatedAccount": "Authenticated account",
@@ -6047,7 +6058,9 @@
   "walletSetupStatusVerifiedLinked": "Verified linked wallet {wallet}",
   "@walletSetupStatusVerifiedLinked": {
     "placeholders": {
-      "wallet": { "type": "String" }
+      "wallet": {
+        "type": "String"
+      }
     }
   },
   "walletSetupPhaseReady": "Choose a wallet action to continue.",
@@ -6056,7 +6069,6 @@
   "walletSetupPhaseLinking": "Linking wallet to your account and verifying…",
   "walletSetupPhaseLinked": "Wallet linked to this account.",
   "walletSetupPhaseFailed": "Wallet link failed. Your account was not changed.",
-
   "onboardingStageWelcome": "Welcome",
   "onboardingStageAccount": "Account",
   "onboardingStageProfile": "Profile",
@@ -6066,8 +6078,12 @@
   "onboardingStageProgress": "Step {current} of {total}",
   "@onboardingStageProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "analyticsMetricFollowersLabel": "Followers",
@@ -6294,7 +6310,13 @@
   "spatialProcessLocalPrivacy": "Source capture stays on hardware you control.",
   "spatialProcessNetworkTitle": "Kubus network",
   "spatialProcessNetworkAvailable": "{count} compatible nodes available",
-  "@spatialProcessNetworkAvailable": {"placeholders": {"count": {"type": "int"}}},
+  "@spatialProcessNetworkAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialProcessNetworkPrivacy": "The capture is encrypted in transit and processed temporarily by the selected provider node.",
   "spatialProcessMaximumPrivacy": "For maximum privacy, process locally.",
   "spatialProcessNoLocalGpu": "No compatible local GPU was found.",
@@ -6304,9 +6326,19 @@
   "spatialProcessAdvanced": "Choose a node",
   "spatialProcessReady": "Ready",
   "spatialProcessJobsAhead": "{count} jobs ahead",
-  "@spatialProcessJobsAhead": {"placeholders": {"count": {"type": "int"}}},
+  "@spatialProcessJobsAhead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialProcessSuccessRate": "{rate}% successful jobs",
-  "@spatialProcessSuccessRate": {"placeholders": {"rate": {}}},
+  "@spatialProcessSuccessRate": {
+    "placeholders": {
+      "rate": {}
+    }
+  },
   "spatialRemotePrivacyTitle": "Use a Kubus network GPU?",
   "spatialRemotePrivacyBody": "The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.",
   "spatialRemotePrivacyConfirm": "Continue with network GPU",
@@ -6335,9 +6367,21 @@
   "spatialArchiveTitle": "Spatial archive",
   "spatialViewIn3d": "View in 3D",
   "spatialCaptureCount": "{count, plural, =1{1 spatial capture} other{{count} spatial captures}}",
-  "@spatialCaptureCount": {"placeholders": {"count": {"type": "int"}}},
+  "@spatialCaptureCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialCapturedOn": "Captured {date}",
-  "@spatialCapturedOn": {"placeholders": {"date": {"type": "String"}}},
+  "@spatialCapturedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "spatialHistoryTitle": "Spatial history",
   "spatialLoadArchiveQuality": "Load archival quality",
   "spatialQualityMobile": "Optimised",
@@ -6357,7 +6401,16 @@
   "spatialCaptureDepthAvailable": "depth available",
   "spatialCaptureRgbPose": "RGB and pose",
   "spatialCaptureTrackedViews": "{count} tracked views · {detail}",
-  "@spatialCaptureTrackedViews": {"placeholders": {"count": {"type": "int"}, "detail": {"type": "String"}}},
+  "@spatialCaptureTrackedViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "mapSpatialAvailable": "Spatial archive available",
   "arErrorCameraUnavailable": "The camera is currently unavailable. Try again.",
   "arErrorArcoreInstallRequired": "AR needs Google Play Services for AR. Install it to continue.",
@@ -6393,13 +6446,28 @@
   "spatialTransferPreparing": "Preparing capture…",
   "spatialTransferCommitting": "Finalising on your node…",
   "spatialTransferUploading": "Uploading {done} of {total} files",
-  "@spatialTransferUploading": {"placeholders":{"done":{"type":"int"},"total":{"type":"int"}}},
+  "@spatialTransferUploading": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "spatialArchiveEmptyTitle": "Spatial archive",
   "spatialArchiveEmptyBody": "Published and locally processed spatial records will appear here over time.",
   "spatialArchiveRecord": "Spatial record",
   "spatialRecoveryTitle": "Unfinished capture",
   "spatialRecoveryBody": "{count} tracked views from an interrupted capture are still on this device.",
-  "@spatialRecoveryBody": {"placeholders":{"count":{"type":"int"}}},
+  "@spatialRecoveryBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialRecoveryResume": "Resume capture",
   "spatialRecoveryDiscard": "Discard capture",
   "spatialRecoveryKeep": "Keep for later",
@@ -6484,7 +6552,13 @@
   "spatialNetworkStateExpired": "Request expired",
   "spatialNetworkStateCancelled": "Request cancelled",
   "spatialLibraryVersionLabel": "v{version}",
-  "@spatialLibraryVersionLabel": {"placeholders": {"version": {"type": "int"}}},
+  "@spatialLibraryVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
   "spatialLibraryArtworkUnavailable": "Artwork unavailable",
   "spatialLibraryMarkerUnavailable": "Marker unavailable",
   "spatialLibraryLinkedTo": "Linked to",
@@ -6495,9 +6569,21 @@
   "spatialLibrarySectionArchive": "Archive",
   "spatialLibraryCoverage": "Coverage",
   "spatialLibraryCoveragePercent": "{percent}% coverage",
-  "@spatialLibraryCoveragePercent": {"placeholders": {"percent": {"type": "int"}}},
+  "@spatialLibraryCoveragePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "spatialLibraryTrackedViews": "{count, plural, =1{1 tracked view} other{{count} tracked views}}",
-  "@spatialLibraryTrackedViews": {"placeholders": {"count": {"type": "int"}}},
+  "@spatialLibraryTrackedViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialLibraryDepthAvailable": "Depth available",
   "spatialLibraryDepthUnavailable": "No depth data",
   "spatialLibraryRawSource": "Raw source",
@@ -6517,7 +6603,13 @@
   "spatialLibraryCurrentPublicVersion": "Current public version",
   "spatialLibraryLocalDraft": "Local draft",
   "spatialLibraryRevisionOf": "Revision {revision}",
-  "@spatialLibraryRevisionOf": {"placeholders": {"revision": {"type": "int"}}},
+  "@spatialLibraryRevisionOf": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
   "spatialLibraryStaleResultWarning": "More capture data was added after this result. Process it again to refresh the scene.",
   "spatialLibraryStorageTitle": "Storage",
   "spatialLibraryCapturedOnLabel": "Captured",
@@ -6538,11 +6630,29 @@
   "spatialProcessRequestNetwork": "Request network processing",
   "spatialProcessNoProviderNow": "No provider is available right now. The request stays open until one is.",
   "spatialProviderQueueAhead": "{count, plural, =0{No jobs ahead} =1{1 job ahead} other{{count} jobs ahead}}",
-  "@spatialProviderQueueAhead": {"placeholders": {"count": {"type": "int"}}},
+  "@spatialProviderQueueAhead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spatialProviderEstimatedDuration": "About {minutes} min",
-  "@spatialProviderEstimatedDuration": {"placeholders": {"minutes": {"type": "int"}}},
+  "@spatialProviderEstimatedDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "spatialProviderEstimatedCost": "About {amount} KUB8",
-  "@spatialProviderEstimatedCost": {"placeholders": {"amount": {"type": "String"}}},
+  "@spatialProviderEstimatedCost": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "spatialProviderNoEstimate": "Not offered",
   "spatialProviderLabel": "Provider",
   "spatialFailureNodeUnavailable": "Node unavailable",
@@ -6558,7 +6668,13 @@
   "spatialCaptureContinueLater": "Continue later",
   "spatialCaptureTargetRequired": "Choose an artwork before starting a capture.",
   "spatialCaptureTargetLabel": "Capturing for {title}",
-  "@spatialCaptureTargetLabel": {"placeholders": {"title": {"type": "String"}}},
+  "@spatialCaptureTargetLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "spatialCaptureSourceUnavailable": "The raw capture for this record is no longer on this device.",
   "spatialCaptureContinueFailed": "That capture could not be reopened.",
   "spatialArtworkDraftsTitle": "Your spatial drafts",
@@ -6566,5 +6682,84 @@
   "spatialArtworkAddUpdate": "Add spatial update",
   "spatialArtworkCaptureCta": "Capture spatial data",
   "spatialViewOnMap": "View on map",
-  "spatialCaptureAnotherOpen": "A capture for another artwork is still open. Finish or discard it before starting a new one."
+  "spatialCaptureAnotherOpen": "A capture for another artwork is still open. Finish or discard it before starting a new one.",
+  "collectionCreatorConnectWalletToLoad": "Connect a wallet to load and curate your artwork library in this creator.",
+  "collectionCreatorLoadingLibrary": "Loading library…",
+  "collectionCreatorLoadArtworkLibrary": "Load artwork library",
+  "collectionCreatorLibraryStillLoading": "Your artwork library is still loading. You can continue with the collection details and return here later.",
+  "collectionCreatorLoadBeforeSave": "Load your artwork library to select pieces for this collection.",
+  "collectionCreatorArtworkSelected": "Selected",
+  "collectionCreatorArtworkAdd": "Add",
+  "walletHomeNoCollectiblesTitle": "No digital editions yet",
+  "artworkCreatorOptionalExtensionsDescription": "Publish the artwork first, then add AR or spatial layers, attendance records, or digital editions when they support the work.",
+  "artworkCreatorCreateDigitalEdition": "Create digital edition",
+  "artworkCreatorDigitalEditionUnavailable": "Digital edition creation is currently unavailable.",
+  "artworkCreatorCreateEditionSeries": "Create edition series",
+  "artworkEditionSeriesDialogTitle": "Create edition series",
+  "artworkEditionSeriesDialogDescription": "Create a digital edition series for this artwork.",
+  "artworkEditionSeriesNameLabel": "Edition series name",
+  "artworkEditionSizeLabel": "Edition size",
+  "artworkEditionPriceLabel": "Edition price (SOL)",
+  "artworkEditionCreateAction": "Create digital edition",
+  "artworkCreatorExtensionsTitle": "Artwork extensions",
+  "artworkCreatorDigitalEditionWalletRequired": "Create an optional digital edition after publishing. A wallet is required for this feature.",
+  "artworkEditionSeriesDescriptionLabel": "Series description",
+  "artworkEditionDefaultsToArtworkTitle": "Defaults to the artwork title",
+  "artworkEditionDefaultsToArtworkDescription": "Defaults to the artwork description",
+  "artworkEditionPriceKub8Label": "Edition price (KUB8)",
+  "artworkEditionCreatorRoyaltyLabel": "Creator royalty (%)",
+  "artworkEditionCreatorRoyaltyHelp": "Applied to secondary sales",
+  "artworkEditionTypeLabel": "Digital edition type",
+  "artworkEditionTypeStandard": "Standard digital edition",
+  "artworkEditionTypeAttendanceRecord": "Attendance record",
+  "artworkEditionTypeAchievement": "Achievement record",
+  "artworkEditionTypeLimited": "Limited digital edition",
+  "artworkCreatorAttendanceRecordsTitle": "Attendance records",
+  "artworkCreatorAttendanceNoneTitle": "No attendance record",
+  "artworkCreatorAttendanceNoneDescription": "Publish without an attendance record.",
+  "artworkCreatorAttendanceExistingTitle": "Use an existing attendance record",
+  "artworkCreatorAttendanceExistingDescription": "Add an event ID or record link from an existing attendance setup.",
+  "artworkCreatorAttendanceCreateTitle": "Create with art.kubus",
+  "artworkCreatorAttendanceCreateDescription": "art.kubus creates an attendance record link after publication.",
+  "artworkCreatorAttendanceEventIdLabel": "Attendance event ID",
+  "artworkCreatorAttendanceEventIdHint": "Paste an existing event ID.",
+  "artworkCreatorAttendanceRecordLinkHint": "A link visitors can open to save the attendance record.",
+  "artworkCreatorAttendanceRecognitionAmountLabel": "Recognition amount (KUB8)",
+  "artworkCreatorAttendanceClaimWindowLabel": "Claim window (days)",
+  "artworkCreatorAttendanceBadgeTitleLabel": "Attendance record title",
+  "artworkCreatorAttendanceBadgeDescriptionLabel": "Attendance record description",
+  "artworkCreatorAttendanceBadgeImageLabel": "Attendance record image",
+  "artworkCreatorAttendanceUsesArtworkCover": "Uses the artwork cover by default.",
+  "artworkCreatorCustomImageLabel": "Custom image",
+  "artworkCreatorAttendanceUseCoverInstead": "Use artwork cover instead",
+  "artworkCreatorAttendanceGeneratedAfterPublish": "The attendance record link is generated when you publish.",
+  "artworkCreatorEnableAr": "Enable AR",
+  "artworkCreatorArAfterPublish": "Generate or upload a marker after publishing.",
+  "artworkCreatorArUnavailable": "AR is currently unavailable on this platform.",
+  "artworkCreatorManageAr": "Create or manage AR",
+  "walletGalleryConnectTitle": "Connect your wallet",
+  "walletGalleryConnectDescription": "Connect a wallet to view your digital editions.",
+  "walletGalleryConnectAction": "Connect wallet",
+  "walletGalleryDigitalEditionFallbackTitle": "Digital edition",
+  "walletGalleryTokenId": "Token #{tokenId}",
+  "@walletGalleryTokenId": {
+    "placeholders": {
+      "tokenId": {}
+    }
+  },
+  "walletGalleryTransaction": "Transaction: {hash}",
+  "@walletGalleryTransaction": {
+    "placeholders": {
+      "hash": {}
+    }
+  },
+  "walletGalleryTransactionUnavailable": "Transaction unavailable",
+  "walletGalleryStatusMinted": "Issued",
+  "walletGalleryStatusListed": "Listed",
+  "walletGalleryStatusSold": "Sold",
+  "walletGalleryStatusTransferred": "Transferred",
+  "walletGalleryStatusBurned": "Retired",
+  "artworkCreatorFeeEstimateTitle": "Estimated network fees",
+  "artworkCreatorFeeEstimateUnavailable": "Unavailable",
+  "artworkCreatorAttendanceImageTooSmall": "The attendance record image must be at least 256 px on its shortest side."
 }

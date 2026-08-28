@@ -350,7 +350,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (bytes == null || bytes.isEmpty) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -358,7 +359,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (!mounted) return;
     if (decoded == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -368,8 +370,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (width < minSide || height < minSide) {
       messenger.showKubusSnackBar(
         const SnackBar(
-            content: Text(
-                'Cover image is too small. Minimum is 512px on the shortest side.')),
+          content: Text(
+            'Cover image is too small. Minimum is 512px on the shortest side.',
+          ),
+        ),
       );
       return;
     }
@@ -378,8 +382,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (ratio < 0.75 || ratio > 3.5) {
       messenger.showKubusSnackBar(
         const SnackBar(
-            content: Text(
-                'Cover aspect ratio is unsupported. Use a landscape image (e.g., 16:9 or 4:3).')),
+          content: Text(
+            'Cover aspect ratio is unsupported. Use a landscape image (e.g., 16:9 or 4:3).',
+          ),
+        ),
       );
       return;
     }
@@ -406,7 +412,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (!mounted) return;
     if (bytes == null || bytes.isEmpty) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -414,7 +421,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (!mounted) return;
     if (decoded == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -423,9 +431,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     const minSide = 256;
     if (width < minSide || height < minSide) {
       messenger.showKubusSnackBar(
-        const SnackBar(
-            content: Text(
-                'Badge image is too small. Minimum is 256px on the shortest side.')),
+        SnackBar(content: Text(l10n.artworkCreatorAttendanceImageTooSmall)),
       );
       return;
     }
@@ -471,7 +477,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (items.isEmpty) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -504,8 +511,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (latText.isEmpty || lngText.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.artworkDraftCoordinatesRequired)),
+          content: Text(
+            AppLocalizations.of(context)!.artworkDraftCoordinatesRequired,
+          ),
+        ),
       );
       return false;
     }
@@ -515,8 +524,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.artworkDraftCoordinatesInvalid)),
+          content: Text(
+            AppLocalizations.of(context)!.artworkDraftCoordinatesInvalid,
+          ),
+        ),
       );
       return false;
     }
@@ -557,7 +568,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final wallet = _resolveWalletAddress(context);
     if (wallet.isEmpty) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)));
+        SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+      );
       return;
     }
 
@@ -569,7 +581,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (!mounted) return;
     if (created == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
     setState(() => _createdArtwork = created);
@@ -589,9 +602,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
 
     if (inviteResult != null) {
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(inviteResult)),
-      );
+      messenger.showKubusSnackBar(SnackBar(content: Text(inviteResult)));
     }
   }
 
@@ -627,12 +638,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (sent > 0) {
       drafts.clearDraftCollaborationInvites(widget.draftId);
-      unawaited(collab.loadCollaborators(
-        'artwork',
-        artworkId,
-        refresh: true,
-        showLoadingIndicator: false,
-      ));
+      unawaited(
+        collab.loadCollaborators(
+          'artwork',
+          artworkId,
+          refresh: true,
+          showLoadingIndicator: false,
+        ),
+      );
     }
 
     if (failed == 0) {
@@ -648,9 +661,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     return l10n.artworkCreatorInvitePartialResult(sent, failed);
   }
 
-  Future<void> _mintNftForCreated({
-    required ArtworkDraftState draft,
-  }) async {
+  Future<void> _mintNftForCreated({required ArtworkDraftState draft}) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
@@ -690,9 +701,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         content: Row(
           children: [
             const SizedBox(
-                width: 18,
-                height: 18,
-                child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
+              width: 18,
+              height: 18,
+              child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
+            ),
             const SizedBox(width: KubusSpacing.md),
             Expanded(child: Text(l10n.archiveObjectCreationPleaseWait)),
           ],
@@ -729,9 +741,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       } else {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(
-              result.error ?? l10n.archiveObjectCreateFailed,
-            ),
+            content: Text(result.error ?? l10n.archiveObjectCreateFailed),
           ),
         );
       }
@@ -816,7 +826,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               : (draft.isSubmitting
                   ? null
                   : (v) => drafts.updateBasics(
-                      draftId: widget.draftId, isPublic: v)),
+                        draftId: widget.draftId,
+                        isPublic: v,
+                      )),
           activeColor: accent,
         ),
       ],
@@ -868,22 +880,27 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     minZoom: 3,
                     maxZoom: 24,
                     isDarkMode: isDarkMode,
-                    styleAsset:
-                        tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                    styleAsset: tileProviders.mapStyleAsset(
+                      isDarkMode: isDarkMode,
+                    ),
                     onMapCreated: (controller) {
                       _mapController = controller;
                       _styleReady = false;
                     },
                     onStyleLoaded: () {
-                      unawaited(_handleMapStyleLoaded(context)
-                          .then((_) => _syncLocationOnMap()));
+                      unawaited(
+                        _handleMapStyleLoaded(
+                          context,
+                        ).then((_) => _syncLocationOnMap()),
+                      );
                     },
                     onMapClick: (_, point) {
                       setState(() {
                         _location = point;
                         _latController.text = point.latitude.toStringAsFixed(6);
-                        _lngController.text =
-                            point.longitude.toStringAsFixed(6);
+                        _lngController.text = point.longitude.toStringAsFixed(
+                          6,
+                        );
                       });
                       drafts.updateLocation(
                         draftId: widget.draftId,
@@ -927,7 +944,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   label: 'Latitude',
                   accentColor: accent,
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   onChanged: (_) => _updateLocationFromFields(drafts),
                 ),
               ),
@@ -938,7 +957,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   label: 'Longitude',
                   accentColor: accent,
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   onChanged: (_) => _updateLocationFromFields(drafts),
                 ),
               ),
@@ -998,8 +1019,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 decoration: BoxDecoration(
                   color: scheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border:
-                      Border.all(color: scheme.outline.withValues(alpha: 0.18)),
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.18),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -1025,7 +1047,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       onPressed: index == 0 || draft.isSubmitting
                           ? null
                           : () => drafts.reorderGallery(
-                              widget.draftId, index, index - 1),
+                                widget.draftId,
+                                index,
+                                index - 1,
+                              ),
                       icon: const Icon(Icons.keyboard_arrow_up),
                     ),
                     IconButton(
@@ -1034,7 +1059,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                               draft.isSubmitting
                           ? null
                           : () => drafts.reorderGallery(
-                              widget.draftId, index, index + 2),
+                                widget.draftId,
+                                index,
+                                index + 2,
+                              ),
                       icon: const Icon(Icons.keyboard_arrow_down),
                     ),
                     IconButton(
@@ -1064,22 +1092,21 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return CreatorSection(
-      title: 'Publishing layers',
+      title: l10n.artworkCreatorExtensionsTitle,
       children: [
         CreatorInfoBox(
-          text:
-              'Publish the artwork first, then add AR layers, archive records, or attendance recognition when they support the work.',
+          text: l10n.artworkCreatorOptionalExtensionsDescription,
           accentColor: accent,
         ),
         const CreatorFieldSpacing(),
 
-        // --- Digital archive record toggle ---
+        // --- Digital edition toggle ---
         CreatorSwitchTile(
-          title: 'Create digital archive record',
+          title: l10n.artworkCreatorCreateDigitalEdition,
           subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
-              ? 'You can create it after publishing (wallet required).'
-              : 'Digital archive record creation is currently unavailable.',
+              ? l10n.artworkCreatorDigitalEditionWalletRequired
+              : l10n.artworkCreatorDigitalEditionUnavailable,
           value: draft.mintNftAfterPublish,
           onChanged: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting') &&
@@ -1096,23 +1123,27 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftSeriesNameController,
-            label: 'Series name',
+            label: l10n.artworkEditionSeriesNameLabel,
             hint: draft.title.trim().isEmpty
-                ? 'Defaults to artwork title'
+                ? l10n.artworkEditionDefaultsToArtworkTitle
                 : draft.title.trim(),
             accentColor: accent,
             onChanged: (v) => drafts.updateOptionalFeatures(
-                draftId: widget.draftId, nftSeriesName: v),
+              draftId: widget.draftId,
+              nftSeriesName: v,
+            ),
           ),
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftSeriesDescriptionController,
-            label: 'Series description',
-            hint: 'Defaults to artwork description',
+            label: l10n.artworkEditionSeriesDescriptionLabel,
+            hint: l10n.artworkEditionDefaultsToArtworkDescription,
             maxLines: 3,
             accentColor: accent,
             onChanged: (v) => drafts.updateOptionalFeatures(
-                draftId: widget.draftId, nftSeriesDescription: v),
+              draftId: widget.draftId,
+              nftSeriesDescription: v,
+            ),
           ),
           const CreatorFieldSpacing(),
           Row(
@@ -1120,14 +1151,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               Expanded(
                 child: CreatorTextField(
                   controller: _nftSupplyController,
-                  label: 'Supply',
+                  label: l10n.artworkEditionSizeLabel,
                   accentColor: accent,
                   keyboardType: TextInputType.number,
                   onChanged: (v) {
                     final parsed = int.tryParse(v.trim());
                     if (parsed != null) {
                       drafts.updateOptionalFeatures(
-                          draftId: widget.draftId, nftTotalSupply: parsed);
+                        draftId: widget.draftId,
+                        nftTotalSupply: parsed,
+                      );
                     }
                   },
                 ),
@@ -1136,15 +1169,18 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               Expanded(
                 child: CreatorTextField(
                   controller: _nftMintPriceController,
-                  label: 'Mint price (KUB8)',
+                  label: l10n.artworkEditionPriceKub8Label,
                   accentColor: accent,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (v) {
                     final parsed = double.tryParse(v.trim());
                     if (parsed != null) {
                       drafts.updateOptionalFeatures(
-                          draftId: widget.draftId, nftMintPrice: parsed);
+                        draftId: widget.draftId,
+                        nftMintPrice: parsed,
+                      );
                     }
                   },
                 ),
@@ -1154,14 +1190,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftRoyaltyController,
-            label: 'Artist fee (royalty %)',
+            label: l10n.artworkEditionCreatorRoyaltyLabel,
             accentColor: accent,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (v) {
               final parsed = double.tryParse(v.trim());
               if (parsed != null) {
                 drafts.updateOptionalFeatures(
-                    draftId: widget.draftId, nftRoyaltyPercent: parsed);
+                  draftId: widget.draftId,
+                  nftRoyaltyPercent: parsed,
+                );
               }
             },
           ),
@@ -1172,9 +1210,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(height: KubusSpacing.lg),
           Padding(
             padding: const EdgeInsets.only(
-                left: KubusSpacing.xs, bottom: KubusSpacing.sm),
+              left: KubusSpacing.xs,
+              bottom: KubusSpacing.sm,
+            ),
             child: Text(
-              'Attendance badge',
+              l10n.artworkCreatorAttendanceRecordsTitle,
               style: KubusTextStyles.detailSectionTitle.copyWith(
                 color: scheme.onSurface,
               ),
@@ -1187,31 +1227,34 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               onChanged: (v) {
                 if (v == null) return;
                 drafts.updateOptionalFeatures(
-                    draftId: widget.draftId, poapMode: v);
+                  draftId: widget.draftId,
+                  poapMode: v,
+                );
               },
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.none,
-                    title: Text('No badge'),
+                    title: Text(l10n.artworkCreatorAttendanceNoneTitle),
                     subtitle:
-                        Text('Publish without attendance recognition records.'),
+                        Text(l10n.artworkCreatorAttendanceNoneDescription),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.existingPoap,
-                    title: Text('Use existing attendance record'),
+                    title: Text(l10n.artworkCreatorAttendanceExistingTitle),
                     subtitle: Text(
-                        'Paste an Event ID or record link from an existing attendance setup.'),
+                      l10n.artworkCreatorAttendanceExistingDescription,
+                    ),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.kubusPoap,
                     title: Text(
-                      'Create with kubus',
+                      l10n.artworkCreatorAttendanceCreateTitle,
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                     subtitle: Text(
-                      'kubus generates a simple attendance record link automatically.',
+                      l10n.artworkCreatorAttendanceCreateDescription,
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                   ),
@@ -1222,72 +1265,84 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'Attendance event ID',
-              hint: 'If you have an Event ID, paste it here.',
+              label: l10n.artworkCreatorAttendanceEventIdLabel,
+              hint: l10n.artworkCreatorAttendanceEventIdHint,
               accentColor: accent,
               controller: _poapEventIdController,
               onChanged: (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId, poapEventId: v),
+                draftId: widget.draftId,
+                poapEventId: v,
+              ),
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
               label: l10n.artworkCreatorAttendanceRecordUrlOptionalLabel,
-              hint: 'A link people can open to save the badge.',
+              hint: l10n.artworkCreatorAttendanceRecordLinkHint,
               accentColor: accent,
               controller: _poapClaimUrlController,
               onChanged: (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId, poapClaimUrl: v),
+                draftId: widget.draftId,
+                poapClaimUrl: v,
+              ),
             ),
           ],
           if (draft.poapMode == ArtworkPoapMode.kubusPoap) ...[
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapRewardAmountController,
-              label: 'Recognition amount (KUB8)',
+              label: l10n.artworkCreatorAttendanceRecognitionAmountLabel,
               accentColor: accent,
               keyboardType: TextInputType.number,
               onChanged: (v) {
                 final parsed = int.tryParse(v.trim());
                 if (parsed != null) {
                   drafts.updateOptionalFeatures(
-                      draftId: widget.draftId, poapRewardAmount: parsed);
+                    draftId: widget.draftId,
+                    poapRewardAmount: parsed,
+                  );
                 }
               },
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapClaimDaysController,
-              label: 'Claim window (days)',
+              label: l10n.artworkCreatorAttendanceClaimWindowLabel,
               accentColor: accent,
               keyboardType: TextInputType.number,
               onChanged: (v) {
                 final parsed = int.tryParse(v.trim());
                 if (parsed != null) {
                   drafts.updateOptionalFeatures(
-                      draftId: widget.draftId, poapClaimDurationDays: parsed);
+                    draftId: widget.draftId,
+                    poapClaimDurationDays: parsed,
+                  );
                 }
               },
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapTitleController,
-              label: 'Badge title',
+              label: l10n.artworkCreatorAttendanceBadgeTitleLabel,
               hint: draft.title.trim().isEmpty
-                  ? 'Defaults to your artwork title'
-                  : 'Defaults to: ${draft.title.trim()}',
+                  ? l10n.artworkEditionDefaultsToArtworkTitle
+                  : draft.title.trim(),
               accentColor: accent,
               onChanged: (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId, poapTitle: v),
+                draftId: widget.draftId,
+                poapTitle: v,
+              ),
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapDescriptionController,
-              label: 'Badge description',
-              hint: 'Defaults to your artwork description',
+              label: l10n.artworkCreatorAttendanceBadgeDescriptionLabel,
+              hint: l10n.artworkEditionDefaultsToArtworkDescription,
               maxLines: 3,
               accentColor: accent,
               onChanged: (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId, poapDescription: v),
+                draftId: widget.draftId,
+                poapDescription: v,
+              ),
             ),
             const CreatorFieldSpacing(),
             Row(
@@ -1299,17 +1354,21 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                     border: Border.all(
-                        color: scheme.outline.withValues(alpha: 0.25)),
-                    color:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      color: scheme.outline.withValues(alpha: 0.25),
+                    ),
+                    color: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.35,
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                     child: (draft.poapImageBytes != null &&
                             draft.poapImageBytes!.isNotEmpty)
                         ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
-                        : Icon(Icons.badge_outlined,
-                            color: scheme.onSurfaceVariant),
+                        : Icon(
+                            Icons.badge_outlined,
+                            color: scheme.onSurfaceVariant,
+                          ),
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.md),
@@ -1317,13 +1376,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Badge image',
-                          style: KubusTextStyles.detailSectionTitle),
+                      Text(
+                        l10n.artworkCreatorAttendanceBadgeImageLabel,
+                        style: KubusTextStyles.detailSectionTitle,
+                      ),
                       const SizedBox(height: KubusSpacing.xs),
                       Text(
                         draft.poapImageBytes == null
-                            ? 'Uses your artwork cover by default.'
-                            : (draft.poapImageFileName ?? 'Custom image'),
+                            ? l10n.artworkCreatorAttendanceUsesArtworkCover
+                            : (draft.poapImageFileName ??
+                                l10n.artworkCreatorCustomImageLabel),
                         style: KubusTextStyles.detailLabel.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.75),
                         ),
@@ -1337,16 +1399,20 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                             onPressed: draft.isSubmitting
                                 ? null
                                 : () => unawaited(_pickPoapImage(drafts)),
-                            icon: const Icon(Icons.upload_file_outlined,
-                                size: 18),
-                            label: const Text('Upload'),
+                            icon: const Icon(
+                              Icons.upload_file_outlined,
+                              size: 18,
+                            ),
+                            label: Text(l10n.commonUpload),
                           ),
                           if (draft.poapImageBytes != null)
                             TextButton(
                               onPressed: draft.isSubmitting
                                   ? null
                                   : () => drafts.clearPoapImage(widget.draftId),
-                              child: const Text('Use cover instead'),
+                              child: Text(
+                                l10n.artworkCreatorAttendanceUseCoverInstead,
+                              ),
                             ),
                         ],
                       ),
@@ -1357,7 +1423,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const CreatorFieldSpacing(),
             Text(
-              'Your attendance record link will be generated when you publish.',
+              l10n.artworkCreatorAttendanceGeneratedAfterPublish,
               style: KubusTextStyles.detailLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -1377,14 +1443,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         // --- AR toggle ---
         const CreatorFieldSpacing(height: KubusSpacing.lg),
         CreatorSwitchTile(
-          title: 'Enable AR',
+          title: l10n.artworkCreatorEnableAr,
           subtitle: AppConfig.isFeatureEnabled('ar')
-              ? 'You can generate or upload a marker after publishing.'
-              : 'AR is currently unavailable on this platform.',
+              ? l10n.artworkCreatorArAfterPublish
+              : l10n.artworkCreatorArUnavailable,
           value: draft.arEnabled,
           onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
               ? (v) => drafts.updateOptionalFeatures(
-                  draftId: widget.draftId, arEnabled: v)
+                    draftId: widget.draftId,
+                    arEnabled: v,
+                  )
               : null,
           activeColor: accent,
         ),
@@ -1401,7 +1469,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               );
             },
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Create / Manage AR'),
+            label: Text(l10n.artworkCreatorManageAr),
           ),
         ],
       ],
@@ -1409,7 +1477,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   }
 
   Widget _buildFeeEstimateCard(
-      ArtworkDraftsProvider drafts, ArtworkDraftState draft) {
+    ArtworkDraftsProvider drafts,
+    ArtworkDraftState draft,
+  ) {
     if (draft.poapMode == ArtworkPoapMode.none) return const SizedBox.shrink();
 
     _updateFeeEstimateIfNeeded(drafts, draft);
@@ -1417,6 +1487,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (future == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(top: KubusSpacing.md),
       child: FutureBuilder<Map<String, dynamic>?>(
@@ -1429,7 +1500,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
           String headline;
           if (minCost == null || maxCost == null) {
-            headline = 'Unavailable';
+            headline = l10n.artworkCreatorFeeEstimateUnavailable;
           } else if (minCost == 0 && maxCost == 0) {
             headline = '0';
           } else if (minCost == maxCost) {
@@ -1449,7 +1520,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Approx. network fees',
+                  l10n.artworkCreatorFeeEstimateTitle,
                   style: KubusTextStyles.detailSectionTitle.copyWith(
                     color: scheme.onSurface,
                   ),
@@ -1517,8 +1588,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         CreatorSection(
           title: 'Review',
           children: [
-            _buildReviewRow('Title',
-                draft.title.trim().isEmpty ? 'Untitled' : draft.title.trim()),
+            _buildReviewRow(
+              'Title',
+              draft.title.trim().isEmpty ? 'Untitled' : draft.title.trim(),
+            ),
             const CreatorFieldSpacing(height: KubusSpacing.sm),
             _buildReviewRow('Category', draft.category),
             const CreatorFieldSpacing(height: KubusSpacing.sm),
@@ -1570,9 +1643,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           Row(
             children: [
               const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
+                width: 18,
+                height: 18,
+                child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
+              ),
               const SizedBox(width: KubusSpacing.sm),
               Expanded(
                 child: Text(
@@ -1630,6 +1704,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required Color accent,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final claimUrl = (_createdArtwork?.poapClaimUrl ?? '').trim();
     final showClaim = _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap &&
         claimUrl.isNotEmpty;
@@ -1641,8 +1716,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           children: [
             Icon(Icons.check_circle, color: accent),
             const SizedBox(width: KubusSpacing.sm),
-            Text('Your artwork is live.',
-                style: KubusTextStyles.detailSectionTitle),
+            Text(
+              'Your artwork is live.',
+              style: KubusTextStyles.detailSectionTitle,
+            ),
           ],
         ),
         if (showClaim) ...[
@@ -1654,10 +1731,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
           ),
           const SizedBox(height: KubusSpacing.sm),
-          SelectableText(
-            claimUrl,
-            style: KubusTextStyles.detailLabel,
-          ),
+          SelectableText(claimUrl, style: KubusTextStyles.detailLabel),
         ],
         if (draft.arEnabled) ...[
           const CreatorFieldSpacing(),
@@ -1672,7 +1746,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               );
             },
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Create / Manage AR'),
+            label: Text(l10n.artworkCreatorManageAr),
           ),
         ],
         if (draft.mintNftAfterPublish &&
@@ -1682,7 +1756,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           OutlinedButton.icon(
             onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
             icon: const Icon(Icons.auto_awesome_outlined),
-            label: const Text('Create archive record series'),
+            label: Text(l10n.artworkCreatorCreateEditionSeries),
           ),
         ],
         const CreatorFieldSpacing(),
@@ -1852,12 +1926,18 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 onPressed: draft.isSubmitting
                     ? null
                     : () => unawaited(_publishDraft(drafts)),
-                icon: Icon(persistedArtwork == null
-                    ? Icons.save_outlined
-                    : Icons.publish_outlined),
-                label: Text(persistedArtwork == null
-                    ? (widget.forceDraftOnly ? 'Save draft' : 'Publish artwork')
-                    : 'Update and republish'),
+                icon: Icon(
+                  persistedArtwork == null
+                      ? Icons.save_outlined
+                      : Icons.publish_outlined,
+                ),
+                label: Text(
+                  persistedArtwork == null
+                      ? (widget.forceDraftOnly
+                          ? 'Save draft'
+                          : 'Publish artwork')
+                      : 'Update and republish',
+                ),
               ),
               const SizedBox(height: KubusSpacing.sm),
               OutlinedButton.icon(
@@ -2020,23 +2100,41 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ),
               children: [
                 _buildBasicsSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
                 const CreatorSectionSpacing(),
                 _buildLocationSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
                 const CreatorSectionSpacing(),
                 _buildMediaSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
                 const CreatorSectionSpacing(),
                 _buildDraftCollaborationSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
                 if (AppConfig.isFeatureEnabled('collabInvites'))
                   const CreatorSectionSpacing(),
                 _buildOptionalSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
                 const CreatorSectionSpacing(),
                 _buildPublishSection(
-                    drafts: drafts, draft: draft, accent: accent),
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                ),
               ],
             ),
           ),

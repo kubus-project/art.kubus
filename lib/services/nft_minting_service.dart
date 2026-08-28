@@ -11,11 +11,11 @@ import '../services/collectibles_storage.dart';
 import 'achievement_service.dart';
 
 /// NFT Minting Service
-/// 
+///
 /// Handles artwork → NFT minting process with notifications
 /// Integrates with Solana blockchain for NFT creation
 /// Integrates with CollectiblesProvider for series/collection management
-/// 
+///
 /// Features:
 /// - Artwork validation
 /// - NFT series creation with artist royalties
@@ -29,7 +29,8 @@ class NFTMintingService {
   factory NFTMintingService() => _instance;
   NFTMintingService._internal();
 
-  final PushNotificationService _notificationService = PushNotificationService();
+  final PushNotificationService _notificationService =
+      PushNotificationService();
   final CollectiblesStorage _collectiblesStorage = CollectiblesStorage();
 
   AppLocalizations get _l10n {
@@ -37,7 +38,7 @@ class NFTMintingService {
         ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
     return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
   }
-  
+
   // Ongoing minting operations
   final Map<String, MintingStatus> _mintingOperations = {};
 
@@ -87,16 +88,10 @@ class NFTMintingService {
 
       debugPrint('NFTMintingService: Series created - ${series.id}');
 
-      return MintingResult(
-        success: true,
-        seriesId: series.id,
-      );
+      return MintingResult(success: true, seriesId: series.id);
     } catch (e) {
       debugPrint('NFTMintingService: Series creation failed - $e');
-      return MintingResult(
-        success: false,
-        error: e.toString(),
-      );
+      return MintingResult(success: false, error: e.toString());
     }
   }
 
@@ -125,7 +120,7 @@ class NFTMintingService {
       final l10n = _l10n;
       // Update status
       _mintingOperations[artworkId] = MintingStatus.inProgress;
-      
+
       // Show starting notification
       await _notificationService.showNFTMintingNotification(
         artworkId: artworkId,
@@ -141,16 +136,22 @@ class NFTMintingService {
 
       // Step 1: Create or get NFT series
       if (seriesId == null || seriesId.isEmpty) {
-        final localExisting = seriesList.where((s) => s.artworkId == artworkId).toList();
+        final localExisting =
+            seriesList.where((s) => s.artworkId == artworkId).toList();
         if (localExisting.isNotEmpty) {
           finalSeriesId = localExisting.first.id;
-          debugPrint('NFTMintingService: Using existing series - $finalSeriesId');
+          debugPrint(
+            'NFTMintingService: Using existing series - $finalSeriesId',
+          );
         } else {
           final seriesResult = await createNFTSeries(
             artworkId: artworkId,
             name: seriesName ?? '$artworkTitle Collection',
-            description:
-                seriesDescription ?? l10n.archiveObjectSeriesDefaultDescription(artworkTitle, artistName),
+            description: seriesDescription ??
+                l10n.archiveObjectSeriesDefaultDescription(
+                  artworkTitle,
+                  artistName,
+                ),
             creatorAddress: ownerAddress,
             totalSupply: totalSupply,
             rarity: rarity,
@@ -165,7 +166,8 @@ class NFTMintingService {
 
           if (!seriesResult.success || seriesResult.seriesId == null) {
             throw Exception(
-                seriesResult.error ?? l10n.archiveObjectSeriesCreateFailed);
+              seriesResult.error ?? l10n.archiveObjectSeriesCreateFailed,
+            );
           }
 
           finalSeriesId = seriesResult.seriesId!;
@@ -200,7 +202,8 @@ class NFTMintingService {
       }
 
       final tokenId = '${series.mintedCount + 1}';
-      final collectibleId = 'collectible_${DateTime.now().millisecondsSinceEpoch}';
+      final collectibleId =
+          'collectible_${DateTime.now().millisecondsSinceEpoch}';
       final collectible = Collectible(
         id: collectibleId,
         seriesId: series.id,
@@ -218,7 +221,9 @@ class NFTMintingService {
       );
 
       collectibles.add(collectible);
-      seriesList[seriesIndex] = series.copyWith(mintedCount: series.mintedCount + 1);
+      seriesList[seriesIndex] = series.copyWith(
+        mintedCount: series.mintedCount + 1,
+      );
       await _collectiblesStorage.saveCollectibles(collectibles);
       await _collectiblesStorage.saveSeries(seriesList);
 
@@ -239,7 +244,7 @@ class NFTMintingService {
         amount: 50,
         reason: l10n.archiveObjectCreatedReason(artworkTitle, tokenId),
       );
-      
+
       // Check NFT minting achievements
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id') ?? 'demo_user';
@@ -249,7 +254,9 @@ class NFTMintingService {
         data: {'mintCount': 1}, // Backend should track total count
       );
 
-      debugPrint('NFTMintingService: Mint successful - TX: $transactionId, Token: $tokenId');
+      debugPrint(
+        'NFTMintingService: Mint successful - TX: $transactionId, Token: $tokenId',
+      );
 
       return MintingResult(
         success: true,
@@ -260,7 +267,7 @@ class NFTMintingService {
       );
     } catch (e) {
       debugPrint('NFTMintingService: Mint failed - $e');
-      
+
       // Update status
       _mintingOperations[artworkId] = MintingStatus.failed;
 
@@ -271,10 +278,7 @@ class NFTMintingService {
         status: 'failed',
       );
 
-      return MintingResult(
-        success: false,
-        error: e.toString(),
-      );
+      return MintingResult(success: false, error: e.toString());
     }
   }
 
@@ -288,14 +292,16 @@ class NFTMintingService {
     Map<String, dynamic>? metadata,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final metadataId = 'meta_${DateTime.now().millisecondsSinceEpoch}_${artworkId.hashCode.abs()}';
+    final metadataId =
+        'meta_${DateTime.now().millisecondsSinceEpoch}_${artworkId.hashCode.abs()}';
 
     final payload = <String, dynamic>{
       'name': title,
-      'description': 'Archive object for $title by $artist',
+      'description': 'Digital edition of $title by $artist',
       'artist': artist,
       'image': imageUrl,
-      if (model3DURL != null && model3DURL.isNotEmpty) 'animation_url': model3DURL,
+      if (model3DURL != null && model3DURL.isNotEmpty)
+        'animation_url': model3DURL,
       if (metadata != null) ...metadata,
       'createdAt': DateTime.now().toIso8601String(),
     };
@@ -311,8 +317,11 @@ class NFTMintingService {
     required String title,
     required String metadataCID,
   }) async {
-    final transactionId = 'tx_${DateTime.now().millisecondsSinceEpoch}_${artworkId.hashCode.abs()}';
-    debugPrint('NFTMintingService: Mint recorded - tx: $transactionId, metadata: $metadataCID');
+    final transactionId =
+        'tx_${DateTime.now().millisecondsSinceEpoch}_${artworkId.hashCode.abs()}';
+    debugPrint(
+      'NFTMintingService: Mint recorded - tx: $transactionId, metadata: $metadataCID',
+    );
     return transactionId;
   }
 
@@ -328,11 +337,7 @@ class NFTMintingService {
 }
 
 /// Minting status enum
-enum MintingStatus {
-  inProgress,
-  success,
-  failed,
-}
+enum MintingStatus { inProgress, success, failed }
 
 /// Result of minting operation
 class MintingResult {
@@ -359,7 +364,8 @@ class TradingService {
   factory TradingService() => _instance;
   TradingService._internal();
 
-  final PushNotificationService _notificationService = PushNotificationService();
+  final PushNotificationService _notificationService =
+      PushNotificationService();
   static const String _listingsKey = 'trade_listings_v1';
   static const String _offersKey = 'trade_offers_v1';
 
