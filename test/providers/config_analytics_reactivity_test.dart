@@ -29,7 +29,7 @@ void main() {
 
     expect(config.enableAnalytics, isTrue);
     expect(stats.analyticsPreferenceEnabled, isTrue);
-    expect(stats.analyticsEnabled, isTrue);
+    expect(stats.analyticsEnabled, stats.analyticsBuildAvailable);
     expect(configNotifications, 1);
     await Future<void>.delayed(Duration.zero);
     expect(statsNotifications, greaterThanOrEqualTo(1));
