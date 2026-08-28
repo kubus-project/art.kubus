@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/config_provider.dart';
 import '../../providers/glass_capabilities_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
@@ -52,6 +53,7 @@ import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 part 'desktop_settings_screen_parts/desktop_settings_screen_p1.dart';
 part 'desktop_settings_screen_parts/desktop_settings_screen_p2.dart';
 part 'desktop_settings_screen_parts/desktop_settings_screen_p3.dart';
+
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
 class DesktopSettingsScreen extends StatefulWidget {
@@ -107,8 +109,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _publicProfile = true;
 
   // App settings state
-  bool _analytics = true;
-  bool _crashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
 
   // Wallet settings state
@@ -135,15 +135,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _animationController.forward();
     _loadSettings();
   }
-
-
-
-
-
-
-
-
-
 
   @override
   void dispose() {
@@ -221,52 +212,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
     return AnimatedGradientBackground(child: scaffold);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 class _SettingsItem {

@@ -2,6 +2,7 @@ import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
@@ -21,6 +22,7 @@ import 'screens/art/ar_screen.dart';
 import 'screens/community/community_screen.dart';
 import 'screens/community/profile_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
@@ -428,8 +430,8 @@ class _MainAppState extends State<MainApp> {
         break;
       case 4:
         if (!profileProvider.isSignedIn) {
-          name = 'SignIn';
-          route = '/sign-in';
+          name = 'GuestAccount';
+          route = '/main/tab/account';
         } else {
           name = 'MainTabProfile';
           route = '/main/tab/profile';
@@ -526,7 +528,7 @@ class ProfileScreenWrapper extends StatelessWidget {
     final profileProvider = Provider.of<ProfileProvider>(context);
 
     if (!profileProvider.isSignedIn) {
-      return const SignInScreenWrapper();
+      return const GuestAccountScreen();
     }
 
     return const ProfileScreen();
@@ -540,5 +542,62 @@ class SignInScreenWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SignInScreen();
+  }
+}
+
+/// A real account destination for guests. It deliberately retains the fifth
+/// tab so primary navigation indexes and deep-link contracts stay stable.
+class GuestAccountScreen extends StatelessWidget {
+  const GuestAccountScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.account_circle_outlined,
+                    size: 56, color: scheme.secondary),
+                const SizedBox(height: KubusSpacing.md),
+                Text(l10n.authSignInTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: KubusSpacing.md),
+                FilledButton(
+                  key: const Key('guest_account_sign_in'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SignInScreen()),
+                  ),
+                  child: Text(l10n.commonSignIn),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                OutlinedButton(
+                  key: const Key('guest_account_create_account'),
+                  onPressed: () => Navigator.of(context).pushNamed('/register'),
+                  child: Text(l10n.commonCreateAccount),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                TextButton.icon(
+                  key: const Key('guest_account_settings'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                  icon: const Icon(Icons.settings_outlined),
+                  label: Text(l10n.settingsTitle),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

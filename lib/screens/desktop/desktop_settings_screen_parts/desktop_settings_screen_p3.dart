@@ -97,8 +97,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                   onChanged: (value) {
                     _applyState(() => _showAchievements = value);
                     unawaited(
-                      profileProvider
-                          .updatePreferences(showAchievements: value),
+                      profileProvider.updatePreferences(
+                          showAchievements: value),
                     );
                   },
                 ),
@@ -106,23 +106,24 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                 _buildToggleSetting(
                   l10n.settingsAnalyticsTileTitle,
                   l10n.settingsAnalyticsTileSubtitle,
-                  _analytics,
-                  onChanged: (value) => _applyState(() => _analytics = value),
+                  context.watch<ConfigProvider>().enableAnalytics,
+                  onChanged: context.read<ConfigProvider>().setEnableAnalytics,
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
                   l10n.settingsCrashReportingTileTitle,
                   l10n.settingsCrashReportingTileSubtitle,
-                  _crashReporting,
-                  onChanged: (value) => _applyState(() => _crashReporting = value),
+                  context.watch<ConfigProvider>().enableCrashReporting,
+                  onChanged:
+                      context.read<ConfigProvider>().setEnableCrashReporting,
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
                   l10n.settingsSkipOnboardingTileTitle,
                   l10n.settingsSkipOnboardingTileSubtitle,
                   _skipOnboardingForReturningUsers,
-                  onChanged: (value) =>
-                      _applyState(() => _skipOnboardingForReturningUsers = value),
+                  onChanged: (value) => _applyState(
+                      () => _skipOnboardingForReturningUsers = value),
                 ),
               ],
             ),
@@ -198,7 +199,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                   l10n.settingsTwoFactorTitle,
                   l10n.settingsTwoFactorSubtitle,
                   _twoFactorAuth,
-                  onChanged: (value) => _applyState(() => _twoFactorAuth = value),
+                  onChanged: (value) =>
+                      _applyState(() => _twoFactorAuth = value),
                 ),
                 const Divider(height: 32),
                 if (_hasPin && _biometricsSupported)
@@ -233,7 +235,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                   l10n.settingsSessionTimeoutTitle,
                   l10n.settingsSessionTimeoutSubtitle,
                   _sessionTimeout,
-                  onChanged: (value) => _applyState(() => _sessionTimeout = value),
+                  onChanged: (value) =>
+                      _applyState(() => _sessionTimeout = value),
                 ),
                 const Divider(height: 32),
                 _buildAutoLockDropdown(),
@@ -280,7 +283,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
           return progress.isCompleted || progress.currentProgress >= required;
         }
 
-        int currentProgressFor(achievement_svc.AchievementDefinition achievement) {
+        int currentProgressFor(
+            achievement_svc.AchievementDefinition achievement) {
           return progressById[achievement.id]?.currentProgress ?? 0;
         }
 
@@ -345,7 +349,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                 spacing: KubusSpacing.md,
                 children: [
                   KubusStatCard(
-                    title: l10n.desktopSettingsAchievementsStatArtworksDiscovered,
+                    title:
+                        l10n.desktopSettingsAchievementsStatArtworksDiscovered,
                     value: discoveryCount.toString(),
                     icon: Icons.explore_outlined,
                     layout: KubusStatCardLayout.centered,
@@ -402,17 +407,13 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                       : width >= 1320
                           ? 4
                           : 3;
-                  final spacing = width >= 1320
-                      ? KubusSpacing.lg
-                      : KubusSpacing.md;
-                  final columns = (width / 300)
-                      .floor()
-                      .clamp(1, maxColumns);
+                  final spacing =
+                      width >= 1320 ? KubusSpacing.lg : KubusSpacing.md;
+                  final columns = (width / 300).floor().clamp(1, maxColumns);
                   final cardWidth =
                       (width - (spacing * (columns - 1))) / columns;
-                  final childAspectRatio = columns == 1
-                      ? 2.45
-                      : (cardWidth >= 280 ? 1.12 : 1.22);
+                  final childAspectRatio =
+                      columns == 1 ? 2.45 : (cardWidth >= 280 ? 1.12 : 1.22);
 
                   return GridView.builder(
                     shrinkWrap: true,

@@ -94,9 +94,13 @@ class StatsProvider extends ChangeNotifier {
     configProvider.addListener(_configListener!);
   }
 
+  bool get analyticsBuildAvailable => AppConfig.isFeatureEnabled('analytics');
+
+  bool get analyticsPreferenceEnabled =>
+      _configProvider?.enableAnalytics ?? true;
+
   bool get analyticsEnabled =>
-      AppConfig.isFeatureEnabled('analytics') &&
-      (_configProvider?.enableAnalytics ?? true);
+      analyticsBuildAvailable && analyticsPreferenceEnabled;
 
   void _markAllStale() {
     final staleAt = DateTime.fromMillisecondsSinceEpoch(0);

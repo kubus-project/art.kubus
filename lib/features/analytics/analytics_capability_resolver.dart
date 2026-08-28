@@ -15,7 +15,8 @@ class AnalyticsViewerContext {
     required this.profileIsArtist,
     required this.profileIsInstitution,
     required this.isAdmin,
-    required this.analyticsEnabled,
+    required this.analyticsBuildAvailable,
+    required this.analyticsPreferenceEnabled,
   });
 
   final String viewerWallet;
@@ -25,7 +26,8 @@ class AnalyticsViewerContext {
   final bool profileIsArtist;
   final bool profileIsInstitution;
   final bool isAdmin;
-  final bool analyticsEnabled;
+  final bool analyticsBuildAvailable;
+  final bool analyticsPreferenceEnabled;
 
   bool get isSignedIn => viewerWallet.trim().isNotEmpty;
 
@@ -48,7 +50,8 @@ class AnalyticsViewerContext {
 /// every reason lives in `AnalyticsBlockedCopy` so it stays localized.
 enum AnalyticsBlockedReason {
   walletRequired,
-  analyticsDisabled,
+  analyticsDisabledByPreference,
+  analyticsUnavailable,
   adminRequired,
   ownerRequired,
   privateOnly,
@@ -105,8 +108,12 @@ class AnalyticsCapabilityResolver {
       return _blocked(AnalyticsBlockedReason.walletRequired);
     }
 
-    if (!viewer.analyticsEnabled) {
-      return _blocked(AnalyticsBlockedReason.analyticsDisabled);
+    if (!viewer.analyticsBuildAvailable) {
+      return _blocked(AnalyticsBlockedReason.analyticsUnavailable);
+    }
+
+    if (!viewer.analyticsPreferenceEnabled) {
+      return _blocked(AnalyticsBlockedReason.analyticsDisabledByPreference);
     }
 
     if (preset.roleRequirement == AnalyticsRoleRequirement.admin) {

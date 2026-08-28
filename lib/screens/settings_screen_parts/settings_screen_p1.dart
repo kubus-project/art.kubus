@@ -958,17 +958,19 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
             _showAccountManagementDialog();
           },
         ),
-        _buildSettingsTile(
-          l10n.settingsRoleSimulationTileTitle,
-          roleSummary,
-          Icons.workspace_premium,
-          onTap: _showRoleSimulationSheet,
-        ),
+        if (kDebugMode)
+          _buildSettingsTile(
+            l10n.settingsRoleSimulationTileTitle,
+            roleSummary,
+            Icons.workspace_premium,
+            onTap: _showRoleSimulationSheet,
+          ),
       ],
     );
   }
 
   void _showRoleSimulationSheet() {
+    if (!kDebugMode) return;
     final l10n = AppLocalizations.of(context)!;
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);

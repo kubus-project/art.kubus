@@ -188,6 +188,9 @@ class AppConfig {
   /// Analytics and tracking
   static const bool enableAnalytics = bool.fromEnvironment(
     'ANALYTICS_APP_ENABLED',
+    // Public release configuration supplies this explicitly. The fallback
+    // retains the historical safe behavior for developer and test builds that
+    // do not run the public-build preparation step.
     defaultValue: isProduction,
   );
 

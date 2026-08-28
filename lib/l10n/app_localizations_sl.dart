@@ -15479,6 +15479,16 @@ class AppLocalizationsSl extends AppLocalizations {
       'V nastavitvah omogoči analitiko za prikaz grafov in vpogledov.';
 
   @override
+  String get analyticsBlockedOpenSettings => 'Odpri nastavitve';
+
+  @override
+  String get analyticsBlockedUnavailableTitle => 'Analitika ni na voljo';
+
+  @override
+  String get analyticsBlockedUnavailableDescription =>
+      'Analitika v tej različici aplikacije ni na voljo.';
+
+  @override
   String get analyticsBlockedAdminRequiredTitle => 'Skrbniška analitika';
 
   @override

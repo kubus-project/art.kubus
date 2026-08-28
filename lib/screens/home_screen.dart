@@ -40,6 +40,7 @@ import '../widgets/empty_state_card.dart';
 import '../widgets/recent_activity_tile.dart';
 import '../widgets/notifications/kubus_notifications_sheet.dart';
 import 'activity/advanced_analytics_screen.dart';
+import 'settings_screen.dart';
 import 'events/event_detail_screen.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../services/stats_api_service.dart';
@@ -901,6 +902,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               badgeCount: np.unreadCount,
                               badgeColor: Provider.of<ThemeProvider>(context)
                                   .accentColor,
+                            ),
+                          ),
+                          TopBarIcon(
+                            tooltip: l10n.settingsTitle,
+                            icon: Icon(
+                              Icons.settings_outlined,
+                              color: scheme.onSurface,
+                              size: KubusHeaderMetrics.actionIcon,
+                            ),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SettingsScreen(),
+                              ),
                             ),
                           ),
                         ],

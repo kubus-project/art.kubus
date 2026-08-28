@@ -7,12 +7,16 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/stats/stats_models.dart';
 import '../../providers/analytics_filters_provider.dart';
+import '../../providers/config_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/kubus_snackbar.dart';
+import '../../screens/settings_screen.dart';
+import '../../screens/desktop/desktop_settings_screen.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import 'analytics_blocked_copy.dart';
 import 'analytics_capability_resolver.dart';
 import 'analytics_entity_registry.dart';
@@ -82,6 +86,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final preset = AnalyticsPresets.byKind(_activePresetKind);
     final availablePresets = _availablePresets();
     final statsProvider = context.watch<StatsProvider>();
+    final configProvider = context.watch<ConfigProvider>();
     final filtersProvider = context.watch<AnalyticsFiltersProvider>();
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
@@ -104,7 +109,8 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
         profileIsInstitution:
             isOwner && (currentProfile?.isInstitution ?? false),
         isAdmin: false,
-        analyticsEnabled: statsProvider.analyticsEnabled,
+        analyticsBuildAvailable: statsProvider.analyticsBuildAvailable,
+        analyticsPreferenceEnabled: configProvider.enableAnalytics,
       ),
     );
 
@@ -114,6 +120,24 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       final permissionState = AnalyticsPermissionState(
         title: AnalyticsBlockedCopy.title(l10n, reason),
         description: AnalyticsBlockedCopy.description(l10n, reason),
+        actionLabel:
+            reason == AnalyticsBlockedReason.analyticsDisabledByPreference
+                ? l10n.analyticsBlockedOpenSettings
+                : null,
+        onAction: reason == AnalyticsBlockedReason.analyticsDisabledByPreference
+            ? () {
+                final shellScope = DesktopShellScope.of(context);
+                if (shellScope != null) {
+                  shellScope.pushScreen(
+                    const DesktopSettingsScreen(embeddedInShell: true),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              }
+            : null,
       );
       if (widget.embedded) return permissionState;
       return Scaffold(

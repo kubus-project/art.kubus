@@ -26697,6 +26697,12 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
+  String get analyticsBlockedOpenSettings;
+
+  String get analyticsBlockedUnavailableTitle;
+
+  String get analyticsBlockedUnavailableDescription;
+
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
   ///
   /// In en, this message translates to:

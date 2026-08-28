@@ -513,6 +513,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   void setRoleFlags({bool? isArtist, bool? isInstitution}) {
+    // This is a local development preview aid only. Real role authority is
+    // server-backed/DAO reviewed and must never be mutable in a release build.
+    if (!foundation.kDebugMode) return;
     if (_currentUser == null) return;
     var updated = _currentUser!;
     var changed = false;
