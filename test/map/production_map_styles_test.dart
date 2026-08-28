@@ -69,9 +69,10 @@ void main() {
   List<Map<String, dynamic>> fromSourceLayer(
     Map<String, dynamic> style,
     String sourceLayer,
-  ) => layersOf(
-    style,
-  ).where((layer) => layer['source-layer'] == sourceLayer).toList();
+  ) =>
+      layersOf(
+        style,
+      ).where((layer) => layer['source-layer'] == sourceLayer).toList();
 
   double minZoomOf(Map<String, dynamic> layer) =>
       (layer['minzoom'] as num?)?.toDouble() ?? 0;
@@ -112,10 +113,10 @@ void main() {
   }
 
   ({int r, int g, int b}) rgbOf(String hex) => (
-    r: int.parse(hex.substring(1, 3), radix: 16),
-    g: int.parse(hex.substring(3, 5), radix: 16),
-    b: int.parse(hex.substring(5, 7), radix: 16),
-  );
+        r: int.parse(hex.substring(1, 3), radix: 16),
+        g: int.parse(hex.substring(3, 5), radix: 16),
+        b: int.parse(hex.substring(5, 7), radix: 16),
+      );
 
   /// How far a colour strays from neutral grey. A road may only differ from
   /// grey by a hair; water is expected to be clearly cooler than it is warm.
@@ -400,15 +401,13 @@ void main() {
           expect(
             minZoomOf(layer),
             greaterThanOrEqualTo(13),
-            reason:
-                'building layer "${layer['id']}" starts before the source '
+            reason: 'building layer "${layer['id']}" starts before the source '
                 'has building geometry',
           );
           expect(
             minZoomOf(layer),
             lessThanOrEqualTo(14),
-            reason:
-                'building layer "${layer['id']}" starts too late to give '
+            reason: 'building layer "${layer['id']}" starts too late to give '
                 'detailed zooms any building context',
           );
         }
@@ -445,8 +444,7 @@ void main() {
           expect(
             minZoomOf(layer),
             greaterThanOrEqualTo(13),
-            reason:
-                'local road layer "${layer['id']}" starts too early and '
+            reason: 'local road layer "${layer['id']}" starts too early and '
                 'only adds low-zoom noise',
           );
         }
@@ -506,8 +504,7 @@ void main() {
           expect(
             waterColors.contains(road.key),
             isFalse,
-            reason:
-                'road layer "${road.value}" reuses the water colour '
+            reason: 'road layer "${road.value}" reuses the water colour '
                 '${road.key}',
           );
           // The original defect was blue-grey road fills (`#414758`) sitting in
@@ -516,8 +513,7 @@ void main() {
           expect(
             chroma(road.key),
             lessThanOrEqualTo(16),
-            reason:
-                'road layer "${road.value}" uses the tinted colour '
+            reason: 'road layer "${road.value}" uses the tinted colour '
                 '${road.key}, which can read as water',
           );
         }
@@ -544,8 +540,7 @@ void main() {
     expect(
       ids(dark),
       equals(ids(light)),
-      reason:
-          'the two variants must differ only in palette, so a semantic '
+      reason: 'the two variants must differ only in palette, so a semantic '
           'change can never land in one theme and not the other',
     );
 
