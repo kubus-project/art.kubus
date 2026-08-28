@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../models/kubus_node_models.dart';
 import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
@@ -25,6 +26,10 @@ class ArtworkProvider extends ChangeNotifier {
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
+  final BackendApiService? _spatialApi;
+  final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
+  final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
+  final Map<String, String> _spatialHistoryErrors = {};
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
   // Individual detail requests may return artwork outside the first page used
@@ -39,10 +44,78 @@ class ArtworkProvider extends ChangeNotifier {
   bool _historyLoaded = false;
 
   ArtworkProvider({ArtworkBackendApi? backendApi})
-      : _backendApi = backendApi ?? BackendApiService();
+      : _backendApi = backendApi ?? BackendApiService(),
+        _spatialApi = backendApi == null
+            ? BackendApiService()
+            : (backendApi is BackendApiService ? backendApi : null);
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
+
+  ArtworkSpatialHistory? spatialHistoryFor(String artworkId) =>
+      _spatialHistory[artworkId];
+
+  String? spatialHistoryErrorFor(String artworkId) =>
+      _spatialHistoryErrors[artworkId];
+
+  bool isSpatialHistoryLoading(String artworkId) =>
+      _spatialHistoryLoads.containsKey(artworkId);
+
+  /// Replaces the in-memory artwork list, order included.
+  ///
+  /// Exists so a test can reproduce the ordering churn that used to decide
+  /// which artwork a spatial capture was filed under: surfaces must resolve
+  /// each record by its own id, so reordering this list changes nothing they
+  /// display.
+  @visibleForTesting
+  void seedArtworksForTesting(List<Artwork> artworks) {
+    _artworks
+      ..clear()
+      ..addAll(artworks);
+    _artworkById
+      ..clear()
+      ..addEntries(
+        artworks.map((artwork) => MapEntry(artwork.id, artwork)),
+      );
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void seedSpatialHistoryForTesting(
+    String artworkId,
+    ArtworkSpatialHistory history,
+  ) {
+    _spatialHistory[artworkId] = history;
+  }
+
+  Future<ArtworkSpatialHistory> loadSpatialHistory(
+    String artworkId, {
+    bool refresh = false,
+  }) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return const ArtworkSpatialHistory(history: []);
+    final cached = _spatialHistory[id];
+    if (!refresh && cached != null) return cached;
+    final pending = _spatialHistoryLoads[id];
+    if (pending != null) return pending;
+    final api = _spatialApi;
+    if (api == null) return const ArtworkSpatialHistory(history: []);
+    final future = api.getArtworkSpatialHistory(id);
+    _spatialHistoryLoads[id] = future;
+    _spatialHistoryErrors.remove(id);
+    notifyListeners();
+    try {
+      final history = await future;
+      _spatialHistory[id] = history;
+      return history;
+    } catch (error) {
+      _spatialHistoryErrors[id] = error.toString();
+      rethrow;
+    } finally {
+      _spatialHistoryLoads.remove(id);
+      notifyListeners();
+    }
+  }
 
   bool isLoading(String operation) => _loadingStates[operation] ?? false;
 

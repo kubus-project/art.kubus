@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
@@ -64,6 +63,10 @@ import 'providers/map_deep_link_provider.dart';
 import 'providers/walking_navigation_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/pending_action_provider.dart';
+import 'providers/kubus_node_provider.dart';
+import 'providers/spatial_capture_provider.dart';
+import 'providers/spatial_library_provider.dart';
+import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
@@ -83,6 +86,9 @@ import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
+import 'screens/node/kubus_node_screen.dart';
+import 'screens/spatial/spatial_library_detail_screen.dart';
+import 'screens/spatial/spatial_library_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
@@ -94,8 +100,7 @@ import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
-import 'services/diagnostics/diagnostics_client.dart';
-import 'services/diagnostics/flutter_error_context.dart';
+import 'services/diagnostics/unhandled_error_reporter.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -113,124 +118,38 @@ import 'screens/debug/walking_route_render_harness_screen.dart';
 import 'providers/activation_prompt_provider.dart';
 import 'models/pending_action_intent.dart';
 
-class _UnhandledErrorDedupe {
-  static const Duration _dedupeWindow = Duration(seconds: 2);
-  static const bool _logInRelease =
-      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
-  static String? _lastSignature;
-  static DateTime? _lastLoggedAt;
-  static int _suppressedCount = 0;
-  static bool _capturedFirst = false;
-  static DateTime? _lastUiSurfaceAt;
-  // Stored for debugging / external stack mapping tools.
-  // ignore: unused_field
-  static Object? firstError;
-  // ignore: unused_field
-  static StackTrace? firstStack;
-  // ignore: unused_field
-  static String? firstSource;
+/// Global unhandled-error router.
+///
+/// Each global error domain reports here exactly once. Notably
+/// `FlutterError.onError` no longer re-dispatches into the guarded zone:
+/// doing so turned every framework or plugin error into a second, spurious
+/// `Zone` event at `fatal` severity, so ordinary recoverable AR errors
+/// surfaced to the user as "Unhandled Zone error".
+final UnhandledErrorReporter _unhandledErrors = UnhandledErrorReporter(
+  debugSurface: _surfaceUnhandledErrorInDebugUi,
+);
 
-  static void handle(
-    Object error,
-    StackTrace stack, {
-    required String source,
-    FlutterErrorDetails? details,
-  }) {
-    _captureFirst(error, stack, source);
-    final signature = _signatureFor(error, stack, source);
-    final now = DateTime.now();
-    final lastAt = _lastLoggedAt;
-
-    if (_lastSignature == signature &&
-        lastAt != null &&
-        now.difference(lastAt) < _dedupeWindow) {
-      _suppressedCount += 1;
-      return;
-    }
-
-    if (_suppressedCount > 0 && kDebugMode) {
-      debugPrint('main.dart: suppressed $_suppressedCount duplicate error(s)');
-    }
-
-    _suppressedCount = 0;
-    _lastSignature = signature;
-    _lastLoggedAt = now;
-
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-          'main.dart: Unhandled error ($source) ${error.runtimeType}: $error');
-      debugPrint('main.dart: stack: $stack');
-    } else {
-      // Keep a minimal breadcrumb in release so errors are never fully silent.
-      dev.log(
-        'Unhandled error ($source) ${error.runtimeType}',
-        name: 'main.dart',
-        error: error,
-        stackTrace: stack,
-      );
-    }
-
-    _surfaceDebugUi(error: error, source: source);
-    unawaited(DiagnosticsClient.instance.captureError(
-      error,
-      stack,
-      source: source,
-      severity: source == 'PlatformDispatcher' || source == 'Zone'
-          ? 'fatal'
-          : 'error',
-      metadata: buildFlutterErrorContext(error, details),
-    ));
-  }
-
-  static void _captureFirst(Object error, StackTrace stack, String source) {
-    if (_capturedFirst) return;
-    _capturedFirst = true;
-    firstError = error;
-    firstStack = stack;
-    firstSource = source;
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-          'main.dart: First unhandled error captured ($source) ${error.runtimeType}: $error');
-      debugPrint('main.dart: First error stack: $stack');
-    }
-  }
-
-  static String _signatureFor(Object error, StackTrace stack, String source) {
-    final stackLine = stack.toString().split('\n').first.trim();
-    return '$source|${error.runtimeType}|$error|$stackLine';
-  }
-
-  static void _surfaceDebugUi({
-    required Object error,
-    required String source,
-  }) {
-    if (!kDebugMode) return;
-    final now = DateTime.now();
-    final last = _lastUiSurfaceAt;
-    if (last != null && now.difference(last) < const Duration(seconds: 4)) {
-      return;
-    }
-    _lastUiSurfaceAt = now;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = appNavigatorKey.currentContext;
-      if (context == null) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          content: Text(
-            'Unhandled $source error: ${error.runtimeType}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+void _surfaceUnhandledErrorInDebugUi(UnhandledErrorReport report) {
+  if (!kDebugMode) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final context = appNavigatorKey.currentContext;
+    if (context == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        content: Text(
+          'Unhandled ${report.source.wireName} error: '
+          '${report.error.runtimeType}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
 }
 
 SemanticsHandle? _webSemanticsHandle;
@@ -259,8 +178,10 @@ void main() {
 
   // Silence debugPrint in release unless explicitly enabled. This avoids
   // unintended runtime type issues from debug-only logging in production.
-  const bool allowReleasePrint =
-      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
+  const bool allowReleasePrint = bool.fromEnvironment(
+    'ERROR_STACK_LOG',
+    defaultValue: false,
+  );
   if (!kDebugMode && !allowReleasePrint) {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
@@ -270,10 +191,10 @@ void main() {
     // Keep message minimal and safe for web debugging
     final message = 'An unexpected error occurred';
     try {
-      _UnhandledErrorDedupe.handle(
+      _unhandledErrors.report(
         details.exception,
         details.stack ?? StackTrace.current,
-        source: 'ErrorWidget',
+        source: UnhandledErrorSource.errorWidget,
         details: details,
       );
     } catch (_) {
@@ -336,18 +257,27 @@ void main() {
             debugPrint('FlutterError.presentError failed: $e');
           }
           try {
-            final stack = details.stack ?? StackTrace.current;
-            _UnhandledErrorDedupe.handle(details.exception, stack,
-                source: 'FlutterError', details: details);
-            Zone.current.handleUncaughtError(details.exception, stack);
+            // Report in the FlutterError domain only. Forwarding to
+            // Zone.current.handleUncaughtError() here would re-enter the
+            // runZonedGuarded handler below and report the same incident a
+            // second time as a fatal 'Zone' error.
+            _unhandledErrors.report(
+              details.exception,
+              details.stack ?? StackTrace.current,
+              source: UnhandledErrorSource.flutterError,
+              details: details,
+            );
           } catch (e, st) {
-            debugPrint('Failed to forward FlutterError to zone: $e\n$st');
+            debugPrint('main.dart: failed to report FlutterError: $e\n$st');
           }
         };
 
         PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-          _UnhandledErrorDedupe.handle(error, stack,
-              source: 'PlatformDispatcher');
+          _unhandledErrors.report(
+            error,
+            stack,
+            source: UnhandledErrorSource.platformDispatcher,
+          );
           return true;
         };
 
@@ -363,15 +293,23 @@ void main() {
                   final Object err = pair[0] is Object
                       ? pair[0] as Object
                       : Exception(pair[0].toString());
-                  final StackTrace st =
-                      StackTrace.fromString(pair[1].toString());
-                  _UnhandledErrorDedupe.handle(err, st, source: 'Isolate');
+                  final StackTrace st = StackTrace.fromString(
+                    pair[1].toString(),
+                  );
+                  _unhandledErrors.report(
+                    err,
+                    st,
+                    source: UnhandledErrorSource.isolate,
+                  );
                   return;
                 }
                 final Object err =
                     pair is Object ? pair : Exception(pair.toString());
-                _UnhandledErrorDedupe.handle(err, StackTrace.current,
-                    source: 'Isolate');
+                _unhandledErrors.report(
+                  err,
+                  StackTrace.current,
+                  source: UnhandledErrorSource.isolate,
+                );
               } catch (_) {
                 // Ignore listener failures.
               }
@@ -393,8 +331,13 @@ void main() {
     },
     (error, stack) {
       try {
-        _UnhandledErrorDedupe.handle(error, stack, source: 'Zone');
-        // Optionally report to analytics/logging service here.
+        // Reached only by errors that genuinely escaped the guarded zone,
+        // e.g. an unobserved Future from a fire-and-forget platform call.
+        _unhandledErrors.report(
+          error,
+          stack,
+          source: UnhandledErrorSource.zone,
+        );
       } catch (e) {
         debugPrint('Error while handling zone error: $e');
       }
@@ -450,7 +393,8 @@ class _AppLauncherState extends State<AppLauncher> {
       );
     } catch (e, st) {
       AppConfig.debugPrint(
-          'AppLauncher: PushNotificationService init failed: $e\n$st');
+        'AppLauncher: PushNotificationService init failed: $e\n$st',
+      );
     }
   }
 
@@ -463,7 +407,8 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
-            create: (_) => GlassCapabilitiesProvider()),
+          create: (_) => GlassCapabilitiesProvider(),
+        ),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
@@ -505,24 +450,55 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => MainTabProvider()),
               // Marker deep links open inside the already-mounted MapScreen.
               ChangeNotifierProvider(
-                  create: (context) => MapDeepLinkProvider()),
+                create: (context) => MapDeepLinkProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => WalkingNavigationProvider()),
+                create: (context) => WalkingNavigationProvider(),
+              ),
               // Session-scoped onboarding deferral for deep-link cold starts.
               ChangeNotifierProvider(
-                  create: (context) => DeferredOnboardingProvider()),
+                create: (context) => DeferredOnboardingProvider(),
+              ),
               // Remembers the identity-dependent action a guest attempted, so
               // it can be offered back to them after they create an account.
               ChangeNotifierProvider(
-                  create: (context) => PendingActionProvider()),
+                create: (context) => PendingActionProvider(),
+              ),
               // Non-blocking "create a free account" prompt, armed only after
               // a visitor has shown real interest.
               ChangeNotifierProvider(
-                  create: (context) => ActivationPromptProvider()),
+                create: (context) => ActivationPromptProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => PublicEntityTakeoverProvider()),
+                create: (context) => PublicEntityTakeoverProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ChangeNotifierProvider(create: (context) => KubusNodeProvider()),
+              ChangeNotifierProxyProvider<KubusNodeProvider,
+                  SpatialLibraryProvider>(
+                create: (_) => SpatialLibraryProvider(),
+                update: (_, node, library) {
+                  final value = library ?? SpatialLibraryProvider();
+                  value.bindNode(node);
+                  return value;
+                },
+              ),
+              ChangeNotifierProxyProvider<SpatialLibraryProvider,
+                  SpatialCaptureProvider>(
+                create: (_) => SpatialCaptureProvider(),
+                update: (_, library, capture) {
+                  final value = capture ?? SpatialCaptureProvider();
+                  value.bindLibraryStore(
+                    library.store,
+                    onChanged: library.reload,
+                  );
+                  return value;
+                },
+              ),
+              ChangeNotifierProvider(
+                create: (context) => AvailabilityOperatorProvider(),
+              ),
               ChangeNotifierProvider<AppModeProvider>(
                 lazy: false,
                 create: (context) => AppModeProvider(),
@@ -532,7 +508,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 update: (context, configProvider, telemetry) {
                   final service = telemetry ?? TelemetryService();
                   service.setAnalyticsPreferenceEnabled(
-                      configProvider.enableAnalytics);
+                    configProvider.enableAnalytics,
+                  );
                   return service;
                 },
               ),
@@ -553,8 +530,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
                 create: (context) => StatsProvider(),
-                update: (context, appRefreshProvider, configProvider,
-                    statsProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  configProvider,
+                  statsProvider,
+                ) {
                   final provider = statsProvider ?? StatsProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindConfigProvider(configProvider);
@@ -564,8 +545,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
                   PresenceProvider>(
                 create: (context) => PresenceProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    presenceProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  presenceProvider,
+                ) {
                   final provider = presenceProvider ?? PresenceProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
@@ -574,7 +559,8 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
               ChangeNotifierProvider(
-                  create: (context) => CommunitySubjectProvider()),
+                create: (context) => CommunitySubjectProvider(),
+              ),
               ChangeNotifierProxyProvider<AppRefreshProvider,
                   NotificationProvider>(
                 create: (context) => NotificationProvider(),
@@ -600,9 +586,11 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => DesktopDashboardStateProvider()),
+                create: (context) => DesktopDashboardStateProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => AnalyticsFiltersProvider()),
+                create: (context) => AnalyticsFiltersProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => NavigationProvider()),
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
@@ -650,8 +638,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   PlatformDeepLinkListenerProvider>(
                 lazy: false,
                 create: (context) => PlatformDeepLinkListenerProvider(),
-                update: (context, deepLinkProvider, authDeepLinkProvider,
-                    walletProvider, listenerProvider) {
+                update: (
+                  context,
+                  deepLinkProvider,
+                  authDeepLinkProvider,
+                  walletProvider,
+                  listenerProvider,
+                ) {
                   final provider =
                       listenerProvider ?? PlatformDeepLinkListenerProvider();
                   provider.bindProviders(
@@ -664,12 +657,17 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(
-                  create: (context) => ExhibitionsProvider()),
+                create: (context) => ExhibitionsProvider(),
+              ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
                   CollabProvider>(
                 create: (context) => CollabProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    collabProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  collabProvider,
+                ) {
                   final provider = collabProvider ?? CollabProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
@@ -677,7 +675,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => CollectionsProvider()),
+                create: (context) => CollectionsProvider(),
+              ),
               ChangeNotifierProxyProvider<SavedItemsProvider, ArtworkProvider>(
                 create: (context) => ArtworkProvider(),
                 update: (context, savedItemsProvider, artworkProvider) {
@@ -687,15 +686,21 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => ArtworkDraftsProvider()),
+                create: (context) => ArtworkDraftsProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => ArtworkArConfigProvider()),
+                create: (context) => ArtworkArConfigProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => PromotionProvider()),
               ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider,
                   PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
-                update: (context, artworkProvider, appRefreshProvider,
-                    portfolioProvider) {
+                update: (
+                  context,
+                  artworkProvider,
+                  appRefreshProvider,
+                  portfolioProvider,
+                ) {
                   final provider = portfolioProvider ?? PortfolioProvider();
                   provider.bindArtworkProvider(artworkProvider);
                   provider.bindAppRefreshProvider(appRefreshProvider);
@@ -729,8 +734,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, DAOProvider,
                   InstitutionProvider>(
                 create: (context) => InstitutionProvider(),
-                update: (context, profileProvider, daoProvider,
-                    institutionProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  daoProvider,
+                  institutionProvider,
+                ) {
                   final provider = institutionProvider ?? InstitutionProvider();
                   provider.bindProfileProvider(profileProvider);
                   provider.bindDaoProvider(daoProvider);
@@ -769,8 +778,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   AttendanceProvider>(
                 create: (context) => AttendanceProvider(),
-                update: (context, profileProvider, walletProvider,
-                    attendanceProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  attendanceProvider,
+                ) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
@@ -782,8 +795,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   AttestationProvider>(
                 create: (context) => AttestationProvider(),
-                update: (context, profileProvider, walletProvider,
-                    attestationProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  attestationProvider,
+                ) {
                   final provider = attestationProvider ?? AttestationProvider();
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
@@ -796,8 +813,13 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider,
                   WalletProvider, ChatProvider>(
                 create: (context) => ChatProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    walletProvider, chatProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  walletProvider,
+                  chatProvider,
+                ) {
                   final provider = chatProvider ?? ChatProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindAuthContext(
@@ -812,8 +834,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   NotificationProvider, SecurityGateProvider>(
                 lazy: false,
                 create: (context) => SecurityGateProvider(),
-                update: (context, profileProvider, walletProvider,
-                    notificationProvider, securityGateProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  notificationProvider,
+                  securityGateProvider,
+                ) {
                   final provider =
                       securityGateProvider ?? SecurityGateProvider();
                   provider.bindDependencies(
@@ -839,21 +866,27 @@ class _AppLauncherState extends State<AppLauncher> {
                           .trim()
                           .isNotEmpty;
                   provider.bindSession(
-                      hasSession:
-                          tokenPresent || securityGateProvider.hasLocalAccount);
+                    hasSession:
+                        tokenPresent || securityGateProvider.hasLocalAccount,
+                  );
                   return provider;
                 },
               ),
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   MarkerManagementProvider>(
                 create: (context) => MarkerManagementProvider(),
-                update: (context, profileProvider, walletProvider,
-                    markerManagementProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  markerManagementProvider,
+                ) {
                   final provider =
                       markerManagementProvider ?? MarkerManagementProvider();
                   provider.bindWallet(
-                      profileProvider.currentUser?.walletAddress ??
-                          walletProvider.currentWalletAddress);
+                    profileProvider.currentUser?.walletAddress ??
+                        walletProvider.currentWalletAddress,
+                  );
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
                   }
@@ -903,6 +936,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
         '/ar': (context) => const ARScreen(),
+        // A localSpatialId argument opens straight to that capture, so the
+        // "Saved" flow lands on the record it just created rather than on a
+        // list the user then has to search.
+        '/spatial-library': (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          final localSpatialId =
+              arguments is String && arguments.trim().isNotEmpty
+                  ? arguments.trim()
+                  : null;
+          return localSpatialId == null
+              ? const SpatialLibraryScreen()
+              : SpatialLibraryDetailScreen(localSpatialId: localSpatialId);
+        },
         '/artwork': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? artworkId;
@@ -925,9 +971,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           attendanceMarkerId = attendanceMarkerId?.trim();
           if (artworkId == null || artworkId.isEmpty) {
             final l10n = AppLocalizations.of(context)!;
-            return Scaffold(
-              body: Center(child: Text(l10n.artworkNotFound)),
-            );
+            return Scaffold(body: Center(child: Text(l10n.artworkNotFound)));
           }
           final isDesktop = DesktopBreakpoints.isDesktop(context);
           return isDesktop
@@ -964,9 +1008,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           attendanceMarkerId = attendanceMarkerId?.trim();
           if (exhibitionId == null || exhibitionId.isEmpty) {
             final l10n = AppLocalizations.of(context)!;
-            return Scaffold(
-              body: Center(child: Text(l10n.exhibitionNotFound)),
-            );
+            return Scaffold(body: Center(child: Text(l10n.exhibitionNotFound)));
           }
           return ExhibitionDetailScreen(
             exhibitionId: exhibitionId,
@@ -978,9 +1020,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
             : const ConnectWallet(),
-        '/wallet/availability-node': (context) =>
-            const AvailabilityNodeOperatorScreen(),
-        '/settings/availability-node': (context) =>
+        '/wallet/availability-node': (context) => const KubusNodeScreen(),
+        '/settings/availability-node': (context) => const KubusNodeScreen(),
+        // The operator-token workflow is advanced setup, not the node's front
+        // door. It keeps its own route rather than being what "kubus Node"
+        // opens onto.
+        '/settings/availability-node/advanced': (context) =>
             const AvailabilityNodeOperatorScreen(),
         '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
@@ -1077,8 +1122,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/web3': (context) {
           final l10n = AppLocalizations.of(context)!;
           return Scaffold(
-            body: Center(child: Text(l10n.web3DashboardComingSoon)),
-          );
+              body: Center(child: Text(l10n.web3DashboardComingSoon)));
         },
       };
 
@@ -1104,10 +1148,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           ),
           settings: RouteSettings(
             name: '/verify-email',
-            arguments: {
-              'token': token,
-              if (email.isNotEmpty) 'email': email,
-            },
+            arguments: {'token': token, if (email.isNotEmpty) 'email': email},
           ),
         );
       }
@@ -1116,14 +1157,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (uri.path == '/verify-email/success') {
       final email = (uri.queryParameters['email'] ?? '').trim();
       return MaterialPageRoute(
-        builder: (_) => EmailVerificationSuccessScreen(
-          email: email.isEmpty ? null : email,
-        ),
+        builder: (_) =>
+            EmailVerificationSuccessScreen(email: email.isEmpty ? null : email),
         settings: RouteSettings(
           name: '/verify-email/success',
-          arguments: {
-            if (email.isNotEmpty) 'email': email,
-          },
+          arguments: {if (email.isNotEmpty) 'email': email},
         ),
       );
     }
@@ -1208,20 +1246,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final target = const ShareDeepLinkParser().parse(uri);
     if (target != null) {
       return MaterialPageRoute(
-        builder: (_) => DeepLinkBootstrapScreen(
-          target: target,
-          initialUri: uri,
-        ),
+        builder: (_) =>
+            DeepLinkBootstrapScreen(target: target, initialUri: uri),
         settings: settings,
       );
     }
 
     final namedRouteBuilder = _namedRoutes[uri.path];
     if (namedRouteBuilder != null) {
-      return MaterialPageRoute(
-        builder: namedRouteBuilder,
-        settings: settings,
-      );
+      return MaterialPageRoute(builder: namedRouteBuilder, settings: settings);
     }
 
     // Fall back to the main initializer for unknown named routes
@@ -1257,18 +1290,14 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (ShellRoutes.shouldWrapInitialUri(uri)) {
       return <Route<dynamic>>[
         MaterialPageRoute(
-          builder: (_) => AppInitializer(
-            preferredShellRoute: uri.path,
-            initialUri: uri,
-          ),
+          builder: (_) =>
+              AppInitializer(preferredShellRoute: uri.path, initialUri: uri),
           settings: RouteSettings(name: normalized),
         ),
       ];
     }
 
-    return <Route<dynamic>>[
-      _buildAppRoute(RouteSettings(name: normalized)),
-    ];
+    return <Route<dynamic>>[_buildAppRoute(RouteSettings(name: normalized))];
   }
 
   @override
@@ -1334,49 +1363,67 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
   void _initNotificationRouting() {
     final handler = NotificationHandler();
+    // A notification tap can fire while `AppInitializer` is still hydrating
+    // providers and deciding the deterministic cold-start route (this can take
+    // several seconds). Deferring behind `AppStartupGate` stops that navigation
+    // from racing AppInitializer's own route push and landing the visitor on
+    // an unrelated screen — see `AppStartupGate` for the full rationale.
     handler.onNavigate = (route, params) {
-      final navigator = appNavigatorKey.currentState;
-      if (navigator == null) return;
-
-      if (route == '/collab_invite') {
-        final rawType = (params['entityType'] ?? '').toString();
-        final rawId = (params['entityId'] ?? '').toString();
-
-        final entityType = rawType.trim().toLowerCase();
-        final entityId = rawId.trim();
-
-        if (entityId.isEmpty) {
-          navigator.push(
-              MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
-          return;
-        }
-
-        if (entityType == 'events' || entityType == 'event') {
-          navigator.push(MaterialPageRoute(
-              builder: (_) => EventDetailScreen(eventId: entityId)));
-          return;
-        }
-
-        if (entityType == 'exhibitions' || entityType == 'exhibition') {
-          navigator.push(MaterialPageRoute(
-              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId)));
-          return;
-        }
-
-        navigator.push(
-            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
-        return;
-      }
-
-      // Best-effort fallback to named routes.
-      try {
-        navigator.pushNamed(route, arguments: params);
-      } catch (_) {
-        // Ignore unknown routes.
-      }
+      AppStartupGate.runWhenReady(
+          () => _dispatchNotificationRoute(route, params));
     };
 
     handler.initialize();
+  }
+
+  void _dispatchNotificationRoute(String route, Map<String, dynamic> params) {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
+
+    if (route == '/collab_invite') {
+      final rawType = (params['entityType'] ?? '').toString();
+      final rawId = (params['entityId'] ?? '').toString();
+
+      final entityType = rawType.trim().toLowerCase();
+      final entityId = rawId.trim();
+
+      if (entityId.isEmpty) {
+        navigator.push(
+          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+        );
+        return;
+      }
+
+      if (entityType == 'events' || entityType == 'event') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailScreen(eventId: entityId),
+          ),
+        );
+        return;
+      }
+
+      if (entityType == 'exhibitions' || entityType == 'exhibition') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
+          ),
+        );
+        return;
+      }
+
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+      );
+      return;
+    }
+
+    // Best-effort fallback to named routes.
+    try {
+      navigator.pushNamed(route, arguments: params);
+    } catch (_) {
+      // Ignore unknown routes.
+    }
   }
 
   @override
@@ -1395,8 +1442,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
     final chatProvider = Provider.of<ChatProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
-    final notificationProvider =
-        Provider.of<NotificationProvider>(ctx, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(
+      ctx,
+      listen: false,
+    );
     final collabProvider = Provider.of<CollabProvider>(ctx, listen: false);
     final isForeground = state != AppLifecycleState.paused &&
         state != AppLifecycleState.inactive;
@@ -1443,8 +1492,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           builder: (context, child) {
             // Report the resolved UI locale so the funnel can compare the
             // English and Slovenian experiences.
-            TelemetryService()
-                .setLocale(Localizations.localeOf(context).languageCode);
+            TelemetryService().setLocale(
+              Localizations.localeOf(context).languageCode,
+            );
             return AnimatedGradientBackground(
               animate: false,
               intensity: 0.22,

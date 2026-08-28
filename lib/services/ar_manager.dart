@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'dart:io';
+import 'dart:math' as math;
 
 // Platform-specific imports
 import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
-// ARKit temporarily disabled due to vector_math 2.1.4 incompatibility
-// import 'package:arkit_plugin/arkit_plugin.dart';
+import 'package:arkit_plugin/arkit_plugin.dart';
+
+import 'ar_placement_controller.dart';
 
 /// Unified AR Manager providing cross-platform AR functionality
 /// Uses arcore_flutter_plugin for Android
-/// iOS ARKit support temporarily disabled pending package update
+/// Uses the maintained ARKit plugin on iOS. Spatial capture exposes only the
+/// sensors actually returned by each platform/device.
 class ARManager {
   static final ARManager _instance = ARManager._internal();
   factory ARManager() => _instance;
@@ -17,8 +21,18 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
-  // ARKitController? _arKitController; // Disabled
+  final ValueNotifier<bool> isTracking = ValueNotifier(false);
+  ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
+
+  /// ARKit nodes this manager added, by name.
+  ///
+  /// ARKit exposes a node's composed transform but not the yaw and scale that
+  /// produced it, so the inputs are kept alongside the node to recompose the
+  /// matrix when the placement preview is adjusted.
+  final Map<String, ARKitNode> _arKitNodes = {};
+  final Map<String, double> _arKitNodeYaw = {};
+  final Map<String, double> _arKitNodeScale = {};
 
   /// Initialize AR manager
   Future<bool> initialize() async {
@@ -27,66 +41,120 @@ class ARManager {
     try {
       // Check platform support
       if (!Platform.isAndroid && !Platform.isIOS) {
-        debugPrint('ARManager: Platform not supported');
+        if (kDebugMode) debugPrint('ARManager: Platform not supported');
         return false;
       }
 
       _isInitialized = true;
-      debugPrint('ARManager: Initialized successfully for $platformInfo');
+      if (kDebugMode) {
+        debugPrint('ARManager: Initialized successfully for $platformInfo');
+      }
       return true;
     } catch (e) {
-      debugPrint('ARManager: Initialization error: $e');
+      if (kDebugMode) debugPrint('ARManager: Initialization error: $e');
       return false;
     }
   }
 
+  /// Called when the user taps a tracked surface, with the hit-tested pose.
+  ///
+  /// The native side already runs a real ARCore hit test and filters to points
+  /// inside a tracked plane polygon; without this hook the result was
+  /// discarded and placement fell back to a fixed offset in front of the
+  /// camera.
+  void Function(List<ArCoreHitTestResult> hits)? onPlaneTap;
+
+  /// Called the first time a usable surface is detected.
+  void Function()? onSurfaceDetected;
+
+  /// Called for recoverable AR session problems (camera contention, ARCore
+  /// install or update required).
+  void Function(ArCoreSessionError error)? onSessionError;
+
+  /// Latest tracking failure reason reported by ARCore, if any.
+  final ValueNotifier<String?> trackingFailureReason =
+      ValueNotifier<String?>(null);
+
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
-    debugPrint('ARManager: ARCore controller set');
+    controller.onTrackingStateChanged = (state) {
+      isTracking.value = state.isTracking;
+      trackingFailureReason.value =
+          state.isTracking ? null : state.failureReason;
+    };
+    controller.onPlaneTap = (hits) => onPlaneTap?.call(hits);
+    controller.onPlaneDetected = (_) => onSurfaceDetected?.call();
+    controller.onSessionError = (error) => onSessionError?.call(error);
+    if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
-  /// Set ARKit controller (iOS only) - Currently disabled
-  void setArKitController(dynamic controller) {
-    // _arKitController = controller;
-    debugPrint('ARManager: ARKit currently disabled - iOS AR not available');
+  /// Set ARKit controller (iOS only).
+  void setArKitController(ARKitController controller) {
+    _arKitController = controller;
+    controller.onCameraDidChangeTrackingState =
+        (state, reason) => isTracking.value = state == ARTrackingState.normal;
+    if (kDebugMode) debugPrint('ARManager: ARKit controller set');
   }
 
-  /// Add a sphere to the AR scene
-  void addSphere({
+  /// Add a sphere to the AR scene.
+  ///
+  /// Awaitable so the platform call's Future is observed. Dropping it left an
+  /// unhandled rejection whenever the native side rejected the node, which
+  /// escaped to the root zone as an "Unhandled Zone error".
+  Future<void> addSphere({
     required vector.Vector3 position,
     required double radius,
     Color? color,
     String? name,
-  }) {
+  }) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _addArCoreSphere(position: position, radius: radius, color: color, name: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _addArKitSphere(position: position, radius: radius, color: color, name: name);
+      await _addArCoreSphere(
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
+    } else if (Platform.isIOS && _arKitController != null) {
+      _addArKitSphere(
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
     }
   }
 
-  /// Add a cube to the AR scene
-  void addCube({
+  /// Add a cube to the AR scene. Awaitable for the same reason as [addSphere].
+  Future<void> addCube({
     required vector.Vector3 position,
     required vector.Vector3 size,
     Color? color,
     String? name,
-  }) {
+  }) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _addArCoreCube(position: position, size: size, color: color, name: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _addArKitCube(position: position, size: size, color: color, name: name);
+      await _addArCoreCube(
+        position: position,
+        size: size,
+        color: color,
+        name: name,
+      );
+    } else if (Platform.isIOS && _arKitController != null) {
+      _addArKitCube(position: position, size: size, color: color, name: name);
     }
   }
 
-  /// Add a GLTF/GLB model to the AR scene
+  /// Add a GLTF/GLB model to the AR scene.
+  ///
+  /// [yawRadians] rotates the model about the world up axis. Artworks stay
+  /// upright, so yaw is the only rotation the placement UI offers — but it has
+  /// to reach the platform node, or the Rotate control changes nothing the user
+  /// can see.
   Future<void> addModel({
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
     if (Platform.isAndroid && _arCoreController != null) {
@@ -94,70 +162,159 @@ class ARManager {
         modelPath: modelPath,
         position: position,
         scale: scale,
+        yawRadians: yawRadians,
         name: name,
       );
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // await _addArKitModel(...);
+    } else if (Platform.isIOS && _arKitController != null) {
+      await _addArKitModel(
+        modelPath: modelPath,
+        position: position,
+        scale: scale,
+        yawRadians: yawRadians,
+        name: name,
+      );
     }
   }
 
-  /// Remove a node by name
-  void removeNode(String name) {
+  /// Creates an adjustable placement with a world anchor and local content.
+  ///
+  /// Android keeps the hit-test orientation on the ARCore anchor and applies
+  /// the user's yaw and scale to a child content node. iOS deliberately keeps
+  /// artwork upright: its ARKit reference node uses the anchor position plus
+  /// local yaw/scale, rather than inheriting plane pitch and roll.
+  Future<void> addAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
+    required String name,
+  }) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _arCoreController!.removeNode(nodeName: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _arKitController!.remove(name);
+      await _addArCoreAnchoredModel(
+        modelPath: modelPath,
+        anchor: anchor,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
+        name: name,
+      );
+    } else if (Platform.isIOS && _arKitController != null) {
+      await _addArKitModel(
+        modelPath: modelPath,
+        position: anchor.position,
+        scale: vector.Vector3.all(localScale),
+        yawRadians: localYawRadians,
+        name: name,
+      );
     }
+  }
+
+  /// Replaces an anchor pose and/or adjusts content below that anchor.
+  ///
+  /// Returns false when no node by that name exists. On Android anchor pose
+  /// and content transforms use separate native fields; this is intentionally
+  /// not the old ambiguous node-transform operation.
+  Future<bool> updateAnchoredNode({
+    required String name,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
+  }) async {
+    if (Platform.isAndroid) {
+      final controller = _arCoreController;
+      if (controller == null || !controller.isReady) return false;
+      return controller.updateAnchoredNode(
+        nodeName: name,
+        anchorPosition: anchor?.position,
+        anchorRotation: anchor?.rotation,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
+      );
+    }
+    if (Platform.isIOS) {
+      final node = _arKitNodes[name];
+      if (node == null) return false;
+      final current = node.transform;
+      final nextPosition = anchor?.position ?? current.getTranslation();
+      final nextScale = localScale ?? _arKitNodeScale[name] ?? 1.0;
+      final nextYaw = localYawRadians ?? _arKitNodeYaw[name] ?? 0.0;
+      _arKitNodeScale[name] = nextScale;
+      _arKitNodeYaw[name] = nextYaw;
+      node.transformNotifier.value = _composeTransform(
+        position: nextPosition,
+        yawRadians: nextYaw,
+        scale: nextScale,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /// Yaw about the world up axis as an `[x, y, z, w]` quaternion, the rotation
+  /// representation both ARCore poses and Sceneform nodes use.
+  static vector.Vector4 _yawQuaternion(double yawRadians) {
+    final half = yawRadians / 2;
+    return vector.Vector4(0, math.sin(half), 0, math.cos(half));
+  }
+
+  static vector.Matrix4 _composeTransform({
+    required vector.Vector3 position,
+    required double yawRadians,
+    required double scale,
+  }) {
+    return vector.Matrix4.compose(
+      position,
+      vector.Quaternion.axisAngle(vector.Vector3(0, 1, 0), yawRadians),
+      vector.Vector3.all(scale),
+    );
+  }
+
+  /// Remove a node by name.
+  ///
+  /// Awaitable so a caller replacing a preview with the confirmed node can wait
+  /// for the old one to leave the scene, rather than leaving both behind.
+  Future<void> removeNode(String name) async {
+    if (Platform.isAndroid && _arCoreController != null) {
+      await _arCoreController!.removeNode(nodeName: name);
+    } else if (Platform.isIOS && _arKitController != null) {
+      _arKitController!.remove(name);
+    }
+    _arKitNodes.remove(name);
+    _arKitNodeYaw.remove(name);
+    _arKitNodeScale.remove(name);
     _placedNodes.removeWhere((node) => node['name'] == name);
-    debugPrint('ARManager: Removed node: $name');
+    if (kDebugMode) debugPrint('ARManager: Removed node: $name');
   }
 
   // Android ARCore specific methods
-  void _addArCoreSphere({
+  Future<void> _addArCoreSphere({
     required vector.Vector3 position,
     required double radius,
     Color? color,
     String? name,
-  }) {
+  }) async {
     final material = ArCoreMaterial(
       color: color ?? Colors.blue,
       reflectance: 1.0,
     );
-    final sphere = ArCoreSphere(
-      materials: [material],
-      radius: radius,
+    final sphere = ArCoreSphere(materials: [material], radius: radius);
+    final node = ArCoreNode(shape: sphere, position: position, name: name);
+    await _arCoreController!.addArCoreNode(node);
+    _trackNode(
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
     );
-    final node = ArCoreNode(
-      shape: sphere,
-      position: position,
-      name: name,
-    );
-    _arCoreController!.addArCoreNode(node);
-    _trackNode(name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
   }
 
-  void _addArCoreCube({
+  Future<void> _addArCoreCube({
     required vector.Vector3 position,
     required vector.Vector3 size,
     Color? color,
     String? name,
-  }) {
-    final material = ArCoreMaterial(
-      color: color ?? Colors.red,
-      metallic: 1.0,
-    );
-    final cube = ArCoreCube(
-      materials: [material],
-      size: size,
-    );
-    final node = ArCoreNode(
-      shape: cube,
-      position: position,
-      name: name,
-    );
-    _arCoreController!.addArCoreNode(node);
+  }) async {
+    final material = ArCoreMaterial(color: color ?? Colors.red, metallic: 1.0);
+    final cube = ArCoreCube(materials: [material], size: size);
+    final node = ArCoreNode(shape: cube, position: position, name: name);
+    await _arCoreController!.addArCoreNode(node);
     _trackNode(name ?? 'cube_${DateTime.now().millisecondsSinceEpoch}', 'cube');
   }
 
@@ -165,6 +322,7 @@ class ARManager {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
     final node = ArCoreReferenceNode(
@@ -172,13 +330,39 @@ class ARManager {
       objectUrl: modelPath,
       position: position,
       scale: scale ?? vector.Vector3.all(1.0),
+      rotation: _yawQuaternion(yawRadians),
     );
-    _arCoreController!.addArCoreNodeWithAnchor(node);
-    _trackNode(name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+    await _arCoreController!.addArCoreNodeWithAnchor(node);
+    _trackNode(
+      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
+      'model',
+    );
   }
 
-  // iOS ARKit specific methods - DISABLED (arkit_plugin incompatible with vector_math 2.1.4)
-  /*
+  Future<void> _addArCoreAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
+    required String name,
+  }) async {
+    final node = ArCoreReferenceNode(
+      name: name,
+      objectUrl: modelPath,
+      // These fields exclusively define the ARCore anchor pose. The native
+      // implementation creates a separate content child for local controls.
+      position: anchor.position,
+      rotation: anchor.rotation,
+    );
+    await _arCoreController!.addArCoreNodeWithAnchor(
+      node,
+      localYawRadians: localYawRadians,
+      localScale: localScale,
+    );
+    _trackNode(name, 'model');
+  }
+
+  // iOS ARKit specific methods.
   void _addArKitSphere({
     required vector.Vector3 position,
     required double radius,
@@ -188,17 +372,17 @@ class ARManager {
     final material = ARKitMaterial(
       diffuse: ARKitMaterialProperty.color(color ?? Colors.blue),
     );
-    final sphere = ARKitSphere(
-      radius: radius,
-      materials: [material],
-    );
+    final sphere = ARKitSphere(radius: radius, materials: [material]);
     final node = ARKitNode(
       geometry: sphere,
       position: vector.Vector3(position.x, position.y, position.z),
       name: name,
     );
     _arKitController!.add(node);
-    _trackNode(name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+    _trackNode(
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
+    );
   }
 
   void _addArKitCube({
@@ -229,25 +413,81 @@ class ARManager {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
-    // ARKit uses USDZ format for models
-    // For GLTF/GLB files, you'll need to convert them to USDZ
-    // Or use ARKitReferenceNode with local assets
-    final node = ARKitNode(
+    final resolvedName =
+        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}';
+    final node = ARKitReferenceNode(
+      url: modelPath,
       position: vector.Vector3(position.x, position.y, position.z),
-      scale: vector.Vector3(
-        scale?.x ?? 1.0,
-        scale?.y ?? 1.0,
-        scale?.z ?? 1.0,
-      ),
-      name: name,
+      scale: vector.Vector3(scale?.x ?? 1.0, scale?.y ?? 1.0, scale?.z ?? 1.0),
+      // ARKitReferenceNode exposes orientation as Euler angles; artworks stay
+      // upright, so only yaw is set.
+      eulerAngles: vector.Vector3(0, yawRadians, 0),
+      name: resolvedName,
     );
     _arKitController!.add(node);
-    _trackNode(name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
-    debugPrint('ARManager: Note - ARKit requires USDZ format for 3D models');
+    // Kept so a later transform update can recompose the node's matrix; ARKit
+    // exposes the transform, not the yaw and scale that produced it.
+    _arKitNodes[resolvedName] = node;
+    _arKitNodeYaw[resolvedName] = yawRadians;
+    _arKitNodeScale[resolvedName] = scale?.x ?? 1.0;
+    _trackNode(resolvedName, 'model');
+    if (kDebugMode) {
+      debugPrint('ARManager: ARKit reference model added from $modelPath');
+    }
   }
-  */
+
+  /// Capture one tracked spatial sample. Android returns RGB, pose,
+  /// intrinsics, and optional depth/confidence. iOS returns the same metadata
+  /// available through ARKit and includes depth only on supported hardware.
+  Future<Map<String, dynamic>> captureSpatialFrame() async {
+    if (Platform.isAndroid && _arCoreController != null) {
+      return _arCoreController!.captureSpatialFrame();
+    }
+    if (Platform.isIOS && _arKitController != null) {
+      final snapshot = await _arKitController!.snapshotWithDepthData();
+      final image = snapshot?['image'];
+      final rgb = image is MemoryImage
+          ? image.bytes
+          : (await _arKitController!.snapshot() as MemoryImage).bytes;
+      final intrinsics = await _arKitController!.getCameraIntrinsics();
+      final resolution = await _arKitController!.getCameraImageResolution();
+      final transform = await _arKitController!.pointOfViewTransform();
+      final payload = <String, dynamic>{
+        'rgb': Uint8List.fromList(rgb),
+        'timestampNanos': DateTime.now().microsecondsSinceEpoch * 1000,
+        'poseMatrix': transform?.storage.toList(growable: false),
+        'intrinsics': {
+          'width': resolution.width.round(),
+          'height': resolution.height.round(),
+          'matrix': intrinsics.storage.toList(growable: false),
+        },
+        'depthAvailable':
+            snapshot != null && snapshot.keys.any((key) => key != 'image'),
+      };
+      if (snapshot != null) {
+        for (final entry in snapshot.entries.where(
+          (entry) => entry.key != 'image',
+        )) {
+          payload[entry.key] = entry.value;
+        }
+      }
+      return payload;
+    }
+    throw StateError('Spatial tracking is not ready on this device.');
+  }
+
+  /// Retains the platform view/session identity while releasing its camera and
+  /// renderer workload for the local SpatialViewer.
+  Future<void> pauseSession() async {
+    if (Platform.isAndroid) await _arCoreController?.pause();
+  }
+
+  Future<void> resumeSession() async {
+    if (Platform.isAndroid) await _arCoreController?.resume();
+  }
 
   void _trackNode(String name, String type) {
     _placedNodes.add({
@@ -255,7 +495,7 @@ class ARManager {
       'type': type,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
-    debugPrint('ARManager: Added $type node: $name');
+    if (kDebugMode) debugPrint('ARManager: Added $type node: $name');
   }
 
   /// Get list of placed nodes
@@ -269,18 +509,22 @@ class ARManager {
   /// Clear all placed nodes
   void clearPlacedNodes() {
     _placedNodes.clear();
-    debugPrint('ARManager: Cleared all placed nodes');
+    if (kDebugMode) debugPrint('ARManager: Cleared all placed nodes');
   }
 
   /// Check if AR is initialized
   bool get isInitialized => _isInitialized;
 
-  /// Check if controller is ready
+  /// Whether the platform AR session is genuinely usable.
+  ///
+  /// On Android a controller reference is not sufficient: the native ARCore
+  /// session initializes asynchronously and the controller can already be
+  /// torn down, so readiness comes from the controller's own lifecycle.
   bool get isControllerReady {
     if (Platform.isAndroid) {
-      return _arCoreController != null;
+      return _arCoreController?.isReady ?? false;
     } else if (Platform.isIOS) {
-      return false; // ARKit currently disabled
+      return _arKitController != null;
     }
     return false;
   }
@@ -290,7 +534,7 @@ class ARManager {
     if (Platform.isAndroid) {
       return 'Android (ARCore)';
     } else if (Platform.isIOS) {
-      return 'iOS (ARKit - currently disabled)';
+      return 'iOS (ARKit)';
     }
     return 'Unsupported Platform';
   }
@@ -298,6 +542,7 @@ class ARManager {
   /// Get platform-specific view widget
   Widget createARView({
     required Function onARViewCreated,
+    void Function(ArCoreSessionError error)? onArCoreViewFailed,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   }) {
@@ -307,30 +552,35 @@ class ARManager {
           setArCoreController(controller);
           onARViewCreated();
         },
+        // An initialization failure used to be swallowed, so the screen waited
+        // on a callback that never arrived. Routing it through the same
+        // recoverable-error path gives the user localized guidance and a retry.
+        onArCoreViewFailed: (error) {
+          if (kDebugMode) {
+            debugPrint('ARManager: AR view init failed: ${error.code}');
+          }
+          final sessionError =
+              ArCoreSessionError(code: error.code, message: error.message);
+          onArCoreViewFailed?.call(sessionError);
+          onSessionError?.call(sessionError);
+        },
         enableTapRecognizer: enableTapRecognizer,
+        // Required for onPlaneDetected: without the update listener the
+        // session never reports that a surface is available.
+        enableUpdateListener: true,
+        enablePlaneRenderer: enablePlaneDetection,
       );
     } else if (Platform.isIOS) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.warning_amber, size: 64, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              'iOS AR Currently Unavailable',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'ARKit support is temporarily disabled due to package compatibility issues. '
-                'Please use an Android device for AR features.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
+      return ARKitSceneView(
+        onARKitViewCreated: (controller) {
+          setArKitController(controller);
+          onARViewCreated(controller);
+        },
+        configuration: ARKitConfiguration.worldTracking,
+        planeDetection: enablePlaneDetection
+            ? ARPlaneDetection.horizontalAndVertical
+            : ARPlaneDetection.none,
+        enableTapRecognizer: enableTapRecognizer,
       );
     }
     return Center(
@@ -338,14 +588,33 @@ class ARManager {
     );
   }
 
-  /// Dispose resources
-  void dispose() {
-    _arCoreController?.dispose();
-    // _arKitController?.dispose(); // Disabled
-    _placedNodes.clear();
+  /// Dispose resources.
+  ///
+  /// Awaitable so a caller handing the camera to another owner can wait for
+  /// the native session to actually release it. Never throws, so callers that
+  /// cannot await (a `State.dispose()`, for instance) can safely drop the
+  /// future without leaving an unobserved rejection behind.
+  Future<void> dispose() async {
+    final arCore = _arCoreController;
+    final arKit = _arKitController;
+    // Drop the references before awaiting so nothing observes a
+    // half-torn-down session as ready.
     _arCoreController = null;
-    // _arKitController = null; // Disabled
+    _arKitController = null;
+    _placedNodes.clear();
+    _arKitNodes.clear();
+    _arKitNodeYaw.clear();
+    _arKitNodeScale.clear();
+    isTracking.value = false;
     _isInitialized = false;
-    debugPrint('ARManager: Disposed');
+
+    try {
+      arKit?.dispose();
+    } catch (error) {
+      if (kDebugMode) debugPrint('ARManager: ARKit dispose failed: $error');
+    }
+    // ArCoreController.dispose() is idempotent and absorbs its own failures.
+    await arCore?.dispose();
+    if (kDebugMode) debugPrint('ARManager: Disposed');
   }
 }

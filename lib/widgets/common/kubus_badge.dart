@@ -54,8 +54,7 @@ class KubusBadge extends StatelessWidget {
     final vertical = compact ? KubusSpacing.xxs : KubusSpacing.xs;
 
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
+      padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(KubusRadius.xl),
@@ -68,7 +67,17 @@ class KubusBadge extends StatelessWidget {
             Icon(icon, size: KubusSizes.trailingChevron, color: foreground),
             const SizedBox(width: KubusSpacing.xs),
           ],
-          Text(text, style: style),
+          // Flexible, not a bare Text: a Wrap hands its children the row's
+          // full width as a hard constraint, so a long status at a large text
+          // scale used to overflow the badge instead of wrapping inside it.
+          Flexible(
+            child: Text(
+              text,
+              style: style,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

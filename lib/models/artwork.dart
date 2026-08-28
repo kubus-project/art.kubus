@@ -98,6 +98,7 @@ class Artwork {
   final String? nftMintAddress;
   final String? nftMetadataUri;
   final bool arEnabled;
+  final int spatialCaptureCount;
   final int rewards; // KUB8 tokens
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -182,6 +183,7 @@ class Artwork {
     this.nftMintAddress,
     this.nftMetadataUri,
     this.arEnabled = false,
+    this.spatialCaptureCount = 0,
     required this.rewards,
     required this.createdAt,
     this.updatedAt,
@@ -272,6 +274,7 @@ class Artwork {
       'nftMintAddress': nftMintAddress,
       'nftMetadataUri': nftMetadataUri,
       'arEnabled': arEnabled,
+      'spatialCaptureCount': spatialCaptureCount,
       'rewards': rewards,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -352,6 +355,11 @@ class Artwork {
           nft?['metadata_uri']?.toString() ??
           nft?['uri']?.toString(),
       arEnabled: map['arEnabled'] ?? false,
+      spatialCaptureCount: int.tryParse(
+            (map['spatialCaptureCount'] ?? map['spatial_capture_count'] ?? 0)
+                .toString(),
+          ) ??
+          0,
       rewards: map['rewards']?.toInt() ?? 0,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt:
@@ -439,6 +447,7 @@ class Artwork {
     String? nftMintAddress,
     String? nftMetadataUri,
     bool? arEnabled,
+    int? spatialCaptureCount,
     int? rewards,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -496,6 +505,7 @@ class Artwork {
       nftMintAddress: nftMintAddress ?? this.nftMintAddress,
       nftMetadataUri: nftMetadataUri ?? this.nftMetadataUri,
       arEnabled: arEnabled ?? this.arEnabled,
+      spatialCaptureCount: spatialCaptureCount ?? this.spatialCaptureCount,
       rewards: rewards ?? this.rewards,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

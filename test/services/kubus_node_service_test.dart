@@ -1,0 +1,514 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:art_kubus/models/kubus_node_models.dart';
+import 'package:art_kubus/services/kubus_node_service.dart';
+import 'package:art_kubus/services/node/node_identity_proof.dart';
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+class _MemoryCredentialStore implements KubusNodeCredentialStore {
+  final values = <String, String>{};
+  @override
+  Future<void> delete(String key) async => values.remove(key);
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async => values[key] = value;
+}
+
+/// A fake Node that holds real Ed25519 key material.
+///
+/// The app no longer accepts a repeated identity string as proof — the node id
+/// and fingerprint are printed in the pairing QR, so anyone who has seen it can
+/// echo them. It demands a signature over a nonce it chose. A fake that cannot
+/// sign therefore cannot stand in for a Node, and these fixtures exist so the
+/// tests exercise the real verification path instead of a stub of it.
+class _NodeIdentityFixture {
+  _NodeIdentityFixture(this.keyPair, this.publicKey, this.nodeId);
+
+  final SimpleKeyPair keyPair;
+  final Uint8List publicKey;
+  final String nodeId;
+
+  String get publicKeyBase64Url => base64Url.encode(publicKey);
+
+  /// Derived from the key, exactly as both real implementations derive it, so
+  /// the fingerprint in the pairing payload is genuinely a statement about
+  /// this key rather than an unrelated constant.
+  String get fingerprint => nodeFingerprintFromPublicKey(publicKey);
+
+  /// Deterministic, so a failure reproduces rather than depending on the run.
+  static Future<_NodeIdentityFixture> create(int seed, String nodeId) async {
+    final keyPair =
+        await Ed25519().newKeyPairFromSeed(List<int>.filled(32, seed));
+    final key = await keyPair.extractPublicKey();
+    return _NodeIdentityFixture(
+      keyPair,
+      Uint8List.fromList(key.bytes),
+      nodeId,
+    );
+  }
+
+  /// Answers an identity challenge the way the Node's
+  /// `POST /local/v1/identity/proof` route does.
+  Future<http.Response> proofFor(http.Request request) async {
+    final body = jsonDecode(request.body) as Map<String, dynamic>;
+    final nonce = Uint8List.fromList(
+      base64.decode(base64.normalize(body['nonce'].toString())),
+    );
+    final signature = await Ed25519().sign(
+      buildIdentityProofMessage(
+        protocolVersion: kIdentityProofProtocolVersion,
+        sessionId: kHttpIdentitySessionId,
+        nonce: nonce,
+        publicKey: publicKey,
+        clientRole: 'client',
+      ),
+      keyPair: keyPair,
+    );
+    return http.Response(
+      jsonEncode({
+        'protocolVersion': kIdentityProofProtocolVersion,
+        'sessionId': kHttpIdentitySessionId,
+        'nodeId': nodeId,
+        'fingerprint': fingerprint,
+        'publicKey': publicKeyBase64Url,
+        'signature': base64.encode(signature.bytes),
+      }),
+      200,
+    );
+  }
+}
+
+late final _NodeIdentityFixture _node;
+
+/// A second, unrelated key: what a redirected ingress or a reassigned DHCP
+/// lease actually looks like from the app's side.
+late final _NodeIdentityFixture _impostor;
+
+KubusNodePairingPayload get _payload => KubusNodePairingPayload(
+      endpoint: Uri.parse('http://192.168.1.8:8787'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: _node.nodeId,
+      fingerprint: _node.fingerprint,
+      publicKey: _node.publicKeyBase64Url,
+    );
+
+http.Response _nodeInfo() => http.Response(
+      jsonEncode({'nodeId': _node.nodeId, 'fingerprint': _node.fingerprint}),
+      200,
+    );
+
+void main() {
+  setUpAll(() async {
+    _node = await _NodeIdentityFixture.create(7, 'node-1');
+    _impostor = await _NodeIdentityFixture.create(9, 'proxy-changed-node');
+  });
+  test('pairs with a scoped credential and sends it only as a bearer header',
+      () async {
+    final requests = <http.Request>[];
+    final store = _MemoryCredentialStore();
+    final service = KubusNodeService(
+      credentialStore: store,
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    await service.fetchNetwork();
+
+    expect(service.isPaired, isTrue);
+    expect(requests.last.headers['Authorization'],
+        'Bearer kubus_local_scoped-token');
+    expect(requests.last.url.toString(), isNot(contains('kubus_local_')));
+    expect(store.values.values, contains('kubus_local_scoped-token'));
+  });
+
+  test('native CID resolution prefers paired node before public fallbacks',
+      () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        return http.Response(
+          jsonEncode({'token': 'kubus_local_scoped-token'}),
+          201,
+        );
+      }),
+    );
+    await service.pair(_payload);
+
+    final candidates = await service.resolveContentCandidates(
+      'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3xfdnyh5j3zvw2j4q7x5j6qka',
+    );
+
+    expect(candidates.first.source, 'kubus_node');
+    expect(candidates[1].source, 'ipfs_gateway');
+    expect(candidates.last.source, 'legacy_static_upload');
+  });
+
+  test('secure web mode rejects insecure LAN pairing', () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: true,
+      client: MockClient((_) async => http.Response('{}', 500)),
+    );
+
+    await expectLater(service.pair(_payload), throwsStateError);
+  });
+
+  test('falls back from an unavailable remote endpoint to the paired LAN node',
+      () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.host == 'node.example.test') {
+          throw http.ClientException('remote tunnel unavailable');
+        }
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('https://node.example.test'),
+      alternateEndpoints: [Uri.parse('http://192.168.1.8:8787')],
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: _node.nodeId,
+      fingerprint: _node.fingerprint,
+      publicKey: _node.publicKeyBase64Url,
+    );
+
+    await service.pair(payload);
+    await service.fetchNetwork();
+
+    expect(service.endpoint, Uri.parse('http://192.168.1.8:8787'));
+    expect(requests.any((request) => request.url.host == 'node.example.test'),
+        isTrue);
+    expect(requests.last.url.host, '192.168.1.8');
+  });
+
+  test('rejects an endpoint whose authenticated identity differs from pairing',
+      () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(
+          jsonEncode({'nodeId': 'other-node', 'fingerprint': 'other-print'}),
+          200,
+        );
+      }),
+    );
+
+    await expectLater(service.pair(_payload), throwsA(isA<StateError>()));
+    expect(service.isPaired, isFalse);
+  });
+
+  test('network compute discovery forwards auth only inside paired JSON',
+      () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'nodes': [
+                {
+                  'nodeId': 'provider-1',
+                  'label': 'studio-node-47',
+                  'encryptionPublicKey': 'x25519-public',
+                  'signingPublicKey': 'ed25519-public',
+                  'gpu': {'model': 'RTX 4090', 'totalVramBytes': 25769803776},
+                  'queue': {'queuedJobs': 0},
+                  'reliability': {'successRate': 0.994},
+                  'worker': {'version': '1.1.5'},
+                }
+              ],
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    await service.pair(_payload);
+
+    final nodes = await service.findComputeCandidates(
+      backendAuthorization: 'Bearer signed-in-user-token',
+      inputBytes: 4096,
+    );
+
+    expect(nodes.single.label, 'studio-node-47');
+    expect(nodes.single.jobsAhead, 0);
+    expect(requests.last.url.toString(), isNot(contains('signed-in-user')));
+    expect(requests.last.headers['Authorization'],
+        'Bearer kubus_local_scoped-token');
+    expect(jsonDecode(requests.last.body)['backendAuthorization'],
+        'Bearer signed-in-user-token');
+  });
+
+  test('provider settings use scoped PUT on the local API', () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'enabled': true, 'paused': false, 'maxConcurrency': 2},
+          }),
+          200,
+        );
+      }),
+    );
+    await service.pair(_payload);
+
+    final settings = await service
+        .updateComputeSettings({'enabled': true, 'maxConcurrency': 2});
+
+    expect(settings['enabled'], isTrue);
+    expect(requests.last.method, 'PUT');
+    expect(requests.last.url.path, '/local/v1/compute/settings');
+  });
+
+  test('native pairing rejects arbitrary public HTTP before sending a secret',
+      () async {
+    var requests = 0;
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((_) async {
+        requests++;
+        return http.Response('{}', 500);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('http://node.example.test:8787'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: _node.nodeId,
+      fingerprint: _node.fingerprint,
+      publicKey: _node.publicKeyBase64Url,
+    );
+
+    await expectLater(service.pair(payload), throwsFormatException);
+    expect(requests, isZero);
+  });
+
+  test('paired HTTPS endpoint remains usable outside the LAN', () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('https://node.example.test'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: _node.nodeId,
+      fingerprint: _node.fingerprint,
+      publicKey: _node.publicKeyBase64Url,
+    );
+
+    await service.pair(payload);
+    await service.fetchNetwork();
+
+    expect(service.endpoint, Uri.parse('https://node.example.test'));
+    expect(requests.every((request) => request.url.scheme == 'https'), isTrue);
+  });
+
+  test('unpair forgets the address list an earlier build persisted', () async {
+    // A key this build never writes is also a key it never cleans up unless it
+    // is named. The list holds the user's LAN addresses and internal
+    // hostnames, and unpairing is an explicit instruction to forget the Node.
+    final store = _MemoryCredentialStore();
+    await store.write('kubus_node_endpoints_v2', '["http://192.168.1.8:8787"]');
+    final service = KubusNodeService(
+      credentialStore: store,
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/identity/proof')) {
+          return _node.proofFor(request);
+        }
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    expect(store.values.containsKey('kubus_node_endpoints_v2'), isTrue,
+        reason: 'precondition: the stale key survived the upgrade');
+
+    await service.unpair();
+
+    expect(store.values.containsKey('kubus_node_endpoints_v2'), isFalse);
+    expect(store.values, isEmpty,
+        reason: 'unpair must not leave anything about the Node behind');
+  });
+
+  test('rejects an endpoint that echoes the whole pairing QR but cannot sign',
+      () async {
+    // The attack this exists to stop. Every value in the pairing QR is public
+    // — it is held up to a camera — so an impostor can present the correct
+    // node id, the correct fingerprint and even the correct public key. What
+    // it cannot do is sign the app's nonce with the matching private key.
+    var draftPosts = 0;
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/identity/proof')) {
+          // Signed by a key the app never paired with, while claiming the
+          // identity of the one it did.
+          final forged = await _impostor.proofFor(request);
+          final body = jsonDecode(forged.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              ...body,
+              'nodeId': _node.nodeId,
+              'fingerprint': _node.fingerprint,
+              'publicKey': _node.publicKeyBase64Url,
+            }),
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.path.endsWith('/captures/drafts')) draftPosts++;
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await expectLater(
+      service.pair(_payload),
+      throwsA(isA<StateError>()),
+      reason: 'a pairing secret must not reach an endpoint that cannot prove '
+          'it holds the paired private key',
+    );
+    expect(draftPosts, isZero);
+  });
+
+  test('fresh private-transfer verification stops on changed endpoint identity',
+      () async {
+    var proofCalls = 0;
+    var draftPosts = 0;
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/identity/proof')) {
+          proofCalls++;
+          // The second challenge is answered by an entirely different key.
+          // The impostor can repeat the node id and fingerprint from the QR —
+          // both are printed on it — and still cannot produce this signature,
+          // which is the whole reason the probe asks for one.
+          return proofCalls == 1
+              ? _node.proofFor(request)
+              : _impostor.proofFor(request);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.path.endsWith('/captures/drafts')) draftPosts++;
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    await service.fetchNetwork();
+    await expectLater(
+      service.beginCaptureDraft(
+        <String, dynamic>{'schema': 'kubus.capture/1'},
+        localCaptureId: 'local-capture-1',
+      ),
+      throwsA(isA<KubusNodeIdentityException>()),
+    );
+
+    expect(proofCalls, 2,
+        reason: 'private upload must bypass the short-lived identity cache');
+    expect(draftPosts, isZero,
+        reason: 'no private capture metadata reaches a mismatched endpoint');
+  });
+}

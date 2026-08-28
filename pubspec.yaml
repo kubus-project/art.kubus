@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.7.5+26081002
+version: 0.8.0+26081201
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -89,6 +89,19 @@ dependencies:
   qr_flutter: ^4.1.0 # QR code generation
   mobile_scanner: ^7.2.0 # QR code scanning (modern replacement for qr_code_scanner)
 
+  # Real network-state reporting for the Node transport resolver: which route
+  # to the paired Node is worth trying depends on whether the device is on
+  # Wi-Fi or mobile data, and a switch between them must invalidate stale route
+  # health rather than waiting for a timeout to discover it. Pinned below 7.2
+  # by the override below.
+  connectivity_plus: ^7.0.0
+
+  # Real WebRTC peer connections for the Node transport ladder. Only the
+  # DataChannel half is used: no camera or microphone is ever opened, so the
+  # media permissions the plugin declares are deliberately not requested at
+  # runtime. See docs/node/webrtc-protocol.md.
+  flutter_webrtc: ^1.6.0
+
   # Camera and AR
   camera: ^0.12.0+1
   flutter_compass: ^0.8.1
@@ -96,6 +109,8 @@ dependencies:
   # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
   arcore_flutter_plugin:
     path: third_party/arcore_flutter_plugin # Local override with updated Android config
+  arkit_plugin: 1.5.0
+  webview_flutter: 4.14.1
   # Note: ARManager provides unified API for both platforms
   # Features: Plane detection, object placement, hit testing, GLTF/GLB models
   # See AR_IMPLEMENTATION.md for setup instructions
@@ -126,6 +141,7 @@ dependencies:
   flutter_image_compress: ^2.4.0
   video_compress: ^3.1.4
   image: ^4.8.0
+  wakelock_plus: ^1.5.2
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4
 # The scaleByVector3 method was removed in vector_math 2.1.4
@@ -180,6 +196,8 @@ flutter:
     - assets/images/backgrounds/background_map_dark.png
     - assets/map_styles/kubus_light.json
     - assets/map_styles/kubus_dark.json
+    - assets/spatial_viewer/index.html
+    - assets/spatial_viewer/viewer.bundle.js
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

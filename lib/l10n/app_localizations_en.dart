@@ -5004,20 +5004,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.';
 
   @override
-  String get arModeScanName => 'Scan';
+  String get arModeScanName => 'Discover';
 
   @override
   String get arModePlaceName => 'Place';
 
   @override
-  String get arModeViewName => 'View';
+  String get arModeViewName => 'Archive';
 
   @override
-  String get arModeCreateName => 'Create';
+  String get arModeCreateName => 'Capture';
 
   @override
   String get arModeScanDescription =>
-      'Scan AR markers to discover artworks around you.';
+      'Identify and discover nearby physical art.';
 
   @override
   String get arModePlaceDescription =>
@@ -5025,11 +5025,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arModeViewDescription =>
-      'View your placed artworks and revisit them.';
+      'Explore an existing spatial or 3D archive.';
 
   @override
   String get arModeCreateDescription =>
-      'Create and experiment with AR placements.';
+      'Document a physical artwork spatially on your device.';
 
   @override
   String arMarkerNearbyToast(Object name) {
@@ -5077,16 +5077,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to place artwork. Please try again.';
 
   @override
-  String get arActionScan => 'Scan for artwork';
+  String get arActionScan => 'Discover artwork';
 
   @override
   String get arActionPlace => 'Place artwork here';
 
   @override
-  String get arActionView => 'View details';
+  String get arActionView => 'Explore spatial archive';
 
   @override
-  String get arActionCreate => 'Create AR artwork';
+  String get arActionCreate => 'Capture tracked view';
 
   @override
   String get arArtworkPlacedToast => 'Artwork placed successfully!';
@@ -5955,30 +5955,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorArtworkAddLabel => 'Add';
 
   @override
-  String get collectionCreatorConnectWalletToLoad =>
-      'Connect a wallet to load and curate your artwork library in this creator.';
-
-  @override
-  String get collectionCreatorLoadingLibrary => 'Loading library…';
-
-  @override
-  String get collectionCreatorLoadArtworkLibrary => 'Load artwork library';
-
-  @override
-  String get collectionCreatorLibraryStillLoading =>
-      'Your artwork library is still loading. You can continue with the collection details and return here later.';
-
-  @override
-  String get collectionCreatorLoadBeforeSave =>
-      'Load your artwork library to select pieces for this collection.';
-
-  @override
-  String get collectionCreatorArtworkSelected => 'Selected';
-
-  @override
-  String get collectionCreatorArtworkAdd => 'Add';
-
-  @override
   String get collectionCreatorNoArtworksAvailable =>
       'No artworks available matching your search.';
 
@@ -6802,18 +6778,416 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Secure wallet';
 
   @override
-  String get availabilityNodeTitle => 'Availability Node';
+  String get availabilityNodeTitle => 'kubus Node';
 
   @override
-  String get availabilityNodeNavTitle => 'Availability Node';
+  String get availabilityNodeNavTitle => 'kubus Node';
 
   @override
   String get availabilityNodeNavSubtitle =>
-      'Create and manage scoped node operator tokens.';
+      'Public archive, local processing and verified contribution.';
 
   @override
   String get availabilityNodeSubtitle =>
-      'Create and manage scoped node operator tokens.';
+      'Run part of the art.kubus network on hardware you control.';
+
+  @override
+  String get kubusNodeHeroTitle =>
+      'Run part of the art.kubus network on hardware you control.';
+
+  @override
+  String get kubusNodeHeroBody =>
+      'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.';
+
+  @override
+  String get kubusNodePrivacyBody =>
+      'Your source capture stays local. Only the spatial archive you choose to publish is added to the public network.';
+
+  @override
+  String get kubusNodeOverview => 'Overview';
+
+  @override
+  String get kubusNodeArchive => 'Archive';
+
+  @override
+  String get kubusNodeSpatial => 'Spatial';
+
+  @override
+  String get kubusNodeRewards => 'Contribution';
+
+  @override
+  String get kubusNodeSecuritySetup => 'Security / Setup';
+
+  @override
+  String get kubusNodeOnline => 'Online';
+
+  @override
+  String get kubusNodeOffline => 'Offline';
+
+  @override
+  String get kubusNodeNotPaired => 'No local kubus Node paired';
+
+  @override
+  String get kubusNodeUnavailable => 'Node unavailable';
+
+  @override
+  String get kubusNodeAvailable => 'Available';
+
+  @override
+  String get kubusNodeArchiveTitle => 'Keep public art available';
+
+  @override
+  String get kubusNodeArchiveBody =>
+      'Store verified public archive records and help other people retrieve them when they explore art.kubus.';
+
+  @override
+  String get kubusNodeBytesStored => 'Stored';
+
+  @override
+  String get kubusNodeRecords => 'Public records';
+
+  @override
+  String get kubusNodeRetrievalHealth => 'Retrieval health';
+
+  @override
+  String get kubusNodeSpatialTitle => 'Process spatial archives locally';
+
+  @override
+  String get kubusNodeSpatialBody =>
+      'Turn a capture into an optimized spatial record without uploading the source material to a processing server.';
+
+  @override
+  String get kubusNodeWorker => 'Spatial worker';
+
+  @override
+  String get kubusNodeGpu => 'GPU capability';
+
+  @override
+  String get kubusNodeRunningJobs => 'Running jobs';
+
+  @override
+  String get kubusNodeLocalCaptures => 'Local captures';
+
+  @override
+  String get kubusNodeRewardsTitle => 'Verified contribution';
+
+  @override
+  String get kubusNodeRewardsBody =>
+      'KUB8 contribution records are calculated from verified archive availability, uptime and successful retrieval — not simply from running the software.';
+
+  @override
+  String get kubusNodeSettledKub8 => 'Settled KUB8';
+
+  @override
+  String get kubusNodePendingBody =>
+      'Calculated from verified archive availability. Settlement is not yet active.';
+
+  @override
+  String get kubusNodePairTitle => 'Pair this device';
+
+  @override
+  String get kubusNodePairBody =>
+      'Open Devices in your kubus Node interface and scan the code it shows. This device receives only a limited local credential.';
+
+  @override
+  String get kubusNodePairingPayload => 'Pairing payload';
+
+  @override
+  String get kubusNodePairAction => 'Pair kubus Node';
+
+  @override
+  String get kubusNodeUnpairAction => 'Forget paired node';
+
+  @override
+  String get kubusNodePairedToast => 'kubus Node paired';
+
+  @override
+  String get kubusNodePairFailed => 'Pairing failed';
+
+  @override
+  String get kubusNodeStateContributing => 'Contributing';
+
+  @override
+  String get kubusNodeStateContributingBody =>
+      'Archive participation is active.';
+
+  @override
+  String get kubusNodeStateJoining => 'Joining network';
+
+  @override
+  String get kubusNodeStateJoiningBody =>
+      'kubus Node is synchronising and verifying its public archive contribution.';
+
+  @override
+  String get kubusNodeStateDegraded => 'Connection interrupted';
+
+  @override
+  String get kubusNodeStateDegradedBody =>
+      'This previously verified node is in a temporary grace period. Processing locks if archive participation is not restored before grace expires.';
+
+  @override
+  String get kubusNodeStateLocked => 'Network participation required';
+
+  @override
+  String get kubusNodeStateLockedBody =>
+      'Spatial processing becomes available when this kubus Node is actively contributing to the public archive.';
+
+  @override
+  String get kubusNodeStateUnconfigured => 'Setup required';
+
+  @override
+  String get kubusNodeStateUnconfiguredBody =>
+      'Connect this node to your art.kubus operator account to begin.';
+
+  @override
+  String get kubusNodeStateOffline => 'Node unavailable';
+
+  @override
+  String get kubusNodeStateOfflineBody =>
+      'The app cannot reach this kubus Node right now. It stays paired and reconnects automatically.';
+
+  @override
+  String get kubusNodeReciprocity =>
+      'kubus Node gives you local spatial processing while your node contributes storage and availability to the shared public archive.';
+
+  @override
+  String get kubusNodeCheckStatusAction => 'Check node status';
+
+  @override
+  String get kubusNodeWorkerReady => 'Ready';
+
+  @override
+  String get kubusNodeWorkerReadyBody => 'Gaussian reconstruction available.';
+
+  @override
+  String get kubusNodeWorkerNoGpu => 'Unavailable';
+
+  @override
+  String get kubusNodeWorkerNoGpuBody => 'No compatible NVIDIA GPU detected.';
+
+  @override
+  String get kubusNodeWorkerDown => 'Worker unavailable';
+
+  @override
+  String get kubusNodeWorkerDownBody =>
+      'GPU detected, but the spatial worker is not responding.';
+
+  @override
+  String get kubusNodeEntryTitle => 'kubus Node';
+
+  @override
+  String get kubusNodeEntrySubtitle =>
+      'Run part of the art.kubus network on hardware you control.';
+
+  @override
+  String get kubusNodeEntryFeatureArchive =>
+      'Keep the public archive available';
+
+  @override
+  String get kubusNodeEntryFeatureSpatial => 'Process spatial captures locally';
+
+  @override
+  String get kubusNodeEntryFeatureNetwork =>
+      'Use network GPU capacity when needed';
+
+  @override
+  String get kubusNodeEntryFeatureContribution =>
+      'Receive verified KUB8 contribution records';
+
+  @override
+  String get kubusNodeEntryConnectCta => 'Connect or set up a kubus Node';
+
+  @override
+  String get kubusNodeEntryOpenCta => 'Open kubus Node';
+
+  @override
+  String get kubusNodeEntryAttention => 'Node needs attention';
+
+  @override
+  String get kubusNodeScanTitle => 'Scan the pairing code';
+
+  @override
+  String get kubusNodeScanBody =>
+      'Open Devices in your kubus Node interface and scan the code it shows.';
+
+  @override
+  String get kubusNodeScanManualAction => 'Enter code manually';
+
+  @override
+  String get kubusNodeScanPermission =>
+      'Camera access is needed to scan the pairing code.';
+
+  @override
+  String get kubusNodeScanInvalid => 'That is not a kubus Node pairing code.';
+
+  @override
+  String get kubusNodeConfirmTitle => 'Connect to this node?';
+
+  @override
+  String get kubusNodeConfirmBody =>
+      'This device will be allowed to use the node for spatial processing. You can disconnect it at any time from the node.';
+
+  @override
+  String get kubusNodeConfirmAction => 'Connect';
+
+  @override
+  String get kubusNodeConnectedTitle => 'Connected';
+
+  @override
+  String kubusNodeConnectedBody(Object label) {
+    return 'This device can now use $label for spatial processing.';
+  }
+
+  @override
+  String get kubusNodeFingerprintLabel => 'Fingerprint';
+
+  @override
+  String get kubusNodeEmptyCapturesTitle => 'No spatial captures yet';
+
+  @override
+  String get kubusNodeEmptyCapturesBody =>
+      'Document an artwork spatially to create its first 3D archive.';
+
+  @override
+  String get kubusNodeEmptyContributionTitle => 'No verified contribution yet';
+
+  @override
+  String get kubusNodeEmptyContributionBody =>
+      'Contribution appears after the network verifies archive availability or completed compute jobs.';
+
+  @override
+  String get kubusNodeEmptyProvidersTitle =>
+      'No compatible network GPUs are available right now';
+
+  @override
+  String get kubusNodeEmptyProvidersBody =>
+      'Keep the capture locally or process it later.';
+
+  @override
+  String get kubusNodeNoNodeTitle => 'No kubus Node connected';
+
+  @override
+  String get kubusNodeStoredLabel => 'Stored';
+
+  @override
+  String get kubusNodeCoverageLabel => 'Coverage';
+
+  @override
+  String get kubusNodePublicRecordsLabel => 'Public records';
+
+  @override
+  String get kubusNodeContribution => 'Contribution';
+
+  @override
+  String get kubusNodeHowCalculated => 'How contribution is calculated';
+
+  @override
+  String get kubusNodeAdvancedDetails => 'Technical details';
+
+  @override
+  String get kubusNodeCopiedToast => 'Copied';
+
+  @override
+  String get spatialStagePreparing => 'Preparing';
+
+  @override
+  String get spatialStageProcessingLocally => 'Processing locally';
+
+  @override
+  String get spatialStageOptimising => 'Optimising';
+
+  @override
+  String get spatialStageCreatingPreview => 'Creating preview';
+
+  @override
+  String get spatialStageComplete => 'Complete';
+
+  @override
+  String get spatialStageEncrypting => 'Encrypting';
+
+  @override
+  String get spatialStageSending => 'Sending to node';
+
+  @override
+  String get spatialStageWaitingForGpu => 'Waiting for GPU';
+
+  @override
+  String get spatialStageProcessing => 'Processing';
+
+  @override
+  String get spatialStagePreparingArchive => 'Preparing spatial archive';
+
+  @override
+  String get spatialStageReceiving => 'Receiving result';
+
+  @override
+  String get spatialStageVerifying => 'Verifying';
+
+  @override
+  String get spatialProgressLocalBody => 'Processing on your kubus Node.';
+
+  @override
+  String get spatialProgressRemoteBody => 'Processing on the Kubus network.';
+
+  @override
+  String get spatialProgressLeaveHint =>
+      'You can leave this screen. Processing continues on your kubus Node.';
+
+  @override
+  String get spatialFailedTitle => 'Processing stopped';
+
+  @override
+  String get spatialFailedRemoteBody =>
+      'The provider node became unavailable before reconstruction finished. Your original capture is still available.';
+
+  @override
+  String get spatialFailedLocalBody =>
+      'Processing did not finish. Your original capture is still available on your kubus Node.';
+
+  @override
+  String get spatialFailedTryAnother => 'Try another node';
+
+  @override
+  String get spatialFailedProcessLocally => 'Process locally';
+
+  @override
+  String get spatialFailedKeepForLater => 'Keep for later';
+
+  @override
+  String get spatialErrorParticipation => 'Network participation required';
+
+  @override
+  String get spatialErrorNoProvider =>
+      'No compatible network GPU is currently available.';
+
+  @override
+  String get spatialErrorExpired =>
+      'This processing request expired before a node accepted it.';
+
+  @override
+  String get spatialErrorRetrieval =>
+      'The processing node could not retrieve the encrypted capture.';
+
+  @override
+  String get spatialErrorSignIn =>
+      'Sign in to art.kubus to use network processing.';
+
+  @override
+  String get spatialErrorGeneric =>
+      'Something went wrong while processing this capture.';
+
+  @override
+  String get spatialProcessLocallyAction => 'Process locally';
+
+  @override
+  String get spatialProcessNetworkAction => 'Use network GPU';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetup => 'Advanced operator setup';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetupBody =>
+      'Optional network identity, operator token and environment configuration.';
 
   @override
   String get availabilityNodeWhatIsTitle => 'What this does';
@@ -6989,9 +7363,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get walletHomeNoCollectiblesDescription =>
       'Digital editions will appear here when they are linked to this wallet.';
-
-  @override
-  String get walletHomeNoCollectiblesTitle => 'No digital editions yet';
 
   @override
   String walletHomeCollectibleByline(Object creator) {
@@ -15202,6 +15573,934 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Secure';
+
+  @override
+  String get spatialProcessTitle => 'Process spatial capture';
+
+  @override
+  String get spatialProcessLocalTitle => 'This kubus Node';
+
+  @override
+  String get spatialProcessLocalPrivacy =>
+      'Source capture stays on hardware you control.';
+
+  @override
+  String get spatialProcessNetworkTitle => 'Kubus network';
+
+  @override
+  String spatialProcessNetworkAvailable(int count) {
+    return '$count compatible nodes available';
+  }
+
+  @override
+  String get spatialProcessNetworkPrivacy =>
+      'The capture is encrypted in transit and processed temporarily by the selected provider node.';
+
+  @override
+  String get spatialProcessMaximumPrivacy =>
+      'For maximum privacy, process locally.';
+
+  @override
+  String get spatialProcessNoLocalGpu => 'No compatible local GPU was found.';
+
+  @override
+  String get spatialProcessKeepLocal => 'Keep capture locally';
+
+  @override
+  String get spatialProcessStart => 'Start processing';
+
+  @override
+  String get spatialProcessAutoSelect => 'Auto-select best node';
+
+  @override
+  String get spatialProcessAdvanced => 'Choose a node';
+
+  @override
+  String get spatialProcessReady => 'Ready';
+
+  @override
+  String spatialProcessJobsAhead(int count) {
+    return '$count jobs ahead';
+  }
+
+  @override
+  String spatialProcessSuccessRate(Object rate) {
+    return '$rate% successful jobs';
+  }
+
+  @override
+  String get spatialRemotePrivacyTitle => 'Use a Kubus network GPU?';
+
+  @override
+  String get spatialRemotePrivacyBody =>
+      'The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.';
+
+  @override
+  String get spatialRemotePrivacyConfirm => 'Continue with network GPU';
+
+  @override
+  String get spatialResultReviewTitle => 'Spatial result is ready';
+
+  @override
+  String get spatialResultReviewBody =>
+      'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus Node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.';
+
+  @override
+  String get spatialResultKeepPrivate => 'Keep unpublished';
+
+  @override
+  String get spatialResultReject => 'Reject result';
+
+  @override
+  String get spatialResultPublish => 'Publish spatial archive';
+
+  @override
+  String get kubusNodeCompute => 'Compute';
+
+  @override
+  String get kubusNodeComputeTitle => 'Compute network';
+
+  @override
+  String get kubusNodeComputeBody =>
+      'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.';
+
+  @override
+  String get kubusNodeOfferGpu => 'Offer GPU to Kubus network';
+
+  @override
+  String get kubusNodeOfferGpuBody =>
+      'Accept new compatible spatial jobs from other art.kubus users.';
+
+  @override
+  String get kubusNodePauseRemoteJobs => 'Pause accepting new remote jobs';
+
+  @override
+  String get kubusNodeMaxRemoteJobs => 'Maximum concurrent remote jobs';
+
+  @override
+  String get kubusNodeArchiveContribution => 'Archive contribution';
+
+  @override
+  String get kubusNodeComputeContribution => 'Compute contribution';
+
+  @override
+  String get kubusNodePendingTotal => 'Pending total';
+
+  @override
+  String get kubusNodeSettlementPending =>
+      'Rewards are currently recorded by the network. Settlement is not yet active.';
+
+  @override
+  String get kubusNodeVerifiedArchiveCopy =>
+      'KUB8 contribution records are calculated from verified public archive availability, healthy participation and successful retrieval.';
+
+  @override
+  String get kubusNodeVerifiedComputeCopy =>
+      'When you choose to offer spare GPU capacity, successfully completed and verified network compute jobs can contribute to your KUB8 reward record.';
+
+  @override
+  String get kubusNodeParticipationContributing => 'Contributing';
+
+  @override
+  String get kubusNodeParticipationDegraded => 'Connection interrupted';
+
+  @override
+  String get kubusNodeParticipationLocked => 'Network participation required';
+
+  @override
+  String get kubusNodeRemoteJobsCompleted => 'Remote jobs completed';
+
+  @override
+  String get spatialArchiveTitle => 'Spatial archive';
+
+  @override
+  String get spatialViewIn3d => 'View in 3D';
+
+  @override
+  String spatialCaptureCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count spatial captures',
+      one: '1 spatial capture',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialCapturedOn(String date) {
+    return 'Captured $date';
+  }
+
+  @override
+  String get spatialHistoryTitle => 'Spatial history';
+
+  @override
+  String get spatialLoadArchiveQuality => 'Load archival quality';
+
+  @override
+  String get spatialQualityMobile => 'Optimised';
+
+  @override
+  String get spatialQualityPreview => 'Preview';
+
+  @override
+  String get spatialQualityArchive => 'Archival';
+
+  @override
+  String get spatialViewerReset => 'Reset view';
+
+  @override
+  String get spatialViewerFullscreen => 'Fullscreen';
+
+  @override
+  String get spatialViewerRetry => 'Try again';
+
+  @override
+  String get spatialViewerUnavailable =>
+      'This spatial archive is currently unavailable.';
+
+  @override
+  String get spatialViewerFallback => 'Trying another archive route…';
+
+  @override
+  String get spatialViewerWebSafety =>
+      'Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.';
+
+  @override
+  String get spatialCaptureFinish => 'Finish capture';
+
+  @override
+  String get spatialCaptureGuideStart => 'Move slowly around the artwork.';
+
+  @override
+  String get spatialCaptureGuideOverlap =>
+      'Keep the artwork in view and maintain overlap.';
+
+  @override
+  String get spatialCaptureGuideDetails =>
+      'Capture the sides and details you have not covered.';
+
+  @override
+  String get spatialCaptureGuideReady =>
+      'Coverage is ready. You can finish or add a few more angles.';
+
+  @override
+  String get spatialCaptureDepthAvailable => 'depth available';
+
+  @override
+  String get spatialCaptureRgbPose => 'RGB and pose';
+
+  @override
+  String spatialCaptureTrackedViews(int count, String detail) {
+    return '$count tracked views · $detail';
+  }
+
+  @override
+  String get mapSpatialAvailable => 'Spatial archive available';
+
+  @override
+  String get arErrorCameraUnavailable =>
+      'The camera is currently unavailable. Try again.';
+
+  @override
+  String get arErrorArcoreInstallRequired =>
+      'AR needs Google Play Services for AR. Install it to continue.';
+
+  @override
+  String get arErrorArcoreUpdateRequired =>
+      'Google Play Services for AR needs an update to continue.';
+
+  @override
+  String get arErrorAppUpdateRequired => 'This app needs an update to use AR.';
+
+  @override
+  String get arErrorArcoreUnsupportedDevice =>
+      'This device does not support AR.';
+
+  @override
+  String get arErrorArcoreInstallDeclined =>
+      'AR needs Google Play Services for AR. You can install it and try again.';
+
+  @override
+  String get arErrorSessionUnavailable =>
+      'AR is unavailable right now. Try again.';
+
+  @override
+  String get arErrorCameraPermissionRequired =>
+      'AR needs camera access. Allow it to continue.';
+
+  @override
+  String get arTrackingInitializing =>
+      'AR is still locating itself. Move your phone slowly.';
+
+  @override
+  String get arTrackingInsufficientLight =>
+      'More light will help AR understand the space.';
+
+  @override
+  String get arTrackingExcessiveMotion => 'Move your phone more slowly.';
+
+  @override
+  String get arTrackingInsufficientFeatures =>
+      'Point the camera toward an area with more visible detail.';
+
+  @override
+  String get arTrackingBadState => 'AR is recovering.';
+
+  @override
+  String get arPlacementSelectArtwork => 'Choose an artwork to place.';
+
+  @override
+  String get arPlacementFindingSurface =>
+      'Move your phone slowly to find a surface.';
+
+  @override
+  String get arPlacementTapToPlace => 'Tap a surface to place the artwork.';
+
+  @override
+  String get arPlacementAdjustOrConfirm =>
+      'Drag to move, rotate to adjust, then confirm.';
+
+  @override
+  String get arPlacementRotate => 'Rotate';
+
+  @override
+  String get spatialCaptureGuideIdle =>
+      'Point your phone at the artwork to begin.';
+
+  @override
+  String get spatialCaptureGuidePaused =>
+      'Capture is paused. Resume when you are ready.';
+
+  @override
+  String get spatialCaptureGuideTrackingLost =>
+      'AR lost track of the space. Move your phone slowly to continue.';
+
+  @override
+  String get spatialCaptureGuideFull =>
+      'Capture is full. Finish to process what you have.';
+
+  @override
+  String get spatialCaptureResume => 'Resume capture';
+
+  @override
+  String get spatialCaptureStart => 'Start capture';
+
+  @override
+  String get spatialCaptureContributorOnly =>
+      'Spatial capture is available to approved contributors, artists and institutions.';
+
+  @override
+  String get spatialCaptureChooseArtwork =>
+      'Choose an artwork before starting a spatial capture.';
+
+  @override
+  String get spatialCaptureNotReadyToast =>
+      'Capture a few more angles before finishing.';
+
+  @override
+  String get spatialCaptureNodeRequired =>
+      'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.';
+
+  @override
+  String get spatialCaptureNodeOutdated =>
+      'This kubus Node cannot receive a streamed capture. Update the node and try again.';
+
+  @override
+  String get spatialCaptureTransferFailed =>
+      'The capture could not be transferred. It is still on this device, so you can try again.';
+
+  @override
+  String get spatialCaptureRetryTransfer => 'Retry transfer';
+
+  @override
+  String get spatialTransferPreparing => 'Preparing capture…';
+
+  @override
+  String get spatialTransferCommitting => 'Finalising on your node…';
+
+  @override
+  String spatialTransferUploading(int done, int total) {
+    return 'Uploading $done of $total files';
+  }
+
+  @override
+  String get spatialArchiveEmptyTitle => 'Spatial archive';
+
+  @override
+  String get spatialArchiveEmptyBody =>
+      'Published and locally processed spatial records will appear here over time.';
+
+  @override
+  String get spatialArchiveRecord => 'Spatial record';
+
+  @override
+  String get spatialRecoveryTitle => 'Unfinished capture';
+
+  @override
+  String spatialRecoveryBody(int count) {
+    return '$count tracked views from an interrupted capture are still on this device.';
+  }
+
+  @override
+  String get spatialRecoveryResume => 'Resume capture';
+
+  @override
+  String get spatialRecoveryDiscard => 'Discard capture';
+
+  @override
+  String get spatialRecoveryKeep => 'Keep for later';
+
+  @override
+  String get arPlacementScaleUp => 'Larger';
+
+  @override
+  String get arPlacementScaleDown => 'Smaller';
+
+  @override
+  String get arPlacementReposition => 'Move';
+
+  @override
+  String get arPlacementConfirm => 'Confirm placement';
+
+  @override
+  String get arPlacementRepositionHint =>
+      'Tap another surface to move the artwork.';
+
+  @override
+  String get arPlacementAdjustHint =>
+      'Pinch to resize, drag to rotate, then confirm.';
+
+  @override
+  String get arPlacementTrackingLost =>
+      'AR lost track of the space. Your placement is kept — move slowly to continue.';
+
+  @override
+  String get arPlacementPreviewFailed =>
+      'The artwork preview could not be shown. Try choosing the surface again.';
+
+  @override
+  String get arCameraSwitching => 'Switching camera…';
+
+  @override
+  String get spatialCaptureDiscardAndRestart => 'Discard and start over';
+
+  @override
+  String get spatialCaptureGuideFullUnusable =>
+      'Capture reached its limit before covering enough of the artwork. Start over and move around it more.';
+
+  @override
+  String get arCaptureFrameFailed => 'Could not capture a frame. Try again.';
+
+  @override
+  String get spatialCaptureSaved =>
+      'Captured privately on this phone. Process it now or later from Spatial Library.';
+
+  @override
+  String get spatialLibraryTitle => 'Spatial Library';
+
+  @override
+  String get spatialLibraryOpen => 'Open library';
+
+  @override
+  String get spatialLibraryEmpty =>
+      'Your private spatial captures will appear here.';
+
+  @override
+  String get spatialLibraryFilterAll => 'All';
+
+  @override
+  String get spatialLibraryFilterCaptured => 'Captured';
+
+  @override
+  String get spatialLibraryFilterProcessing => 'Processing';
+
+  @override
+  String get spatialLibraryFilterReady => 'Ready';
+
+  @override
+  String get spatialLibraryFilterPublished => 'Published';
+
+  @override
+  String get spatialLibraryStatusCaptured => 'Captured';
+
+  @override
+  String get spatialLibraryStatusWaiting => 'Waiting for Node';
+
+  @override
+  String get spatialLibraryStatusUploading => 'Uploading';
+
+  @override
+  String get spatialLibraryStatusQueued => 'Queued';
+
+  @override
+  String get spatialLibraryStatusProcessing => 'Processing';
+
+  @override
+  String get spatialLibraryStatusDownloading => 'Downloading';
+
+  @override
+  String get spatialLibraryStatusReady => 'Ready';
+
+  @override
+  String get spatialLibraryStatusPublished => 'Published';
+
+  @override
+  String get spatialLibraryStatusFailed => 'Failed';
+
+  @override
+  String get spatialLibraryPrivate => 'Private';
+
+  @override
+  String get spatialLibraryPublic => 'Public';
+
+  @override
+  String get spatialLibraryRawStorage => 'Raw source';
+
+  @override
+  String get spatialLibraryProcessedStorage => 'Processed';
+
+  @override
+  String get spatialLibraryTotalStorage => 'Total';
+
+  @override
+  String get spatialLibraryNodeConnected => 'Node connected';
+
+  @override
+  String get spatialLibraryNodeConnect => 'Connect Node';
+
+  @override
+  String get spatialLibraryProcess => 'Process';
+
+  @override
+  String get spatialLibraryRetryUpload => 'Retry upload';
+
+  @override
+  String get spatialLibraryRetryProcessing => 'Retry processing';
+
+  @override
+  String get spatialLibraryView => 'View';
+
+  @override
+  String get spatialLibraryPublish => 'Publish';
+
+  @override
+  String get spatialLibraryShare => 'Share';
+
+  @override
+  String get spatialLibraryDeleteRaw => 'Delete raw capture';
+
+  @override
+  String get spatialLibraryDeleteProcessed => 'Delete local processed result';
+
+  @override
+  String get spatialLibraryDeleteRecord => 'Delete local record';
+
+  @override
+  String get spatialLibraryDeleteRecordWarning =>
+      'This removes the local record only. A published public archive will stay published.';
+
+  @override
+  String get spatialLibraryProcessorUnavailable =>
+      'No processor is available. Your private capture remains safely stored.';
+
+  @override
+  String get spatialLibraryOperationFailed =>
+      'That action could not be completed. Your private source remains intact.';
+
+  @override
+  String get arStatusTracking => 'Tracking';
+
+  @override
+  String get arStatusFindingSurface => 'Finding surface';
+
+  @override
+  String get arStatusCapturing => 'Capturing';
+
+  @override
+  String get arStatusPaused => 'Paused';
+
+  @override
+  String get arStatusError => 'Error';
+
+  @override
+  String get arStatusSwitching => 'Switching';
+
+  @override
+  String get arMoreActions => 'More actions';
+
+  @override
+  String get arToggleFlash => 'Flash';
+
+  @override
+  String get arOpenArSettings => 'AR settings';
+
+  @override
+  String get spatialTargetPickerTitle => 'Choose the artwork';
+
+  @override
+  String get spatialTargetPickerSubtitle =>
+      'Every spatial capture is filed under one artwork.';
+
+  @override
+  String get spatialTargetSearchHint => 'Search artworks';
+
+  @override
+  String get spatialTargetNoArtworksTitle => 'No artworks yet';
+
+  @override
+  String get spatialTargetNoArtworksBody =>
+      'Add an artwork before capturing spatial data for it.';
+
+  @override
+  String get spatialTargetNoResultsTitle => 'No matches';
+
+  @override
+  String get spatialTargetNoResultsBody => 'No artwork matches that search.';
+
+  @override
+  String get spatialTargetMarkerTitle => 'Choose a marker';
+
+  @override
+  String get spatialTargetMarkerSubtitle =>
+      'Optional. Links this capture to a specific location or AR marker.';
+
+  @override
+  String get spatialTargetNoMarker => 'No specific marker';
+
+  @override
+  String get spatialTargetChangeArtwork => 'Change artwork';
+
+  @override
+  String get spatialMarkerKindLocation => 'Map location';
+
+  @override
+  String get spatialMarkerKindConfiguration => 'AR marker';
+
+  @override
+  String get spatialLibraryStatusReprocessNeeded => 'Reprocessing required';
+
+  @override
+  String get spatialLibraryStatusPublishing => 'Publishing';
+
+  @override
+  String get spatialNetworkStateRequested => 'Requested';
+
+  @override
+  String get spatialNetworkStateSearching => 'Finding a processor';
+
+  @override
+  String get spatialNetworkStateOffered => 'Provider offered';
+
+  @override
+  String get spatialNetworkStateAccepted => 'Provider accepted';
+
+  @override
+  String get spatialNetworkStateVerifying => 'Verifying';
+
+  @override
+  String get spatialNetworkStateExpired => 'Request expired';
+
+  @override
+  String get spatialNetworkStateCancelled => 'Request cancelled';
+
+  @override
+  String spatialLibraryVersionLabel(int version) {
+    return 'v$version';
+  }
+
+  @override
+  String get spatialLibraryArtworkUnavailable => 'Artwork unavailable';
+
+  @override
+  String get spatialLibraryMarkerUnavailable => 'Marker unavailable';
+
+  @override
+  String get spatialLibraryLinkedTo => 'Linked to';
+
+  @override
+  String get spatialLibraryArtworkLabel => 'Artwork';
+
+  @override
+  String get spatialLibraryMarkerLabel => 'Marker';
+
+  @override
+  String get spatialLibrarySectionCapture => 'Capture';
+
+  @override
+  String get spatialLibrarySectionProcessing => 'Processing';
+
+  @override
+  String get spatialLibrarySectionArchive => 'Archive';
+
+  @override
+  String get spatialLibraryCoverage => 'Coverage';
+
+  @override
+  String spatialLibraryCoveragePercent(int percent) {
+    return '$percent% coverage';
+  }
+
+  @override
+  String spatialLibraryTrackedViews(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracked views',
+      one: '1 tracked view',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get spatialLibraryDepthAvailable => 'Depth available';
+
+  @override
+  String get spatialLibraryDepthUnavailable => 'No depth data';
+
+  @override
+  String get spatialLibraryRawSource => 'Raw source';
+
+  @override
+  String get spatialLibraryRawSourceDeleted => 'Raw source deleted';
+
+  @override
+  String get spatialLibraryContinueCapture => 'Continue capture';
+
+  @override
+  String get spatialLibraryEditAssociation => 'Edit association';
+
+  @override
+  String get spatialLibraryEditMetadata => 'Rename or add a note';
+
+  @override
+  String get spatialLibraryProcessScene => 'Process scene';
+
+  @override
+  String get spatialLibraryNotProcessed => 'Not processed';
+
+  @override
+  String get spatialLibraryViewResult => 'View result';
+
+  @override
+  String get spatialLibraryViewPublicArchive => 'View public archive';
+
+  @override
+  String get spatialLibraryNewRevision => 'Add spatial update';
+
+  @override
+  String get spatialLibraryMoreActions => 'More';
+
+  @override
+  String get spatialLibraryCancelRequest => 'Cancel request';
+
+  @override
+  String get spatialLibraryChangeProcessor => 'Change processor';
+
+  @override
+  String get spatialLibraryVersionsTitle => 'Versions';
+
+  @override
+  String get spatialLibraryCurrentPublicVersion => 'Current public version';
+
+  @override
+  String get spatialLibraryLocalDraft => 'Local draft';
+
+  @override
+  String spatialLibraryRevisionOf(int revision) {
+    return 'Revision $revision';
+  }
+
+  @override
+  String get spatialLibraryStaleResultWarning =>
+      'More capture data was added after this result. Process it again to refresh the scene.';
+
+  @override
+  String get spatialLibraryStorageTitle => 'Storage';
+
+  @override
+  String get spatialLibraryCapturedOnLabel => 'Captured';
+
+  @override
+  String get spatialEditMetadataTitle => 'Capture details';
+
+  @override
+  String get spatialEditDisplayNameLabel => 'Name';
+
+  @override
+  String get spatialEditDisplayNameHint =>
+      'For example: North facade, evening capture';
+
+  @override
+  String get spatialEditNoteLabel => 'Note';
+
+  @override
+  String get spatialEditAssociationTitle => 'Change association';
+
+  @override
+  String get spatialEditAssociationProcessedWarning =>
+      'This capture already has a processed result. Changing the artwork changes the metadata it would be published with.';
+
+  @override
+  String get spatialEditAssociationPublishedWarning =>
+      'This capture is published. Changing it starts a new draft revision; the published version stays exactly as it is.';
+
+  @override
+  String get spatialEditAssociationConfirm => 'Change association';
+
+  @override
+  String get spatialProcessOwnNodeSubtitle => 'Use your paired kubus Node.';
+
+  @override
+  String get spatialProcessOwnNodeRemote => 'Connected remotely';
+
+  @override
+  String get spatialProcessOwnNodeLocal => 'On your network';
+
+  @override
+  String get spatialProcessOwnNodeUnpaired => 'Not connected — tap to pair';
+
+  @override
+  String get spatialProcessConnectOwnNode => 'Connect my Node';
+
+  @override
+  String get spatialProcessNetworkSubtitle =>
+      'Request processing from an available GPU provider.';
+
+  @override
+  String get spatialProcessRequestNetwork => 'Request network processing';
+
+  @override
+  String get spatialProcessNoProviderNow =>
+      'No provider is available right now. The request stays open until one is.';
+
+  @override
+  String spatialProviderQueueAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs ahead',
+      one: '1 job ahead',
+      zero: 'No jobs ahead',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialProviderEstimatedDuration(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String spatialProviderEstimatedCost(String amount) {
+    return 'About $amount KUB8';
+  }
+
+  @override
+  String get spatialProviderNoEstimate => 'Not offered';
+
+  @override
+  String get spatialProviderLabel => 'Provider';
+
+  @override
+  String get spatialFailureNodeUnavailable => 'Node unavailable';
+
+  @override
+  String get spatialFailureUploadInterrupted => 'Upload interrupted';
+
+  @override
+  String get spatialFailureProcessorDeclined =>
+      'The processor declined the job';
+
+  @override
+  String get spatialFailureProcessingFailed => 'Processing failed';
+
+  @override
+  String get spatialFailureResultDownload => 'Result download failed';
+
+  @override
+  String get spatialFailureResultVerification => 'Result verification failed';
+
+  @override
+  String get spatialFailureRequestExpired =>
+      'The request expired before a processor took it';
+
+  @override
+  String get spatialFailureGeneric => 'Something went wrong';
+
+  @override
+  String get spatialFailureRawIntact => 'Your raw capture is untouched.';
+
+  @override
+  String get spatialCaptureSavedTitle => 'Saved to Spatial Library';
+
+  @override
+  String get spatialCaptureContinueLater => 'Continue later';
+
+  @override
+  String get spatialCaptureTargetRequired =>
+      'Choose an artwork before starting a capture.';
+
+  @override
+  String spatialCaptureTargetLabel(String title) {
+    return 'Capturing for $title';
+  }
+
+  @override
+  String get spatialCaptureSourceUnavailable =>
+      'The raw capture for this record is no longer on this device.';
+
+  @override
+  String get spatialCaptureContinueFailed =>
+      'That capture could not be reopened.';
+
+  @override
+  String get spatialArtworkDraftsTitle => 'Your spatial drafts';
+
+  @override
+  String get spatialArtworkDraftsSubtitle =>
+      'Private to this device until you publish.';
+
+  @override
+  String get spatialArtworkAddUpdate => 'Add spatial update';
+
+  @override
+  String get spatialArtworkCaptureCta => 'Capture spatial data';
+
+  @override
+  String get spatialViewOnMap => 'View on map';
+
+  @override
+  String get spatialCaptureAnotherOpen =>
+      'A capture for another artwork is still open. Finish or discard it before starting a new one.';
+
+  @override
+  String get collectionCreatorConnectWalletToLoad =>
+      'Connect a wallet to load and curate your artwork library in this creator.';
+
+  @override
+  String get collectionCreatorLoadingLibrary => 'Loading library…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibrary => 'Load artwork library';
+
+  @override
+  String get collectionCreatorLibraryStillLoading =>
+      'Your artwork library is still loading. You can continue with the collection details and return here later.';
+
+  @override
+  String get collectionCreatorLoadBeforeSave =>
+      'Load your artwork library to select pieces for this collection.';
+
+  @override
+  String get collectionCreatorArtworkSelected => 'Selected';
+
+  @override
+  String get collectionCreatorArtworkAdd => 'Add';
+
+  @override
+  String get walletHomeNoCollectiblesTitle => 'No digital editions yet';
 
   @override
   String get artworkCreatorOptionalExtensionsDescription =>

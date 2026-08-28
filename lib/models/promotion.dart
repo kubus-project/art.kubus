@@ -364,12 +364,22 @@ extension PromotionPaymentMethodApi on PromotionPaymentMethod {
 
   bool get isKub8 => this == PromotionPaymentMethod.kub8Spl;
 
+  /// Maps the wire value, accepting only methods this build actually performs.
+  ///
+  /// `kub8_balance` and `kub8` named the retired internal-credit flow. Reading
+  /// them as [PromotionPaymentMethod.kub8Spl] made [isKub8] and
+  /// `awaitsKub8Payment` report on-chain semantics for a record that has no
+  /// on-chain transfer behind it and never will, so the app would wait for a
+  /// settlement that cannot arrive. They are not remapped to a different
+  /// payment method either — the field says how the promotion was paid for, and
+  /// guessing would be worse than the default.
+  ///
+  /// Per AGENTS.md the project is pre-launch with no production users, so the
+  /// retired values are dropped rather than carried forward as a shim.
   static PromotionPaymentMethod fromApiValue(String? value) {
     final normalized = (value ?? '').trim().toLowerCase();
     switch (normalized) {
       case 'kub8_spl':
-      case 'kub8_balance':
-      case 'kub8':
         return PromotionPaymentMethod.kub8Spl;
       case 'fiat_card':
       default:

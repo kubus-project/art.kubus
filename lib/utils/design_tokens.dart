@@ -203,6 +203,41 @@ class KubusSizes {
   /// Common max widths for modal/dialog content.
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
+
+  /// Coloured state dot shown beside a status label (AR header, list rows).
+  static const double statusDot = 8.0;
+
+  /// Thin inline meter used inside dense chrome (AR guidance, list cards).
+  static const double meterThin = 6.0;
+
+  /// Standard inline meter used in dialogs and detail sections.
+  static const double meterStandard = 8.0;
+
+  /// Square thumbnail used in list rows (Spatial Library, pickers).
+  static const double listThumbnail = 76.0;
+
+  /// Compact square thumbnail used in dense pickers and linked-entity rows.
+  static const double compactThumbnail = 48.0;
+
+  /// Height of the preview surface at the top of a spatial detail screen.
+  static const double detailPreviewHeight = 320.0;
+}
+
+/// Canonical Material elevations.
+///
+/// Exists so surfaces stop carrying bare numbers: an "8" in one file and a
+/// "6" in another read as intent when they are only drift.
+class KubusElevation {
+  KubusElevation._();
+
+  /// Flat against its parent surface.
+  static const double flat = 0.0;
+
+  /// Cards and tiles that need separation without lifting off the page.
+  static const double resting = 2.0;
+
+  /// Primary actions and floating controls.
+  static const double raised = 8.0;
 }
 
 /// Canonical sizing for screen headers, app bars, and section chrome.

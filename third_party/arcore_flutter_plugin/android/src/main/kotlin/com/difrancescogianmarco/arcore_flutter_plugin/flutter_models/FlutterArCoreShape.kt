@@ -16,9 +16,18 @@ class FlutterArCoreShape(map: HashMap<String, *>) {
 
     fun buildShape(material: Material): ModelRenderable? {
         return when (dartType) {
-            "ArCoreSphere" -> ShapeFactory.makeSphere(radius!!, Vector3(0.0f, 0.15f, 0.0f), material)
+            "ArCoreSphere" -> ShapeFactory.makeSphere(
+                    requireNotNull(radius) { "Sphere radius is required" },
+                    Vector3(0.0f, 0.15f, 0.0f),
+                    material
+            )
             "ArCoreCube" -> ShapeFactory.makeCube(size, Vector3(0.0f, 0.15f, 0.0f), material)
-            "ArCoreCylinder" -> ShapeFactory.makeCylinder(radius!!, height!!, Vector3(0.0f, 0.15f, 0.0f), material)
+            "ArCoreCylinder" -> ShapeFactory.makeCylinder(
+                    requireNotNull(radius) { "Cylinder radius is required" },
+                    requireNotNull(height) { "Cylinder height is required" },
+                    Vector3(0.0f, 0.15f, 0.0f),
+                    material
+            )
             else -> //TODO return exception
                 null
         }
@@ -29,6 +38,6 @@ class FlutterArCoreShape(map: HashMap<String, *>) {
     }
 
     override fun toString(): String {
-        return "dartType: $dartType\nradius: $radius\nsize: $size\nheight: $height\nmaterial: ${materials[0].toString()}"
+        return "dartType: $dartType\nradius: $radius\nsize: $size\nheight: $height\nmaterial: ${materials.firstOrNull()}"
     }
 }

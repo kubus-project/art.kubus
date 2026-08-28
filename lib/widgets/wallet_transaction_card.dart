@@ -61,6 +61,11 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                   icon: _iconForTransaction(tx),
                   color: _colorForTransaction(roles, tx),
                   tokenSymbol: tx.token,
+                  // Native transactions are SOL itself; everything else is
+                  // identified by its own mint, never by what it calls itself.
+                  tokenMint: tx.assetKind == WalletTransactionAssetKind.native
+                      ? KubusTokenIdentity.nativeSolMint
+                      : tx.tokenMint,
                   compact: isCompact,
                 ),
                 const SizedBox(width: KubusSpacing.md),
@@ -515,12 +520,14 @@ class _TransactionIconBadge extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.tokenSymbol,
+    this.tokenMint,
     required this.compact,
   });
 
   final IconData icon;
   final Color color;
   final String tokenSymbol;
+  final String? tokenMint;
   final bool compact;
 
   @override
@@ -558,6 +565,7 @@ class _TransactionIconBadge extends StatelessWidget {
               bottom: 0,
               child: KubusTokenAvatar(
                 symbol: tokenSymbol,
+                mint: tokenMint,
                 size: KubusTokenAvatarSize.xs,
                 filled: true,
                 ringColor: scheme.surface,
@@ -783,7 +791,11 @@ class _AssetChangeRow extends StatelessWidget {
         : theme.colorScheme.onSurface;
     return Row(
       children: [
-        KubusTokenAvatar(symbol: change.symbol, size: KubusTokenAvatarSize.xs),
+        KubusTokenAvatar(
+          symbol: change.symbol,
+          mint: change.mint,
+          size: KubusTokenAvatarSize.xs,
+        ),
         const SizedBox(width: KubusSpacing.sm),
         Expanded(
           child: Text(

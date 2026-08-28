@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/config.dart';
 import '../providers/app_mode_provider.dart';
+import '../providers/availability_operator_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/collectibles_provider.dart';
@@ -15,7 +16,10 @@ import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/marker_management_provider.dart';
+import '../providers/kubus_node_provider.dart';
+import '../providers/spatial_library_provider.dart';
 import '../providers/presence_provider.dart';
+import '../providers/promotion_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/stats_provider.dart';
@@ -30,9 +34,7 @@ import 'backend_api_service.dart';
 /// reaches the main UI. Screen-specific providers still own heavyweight
 /// feed, notification, chat, and group loading so first paint stays lean.
 class AppBootstrapService {
-  const AppBootstrapService({
-    this.taskTimeout = const Duration(seconds: 12),
-  });
+  const AppBootstrapService({this.taskTimeout = const Duration(seconds: 12)});
 
   final Duration taskTimeout;
 
@@ -61,6 +63,11 @@ class AppBootstrapService {
     final statsProvider = context.read<StatsProvider>();
     final presenceProvider = context.read<PresenceProvider>();
     final markerManagementProvider = context.read<MarkerManagementProvider>();
+    final kubusNodeProvider = context.read<KubusNodeProvider>();
+    final spatialLibraryProvider = context.read<SpatialLibraryProvider>();
+    final availabilityOperatorProvider =
+        context.read<AvailabilityOperatorProvider>();
+    final promotionProvider = context.read<PromotionProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
     await _runTask('app_mode', appModeProvider.initialize);
@@ -90,6 +97,18 @@ class AppBootstrapService {
       _runTask('navigation', navigationProvider.initialize),
       _runTask('stats', statsProvider.initialize),
       _runTask('presence', presenceProvider.initialize),
+      if (AppConfig.isFeatureEnabled('availabilityNodes'))
+        _runTask('kubus_node', kubusNodeProvider.initialize),
+      _runTask('spatial_library', spatialLibraryProvider.initialize),
+      if (AppConfig.isFeatureEnabled('availabilityNodes') &&
+          hasAuth &&
+          (resolvedWallet ?? '').trim().isNotEmpty)
+        _runTask(
+          'availability_operator',
+          () => availabilityOperatorProvider.loadTokens(
+            walletAddress: resolvedWallet!.trim(),
+          ),
+        ),
       _runTask(
         'tasks',
         () => hasAuth
@@ -99,6 +118,11 @@ class AppBootstrapService {
     ];
 
     final p1 = <Future<void>>[
+      // Global promotion config, warmed centrally rather than by whichever
+      // widget happens to open first. This also resumes a KUB8 transfer that a
+      // previous run submitted but never got to verify, so the promotion is
+      // never presented as unpaid to someone who already paid for it.
+      _runTask('promotions', promotionProvider.loadConfig),
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask(
         'collectibles',
@@ -107,86 +131,114 @@ class AppBootstrapService {
         ),
       ),
       _runTask(
-          'institutions',
-          () => institutionProvider.initialize(
-              seedMockIfEmpty: AppConfig.isDevelopment)),
+        'institutions',
+        () => institutionProvider.initialize(
+          seedMockIfEmpty: AppConfig.isDevelopment,
+        ),
+      ),
       _runTask('events', () => eventsProvider.initialize(refresh: true)),
     ];
 
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
-      p1.add(_runTask('collab_invites', () async {
-        await collabProvider.initialize(refresh: true);
-        collabProvider.startInvitePolling();
-      }));
+      p1.add(
+        _runTask('collab_invites', () async {
+          await collabProvider.initialize(refresh: true);
+          collabProvider.startInvitePolling();
+        }),
+      );
     }
 
     if (shouldLoadCommunity) {
       if (hasAuth) {
-        p1.add(_runTask(
-          'secure_account_status',
-          backend.syncSecureAccountStatusToPrefs,
-        ));
+        p1.add(
+          _runTask(
+            'secure_account_status',
+            backend.syncSecureAccountStatusToPrefs,
+          ),
+        );
       }
     }
 
     if (shouldLoadWeb3) {
-      p1.add(_runTask('web3_provider',
-          () => web3Provider.initialize(attemptRestore: true)));
+      p1.add(
+        _runTask(
+          'web3_provider',
+          () => web3Provider.initialize(attemptRestore: true),
+        ),
+      );
       if (resolvedWallet != null && resolvedWallet.isNotEmpty) {
-        p1.add(_runTask(
-          'wallet_collectible_index',
-          () => collectiblesProvider.refreshWalletCollectibleIndex(
-            resolvedWallet,
+        p1.add(
+          _runTask(
+            'wallet_collectible_index',
+            () => collectiblesProvider.refreshWalletCollectibleIndex(
+              resolvedWallet,
+            ),
           ),
-        ));
+        );
         p1.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
-        p1.add(_runTask('profile_refresh', () async {
-          await profileProvider.loadProfile(resolvedWallet);
-          await profileProvider.refreshStats();
-        }));
-        p1.add(_runTask(
+        p1.add(
+          _runTask('profile_refresh', () async {
+            await profileProvider.loadProfile(resolvedWallet);
+            await profileProvider.refreshStats();
+          }),
+        );
+        p1.add(
+          _runTask(
             'home_activity_stats_snapshot',
             () => statsProvider.ensureSnapshot(
-                  entityType: 'user',
-                  entityId: resolvedWallet,
-                  metrics: homeActivityPublicSnapshotMetrics,
-                  scope: 'public',
-                )));
-        p1.add(_runTask(
+              entityType: 'user',
+              entityId: resolvedWallet,
+              metrics: homeActivityPublicSnapshotMetrics,
+              scope: 'public',
+            ),
+          ),
+        );
+        p1.add(
+          _runTask(
             'home_activity_discovered_snapshot',
             () => statsProvider.ensureSnapshot(
-                  entityType: 'user',
-                  entityId: resolvedWallet,
-                  metrics: homeActivityPrivateSnapshotMetrics,
-                  scope: 'private',
-                )));
-        p1.add(_runTask('my_exhibitions', () async {
-          await exhibitionsProvider.loadExhibitions(
-            refresh: true,
-            mine: true,
-            limit: 50,
-          );
-        }));
-        p1.add(_runTask('home_program_views', () async {
-          final nowUtc = DateTime.now().toUtc();
-          await statsProvider.ensureSeries(
-            entityType: 'user',
-            entityId: resolvedWallet,
-            metric: 'viewsReceived',
-            bucket: 'month',
-            timeframe: 'all',
-            from: homeActivityProgramViewsFromUtc().toIso8601String(),
-            to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
-            groupBy: 'targetType',
-            scope: 'private',
-          );
-        }));
+              entityType: 'user',
+              entityId: resolvedWallet,
+              metrics: homeActivityPrivateSnapshotMetrics,
+              scope: 'private',
+            ),
+          ),
+        );
+        p1.add(
+          _runTask('my_exhibitions', () async {
+            await exhibitionsProvider.loadExhibitions(
+              refresh: true,
+              mine: true,
+              limit: 50,
+            );
+          }),
+        );
+        p1.add(
+          _runTask('home_program_views', () async {
+            final nowUtc = DateTime.now().toUtc();
+            await statsProvider.ensureSeries(
+              entityType: 'user',
+              entityId: resolvedWallet,
+              metric: 'viewsReceived',
+              bucket: 'month',
+              timeframe: 'all',
+              from: homeActivityProgramViewsFromUtc().toIso8601String(),
+              to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+              groupBy: 'targetType',
+              scope: 'private',
+            );
+          }),
+        );
       }
     }
 
     if (hasAuth) {
-      p1.add(_runTask('marker_management',
-          () => markerManagementProvider.initialize(force: true)));
+      p1.add(
+        _runTask(
+          'marker_management',
+          () => markerManagementProvider.initialize(force: true),
+        ),
+      );
     }
 
     await Future.wait(p0, eagerError: false);
@@ -200,7 +252,8 @@ class AppBootstrapService {
     StartupTrace.mark('deferred warm-up end');
     if (kDebugMode) {
       debugPrint(
-          'AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');
+        'AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})',
+      );
     }
   }
 

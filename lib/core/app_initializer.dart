@@ -30,7 +30,7 @@ import '../services/share/share_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
-import 'app_navigator.dart';
+import 'app_navigator.dart' show AppStartupGate, appNavigatorKey;
 import 'app_initializer_helper.dart';
 import 'startup_trace.dart';
 import 'deep_link_startup_routing.dart';
@@ -170,17 +170,21 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!mounted || _didNavigate) return;
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
-    if (_openPendingPublicTarget(navigator)) return;
-    if (await _openPreferredPublicMap(navigator)) return;
-    if (!mounted || _didNavigate) return;
-    final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
-    _didNavigate = true;
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-        settings: const RouteSettings(name: '/onboarding'),
-      ),
-    );
+    try {
+      if (_openPendingPublicTarget(navigator)) return;
+      if (await _openPreferredPublicMap(navigator)) return;
+      if (!mounted || _didNavigate) return;
+      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
+      _didNavigate = true;
+      navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+          settings: const RouteSettings(name: '/onboarding'),
+        ),
+      );
+    } finally {
+      AppStartupGate.markReady();
+    }
   }
 
   @override
@@ -928,6 +932,7 @@ class _AppInitializerState extends State<AppInitializer> {
       StartupTrace.mark('critical bootstrap end (shell route pushed)');
       _startupWatchdog?.cancel();
       _startupWatchdog = null;
+      AppStartupGate.markReady();
       if (!completer.isCompleted) completer.complete();
       _initCompleter = null;
     }

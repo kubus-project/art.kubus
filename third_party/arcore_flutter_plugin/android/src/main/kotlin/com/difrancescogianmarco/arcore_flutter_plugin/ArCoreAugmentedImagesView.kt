@@ -76,9 +76,10 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 
                     TrackingState.STOPPED -> {
                         debugLog( "STOPPED: ${augmentedImage.name}")
-                        val anchorNode = augmentedImageMap[augmentedImage.index]!!.second
-                        augmentedImageMap.remove(augmentedImage.index)
-                        arSceneView?.scene?.removeChild(anchorNode)
+                        val removed = augmentedImageMap.remove(augmentedImage.index)
+                        removed?.second?.let { anchorNode ->
+                            arSceneView?.scene?.removeChild(anchorNode)
+                        }
                         val text = String.format("Removed Image %d", augmentedImage.index)
                         debugLog( text)
                     }
@@ -137,34 +138,43 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             when (call.method) {
                 "init" -> {
                     debugLog( "INIT AUGMENTED IMAGES")
-                    arScenViewInit(call, result)
+                    if (!ArCoreUtils.hasCameraPermission(activity)) {
+                        result.error("camera_permission_required", "Camera permission must be granted before mounting AR.", null)
+                    } else {
+                        arScenViewInit(call, result)
+                    }
                 }
                 "load_single_image_on_db" -> {
                     debugLog( "load_single_image_on_db")
                     val map = call.arguments as HashMap<String, Any>
                     val singleImageBytes = map["bytes"] as? ByteArray
                     setupSession(singleImageBytes, true)
+                    result.success(null)
                 }
                 "load_multiple_images_on_db" -> {
                     debugLog( "load_multiple_image_on_db")
                     val map = call.arguments as HashMap<String, Any>
                     val dbByteMap = map["bytesMap"] as? Map<String, ByteArray>
                     setupSession(dbByteMap)
+                    result.success(null)
                 }
                 "load_augmented_images_database" -> {
                     debugLog( "LOAD DB")
                     val map = call.arguments as HashMap<String, Any>
                     val dbByteArray = map["bytes"] as? ByteArray
                     setupSession(dbByteArray, false)
+                    result.success(null)
                 }
                 "attachObjectToAugmentedImage" -> {
                     debugLog( "attachObjectToAugmentedImage")
-                    val map = call.arguments as HashMap<String, Any>
-                    val flutterArCoreNode = FlutterArCoreNode(map["node"] as HashMap<String, Any>)
-                    val index = map["index"] as Int
-                    if (augmentedImageMap.containsKey(index)) {
-//                        val augmentedImage = augmentedImageMap[index]!!.first
-                        val anchorNode = augmentedImageMap[index]!!.second
+                    val map = call.arguments as? Map<*, *>
+                    val nodeMap = map?.get("node") as? HashMap<String, Any>
+                    val index = map?.get("index") as? Int
+                    val anchorNode = index?.let { augmentedImageMap[it]?.second }
+                    if (nodeMap == null || index == null) {
+                        result.error("invalid_augmented_image_node", "A node and image index are required", null)
+                    } else if (anchorNode != null) {
+                        val flutterArCoreNode = FlutterArCoreNode(nodeMap)
 //                        setImage(augmentedImage, anchorNode)
 //                        onAddNode(flutterArCoreNode, result)
                         NodeFactory.makeNode(activity.applicationContext, flutterArCoreNode, debug) { node, throwable ->
@@ -173,8 +183,14 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                                 node.setParent(anchorNode)
                                 arSceneView?.scene?.addChild(anchorNode)
                                 result.success(null)
-                            } else if (throwable != null) {
-                                result.error("attachObjectToAugmentedImage error", throwable.localizedMessage, null)
+                            } else {
+                                // A null node with no throwable left the call
+                                // pending forever.
+                                result.error(
+                                        "attachObjectToAugmentedImage error",
+                                        throwable?.localizedMessage ?: "The node could not be built.",
+                                        null
+                                )
                             }
                         }
                     } else {
@@ -184,19 +200,24 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                 "removeARCoreNodeWithIndex" -> {
                     debugLog( "removeObject")
                     try {
-                        val map = call.arguments as HashMap<String, Any>
-                        val index = map["index"] as Int
-                        removeNode(augmentedImageMap[index]!!.second)
-                        augmentedImageMap.remove(index)
+                        val map = call.arguments as? Map<*, *>
+                        val index = map?.get("index") as? Int
+                        val anchorNode = index?.let { augmentedImageMap.remove(it)?.second }
+                        if (anchorNode == null) {
+                            result.error("removeARCoreNodeWithIndex", "No augmented image exists at that index", null)
+                            return
+                        }
+                        removeNode(anchorNode)
                         result.success(null)
                     } catch (ex: Exception) {
                         result.error("removeARCoreNodeWithIndex", ex.localizedMessage, null)
                     }
                 }
                 "dispose" -> {
-                    debugLog( " updateMaterials")
+                    debugLog(" dispose")
                     job.cancel()
                     dispose()
+                    result.success(null)
                 }
                 else -> {
                     result.notImplemented()
@@ -205,7 +226,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         } else {
             debugLog( "Impossible call " + call.method + " method on unsupported device")
             job.cancel()
-            result.error("Unsupported Device", "", null)
+            result.error("arcore_unsupported_device", "This device cannot run ARCore.", null)
         }
     }
 
@@ -225,8 +246,11 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 
         if (arSceneView?.session == null) {
             debugLog( "session NULL")
+            // Flutter owns the permission flow and only mounts this view once
+            // CAMERA is granted. Raising a second request here paused the
+            // activity mid-initialization and raced the session startup.
             if (!ArCoreUtils.hasCameraPermission(activity)) {
-                ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
+                methodChannel.invokeMethod("onSessionError", hashMapOf("code" to "camera_permission_required"))
                 return
             }
 
@@ -254,9 +278,10 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             arSceneView?.resume()
             debugLog( "arSceneView.resume()")
         } catch (ex: CameraNotAvailableException) {
+            // The camera being briefly held elsewhere is recoverable. Closing
+            // the activity over it tore down the whole single-activity app.
             ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            debugLog( "CameraNotAvailableException")
-            activity.finish()
+            debugLog("CameraNotAvailableException")
             return
         }
     }

@@ -568,6 +568,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               children: [
                 const KubusTokenAvatar(
                   symbol: KubusTokenIdentity.solSymbol,
+                  // This card is the wallet's native balance, so the asset is
+                  // SOL itself rather than anything that calls itself SOL.
+                  mint: KubusTokenIdentity.nativeSolMint,
                   size: KubusTokenAvatarSize.lg,
                   filled: true,
                 ),
@@ -913,7 +916,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       onTap: () {},
       child: Row(
         children: [
-          KubusTokenAvatar(symbol: token.symbol, size: KubusTokenAvatarSize.md),
+          KubusTokenAvatar(
+            symbol: token.symbol,
+            mint: token.contractAddress,
+            size: KubusTokenAvatarSize.md,
+          ),
           const SizedBox(width: KubusSpacing.md),
           Expanded(
             flex: 3,

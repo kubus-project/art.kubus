@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/api_keys.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -95,23 +96,62 @@ class KubusTokenIdentity {
   static const String kub8Symbol = 'KUB8';
   static const String solSymbol = 'SOL';
 
-  static KubusTokenVisual resolve(BuildContext context, String symbol) {
+  /// The sentinel `SolanaWalletService` uses for the chain's own asset, which
+  /// has no mint account of its own.
+  static const String nativeSolMint = 'native';
+
+  /// Wrapped SOL. A real mint, and Solana's own, so it earns the mark too.
+  static const String wrappedSolMint =
+      'So11111111111111111111111111111111111111112';
+
+  /// Whether [mint] is the KUB8 mint this build was configured with.
+  ///
+  /// A symbol is metadata: any SPL token can set its own to `KUB8`, and
+  /// `SolanaWalletService._getTokenInfo` will happily read it from on-chain or
+  /// off-chain metadata. The mint account is the identity, and it cannot be
+  /// claimed. Base58 is case-sensitive, so this compares exactly.
+  static bool isCanonicalKub8(String? mint) {
+    final value = (mint ?? '').trim();
+    if (value.isEmpty) return false;
+    final expected = ApiKeys.kub8MintAddress.trim();
+    return expected.isNotEmpty && value == expected;
+  }
+
+  /// Whether [mint] is SOL itself rather than a token calling itself SOL.
+  static bool isCanonicalSol(String? mint) {
+    final value = (mint ?? '').trim();
+    return value == nativeSolMint || value == wrappedSolMint;
+  }
+
+  /// The visual for an asset.
+  ///
+  /// [mint] decides whether the canonical marks apply; [symbol] only ever
+  /// chooses among the generic accents. Passing no mint therefore means "I
+  /// cannot prove what this is", and the asset gets a symbol-derived accent —
+  /// the safe answer, because an attacker-airdropped token that names itself
+  /// `KUB8` must not wear the house identity in a wallet list or a transaction
+  /// card.
+  static KubusTokenVisual resolve(
+    BuildContext context,
+    String symbol, {
+    String? mint,
+  }) {
     final normalized = symbol.trim().toUpperCase();
-    switch (normalized) {
-      case kub8Symbol:
-        return const KubusTokenVisual(
-          symbol: kub8Symbol,
-          accent: KubusColors.primaryVariantDark,
-          secondaryAccent: KubusColors.accentTealDark,
-          glyph: KubusTokenGlyph.kubusCube,
-        );
-      case solSymbol:
-        return const KubusTokenVisual(
-          symbol: solSymbol,
-          accent: KubusBrandColors.solanaPurple,
-          secondaryAccent: KubusBrandColors.solanaGreen,
-          glyph: KubusTokenGlyph.solana,
-        );
+    if (isCanonicalKub8(mint)) {
+      return const KubusTokenVisual(
+        symbol: kub8Symbol,
+        accent: KubusColors.primaryVariantDark,
+        secondaryAccent: KubusColors.accentTealDark,
+        glyph: KubusTokenGlyph.kubusCube,
+      );
+    }
+    if (isCanonicalSol(mint)) {
+      return const KubusTokenVisual(
+        symbol: solSymbol,
+        accent: KubusBrandColors.solanaPurple,
+        secondaryAccent: KubusBrandColors.solanaGreen,
+        glyph: KubusTokenGlyph.solana,
+      );
     }
 
     final roles = KubusColorRoles.of(context);
@@ -149,12 +189,17 @@ class KubusTokenAvatar extends StatelessWidget {
   const KubusTokenAvatar({
     super.key,
     required this.symbol,
+    this.mint,
     this.size = KubusTokenAvatarSize.md,
     this.filled = false,
     this.ringColor,
   });
 
   final String symbol;
+
+  /// The asset's mint. Without it the canonical marks are withheld — see
+  /// [KubusTokenIdentity.resolve].
+  final String? mint;
   final KubusTokenAvatarSize size;
   final bool filled;
 
@@ -164,7 +209,7 @@ class KubusTokenAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visual = KubusTokenIdentity.resolve(context, symbol);
+    final visual = KubusTokenIdentity.resolve(context, symbol, mint: mint);
     final box = size.box;
     final glyphSize = box * KubusSizes.tokenGlyphRatio;
     final glyphColor = filled ? KubusColors.textPrimaryDark : visual.accent;
@@ -343,12 +388,16 @@ class KubusTokenBadge extends StatelessWidget {
   const KubusTokenBadge({
     super.key,
     required this.symbol,
+    this.mint,
     this.value,
     this.label,
     this.onDark = false,
   });
 
   final String symbol;
+
+  /// The asset's mint. See [KubusTokenIdentity.resolve].
+  final String? mint;
   final String? value;
   final String? label;
   final bool onDark;
@@ -356,7 +405,7 @@ class KubusTokenBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final visual = KubusTokenIdentity.resolve(context, symbol);
+    final visual = KubusTokenIdentity.resolve(context, symbol, mint: mint);
     final onSurface = onDark ? KubusColors.textPrimaryDark : scheme.onSurface;
 
     return Container(
@@ -375,6 +424,7 @@ class KubusTokenBadge extends StatelessWidget {
         children: <Widget>[
           KubusTokenAvatar(
             symbol: symbol,
+            mint: mint,
             size: KubusTokenAvatarSize.sm,
             filled: true,
           ),

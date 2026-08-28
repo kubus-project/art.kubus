@@ -50,6 +50,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../../widgets/spatial/artwork_spatial_archive_section.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../services/meta/meta_conversion_adapter.dart';
 
@@ -365,6 +366,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                   height: DetailSpacing.cardGap,
                                 ),
                               _buildDescription(artwork),
+                              const SizedBox(height: DetailSpacing.cardGap),
+                              ArtworkSpatialArchiveSection(
+                                artwork: artwork,
+                                contextMarkerId: widget.attendanceMarkerId,
+                              ),
                               const SizedBox(height: DetailSpacing.cardGap),
                               _buildSocialStats(artwork),
                               const SizedBox(height: DetailSpacing.cardGap),

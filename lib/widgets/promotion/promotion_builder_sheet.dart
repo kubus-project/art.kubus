@@ -106,38 +106,42 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   @override
   void initState() {
     super.initState();
-    // Defer initial quote calculation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeDefaults();
-    });
-  }
-
-  Future<void> _initializeDefaults() async {
-    final provider = context.read<PromotionProvider>();
-    await provider.loadConfig();
-    if (!mounted) return;
-    final rateCards = provider.rateCardsFor(widget.entityType);
-    if (rateCards.isNotEmpty && _selectedRateCard == null) {
-      setState(() {
-        _selectedRateCard = rateCards.first;
-        if (_selectedRateCard!.isSlotBased) {
-          _selectedSlot = 1;
-        }
-      });
-      _updateQuote();
+    // Consume state, do not create it. The global config is warmed by
+    // AppBootstrapService and this entity's rate cards are loaded by
+    // showPromotionBuilderSheet before the sheet is built, so choosing a
+    // default here is a plain read of data that already exists. Loading a
+    // provider from a widget would tie that setup to whether this sheet was
+    // opened, and repeat it on every widget lifecycle.
+    final rateCards =
+        context.read<PromotionProvider>().rateCardsFor(widget.entityType);
+    if (rateCards.isNotEmpty) {
+      _selectedRateCard = rateCards.first;
+      if (_selectedRateCard!.isSlotBased) _selectedSlot = 1;
     }
+    // The first quote is still deferred: it is a network call that calls
+    // setState when it lands.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectedRateCard == null) return;
+      _updateQuote();
+    });
   }
 
   /// Called whenever the selection changes. The previous quote no longer describes what the
   /// user is looking at, so it is dropped immediately rather than lingering on screen.
-  void _onSelectionChanged(VoidCallback apply) {
+  /// Applies a selection change and returns the refresh it started.
+  ///
+  /// Returning the future is what lets a caller that needs the new quote wait
+  /// for *this* refresh instead of starting a second one: the generation check
+  /// in [_updateQuote] would discard the first result, but both would still
+  /// have gone to the backend and both would have churned loading state.
+  Future<void> _onSelectionChanged(VoidCallback apply) {
     setState(() {
       apply();
       _submitIdempotencyKey = null;
       _pendingFiatSubmission = null;
     });
     context.read<PromotionProvider>().invalidateQuote();
-    _updateQuote();
+    return _updateQuote();
   }
 
   Future<void> _updateQuote() async {
@@ -627,8 +631,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   alternatives: alternatives,
                   onSlotSelected: (slot) {
                     final promotionProvider = context.read<PromotionProvider>();
-                    _onSelectionChanged(() => _selectedSlot = slot);
-                    _updateQuote().then((_) {
+                    _onSelectionChanged(() => _selectedSlot = slot).then((_) {
                       if (!mounted) return;
                       // If slot is unavailable, load alternatives
                       final newAvailability =
