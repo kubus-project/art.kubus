@@ -5881,31 +5881,55 @@ class BackendApiService
     int page = 1,
     int limit = 50,
   }) async {
-    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(
-      queryParameters: {'page': page.toString(), 'limit': limit.toString()},
-    );
-    final response = await _get(
-      uri,
-      includeAuth: false,
-      headers: _getHeaders(includeAuth: false),
-    );
-
-    if (response.statusCode == 200) {
-      final payload = jsonDecode(response.body);
-      if (payload is Map<String, dynamic>) {
-        final raw = payload['data'] as List<dynamic>? ?? <dynamic>[];
+    return _performPublicRead<List<ArtworkComment>>(
+      liveRead: (candidateBaseUrl) async {
+        final uri = _buildApiUri(
+          candidateBaseUrl,
+          '/api/artworks/$artworkId/comments',
+          queryParameters: <String, String>{
+            'page': page.toString(),
+            'limit': limit.toString(),
+          },
+        );
+        final response = await _request(
+          'GET',
+          uri,
+          includeAuth: false,
+          headers: _getHeaders(includeAuth: false),
+          isIdempotent: true,
+          allowImplicitBackendFailover: false,
+        );
+        if (response.statusCode != 200) {
+          throw BackendApiRequestException(
+            statusCode: response.statusCode,
+            path: uri.path,
+            body: response.body,
+          );
+        }
+        final payload = jsonDecode(response.body);
+        final raw = payload is Map<String, dynamic>
+            ? payload['data'] as List<dynamic>? ?? const <dynamic>[]
+            : const <dynamic>[];
         return raw
             .whereType<Map<String, dynamic>>()
             .map(ArtworkComment.fromMap)
-            .toList();
-      }
-      return <ArtworkComment>[];
-    }
-
-    throw BackendApiRequestException(
-      statusCode: response.statusCode,
-      path: uri.path,
-      body: response.body,
+            .toList(growable: false);
+      },
+      snapshotRead: () async {
+        final comments = await _loadSnapshotDatasetMaps('comments');
+        final matching = comments
+            .where((comment) {
+              final value =
+                  (comment['artworkId'] ?? comment['artwork_id'] ?? '')
+                      .toString();
+              return value == artworkId;
+            })
+            .map(ArtworkComment.fromMap)
+            .toList(growable: false);
+        final start = ((page - 1) * limit).clamp(0, matching.length).toInt();
+        final end = (start + limit).clamp(0, matching.length).toInt();
+        return matching.sublist(start, end);
+      },
     );
   }
 
@@ -7204,41 +7228,63 @@ class BackendApiService
     int limit = 50,
   }) async {
     try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
-      };
-
-      final uri = Uri.parse(
-        '$baseUrl/api/community/posts/$postId/comments',
-      ).replace(queryParameters: queryParams);
-      final response = await _get(
-        uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final parsed = jsonDecode(response.body);
-        if (parsed is Map<String, dynamic>) {
-          final raw = parsed['comments'] ??
-              parsed['data'] ??
-              parsed['result'] ??
-              parsed['payload'] ??
-              [];
-          if (raw is List) {
-            final flat = raw
+      return await _performPublicRead<List<Comment>>(
+        liveRead: (candidateBaseUrl) async {
+          final uri = _buildApiUri(
+            candidateBaseUrl,
+            '/api/community/posts/$postId/comments',
+            queryParameters: <String, String>{
+              'page': page.toString(),
+              'limit': limit.toString(),
+            },
+          );
+          final response = await _request(
+            'GET',
+            uri,
+            includeAuth: false,
+            headers: _getHeaders(includeAuth: false),
+            isIdempotent: true,
+            allowImplicitBackendFailover: false,
+          );
+          if (response.statusCode != 200) {
+            throw BackendApiRequestException(
+              statusCode: response.statusCode,
+              path: uri.path,
+              body: response.body,
+            );
+          }
+          final parsed = jsonDecode(response.body);
+          final raw = parsed is Map<String, dynamic>
+              ? parsed['comments'] ??
+                  parsed['data'] ??
+                  parsed['result'] ??
+                  parsed['payload'] ??
+                  const <dynamic>[]
+              : const <dynamic>[];
+          if (raw is! List) return <Comment>[];
+          return _nestComments(
+            raw
                 .whereType<Map<String, dynamic>>()
                 .map(_commentFromBackendJson)
-                .toList();
-            return _nestComments(flat);
-          }
-          return <Comment>[];
-        }
-        return <Comment>[];
-      } else {
-        return <Comment>[];
-      }
+                .toList(growable: false),
+          );
+        },
+        snapshotRead: () async {
+          final comments = await _loadSnapshotDatasetMaps('comments');
+          final matching = comments
+              .where(
+                (comment) =>
+                    (comment['postId'] ?? comment['post_id'] ?? '')
+                        .toString() ==
+                    postId,
+              )
+              .map(_commentFromBackendJson)
+              .toList(growable: false);
+          final start = ((page - 1) * limit).clamp(0, matching.length).toInt();
+          final end = (start + limit).clamp(0, matching.length).toInt();
+          return _nestComments(matching.sublist(start, end));
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getComments failed: $e');
       return <Comment>[];
