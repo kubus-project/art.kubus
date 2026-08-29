@@ -44,10 +44,10 @@ class SignInScreen extends StatefulWidget {
     this.initialEmail,
     this.onAuthSuccess,
     this.embedded = false,
-    this.openWalletFlowOnStart = false,
     this.googleAuthOrigin = 'signin',
     this.onVerificationRequired,
     this.onSwitchToRegister,
+    this.requiresWalletSetup = false,
     this.postAuthCoordinator = const PostAuthCoordinator(),
   });
 
@@ -56,10 +56,10 @@ class SignInScreen extends StatefulWidget {
   final String? initialEmail;
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
   final bool embedded;
-  final bool openWalletFlowOnStart;
   final String googleAuthOrigin;
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
+  final bool requiresWalletSetup;
   final PostAuthCoordinator postAuthCoordinator;
 
   @override
@@ -107,12 +107,6 @@ class _SignInScreenState extends State<SignInScreen> {
     // Preload rate-limit cooldown so the Google sign-in click handler can
     // start the popup flow without awaiting (browser user-activation rules).
     unawaited(_loadGoogleAuthCooldown());
-
-    if (widget.openWalletFlowOnStart) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(_showConnectWalletFlow());
-      });
-    }
   }
 
   Future<void> _loadGoogleAuthCooldown() async {
@@ -733,6 +727,7 @@ class _SignInScreenState extends State<SignInScreen> {
       embedded: widget.embedded,
       modalReauth: false,
       requiresWalletBackup: false,
+      requiresWalletSetup: widget.requiresWalletSetup,
       presentation: presentation,
       onBeforeSavedItemsSync:
           (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)

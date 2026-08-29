@@ -656,6 +656,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
       context: context,
       profileProvider: profile,
       walletProvider: wallet,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) return;
 
@@ -688,6 +689,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
       context: context,
       profileProvider: profile,
       walletProvider: wallet,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) return;
 

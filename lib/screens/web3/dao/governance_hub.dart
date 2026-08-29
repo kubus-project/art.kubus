@@ -379,8 +379,11 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
             ),
             const SizedBox(width: KubusSpacing.md),
             TextButton(
-              onPressed: () => Navigator.of(context).pushNamed(
-                capabilities.hasWalletIdentity ? '/wallet' : '/connect-wallet',
+              onPressed: () => WalletActionGuard.ensureSignerAccess(
+                context: context,
+                profileProvider: context.read<ProfileProvider>(),
+                walletProvider: context.read<WalletProvider>(),
+                returnRoute: '/governance',
               ),
               child: Text(actionLabel),
             ),
@@ -1971,6 +1974,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;
@@ -2859,6 +2863,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) return;
 
@@ -2914,6 +2919,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;

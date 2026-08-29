@@ -11,7 +11,7 @@ import '../kubus_auth_method_button.dart';
 import '../kubus_button.dart';
 
 /// What the visitor chose on the contextual activation surface.
-enum ActivationGateChoice { google, email, signIn, dismissed }
+enum ActivationGateChoice { google, email, wallet, signIn, dismissed }
 
 /// Value-first conversion surface shown when a guest attempts an
 /// identity-dependent action.
@@ -123,6 +123,17 @@ class _ContextualActivationSheet extends StatelessWidget {
               variant: KubusButtonVariant.secondary,
               onPressed: () => Navigator.of(context).pop(
                 ActivationGateChoice.email,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+          ],
+          if (AppConfig.enableWeb3 && AppConfig.enableWalletConnect) ...[
+            KubusAuthMethodButton(
+              label: l10n.authUseWalletInstead,
+              icon: Icons.account_balance_wallet_outlined,
+              variant: KubusButtonVariant.secondary,
+              onPressed: () => Navigator.of(context).pop(
+                ActivationGateChoice.wallet,
               ),
             ),
             const SizedBox(height: KubusSpacing.sm),

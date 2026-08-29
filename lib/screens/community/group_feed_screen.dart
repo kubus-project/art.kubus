@@ -248,7 +248,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pushNamed('/sign-in'),
+              onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+                context,
+                actionLabel: l10n.commonCreate,
+                returnRoute: '/community',
+              ),
               child: Text(l10n.commonSignIn),
             ),
           ],

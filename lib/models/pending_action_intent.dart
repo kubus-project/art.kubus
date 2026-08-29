@@ -213,6 +213,12 @@ class PendingActionIntent {
     return Map<String, String>.unmodifiable(out);
   }
 
+  /// Sanitizes route arguments used across an auth/onboarding round trip.
+  /// The same narrow string-only contract as pending actions prevents auth
+  /// callbacks and deep links from carrying executable or sensitive objects.
+  static Map<String, String> sanitizeReturnArguments(Object? raw) =>
+      _sanitizeArguments(raw);
+
   PendingActionIntent copyWith({
     String? sessionId,
     String? capturedByUserId,

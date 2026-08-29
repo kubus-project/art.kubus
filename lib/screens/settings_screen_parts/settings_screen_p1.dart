@@ -1127,7 +1127,14 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
             if (walletProvider.hasWalletIdentity) {
               unawaited(walletProvider.disconnectWallet());
             } else {
-              Navigator.of(context).pushNamed('/connect-wallet');
+              unawaited(
+                WalletActionGuard.ensureSignerAccess(
+                  context: context,
+                  profileProvider: profileProvider,
+                  walletProvider: walletProvider,
+                  returnRoute: '/settings',
+                ),
+              );
             }
           },
           trailing: walletProvider.hasWalletIdentity
@@ -1188,7 +1195,12 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               ? () => unawaited(_handleReadOnlyWalletReconnect(walletProvider))
               : null,
           onConnectExternalWallet: !walletProvider.authority.canTransact
-              ? () => Navigator.of(context).pushNamed('/connect-wallet')
+              ? () => WalletActionGuard.ensureSignerAccess(
+                    context: context,
+                    profileProvider: profileProvider,
+                    walletProvider: walletProvider,
+                    returnRoute: '/settings',
+                  )
               : null,
         ),
       ],

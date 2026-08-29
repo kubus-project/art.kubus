@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/contextual_auth_gate.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 enum WalletSignerActionBlock {
   signInRequired,
@@ -31,8 +32,7 @@ class WalletSessionAccessSnapshot {
       hasWalletIdentity: authority.hasWalletIdentity,
       hasSigner: authority.canTransact,
       authorityState: authority.state,
-      canRestoreFromEncryptedBackup:
-          authority.canRestoreFromEncryptedBackup,
+      canRestoreFromEncryptedBackup: authority.canRestoreFromEncryptedBackup,
     );
   }
 
@@ -120,14 +120,24 @@ class WalletSessionAccessSnapshot {
 }
 
 class WalletActionGuard {
+  /// [returnRoute] should name the screen the caller actually wants restored
+  /// after wallet capability acquisition — e.g. a marketplace listing, a DAO
+  /// proposal, or a settings section — not a generic wallet landing page.
+  /// Callers in nested/unnamed routes (desktop shell tabs, modal sheets)
+  /// cannot rely on `ModalRoute.of(context)?.settings.name`, so this is
+  /// preferred over that fallback whenever the caller knows its destination.
+  ///
+  /// [returnArguments] are sanitized the same way pending-action arguments
+  /// are: string-only, capped, no executable objects.
   static Future<bool> ensureSignerAccess({
     required BuildContext context,
     required ProfileProvider profileProvider,
     required WalletProvider walletProvider,
+    String? returnRoute,
+    Map<String, String> returnArguments = const <String, String>{},
     bool requireSignedIn = true,
     bool refreshBackendSession = true,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
     final access = WalletSessionAccessSnapshot.fromProviders(
       profileProvider: profileProvider,
       walletProvider: walletProvider,
@@ -146,29 +156,27 @@ class WalletActionGuard {
       return walletProvider.canTransact;
     }
 
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) {
-      return false;
-    }
+    // Missing account/wallet capability is acquisition, not signer recovery.
+    // It enters the same contextual account flow as the rest of the app. The
+    // attempted financial operation is intentionally not captured, so it must
+    // be explicitly started again after setup.
+    final explicitRoute = (returnRoute ?? '').trim();
+    final modalRoute = ModalRoute.of(context)?.settings.name ?? '';
+    final resolvedRoute = explicitRoute.isNotEmpty
+        ? explicitRoute
+        : (modalRoute.isNotEmpty ? modalRoute : '/wallet');
+    final safeRoute = PendingActionIntent.isSafeInternalRoute(resolvedRoute)
+        ? resolvedRoute
+        : '/wallet';
+    final safeArguments =
+        PendingActionIntent.sanitizeReturnArguments(returnArguments);
 
-    final navigator = Navigator.of(context);
-    messenger.showKubusSnackBar(
-      SnackBar(
-        content: Text(access.blockMessage(l10n, block)),
-        action: SnackBarAction(
-          label: block == WalletSignerActionBlock.signInRequired
-              ? l10n.commonSignIn
-              : l10n.authConnectWalletButton,
-          onPressed: () {
-            navigator.pushNamed(
-              block == WalletSignerActionBlock.signInRequired
-                  ? '/sign-in'
-                  : '/connect-wallet',
-            );
-          },
-        ),
-      ),
-      tone: KubusSnackBarTone.warning,
+    await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.commonContinue,
+      returnRoute: safeRoute,
+      returnArguments: safeArguments,
+      requirements: ProtectedActionRequirements.wallet,
     );
     return false;
   }

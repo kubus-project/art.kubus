@@ -645,8 +645,12 @@ class _MarketplaceState extends State<Marketplace>
                   description: l10n.marketplaceConnectWalletDescription,
                   showAction: true,
                   actionLabel: l10n.authConnectWalletButton,
-                  onAction: () =>
-                      Navigator.of(context).pushNamed('/connect-wallet'),
+                  onAction: () => WalletActionGuard.ensureSignerAccess(
+                    context: context,
+                    profileProvider: profileProvider,
+                    walletProvider: walletProvider,
+                    returnRoute: '/marketplace',
+                  ),
                 ),
               ),
             ),
@@ -717,6 +721,7 @@ class _MarketplaceState extends State<Marketplace>
                             context: context,
                             profileProvider: profileProvider,
                             walletProvider: walletProvider,
+                            returnRoute: '/marketplace',
                           );
                         },
                         child:
@@ -1386,6 +1391,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) {
       return;
@@ -1527,6 +1533,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) {
       return;
@@ -1577,6 +1584,7 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/marketplace',
     );
     if (!mounted || !canProceed) return;
 

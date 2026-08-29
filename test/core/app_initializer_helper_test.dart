@@ -134,8 +134,7 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test(
-      'Google onboarding guard with session and missing wallet routes to walletConnect',
+  test('Google onboarding guard keeps wallet optional during account setup',
       () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: true,
@@ -149,7 +148,7 @@ void main() {
     );
 
     expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, 'walletConnect');
+    expect(decision.onboardingInitialStepId, isNull);
   });
 
   test('account-link guard without session never routes to sign-in', () {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/preferred_auth_method.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/auth_success_handoff_service.dart';
@@ -58,6 +59,9 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onSwitchToSignIn,
     this.redirectRoute,
     this.redirectArguments,
+    this.preferredAuthMethod,
+    this.onPreferredAuthMethodConsumed,
+    this.debugIsWebOverride,
   });
 
   final bool embedded;
@@ -73,6 +77,21 @@ class AuthMethodsPanel extends StatefulWidget {
   final String googleAuthOrigin;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
+
+  /// Auth method already chosen upstream (e.g. on the contextual activation
+  /// sheet). When set, this panel enters that method's state directly on
+  /// first build instead of showing the Google/email/wallet choice again.
+  final PreferredAuthMethod? preferredAuthMethod;
+
+  /// Called once the preferred method has been acted on, so the caller can
+  /// clear it and avoid re-triggering it on a later rebuild.
+  final VoidCallback? onPreferredAuthMethodConsumed;
+
+  /// Test-only override for [kIsWeb]. The focused web Google continuation
+  /// surface only renders on web, which cannot be toggled in a widget test;
+  /// this lets tests exercise that presentation logic directly.
+  @visibleForTesting
+  final bool? debugIsWebOverride;
 
   /// Where to land after a successful registration.
   ///
@@ -100,6 +119,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _usernameError;
   bool _showCompactEmailForm = false;
   bool _showAlternativeMethods = false;
+  // Set once the visitor asks to leave the focused web Google continuation
+  // surface for the ordinary Google/email/wallet method picker.
+  bool _revealAllRegistrationMethods = false;
+  // Latched in initState from the upstream preferred method. The parent clears
+  // `preferredAuthMethod` as soon as `onPreferredAuthMethodConsumed` fires, so
+  // the focused Google continuation state has to live locally, not be derived
+  // from the widget on every build.
+  bool _preferredGoogleContinuationArmed = false;
   bool _walletFlowOpening = false;
   bool _showInlineWalletFlow = false;
   int _walletInlineInitialStep = 0;
@@ -113,10 +140,66 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _postAuthWalletAddress;
   Object? _postAuthUserId;
 
+  bool get _treatAsWeb => widget.debugIsWebOverride ?? kIsWeb;
+
+  /// Whether the account step should show the focused "continue with Google"
+  /// surface: the visitor already chose Google upstream, and on web the Google
+  /// Identity button still needs a real user click — but the method choice
+  /// should not be presented a second time.
+  bool get _showPreferredGoogleContinuation =>
+      _preferredGoogleContinuationArmed &&
+      AppConfig.enableGoogleAuth &&
+      !_revealAllRegistrationMethods &&
+      !_showCompactEmailForm &&
+      !_showInlineWalletFlow;
+
+  @visibleForTesting
+  bool get debugShowPreferredGoogleContinuation =>
+      _showPreferredGoogleContinuation;
+
   AuthOrigin get _googlePostAuthOrigin =>
       widget.googleAuthOrigin == 'onboarding'
           ? AuthOrigin.googleOnboarding
           : AuthOrigin.google;
+
+  @override
+  void initState() {
+    super.initState();
+    final preferred = widget.preferredAuthMethod;
+    if (preferred == null) return;
+    switch (preferred) {
+      case PreferredAuthMethod.email:
+        // No provider popup involved: land in the email form immediately.
+        _showCompactEmailForm = true;
+        _showAlternativeMethods = true;
+        break;
+      case PreferredAuthMethod.google:
+        if (_treatAsWeb) {
+          // Web cannot auto-click the Google Identity button, but the visitor
+          // already chose Google upstream: render the focused continuation
+          // surface instead of the generic method picker. Latched locally so
+          // it survives the parent clearing `preferredAuthMethod`.
+          _preferredGoogleContinuationArmed = true;
+        } else {
+          // Native Google opens a provider popup that depends on the widget
+          // tree being mounted; defer to the first post-frame callback to
+          // avoid racing that mount.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(_registerWithGoogle());
+          });
+        }
+        break;
+      case PreferredAuthMethod.wallet:
+        // Wallet's inline surface also needs the tree mounted; same deferral.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(_showConnectWalletModal());
+        });
+        break;
+    }
+    widget.onPreferredAuthMethodConsumed?.call();
+  }
 
   @override
   void dispose() {
@@ -219,6 +302,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     // For embedded flows, local build() will show PostAuthLoadingScreen
     // because _postAuthActive is true
   }
+
+  @visibleForTesting
+  bool get debugShowCompactEmailForm => _showCompactEmailForm;
+
+  @visibleForTesting
+  bool get debugShowInlineWalletFlow => _showInlineWalletFlow;
 
   @visibleForTesting
   Future<void> debugTriggerAuthSuccess(
@@ -661,6 +750,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       enableGoogle: enableGoogle,
       showAlternativeMethods: _showAlternativeMethods,
       isGoogleSubmitting: _isGoogleSubmitting,
+      showPreferredGoogleContinuation: _showPreferredGoogleContinuation,
       emailFormShell: AuthMethodsPanelEmailFormShell(
         emailController: _emailController,
         passwordController: _passwordController,
@@ -695,6 +785,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       },
       onShowConnectWalletModal: _showConnectWalletModal,
       onGooglePressed: _registerWithGoogle,
+      onRevealAllRegistrationMethods: () {
+        setState(() => _revealAllRegistrationMethods = true);
+      },
       onWebGoogleAuthResult: (GoogleAuthResult googleResult) async {
         if (_isGoogleSubmitting) {
           return;
