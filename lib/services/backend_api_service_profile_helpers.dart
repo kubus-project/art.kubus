@@ -63,22 +63,21 @@ Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
       snapshotRead: () async {
         final profiles = await service._loadSnapshotDatasetMaps('profiles');
         for (final profile in profiles) {
-          final candidates =
-              <dynamic>[
-                    profile['walletAddress'],
-                    profile['wallet_address'],
-                    profile['wallet'],
-                    profile['profileId'],
-                    profile['profile_id'],
-                    profile['userId'],
-                    profile['user_id'],
-                    profile['publicActorId'],
-                    profile['public_actor_id'],
-                    profile['username'],
-                    profile['id'],
-                  ]
-                  .map((value) => WalletUtils.normalize(value?.toString()))
-                  .where((value) => value.isNotEmpty);
+          final candidates = <dynamic>[
+            profile['walletAddress'],
+            profile['wallet_address'],
+            profile['wallet'],
+            profile['profileId'],
+            profile['profile_id'],
+            profile['userId'],
+            profile['user_id'],
+            profile['publicActorId'],
+            profile['public_actor_id'],
+            profile['username'],
+            profile['id'],
+          ]
+              .map((value) => WalletUtils.normalize(value?.toString()))
+              .where((value) => value.isNotEmpty);
           if (candidates.any(
             (candidate) =>
                 candidate == normalized ||
@@ -102,45 +101,50 @@ Future<Map<String, dynamic>> _backendApiGetProfilesBatchImpl(
 ) async {
   try {
     if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
-    if (service._publicFallbackService.isIpfsFallbackMode) {
+    Future<Map<String, dynamic>> snapshotRead() async {
       final requested = wallets
           .map(WalletUtils.normalize)
           .where((wallet) => wallet.isNotEmpty)
           .toSet();
       final profiles = await service._loadSnapshotDatasetMaps('profiles');
-      final matches = profiles
-          .where((profile) {
-            final candidates =
-                <dynamic>[
-                      profile['walletAddress'],
-                      profile['wallet_address'],
-                      profile['wallet'],
-                      profile['publicActorId'],
-                      profile['public_actor_id'],
-                    ]
-                    .map((value) => WalletUtils.normalize(value?.toString()))
-                    .where((value) => value.isNotEmpty);
-            return candidates.any(requested.contains);
-          })
-          .toList(growable: false);
+      final matches = profiles.where((profile) {
+        final candidates = <dynamic>[
+          profile['walletAddress'],
+          profile['wallet_address'],
+          profile['wallet'],
+          profile['publicActorId'],
+          profile['public_actor_id'],
+        ]
+            .map((value) => WalletUtils.normalize(value?.toString()))
+            .where((value) => value.isNotEmpty);
+        return candidates.any(requested.contains);
+      }).toList(growable: false);
       return {'success': true, 'data': matches, 'source': 'ipfs_snapshot'};
     }
-    await service._ensureAuthBeforeRequest();
-    final response = await service._post(
-      Uri.parse('${service.baseUrl}/api/profiles/batch'),
-      headers: service._getHeaders(),
-      body: jsonEncode({'wallets': wallets}),
-    );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return {'success': true, 'data': data['data'] ?? data};
-    }
-    return {
-      'success': false,
-      'status': response.statusCode,
-      'body': response.body,
-    };
+    return await service._performPublicRead<Map<String, dynamic>>(
+      liveRead: (candidateBaseUrl) async {
+        final response = await service._request(
+          'POST',
+          service._buildApiUri(candidateBaseUrl, '/api/profiles/batch'),
+          includeAuth: false,
+          headers: service._getHeaders(includeAuth: false),
+          body: jsonEncode({'wallets': wallets}),
+          isIdempotent: true,
+          allowImplicitBackendFailover: false,
+        );
+        if (response.statusCode != 200) {
+          throw BackendApiRequestException(
+            statusCode: response.statusCode,
+            path: '/api/profiles/batch',
+            body: response.body,
+          );
+        }
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      },
+      snapshotRead: snapshotRead,
+    );
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.getProfilesBatch failed: $e');
     return {'success': false, 'error': e.toString()};
@@ -266,17 +270,15 @@ Future<Map<String, dynamic>?> _backendApiFindProfileByUsernameImpl(
     }
     for (final entry in profiles) {
       if (entry is! Map<String, dynamic>) continue;
-      final rawUsername =
-          (entry['username'] ??
+      final rawUsername = (entry['username'] ??
                   entry['walletAddress'] ??
                   entry['wallet_address'] ??
                   entry['wallet'])
               ?.toString() ??
           '';
       if (rawUsername.isEmpty) continue;
-      final normalized = rawUsername
-          .replaceFirst(RegExp(r'^@+'), '')
-          .toLowerCase();
+      final normalized =
+          rawUsername.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
       if (normalized == normalizedTarget) {
         return entry;
       }
