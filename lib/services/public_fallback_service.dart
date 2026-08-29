@@ -10,11 +10,7 @@ import '../config/config.dart';
 import 'http_client_factory.dart';
 import 'storage_config.dart';
 
-enum AppRuntimeMode {
-  live,
-  standby,
-  ipfsFallback,
-}
+enum AppRuntimeMode { live, standby, ipfsFallback }
 
 class BackendWritableStatusRecord {
   const BackendWritableStatusRecord({
@@ -49,10 +45,7 @@ class BackendWritableStatusRecord {
 }
 
 class PublicSnapshotDatasetRecord {
-  const PublicSnapshotDatasetRecord({
-    required this.cid,
-    this.generatedAt,
-  });
+  const PublicSnapshotDatasetRecord({required this.cid, this.generatedAt});
 
   final String cid;
   final DateTime? generatedAt;
@@ -118,8 +111,8 @@ class PublicSnapshotRegistryRecord {
 
 class PublicFallbackService extends ChangeNotifier {
   PublicFallbackService._internal()
-      : _client = createPlatformHttpClient(),
-        _mode = AppRuntimeMode.live;
+    : _client = createPlatformHttpClient(),
+      _mode = AppRuntimeMode.live;
 
   static final PublicFallbackService _instance =
       PublicFallbackService._internal();
@@ -134,6 +127,7 @@ class PublicFallbackService extends ChangeNotifier {
     'events',
     'exhibitions',
     'communityFeed',
+    'comments',
   };
 
   static const String _registryCacheKey = 'public_snapshot_registry_cache_v1';
@@ -281,7 +275,8 @@ class PublicFallbackService extends ChangeNotifier {
 
         final hintedMode = _resolveHintedMode(
           primary: _primaryStatus!,
-          standby: _standbyStatus ??
+          standby:
+              _standbyStatus ??
               BackendWritableStatusRecord(
                 baseUrl: AppConfig.standbyApiUrl,
                 reachable: false,
@@ -295,7 +290,8 @@ class PublicFallbackService extends ChangeNotifier {
         );
         final writableMode = _resolveWritableMode(
           primary: _primaryStatus!,
-          standby: _standbyStatus ??
+          standby:
+              _standbyStatus ??
               BackendWritableStatusRecord(
                 baseUrl: AppConfig.standbyApiUrl,
                 reachable: false,
@@ -389,8 +385,9 @@ class PublicFallbackService extends ChangeNotifier {
       }
     }
 
-    final candidateUrls =
-        StorageConfig.resolveAllUrls(AppConfig.publicSnapshotRegistryUrl);
+    final candidateUrls = StorageConfig.resolveAllUrls(
+      AppConfig.publicSnapshotRegistryUrl,
+    );
     if (candidateUrls.isEmpty) {
       return _registryCache;
     }
@@ -398,12 +395,21 @@ class PublicFallbackService extends ChangeNotifier {
     Object? lastError;
     for (final candidateUrl in candidateUrls) {
       try {
-        final response = await _client.get(
-          Uri.parse(candidateUrl),
-          headers: const <String, String>{
-            'Accept': 'application/json',
+        // IPNS is mutable, but public gateway CDNs may cache a prior DNSLink
+        // resolution for far longer than its TTL. A unique query prevents an
+        // outage-mode client from being stuck on a days-old registry.
+        final registryUri = Uri.parse(candidateUrl).replace(
+          queryParameters: <String, String>{
+            ...Uri.parse(candidateUrl).queryParameters,
+            '_snapshot': DateTime.now().millisecondsSinceEpoch.toString(),
           },
-        ).timeout(const Duration(seconds: 8));
+        );
+        final response = await _client
+            .get(
+              registryUri,
+              headers: const <String, String>{'Accept': 'application/json'},
+            )
+            .timeout(const Duration(seconds: 8));
         if (response.statusCode < 200 || response.statusCode >= 300) {
           continue;
         }
@@ -414,7 +420,8 @@ class PublicFallbackService extends ChangeNotifier {
         }
 
         final registry = PublicSnapshotRegistryRecord.fromJson(
-            Map<String, dynamic>.from(decoded));
+          Map<String, dynamic>.from(decoded),
+        );
         if (!_hasRequiredDatasets(registry)) {
           continue;
         }
@@ -469,8 +476,9 @@ class PublicFallbackService extends ChangeNotifier {
       return const <dynamic>[];
     }
 
-    final candidateUrls =
-        StorageConfig.resolveAllUrls('ipfs://${datasetRecord.cid}');
+    final candidateUrls = StorageConfig.resolveAllUrls(
+      'ipfs://${datasetRecord.cid}',
+    );
     if (candidateUrls.isEmpty) {
       return const <dynamic>[];
     }
@@ -478,12 +486,15 @@ class PublicFallbackService extends ChangeNotifier {
     Object? lastError;
     for (final candidateUrl in candidateUrls) {
       try {
-        final response = await _client.get(
-          Uri.parse(candidateUrl),
-          headers: const <String, String>{
-            'Accept': 'application/json',
-          },
-        ).timeout(const Duration(seconds: 8));
+        final response = await _client
+            .get(
+              Uri.parse(candidateUrl),
+              headers: const <String, String>{'Accept': 'application/json'},
+            )
+            // Datasets are immutable and are cached after the first fetch, so
+            // allow a slow public gateway enough time to deliver the initial
+            // outage-mode map snapshot.
+            .timeout(const Duration(seconds: 30));
         if (response.statusCode < 200 || response.statusCode >= 300) {
           continue;
         }
@@ -500,11 +511,7 @@ class PublicFallbackService extends ChangeNotifier {
 
         _datasetCache[normalizedKey] = List<dynamic>.from(items);
         _datasetCidCache[normalizedKey] = datasetRecord.cid;
-        await _persistDataset(
-          normalizedKey,
-          datasetRecord.cid,
-          response.body,
-        );
+        await _persistDataset(normalizedKey, datasetRecord.cid, response.body);
         return List<dynamic>.from(items);
       } catch (error) {
         lastError = error;
@@ -552,16 +559,21 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (_mode == AppRuntimeMode.ipfsFallback) {
-      final deepOutage = _consecutiveDualFailures >=
+      final deepOutage =
+          _consecutiveDualFailures >=
           (AppConfig.backendOutageFailureThreshold * 2);
       if (deepOutage) {
-        return atLeastConfigured(_isAppForeground
-            ? const Duration(seconds: 120)
-            : const Duration(seconds: 300));
+        return atLeastConfigured(
+          _isAppForeground
+              ? const Duration(seconds: 120)
+              : const Duration(seconds: 300),
+        );
       }
-      return atLeastConfigured(_isAppForeground
-          ? const Duration(seconds: 60)
-          : const Duration(seconds: 180));
+      return atLeastConfigured(
+        _isAppForeground
+            ? const Duration(seconds: 60)
+            : const Duration(seconds: 180),
+      );
     }
 
     if (_isAppForeground) {
@@ -590,7 +602,8 @@ class PublicFallbackService extends ChangeNotifier {
 
   Duration _standbyProbeIntervalWhenNotLive() {
     if (_mode == AppRuntimeMode.ipfsFallback) {
-      final deepOutage = _consecutiveDualFailures >=
+      final deepOutage =
+          _consecutiveDualFailures >=
           (AppConfig.backendOutageFailureThreshold * 2);
       if (deepOutage) {
         return _isAppForeground
@@ -607,9 +620,7 @@ class PublicFallbackService extends ChangeNotifier {
         : const Duration(minutes: 4);
   }
 
-  bool _shouldProbeStandbyNow({
-    required BackendWritableStatusRecord primary,
-  }) {
+  bool _shouldProbeStandbyNow({required BackendWritableStatusRecord primary}) {
     if (_isSameBaseUrl(AppConfig.baseApiUrl, AppConfig.standbyApiUrl)) {
       return false;
     }
@@ -619,7 +630,8 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (!primary.reachable || !primary.writable) {
-      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
+      final deepIpfsOutage =
+          _mode == AppRuntimeMode.ipfsFallback &&
           _consecutiveDualFailures >=
               (AppConfig.backendOutageFailureThreshold * 3);
       if (!deepIpfsOutage) {
@@ -634,7 +646,8 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (_mode != AppRuntimeMode.live) {
-      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
+      final deepIpfsOutage =
+          _mode == AppRuntimeMode.ipfsFallback &&
           _consecutiveDualFailures >=
               (AppConfig.backendOutageFailureThreshold * 3);
       if (!deepIpfsOutage) {
@@ -684,16 +697,17 @@ class PublicFallbackService extends ChangeNotifier {
   }
 
   Future<BackendWritableStatusRecord> _fetchWritableStatus(
-      String baseUrl) async {
+    String baseUrl,
+  ) async {
     final localCheckedAt = DateTime.now().toUtc();
     final uri = Uri.parse('${_normalizeBaseUrlValue(baseUrl)}/health/writable');
     try {
-      final response = await _client.get(
-        uri,
-        headers: const <String, String>{
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(
+            uri,
+            headers: const <String, String>{'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 5));
 
       Map<String, dynamic>? payload;
       if (response.body.trim().isNotEmpty) {
@@ -708,18 +722,23 @@ class PublicFallbackService extends ChangeNotifier {
               .toString()
               .trim()
               .toLowerCase();
-      final checkedAt = DateTime.tryParse(
+      final checkedAt =
+          DateTime.tryParse(
             (payload?['checkedAt'] ?? '').toString(),
           )?.toUtc() ??
           localCheckedAt;
-      final writable = response.statusCode == 200 &&
+      final writable =
+          response.statusCode == 200 &&
           (payload?['writable'] == null || payload?['writable'] == true);
-      final reachable = response.statusCode == 200 ||
+      final reachable =
+          response.statusCode == 200 ||
           (response.statusCode == 503 && databaseRole.isNotEmpty);
-      final preferredWriteBaseUrl =
-          _normalizeOptionalBaseUrl(payload?['preferredWriteBaseUrl']);
-      final preferredReadBaseUrl =
-          _normalizeOptionalBaseUrl(payload?['preferredReadBaseUrl']);
+      final preferredWriteBaseUrl = _normalizeOptionalBaseUrl(
+        payload?['preferredWriteBaseUrl'],
+      );
+      final preferredReadBaseUrl = _normalizeOptionalBaseUrl(
+        payload?['preferredReadBaseUrl'],
+      );
       final nodeApiBaseUrl = _normalizeOptionalBaseUrl(
         payload?['nodeApiBaseUrl'] ?? payload?['apiBaseUrl'],
       );
@@ -907,7 +926,8 @@ class PublicFallbackService extends ChangeNotifier {
         return null;
       }
       final registry = PublicSnapshotRegistryRecord.fromJson(
-          Map<String, dynamic>.from(decoded));
+        Map<String, dynamic>.from(decoded),
+      );
       if (!_hasRequiredDatasets(registry)) {
         return null;
       }
@@ -960,20 +980,14 @@ class PublicFallbackService extends ChangeNotifier {
 }
 
 class _RegistryCacheRecord {
-  const _RegistryCacheRecord({
-    required this.record,
-    required this.rawJson,
-  });
+  const _RegistryCacheRecord({required this.record, required this.rawJson});
 
   final PublicSnapshotRegistryRecord record;
   final String rawJson;
 }
 
 class _DatasetCacheRecord {
-  const _DatasetCacheRecord({
-    required this.cachedCid,
-    required this.items,
-  });
+  const _DatasetCacheRecord({required this.cachedCid, required this.items});
 
   final String cachedCid;
   final List<dynamic> items;
