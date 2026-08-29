@@ -25,12 +25,14 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
     required this.enableGoogle,
     required this.showAlternativeMethods,
     required this.isGoogleSubmitting,
+    required this.showPreferredGoogleContinuation,
     required this.emailFormShell,
     required this.inlineWalletSurface,
     required this.onShowCompactEmailForm,
     required this.onToggleAlternativeMethods,
     required this.onShowConnectWalletModal,
     required this.onGooglePressed,
+    required this.onRevealAllRegistrationMethods,
     required this.onWebGoogleAuthResult,
     required this.onWebGoogleAuthError,
   });
@@ -46,12 +48,22 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
   final bool enableGoogle;
   final bool showAlternativeMethods;
   final bool isGoogleSubmitting;
+
+  /// The visitor already chose Google upstream (contextual gate) and this is
+  /// web, where the Google Identity button needs a real user click. Show a
+  /// focused "continue with Google" surface instead of repeating the generic
+  /// Google/email/wallet choice.
+  final bool showPreferredGoogleContinuation;
   final Widget emailFormShell;
   final Widget inlineWalletSurface;
   final VoidCallback onShowCompactEmailForm;
   final ValueChanged<bool> onToggleAlternativeMethods;
   final VoidCallback onShowConnectWalletModal;
   final VoidCallback onGooglePressed;
+
+  /// Drops the focused Google continuation surface and shows the ordinary
+  /// Google/email/wallet registration method picker.
+  final VoidCallback onRevealAllRegistrationMethods;
   final Future<void> Function(GoogleAuthResult googleResult)
       onWebGoogleAuthResult;
   final ValueChanged<Object> onWebGoogleAuthError;
@@ -154,19 +166,67 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
       ),
     );
 
+    final googleContinuation = Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showSectionCopy) ...[
+              Text(
+                l10n.authContinueWithGoogleLabel,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              SizedBox(
+                  height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
+            ],
+            GoogleSignInWebButton(
+              colorScheme: colorScheme,
+              isLoading: isGoogleSubmitting,
+              onAuthResult: onWebGoogleAuthResult,
+              onAuthError: onWebGoogleAuthError,
+            ),
+            SizedBox(height: methodGap),
+            Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                onPressed: onRevealAllRegistrationMethods,
+                style: TextButton.styleFrom(
+                  foregroundColor:
+                      colorScheme.onSurface.withValues(alpha: 0.82),
+                ),
+                child: Text(l10n.authShowOtherOptions),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final Widget child;
+    final String childKey;
+    if (showInlineWalletFlow) {
+      child = inlineWalletSurface;
+      childKey = 'register-wallet-inline';
+    } else if (showPreferredGoogleContinuation) {
+      child = googleContinuation;
+      childKey = 'register-google-continuation';
+    } else {
+      child = constrainedRegisterMethods;
+      childKey = 'register-auth-forms';
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       child: KeyedSubtree(
-        key: ValueKey<String>(
-          showInlineWalletFlow
-              ? 'register-wallet-inline'
-              : 'register-auth-forms',
-        ),
-        child: showInlineWalletFlow
-            ? inlineWalletSurface
-            : constrainedRegisterMethods,
+        key: ValueKey<String>(childKey),
+        child: child,
       ),
     );
   }
