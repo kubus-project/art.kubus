@@ -111,8 +111,8 @@ class PublicSnapshotRegistryRecord {
 
 class PublicFallbackService extends ChangeNotifier {
   PublicFallbackService._internal()
-    : _client = createPlatformHttpClient(),
-      _mode = AppRuntimeMode.live;
+      : _client = createPlatformHttpClient(),
+        _mode = AppRuntimeMode.live;
 
   static final PublicFallbackService _instance =
       PublicFallbackService._internal();
@@ -275,8 +275,7 @@ class PublicFallbackService extends ChangeNotifier {
 
         final hintedMode = _resolveHintedMode(
           primary: _primaryStatus!,
-          standby:
-              _standbyStatus ??
+          standby: _standbyStatus ??
               BackendWritableStatusRecord(
                 baseUrl: AppConfig.standbyApiUrl,
                 reachable: false,
@@ -290,8 +289,7 @@ class PublicFallbackService extends ChangeNotifier {
         );
         final writableMode = _resolveWritableMode(
           primary: _primaryStatus!,
-          standby:
-              _standbyStatus ??
+          standby: _standbyStatus ??
               BackendWritableStatusRecord(
                 baseUrl: AppConfig.standbyApiUrl,
                 reachable: false,
@@ -404,12 +402,10 @@ class PublicFallbackService extends ChangeNotifier {
             '_snapshot': DateTime.now().millisecondsSinceEpoch.toString(),
           },
         );
-        final response = await _client
-            .get(
-              registryUri,
-              headers: const <String, String>{'Accept': 'application/json'},
-            )
-            .timeout(const Duration(seconds: 8));
+        final response = await _client.get(
+          registryUri,
+          headers: const <String, String>{'Accept': 'application/json'},
+        ).timeout(const Duration(seconds: 8));
         if (response.statusCode < 200 || response.statusCode >= 300) {
           continue;
         }
@@ -486,11 +482,10 @@ class PublicFallbackService extends ChangeNotifier {
     Object? lastError;
     for (final candidateUrl in candidateUrls) {
       try {
-        final response = await _client
-            .get(
-              Uri.parse(candidateUrl),
-              headers: const <String, String>{'Accept': 'application/json'},
-            )
+        final response = await _client.get(
+          Uri.parse(candidateUrl),
+          headers: const <String, String>{'Accept': 'application/json'},
+        )
             // Datasets are immutable and are cached after the first fetch, so
             // allow a slow public gateway enough time to deliver the initial
             // outage-mode map snapshot.
@@ -559,8 +554,7 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (_mode == AppRuntimeMode.ipfsFallback) {
-      final deepOutage =
-          _consecutiveDualFailures >=
+      final deepOutage = _consecutiveDualFailures >=
           (AppConfig.backendOutageFailureThreshold * 2);
       if (deepOutage) {
         return atLeastConfigured(
@@ -602,8 +596,7 @@ class PublicFallbackService extends ChangeNotifier {
 
   Duration _standbyProbeIntervalWhenNotLive() {
     if (_mode == AppRuntimeMode.ipfsFallback) {
-      final deepOutage =
-          _consecutiveDualFailures >=
+      final deepOutage = _consecutiveDualFailures >=
           (AppConfig.backendOutageFailureThreshold * 2);
       if (deepOutage) {
         return _isAppForeground
@@ -630,8 +623,7 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (!primary.reachable || !primary.writable) {
-      final deepIpfsOutage =
-          _mode == AppRuntimeMode.ipfsFallback &&
+      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
           _consecutiveDualFailures >=
               (AppConfig.backendOutageFailureThreshold * 3);
       if (!deepIpfsOutage) {
@@ -646,8 +638,7 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (_mode != AppRuntimeMode.live) {
-      final deepIpfsOutage =
-          _mode == AppRuntimeMode.ipfsFallback &&
+      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
           _consecutiveDualFailures >=
               (AppConfig.backendOutageFailureThreshold * 3);
       if (!deepIpfsOutage) {
@@ -702,12 +693,10 @@ class PublicFallbackService extends ChangeNotifier {
     final localCheckedAt = DateTime.now().toUtc();
     final uri = Uri.parse('${_normalizeBaseUrlValue(baseUrl)}/health/writable');
     try {
-      final response = await _client
-          .get(
-            uri,
-            headers: const <String, String>{'Accept': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 5));
+      final response = await _client.get(
+        uri,
+        headers: const <String, String>{'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
 
       Map<String, dynamic>? payload;
       if (response.body.trim().isNotEmpty) {
@@ -722,16 +711,13 @@ class PublicFallbackService extends ChangeNotifier {
               .toString()
               .trim()
               .toLowerCase();
-      final checkedAt =
-          DateTime.tryParse(
+      final checkedAt = DateTime.tryParse(
             (payload?['checkedAt'] ?? '').toString(),
           )?.toUtc() ??
           localCheckedAt;
-      final writable =
-          response.statusCode == 200 &&
+      final writable = response.statusCode == 200 &&
           (payload?['writable'] == null || payload?['writable'] == true);
-      final reachable =
-          response.statusCode == 200 ||
+      final reachable = response.statusCode == 200 ||
           (response.statusCode == 503 && databaseRole.isNotEmpty);
       final preferredWriteBaseUrl = _normalizeOptionalBaseUrl(
         payload?['preferredWriteBaseUrl'],
