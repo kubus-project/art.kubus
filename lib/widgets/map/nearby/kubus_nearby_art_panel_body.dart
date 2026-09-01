@@ -21,7 +21,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     required this.markers,
     required this.basePosition,
     required this.isLoading,
-    required this.travelModeEnabled,
+    required this.viewportScope,
     required this.radiusKm,
     required this.titleKey,
     required this.discoveryProgress,
@@ -42,7 +42,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
   final List<ArtMarker> markers;
   final LatLng? basePosition;
   final bool isLoading;
-  final bool travelModeEnabled;
+  final bool viewportScope;
   final double radiusKm;
   final Key? titleKey;
   final double? discoveryProgress;
@@ -64,8 +64,10 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     switch (sort) {
       case KubusNearbyArtSort.nearest:
         if (base != null) {
-          list.sort((a, b) =>
-              a.getDistanceFrom(base).compareTo(b.getDistanceFrom(base)));
+          list.sort(
+            (a, b) =>
+                a.getDistanceFrom(base).compareTo(b.getDistanceFrom(base)),
+          );
         }
         break;
       case KubusNearbyArtSort.newest:
@@ -110,10 +112,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     );
   }
 
-  Future<void> _handlePrimaryTap(
-    Artwork artwork,
-    LatLng fallback,
-  ) async {
+  Future<void> _handlePrimaryTap(Artwork artwork, LatLng fallback) async {
     await controller.handleArtworkTap(
       artwork: artwork,
       markers: markers,
@@ -138,7 +137,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
             titleKey: titleKey,
             artworkCount: artworks.length,
             discoveryProgress: discoveryProgress,
-            travelModeEnabled: travelModeEnabled,
+            viewportScope: viewportScope,
             radiusKm: radiusKm,
             useGrid: useGrid,
             sort: sort,
@@ -164,30 +163,27 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final artwork = sorted[index];
-                  final marker = controller.findMarkerForArtwork(
-                    artwork,
-                    markers,
-                  );
-                  final resolvedBase = basePosition ?? artwork.position;
-                  final meters = controller.distanceMeters(
-                    from: resolvedBase,
-                    to: artwork.position,
-                  );
-                  final distanceText = controller.formatDistance(meters);
-                  final accent = _subjectColorFor(context, artwork, marker);
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final artwork = sorted[index];
+                final marker = controller.findMarkerForArtwork(
+                  artwork,
+                  markers,
+                );
+                final resolvedBase = basePosition ?? artwork.position;
+                final meters = controller.distanceMeters(
+                  from: resolvedBase,
+                  to: artwork.position,
+                );
+                final distanceText = controller.formatDistance(meters);
+                final accent = _subjectColorFor(context, artwork, marker);
 
-                  return KubusNearbyArtArtworkGridItem(
-                    artwork: artwork,
-                    distanceText: distanceText,
-                    accentColor: accent,
-                    onTap: () => _handlePrimaryTap(artwork, artwork.position),
-                  );
-                },
-                childCount: sorted.length,
-              ),
+                return KubusNearbyArtArtworkGridItem(
+                  artwork: artwork,
+                  distanceText: distanceText,
+                  accentColor: accent,
+                  onTap: () => _handlePrimaryTap(artwork, artwork.position),
+                );
+              }, childCount: sorted.length),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: KubusSpacing.md,

@@ -26,7 +26,10 @@ void main() {
 
   group('MapViewportUtils.expandBounds', () {
     test('expands non-dateline bounds by fraction', () {
-      final bounds = GeoBounds.fromCorners(const LatLng(0, 0), const LatLng(1, 1));
+      final bounds = GeoBounds.fromCorners(
+        const LatLng(0, 0),
+        const LatLng(1, 1),
+      );
 
       final expanded = MapViewportUtils.expandBounds(bounds, 0.2);
       expect(expanded.south, closeTo(-0.2, 1e-9));
@@ -36,7 +39,10 @@ void main() {
     });
 
     test('does not expand dateline-crossing bounds', () {
-      final bounds = GeoBounds.fromCorners(const LatLng(-10, 170), const LatLng(10, -170));
+      final bounds = GeoBounds.fromCorners(
+        const LatLng(-10, 170),
+        const LatLng(10, -170),
+      );
 
       final expanded = MapViewportUtils.expandBounds(bounds, 0.2);
       expect(expanded.south, bounds.south);
@@ -48,20 +54,38 @@ void main() {
 
   group('MapViewportUtils.containsPoint', () {
     test('supports dateline crossing', () {
-      final bounds = GeoBounds.fromCorners(const LatLng(-10, 170), const LatLng(10, -170));
+      final bounds = GeoBounds.fromCorners(
+        const LatLng(-10, 170),
+        const LatLng(10, -170),
+      );
 
-      expect(MapViewportUtils.containsPoint(bounds, const LatLng(0, 175)), isTrue);
-      expect(MapViewportUtils.containsPoint(bounds, const LatLng(0, -175)), isTrue);
-      expect(MapViewportUtils.containsPoint(bounds, const LatLng(0, 0)), isFalse);
-      expect(MapViewportUtils.containsPoint(bounds, const LatLng(20, 175)), isFalse);
+      expect(
+        MapViewportUtils.containsPoint(bounds, const LatLng(0, 175)),
+        isTrue,
+      );
+      expect(
+        MapViewportUtils.containsPoint(bounds, const LatLng(0, -175)),
+        isTrue,
+      );
+      expect(
+        MapViewportUtils.containsPoint(bounds, const LatLng(0, 0)),
+        isFalse,
+      );
+      expect(
+        MapViewportUtils.containsPoint(bounds, const LatLng(20, 175)),
+        isFalse,
+      );
     });
   });
 
-  group('MapViewportUtils.shouldRefetchTravelMode', () {
+  group('MapViewportUtils.shouldRefetchViewport', () {
     test('refetches when missing state', () {
-      final visible = GeoBounds.fromCorners(const LatLng(0, 0), const LatLng(1, 1));
+      final visible = GeoBounds.fromCorners(
+        const LatLng(0, 0),
+        const LatLng(1, 1),
+      );
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: null,
           zoomBucket: 13,
@@ -71,7 +95,7 @@ void main() {
         isTrue,
       );
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: visible,
           zoomBucket: 13,
@@ -81,7 +105,7 @@ void main() {
         isTrue,
       );
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: visible,
           zoomBucket: 13,
@@ -93,9 +117,12 @@ void main() {
     });
 
     test('refetches on zoom bucket change', () {
-      final visible = GeoBounds.fromCorners(const LatLng(0, 0), const LatLng(1, 1));
+      final visible = GeoBounds.fromCorners(
+        const LatLng(0, 0),
+        const LatLng(1, 1),
+      );
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: visible,
           zoomBucket: 15,
@@ -107,10 +134,16 @@ void main() {
     });
 
     test('refetches when viewport escapes loaded bounds', () {
-      final loaded = GeoBounds.fromCorners(const LatLng(0, 0), const LatLng(1, 1));
-      final visible = GeoBounds.fromCorners(const LatLng(2, 2), const LatLng(3, 3));
+      final loaded = GeoBounds.fromCorners(
+        const LatLng(0, 0),
+        const LatLng(1, 1),
+      );
+      final visible = GeoBounds.fromCorners(
+        const LatLng(2, 2),
+        const LatLng(3, 3),
+      );
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: loaded,
           zoomBucket: 13,
@@ -122,10 +155,13 @@ void main() {
     });
 
     test('does not refetch when viewport is contained in loaded bounds', () {
-      final visible = GeoBounds.fromCorners(const LatLng(0, 0), const LatLng(1, 1));
+      final visible = GeoBounds.fromCorners(
+        const LatLng(0, 0),
+        const LatLng(1, 1),
+      );
       final loaded = MapViewportUtils.expandBounds(visible, 0.2);
       expect(
-        MapViewportUtils.shouldRefetchTravelMode(
+        MapViewportUtils.shouldRefetchViewport(
           visibleBounds: visible,
           loadedBounds: loaded,
           zoomBucket: 13,
@@ -140,7 +176,8 @@ void main() {
   group('MapViewportUtils.markerLimitForZoomBucket', () {
     test('is monotonic for standard buckets', () {
       final buckets = <int>[5, 7, 9, 11, 13, 15, 17, 19];
-      final limits = buckets.map(MapViewportUtils.markerLimitForZoomBucket).toList();
+      final limits =
+          buckets.map(MapViewportUtils.markerLimitForZoomBucket).toList();
 
       expect(limits, everyElement(greaterThan(0)));
       for (var i = 1; i < limits.length; i++) {

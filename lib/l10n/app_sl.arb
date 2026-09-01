@@ -1512,22 +1512,6 @@
       "radiusKm": {}
     }
   },
-  "mapNearbyRadiusTooltipWorld": "Radij bližine (Svet)",
-  "@mapNearbyRadiusTooltipWorld": {
-    "description": "Namig za radij bližine, ko je vključen potovalni način (po vsem svetu)."
-  },
-  "mapNearbyRadiusWorldShort": "Radij: Svet",
-  "@mapNearbyRadiusWorldShort": {
-    "description": "Kratek napis v seznamu bližnjih vsebin, ko je vključen potovalni način."
-  },
-  "mapTravelModeStatusTravelling": "Potuješ",
-  "@mapTravelModeStatusTravelling": {
-    "description": "Kratek statusni napis, ko je vključen način potovanja (namesto številčnega radija)."
-  },
-  "mapTravelModeStatusTravellingTooltip": "Način potovanja je vklopljen - prikazujem označevalce v pogledu",
-  "@mapTravelModeStatusTravellingTooltip": {
-    "description": "Namig ob kontroli radija bližine, ko je vključen način potovanja."
-  },
   "mapArArtworkNearbyTitle": "AR umetnina v bližini!",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters} m stran",
   "@mapArArtworkNearbySubtitle": {
@@ -1685,10 +1669,9 @@
   "mapFilterUndiscovered": "Neodkrito",
   "mapFilterArEnabled": "AR pripravljeno",
   "mapFilterFavorites": "Priljubljene",
-  "mapFilterScopeTitle": "Obseg",
-  "mapFilterScopeCurrentViewport": "Trenutni pogled",
+  "mapFilterScopeTitle": "Območje",
+  "mapFilterScopeCurrentViewport": "Območje zemljevida",
   "mapFilterScopeNearMe": "V moji bližini",
-  "mapFilterScopeTravel": "Potovanje",
   "mapFilterDiscoveryStatusTitle": "Stanje odkritja",
   "mapFilterAttributesTitle": "Lastnosti",
   "mapFilterContentLayersTitle": "Vsebinske plasti",
@@ -1732,15 +1715,6 @@
   "mapToolsTitle": "Orodja zemljevida",
   "mapAttributionsTitle": "Avtorstvo zemljevida",
   "mapZoomInTooltip": "Približaj",
-  "mapTravelModeTooltip": "Način potovanja",
-  "mapTravelModeEnableTooltip": "Vklopi način potovanja",
-  "@mapTravelModeEnableTooltip": {
-    "description": "Namig (tooltip) za preklop načina potovanja, ko je trenutno IZKLOPLJEN."
-  },
-  "mapTravelModeDisableTooltip": "Izklopi način potovanja",
-  "@mapTravelModeDisableTooltip": {
-    "description": "Namig (tooltip) za preklop načina potovanja, ko je trenutno VKLOPLJEN."
-  },
   "mapIsometricViewEnableTooltip": "Vklopi izometrični pogled",
   "@mapIsometricViewEnableTooltip": {
     "description": "Namig (tooltip) za preklop izometričnega pogleda, ko je trenutno IZKLOPLJEN."
@@ -1813,14 +1787,6 @@
   "@mapTutorialStepFiltersDesktopBody": {
     "description": "Opis koraka o filtrih (namizno) v interaktivnem vodiču po zemljevidu."
   },
-  "mapTutorialStepTravelTitle": "Način potovanja",
-  "@mapTutorialStepTravelTitle": {
-    "description": "Naslov koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
-  },
-  "mapTutorialStepTravelBody": "Način potovanja naloži označevalce za trenutno viden del zemljevida, da lahko raziskuješ kjerkoli.",
-  "@mapTutorialStepTravelBody": {
-    "description": "Opis koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
-  },
   "mapTutorialStepRecenterTitle": "Nazaj na mojo lokacijo",
   "@mapTutorialStepRecenterTitle": {
     "description": "Naslov koraka za ponovni center (mobilno) v interaktivnem vodiču po zemljevidu."
@@ -1837,11 +1803,6 @@
   "@mapTutorialStepSearchBody": {
     "description": "Opis koraka o iskanju (namizno) v interaktivnem vodiču po zemljevidu."
   },
-  "mapTravelModeTutorialTitle": "Razišči širše območje",
-  "mapTravelModeTutorialBody": "Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.",
-  "mapTravelModeTutorialHint": "Namig: Premakni in približaj/oddalji - označevalci se osvežijo glede na pogled.",
-  "mapTravelModeTutorialGotIt": "Razumem",
-  "mapTravelModeTutorialEnable": "Vključi način potovanja",
   "mapNearbyArtTitle": "Umetnost in kraji v bližini",
   "mapResultsDiscoveredLabel": "{count} rezultatov · {percent}% odkrito",
   "@mapResultsDiscoveredLabel": {

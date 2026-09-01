@@ -65,7 +65,6 @@ bool _markerMatchesQuery(ArtMarker marker, String normalizedQuery) {
 bool _markerMatchesScope(ArtMarker marker, KubusMapFilterContext context) {
   switch (context.state.scope) {
     case KubusMapScope.currentViewport:
-    case KubusMapScope.travel:
       // The loaded marker set already represents the active map viewport.
       return true;
     case KubusMapScope.nearMe:

@@ -1,91 +1,81 @@
 import 'dart:async';
+
 import 'package:latlong2/latlong.dart';
 
+import '../../features/map/filters/map_filter_state.dart';
 import '../../utils/debouncer.dart';
 import '../../utils/geo_bounds.dart';
 import '../../utils/map_marker_helper.dart';
 import '../../utils/map_viewport_utils.dart';
 
-/// Centralizes marker refresh scheduling logic shared by mobile + desktop map screens.
+/// Shared marker-refresh policy for the mobile and desktop maps.
 ///
-/// Responsibilities:
-/// - Debounce refresh triggers (gesture vs. programmatic)
-/// - Decide whether to refresh in radius mode based on distance/time
-/// - Decide whether to refetch in travel mode based on viewport bounds + zoom bucket
-/// - Defer work when the map is not active/ready (caller decides what "pending" means)
-///
-/// This coordinator intentionally does NOT fetch markers directly; it only
-/// orchestrates when the caller should do so.
+/// Camera idle drives [KubusMapScope.currentViewport]. Near Me is deliberately
+/// not camera-driven: callers invoke [refreshNearMeForLocation] only when an
+/// actual user-location fix changes.
 class MapDataCoordinator {
   MapDataCoordinator({
     required bool Function() pollingEnabled,
     required bool Function() mapReady,
+    required KubusMapScope Function() scope,
     required LatLng Function() cameraCenter,
     required double Function() cameraZoom,
-    required bool Function() travelModeEnabled,
     required bool Function() hasMarkers,
     required LatLng? Function() lastFetchCenter,
     required DateTime? Function() lastFetchTime,
-    required GeoBounds? Function() loadedTravelBounds,
-    required int? Function() loadedTravelZoomBucket,
+    required GeoBounds? Function() loadedViewportBounds,
+    required int? Function() loadedViewportZoomBucket,
     required Distance distance,
     required Duration refreshInterval,
     required double refreshDistanceMeters,
     required Future<GeoBounds?> Function() getVisibleBounds,
-    required Future<void> Function({required LatLng center}) refreshRadiusMode,
+    required Future<void> Function({required LatLng center}) refreshNearMe,
     required Future<void> Function({
       required LatLng center,
       required GeoBounds bounds,
       required int zoomBucket,
-    }) refreshTravelMode,
+    }) refreshViewport,
     required void Function({bool force}) queuePendingRefresh,
   })  : _pollingEnabled = pollingEnabled,
         _mapReady = mapReady,
+        _scope = scope,
         _cameraCenter = cameraCenter,
         _cameraZoom = cameraZoom,
-        _travelModeEnabled = travelModeEnabled,
         _hasMarkers = hasMarkers,
         _lastFetchCenter = lastFetchCenter,
         _lastFetchTime = lastFetchTime,
-        _loadedTravelBounds = loadedTravelBounds,
-        _loadedTravelZoomBucket = loadedTravelZoomBucket,
+        _loadedViewportBounds = loadedViewportBounds,
+        _loadedViewportZoomBucket = loadedViewportZoomBucket,
         _distance = distance,
         _refreshInterval = refreshInterval,
         _refreshDistanceMeters = refreshDistanceMeters,
         _getVisibleBounds = getVisibleBounds,
-        _refreshRadiusMode = refreshRadiusMode,
-        _refreshTravelMode = refreshTravelMode,
+        _refreshNearMe = refreshNearMe,
+        _refreshViewport = refreshViewport,
         _queuePendingRefresh = queuePendingRefresh;
 
   final Debouncer _debouncer = Debouncer();
-
   final bool Function() _pollingEnabled;
   final bool Function() _mapReady;
+  final KubusMapScope Function() _scope;
   final LatLng Function() _cameraCenter;
   final double Function() _cameraZoom;
-  final bool Function() _travelModeEnabled;
   final bool Function() _hasMarkers;
-
   final LatLng? Function() _lastFetchCenter;
   final DateTime? Function() _lastFetchTime;
-
-  final GeoBounds? Function() _loadedTravelBounds;
-  final int? Function() _loadedTravelZoomBucket;
-
+  final GeoBounds? Function() _loadedViewportBounds;
+  final int? Function() _loadedViewportZoomBucket;
   final Distance _distance;
   final Duration _refreshInterval;
   final double _refreshDistanceMeters;
-
   final Future<GeoBounds?> Function() _getVisibleBounds;
-  final Future<void> Function({required LatLng center}) _refreshRadiusMode;
+  final Future<void> Function({required LatLng center}) _refreshNearMe;
   final Future<void> Function({
     required LatLng center,
     required GeoBounds bounds,
     required int zoomBucket,
-  }) _refreshTravelMode;
-
+  }) _refreshViewport;
   final void Function({bool force}) _queuePendingRefresh;
-
   bool _disposed = false;
 
   void dispose() {
@@ -93,83 +83,66 @@ class MapDataCoordinator {
     _debouncer.dispose();
   }
 
-  void cancelPending() {
-    _debouncer.cancel();
-  }
+  void cancelPending() => _debouncer.cancel();
 
-  /// Schedules a marker refresh if the refresh conditions are met.
-  ///
-  /// The debounce behavior matches the current screens:
-  /// - Travel mode: ~350–450ms
-  /// - Radius mode: ~800ms (programmatic) or 2s (gesture)
+  /// Called on camera idle. Only viewport scope may make a camera-driven query.
   void queueMarkerRefresh({required bool fromGesture}) {
     if (_disposed) return;
-
     if (!_pollingEnabled()) {
       _queuePendingRefresh(force: false);
       return;
     }
-
-    if (!_mapReady()) return;
+    if (!_mapReady() || _scope() != KubusMapScope.currentViewport) return;
 
     final center = _cameraCenter();
-    final zoom = _cameraZoom();
+    final bucket = MapViewportUtils.zoomBucket(_cameraZoom());
+    _debouncer(
+      fromGesture
+          ? const Duration(milliseconds: 350)
+          : const Duration(milliseconds: 300),
+      () => unawaited(_refreshViewportIfNeeded(center, bucket)),
+    );
+  }
 
-    if (_travelModeEnabled()) {
-      final bucket = MapViewportUtils.zoomBucket(zoom);
-      final debounceTime = fromGesture
-          ? const Duration(milliseconds: 450)
-          : const Duration(milliseconds: 350);
-
-      _debouncer(debounceTime, () {
-        unawaited(_refreshTravel(center: center, zoomBucket: bucket));
-      });
+  /// Called only after a resolved user-location update while Near Me is active.
+  void refreshNearMeForLocation(LatLng userLocation, {bool force = false}) {
+    if (_disposed || _scope() != KubusMapScope.nearMe) return;
+    if (!_pollingEnabled()) {
+      _queuePendingRefresh(force: force);
       return;
     }
-
     final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
-      newCenter: center,
+      newCenter: userLocation,
       lastCenter: _lastFetchCenter(),
       lastFetchTime: _lastFetchTime(),
       distance: _distance,
       refreshInterval: _refreshInterval,
       refreshDistanceMeters: _refreshDistanceMeters,
       hasMarkers: _hasMarkers(),
+      force: force,
     );
-
-    if (!shouldRefresh) return;
-
-    final debounceTime = fromGesture
-        ? const Duration(seconds: 2)
-        : const Duration(milliseconds: 800);
-
-    _debouncer(debounceTime, () {
-      unawaited(_refreshRadiusMode(center: center));
-    });
+    if (shouldRefresh) unawaited(_refreshNearMe(center: userLocation));
   }
 
-  Future<void> _refreshTravel({required LatLng center, required int zoomBucket}) async {
-    if (_disposed) return;
-
+  Future<void> _refreshViewportIfNeeded(LatLng center, int zoomBucket) async {
+    if (_disposed || _scope() != KubusMapScope.currentViewport) return;
     final visibleBounds = await _getVisibleBounds();
-    if (_disposed) return;
-    if (visibleBounds == null) return;
-
-    final shouldRefetch = MapViewportUtils.shouldRefetchTravelMode(
+    if (_disposed || visibleBounds == null) return;
+    if (!MapViewportUtils.shouldRefetchViewport(
       visibleBounds: visibleBounds,
-      loadedBounds: _loadedTravelBounds(),
+      loadedBounds: _loadedViewportBounds(),
       zoomBucket: zoomBucket,
-      loadedZoomBucket: _loadedTravelZoomBucket(),
+      loadedZoomBucket: _loadedViewportZoomBucket(),
       hasMarkers: _hasMarkers(),
-    );
-    if (!shouldRefetch) return;
+    )) {
+      return;
+    }
 
     final queryBounds = MapViewportUtils.expandBounds(
       visibleBounds,
       MapViewportUtils.paddingFractionForZoomBucket(zoomBucket),
     );
-
-    await _refreshTravelMode(
+    await _refreshViewport(
       center: center,
       bounds: queryBounds,
       zoomBucket: zoomBucket,

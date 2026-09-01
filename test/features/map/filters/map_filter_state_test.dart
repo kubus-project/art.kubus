@@ -20,7 +20,7 @@ void main() {
 
     test('reset returns a fresh default state', () {
       final changed = KubusMapFilterState(
-        scope: KubusMapScope.travel,
+        scope: KubusMapScope.nearMe,
         discoveryStatus: KubusMapDiscoveryStatus.discovered,
         arOnly: true,
         favoritesOnly: true,
@@ -36,10 +36,10 @@ void main() {
     test('scope updates replace rather than combine choices', () {
       final state = KubusMapFilterState.defaults()
           .withScope(KubusMapScope.nearMe)
-          .withScope(KubusMapScope.travel);
+          .withScope(KubusMapScope.currentViewport);
 
-      expect(state.scope, KubusMapScope.travel);
-      expect(state.activeFilterCount, 1);
+      expect(state.scope, KubusMapScope.currentViewport);
+      expect(state.activeFilterCount, 0);
     });
 
     test('discovery updates replace rather than combine choices', () {
@@ -91,8 +91,9 @@ void main() {
         KubusMapFilterState.maxNearMeRadiusKm,
       );
       expect(
-        KubusMapFilterState(nearMeRadiusKm: double.negativeInfinity)
-            .nearMeRadiusKm,
+        KubusMapFilterState(
+          nearMeRadiusKm: double.negativeInfinity,
+        ).nearMeRadiusKm,
         KubusMapFilterState.minNearMeRadiusKm,
       );
     });
@@ -109,9 +110,8 @@ void main() {
   group('content-layer invariant', () {
     test('constructor rejects an empty layer set', () {
       expect(
-        () => KubusMapFilterState(
-          visibleContentLayers: const <ArtMarkerType>{},
-        ),
+        () =>
+            KubusMapFilterState(visibleContentLayers: const <ArtMarkerType>{}),
         throwsArgumentError,
       );
     });
@@ -127,15 +127,17 @@ void main() {
       );
 
       expect(identical(result, singleLayer), isTrue);
-      expect(
-          result.visibleContentLayers, <ArtMarkerType>{ArtMarkerType.artwork});
+      expect(result.visibleContentLayers, <ArtMarkerType>{
+        ArtMarkerType.artwork,
+      });
     });
 
     test('layers toggle independently and can be restored together', () {
       final initial = KubusMapFilterState.defaults();
       final hiddenArtwork = initial.toggleContentLayer(ArtMarkerType.artwork);
-      final hiddenArtworkAndEvent =
-          hiddenArtwork.toggleContentLayer(ArtMarkerType.event);
+      final hiddenArtworkAndEvent = hiddenArtwork.toggleContentLayer(
+        ArtMarkerType.event,
+      );
 
       expect(
         hiddenArtworkAndEvent.visibleContentLayers,
@@ -158,8 +160,9 @@ void main() {
 
       layers.add(ArtMarkerType.event);
 
-      expect(
-          state.visibleContentLayers, <ArtMarkerType>{ArtMarkerType.artwork});
+      expect(state.visibleContentLayers, <ArtMarkerType>{
+        ArtMarkerType.artwork,
+      });
       expect(
         () => state.visibleContentLayers.add(ArtMarkerType.event),
         throwsUnsupportedError,
@@ -211,15 +214,11 @@ void main() {
       );
     });
 
-    test('travel scope summary does not expose an irrelevant radius', () {
-      final summary = KubusMapFilterState(
-        scope: KubusMapScope.travel,
-        nearMeRadiusKm: 42,
-      ).activeSummaries.single;
-
-      expect(summary.scope, KubusMapScope.travel);
-      expect(summary.nearMeRadiusKm, isNull);
-      expect(summary.stableKey, 'scope:travel:-');
+    test('geographic scopes contain only map area and near me', () {
+      expect(KubusMapScope.values, <KubusMapScope>[
+        KubusMapScope.currentViewport,
+        KubusMapScope.nearMe,
+      ]);
     });
   });
 

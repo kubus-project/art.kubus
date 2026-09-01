@@ -15,18 +15,15 @@ import 'map_view_mode_controls.dart';
 /// - [mobileRightRail] matches the vertical control stack used in `MapScreen`.
 /// - [desktopToolbar] matches the horizontal glass toolbar used in
 ///   `DesktopMapScreen`.
-enum KubusMapPrimaryControlsLayout {
-  mobileRightRail,
-  desktopToolbar,
-}
+enum KubusMapPrimaryControlsLayout { mobileRightRail, desktopToolbar }
 
 /// Unified primary map controls used by both mobile + desktop map screens.
 ///
 /// This widget is deliberately UI-only:
 /// - It does not read providers or perform any side effects in `build()`.
 /// - It integrates with [KubusMapController] for camera actions (zoom and
-///   reset bearing), while leaving screen-owned flows (create marker, travel
-///   mode, center-on-me) as callbacks.
+///   reset bearing), while leaving screen-owned flows (create marker and
+///   center-on-me) as callbacks.
 ///
 /// Screens remain responsible for:
 /// - feature flags (`AppConfig.isFeatureEnabled(...)`)
@@ -49,13 +46,6 @@ class KubusMapPrimaryControls extends StatelessWidget {
     this.nearbyTooltipWhenActive,
     this.nearbyTooltipWhenInactive,
     this.nearbyIcon = Icons.view_list,
-    this.showTravelModeToggle = false,
-    this.travelModeActive = false,
-    this.onToggleTravelMode,
-    this.travelModeKey,
-    this.travelModeTooltip,
-    this.travelModeTooltipWhenActive,
-    this.travelModeTooltipWhenInactive,
     this.showIsometricViewToggle = false,
     this.isometricViewActive = false,
     this.onToggleIsometricView,
@@ -126,16 +116,6 @@ class KubusMapPrimaryControls extends StatelessWidget {
   final String? nearbyTooltipWhenActive;
   final String? nearbyTooltipWhenInactive;
   final IconData nearbyIcon;
-
-  // --- Travel mode ---
-
-  final bool showTravelModeToggle;
-  final bool travelModeActive;
-  final VoidCallback? onToggleTravelMode;
-  final Key? travelModeKey;
-  final String? travelModeTooltip;
-  final String? travelModeTooltipWhenActive;
-  final String? travelModeTooltipWhenInactive;
 
   // --- Isometric view ---
 
@@ -216,8 +196,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
     final resolvedGap = gap ?? KubusSpacing.sm + KubusSpacing.xxs;
     final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
     final hasModeControls =
-        (showTravelModeToggle && onToggleTravelMode != null) ||
-            (showIsometricViewToggle && onToggleIsometricView != null);
+        showIsometricViewToggle && onToggleIsometricView != null;
 
     final children = <Widget>[];
 
@@ -251,21 +230,10 @@ class KubusMapPrimaryControls extends StatelessWidget {
       children.add(
         MapViewModeControls(
           density: MapViewModeControlsDensity.mobileRail,
-          showTravelModeToggle: showTravelModeToggle,
-          travelModeActive: travelModeActive,
-          onToggleTravelMode: onToggleTravelMode,
           showIsometricViewToggle: showIsometricViewToggle,
           isometricViewActive: isometricViewActive,
           onToggleIsometricView: onToggleIsometricView,
-          travelModeIcon: Icons.travel_explore,
           isometricViewIcon: Icons.filter_tilt_shift,
-          travelModeKey: travelModeKey,
-          travelModeTooltip: _resolveTooltip(
-            active: travelModeActive,
-            fallback: travelModeTooltip,
-            whenActive: travelModeTooltipWhenActive,
-            whenInactive: travelModeTooltipWhenInactive,
-          ),
           isometricViewTooltip: _resolveTooltip(
             active: isometricViewActive,
             fallback: isometricViewTooltip,
@@ -288,16 +256,11 @@ class KubusMapPrimaryControls extends StatelessWidget {
               child: button,
             );
             if (spec.controlKey == null) return semanticButton;
-            return KeyedSubtree(
-              key: spec.controlKey,
-              child: semanticButton,
-            );
+            return KeyedSubtree(key: spec.controlKey, child: semanticButton);
           },
         ),
       );
-      children.add(
-        SizedBox(height: resolvedGap),
-      );
+      children.add(SizedBox(height: resolvedGap));
     }
 
     if (showZoomControls) {
@@ -366,9 +329,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
         ),
       ),
     );
-    children.add(
-      SizedBox(height: resolvedGap),
-    );
+    children.add(SizedBox(height: resolvedGap));
 
     children.add(
       Semantics(
@@ -410,8 +371,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     final accent = accentColor ?? scheme.primary;
     final hasModeControls =
-        (showTravelModeToggle && onToggleTravelMode != null) ||
-            (showIsometricViewToggle && onToggleIsometricView != null);
+        showIsometricViewToggle && onToggleIsometricView != null;
 
     Widget buildDivider() {
       return Container(
@@ -428,21 +388,10 @@ class KubusMapPrimaryControls extends StatelessWidget {
       rowChildren.add(
         MapViewModeControls(
           density: MapViewModeControlsDensity.desktopToolbar,
-          showTravelModeToggle: showTravelModeToggle,
-          travelModeActive: travelModeActive,
-          onToggleTravelMode: onToggleTravelMode,
           showIsometricViewToggle: showIsometricViewToggle,
           isometricViewActive: isometricViewActive,
           onToggleIsometricView: onToggleIsometricView,
-          travelModeIcon: Icons.travel_explore,
           isometricViewIcon: Icons.filter_tilt_shift,
-          travelModeKey: travelModeKey,
-          travelModeTooltip: _resolveTooltip(
-            active: travelModeActive,
-            fallback: travelModeTooltip,
-            whenActive: travelModeTooltipWhenActive,
-            whenInactive: travelModeTooltipWhenInactive,
-          ),
           isometricViewTooltip: _resolveTooltip(
             active: isometricViewActive,
             fallback: isometricViewTooltip,
@@ -467,10 +416,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
               child: button,
             );
             if (spec.controlKey == null) return semanticButton;
-            return KeyedSubtree(
-              key: spec.controlKey,
-              child: semanticButton,
-            );
+            return KeyedSubtree(key: spec.controlKey, child: semanticButton);
           },
         ),
       );
@@ -592,9 +538,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
       ),
     );
 
-    rowChildren.add(
-      const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
-    );
+    rowChildren.add(const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs));
 
     rowChildren.add(
       Semantics(
@@ -629,10 +573,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
         overlayName: 'map-primary-controls',
         backdropRegionId: 'desktop-map-primary-controls',
         enablePlatformBackdropRegion: true,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: rowChildren,
-        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: rowChildren),
       ),
     );
   }

@@ -19,51 +19,54 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('nearby panel radius button and artwork list item callbacks fire',
-      (tester) async {
-    final mapDelegate = _FakeNearbyMapDelegate();
-    final controller = NearbyArtController(map: mapDelegate);
-    var radiusTapCount = 0;
+  testWidgets(
+    'nearby panel radius button and artwork list item callbacks fire',
+    (tester) async {
+      final mapDelegate = _FakeNearbyMapDelegate();
+      final controller = NearbyArtController(map: mapDelegate);
+      var radiusTapCount = 0;
 
-    final artwork = _artwork();
-    final marker = _marker(artworkId: artwork.id);
+      final artwork = _artwork();
+      final marker = _marker(artworkId: artwork.id);
 
-    await tester.pumpWidget(
-      _buildApp(
-        SizedBox(
-          width: 420,
-          height: 640,
-          child: KubusNearbyArtPanel(
-            controller: controller,
-            layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
-            artworks: <Artwork>[artwork],
-            markers: <ArtMarker>[marker],
-            basePosition: const LatLng(46.0569, 14.5058),
-            isLoading: false,
-            travelModeEnabled: false,
-            radiusKm: 2,
-            onRadiusTap: () => radiusTapCount += 1,
+      await tester.pumpWidget(
+        _buildApp(
+          SizedBox(
+            width: 420,
+            height: 640,
+            child: KubusNearbyArtPanel(
+              controller: controller,
+              layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+              artworks: <Artwork>[artwork],
+              markers: <ArtMarker>[marker],
+              basePosition: const LatLng(46.0569, 14.5058),
+              isLoading: false,
+              viewportScope: false,
+              radiusKm: 2,
+              onRadiusTap: () => radiusTapCount += 1,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.radar));
-    await tester.pump();
+      await tester.tap(find.byIcon(Icons.radar));
+      await tester.pump();
 
-    await tester.tap(find.text('Nearby Artwork'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Nearby Artwork'));
+      await tester.pumpAndSettle();
 
-    expect(radiusTapCount, 1);
-    expect(mapDelegate.selectedMarker?.id, marker.id);
-    expect(mapDelegate.animateCallCount, 1);
-    expect(mapDelegate.lastAnimatedTarget, marker.position);
-  });
+      expect(radiusTapCount, 1);
+      expect(mapDelegate.selectedMarker?.id, marker.id);
+      expect(mapDelegate.animateCallCount, 1);
+      expect(mapDelegate.lastAnimatedTarget, marker.position);
+    },
+  );
 
-  testWidgets('nearby panel desktop close button callback fires',
-      (tester) async {
+  testWidgets('nearby panel desktop close button callback fires', (
+    tester,
+  ) async {
     final mapDelegate = _FakeNearbyMapDelegate();
     final controller = NearbyArtController(map: mapDelegate);
     var closeTapCount = 0;
@@ -80,7 +83,7 @@ void main() {
             markers: const <ArtMarker>[],
             basePosition: const LatLng(46.0569, 14.5058),
             isLoading: false,
-            travelModeEnabled: false,
+            viewportScope: false,
             radiusKm: 2,
             onClose: () => closeTapCount += 1,
           ),
@@ -96,35 +99,38 @@ void main() {
     expect(closeTapCount, 1);
   });
 
-  testWidgets('nearby artwork with a spatial archive shows the subtle 3D badge',
-      (tester) async {
-    final controller = NearbyArtController(map: _FakeNearbyMapDelegate());
-    final artwork = _artwork().copyWith(spatialCaptureCount: 2);
-    await tester.pumpWidget(
-      _buildApp(
-        SizedBox(
-          width: 420,
-          height: 640,
-          child: KubusNearbyArtPanel(
-            controller: controller,
-            layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
-            artworks: <Artwork>[artwork],
-            markers: <ArtMarker>[_marker(artworkId: artwork.id)],
-            basePosition: const LatLng(46.0569, 14.5058),
-            isLoading: false,
-            travelModeEnabled: false,
-            radiusKm: 2,
-            onRadiusTap: () {},
+  testWidgets(
+    'nearby artwork with a spatial archive shows the subtle 3D badge',
+    (tester) async {
+      final controller = NearbyArtController(map: _FakeNearbyMapDelegate());
+      final artwork = _artwork().copyWith(spatialCaptureCount: 2);
+      await tester.pumpWidget(
+        _buildApp(
+          SizedBox(
+            width: 420,
+            height: 640,
+            child: KubusNearbyArtPanel(
+              controller: controller,
+              layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+              artworks: <Artwork>[artwork],
+              markers: <ArtMarker>[_marker(artworkId: artwork.id)],
+              basePosition: const LatLng(46.0569, 14.5058),
+              isLoading: false,
+              viewportScope: false,
+              radiusKm: 2,
+              onRadiusTap: () {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.threed_rotation_rounded), findsOneWidget);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.threed_rotation_rounded), findsOneWidget);
+    },
+  );
 
-  testWidgets('nearby panel mobile handle is decorative for semantics',
-      (tester) async {
+  testWidgets('nearby panel mobile handle is decorative for semantics', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     final mapDelegate = _FakeNearbyMapDelegate();
     final controller = NearbyArtController(map: mapDelegate);
@@ -141,7 +147,7 @@ void main() {
             markers: const <ArtMarker>[],
             basePosition: const LatLng(46.0569, 14.5058),
             isLoading: false,
-            travelModeEnabled: false,
+            viewportScope: false,
             radiusKm: 2,
           ),
         ),
@@ -151,8 +157,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.bySemanticsLabel('nearby_art_handle'), findsNothing);
-    expect(find.bySemanticsLabel('Nearby art and places'),
-        findsAtLeastNWidgets(1));
+    expect(
+      find.bySemanticsLabel('Nearby art and places'),
+      findsAtLeastNWidgets(1),
+    );
     semantics.dispose();
   });
 
@@ -171,10 +179,7 @@ void main() {
 
     final finder = find.bySemanticsLabel('Loading: Nearby art and places');
     expect(finder, findsOneWidget);
-    expect(
-      tester.getSemantics(finder).flagsCollection.isLiveRegion,
-      isTrue,
-    );
+    expect(tester.getSemantics(finder).flagsCollection.isLiveRegion, isTrue);
 
     semantics.dispose();
   });
@@ -197,10 +202,7 @@ void main() {
       'Explore different areas or adjust your filters to discover art around you.',
     );
     expect(finder, findsOneWidget);
-    expect(
-      tester.getSemantics(finder).flagsCollection.isLiveRegion,
-      isTrue,
-    );
+    expect(tester.getSemantics(finder).flagsCollection.isLiveRegion, isTrue);
 
     semantics.dispose();
   });

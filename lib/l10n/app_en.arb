@@ -1545,22 +1545,6 @@
       "radiusKm": {}
     }
   },
-  "mapNearbyRadiusTooltipWorld": "Nearby radius (World)",
-  "@mapNearbyRadiusTooltipWorld": {
-    "description": "Tooltip for nearby radius when travel mode is enabled (worldwide)."
-  },
-  "mapNearbyRadiusWorldShort": "Radius: World",
-  "@mapNearbyRadiusWorldShort": {
-    "description": "Short label shown in Nearby Art when travel mode is enabled."
-  },
-  "mapTravelModeStatusTravelling": "You are travelling",
-  "@mapTravelModeStatusTravelling": {
-    "description": "Short status label shown when Travel mode is enabled (instead of a numeric radius)."
-  },
-  "mapTravelModeStatusTravellingTooltip": "Travel mode is on - showing markers in view",
-  "@mapTravelModeStatusTravellingTooltip": {
-    "description": "Tooltip shown near the Nearby Art radius control when Travel mode is enabled."
-  },
   "mapArArtworkNearbyTitle": "Artwork nearby",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters}m away",
   "@mapArArtworkNearbySubtitle": {
@@ -1724,10 +1708,9 @@
   "mapFilterUndiscovered": "Undiscovered",
   "mapFilterArEnabled": "AR ready",
   "mapFilterFavorites": "Favorites",
-  "mapFilterScopeTitle": "Scope",
-  "mapFilterScopeCurrentViewport": "Current viewport",
+  "mapFilterScopeTitle": "Area",
+  "mapFilterScopeCurrentViewport": "Map area",
   "mapFilterScopeNearMe": "Near me",
-  "mapFilterScopeTravel": "Travel",
   "mapFilterDiscoveryStatusTitle": "Discovery status",
   "mapFilterAttributesTitle": "Attributes",
   "mapFilterContentLayersTitle": "Content layers",
@@ -1771,15 +1754,6 @@
   "mapToolsTitle": "Map tools",
   "mapAttributionsTitle": "Map attributions",
   "mapZoomInTooltip": "Zoom in",
-  "mapTravelModeTooltip": "Travel mode",
-  "mapTravelModeEnableTooltip": "Enable travel mode",
-  "@mapTravelModeEnableTooltip": {
-    "description": "Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode)."
-  },
-  "mapTravelModeDisableTooltip": "Disable travel mode",
-  "@mapTravelModeDisableTooltip": {
-    "description": "Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode)."
-  },
   "mapIsometricViewEnableTooltip": "Enable isometric view",
   "@mapIsometricViewEnableTooltip": {
     "description": "Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view)."
@@ -1852,14 +1826,6 @@
   "@mapTutorialStepFiltersDesktopBody": {
     "description": "Body text for the filters step of the interactive map tutorial (desktop)."
   },
-  "mapTutorialStepTravelTitle": "Travel mode",
-  "@mapTutorialStepTravelTitle": {
-    "description": "Title for the travel mode step of the interactive map tutorial."
-  },
-  "mapTutorialStepTravelBody": "Travel mode loads markers for the visible map area so you can explore anywhere.",
-  "@mapTutorialStepTravelBody": {
-    "description": "Body text for the travel mode step of the interactive map tutorial."
-  },
   "mapTutorialStepRecenterTitle": "Recenter",
   "@mapTutorialStepRecenterTitle": {
     "description": "Title for the recenter step of the interactive map tutorial (mobile)."
@@ -1876,11 +1842,6 @@
   "@mapTutorialStepSearchBody": {
     "description": "Body text for the search step of the interactive map tutorial (desktop)."
   },
-  "mapTravelModeTutorialTitle": "Explore beyond nearby",
-  "mapTravelModeTutorialBody": "Travel mode lets you browse markers anywhere. The map loads what's currently in view.",
-  "mapTravelModeTutorialHint": "Tip: Pan and zoom - markers refresh to match the viewport.",
-  "mapTravelModeTutorialGotIt": "Got it",
-  "mapTravelModeTutorialEnable": "Enable travel mode",
   "mapNearbyArtTitle": "Nearby art and places",
   "mapResultsDiscoveredLabel": "{count} results · {percent}% discovered",
   "@mapResultsDiscoveredLabel": {

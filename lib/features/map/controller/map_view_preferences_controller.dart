@@ -5,20 +5,12 @@ import '../map_view_mode_prefs.dart';
 
 @immutable
 class MapViewPreferences {
-  const MapViewPreferences({
-    this.travelModeEnabled = false,
-    this.isometricViewEnabled = false,
-  });
+  const MapViewPreferences({this.isometricViewEnabled = false});
 
-  final bool travelModeEnabled;
   final bool isometricViewEnabled;
 
-  MapViewPreferences copyWith({
-    bool? travelModeEnabled,
-    bool? isometricViewEnabled,
-  }) {
+  MapViewPreferences copyWith({bool? isometricViewEnabled}) {
     return MapViewPreferences(
-      travelModeEnabled: travelModeEnabled ?? this.travelModeEnabled,
       isometricViewEnabled: isometricViewEnabled ?? this.isometricViewEnabled,
     );
   }
@@ -26,12 +18,11 @@ class MapViewPreferences {
   @override
   bool operator ==(Object other) {
     return other is MapViewPreferences &&
-        other.travelModeEnabled == travelModeEnabled &&
         other.isometricViewEnabled == isometricViewEnabled;
   }
 
   @override
-  int get hashCode => Object.hash(travelModeEnabled, isometricViewEnabled);
+  int get hashCode => isometricViewEnabled.hashCode;
 }
 
 /// Persists + exposes map view mode preferences shared by mobile and desktop.
@@ -55,13 +46,10 @@ class MapViewPreferencesController extends ChangeNotifier {
   Future<MapViewPreferences> load() async {
     try {
       final prefs = await _sharedPreferencesLoader();
-      final travelEnabled = await MapViewModePrefs.loadTravelModeEnabled(prefs);
-      final isometricEnabled =
-          await MapViewModePrefs.loadIsometricViewEnabled(prefs);
-      final next = MapViewPreferences(
-        travelModeEnabled: travelEnabled,
-        isometricViewEnabled: isometricEnabled,
+      final isometricEnabled = await MapViewModePrefs.loadIsometricViewEnabled(
+        prefs,
       );
+      final next = MapViewPreferences(isometricViewEnabled: isometricEnabled);
       _hasLoaded = true;
       _setValue(next);
     } catch (_) {
@@ -69,20 +57,6 @@ class MapViewPreferencesController extends ChangeNotifier {
       _hasLoaded = true;
     }
     return _value;
-  }
-
-  Future<void> setTravelMode(bool enabled) async {
-    _setValue(_value.copyWith(travelModeEnabled: enabled));
-    try {
-      final prefs = await _sharedPreferencesLoader();
-      await MapViewModePrefs.persistTravelModeEnabled(prefs, enabled);
-    } catch (_) {
-      // Best-effort persistence.
-    }
-  }
-
-  Future<void> setTravelModeEnabled(bool enabled) async {
-    await setTravelMode(enabled);
   }
 
   Future<void> setIsometric(bool enabled) async {

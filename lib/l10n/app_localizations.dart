@@ -62,15 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
-
-  static String _supportedLocaleName(String locale) {
-    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
-    return switch (localeName) {
-      'en' || 'sl' => localeName,
-      _ => 'sl',
-    };
-  }
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -78,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -91,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -337,8 +327,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -386,8 +375,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -465,8 +453,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4612,8 +4599,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -7603,30 +7589,6 @@ abstract class AppLocalizations {
   /// **'Nearby radius ({radiusKm} km)'**
   String mapNearbyRadiusTooltip(Object radiusKm);
 
-  /// Tooltip for nearby radius when travel mode is enabled (worldwide).
-  ///
-  /// In en, this message translates to:
-  /// **'Nearby radius (World)'**
-  String get mapNearbyRadiusTooltipWorld;
-
-  /// Short label shown in Nearby Art when travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Radius: World'**
-  String get mapNearbyRadiusWorldShort;
-
-  /// Short status label shown when Travel mode is enabled (instead of a numeric radius).
-  ///
-  /// In en, this message translates to:
-  /// **'You are travelling'**
-  String get mapTravelModeStatusTravelling;
-
-  /// Tooltip shown near the Nearby Art radius control when Travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode is on - showing markers in view'**
-  String get mapTravelModeStatusTravellingTooltip;
-
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:
@@ -8356,13 +8318,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapFilterScopeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Scope'**
+  /// **'Area'**
   String get mapFilterScopeTitle;
 
   /// No description provided for @mapFilterScopeCurrentViewport.
   ///
   /// In en, this message translates to:
-  /// **'Current viewport'**
+  /// **'Map area'**
   String get mapFilterScopeCurrentViewport;
 
   /// No description provided for @mapFilterScopeNearMe.
@@ -8370,12 +8332,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Near me'**
   String get mapFilterScopeNearMe;
-
-  /// No description provided for @mapFilterScopeTravel.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel'**
-  String get mapFilterScopeTravel;
 
   /// No description provided for @mapFilterDiscoveryStatusTitle.
   ///
@@ -8485,24 +8441,6 @@ abstract class AppLocalizations {
   /// **'Zoom in'**
   String get mapZoomInTooltip;
 
-  /// No description provided for @mapTravelModeTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTravelModeTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeEnableTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Disable travel mode'**
-  String get mapTravelModeDisableTooltip;
-
   /// Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view).
   ///
   /// In en, this message translates to:
@@ -8611,18 +8549,6 @@ abstract class AppLocalizations {
   /// **'Open the Filters panel to refine results (type, distance, discovery status, and more).'**
   String get mapTutorialStepFiltersDesktopBody;
 
-  /// Title for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTutorialStepTravelTitle;
-
-  /// Body text for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode loads markers for the visible map area so you can explore anywhere.'**
-  String get mapTutorialStepTravelBody;
-
   /// Title for the recenter step of the interactive map tutorial (mobile).
   ///
   /// In en, this message translates to:
@@ -8646,36 +8572,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search for artworks, artists, institutions, or places to jump to them quickly.'**
   String get mapTutorialStepSearchBody;
-
-  /// No description provided for @mapTravelModeTutorialTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Explore beyond nearby'**
-  String get mapTravelModeTutorialTitle;
-
-  /// No description provided for @mapTravelModeTutorialBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.'**
-  String get mapTravelModeTutorialBody;
-
-  /// No description provided for @mapTravelModeTutorialHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Tip: Pan and zoom - markers refresh to match the viewport.'**
-  String get mapTravelModeTutorialHint;
-
-  /// No description provided for @mapTravelModeTutorialGotIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Got it'**
-  String get mapTravelModeTutorialGotIt;
-
-  /// No description provided for @mapTravelModeTutorialEnable.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeTutorialEnable;
 
   /// No description provided for @mapNearbyArtTitle.
   ///
@@ -13223,8 +13119,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -13320,8 +13215,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -13495,8 +13389,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16580,8 +16473,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -17391,8 +17283,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20818,8 +20709,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -24233,8 +24123,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -24558,8 +24447,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26697,10 +26585,22 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
+  /// No description provided for @analyticsBlockedOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
   String get analyticsBlockedOpenSettings;
 
+  /// No description provided for @analyticsBlockedUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics unavailable'**
   String get analyticsBlockedUnavailableTitle;
 
+  /// No description provided for @analyticsBlockedUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are not available in this app build.'**
   String get analyticsBlockedUnavailableDescription;
 
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
@@ -26959,8 +26859,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -29099,8 +28998,7 @@ abstract class AppLocalizations {
   String get artworkCreatorAttendanceImageTooSmall;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -29109,25 +29007,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

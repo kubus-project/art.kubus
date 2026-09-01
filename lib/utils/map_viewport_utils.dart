@@ -6,7 +6,7 @@ import 'geo_bounds.dart';
 
 /// Utilities for viewport-based marker loading on MapLibre.
 ///
-/// Travel Mode fetches markers using a bounds query. To keep panning smooth,
+/// Viewport loading fetches markers using a bounds query. To keep panning smooth,
 /// we expand the visible bounds by a padding factor and only refetch when the
 /// viewport escapes the previously loaded region (or when zoom crosses
 /// density buckets).
@@ -39,7 +39,7 @@ class MapViewportUtils {
 
   /// Marker fetch limit per zoom bucket.
   ///
-  /// Travel Mode can cover large areas quickly; this keeps payload sizes bounded
+  /// Viewport queries can cover large areas quickly; this keeps payload sizes bounded
   /// while still returning enough density for clustering and exploration.
   static int markerLimitForZoomBucket(int bucket) {
     if (bucket <= 7) return 300;
@@ -51,9 +51,9 @@ class MapViewportUtils {
     return 2600;
   }
 
-  /// Returns `true` if Travel Mode should refetch based on bounds coverage and
+  /// Returns `true` if the viewport should refetch based on bounds coverage and
   /// zoom bucket changes.
-  static bool shouldRefetchTravelMode({
+  static bool shouldRefetchViewport({
     required GeoBounds visibleBounds,
     required GeoBounds? loadedBounds,
     required int zoomBucket,
@@ -88,12 +88,7 @@ class MapViewportUtils {
     final west = (bounds.west - lngPad).clamp(-180.0, 180.0);
     final east = (bounds.east + lngPad).clamp(-180.0, 180.0);
 
-    return GeoBounds(
-      south: south,
-      west: west,
-      north: north,
-      east: east,
-    );
+    return GeoBounds(south: south, west: west, north: north, east: east);
   }
 
   /// Returns `true` if [outer] fully contains [inner] (all four corners).
