@@ -50,14 +50,14 @@ class MapArtworkFiltering {
           !artwork.title.toLowerCase().contains(normalizedQuery) &&
           !artwork.artist.toLowerCase().contains(normalizedQuery) &&
           !artwork.category.toLowerCase().contains(normalizedQuery) &&
-          !artwork.tags
-              .any((tag) => tag.toLowerCase().contains(normalizedQuery))) {
+          !artwork.tags.any(
+            (tag) => tag.toLowerCase().contains(normalizedQuery),
+          )) {
         return false;
       }
 
       switch (state.scope) {
         case KubusMapScope.currentViewport:
-        case KubusMapScope.travel:
           break;
         case KubusMapScope.nearMe:
           final base = context.basePosition;

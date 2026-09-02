@@ -49,7 +49,7 @@ Attach anchors using `KeyedSubtree(key: ..., child: ...)` when the target widget
 
 Good targets:
 
-- Primary action buttons (filters, travel mode, add marker)
+- Primary action buttons (filters, location, add marker)
 - Panels/titles that the user can visually associate with a feature
 - Search field
 - Type filter chips
@@ -81,7 +81,7 @@ Guidelines for steps:
 - Explain **markers & types**.
 - Teach **nearby/results list**.
 - Teach **filters**.
-- Teach optional power features last (e.g. **Travel mode**).
+- Teach optional power features last (e.g. **isometric view**).
 
 If the step should open a panel or toggle a state, use `onTargetTap` (or trigger it programmatically when the step becomes active).
 
@@ -125,7 +125,7 @@ If a step references a gated feature:
 
 - Only include the step when `AppConfig.isFeatureEnabled('flag')` is true.
 
-Example: Travel mode step only when `mapTravelMode` is enabled.
+Example: an isometric-view step only when `mapIsometricView` is enabled.
 
 ---
 
@@ -163,7 +163,7 @@ Tutorial UI must follow the app’s **glassmorphism + tokens** system:
 3. Create marker
 4. Nearby art list
 5. Filters
-6. Travel mode (optional)
+6. Isometric view (optional)
 7. Recenter
 
 ### Map screen (desktop)
@@ -173,7 +173,7 @@ Tutorial UI must follow the app’s **glassmorphism + tokens** system:
 3. Nearby panel
 4. Type chips
 5. Filters panel
-6. Travel mode (optional)
+6. Isometric view (optional)
 7. Search
 
 ---

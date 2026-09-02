@@ -1,6 +1,8 @@
 import 'package:art_kubus/features/map/controller/kubus_map_controller.dart';
 import 'package:art_kubus/features/map/map_layers_manager.dart';
 import 'package:art_kubus/features/map/map_overlay_stack.dart';
+import 'package:art_kubus/features/map/shared/map_marker_chrome_occlusion_plan.dart';
+import 'package:art_kubus/features/map/shared/map_passive_chrome_visibility.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/utils/kubus_map_tokens.dart';
@@ -15,47 +17,50 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'hidden marker overlay with cursor does not block Flutter buttons',
-      (tester) async {
-    var outsideTapCount = 0;
+    'hidden marker overlay with cursor does not block Flutter buttons',
+    (tester) async {
+      var outsideTapCount = 0;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Stack(
-            children: [
-              Positioned(
-                left: 24,
-                top: 24,
-                child: ElevatedButton(
-                  key: const ValueKey<String>('under_marker_overlay_button'),
-                  onPressed: () => outsideTapCount += 1,
-                  child: const Text('Under overlay'),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 24,
+                  top: 24,
+                  child: ElevatedButton(
+                    key: const ValueKey<String>('under_marker_overlay_button'),
+                    onPressed: () => outsideTapCount += 1,
+                    child: const Text('Under overlay'),
+                  ),
                 ),
-              ),
-              KubusMapMarkerOverlayLayer(
-                content: null,
-                contentKey: const ValueKey<String>('hidden_marker_overlay'),
-                cursor: SystemMouseCursors.basic,
-                blockMapGestures: false,
-                dismissOnBackdropTap: false,
-                onDismiss: () {},
-              ),
-            ],
+                KubusMapMarkerOverlayLayer(
+                  content: null,
+                  contentKey: const ValueKey<String>('hidden_marker_overlay'),
+                  cursor: SystemMouseCursors.basic,
+                  blockMapGestures: false,
+                  dismissOnBackdropTap: false,
+                  onDismiss: () {},
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('under_marker_overlay_button')));
-    await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('under_marker_overlay_button')),
+      );
+      await tester.pump();
 
-    expect(outsideTapCount, 1);
-  });
+      expect(outsideTapCount, 1);
+    },
+  );
 
-  testWidgets('marker overlay layer does not block controls outside the card',
-      (tester) async {
+  testWidgets('marker overlay layer does not block controls outside the card', (
+    tester,
+  ) async {
     var outsideTapCount = 0;
     var cardTapCount = 0;
 
@@ -85,8 +90,9 @@ void main() {
                     ),
                   ),
                 ),
-                contentKey:
-                    const ValueKey<String>('visible_marker_overlay_content'),
+                contentKey: const ValueKey<String>(
+                  'visible_marker_overlay_content',
+                ),
                 cursor: SystemMouseCursors.basic,
                 blockMapGestures: false,
                 dismissOnBackdropTap: false,
@@ -109,8 +115,9 @@ void main() {
     expect(cardTapCount, 1);
   });
 
-  testWidgets('reduced marker overlay motion uses no spatial transitions',
-      (tester) async {
+  testWidgets('reduced marker overlay motion uses no spatial transitions', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -120,8 +127,9 @@ void main() {
                 content: const Center(child: Text('Preview')),
                 contentKey: const ValueKey<String>('reduced_preview'),
                 onDismiss: () {},
-                transitionMotion:
-                    KubusMapMotion.defaults(reduceMotion: true).overlayEnter,
+                transitionMotion: KubusMapMotion.defaults(
+                  reduceMotion: true,
+                ).overlayEnter,
               ),
             ],
           ),
@@ -145,95 +153,101 @@ void main() {
   });
 
   testWidgets(
-      'filter chips and primary controls remain clickable under overlay',
-      (tester) async {
-    final controller = _buildMapController();
-    var chipToggleCount = 0;
-    var createMarkerCount = 0;
-    var centerOnMeCount = 0;
+    'filter chips and primary controls remain clickable under overlay',
+    (tester) async {
+      final controller = _buildMapController();
+      var chipToggleCount = 0;
+      var createMarkerCount = 0;
+      var centerOnMeCount = 0;
 
-    addTearDown(controller.dispose);
+      addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('en'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              final l10n = AppLocalizations.of(context)!;
-              return Stack(
-                children: [
-                  Positioned(
-                    left: 16,
-                    top: 16,
-                    child: KubusMapMarkerLayerChips(
-                      l10n: l10n,
-                      visibility: <ArtMarkerType, bool>{
-                        for (final type in ArtMarkerType.values) type: true,
-                      },
-                      onToggle: (type, nextSelected) => chipToggleCount += 1,
-                    ),
-                  ),
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: KubusMapPrimaryControls(
-                      controller: controller,
-                      layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-                      onCenterOnMe: () => centerOnMeCount += 1,
-                      onCreateMarker: () => createMarkerCount += 1,
-                      centerOnMeActive: false,
-                      centerOnMeKey:
-                          const ValueKey<String>('center_on_me_control'),
-                      createMarkerKey:
-                          const ValueKey<String>('create_marker_control'),
-                    ),
-                  ),
-                  KubusMapMarkerOverlayLayer(
-                    content: Center(
-                      child: Container(
-                        width: 180,
-                        height: 100,
-                        color: Colors.black12,
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                return Stack(
+                  children: [
+                    Positioned(
+                      left: 16,
+                      top: 16,
+                      child: KubusMapMarkerLayerChips(
+                        l10n: l10n,
+                        visibility: <ArtMarkerType, bool>{
+                          for (final type in ArtMarkerType.values) type: true,
+                        },
+                        onToggle: (type, nextSelected) => chipToggleCount += 1,
                       ),
                     ),
-                    contentKey:
-                        const ValueKey<String>('marker_overlay_card_content'),
-                    blockMapGestures: false,
-                    dismissOnBackdropTap: false,
-                    onDismiss: () {},
-                  ),
-                ],
-              );
-            },
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: KubusMapPrimaryControls(
+                        controller: controller,
+                        layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+                        onCenterOnMe: () => centerOnMeCount += 1,
+                        onCreateMarker: () => createMarkerCount += 1,
+                        centerOnMeActive: false,
+                        centerOnMeKey: const ValueKey<String>(
+                          'center_on_me_control',
+                        ),
+                        createMarkerKey: const ValueKey<String>(
+                          'create_marker_control',
+                        ),
+                      ),
+                    ),
+                    KubusMapMarkerOverlayLayer(
+                      content: Center(
+                        child: Container(
+                          width: 180,
+                          height: 100,
+                          color: Colors.black12,
+                        ),
+                      ),
+                      contentKey: const ValueKey<String>(
+                        'marker_overlay_card_content',
+                      ),
+                      blockMapGestures: false,
+                      dismissOnBackdropTap: false,
+                      onDismiss: () {},
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(KubusGlassChip).first);
-    await tester.pump();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('create_marker_control')));
-    await tester.pump();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('center_on_me_control')));
-    await tester.pump();
+      await tester.tap(find.byType(KubusGlassChip).first);
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('create_marker_control')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('center_on_me_control')),
+      );
+      await tester.pump();
 
-    expect(chipToggleCount, 1);
-    expect(createMarkerCount, 1);
-    expect(centerOnMeCount, 1);
-  });
+      expect(chipToggleCount, 1);
+      expect(createMarkerCount, 1);
+      expect(centerOnMeCount, 1);
+    },
+  );
 
-  testWidgets('desktop primary control optional callbacks fire',
-      (tester) async {
+  testWidgets('desktop primary control optional callbacks fire', (
+    tester,
+  ) async {
     final controller = _buildMapController();
     var nearbyToggleCount = 0;
-    var travelToggleCount = 0;
     var isometricToggleCount = 0;
 
     addTearDown(controller.dispose);
@@ -252,9 +266,6 @@ void main() {
               showNearbyToggle: true,
               onToggleNearby: () => nearbyToggleCount += 1,
               nearbyKey: const ValueKey<String>('nearby_toggle_control'),
-              showTravelModeToggle: true,
-              onToggleTravelMode: () => travelToggleCount += 1,
-              travelModeKey: const ValueKey<String>('travel_toggle_control'),
               showIsometricViewToggle: true,
               onToggleIsometricView: () => isometricToggleCount += 1,
               isometricViewTooltip: 'Isometric',
@@ -266,22 +277,20 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('nearby_toggle_control')));
-    await tester.pump();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('travel_toggle_control')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('nearby_toggle_control')),
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('Isometric'));
     await tester.pump();
 
     expect(nearbyToggleCount, 1);
-    expect(travelToggleCount, 1);
     expect(isometricToggleCount, 1);
   });
 
-  testWidgets('primary map controls expose user-facing semantics labels',
-      (tester) async {
+  testWidgets('primary map controls expose user-facing semantics labels', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     final controller = _buildMapController();
 
@@ -319,6 +328,49 @@ void main() {
     expect(find.bySemanticsLabel('map_center_on_me'), findsNothing);
     expect(find.bySemanticsLabel('map_create_marker'), findsNothing);
     semantics.dispose();
+  });
+
+  testWidgets('mobile tools control mounts beside its measured controls rail',
+      (tester) async {
+    final controller = _buildMapController();
+    final controlsKey = GlobalKey();
+    final toolsKey = GlobalKey();
+    final plans = ValueNotifier<MapMarkerChromeOcclusionPlan>(
+      MapMarkerChromeOcclusionPlan.visible(revision: 1),
+    );
+    var toolsTapCount = 0;
+    addTearDown(controller.dispose);
+    addTearDown(plans.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapPassiveChromeVisibility(
+            planListenable: plans,
+            isOccluded: (plan) => plan.controlsOccluded,
+            measurementKey: controlsKey,
+            duration: Duration.zero,
+            curve: Curves.linear,
+            child: KubusMapPrimaryControls(
+              controller: controller,
+              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+              onCenterOnMe: () {},
+              onCreateMarker: () {},
+              centerOnMeActive: false,
+              showSecondaryTools: true,
+              onOpenSecondaryTools: () => toolsTapCount += 1,
+              secondaryToolsKey: toolsKey,
+              secondaryToolsTooltip: 'Map tools',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(toolsKey));
+    await tester.pump();
+    expect(toolsTapCount, 1);
   });
 }
 

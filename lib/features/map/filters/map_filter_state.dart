@@ -9,17 +9,10 @@ enum KubusMapScope {
 
   /// Query around the user's location using [KubusMapFilterState.nearMeRadiusKm].
   nearMe,
-
-  /// Follow the viewport while the user deliberately explores another area.
-  travel,
 }
 
 /// Mutually exclusive discovery state applied to visible map content.
-enum KubusMapDiscoveryStatus {
-  all,
-  undiscovered,
-  discovered,
-}
+enum KubusMapDiscoveryStatus { all, undiscovered, discovered }
 
 /// Semantic kind of an active-filter summary.
 ///
@@ -103,13 +96,8 @@ class KubusMapFilterSummary {
   }
 
   @override
-  int get hashCode => Object.hash(
-        kind,
-        scope,
-        nearMeRadiusKm,
-        discoveryStatus,
-        contentLayer,
-      );
+  int get hashCode =>
+      Object.hash(kind, scope, nearMeRadiusKm, discoveryStatus, contentLayer);
 }
 
 /// Immutable, typed source of truth for map filtering.
@@ -209,9 +197,7 @@ class KubusMapFilterState {
       );
     }
     if (discoveryStatus != KubusMapDiscoveryStatus.all) {
-      summaries.add(
-        KubusMapFilterSummary.discoveryStatus(discoveryStatus),
-      );
+      summaries.add(KubusMapFilterSummary.discoveryStatus(discoveryStatus));
     }
     if (arOnly) {
       summaries.add(const KubusMapFilterSummary.arOnly());
@@ -268,14 +254,10 @@ class KubusMapFilterState {
   KubusMapFilterState withScope(KubusMapScope value) => copyWith(scope: value);
 
   /// Updates the radius and activates the scope it belongs to.
-  KubusMapFilterState withNearMeRadiusKm(double value) => copyWith(
-        scope: KubusMapScope.nearMe,
-        nearMeRadiusKm: value,
-      );
+  KubusMapFilterState withNearMeRadiusKm(double value) =>
+      copyWith(scope: KubusMapScope.nearMe, nearMeRadiusKm: value);
 
-  KubusMapFilterState withDiscoveryStatus(
-    KubusMapDiscoveryStatus value,
-  ) =>
+  KubusMapFilterState withDiscoveryStatus(KubusMapDiscoveryStatus value) =>
       copyWith(discoveryStatus: value);
 
   KubusMapFilterState withArOnly(bool value) => copyWith(arOnly: value);

@@ -4302,19 +4302,6 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get mapNearbyRadiusTooltipWorld => 'Radij bližine (Svet)';
-
-  @override
-  String get mapNearbyRadiusWorldShort => 'Radij: Svet';
-
-  @override
-  String get mapTravelModeStatusTravelling => 'Potuješ';
-
-  @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Način potovanja je vklopljen - prikazujem označevalce v pogledu';
-
-  @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
 
   @override
@@ -4717,16 +4704,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapFilterFavorites => 'Priljubljene';
 
   @override
-  String get mapFilterScopeTitle => 'Obseg';
+  String get mapFilterScopeTitle => 'Območje';
 
   @override
-  String get mapFilterScopeCurrentViewport => 'Trenutni pogled';
+  String get mapFilterScopeCurrentViewport => 'Območje zemljevida';
 
   @override
   String get mapFilterScopeNearMe => 'V moji bližini';
-
-  @override
-  String get mapFilterScopeTravel => 'Potovanje';
 
   @override
   String get mapFilterDiscoveryStatusTitle => 'Stanje odkritja';
@@ -4787,15 +4771,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapZoomInTooltip => 'Približaj';
-
-  @override
-  String get mapTravelModeTooltip => 'Način potovanja';
-
-  @override
-  String get mapTravelModeEnableTooltip => 'Vklopi način potovanja';
-
-  @override
-  String get mapTravelModeDisableTooltip => 'Izklopi način potovanja';
 
   @override
   String get mapIsometricViewEnableTooltip => 'Vklopi izometrični pogled';
@@ -4861,13 +4836,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odpri panel s filtri za natančnejšo izbiro (vrsta, razdalja, odkrito/neodkrito …).';
 
   @override
-  String get mapTutorialStepTravelTitle => 'Način potovanja';
-
-  @override
-  String get mapTutorialStepTravelBody =>
-      'Način potovanja naloži označevalce za trenutno viden del zemljevida, da lahko raziskuješ kjerkoli.';
-
-  @override
   String get mapTutorialStepRecenterTitle => 'Nazaj na mojo lokacijo';
 
   @override
@@ -4880,23 +4848,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get mapTutorialStepSearchBody =>
       'Poišči umetnine, umetnike, institucije ali kraje in hitro skoči na rezultat.';
-
-  @override
-  String get mapTravelModeTutorialTitle => 'Razišči širše območje';
-
-  @override
-  String get mapTravelModeTutorialBody =>
-      'Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.';
-
-  @override
-  String get mapTravelModeTutorialHint =>
-      'Namig: Premakni in približaj/oddalji - označevalci se osvežijo glede na pogled.';
-
-  @override
-  String get mapTravelModeTutorialGotIt => 'Razumem';
-
-  @override
-  String get mapTravelModeTutorialEnable => 'Vključi način potovanja';
 
   @override
   String get mapNearbyArtTitle => 'Umetnost in kraji v bližini';

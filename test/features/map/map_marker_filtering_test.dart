@@ -69,10 +69,7 @@ void main() {
     ];
 
     test('defaults keep every valid-position marker', () {
-      final result = filterVisibleMapMarkers(
-        markers: all,
-        context: _context(),
-      );
+      final result = filterVisibleMapMarkers(markers: all, context: _context());
 
       expect(
         _ids(result),
@@ -108,18 +105,12 @@ void main() {
       expect(_ids(result), _ids([named, described, categorized, tagged]));
     });
 
-    test('current viewport and travel do not apply the near-me radius', () {
-      for (final scope in <KubusMapScope>[
-        KubusMapScope.currentViewport,
-        KubusMapScope.travel,
-      ]) {
+    test('current viewport does not apply the near-me radius', () {
+      for (final scope in <KubusMapScope>[KubusMapScope.currentViewport]) {
         final result = filterVisibleMapMarkers(
           markers: <ArtMarker>[near, far],
           context: _context(
-            state: KubusMapFilterState(
-              scope: scope,
-              nearMeRadiusKm: 1,
-            ),
+            state: KubusMapFilterState(scope: scope, nearMeRadiusKm: 1),
             basePosition: near.position,
           ),
         );
@@ -295,9 +286,7 @@ void main() {
         context: _context(
           state: KubusMapFilterState(
             favoritesOnly: true,
-            visibleContentLayers: const <ArtMarkerType>{
-              ArtMarkerType.artwork,
-            },
+            visibleContentLayers: const <ArtMarkerType>{ArtMarkerType.artwork},
           ),
           query: 'does-not-match',
         ),

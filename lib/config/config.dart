@@ -98,9 +98,6 @@ class AppConfig {
   // Auth UX: re-prompt login when backend token expires.
   static const bool enableRePromptLoginOnExpiry = true;
 
-  /// Map: allow expanding marker radius via "Travel mode".
-  static const bool enableMapTravelMode = true;
-
   /// Map: optional isometric-like perspective on the map canvas.
   ///
   /// Pitched mode renders stable screen-space pedestals beneath the canonical
@@ -566,8 +563,6 @@ class AppConfig {
         return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry':
         return enableRePromptLoginOnExpiry;
-      case 'mapTravelMode':
-        return enableMapTravelMode;
       case 'mapIsometricView':
         return enableMapIsometricView;
       case 'mapWalkingNavigation':
@@ -688,8 +683,6 @@ class PreferenceKeys {
   static const String userProfile = 'user_profile';
 
   /// Map UX
-  static const String mapTravelModeEnabledV1 = 'map_travel_mode_enabled_v1';
-  static const String mapTravelTutorialSeenV1 = 'map_travel_tutorial_seen_v1';
   static const String mapIsometricViewEnabledV1 =
       'map_isometric_view_enabled_v1';
 

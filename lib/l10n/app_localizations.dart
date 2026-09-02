@@ -7603,30 +7603,6 @@ abstract class AppLocalizations {
   /// **'Nearby radius ({radiusKm} km)'**
   String mapNearbyRadiusTooltip(Object radiusKm);
 
-  /// Tooltip for nearby radius when travel mode is enabled (worldwide).
-  ///
-  /// In en, this message translates to:
-  /// **'Nearby radius (World)'**
-  String get mapNearbyRadiusTooltipWorld;
-
-  /// Short label shown in Nearby Art when travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Radius: World'**
-  String get mapNearbyRadiusWorldShort;
-
-  /// Short status label shown when Travel mode is enabled (instead of a numeric radius).
-  ///
-  /// In en, this message translates to:
-  /// **'You are travelling'**
-  String get mapTravelModeStatusTravelling;
-
-  /// Tooltip shown near the Nearby Art radius control when Travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode is on - showing markers in view'**
-  String get mapTravelModeStatusTravellingTooltip;
-
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:
@@ -8371,12 +8347,6 @@ abstract class AppLocalizations {
   /// **'Near me'**
   String get mapFilterScopeNearMe;
 
-  /// No description provided for @mapFilterScopeTravel.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel'**
-  String get mapFilterScopeTravel;
-
   /// No description provided for @mapFilterDiscoveryStatusTitle.
   ///
   /// In en, this message translates to:
@@ -8484,24 +8454,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Zoom in'**
   String get mapZoomInTooltip;
-
-  /// No description provided for @mapTravelModeTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTravelModeTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeEnableTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Disable travel mode'**
-  String get mapTravelModeDisableTooltip;
 
   /// Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view).
   ///
@@ -8611,18 +8563,6 @@ abstract class AppLocalizations {
   /// **'Open the Filters panel to refine results (type, distance, discovery status, and more).'**
   String get mapTutorialStepFiltersDesktopBody;
 
-  /// Title for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTutorialStepTravelTitle;
-
-  /// Body text for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode loads markers for the visible map area so you can explore anywhere.'**
-  String get mapTutorialStepTravelBody;
-
   /// Title for the recenter step of the interactive map tutorial (mobile).
   ///
   /// In en, this message translates to:
@@ -8646,36 +8586,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search for artworks, artists, institutions, or places to jump to them quickly.'**
   String get mapTutorialStepSearchBody;
-
-  /// No description provided for @mapTravelModeTutorialTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Explore beyond nearby'**
-  String get mapTravelModeTutorialTitle;
-
-  /// No description provided for @mapTravelModeTutorialBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.'**
-  String get mapTravelModeTutorialBody;
-
-  /// No description provided for @mapTravelModeTutorialHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Tip: Pan and zoom - markers refresh to match the viewport.'**
-  String get mapTravelModeTutorialHint;
-
-  /// No description provided for @mapTravelModeTutorialGotIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Got it'**
-  String get mapTravelModeTutorialGotIt;
-
-  /// No description provided for @mapTravelModeTutorialEnable.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeTutorialEnable;
 
   /// No description provided for @mapNearbyArtTitle.
   ///

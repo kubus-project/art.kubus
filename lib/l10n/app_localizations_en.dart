@@ -4269,19 +4269,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mapNearbyRadiusTooltipWorld => 'Nearby radius (World)';
-
-  @override
-  String get mapNearbyRadiusWorldShort => 'Radius: World';
-
-  @override
-  String get mapTravelModeStatusTravelling => 'You are travelling';
-
-  @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Travel mode is on - showing markers in view';
-
-  @override
   String get mapArArtworkNearbyTitle => 'Artwork nearby';
 
   @override
@@ -4682,16 +4669,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapFilterFavorites => 'Favorites';
 
   @override
-  String get mapFilterScopeTitle => 'Scope';
+  String get mapFilterScopeTitle => 'Area';
 
   @override
-  String get mapFilterScopeCurrentViewport => 'Current viewport';
+  String get mapFilterScopeCurrentViewport => 'Map area';
 
   @override
   String get mapFilterScopeNearMe => 'Near me';
-
-  @override
-  String get mapFilterScopeTravel => 'Travel';
 
   @override
   String get mapFilterDiscoveryStatusTitle => 'Discovery status';
@@ -4752,15 +4736,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapZoomInTooltip => 'Zoom in';
-
-  @override
-  String get mapTravelModeTooltip => 'Travel mode';
-
-  @override
-  String get mapTravelModeEnableTooltip => 'Enable travel mode';
-
-  @override
-  String get mapTravelModeDisableTooltip => 'Disable travel mode';
 
   @override
   String get mapIsometricViewEnableTooltip => 'Enable isometric view';
@@ -4826,13 +4801,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Open the Filters panel to refine results (type, distance, discovery status, and more).';
 
   @override
-  String get mapTutorialStepTravelTitle => 'Travel mode';
-
-  @override
-  String get mapTutorialStepTravelBody =>
-      'Travel mode loads markers for the visible map area so you can explore anywhere.';
-
-  @override
   String get mapTutorialStepRecenterTitle => 'Recenter';
 
   @override
@@ -4845,23 +4813,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mapTutorialStepSearchBody =>
       'Search for artworks, artists, institutions, or places to jump to them quickly.';
-
-  @override
-  String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
-
-  @override
-  String get mapTravelModeTutorialBody =>
-      'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.';
-
-  @override
-  String get mapTravelModeTutorialHint =>
-      'Tip: Pan and zoom - markers refresh to match the viewport.';
-
-  @override
-  String get mapTravelModeTutorialGotIt => 'Got it';
-
-  @override
-  String get mapTravelModeTutorialEnable => 'Enable travel mode';
 
   @override
   String get mapNearbyArtTitle => 'Nearby art and places';
