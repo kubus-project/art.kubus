@@ -4704,10 +4704,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapFilterFavorites => 'Priljubljene';
 
   @override
-  String get mapFilterScopeTitle => 'Obseg';
+  String get mapFilterScopeTitle => 'Območje';
 
   @override
-  String get mapFilterScopeCurrentViewport => 'Trenutni pogled';
+  String get mapFilterScopeCurrentViewport => 'Območje zemljevida';
 
   @override
   String get mapFilterScopeNearMe => 'V moji bližini';

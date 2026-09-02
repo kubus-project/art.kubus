@@ -4669,10 +4669,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapFilterFavorites => 'Favorites';
 
   @override
-  String get mapFilterScopeTitle => 'Scope';
+  String get mapFilterScopeTitle => 'Area';
 
   @override
-  String get mapFilterScopeCurrentViewport => 'Current viewport';
+  String get mapFilterScopeCurrentViewport => 'Map area';
 
   @override
   String get mapFilterScopeNearMe => 'Near me';
