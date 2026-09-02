@@ -62,7 +62,15 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
+
+  static String _supportedLocaleName(String locale) {
+    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
+    return switch (localeName) {
+      'en' || 'sl' => localeName,
+      _ => 'sl',
+    };
+  }
 
   final String localeName;
 
@@ -70,7 +78,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +91,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -327,7 +337,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(
+      Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -375,7 +386,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(
+      Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -453,7 +465,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(
+      Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4599,7 +4612,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -8318,13 +8332,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapFilterScopeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Area'**
+  /// **'Scope'**
   String get mapFilterScopeTitle;
 
   /// No description provided for @mapFilterScopeCurrentViewport.
   ///
   /// In en, this message translates to:
-  /// **'Map area'**
+  /// **'Current viewport'**
   String get mapFilterScopeCurrentViewport;
 
   /// No description provided for @mapFilterScopeNearMe.
@@ -13119,7 +13133,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -13215,7 +13230,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -13389,7 +13405,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(
+      Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16473,7 +16490,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(
+      Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -17283,7 +17301,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20709,7 +20728,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(
+      Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -24123,7 +24143,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -24447,7 +24468,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26585,22 +26607,10 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
-  /// No description provided for @analyticsBlockedOpenSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Open Settings'**
   String get analyticsBlockedOpenSettings;
 
-  /// No description provided for @analyticsBlockedUnavailableTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Analytics unavailable'**
   String get analyticsBlockedUnavailableTitle;
 
-  /// No description provided for @analyticsBlockedUnavailableDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Analytics are not available in this app build.'**
   String get analyticsBlockedUnavailableDescription;
 
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
@@ -26859,7 +26869,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(
+      Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -28998,7 +29009,8 @@ abstract class AppLocalizations {
   String get artworkCreatorAttendanceImageTooSmall;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -29007,25 +29019,25 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'sl': return AppLocalizationsSl();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'sl':
+      return AppLocalizationsSl();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

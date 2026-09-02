@@ -342,6 +342,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   GeoBounds? _loadedViewportBounds;
   int? _loadedViewportZoomBucket;
   bool _initialLocaleViewportApplied = false;
+  bool _initialLocaleResolved = false;
+  LatLng? _pendingTargetMarkerLoad;
+  Completer<void>? _pendingTargetMarkerLoadCompleter;
   double _lastBearing = 0.0;
   double _lastPitch = 0.0;
   DateTime _lastCameraUpdateTime = DateTime.now();
@@ -472,11 +475,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
-    final localeViewport = MapInitialViewport.forLocale(
-      WidgetsBinding.instance.platformDispatcher.locale,
-    );
-    _cameraCenter = widget.initialCenter ?? localeViewport.initialCenter;
-    _cameraZoom = widget.initialZoom ?? localeViewport.initialZoom;
+    _cameraCenter =
+        widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
+    _cameraZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
         widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
     _walkingLocationCoordinator = WalkingNavigationLocationCoordinator(
@@ -650,8 +651,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       loadedMarkers: () => _artMarkers,
       fetchMarkerById: MapDataController().getArtMarkerById,
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
-      loadMarkersAround: (position) =>
-          _loadMarkers(center: position, force: true),
+      loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
       moveCamera: _moveCamera,
       selectMarker: _handleMarkerTap,
@@ -838,6 +838,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _resolveInitialLocaleViewport();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
       if (!_walkingSessionStartScheduled) {
@@ -878,6 +879,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
+  }
+
+  void _resolveInitialLocaleViewport() {
+    if (_initialLocaleResolved) return;
+    _initialLocaleResolved = true;
+
+    final viewport =
+        MapInitialViewport.forLocale(Localizations.localeOf(context));
+    _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
+    _cameraZoom = widget.initialZoom ?? viewport.initialZoom;
   }
 
   void _unsubscribeRouteObserver({required String source}) {
@@ -1623,8 +1634,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapTargetCoordinator.setMapControllerReady(true);
     _mapTargetCoordinator.setStyleReady(_styleInitialized);
     _mapCameraController.flushQueuedIfReady();
-
-    unawaited(_applyInitialLocaleViewportAndLoad());
   }
 
   Future<void> _applyInitialLocaleViewportAndLoad() async {
@@ -1764,6 +1773,71 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     unawaited(_loadMarkersForCurrentView(force: shouldForce));
   }
 
+  /// Explicit target resolution must query around [position], never around the
+  /// current camera viewport. This keeps deep links and search selections
+  /// reliable when their marker is outside the loaded viewport snapshot.
+  Future<void> _loadMarkersAroundTarget(LatLng position) async {
+    if (!_pollingEnabled) return;
+    if (_isLoadingMarkers) {
+      _pendingTargetMarkerLoad = position;
+      return (_pendingTargetMarkerLoadCompleter ??= Completer<void>()).future;
+    }
+
+    await _loadMarkersAroundTargetNow(position);
+  }
+
+  Future<void> _loadMarkersAroundTargetNow(LatLng position) async {
+    if (!_pollingEnabled || _isLoadingMarkers) return;
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    final themeProvider = context.read<ThemeProvider>();
+    final requestId = ++_markerRequestId;
+    _isLoadingMarkers = true;
+
+    try {
+      _perf.recordFetch('markers:target-radius');
+      final result = await MapMarkerHelper.loadAndHydrateMarkers(
+        artworkProvider: artworkProvider,
+        mapMarkerService: _mapMarkerService,
+        center: position,
+        radiusKm: math.max(_effectiveSearchRadiusKm, 5),
+        forceRefresh: true,
+        filtersKey: _markerQueryFiltersKey(),
+      );
+      if (!mounted || requestId != _markerRequestId) return;
+
+      _mergeDirectTargetMarkers(result.markers);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+    } catch (error) {
+      AppConfig.debugPrint(
+        'DesktopMapScreen: error loading target markers: $error',
+      );
+    } finally {
+      if (requestId == _markerRequestId) {
+        _isLoadingMarkers = false;
+      }
+      _flushPendingTargetMarkerLoad();
+      if (_pendingMarkerRefresh && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _flushPendingMarkerRefresh();
+        });
+      }
+    }
+  }
+
+  void _flushPendingTargetMarkerLoad() {
+    if (_isLoadingMarkers || !_pollingEnabled) return;
+    final position = _pendingTargetMarkerLoad;
+    final completer = _pendingTargetMarkerLoadCompleter;
+    if (position == null || completer == null) return;
+
+    _pendingTargetMarkerLoad = null;
+    _pendingTargetMarkerLoadCompleter = null;
+    unawaited(_loadMarkersAroundTargetNow(position).whenComplete(() {
+      if (!completer.isCompleted) completer.complete();
+    }));
+  }
+
   void _handleMapCreated(ml.MapLibreMapController controller) {
     KubusMapLifecycleHelpers.handleMapCreated(
       controller: controller,
@@ -1839,6 +1913,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           await _renderCoordinator.updateRenderMode();
           // Start the ambient dot-pulse / floating-badge bob ticker.
           _renderCoordinator.updateAmbientTicker();
+          await _applyInitialLocaleViewportAndLoad();
         }
       },
     );
@@ -4999,6 +5074,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
+      _flushPendingTargetMarkerLoad();
       // Schedule flush for next frame to avoid tight retry loop on repeated errors.
       if (_pendingMarkerRefresh && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

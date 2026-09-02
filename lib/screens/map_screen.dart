@@ -433,6 +433,7 @@ class _MapScreenState extends State<MapScreen>
   final GlobalKey _searchSurfaceKey = GlobalKey();
   final GlobalKey _discoveryCardKey = GlobalKey();
   final GlobalKey _primaryControlsKey = GlobalKey();
+  final GlobalKey _tutorialMapToolsButtonKey = GlobalKey();
   final GlobalKey _nearbyPeekKey = GlobalKey();
   final ValueNotifier<MapMarkerChromeOcclusionPlan>
       _markerChromeOcclusionNotifier =
@@ -515,6 +516,9 @@ class _MapScreenState extends State<MapScreen>
   GeoBounds? _loadedViewportBounds;
   int? _loadedViewportZoomBucket;
   bool _initialLocaleViewportApplied = false;
+  bool _initialLocaleResolved = false;
+  LatLng? _pendingTargetMarkerLoad;
+  Completer<void>? _pendingTargetMarkerLoadCompleter;
   static const double _markerRefreshDistanceMeters =
       MapScreenConstants.markerRefreshDistanceMeters;
   static const Duration _markerRefreshInterval =
@@ -626,11 +630,9 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
-    final localeViewport = MapInitialViewport.forLocale(
-      ui.PlatformDispatcher.instance.locale,
-    );
-    _cameraCenter = widget.initialCenter ?? localeViewport.initialCenter;
-    _lastZoom = widget.initialZoom ?? localeViewport.initialZoom;
+    _cameraCenter =
+        widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
+    _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
         widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
     StartupTrace.mark('map screen init');
@@ -808,8 +810,7 @@ class _MapScreenState extends State<MapScreen>
       loadedMarkers: () => _artMarkers,
       fetchMarkerById: MapDataController().getArtMarkerById,
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
-      loadMarkersAround: (position) =>
-          _loadArtMarkers(center: position, force: true),
+      loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
       moveCamera: (position, zoom) => _animateMapTo(position, zoom: zoom),
       selectMarker: _showArtMarkerDialog,
@@ -1190,6 +1191,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _resolveInitialLocaleViewport();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
       if (!_walkingLocationPromptScheduled) {
@@ -1259,6 +1261,16 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _handleMapDeepLinkProviderChanged();
     });
+  }
+
+  void _resolveInitialLocaleViewport() {
+    if (_initialLocaleResolved) return;
+    _initialLocaleResolved = true;
+
+    final viewport =
+        MapInitialViewport.forLocale(Localizations.localeOf(context));
+    _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
+    _lastZoom = widget.initialZoom ?? viewport.initialZoom;
   }
 
   void _syncRootTutorialBinding() {
@@ -1777,6 +1789,69 @@ class _MapScreenState extends State<MapScreen>
     _pendingMarkerRefresh = false;
     _pendingMarkerRefreshForce = false;
     unawaited(_loadMarkersForCurrentView(force: shouldForce));
+  }
+
+  /// Explicit target resolution must query around [position], never around the
+  /// current camera viewport. This keeps deep links and search selections
+  /// reliable when their marker is outside the loaded viewport snapshot.
+  Future<void> _loadMarkersAroundTarget(LatLng position) async {
+    if (!_pollingEnabled) return;
+    if (_isLoadingMarkers) {
+      _pendingTargetMarkerLoad = position;
+      return (_pendingTargetMarkerLoadCompleter ??= Completer<void>()).future;
+    }
+
+    await _loadMarkersAroundTargetNow(position);
+  }
+
+  Future<void> _loadMarkersAroundTargetNow(LatLng position) async {
+    if (!_pollingEnabled || _isLoadingMarkers) return;
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    final themeProvider = context.read<ThemeProvider>();
+    final requestId = ++_markerRequestId;
+    _isLoadingMarkers = true;
+
+    try {
+      _perf.recordFetch('markers:target-radius');
+      final result = await MapMarkerHelper.loadAndHydrateMarkers(
+        artworkProvider: artworkProvider,
+        mapMarkerService: _mapMarkerService,
+        center: position,
+        radiusKm: math.max(_effectiveMarkerRadiusKm, 5),
+        forceRefresh: true,
+        filtersKey: _markerQueryFiltersKey(),
+      );
+      if (!mounted || requestId != _markerRequestId) return;
+
+      _mergeDirectTargetMarkers(result.markers);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+    } catch (error) {
+      AppConfig.debugPrint('MapScreen: error loading target markers: $error');
+    } finally {
+      if (requestId == _markerRequestId) {
+        _isLoadingMarkers = false;
+      }
+      _flushPendingTargetMarkerLoad();
+      if (_pendingMarkerRefresh && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _flushPendingMarkerRefresh();
+        });
+      }
+    }
+  }
+
+  void _flushPendingTargetMarkerLoad() {
+    if (_isLoadingMarkers || !_pollingEnabled) return;
+    final position = _pendingTargetMarkerLoad;
+    final completer = _pendingTargetMarkerLoadCompleter;
+    if (position == null || completer == null) return;
+
+    _pendingTargetMarkerLoad = null;
+    _pendingTargetMarkerLoadCompleter = null;
+    unawaited(_loadMarkersAroundTargetNow(position).whenComplete(() {
+      if (!completer.isCompleted) completer.complete();
+    }));
   }
 
   void _handleMapViewPreferencesChanged() {
@@ -2484,6 +2559,7 @@ class _MapScreenState extends State<MapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
+      _flushPendingTargetMarkerLoad();
       // Schedule flush for next frame to avoid tight retry loop on repeated errors.
       if (_pendingMarkerRefresh && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -5814,7 +5890,7 @@ class _MapScreenState extends State<MapScreen>
                 showZoomControls: false,
                 showSecondaryTools: hasSecondaryTools,
                 onOpenSecondaryTools: _openMobileMapTools,
-                secondaryToolsKey: _primaryControlsKey,
+                secondaryToolsKey: _tutorialMapToolsButtonKey,
                 secondaryToolsTooltip: l10n.mapToolsTitle,
                 showIsometricViewToggle: false,
                 isometricViewActive: _isometricViewEnabled,

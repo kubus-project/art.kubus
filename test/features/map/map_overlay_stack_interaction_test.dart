@@ -1,6 +1,8 @@
 import 'package:art_kubus/features/map/controller/kubus_map_controller.dart';
 import 'package:art_kubus/features/map/map_layers_manager.dart';
 import 'package:art_kubus/features/map/map_overlay_stack.dart';
+import 'package:art_kubus/features/map/shared/map_marker_chrome_occlusion_plan.dart';
+import 'package:art_kubus/features/map/shared/map_passive_chrome_visibility.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/utils/kubus_map_tokens.dart';
@@ -326,6 +328,49 @@ void main() {
     expect(find.bySemanticsLabel('map_center_on_me'), findsNothing);
     expect(find.bySemanticsLabel('map_create_marker'), findsNothing);
     semantics.dispose();
+  });
+
+  testWidgets('mobile tools control mounts beside its measured controls rail',
+      (tester) async {
+    final controller = _buildMapController();
+    final controlsKey = GlobalKey();
+    final toolsKey = GlobalKey();
+    final plans = ValueNotifier<MapMarkerChromeOcclusionPlan>(
+      MapMarkerChromeOcclusionPlan.visible(revision: 1),
+    );
+    var toolsTapCount = 0;
+    addTearDown(controller.dispose);
+    addTearDown(plans.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapPassiveChromeVisibility(
+            planListenable: plans,
+            isOccluded: (plan) => plan.controlsOccluded,
+            measurementKey: controlsKey,
+            duration: Duration.zero,
+            curve: Curves.linear,
+            child: KubusMapPrimaryControls(
+              controller: controller,
+              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+              onCenterOnMe: () {},
+              onCreateMarker: () {},
+              centerOnMeActive: false,
+              showSecondaryTools: true,
+              onOpenSecondaryTools: () => toolsTapCount += 1,
+              secondaryToolsKey: toolsKey,
+              secondaryToolsTooltip: 'Map tools',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(toolsKey));
+    await tester.pump();
+    expect(toolsTapCount, 1);
   });
 }
 
