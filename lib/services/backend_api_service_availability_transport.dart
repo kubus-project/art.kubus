@@ -56,8 +56,7 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
       ),
       headers: _getHeaders(),
       body: jsonEncode(<String, dynamic>{
-        if (reason != null && reason.trim().isNotEmpty)
-          'reason': reason.trim(),
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       }),
     );
     if (!_isSuccessStatus(response.statusCode)) {
@@ -153,7 +152,7 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
   Future<List<Map<String, dynamic>>> getMyAvailabilityNodes() async {
     try {
       final response = await _fetchJson(
-        Uri.parse('$baseUrl/api/availability/nodes/me'),
+        Uri.parse('$baseUrl/api/availability/account/nodes'),
         includeAuth: true,
         allowOrbitFallback: false,
       );
@@ -163,7 +162,7 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
       AppConfig.debugPrint(
         'BackendApiService.getMyAvailabilityNodes failed: $e',
       );
-      return const <Map<String, dynamic>>[];
+      rethrow;
     }
   }
 
@@ -183,7 +182,8 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> getAvailabilityAccountOperatorDashboard() async {
+  Future<Map<String, dynamic>?>
+      getAvailabilityAccountOperatorDashboard() async {
     try {
       final response = await _fetchJson(
         Uri.parse('$baseUrl/api/availability/account/operator-dashboard'),
