@@ -10,6 +10,7 @@
 library;
 
 import '../l10n/app_localizations.dart';
+import '../models/kubus_node_models.dart';
 
 /// Status severity. Colour is derived from this, but never carries the meaning
 /// on its own: each description also has a title, so status survives without
@@ -36,6 +37,27 @@ class NodeStateDescription {
 }
 
 class NodeStatePresentation {
+  static String connection(
+          AppLocalizations l10n, KubusNodeConnectionDetail state) =>
+      switch (state) {
+        KubusNodeConnectionDetail.noNode => l10n.kubusNodeNoNodeTitle,
+        KubusNodeConnectionDetail.ownedNodeAvailable =>
+          l10n.kubusMyNodesAvailable,
+        KubusNodeConnectionDetail.attaching => l10n.kubusMyNodesAttaching,
+        KubusNodeConnectionDetail.pairedOffline =>
+          l10n.kubusNodeStateOfflineBody,
+        KubusNodeConnectionDetail.lanConnected => l10n.kubusConnectionLan,
+        KubusNodeConnectionDetail.webRtcDirectConnected =>
+          l10n.kubusConnectionDirect,
+        KubusNodeConnectionDetail.turnConnected => l10n.kubusConnectionRelay,
+        KubusNodeConnectionDetail.httpsConnected => l10n.kubusConnectionHttps,
+        KubusNodeConnectionDetail.computeAuthorizationRequired =>
+          l10n.kubusComputeAuthorizationRequired,
+        KubusNodeConnectionDetail.identityMismatch =>
+          l10n.kubusConnectionIdentityMismatch,
+        KubusNodeConnectionDetail.error => l10n.kubusMyNodesAttachFailed,
+      };
+
   const NodeStatePresentation._();
 
   /// Participation is reciprocity, not enforcement. The copy explains what the

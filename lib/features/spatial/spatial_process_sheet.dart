@@ -31,8 +31,8 @@ enum SpatialProcessorChoice {
 /// Network processing still uploads the raw capture through the user's own
 /// paired Node first (there is no other place today that stages it for a
 /// third-party processor to reach), so pairing is a real prerequisite for
-/// both options, not just "my own Node". Tapping either while unpaired asks
-/// to pair first, then re-opens this sheet with the freshly paired state.
+/// both options. The network choice remains a network choice while the
+/// caller connects the staging Node, so the original action can resume.
 class SpatialProcessSheet extends StatelessWidget {
   const SpatialProcessSheet({
     super.key,
@@ -118,9 +118,7 @@ class SpatialProcessSheet extends StatelessWidget {
                 : null,
             enabled: true,
             onTap: () => Navigator.of(context).pop(
-              ownNode == SpatialOwnNodeReachability.unpaired
-                  ? SpatialProcessorChoice.connectOwnNode
-                  : SpatialProcessorChoice.kubusNetwork,
+              SpatialProcessorChoice.kubusNetwork,
             ),
           ),
         ],

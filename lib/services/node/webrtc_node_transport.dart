@@ -62,7 +62,16 @@ class WebRtcNodeTransport implements KubusNodeTransport {
   static const int defaultMaxResponseBytes = 4 * 1024 * 1024;
 
   final KubusDataChannel _channel;
-  final String? _credential;
+  String? _credential;
+
+  /// Completes first attachment on this already identity-verified channel.
+  void completeRemoteAuthorization(String credential) {
+    if (_credential != null || !credential.startsWith('kubus_local_')) {
+      throw StateError('Invalid remote Node authorization.');
+    }
+    _credential = credential;
+  }
+
   final KubusFrameSplitter _splitter;
   final int _maxResponseBytes;
 

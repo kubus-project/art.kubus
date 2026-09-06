@@ -16672,4 +16672,55 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get artworkCreatorAttendanceImageTooSmall =>
       'The attendance record image must be at least 256 px on its shortest side.';
+  @override
+  String get kubusMyNodesTitle => 'My Nodes';
+
+  @override
+  String get kubusConnectionLan => 'Connected over LAN';
+
+  @override
+  String get kubusConnectionDirect => 'Connected over direct WebRTC';
+
+  @override
+  String get kubusConnectionRelay => 'Connected over TURN relay';
+
+  @override
+  String get kubusConnectionHttps => 'Connected over HTTPS';
+
+  @override
+  String get kubusComputeAuthorizationRequired =>
+      'Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.';
+
+  @override
+  String get kubusConnectionIdentityMismatch =>
+      'Node identity verification failed. The connection was refused and your saved identity was preserved.';
+
+  @override
+  String get kubusNetworkStagingExplanation =>
+      'Network processing currently uses your kubus Node to securely stage the encrypted capture.';
+
+  @override
+  String get kubusMyNodesDiscoveryFailed =>
+      'Could not load your Nodes. Check your connection and sign in, then retry.';
+
+  @override
+  String get kubusMyNodesEmpty =>
+      'This account has no registered Nodes. Set up a kubus Node to continue.';
+
+  @override
+  String get kubusMyNodesAvailable => 'Available to connect remotely';
+
+  @override
+  String get kubusMyNodesUnavailable =>
+      'Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.';
+
+  @override
+  String get kubusMyNodesAttaching => 'Connecting securely…';
+
+  @override
+  String get kubusMyNodesAttachFailed =>
+      'Could not connect securely. Your saved pairing has been preserved.';
+
+  @override
+  String get kubusMyNodesLocalPairing => 'Pair locally with a QR code';
 }

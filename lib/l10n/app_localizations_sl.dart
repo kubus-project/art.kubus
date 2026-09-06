@@ -16844,4 +16844,55 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artworkCreatorAttendanceImageTooSmall =>
       'Slika zapisa prisotnosti mora biti na krajši stranici velika vsaj 256 px.';
+  @override
+  String get kubusMyNodesTitle => 'Moja vozlišča';
+
+  @override
+  String get kubusConnectionLan => 'Povezano prek lokalnega omrežja';
+
+  @override
+  String get kubusConnectionDirect => 'Povezano neposredno prek WebRTC';
+
+  @override
+  String get kubusConnectionRelay => 'Povezano prek posrednika TURN';
+
+  @override
+  String get kubusConnectionHttps => 'Povezano prek HTTPS';
+
+  @override
+  String get kubusComputeAuthorizationRequired =>
+      'Za omrežno obdelavo posodobite dovoljenja tega vozlišča. Vozlišče ostaja seznanjeno.';
+
+  @override
+  String get kubusConnectionIdentityMismatch =>
+      'Preverjanje identitete vozlišča ni uspelo. Povezava je bila zavrnjena, shranjena identiteta pa je ohranjena.';
+
+  @override
+  String get kubusNetworkStagingExplanation =>
+      'Omrežna obdelava trenutno uporablja vaše vozlišče kubus za varno pripravo šifriranega zajema.';
+
+  @override
+  String get kubusMyNodesDiscoveryFailed =>
+      'Vozlišč ni bilo mogoče naložiti. Preverite povezavo, se prijavite in poskusite znova.';
+
+  @override
+  String get kubusMyNodesEmpty =>
+      'Ta račun nima registriranih vozlišč. Za nadaljevanje nastavite vozlišče kubus.';
+
+  @override
+  String get kubusMyNodesAvailable => 'Na voljo za oddaljeno povezavo';
+
+  @override
+  String get kubusMyNodesUnavailable =>
+      'Oddaljena povezava ni na voljo. Zaženite vozlišče ter preverite različico programske opreme in dovoljenja za signalizacijo.';
+
+  @override
+  String get kubusMyNodesAttaching => 'Varno povezovanje…';
+
+  @override
+  String get kubusMyNodesAttachFailed =>
+      'Varne povezave ni bilo mogoče vzpostaviti. Shranjena seznanitev je ohranjena.';
+
+  @override
+  String get kubusMyNodesLocalPairing => 'Lokalna seznanitev s kodo QR';
 }

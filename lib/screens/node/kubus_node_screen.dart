@@ -11,7 +11,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/node/node_ui.dart';
-import 'node_pairing_screen.dart';
+import 'my_nodes_screen.dart';
 
 /// The kubus Node experience inside art.kubus.
 ///
@@ -49,9 +49,7 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
   }
 
   Future<void> _openPairing() async {
-    final paired = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const NodePairingScreen()),
-    );
+    final paired = await MyNodesScreen.show(context);
     if (paired == true && mounted) unawaited(_refresh());
   }
 
@@ -179,6 +177,10 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
           label: _nodeLabel(snapshot),
           description: participation,
         ),
+        const SizedBox(height: KubusSpacing.md),
+        NodePanel(
+            child: Text(NodeStatePresentation.connection(
+                _l10n, node.connectionDetail))),
         if (participation.severity == NodeSeverity.attention ||
             participation.severity == NodeSeverity.critical) ...[
           const SizedBox(height: KubusSpacing.md),

@@ -4,6 +4,8 @@ import '../models/kubus_node_models.dart';
 import '../services/kubus_node_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/node/turn_credential_service.dart';
+import '../services/node/kubus_node_transport.dart';
+import '../services/node/node_identity_proof.dart';
 
 class KubusNodeProvider extends ChangeNotifier {
   KubusNodeProvider({
@@ -21,6 +23,7 @@ class KubusNodeProvider extends ChangeNotifier {
   KubusRemoteComputeJob? _remoteJob;
   Map<String, dynamic> _computeSettings = const {};
   String? _error;
+  Object? _connectionFailure;
   bool _initialized = false;
   KubusNodeConnectionState get state => _state;
   KubusNodeSnapshot? get snapshot => _snapshot;
@@ -33,6 +36,102 @@ class KubusNodeProvider extends ChangeNotifier {
       _snapshot?.capabilityAvailable('compute.remoteJobs') == true;
   String? get error => _error;
   bool get isPaired => service.isPaired;
+  KubusNodeConnectionDetail get connectionDetail {
+    if (_state == KubusNodeConnectionState.connecting) {
+      return KubusNodeConnectionDetail.attaching;
+    }
+    if (_connectionFailure is KubusNodeIdentityException ||
+        _connectionFailure is NodeIdentityException) {
+      return KubusNodeConnectionDetail.identityMismatch;
+    }
+    if (_state == KubusNodeConnectionState.paired) {
+      final authorization = _snapshot?.status['computeAuthorization'];
+      if (authorization is Map &&
+          authorization['state'] == 'COMPUTE_AUTHORIZATION_REQUIRED') {
+        return KubusNodeConnectionDetail.computeAuthorizationRequired;
+      }
+      return switch (service.activeTransport) {
+        KubusNodeTransportKind.localDirect =>
+          KubusNodeConnectionDetail.lanConnected,
+        KubusNodeTransportKind.webRtcDirect =>
+          KubusNodeConnectionDetail.webRtcDirectConnected,
+        KubusNodeTransportKind.webRtcRelay =>
+          KubusNodeConnectionDetail.turnConnected,
+        KubusNodeTransportKind.remoteHttps =>
+          KubusNodeConnectionDetail.httpsConnected,
+        null => KubusNodeConnectionDetail.error,
+      };
+    }
+    if (isPaired) return KubusNodeConnectionDetail.pairedOffline;
+    if (_ownedNodes.any((node) => node['remoteAttachAvailable'] == true)) {
+      return KubusNodeConnectionDetail.ownedNodeAvailable;
+    }
+    if (_error != null) return KubusNodeConnectionDetail.error;
+    return KubusNodeConnectionDetail.noNode;
+  }
+
+  List<Map<String, dynamic>> _ownedNodes = const [];
+  List<Map<String, dynamic>> get ownedNodes => List.unmodifiable(_ownedNodes);
+  bool _loadingOwnedNodes = false;
+  bool get loadingOwnedNodes => _loadingOwnedNodes;
+  String? _discoveryError;
+  String? get discoveryError => _discoveryError;
+
+  Future<void> loadOwnedNodes() async {
+    if (_loadingOwnedNodes) return;
+    _loadingOwnedNodes = true;
+    _discoveryError = null;
+    notifyListeners();
+    try {
+      _ownedNodes = await BackendApiService().getMyAvailabilityNodes();
+    } catch (error) {
+      _ownedNodes = const [];
+      _discoveryError = error.toString();
+    } finally {
+      _loadingOwnedNodes = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> attachOwnedNode(Map<String, dynamic> node) async {
+    final identity = node['identity'];
+    if (node['remoteAttachAvailable'] != true || identity is! Map) {
+      throw StateError(
+          'This Node is offline or needs remote identity enrollment.');
+    }
+    _state = KubusNodeConnectionState.connecting;
+    _error = null;
+    _connectionFailure = null;
+    notifyListeners();
+    final backend = BackendApiService();
+    try {
+      await service.attachRemote(
+        nodeId: node['nodeId'] as String,
+        publicKey: identity['publicKey'] as String,
+        fingerprint: identity['fingerprint'] as String,
+        signalingBaseUrl: backend.baseUrl,
+        authToken: () async => backend.getAuthToken(),
+        iceConfiguration: _turnCredentialService.loadIceConfiguration,
+        authorize: (sessionId, deviceId, verifierHash) =>
+            backend.createNodeAttachAuthorization(
+          nodeId: node['nodeId'] as String,
+          sessionId: sessionId,
+          deviceId: deviceId,
+          verifierHash: verifierHash,
+        ),
+      );
+      await refresh();
+      if (_state != KubusNodeConnectionState.paired) {
+        throw StateError('Node attached, but is currently unavailable.');
+      }
+    } catch (error) {
+      _state = KubusNodeConnectionState.error;
+      _connectionFailure = error;
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 
   Future<Map<String, dynamic>> requestPublication({
     required String spatialId,
@@ -54,8 +153,16 @@ class KubusNodeProvider extends ChangeNotifier {
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    if (!await service.initialize()) {
-      _state = KubusNodeConnectionState.unpaired;
+    try {
+      if (!await service.initialize()) {
+        _state = KubusNodeConnectionState.unpaired;
+        notifyListeners();
+        return;
+      }
+    } catch (error) {
+      _state = KubusNodeConnectionState.error;
+      _connectionFailure = error;
+      _error = error.toString();
       notifyListeners();
       return;
     }
@@ -66,6 +173,7 @@ class KubusNodeProvider extends ChangeNotifier {
   Future<void> pair(KubusNodePairingPayload payload) async {
     _state = KubusNodeConnectionState.connecting;
     _error = null;
+    _connectionFailure = null;
     notifyListeners();
     try {
       await service.pair(payload);
@@ -74,6 +182,7 @@ class KubusNodeProvider extends ChangeNotifier {
     } catch (error) {
       _state = KubusNodeConnectionState.error;
       _error = error.toString();
+      _connectionFailure = error;
       notifyListeners();
       rethrow;
     }
@@ -90,8 +199,10 @@ class KubusNodeProvider extends ChangeNotifier {
       }
       _state = KubusNodeConnectionState.paired;
       _error = null;
+      _connectionFailure = null;
     } catch (error) {
       _state = KubusNodeConnectionState.unavailable;
+      _connectionFailure = error;
       _error = error.toString();
     }
     notifyListeners();
@@ -211,6 +322,7 @@ class KubusNodeProvider extends ChangeNotifier {
     _computeSettings = const {};
     _state = KubusNodeConnectionState.unpaired;
     _error = null;
+    _connectionFailure = null;
     notifyListeners();
   }
 

@@ -8,6 +8,21 @@ enum KubusNodeConnectionState {
   error,
 }
 
+/// Connection and authorization are distinct from durable pairing state.
+enum KubusNodeConnectionDetail {
+  noNode,
+  ownedNodeAvailable,
+  attaching,
+  pairedOffline,
+  lanConnected,
+  webRtcDirectConnected,
+  turnConnected,
+  httpsConnected,
+  computeAuthorizationRequired,
+  identityMismatch,
+  error,
+}
+
 class KubusNodePairingPayload {
   const KubusNodePairingPayload({
     required this.endpoint,

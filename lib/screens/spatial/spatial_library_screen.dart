@@ -15,7 +15,7 @@ import '../../services/spatial_library_store.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../node/kubus_node_screen.dart';
-import '../node/node_pairing_screen.dart';
+import '../node/my_nodes_screen.dart';
 import 'spatial_library_detail_screen.dart';
 
 enum SpatialLibraryFilter { all, captured, processing, ready, published }
@@ -199,12 +199,7 @@ class _NodeStatusPill extends StatelessWidget {
               ),
             );
           } else {
-            Navigator.of(context).push(
-              MaterialPageRoute<bool>(
-                builder: (_) => const NodePairingScreen(),
-                settings: const RouteSettings(name: '/node-pairing'),
-              ),
-            );
+            MyNodesScreen.show(context);
           }
         },
       ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -127,6 +128,8 @@ class KubusNodeService {
   }
   static const _endpointKey = 'kubus_node_endpoint_v1';
   static const _credentialKey = 'kubus_node_credential_v1';
+  static const _remotePairingKey = 'kubus_node_remote_pairing_v1';
+  static const _deviceIdKey = 'kubus_node_device_id_v1';
   static const _fingerprintKey = 'kubus_node_fingerprint_v1';
 
   /// The paired Node's Ed25519 public key, base64url.
@@ -233,7 +236,9 @@ class KubusNodeService {
   bool get supportsRemoteIdentityVerification => pairedPublicKey != null;
 
   bool get isPaired =>
-      _endpoint != null && (_credential ?? '').startsWith('kubus_local_');
+      (_endpoint != null ||
+          ((_nodeId ?? '').isNotEmpty && pairedPublicKey != null)) &&
+      (_credential ?? '').startsWith('kubus_local_');
 
   /// True when the paired Node is currently reached over the local network.
   ///
@@ -273,6 +278,21 @@ class KubusNodeService {
     _remoteEndpoint = _readStoredEndpoint(
       await _store.read(_remoteEndpointKey),
     );
+    final remoteRecord = await _store.read(_remotePairingKey);
+    if (remoteRecord != null) {
+      final record = jsonDecode(remoteRecord) as Map<String, dynamic>;
+      final publicKey = _decodePublicKey(record['publicKey'] as String);
+      if (publicKey == null ||
+          sha256.convert(publicKey).toString() != record['fingerprint']) {
+        throw const KubusNodeIdentityException();
+      }
+      _nodeId = record['nodeId'] as String;
+      _publicKeyBase64Url = record['publicKey'] as String;
+      _fingerprint = record['fingerprint'] as String;
+      _credential = record['credential'] as String;
+      _endpoint = null;
+      _remoteEndpoint = null;
+    }
     _syncHttpTransports();
     return isPaired;
   }
@@ -326,6 +346,99 @@ class KubusNodeService {
       return transport.kind;
     } on Object {
       if (identical(_signaling, signaling)) _signaling = null;
+      await signaling.dispose();
+      rethrow;
+    }
+  }
+
+  /// First-time account-authorized attachment. No LAN address or QR is used.
+  Future<void> attachRemote({
+    required String nodeId,
+    required String publicKey,
+    required String fingerprint,
+    required String signalingBaseUrl,
+    required Future<String?> Function() authToken,
+    required Future<IceConfiguration> Function() iceConfiguration,
+    required Future<Map<String, dynamic>> Function(
+            String sessionId, String deviceId, String verifierHash)
+        authorize,
+  }) async {
+    final expectedKey = _decodePublicKey(publicKey);
+    if (expectedKey == null ||
+        sha256.convert(expectedKey).toString() != fingerprint) {
+      throw const KubusNodeIdentityException();
+    }
+    if (isPaired && _nodeId == nodeId && _publicKeyBase64Url != publicKey) {
+      throw const KubusNodeIdentityException();
+    }
+    final resolver = _resolver;
+    if (resolver == null) {
+      throw StateError('Remote Node transport is unavailable.');
+    }
+    final random = Random.secure();
+    String randomValue() => base64Url
+        .encode(List<int>.generate(32, (_) => random.nextInt(256)))
+        .replaceAll('=', '');
+    var deviceId = await _store.read(_deviceIdKey);
+    if (deviceId == null) {
+      deviceId = randomValue();
+      await _store.write(_deviceIdKey, deviceId);
+    }
+    final verifier = randomValue();
+    final signaling =
+        NodeSignalingClient(baseUrl: signalingBaseUrl, authToken: authToken);
+    String? credential;
+    try {
+      final transport = await NodeRtcConnector(
+        signaling: signaling,
+        iceConfiguration: iceConfiguration,
+        pairedPublicKey: () => expectedKey,
+        authorizeVerifiedChannel: (transport, sessionId) async {
+          final authorization = await authorize(sessionId, deviceId!,
+              sha256.convert(utf8.encode(verifier)).toString());
+          final response = await transport.request(KubusNodeRequest(
+            method: 'POST',
+            path: '/local/v1/pairing/remote-attach',
+            jsonBody: {'authorization': authorization, 'verifier': verifier},
+          ));
+          final result = _decode(response);
+          final issued = result['token'];
+          if (issued is! String || !issued.startsWith('kubus_local_')) {
+            throw StateError('Node did not authorize this device.');
+          }
+          credential = issued;
+          return issued;
+        },
+      ).connect(nodeId);
+      try {
+        // One secure-storage write is the commit point, preventing mixed keys
+        // and credentials if the process dies between individual writes.
+        await _store.write(
+            _remotePairingKey,
+            jsonEncode({
+              'nodeId': nodeId,
+              'publicKey': publicKey,
+              'fingerprint': fingerprint,
+              'credential': credential,
+            }));
+      } on Object {
+        transport.close();
+        rethrow;
+      }
+      await _signaling?.dispose();
+      _signaling = signaling;
+      for (final kind in KubusNodeTransportKind.values) {
+        _detachRung(resolver.release(kind));
+      }
+      _nodeId = nodeId;
+      _publicKeyBase64Url = publicKey;
+      _fingerprint = fingerprint;
+      _credential = credential;
+      _endpoint = null;
+      _remoteEndpoint = null;
+      _provenOrigins.clear();
+      resolver.adopt(transport);
+    } on Object {
       await signaling.dispose();
       rethrow;
     }
@@ -461,6 +574,7 @@ class KubusNodeService {
     } else {
       await _store.delete(_remoteEndpointKey);
     }
+    await _store.delete(_remotePairingKey);
   }
 
   /// The first address in [endpoints] that can work from outside the LAN.
@@ -949,6 +1063,7 @@ class KubusNodeService {
       _store.delete(_nodeIdKey),
       _store.delete(_remoteEndpointKey),
       _store.delete(_legacyEndpointsKey),
+      _store.delete(_remotePairingKey),
     ]);
   }
 

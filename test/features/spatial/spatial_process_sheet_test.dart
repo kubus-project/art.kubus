@@ -142,8 +142,7 @@ void main() {
     // own paired Node (there is no other place today that stages it for a
     // third-party processor to reach), so an unpaired user cannot actually
     // reach a provider regardless of what discovery reports.
-    testWidgets(
-        'tapping KUBUS Network while unpaired asks to pair first, not silently kubusNetwork',
+    testWidgets('tapping KUBUS Network while unpaired preserves network intent',
         (tester) async {
       SpatialProcessorChoice? result;
       await tester.pumpWidget(
@@ -166,7 +165,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Kubus network'));
       await tester.pumpAndSettle();
-      expect(result, SpatialProcessorChoice.connectOwnNode);
+      expect(result, SpatialProcessorChoice.kubusNetwork);
     });
   });
 }

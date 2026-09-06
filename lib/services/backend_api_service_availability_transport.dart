@@ -1,6 +1,29 @@
 part of 'backend_api_service.dart';
 
 extension BackendApiAvailabilityNetworkAccess on BackendApiService {
+  Future<Map<String, dynamic>> createNodeAttachAuthorization({
+    required String nodeId,
+    required String sessionId,
+    required String deviceId,
+    required String verifierHash,
+  }) async {
+    final path =
+        '/api/availability/account/nodes/${Uri.encodeComponent(nodeId)}/attach-authorizations';
+    final response = await _post(Uri.parse('$baseUrl$path'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'sessionId': sessionId,
+          'deviceId': deviceId,
+          'verifierHash': verifierHash
+        }));
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: path, body: response.body);
+    }
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    return _backendApiMapOrNull(payload['data']) ?? payload;
+  }
+
   Future<Map<String, dynamic>> createAvailabilityOperatorToken({
     required String label,
     required String walletAddress,

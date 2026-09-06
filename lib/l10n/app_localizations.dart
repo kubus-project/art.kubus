@@ -29007,6 +29007,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The attendance record image must be at least 256 px on its shortest side.'**
   String get artworkCreatorAttendanceImageTooSmall;
+
+  /// No description provided for @kubusMyNodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Nodes'**
+  String get kubusMyNodesTitle;
+
+  /// No description provided for @kubusConnectionLan.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected over LAN'**
+  String get kubusConnectionLan;
+
+  /// No description provided for @kubusConnectionDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected over direct WebRTC'**
+  String get kubusConnectionDirect;
+
+  /// No description provided for @kubusConnectionRelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected over TURN relay'**
+  String get kubusConnectionRelay;
+
+  /// No description provided for @kubusConnectionHttps.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected over HTTPS'**
+  String get kubusConnectionHttps;
+
+  /// No description provided for @kubusComputeAuthorizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.'**
+  String get kubusComputeAuthorizationRequired;
+
+  /// No description provided for @kubusConnectionIdentityMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Node identity verification failed. The connection was refused and your saved identity was preserved.'**
+  String get kubusConnectionIdentityMismatch;
+
+  /// No description provided for @kubusNetworkStagingExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Network processing currently uses your kubus Node to securely stage the encrypted capture.'**
+  String get kubusNetworkStagingExplanation;
+
+  /// No description provided for @kubusMyNodesDiscoveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your Nodes. Check your connection and sign in, then retry.'**
+  String get kubusMyNodesDiscoveryFailed;
+
+  /// No description provided for @kubusMyNodesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has no registered Nodes. Set up a kubus Node to continue.'**
+  String get kubusMyNodesEmpty;
+
+  /// No description provided for @kubusMyNodesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available to connect remotely'**
+  String get kubusMyNodesAvailable;
+
+  /// No description provided for @kubusMyNodesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.'**
+  String get kubusMyNodesUnavailable;
+
+  /// No description provided for @kubusMyNodesAttaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting securely…'**
+  String get kubusMyNodesAttaching;
+
+  /// No description provided for @kubusMyNodesAttachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect securely. Your saved pairing has been preserved.'**
+  String get kubusMyNodesAttachFailed;
+
+  /// No description provided for @kubusMyNodesLocalPairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair locally with a QR code'**
+  String get kubusMyNodesLocalPairing;
 }
 
 class _AppLocalizationsDelegate
