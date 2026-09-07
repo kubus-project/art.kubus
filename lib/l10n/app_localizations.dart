@@ -62,15 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
-
-  static String _supportedLocaleName(String locale) {
-    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
-    return switch (localeName) {
-      'en' || 'sl' => localeName,
-      _ => 'sl',
-    };
-  }
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -78,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -91,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -337,8 +327,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -386,8 +375,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -465,8 +453,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4612,8 +4599,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -8332,13 +8318,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapFilterScopeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Scope'**
+  /// **'Area'**
   String get mapFilterScopeTitle;
 
   /// No description provided for @mapFilterScopeCurrentViewport.
   ///
   /// In en, this message translates to:
-  /// **'Current viewport'**
+  /// **'Map area'**
   String get mapFilterScopeCurrentViewport;
 
   /// No description provided for @mapFilterScopeNearMe.
@@ -13133,8 +13119,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -13230,8 +13215,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -13405,8 +13389,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16490,8 +16473,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -17301,8 +17283,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20728,8 +20709,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -24143,8 +24123,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -24468,8 +24447,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26607,10 +26585,22 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
+  /// No description provided for @analyticsBlockedOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
   String get analyticsBlockedOpenSettings;
 
+  /// No description provided for @analyticsBlockedUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics unavailable'**
   String get analyticsBlockedUnavailableTitle;
 
+  /// No description provided for @analyticsBlockedUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are not available in this app build.'**
   String get analyticsBlockedUnavailableDescription;
 
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
@@ -26869,8 +26859,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -28984,30 +28973,6 @@ abstract class AppLocalizations {
   /// **'Transferred'**
   String get walletGalleryStatusTransferred;
 
-  /// No description provided for @walletGalleryStatusBurned.
-  ///
-  /// In en, this message translates to:
-  /// **'Retired'**
-  String get walletGalleryStatusBurned;
-
-  /// No description provided for @artworkCreatorFeeEstimateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Estimated network fees'**
-  String get artworkCreatorFeeEstimateTitle;
-
-  /// No description provided for @artworkCreatorFeeEstimateUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Unavailable'**
-  String get artworkCreatorFeeEstimateUnavailable;
-
-  /// No description provided for @artworkCreatorAttendanceImageTooSmall.
-  ///
-  /// In en, this message translates to:
-  /// **'The attendance record image must be at least 256 px on its shortest side.'**
-  String get artworkCreatorAttendanceImageTooSmall;
-
   /// No description provided for @kubusMyNodesTitle.
   ///
   /// In en, this message translates to:
@@ -29097,10 +29062,153 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pair locally with a QR code'**
   String get kubusMyNodesLocalPairing;
+
+  /// No description provided for @walletGalleryStatusBurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Retired'**
+  String get walletGalleryStatusBurned;
+
+  /// No description provided for @artworkCreatorFeeEstimateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated network fees'**
+  String get artworkCreatorFeeEstimateTitle;
+
+  /// No description provided for @artworkCreatorFeeEstimateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get artworkCreatorFeeEstimateUnavailable;
+
+  /// No description provided for @artworkCreatorAttendanceImageTooSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'The attendance record image must be at least 256 px on its shortest side.'**
+  String get artworkCreatorAttendanceImageTooSmall;
+
+  /// No description provided for @kubusAddNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Node'**
+  String get kubusAddNodeTitle;
+
+  /// No description provided for @kubusAddNodeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.'**
+  String get kubusAddNodeIntro;
+
+  /// No description provided for @kubusAddNodeCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup code'**
+  String get kubusAddNodeCodeLabel;
+
+  /// No description provided for @kubusAddNodeLookup.
+  ///
+  /// In en, this message translates to:
+  /// **'Find Node'**
+  String get kubusAddNodeLookup;
+
+  /// No description provided for @kubusAddNodeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Node is waiting for that code. Check the code on the setup page, or start setup again.'**
+  String get kubusAddNodeNotFound;
+
+  /// No description provided for @kubusAddNodeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize this Node?'**
+  String get kubusAddNodeReview;
+
+  /// No description provided for @kubusAddNodeFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Node fingerprint'**
+  String get kubusAddNodeFingerprint;
+
+  /// No description provided for @kubusAddNodeGrants.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorizing issues this Node a credential for archive availability, connection signaling and network compute. Your captures stay on the Node.'**
+  String get kubusAddNodeGrants;
+
+  /// No description provided for @kubusAddNodeAuthorize.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize'**
+  String get kubusAddNodeAuthorize;
+
+  /// No description provided for @kubusAddNodeDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get kubusAddNodeDecline;
+
+  /// No description provided for @kubusAddNodeAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorized. Your Node is finishing setup and will appear in My Nodes shortly.'**
+  String get kubusAddNodeAuthorized;
+
+  /// No description provided for @kubusAddNodeDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined. No credential was issued.'**
+  String get kubusAddNodeDeclined;
+
+  /// No description provided for @kubusAddNodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete authorization. Nothing was issued; try again.'**
+  String get kubusAddNodeFailed;
+
+  /// No description provided for @kubusPermissionUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateTitle;
+
+  /// No description provided for @kubusPermissionUpdateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This Node was set up before the current permissions. Authorize an updated credential to use network compute. Its identity, pairings, captures and archive stay exactly as they are.'**
+  String get kubusPermissionUpdateBody;
+
+  /// No description provided for @kubusPermissionUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateAction;
+
+  /// No description provided for @kubusPermissionUpdateWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating this Node\'s permissions…'**
+  String get kubusPermissionUpdateWorking;
+
+  /// No description provided for @kubusPermissionUpdateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions updated. Your Node is restarting to use them.'**
+  String get kubusPermissionUpdateDone;
+
+  /// No description provided for @kubusPermissionUpdateDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Update declined. This Node keeps its current permissions.'**
+  String get kubusPermissionUpdateDeclined;
+
+  /// No description provided for @kubusPermissionUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update permissions. This Node kept its existing credential.'**
+  String get kubusPermissionUpdateFailed;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -29109,25 +29217,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

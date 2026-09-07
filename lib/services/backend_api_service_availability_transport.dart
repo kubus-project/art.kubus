@@ -1,6 +1,47 @@
 part of 'backend_api_service.dart';
 
 extension BackendApiAvailabilityNetworkAccess on BackendApiService {
+  /// What the signed-in account is being asked to approve for a Node setup.
+  ///
+  /// The code is short and human-transcribable on purpose: it lets the Node's
+  /// own setup page hand off to a signed-in account without ever putting a
+  /// secret in a URL or in browser history.
+  Future<Map<String, dynamic>> getNodeInstallationByCode(String code) async {
+    final path =
+        '/api/availability/account/node-installations/by-code/${Uri.encodeComponent(code)}';
+    final response = await _fetchJson(
+      Uri.parse('$baseUrl$path'),
+      includeAuth: true,
+      allowOrbitFallback: false,
+    );
+    return _backendApiMapOrNull(response['data']) ?? const {};
+  }
+
+  /// The explicit account decision that lets a Node credential be minted.
+  Future<Map<String, dynamic>> authorizeNodeInstallation(
+      String installationId) async {
+    return _postNodeInstallation(installationId, 'authorize');
+  }
+
+  Future<Map<String, dynamic>> declineNodeInstallation(
+      String installationId) async {
+    return _postNodeInstallation(installationId, 'decline');
+  }
+
+  Future<Map<String, dynamic>> _postNodeInstallation(
+      String installationId, String action) async {
+    final path =
+        '/api/availability/account/node-installations/${Uri.encodeComponent(installationId)}/$action';
+    final response = await _post(Uri.parse('$baseUrl$path'),
+        headers: _getHeaders(), body: jsonEncode(const <String, dynamic>{}));
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: path, body: response.body);
+    }
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    return _backendApiMapOrNull(payload['data']) ?? payload;
+  }
+
   Future<Map<String, dynamic>> createNodeAttachAuthorization({
     required String nodeId,
     required String sessionId,

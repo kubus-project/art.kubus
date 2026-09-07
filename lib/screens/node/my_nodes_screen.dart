@@ -10,6 +10,7 @@ import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/node/node_ui.dart';
 import '../settings/availability_node_operator_screen.dart';
+import 'add_node_screen.dart';
 import 'node_pairing_screen.dart';
 
 /// Account discovery is initiated by the navigation action, not widget init.
@@ -91,6 +92,17 @@ class MyNodesScreen extends StatelessWidget {
                         l10n, provider.connectionDetail))),
                 const SizedBox(height: KubusSpacing.md),
               ],
+              const SizedBox(height: KubusSpacing.md),
+              KubusButton(
+                label: l10n.kubusAddNodeTitle,
+                onPressed: attaching
+                    ? null
+                    : () async {
+                        await AddNodeScreen.show(context);
+                        if (!context.mounted) return;
+                        await provider.loadOwnedNodes();
+                      },
+              ),
               const SizedBox(height: KubusSpacing.md),
               KubusOutlineButton(
                 label: l10n.commonRetry,

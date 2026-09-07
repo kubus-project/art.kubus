@@ -1526,6 +1526,18 @@ class KubusNodeService {
     throw StateError('Content is unavailable: $lastError');
   }
 
+  /// Asks the paired Node to begin an account-authorized permission rotation.
+  ///
+  /// The Node — not this app — mints the grant, because the grant is bound to
+  /// the Node's Ed25519 identity and only the Node can prove it. The app's part
+  /// is to authorize the returned installation with the signed-in account.
+  Future<Map<String, dynamic>> beginComputePermissionUpdate() =>
+      _post('/local/v1/compute/permission-update', const {});
+
+  /// Current phase of an in-flight permission rotation, driven by the Node.
+  Future<Map<String, dynamic>> computePermissionUpdateStatus() =>
+      _get('/local/v1/compute/permission-update');
+
   Future<Map<String, dynamic>> _get(String path) async =>
       _decode(await _request('GET', path));
   Future<Map<String, dynamic>> _post(
