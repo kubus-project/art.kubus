@@ -118,7 +118,8 @@ class _AddNodeScreenState extends State<AddNodeScreen> {
                 maxLength: 8,
                 inputFormatters: [
                   UpperCaseTextFormatter(),
-                  FilteringTextInputFormatter.allow(RegExp('[0-9A-HJ-NP-TV-Z]')),
+                  FilteringTextInputFormatter.allow(
+                      RegExp('[0-9A-HJ-NP-TV-Z]')),
                 ],
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(

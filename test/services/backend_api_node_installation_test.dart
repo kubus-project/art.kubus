@@ -70,8 +70,8 @@ void main() {
           }),
           200);
     }));
-    expect((await api.declineNodeInstallation('install-1'))['state'],
-        'DECLINED');
+    expect(
+        (await api.declineNodeInstallation('install-1'))['state'], 'DECLINED');
   });
 
   test('a rejected authorization surfaces rather than reading as success',
