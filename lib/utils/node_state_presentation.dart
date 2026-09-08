@@ -10,6 +10,7 @@
 library;
 
 import '../l10n/app_localizations.dart';
+import '../models/kubus_node_models.dart';
 
 /// Status severity. Colour is derived from this, but never carries the meaning
 /// on its own: each description also has a title, so status survives without
@@ -36,6 +37,33 @@ class NodeStateDescription {
 }
 
 class NodeStatePresentation {
+  static String connection(
+          AppLocalizations l10n, KubusNodeConnectionDetail state) =>
+      switch (state) {
+        KubusNodeConnectionDetail.noNode => l10n.kubusNodeNoNodeTitle,
+        KubusNodeConnectionDetail.ownedNodeAvailable =>
+          l10n.kubusMyNodesAvailable,
+        KubusNodeConnectionDetail.attaching => l10n.kubusMyNodesAttaching,
+        KubusNodeConnectionDetail.pairedOffline =>
+          l10n.kubusNodeStateOfflineBody,
+        // Primary UI is deliberately coarse: local reads as "nearby", and
+        // every other rung collapses to "remotely". Whether the bytes took a
+        // direct peer connection, a relay or the operator's own ingress is
+        // nothing the user can act on, so TURN/STUN/ICE/WebRTC never appear
+        // here — see docs/node/transport-ladder.md. The rung itself stays
+        // available on the enum for diagnostics and tests.
+        KubusNodeConnectionDetail.lanConnected => l10n.kubusConnectionNearby,
+        KubusNodeConnectionDetail.webRtcDirectConnected ||
+        KubusNodeConnectionDetail.turnConnected ||
+        KubusNodeConnectionDetail.httpsConnected =>
+          l10n.kubusConnectionRemote,
+        KubusNodeConnectionDetail.computeAuthorizationRequired =>
+          l10n.kubusComputeAuthorizationRequired,
+        KubusNodeConnectionDetail.identityMismatch =>
+          l10n.kubusConnectionIdentityMismatch,
+        KubusNodeConnectionDetail.error => l10n.kubusMyNodesAttachFailed,
+      };
+
   const NodeStatePresentation._();
 
   /// Participation is reciprocity, not enforcement. The copy explains what the

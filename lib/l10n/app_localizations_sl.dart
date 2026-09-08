@@ -16833,6 +16833,52 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletGalleryStatusTransferred => 'Prenesena';
 
   @override
+  String get kubusMyNodesTitle => 'Moja vozlišča';
+
+  @override
+  String get kubusConnectionNearby => 'Povezano v bližini';
+
+  @override
+  String get kubusConnectionRemote => 'Povezano na daljavo';
+
+  @override
+  String get kubusComputeAuthorizationRequired =>
+      'Za omrežno obdelavo posodobite dovoljenja tega vozlišča. Vozlišče ostaja seznanjeno.';
+
+  @override
+  String get kubusConnectionIdentityMismatch =>
+      'Preverjanje identitete vozlišča ni uspelo. Povezava je bila zavrnjena, shranjena identiteta pa je ohranjena.';
+
+  @override
+  String get kubusNetworkStagingExplanation =>
+      'Omrežna obdelava trenutno uporablja vaše vozlišče kubus za varno pripravo šifriranega zajema.';
+
+  @override
+  String get kubusMyNodesDiscoveryFailed =>
+      'Vozlišč ni bilo mogoče naložiti. Preverite povezavo, se prijavite in poskusite znova.';
+
+  @override
+  String get kubusMyNodesEmpty =>
+      'Ta račun nima registriranih vozlišč. Za nadaljevanje nastavite vozlišče kubus.';
+
+  @override
+  String get kubusMyNodesAvailable => 'Na voljo za oddaljeno povezavo';
+
+  @override
+  String get kubusMyNodesUnavailable =>
+      'Oddaljena povezava ni na voljo. Zaženite vozlišče ter preverite različico programske opreme in dovoljenja za signalizacijo.';
+
+  @override
+  String get kubusMyNodesAttaching => 'Varno povezovanje…';
+
+  @override
+  String get kubusMyNodesAttachFailed =>
+      'Varne povezave ni bilo mogoče vzpostaviti. Shranjena seznanitev je ohranjena.';
+
+  @override
+  String get kubusMyNodesLocalPairing => 'Lokalna seznanitev s kodo QR';
+
+  @override
   String get walletGalleryStatusBurned => 'Umaknjena';
 
   @override
@@ -16844,4 +16890,75 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artworkCreatorAttendanceImageTooSmall =>
       'Slika zapisa prisotnosti mora biti na krajši stranici velika vsaj 256 px.';
+
+  @override
+  String get kubusAddNodeTitle => 'Dodaj vozlišče';
+
+  @override
+  String get kubusAddNodeIntro =>
+      'Namestite kubus Node na računalnik in odprite njegovo stran za nastavitev. Prikaže osemmestno kodo. Vnesite jo tukaj in vozlišče pooblastite za ta račun.';
+
+  @override
+  String get kubusAddNodeCodeLabel => 'Koda za nastavitev';
+
+  @override
+  String get kubusAddNodeLookup => 'Poišči vozlišče';
+
+  @override
+  String get kubusAddNodeNotFound =>
+      'Za to kodo ne čaka nobeno vozlišče. Preverite kodo na strani za nastavitev ali znova zaženite nastavitev.';
+
+  @override
+  String get kubusAddNodeReview => 'Ali pooblastite to vozlišče?';
+
+  @override
+  String get kubusAddNodeFingerprint => 'Prstni odtis vozlišča';
+
+  @override
+  String get kubusAddNodeGrants =>
+      'S pooblastitvijo vozlišče dobi poverilnico za razpoložljivost arhiva, usklajevanje povezav in omrežno računanje. Vaši zajemi ostanejo na vozlišču.';
+
+  @override
+  String get kubusAddNodeAuthorize => 'Pooblasti';
+
+  @override
+  String get kubusAddNodeDecline => 'Zavrni';
+
+  @override
+  String get kubusAddNodeAuthorized =>
+      'Pooblaščeno. Vozlišče zaključuje nastavitev in se bo kmalu pojavilo med Mojimi vozlišči.';
+
+  @override
+  String get kubusAddNodeDeclined =>
+      'Zavrnjeno. Nobena poverilnica ni bila izdana.';
+
+  @override
+  String get kubusAddNodeFailed =>
+      'Pooblastitve ni bilo mogoče dokončati. Nič ni bilo izdano; poskusite znova.';
+
+  @override
+  String get kubusPermissionUpdateTitle => 'Posodobi dovoljenja';
+
+  @override
+  String get kubusPermissionUpdateBody =>
+      'To vozlišče je bilo nastavljeno pred trenutnimi dovoljenji. Pooblastite posodobljeno poverilnico za omrežno računanje. Njegova identiteta, seznanitve, zajemi in arhiv ostanejo nespremenjeni.';
+
+  @override
+  String get kubusPermissionUpdateAction => 'Posodobi dovoljenja';
+
+  @override
+  String get kubusPermissionUpdateWorking =>
+      'Posodabljanje dovoljenj vozlišča …';
+
+  @override
+  String get kubusPermissionUpdateDone =>
+      'Dovoljenja so posodobljena. Vozlišče se ponovno zaganja, da jih uporabi.';
+
+  @override
+  String get kubusPermissionUpdateDeclined =>
+      'Posodobitev je zavrnjena. Vozlišče ohrani trenutna dovoljenja.';
+
+  @override
+  String get kubusPermissionUpdateFailed =>
+      'Dovoljenj ni bilo mogoče posodobiti. Vozlišče je ohranilo obstoječo poverilnico.';
 }

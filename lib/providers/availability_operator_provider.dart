@@ -3,17 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 import '../services/backend_api_service.dart';
 
-const List<String> availabilityOperatorDefaultScopes = <String>[
-  'availability:nodes:register',
-  'availability:nodes:read',
-  'availability:nodes:heartbeat',
-  'availability:commitments:write',
-  'availability:commitments:read',
-  'availability:rewards:read',
-  'availability:policy:read',
-  'availability:rewardable-cids:read',
-];
-
 class AvailabilityOperatorTokenRecord {
   const AvailabilityOperatorTokenRecord({
     required this.id,
@@ -234,7 +223,8 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
         label: label,
         walletAddress: walletAddress,
         expiresInDays: expiresInDays,
-        scopes: availabilityOperatorDefaultScopes,
+        // The backend owns the current default scope contract. This applies
+        // only to explicit token creation; stored tokens retain their scopes.
       );
       final token = (response['token'] ?? '').toString();
       final recordMap = response['record'] is Map<String, dynamic>

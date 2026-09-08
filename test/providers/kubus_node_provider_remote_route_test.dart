@@ -107,6 +107,28 @@ void main() {
     _node = await _NodeIdentity.create();
   });
 
+  test(
+      'a corrupted remote identity is an identity error and keeps saved pairing',
+      () async {
+    final store = _MemoryCredentialStore();
+    final saved = jsonEncode({
+      'nodeId': 'node-1',
+      'publicKey': _node.publicKeyBase64Url,
+      'fingerprint': '0' * 64,
+      'credential': 'kubus_local_testtoken',
+    });
+    await store.write('kubus_node_remote_pairing_v1', saved);
+    final provider = KubusNodeProvider(
+      service: KubusNodeService(credentialStore: store, isWeb: false),
+    );
+    await provider.initialize();
+    expect(provider.state, KubusNodeConnectionState.error);
+    expect(
+        provider.connectionDetail, KubusNodeConnectionDetail.identityMismatch);
+    expect(store.values['kubus_node_remote_pairing_v1'], saved);
+    provider.dispose();
+  });
+
   // What regressed was the decision to re-read, not the connection: a working
   // remote rung was installed and nothing ever asked the Node anything again,
   // so the UI kept showing an unreachable Node. `refresh()` notifies its

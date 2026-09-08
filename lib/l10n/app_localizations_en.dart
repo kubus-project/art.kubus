@@ -16661,6 +16661,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletGalleryStatusTransferred => 'Transferred';
 
   @override
+  String get kubusMyNodesTitle => 'My Nodes';
+
+  @override
+  String get kubusConnectionNearby => 'Connected nearby';
+
+  @override
+  String get kubusConnectionRemote => 'Connected remotely';
+
+  @override
+  String get kubusComputeAuthorizationRequired =>
+      'Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.';
+
+  @override
+  String get kubusConnectionIdentityMismatch =>
+      'Node identity verification failed. The connection was refused and your saved identity was preserved.';
+
+  @override
+  String get kubusNetworkStagingExplanation =>
+      'Network processing currently uses your kubus Node to securely stage the encrypted capture.';
+
+  @override
+  String get kubusMyNodesDiscoveryFailed =>
+      'Could not load your Nodes. Check your connection and sign in, then retry.';
+
+  @override
+  String get kubusMyNodesEmpty =>
+      'This account has no registered Nodes. Set up a kubus Node to continue.';
+
+  @override
+  String get kubusMyNodesAvailable => 'Available to connect remotely';
+
+  @override
+  String get kubusMyNodesUnavailable =>
+      'Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.';
+
+  @override
+  String get kubusMyNodesAttaching => 'Connecting securely…';
+
+  @override
+  String get kubusMyNodesAttachFailed =>
+      'Could not connect securely. Your saved pairing has been preserved.';
+
+  @override
+  String get kubusMyNodesLocalPairing => 'Pair locally with a QR code';
+
+  @override
   String get walletGalleryStatusBurned => 'Retired';
 
   @override
@@ -16672,4 +16718,74 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get artworkCreatorAttendanceImageTooSmall =>
       'The attendance record image must be at least 256 px on its shortest side.';
+
+  @override
+  String get kubusAddNodeTitle => 'Add a Node';
+
+  @override
+  String get kubusAddNodeIntro =>
+      'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.';
+
+  @override
+  String get kubusAddNodeCodeLabel => 'Setup code';
+
+  @override
+  String get kubusAddNodeLookup => 'Find Node';
+
+  @override
+  String get kubusAddNodeNotFound =>
+      'No Node is waiting for that code. Check the code on the setup page, or start setup again.';
+
+  @override
+  String get kubusAddNodeReview => 'Authorize this Node?';
+
+  @override
+  String get kubusAddNodeFingerprint => 'Node fingerprint';
+
+  @override
+  String get kubusAddNodeGrants =>
+      'Authorizing issues this Node a credential for archive availability, connection signaling and network compute. Your captures stay on the Node.';
+
+  @override
+  String get kubusAddNodeAuthorize => 'Authorize';
+
+  @override
+  String get kubusAddNodeDecline => 'Decline';
+
+  @override
+  String get kubusAddNodeAuthorized =>
+      'Authorized. Your Node is finishing setup and will appear in My Nodes shortly.';
+
+  @override
+  String get kubusAddNodeDeclined => 'Declined. No credential was issued.';
+
+  @override
+  String get kubusAddNodeFailed =>
+      'Could not complete authorization. Nothing was issued; try again.';
+
+  @override
+  String get kubusPermissionUpdateTitle => 'Update permissions';
+
+  @override
+  String get kubusPermissionUpdateBody =>
+      'This Node was set up before the current permissions. Authorize an updated credential to use network compute. Its identity, pairings, captures and archive stay exactly as they are.';
+
+  @override
+  String get kubusPermissionUpdateAction => 'Update permissions';
+
+  @override
+  String get kubusPermissionUpdateWorking =>
+      'Updating this Node\'s permissions…';
+
+  @override
+  String get kubusPermissionUpdateDone =>
+      'Permissions updated. Your Node is restarting to use them.';
+
+  @override
+  String get kubusPermissionUpdateDeclined =>
+      'Update declined. This Node keeps its current permissions.';
+
+  @override
+  String get kubusPermissionUpdateFailed =>
+      'Could not update permissions. This Node kept its existing credential.';
 }

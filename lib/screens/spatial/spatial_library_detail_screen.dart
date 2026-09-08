@@ -30,7 +30,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
-import '../node/node_pairing_screen.dart';
+import '../node/my_nodes_screen.dart';
 import 'spatial_capture_launch.dart';
 
 /// The management surface for one capture.
@@ -531,9 +531,7 @@ class _SpatialLibraryDetailScreenState
         // Pairing is reachable from the point of need — not a detour through
         // Settings. On success, drop straight back into the same processing
         // flow with the Node's freshly paired state already reflected.
-        final paired = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(builder: (_) => const NodePairingScreen()),
-        );
+        final paired = await MyNodesScreen.show(context);
         if (!mounted || paired != true) return;
         await _chooseProcessor(provider, record);
       case SpatialProcessorChoice.ownNode:
@@ -541,6 +539,12 @@ class _SpatialLibraryDetailScreenState
         // never leaves their own hardware.
         await _run(() => provider.processWithOwnNode(record.localSpatialId));
       case SpatialProcessorChoice.kubusNetwork:
+        if (context.read<KubusNodeProvider>().state !=
+            KubusNodeConnectionState.paired) {
+          final connected =
+              await MyNodesScreen.show(context, networkProcessing: true);
+          if (!mounted || connected != true) return;
+        }
         final consent = await showKubusDialog<bool>(
               context: context,
               builder: (dialogContext) => KubusAlertDialog(

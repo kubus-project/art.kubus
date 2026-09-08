@@ -275,4 +275,61 @@ void main() {
       }
     });
   });
+
+  group('connection', () {
+    // docs/node/transport-ladder.md: primary UI is deliberately coarse, and
+    // TURN/STUN/ICE/NAT/WebRTC never appear in it. node_connection_status_test
+    // guards the headline enum's names; this guards what is actually rendered,
+    // so a parallel detail enum cannot route the same vocabulary to the screen.
+    // Only the transport rungs: these are what the ladder rule is about, and
+    // matching bare substrings against unrelated copy would fire on ordinary
+    // words that merely contain them.
+    const rungs = [
+      KubusNodeConnectionDetail.lanConnected,
+      KubusNodeConnectionDetail.webRtcDirectConnected,
+      KubusNodeConnectionDetail.turnConnected,
+      KubusNodeConnectionDetail.httpsConnected,
+    ];
+
+    test('no rung leaks transport vocabulary into what is rendered', () {
+      for (final l10n in [en, sl]) {
+        for (final detail in rungs) {
+          final text =
+              NodeStatePresentation.connection(l10n, detail).toLowerCase();
+          for (final banned in [
+            'turn',
+            'stun',
+            'ice',
+            'nat',
+            'webrtc',
+            'sctp',
+            'lan',
+            'https',
+            'posrednik',
+          ]) {
+            expect(text.contains(banned), isFalse,
+                reason: '$detail leaks "$banned" as "$text"');
+          }
+        }
+      }
+    });
+
+    test('every non-local rung reads as the same one remote sentence', () {
+      for (final l10n in [en, sl]) {
+        final remote = [
+          KubusNodeConnectionDetail.webRtcDirectConnected,
+          KubusNodeConnectionDetail.turnConnected,
+          KubusNodeConnectionDetail.httpsConnected,
+        ].map((d) => NodeStatePresentation.connection(l10n, d)).toSet();
+        expect(remote, hasLength(1),
+            reason: 'the rung a connection took is not the user’s concern');
+        expect(remote.single, l10n.kubusConnectionRemote);
+        expect(
+          NodeStatePresentation.connection(
+              l10n, KubusNodeConnectionDetail.lanConnected),
+          l10n.kubusConnectionNearby,
+        );
+      }
+    });
+  });
 }

@@ -104,6 +104,41 @@ http.Response _nodeInfo() => http.Response(
     );
 
 void main() {
+  test('restores a remote-only pairing without any LAN or HTTPS endpoint',
+      () async {
+    final identity = await _NodeIdentityFixture.create(11, 'remote-node');
+    final store = _MemoryCredentialStore();
+    store.values['kubus_node_remote_pairing_v1'] = jsonEncode({
+      'nodeId': identity.nodeId,
+      'publicKey': identity.publicKeyBase64Url,
+      'fingerprint': identity.fingerprint,
+      'credential': 'kubus_local_remote_device',
+    });
+    final service = KubusNodeService(credentialStore: store);
+    expect(await service.initialize(), isTrue);
+    expect(service.isPaired, isTrue);
+    expect(service.nodeId, identity.nodeId);
+    expect(service.endpoint, isNull);
+    expect(service.supportsRemoteIdentityVerification, isTrue);
+    await service.unpair();
+    expect(store.values.containsKey('kubus_node_remote_pairing_v1'), isFalse);
+  });
+
+  test('rejects a substituted identity in a saved remote pairing', () async {
+    final identity = await _NodeIdentityFixture.create(12, 'remote-node');
+    final store = _MemoryCredentialStore();
+    store.values['kubus_node_remote_pairing_v1'] = jsonEncode({
+      'nodeId': identity.nodeId,
+      'publicKey': identity.publicKeyBase64Url,
+      'fingerprint': '0' * 64,
+      'credential': 'kubus_local_remote_device',
+    });
+    final service = KubusNodeService(credentialStore: store);
+    await expectLater(
+        service.initialize(), throwsA(isA<KubusNodeIdentityException>()));
+    expect(service.isPaired, isFalse);
+    expect(store.values.containsKey('kubus_node_remote_pairing_v1'), isTrue);
+  });
   setUpAll(() async {
     _node = await _NodeIdentityFixture.create(7, 'node-1');
     _impostor = await _NodeIdentityFixture.create(9, 'proxy-changed-node');

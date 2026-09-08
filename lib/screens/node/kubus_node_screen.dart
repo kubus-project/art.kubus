@@ -7,11 +7,10 @@ import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../providers/availability_operator_provider.dart';
 import '../../providers/kubus_node_provider.dart';
-import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
-import '../../widgets/glass_components.dart';
+import '../../widgets/kubus_kit.dart';
 import '../../widgets/node/node_ui.dart';
-import 'node_pairing_screen.dart';
+import 'my_nodes_screen.dart';
 
 /// The kubus Node experience inside art.kubus.
 ///
@@ -49,9 +48,7 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
   }
 
   Future<void> _openPairing() async {
-    final paired = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const NodePairingScreen()),
-    );
+    final paired = await MyNodesScreen.show(context);
     if (paired == true && mounted) unawaited(_refresh());
   }
 
@@ -179,6 +176,49 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
           label: _nodeLabel(snapshot),
           description: participation,
         ),
+        const SizedBox(height: KubusSpacing.md),
+        NodePanel(
+            child: Text(NodeStatePresentation.connection(
+                _l10n, node.connectionDetail))),
+        // Detection alone leaves an under-scoped Node stuck. This is the
+        // explicit authorization that lets a replacement credential be issued;
+        // nothing rotates without the person choosing it here.
+        if (node.connectionDetail ==
+            KubusNodeConnectionDetail.computeAuthorizationRequired) ...[
+          const SizedBox(height: KubusSpacing.md),
+          NodePanel(
+            title: _l10n.kubusPermissionUpdateTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(_l10n.kubusPermissionUpdateBody),
+                const SizedBox(height: KubusSpacing.md),
+                KubusButton(
+                  label: node.updatingPermissions
+                      ? _l10n.kubusPermissionUpdateWorking
+                      : _l10n.kubusPermissionUpdateAction,
+                  onPressed: node.updatingPermissions
+                      ? null
+                      : () async {
+                          await node.updateComputePermissions();
+                          if (!mounted) return;
+                          unawaited(_refresh());
+                        },
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (node.permissionUpdatePhase == 'COMPLETED') ...[
+          const SizedBox(height: KubusSpacing.md),
+          NodePanel(child: Text(_l10n.kubusPermissionUpdateDone)),
+        ] else if (node.permissionUpdatePhase == 'DECLINED') ...[
+          const SizedBox(height: KubusSpacing.md),
+          NodePanel(child: Text(_l10n.kubusPermissionUpdateDeclined)),
+        ] else if (node.permissionUpdatePhase == 'FAILED') ...[
+          const SizedBox(height: KubusSpacing.md),
+          NodePanel(child: Text(_l10n.kubusPermissionUpdateFailed)),
+        ],
         if (participation.severity == NodeSeverity.attention ||
             participation.severity == NodeSeverity.critical) ...[
           const SizedBox(height: KubusSpacing.md),

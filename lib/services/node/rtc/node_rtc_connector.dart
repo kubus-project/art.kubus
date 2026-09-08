@@ -32,6 +32,7 @@ class NodeRtcConnector {
     required Future<IceConfiguration> Function() iceConfiguration,
     required Uint8List? Function() pairedPublicKey,
     String? Function()? credential,
+    this.authorizeVerifiedChannel,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration proofTimeout = const Duration(seconds: 10),
     Duration relayStatsTimeout = NodeRelayClassifier.defaultSettleTimeout,
@@ -53,6 +54,9 @@ class NodeRtcConnector {
   final Future<IceConfiguration> Function() _iceConfiguration;
   final Uint8List? Function() _pairedPublicKey;
   final String? Function() _credential;
+  final Future<String> Function(
+          WebRtcNodeTransport transport, String sessionId)?
+      authorizeVerifiedChannel;
 
   static String? _noCredential() => null;
   final Duration _connectTimeout;
@@ -118,6 +122,13 @@ class NodeRtcConnector {
         // this credential before that proof succeeds.
         credential: _credential(),
       );
+
+      final authorize = authorizeVerifiedChannel;
+      if (authorize != null) {
+        transport.completeRemoteAuthorization(
+          await authorize(transport, session.sessionId),
+        );
+      }
 
       // Signalling has done its job. Leaving the session open would keep
       // ephemeral state on the control plane for a connection that no longer

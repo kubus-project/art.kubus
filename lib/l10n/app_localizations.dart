@@ -8332,13 +8332,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapFilterScopeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Scope'**
+  /// **'Area'**
   String get mapFilterScopeTitle;
 
   /// No description provided for @mapFilterScopeCurrentViewport.
   ///
   /// In en, this message translates to:
-  /// **'Current viewport'**
+  /// **'Map area'**
   String get mapFilterScopeCurrentViewport;
 
   /// No description provided for @mapFilterScopeNearMe.
@@ -26607,10 +26607,22 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
+  /// No description provided for @analyticsBlockedOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
   String get analyticsBlockedOpenSettings;
 
+  /// No description provided for @analyticsBlockedUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics unavailable'**
   String get analyticsBlockedUnavailableTitle;
 
+  /// No description provided for @analyticsBlockedUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are not available in this app build.'**
   String get analyticsBlockedUnavailableDescription;
 
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
@@ -28984,6 +28996,84 @@ abstract class AppLocalizations {
   /// **'Transferred'**
   String get walletGalleryStatusTransferred;
 
+  /// No description provided for @kubusMyNodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Nodes'**
+  String get kubusMyNodesTitle;
+
+  /// No description provided for @kubusConnectionNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected nearby'**
+  String get kubusConnectionNearby;
+
+  /// No description provided for @kubusConnectionRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected remotely'**
+  String get kubusConnectionRemote;
+
+  /// No description provided for @kubusComputeAuthorizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.'**
+  String get kubusComputeAuthorizationRequired;
+
+  /// No description provided for @kubusConnectionIdentityMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Node identity verification failed. The connection was refused and your saved identity was preserved.'**
+  String get kubusConnectionIdentityMismatch;
+
+  /// No description provided for @kubusNetworkStagingExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Network processing currently uses your kubus Node to securely stage the encrypted capture.'**
+  String get kubusNetworkStagingExplanation;
+
+  /// No description provided for @kubusMyNodesDiscoveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your Nodes. Check your connection and sign in, then retry.'**
+  String get kubusMyNodesDiscoveryFailed;
+
+  /// No description provided for @kubusMyNodesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has no registered Nodes. Set up a kubus Node to continue.'**
+  String get kubusMyNodesEmpty;
+
+  /// No description provided for @kubusMyNodesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available to connect remotely'**
+  String get kubusMyNodesAvailable;
+
+  /// No description provided for @kubusMyNodesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.'**
+  String get kubusMyNodesUnavailable;
+
+  /// No description provided for @kubusMyNodesAttaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting securely…'**
+  String get kubusMyNodesAttaching;
+
+  /// No description provided for @kubusMyNodesAttachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect securely. Your saved pairing has been preserved.'**
+  String get kubusMyNodesAttachFailed;
+
+  /// No description provided for @kubusMyNodesLocalPairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair locally with a QR code'**
+  String get kubusMyNodesLocalPairing;
+
   /// No description provided for @walletGalleryStatusBurned.
   ///
   /// In en, this message translates to:
@@ -29007,6 +29097,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The attendance record image must be at least 256 px on its shortest side.'**
   String get artworkCreatorAttendanceImageTooSmall;
+
+  /// No description provided for @kubusAddNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Node'**
+  String get kubusAddNodeTitle;
+
+  /// No description provided for @kubusAddNodeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.'**
+  String get kubusAddNodeIntro;
+
+  /// No description provided for @kubusAddNodeCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup code'**
+  String get kubusAddNodeCodeLabel;
+
+  /// No description provided for @kubusAddNodeLookup.
+  ///
+  /// In en, this message translates to:
+  /// **'Find Node'**
+  String get kubusAddNodeLookup;
+
+  /// No description provided for @kubusAddNodeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Node is waiting for that code. Check the code on the setup page, or start setup again.'**
+  String get kubusAddNodeNotFound;
+
+  /// No description provided for @kubusAddNodeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize this Node?'**
+  String get kubusAddNodeReview;
+
+  /// No description provided for @kubusAddNodeFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Node fingerprint'**
+  String get kubusAddNodeFingerprint;
+
+  /// No description provided for @kubusAddNodeGrants.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorizing issues this Node a credential for archive availability, connection signaling and network compute. Your captures stay on the Node.'**
+  String get kubusAddNodeGrants;
+
+  /// No description provided for @kubusAddNodeAuthorize.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize'**
+  String get kubusAddNodeAuthorize;
+
+  /// No description provided for @kubusAddNodeDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get kubusAddNodeDecline;
+
+  /// No description provided for @kubusAddNodeAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorized. Your Node is finishing setup and will appear in My Nodes shortly.'**
+  String get kubusAddNodeAuthorized;
+
+  /// No description provided for @kubusAddNodeDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined. No credential was issued.'**
+  String get kubusAddNodeDeclined;
+
+  /// No description provided for @kubusAddNodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete authorization. Nothing was issued; try again.'**
+  String get kubusAddNodeFailed;
+
+  /// No description provided for @kubusPermissionUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateTitle;
+
+  /// No description provided for @kubusPermissionUpdateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This Node was set up before the current permissions. Authorize an updated credential to use network compute. Its identity, pairings, captures and archive stay exactly as they are.'**
+  String get kubusPermissionUpdateBody;
+
+  /// No description provided for @kubusPermissionUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateAction;
+
+  /// No description provided for @kubusPermissionUpdateWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating this Node\'s permissions…'**
+  String get kubusPermissionUpdateWorking;
+
+  /// No description provided for @kubusPermissionUpdateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions updated. Your Node is restarting to use them.'**
+  String get kubusPermissionUpdateDone;
+
+  /// No description provided for @kubusPermissionUpdateDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Update declined. This Node keeps its current permissions.'**
+  String get kubusPermissionUpdateDeclined;
+
+  /// No description provided for @kubusPermissionUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update permissions. This Node kept its existing credential.'**
+  String get kubusPermissionUpdateFailed;
 }
 
 class _AppLocalizationsDelegate

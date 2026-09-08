@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/config.dart';
 import '../../features/spatial/spatial_marker_directory.dart';
 import '../../features/spatial/spatial_record_card.dart';
 import '../../features/spatial/spatial_status_presentation.dart';
@@ -15,7 +16,7 @@ import '../../services/spatial_library_store.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../node/kubus_node_screen.dart';
-import '../node/node_pairing_screen.dart';
+import '../node/my_nodes_screen.dart';
 import 'spatial_library_detail_screen.dart';
 
 enum SpatialLibraryFilter { all, captured, processing, ready, published }
@@ -75,8 +76,13 @@ class _SpatialLibraryScreenState extends State<SpatialLibraryScreen> {
           children: <Widget>[
             _StorageSummary(raw: raw, processed: processed),
             const SizedBox(height: KubusSpacing.sm),
-            const _NodeStatusPill(),
-            const SizedBox(height: KubusSpacing.md),
+            // The library itself is not gated on the Node rollout, so the Node
+            // affordance has to be: offering it while the flag is off would
+            // reach a provider bootstrap deliberately never initialized.
+            if (AppConfig.isFeatureEnabled('availabilityNodes')) ...[
+              const _NodeStatusPill(),
+              const SizedBox(height: KubusSpacing.md),
+            ],
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -199,12 +205,7 @@ class _NodeStatusPill extends StatelessWidget {
               ),
             );
           } else {
-            Navigator.of(context).push(
-              MaterialPageRoute<bool>(
-                builder: (_) => const NodePairingScreen(),
-                settings: const RouteSettings(name: '/node-pairing'),
-              ),
-            );
+            MyNodesScreen.show(context);
           }
         },
       ),
