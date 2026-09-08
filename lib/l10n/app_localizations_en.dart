@@ -16664,16 +16664,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kubusMyNodesTitle => 'My Nodes';
 
   @override
-  String get kubusConnectionLan => 'Connected over LAN';
+  String get kubusConnectionNearby => 'Connected nearby';
 
   @override
-  String get kubusConnectionDirect => 'Connected over direct WebRTC';
-
-  @override
-  String get kubusConnectionRelay => 'Connected over TURN relay';
-
-  @override
-  String get kubusConnectionHttps => 'Connected over HTTPS';
+  String get kubusConnectionRemote => 'Connected remotely';
 
   @override
   String get kubusComputeAuthorizationRequired =>

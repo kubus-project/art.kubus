@@ -29002,29 +29002,17 @@ abstract class AppLocalizations {
   /// **'My Nodes'**
   String get kubusMyNodesTitle;
 
-  /// No description provided for @kubusConnectionLan.
+  /// No description provided for @kubusConnectionNearby.
   ///
   /// In en, this message translates to:
-  /// **'Connected over LAN'**
-  String get kubusConnectionLan;
+  /// **'Connected nearby'**
+  String get kubusConnectionNearby;
 
-  /// No description provided for @kubusConnectionDirect.
+  /// No description provided for @kubusConnectionRemote.
   ///
   /// In en, this message translates to:
-  /// **'Connected over direct WebRTC'**
-  String get kubusConnectionDirect;
-
-  /// No description provided for @kubusConnectionRelay.
-  ///
-  /// In en, this message translates to:
-  /// **'Connected over TURN relay'**
-  String get kubusConnectionRelay;
-
-  /// No description provided for @kubusConnectionHttps.
-  ///
-  /// In en, this message translates to:
-  /// **'Connected over HTTPS'**
-  String get kubusConnectionHttps;
+  /// **'Connected remotely'**
+  String get kubusConnectionRemote;
 
   /// No description provided for @kubusComputeAuthorizationRequired.
   ///

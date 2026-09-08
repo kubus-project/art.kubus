@@ -16836,16 +16836,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get kubusMyNodesTitle => 'Moja vozlišča';
 
   @override
-  String get kubusConnectionLan => 'Povezano prek lokalnega omrežja';
+  String get kubusConnectionNearby => 'Povezano v bližini';
 
   @override
-  String get kubusConnectionDirect => 'Povezano neposredno prek WebRTC';
-
-  @override
-  String get kubusConnectionRelay => 'Povezano prek posrednika TURN';
-
-  @override
-  String get kubusConnectionHttps => 'Povezano prek HTTPS';
+  String get kubusConnectionRemote => 'Povezano na daljavo';
 
   @override
   String get kubusComputeAuthorizationRequired =>
