@@ -99,6 +99,11 @@ jobs:
         working-directory: backend
       - run: npm run schema:parity
         working-directory: backend
+      # Reads lib/ and backend/ together, so it can only run where the private
+      # backend is materialized — PR CI checks out no submodule by design and
+      # would see an empty backend/ tree.
+      - name: Account and Node cross-repository contract
+        run: npm run verify:account-node-contract
 
   architecture_docs_and_audits:
     name: Architecture, docs, and dependency audits
