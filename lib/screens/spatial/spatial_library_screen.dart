@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/config.dart';
 import '../../features/spatial/spatial_marker_directory.dart';
 import '../../features/spatial/spatial_record_card.dart';
 import '../../features/spatial/spatial_status_presentation.dart';
@@ -75,8 +76,13 @@ class _SpatialLibraryScreenState extends State<SpatialLibraryScreen> {
           children: <Widget>[
             _StorageSummary(raw: raw, processed: processed),
             const SizedBox(height: KubusSpacing.sm),
-            const _NodeStatusPill(),
-            const SizedBox(height: KubusSpacing.md),
+            // The library itself is not gated on the Node rollout, so the Node
+            // affordance has to be: offering it while the flag is off would
+            // reach a provider bootstrap deliberately never initialized.
+            if (AppConfig.isFeatureEnabled('availabilityNodes')) ...[
+              const _NodeStatusPill(),
+              const SizedBox(height: KubusSpacing.md),
+            ],
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(

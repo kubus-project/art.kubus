@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../providers/kubus_node_provider.dart';
@@ -21,6 +22,13 @@ class MyNodesScreen extends StatelessWidget {
 
   static Future<bool?> show(BuildContext context,
       {bool networkProcessing = false}) {
+    // The rollout flag governs the whole Node surface. Bootstrap skips
+    // KubusNodeProvider.initialize() when it is off, so discovering and
+    // navigating here anyway would issue authenticated Node calls against a
+    // provider that was deliberately never started.
+    if (!AppConfig.isFeatureEnabled('availabilityNodes')) {
+      return Future<bool?>.value(null);
+    }
     unawaited(context.read<KubusNodeProvider>().loadOwnedNodes());
     return Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => MyNodesScreen(networkProcessing: networkProcessing),
