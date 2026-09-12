@@ -50,6 +50,7 @@ AR experiences are mobile-focused; web/desktop builds prioritize discovery and c
 
 Licensing overview:
 
-- Client code: `../LICENSE` (Apache-2.0) + `../NOTICE`
+- Client code: `../LICENSE` (MPL-2.0) + `../NOTICE`
 - Trademarks/branding: `../TRADEMARK.md`
 - Assets/content: `../LICENSE_ASSETS.md`
+- Full overview: [`licensing.md`](licensing.md)

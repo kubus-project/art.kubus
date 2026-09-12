@@ -120,7 +120,7 @@ This repository includes a Node/Express backend under `backend/`.
 - Backend setup & environment template: `backend/README.md` and `backend/.env.example`
 - Docker-based local stack: see the backend README and `backend/docker-compose.yml`
 
-The backend is **not** licensed under Apache-2.0 by default (see `backend/package.json`). Treat it as a separate component with its own terms and operational requirements.
+The backend is a separate Git submodule (art.kubus-backend) and is **not** licensed under MPL-2.0 (see `backend/package.json`). Treat it as a separate repository/component with its own terms and operational requirements.
 
 ## Google Sign-In (optional)
 

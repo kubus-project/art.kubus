@@ -3,16 +3,21 @@ art.kubus NOTICE
 Copyright (c) 2026 art.kubus contributors
 
 This repository contains:
-- open-source client code and designated public platform API artifacts licensed under the Apache License 2.0; and
+- open-source client code licensed under the Mozilla Public License 2.0 (MPL-2.0);
+- designated public platform API artifacts explicitly marked/documented as Apache-2.0, where identified; and
 - proprietary and reserved rights artifacts as described in TRADEMARK.md and LICENSE_ASSETS.md.
 
-The Apache License, Version 2.0 applies to client source files and other files explicitly marked or documented as Apache-2.0.
-You may obtain a copy of the License at:
+The Mozilla Public License 2.0 applies to client source files and other files explicitly marked or documented as MPL-2.0. You may obtain a copy of the License at:
+https://www.mozilla.org/en-US/MPL/2.0/
+
+Files explicitly marked or documented as Apache-2.0 (designated public platform API artifacts) remain under the Apache License, Version 2.0:
 http://www.apache.org/licenses/LICENSE-2.0
 
-No trademark rights are granted under Apache-2.0.
+No trademark rights are granted under MPL-2.0 or Apache-2.0.
 Use of the names, logos, and marks of art.kubus is governed by TRADEMARK.md.
 
-Unless expressly stated otherwise, media, screenshots, demo content, branding assets, and backend implementation artifacts are not licensed under Apache-2.0 and remain all rights reserved.
+The backend/ directory is a separate Git submodule pointing to the art.kubus-backend repository, which has its own, separate licensing terms. Nothing in this NOTICE relicenses the backend.
 
-Third-party components remain licensed under their respective upstream licenses.
+Unless expressly stated otherwise, media, screenshots, demo content, branding assets, and backend implementation artifacts are not licensed under MPL-2.0 and remain all rights reserved.
+
+Third-party components remain licensed under their respective upstream licenses. See THIRD_PARTY_NOTICES.md.
