@@ -10,7 +10,7 @@ This repository contains:
 The Mozilla Public License 2.0 applies to client source files and other files explicitly marked or documented as MPL-2.0. You may obtain a copy of the License at:
 https://www.mozilla.org/en-US/MPL/2.0/
 
-Files explicitly marked or documented as Apache-2.0 (designated public platform API artifacts) remain under the Apache License, Version 2.0:
+Files explicitly marked or documented as Apache-2.0 (designated public platform API artifacts, the Android Gradle wrapper, and the bundled Material Symbols fonts) remain under the Apache License, Version 2.0. A full copy of that license is kept at third_party/licenses/APACHE-2.0.txt; see also:
 http://www.apache.org/licenses/LICENSE-2.0
 
 No trademark rights are granted under MPL-2.0 or Apache-2.0.

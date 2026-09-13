@@ -2,13 +2,16 @@
 
 This document identifies components bundled or vendored in this repository that are **not** licensed under MPL-2.0 (or, where applicable, Apache-2.0 for designated public platform API artifacts). It does not relicense any of them, and it does not attempt to reproduce every dependency's license text.
 
+The repository's own root [`LICENSE`](LICENSE) file is MPL-2.0 text only. Because this repository also redistributes files licensed under the Apache License 2.0 (see the Android Gradle wrapper and the bundled Material Symbols fonts below), a full copy of the Apache License, Version 2.0 is kept at [`third_party/licenses/APACHE-2.0.txt`](third_party/licenses/APACHE-2.0.txt) to satisfy that license's requirement to include a copy of the license with any redistribution.
+
 ## Bundled/vendored components stored in this repository
 
 | Component | Location | License | Notes |
 |---|---|---|---|
 | `arcore_flutter_plugin` (local override) | `third_party/arcore_flutter_plugin/` | MIT (see its own `LICENSE`) | Local fork/override of an upstream ARCore Flutter plugin. Not MPL-2.0. Preserve its own `LICENSE`/copyright when modifying. |
 | MapLibre GL JS (web bundle) | `web/local/maplibre-gl/` | BSD-style (see `LICENSE.txt` in that directory) | Vendored browser map renderer. Not MPL-2.0. |
-| Material Symbols fonts | `assets/fonts/` | Apache License 2.0 (Google Material Symbols) | Font files themselves are unaffected by this repository's source-code relicensing. |
+| Material Symbols fonts | `assets/fonts/` | Apache License 2.0 (Google Material Symbols) | Font files themselves are unaffected by this repository's source-code relicensing. License text: [`third_party/licenses/APACHE-2.0.txt`](third_party/licenses/APACHE-2.0.txt). |
+| Gradle wrapper | `android/gradlew`, `android/gradlew.bat` | Apache License 2.0 (Gradle project) | Upstream Gradle wrapper scripts, carrying their own SPDX header. License text: [`third_party/licenses/APACHE-2.0.txt`](third_party/licenses/APACHE-2.0.txt). |
 | Brand/marketing images | `assets/images/` (logos, `belilogo*.png`, `logo*.png`, etc.) | All rights reserved by default | Governed by [`LICENSE_ASSETS.md`](LICENSE_ASSETS.md), not MPL-2.0. |
 | In-house map styles | `assets/map_styles/` (`kubus_dark.json`, `kubus_light.json`) | First-party, MPL-2.0 (client configuration data) | Not third-party; listed here for completeness since it sits alongside vendored map assets. |
 

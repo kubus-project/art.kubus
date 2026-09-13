@@ -37,7 +37,7 @@ They are governed by this policy and are excluded from Apache-2.0 unless a speci
 
 ## Exceptions
 
-If a file or directory includes an explicit license notice (for example CC-BY, MIT, Apache-2.0), that explicit notice controls that specific material.
+If a file or directory includes an explicit license notice (for example CC-BY, MIT, Apache-2.0), that explicit notice controls that specific material. Where Apache-2.0-licensed files are redistributed as part of this repository (e.g. the Android Gradle wrapper, bundled Material Symbols fonts), a full copy of that license is kept at [`third_party/licenses/APACHE-2.0.txt`](third_party/licenses/APACHE-2.0.txt) — see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Contact
 
