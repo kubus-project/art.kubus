@@ -8,9 +8,9 @@ This policy governs use of the following marks (collectively, “Marks”):
 
 All Marks are proprietary and reserved by the project maintainers and rights holders.
 
-## No Trademark License by Apache-2.0
+## No Trademark License by MPL-2.0 or Apache-2.0
 
-The Apache-2.0 license for this repository’s open-source client code does **not** grant rights to use project trade names, trademarks, service marks, logos, or product branding, except nominative use described below.
+The MPL-2.0 license for this repository’s open-source client code, and the Apache-2.0 license applicable to designated public platform API artifacts, do **not** grant rights to use project trade names, trademarks, service marks, logos, or product branding, except nominative use described below.
 
 ## Nominative Use (Allowed)
 

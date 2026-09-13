@@ -9,13 +9,13 @@ This includes, without limitation:
 - screenshots, demo videos, trailers, and marketing media;
 - artwork images, 3D models, audio, text content, and curated datasets.
 
-## What Is Apache-2.0 in This Repository
+## What Is MPL-2.0 (or Apache-2.0) in This Repository
 
-Apache-2.0 applies only to:
-- client source code and files explicitly designated as Apache-2.0;
-- designated public platform API artifacts explicitly marked/documented as open.
+MPL-2.0 applies to client source code, unless a file is explicitly designated otherwise.
 
-Apache-2.0 does **not** apply by default to assets/content/branding listed above.
+Apache-2.0 applies only to designated public platform API artifacts explicitly marked/documented as open.
+
+Neither MPL-2.0 nor Apache-2.0 applies by default to assets/content/branding listed above.
 
 ## Brand Asset Location
 
@@ -25,7 +25,7 @@ They are governed by this policy and are excluded from Apache-2.0 unless a speci
 ## Allowed Without Additional Permission
 
 - Running the software privately.
-- Redistributing Apache-2.0 client code in compliance with Apache-2.0.
+- Redistributing MPL-2.0 client code in compliance with MPL-2.0.
 - Minimal nominative references to project name as allowed by `TRADEMARK.md`.
 
 ## Not Allowed Without Written Permission
@@ -37,7 +37,7 @@ They are governed by this policy and are excluded from Apache-2.0 unless a speci
 
 ## Exceptions
 
-If a file or directory includes an explicit license notice (for example CC-BY, MIT, Apache-2.0), that explicit notice controls that specific material.
+If a file or directory includes an explicit license notice (for example CC-BY, MIT, Apache-2.0), that explicit notice controls that specific material. Where Apache-2.0-licensed files are redistributed as part of this repository (e.g. the Android Gradle wrapper, bundled Material Symbols fonts), a full copy of that license is kept at [`third_party/licenses/APACHE-2.0.txt`](third_party/licenses/APACHE-2.0.txt) — see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Contact
 

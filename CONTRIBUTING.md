@@ -40,7 +40,7 @@ Production releases are merge-commit pull requests from `dev` to `master`. Emerg
 
 ## Legal
 
-By submitting a contribution, you agree your contribution is licensed under Apache-2.0 for this repository.
+By submitting a contribution, you agree your contribution is licensed under MPL-2.0 for this repository (or Apache-2.0 for contributions to a file explicitly designated as a public platform API artifact), unless explicitly agreed otherwise in writing with the maintainers.
 Trademark and brand usage remains governed by `TRADEMARK.md`.
 Asset/content rights remain governed by `LICENSE_ASSETS.md`.
 

@@ -5,7 +5,7 @@
 # art.kubus
 
 [![Flutter](https://img.shields.io/badge/Flutter-app-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev)
-[![License: Apache-2.0 (client)](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![License: MPL-2.0 (client)](https://img.shields.io/badge/License-MPL--2.0-blue.svg)](LICENSE)
 
 A cross-platform Flutter app for discovering public and street art on a map — community-first, with optional AR and wallet-connected experiences.
 
@@ -23,10 +23,10 @@ Project site: https://art.kubus.site · App site: https://app.kubus.site
 
 ## What this repository contains
 
-- `lib/`, `assets/`, `android/`, `ios/`, `web/`, `windows/`, … — the Flutter client (Apache-2.0)
+- `lib/`, `assets/`, `android/`, `ios/`, `web/`, `windows/`, … — the Flutter client (MPL-2.0)
 - `docs/` — client documentation and the open-platform boundary (start at [`docs/README.md`](docs/README.md))
 - [`docs/seo-public-pages.md`](docs/seo-public-pages.md) — server-rendered public routes, canonicals, deployment, and rollback
-- `backend/` — platform backend for local development / reference (not Apache-2.0; see [`backend/README.md`](backend/README.md))
+- `backend/` — platform backend, included as a separate Git submodule for local development / reference (not MPL-2.0, separate repository with its own license; see [`backend/README.md`](backend/README.md))
 
 ## Quick start
 
@@ -137,6 +137,8 @@ Active development. Expect rapid iteration and occasional breaking changes while
 
 Licensing notes:
 
-- Client code: [`LICENSE`](LICENSE) (Apache-2.0) + [`NOTICE`](NOTICE)
+- Client code: [`LICENSE`](LICENSE) (MPL-2.0) + [`NOTICE`](NOTICE)
+- Third-party/vendored components: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 - Trademarks/branding: [`TRADEMARK.md`](TRADEMARK.md)
 - Assets/content: [`LICENSE_ASSETS.md`](LICENSE_ASSETS.md)
+- Full overview: [`docs/licensing.md`](docs/licensing.md)
