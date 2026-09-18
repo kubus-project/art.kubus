@@ -9,6 +9,7 @@ import '../models/kubus_node_models.dart';
 import '../models/spatial_capture_target.dart';
 import '../services/backend_api_service.dart';
 import '../services/kubus_node_service.dart';
+import '../services/node/node_transfer_cancellation.dart';
 import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
 import '../services/spatial_node_upload.dart';
@@ -1259,7 +1260,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
       return 'node_unavailable';
     }
     if (error is KubusNodeUnsupportedException) return 'node_unavailable';
-    if (error is SocketException || error is TimeoutException) {
+    if (error is SocketException ||
+        error is TimeoutException ||
+        error is NodeTransferCancelledException) {
       return 'upload_interrupted';
     }
     // A `StateError` carries a code only when this codebase put one there.

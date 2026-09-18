@@ -438,6 +438,34 @@ void main() {
       expect((document['frames'] as List).length, 2);
     });
 
+    test('a document naming a depth map the index does not have is rebuilt',
+        () async {
+      final store = await legacyCapture(samples: 1);
+      // Parses, names the right image, and still promises a depth map the
+      // capture never recorded — which the Node would refuse with a path
+      // nobody can resend.
+      await store.fileAt('frames.json').writeAsString(jsonEncode({
+            'schema': 'kubus.capture.frames/1',
+            'frames': [
+              {
+                'rgbPath': 'rgb/00000.jpg',
+                'depthPath': 'depth/00007.bin',
+                'depthConfidencePath': 'confidence/00000.bin',
+              },
+            ],
+          }));
+
+      expect(await store.ensureCanonicalFrames(), isTrue);
+
+      final frame = ((jsonDecode(
+        await store.fileAt('frames.json').readAsString(),
+      ) as Map<String, dynamic>)['frames'] as List)
+          .single as Map<String, dynamic>;
+      expect(frame['depthPath'], 'depth/00000.bin');
+      expect(frame['depthConfidencePath'], 'confidence/00000.bin');
+      await store.validateTransferPackage();
+    });
+
     test('a capture with no recorded samples stays unrepairable and intact',
         () async {
       final store = await openStore();

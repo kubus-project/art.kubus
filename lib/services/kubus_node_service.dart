@@ -1179,6 +1179,7 @@ class KubusNodeService {
     required String mimeType,
     Duration timeout = const Duration(minutes: 5),
     void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     final response = await _transport.streamUpload(
@@ -1198,6 +1199,7 @@ class KubusNodeService {
       file: file,
       contentType: mimeType,
       onBytesSent: onBytesSent,
+      cancellation: cancellation,
     );
     return KubusCaptureDraft.fromJson(_decode(response));
   }

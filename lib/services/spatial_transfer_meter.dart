@@ -106,6 +106,17 @@ class SpatialTransferMeter {
   /// about the new one, and carrying it over would produce a confident ETA
   /// for a transfer that is now moving at a completely different speed.
   void resetRate() => _samples.clear();
+
+  /// Starts measuring afresh for a phase in which bytes are expected to move.
+  ///
+  /// Checking the package, opening a draft or waiting for the Node to validate
+  /// moves no bytes by design. Counting that time would call a transfer
+  /// stalled before its first byte was due, and would dilute the first real
+  /// throughput reading with idle seconds, inflating the ETA.
+  void beginMoving() {
+    _samples.clear();
+    _lastProgressAt = _clock();
+  }
 }
 
 class _Sample {

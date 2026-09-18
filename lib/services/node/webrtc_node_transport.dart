@@ -109,32 +109,28 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     required File file,
     required String contentType,
     void Function(int sentBytes)? onBytesSent,
-  }) =>
-      _perform(
-        request,
-        body: _counted(file.openRead(), onBytesSent),
-        contentType: contentType,
-      );
-
-  /// Reports cumulative bytes as they pass, so a peer-to-peer transfer shows
-  /// the same live progress as a LAN one.
-  static Stream<List<int>> _counted(
-    Stream<List<int>> source,
-    void Function(int sentBytes)? onBytesSent,
-  ) {
-    if (onBytesSent == null) return source;
-    var sent = 0;
-    return source.map((chunk) {
-      sent += chunk.length;
-      onBytesSent(sent);
-      return chunk;
-    });
+    NodeTransferCancellation? cancellation,
+  }) {
+    cancellation?.throwIfCancelled();
+    return _perform(
+      request,
+      // Counted as they pass, so a peer-to-peer transfer shows the same live
+      // progress as a LAN one — and stops counting the moment it is abandoned.
+      body: guardedUploadBody(
+        file.openRead(),
+        onBytesSent: onBytesSent,
+        cancellation: cancellation,
+      ),
+      contentType: contentType,
+      cancellation: cancellation,
+    );
   }
 
   Future<KubusNodeResponse> _perform(
     KubusNodeRequest request, {
     Stream<List<int>>? body,
     String? contentType,
+    NodeTransferCancellation? cancellation,
   }) async {
     if (!_channel.isOpen) {
       throw const KubusDataChannelClosedException();
@@ -181,19 +177,36 @@ class WebRtcNodeTransport implements KubusNodeTransport {
           if (!_channel.isOpen) {
             throw const KubusDataChannelClosedException('closed mid-upload');
           }
-          await _channel.send(KubusFrameCodec.encode(frame));
+          await _untilCancelled(
+            _channel.send(KubusFrameCodec.encode(frame)),
+            cancellation,
+          );
         }
       }
 
-      return await pending.completer.future.timeout(
-        request.timeout,
-        onTimeout: () {
-          // Tell the peer to stop working before giving up locally, so an
-          // abandoned request does not keep a Node busy.
-          unawaited(_sendCancel(id));
-          throw TimeoutException('Node request timed out', request.timeout);
-        },
+      return await _untilCancelled(
+        pending.completer.future.timeout(
+          request.timeout,
+          onTimeout: () {
+            // Tell the peer to stop working before giving up locally, so an
+            // abandoned request does not keep a Node busy.
+            unawaited(_sendCancel(id));
+            throw TimeoutException('Node request timed out', request.timeout);
+          },
+        ),
+        cancellation,
       );
+    } on Object {
+      if (cancellation?.isCancelled ?? false) {
+        // Awaited, so by the time the caller hears the transfer is over the
+        // Node has been told to discard the partial file. The channel is
+        // ordered: nothing of this request's body can overtake the cancel,
+        // and anything still in the native send buffer arrives for a request
+        // the Node has already dropped.
+        await _sendCancel(id);
+        throw const NodeTransferCancelledException();
+      }
+      rethrow;
     } finally {
       // Removed *and* released: a request abandoned part-way through its
       // response would otherwise keep that partial body alive.
@@ -206,6 +219,30 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     // require 4 billion concurrent in-flight requests.
     if (_nextRequestId >= 0xFFFFFFFF) _nextRequestId = 1;
     return _nextRequestId++;
+  }
+
+  /// Waits for [work] unless the transfer is abandoned first.
+  ///
+  /// A send can sit in backpressure for as long as the peer is not reading,
+  /// which is exactly the situation a stalled transfer is in. Abandoning it
+  /// must not wait for that to resolve.
+  static Future<T> _untilCancelled<T>(
+    Future<T> work,
+    NodeTransferCancellation? cancellation,
+  ) {
+    if (cancellation == null) return work;
+    if (cancellation.isCancelled) {
+      // The abandoned operation's own outcome no longer matters to anyone.
+      unawaited(work.then((_) {}, onError: (Object _) {}));
+      return Future<T>.error(const NodeTransferCancelledException());
+    }
+    return Future.any<T>(<Future<T>>[
+      work,
+      cancellation.whenCancelled.then<T>((_) {
+        unawaited(work.then((_) {}, onError: (Object _) {}));
+        throw const NodeTransferCancelledException();
+      }),
+    ]);
   }
 
   Future<void> _sendCancel(int id) async {

@@ -47,6 +47,7 @@ class _FakeTransport implements KubusNodeTransport {
     required File file,
     required String contentType,
     void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   }) async {
     uploads += 1;
     final error = failWith;

@@ -459,7 +459,15 @@ class SpatialCaptureStore {
       for (var index = 0; index < frames.length; index++) {
         final frame = frames[index];
         if (frame is! Map) return false;
-        if (frame['rgbPath'] != _samples[index].rgbPath) return false;
+        final sample = _samples[index];
+        // Every path the Node will hold the package to, not only the image:
+        // a stale document declaring a depth map the index does not have is
+        // just as unsendable as one naming the wrong image.
+        if (frame['rgbPath'] != sample.rgbPath) return false;
+        if (frame['depthPath'] != sample.depthPath) return false;
+        if (frame['depthConfidencePath'] != sample.confidencePath) {
+          return false;
+        }
       }
       return true;
     } catch (_) {

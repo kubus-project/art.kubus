@@ -228,51 +228,59 @@ class SpatialNodeUpload {
 
   /// Streams one file, failing it only once it has actually stopped moving.
   ///
-  /// The abandoned request is not cancelled — the transport offers no handle
-  /// for that — so it may still complete in the background. That is harmless:
-  /// a draft file write is keyed by path and the node overwrites it, and the
-  /// node serializes writes within one draft, so a late arrival can only
-  /// rewrite the same bytes. [fileTimeout] is what bounds it.
+  /// A stall is not reported until the transfer has really ended. Declaring
+  /// failure while the request is still writing would leave it calling
+  /// progress into a screen that says it failed, and racing the retry the user
+  /// is being invited to start. So the watchdog cancels the transport, waits
+  /// for it to stop, and only then fails — every rung honours the
+  /// cancellation, and none reports another byte once it fires.
   Future<void> _uploadFile({
     required String draftId,
     required SpatialCaptureUploadEntry entry,
     required void Function(int sentBytes) onBytesSent,
   }) async {
-    final stalled = Completer<void>();
+    final cancellation = NodeTransferCancellation();
     Timer? watchdog;
+    var stalled = false;
     void arm() {
       watchdog?.cancel();
       watchdog = Timer(stallTimeout, () {
-        if (!stalled.isCompleted) {
-          stalled.completeError(
-            TimeoutException('upload_stalled', stallTimeout),
-          );
-        }
+        stalled = true;
+        cancellation.cancel();
       });
     }
 
     arm();
     try {
-      await Future.any<void>(<Future<void>>[
-        _service.uploadCaptureDraftFile(
-          draftId: draftId,
-          path: entry.path,
-          file: _source.fileAt(entry.path),
-          mimeType: entry.mimeType,
-          timeout: fileTimeout,
-          onBytesSent: (sent) {
-            // Every byte is evidence the transfer is alive.
-            arm();
-            onBytesSent(sent);
-          },
-        ),
-        stalled.future,
-      ]);
+      await _service.uploadCaptureDraftFile(
+        draftId: draftId,
+        path: entry.path,
+        file: _source.fileAt(entry.path),
+        mimeType: entry.mimeType,
+        timeout: fileTimeout,
+        cancellation: cancellation,
+        onBytesSent: (sent) {
+          // Nothing reported after abandonment reaches the screen, whatever
+          // a transport still has in hand when it notices.
+          if (cancellation.isCancelled) return;
+          // Every byte is evidence the transfer is alive.
+          arm();
+          onBytesSent(sent);
+        },
+      );
+    } on Object catch (error, stack) {
+      if (stalled) {
+        // The transport has stopped by now: its future settling is what
+        // proves it. Surfaced as the stall it was, not as a cancellation the
+        // user never asked for.
+        Error.throwWithStackTrace(
+          TimeoutException('upload_stalled', stallTimeout),
+          stack,
+        );
+      }
+      Error.throwWithStackTrace(error, stack);
     } finally {
       watchdog?.cancel();
-      // Nothing awaits this once the upload has settled; completing it keeps
-      // an unhandled error from surfacing later.
-      if (!stalled.isCompleted) stalled.complete();
     }
   }
 
@@ -379,6 +387,10 @@ class _ProgressReporter {
   void enter(SpatialTransferPhase phase) {
     _phase = phase;
     _inFlightBytes = 0;
+    if (phase == SpatialTransferPhase.uploading ||
+        phase == SpatialTransferPhase.repairing) {
+      _meter.beginMoving();
+    }
     _ticker ??= Timer.periodic(tick, (_) => _emit(force: true));
     _emit(force: true);
   }
