@@ -1036,6 +1036,10 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final previous = _transfers[localSpatialId];
     _transfers[localSpatialId] = next;
     notifyListeners();
+    // Nothing is known about the size of the work yet. Writing this frame
+    // would overwrite a previous attempt's real counts with zeros, and a
+    // resume would then report no progress against a draft that has plenty.
+    if (next.totalFiles == 0) return;
     // A durable fact changed when a file completed, or when the size of the
     // work itself became known. Bytes in flight alone are not a fact.
     final unchanged = previous != null &&
@@ -1044,17 +1048,43 @@ class SpatialLibraryProvider extends ChangeNotifier {
         previous.totalBytes == next.totalBytes;
     if (unchanged) return;
     unawaited(
-      store.recordNodeTransfer(
-        localSpatialId,
-        uploadedFiles: next.uploadedFiles,
-        totalFiles: next.totalFiles,
-        uploadedBytes: next.confirmedBytes,
-        totalBytes: next.totalBytes,
-      ),
+      () async {
+        try {
+          await store.recordNodeTransfer(
+            localSpatialId,
+            uploadedFiles: next.uploadedFiles,
+            totalFiles: next.totalFiles,
+            uploadedBytes: next.confirmedBytes,
+            totalBytes: next.totalBytes,
+          );
+        } catch (error) {
+          // Progress bookkeeping must never fail a transfer, and nothing
+          // awaits this. The record can legitimately vanish mid-upload if the
+          // user deletes it from another screen.
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+              'SpatialLibrary: progress not recorded: $error',
+            );
+          }
+        }
+      }(),
     );
   }
 
   Future<SpatialLibraryRecord> _uploadToNode(
+    String localSpatialId,
+    KubusNodeProvider node,
+  ) async {
+    try {
+      return await _streamToNode(localSpatialId, node);
+    } finally {
+      // However this ended, the transfer is no longer in flight. A live
+      // progress card left behind would sit above the failure it contradicts.
+      if (_transfers.remove(localSpatialId) != null) notifyListeners();
+    }
+  }
+
+  Future<SpatialLibraryRecord> _streamToNode(
     String localSpatialId,
     KubusNodeProvider node,
   ) async {
@@ -1125,7 +1155,6 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final nodeCaptureId = committed['id']?.toString() ?? '';
     if (nodeCaptureId.isEmpty) throw StateError('capture_id_missing');
     await source.markTransferred();
-    _transfers.remove(localSpatialId);
     record = await store.recordNodeTransfer(
       localSpatialId,
       nodeId: node.service.nodeId,
@@ -1233,9 +1262,26 @@ class SpatialLibraryProvider extends ChangeNotifier {
     if (error is SocketException || error is TimeoutException) {
       return 'upload_interrupted';
     }
-    if (error is StateError && error.message.isNotEmpty) return error.message;
+    // A `StateError` carries a code only when this codebase put one there.
+    // Anything else is free text from a library and must not be persisted as
+    // a machine-readable code the UI then fails to recognize.
+    if (error is StateError && _knownStateCodes.contains(error.message)) {
+      return error.message;
+    }
     return 'processor_unavailable';
   }
+
+  /// Codes this codebase raises as `StateError` messages.
+  static const Set<String> _knownStateCodes = <String>{
+    'node_unavailable',
+    'node_identity_unavailable',
+    'processor_unavailable',
+    'node_capture_incomplete',
+    'raw_source_required',
+    'raw_source_unreadable',
+    'spatial_result_missing',
+    'capture_id_missing',
+  };
 
   static const Set<String> _nodeCaptureFailures = <String>{
     'capture_package_incomplete',

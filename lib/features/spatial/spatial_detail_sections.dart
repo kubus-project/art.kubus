@@ -186,6 +186,8 @@ class SpatialProcessingStatus extends StatelessWidget {
     final request = record.networkRequest;
     final status = SpatialStatusPresentation.forRecord(l10n, record);
     final failure = SpatialFailureMessages.reason(l10n, record.lastErrorCode);
+    final repairable = record.rawPresent &&
+        SpatialFailureMessages.isRepairableUpload(record.lastErrorCode);
     final showsStatus = record.isBusy ||
         record.hasActiveNetworkRequest ||
         record.hasLocalResult ||
@@ -257,6 +259,31 @@ class SpatialProcessingStatus extends StatelessWidget {
         if (failure != null) ...<Widget>[
           const SizedBox(height: KubusSpacing.sm),
           _Advisory(message: failure, tone: SpatialStatusTone.negative),
+          // An unfinished upload is the one failure with a remedy the app can
+          // name: the source is still here, so what is missing can be sent.
+          // Saying that is the difference between a dead end and a next step.
+          if (repairable && record.totalFiles > 0) ...<Widget>[
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              l10n.spatialUploadIncompleteBody(
+                (record.totalFiles - record.uploadedFiles).clamp(
+                  1,
+                  record.totalFiles,
+                ),
+              ),
+              style: KubusTextStyles.detailBody,
+            ),
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              l10n.spatialUploadAvailableFiles(
+                record.uploadedFiles,
+                record.totalFiles,
+              ),
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           if (record.rawPresent) ...<Widget>[
             const SizedBox(height: KubusSpacing.xs),
             Text(

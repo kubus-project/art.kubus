@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../features/spatial/spatial_artwork_thumbnail.dart';
 import '../../features/spatial/spatial_capture_target_picker.dart';
 import '../../features/spatial/spatial_detail_sections.dart';
+import '../../features/spatial/spatial_failure_messages.dart';
 import '../../features/spatial/spatial_linked_entities.dart';
 import '../../features/spatial/spatial_marker_directory.dart';
 import '../../features/spatial/spatial_metadata_sheet.dart';
@@ -295,7 +296,11 @@ class _SpatialLibraryDetailScreenState
           child: KubusButton(
             onPressed:
                 _busy ? null : () => _invoke(context, provider, record, action),
-            label: _label(AppLocalizations.of(context)!, action),
+            label: _label(
+              AppLocalizations.of(context)!,
+              action,
+              record: record,
+            ),
             icon: _icon(action),
             variant: KubusButtonVariant.secondary,
             isFullWidth: true,
@@ -313,7 +318,7 @@ class _SpatialLibraryDetailScreenState
       KubusButton(
         onPressed:
             _busy ? null : () => _invoke(context, provider, record, action),
-        label: _label(AppLocalizations.of(context)!, action),
+        label: _label(AppLocalizations.of(context)!, action, record: record),
         icon: _icon(action),
         variant: KubusButtonVariant.accent,
         isFullWidth: true,
@@ -348,7 +353,7 @@ class _SpatialLibraryDetailScreenState
             for (final action in overflow)
               ListTile(
                 leading: Icon(_icon(action), color: roles.negativeAction),
-                title: Text(_label(l10n, action)),
+                title: Text(_label(l10n, action, record: record)),
                 onTap: () => Navigator.of(sheetContext).pop(action),
               ),
           ],
@@ -630,7 +635,27 @@ class _SpatialLibraryDetailScreenState
     );
   }
 
-  static String _label(AppLocalizations l10n, SpatialLibraryAction action) =>
+  /// The action's name, made specific by what actually failed.
+  ///
+  /// "Try again" is the wrong promise for an upload that did not finish: the
+  /// processor was never the problem and nothing about it will be retried.
+  /// What happens is that the missing files are sent.
+  static String _label(
+    AppLocalizations l10n,
+    SpatialLibraryAction action, {
+    SpatialLibraryRecord? record,
+  }) {
+    if (action == SpatialLibraryAction.retryProcessing &&
+        record != null &&
+        record.rawPresent &&
+        SpatialFailureMessages.isRepairableUpload(record.lastErrorCode)) {
+      return l10n.spatialUploadResume;
+    }
+    return _actionLabel(l10n, action);
+  }
+
+  static String _actionLabel(
+          AppLocalizations l10n, SpatialLibraryAction action) =>
       switch (action) {
         SpatialLibraryAction.continueCapture =>
           l10n.spatialLibraryContinueCapture,

@@ -437,7 +437,15 @@ class SpatialCaptureStore {
     return _canonicalFramesUsable();
   }
 
-  /// Whether `frames.json` exists and parses as the document the node expects.
+  /// Whether `frames.json` exists, parses, and still describes this capture.
+  ///
+  /// Agreement with the sample index matters as much as the document being
+  /// well-formed. A `frames.json` written before a continued capture added
+  /// samples, or before a crash truncated the index, parses perfectly and
+  /// names frames the capture no longer has — and the node then rejects the
+  /// package with paths the repair cannot resend, which is a retry loop with
+  /// no way out. A document that disagrees is rebuilt from the index, which
+  /// is the durable record.
   Future<bool> _canonicalFramesUsable() async {
     final file = File(p.join(directory.path, _framesFile));
     if (!await file.exists()) return false;
@@ -446,7 +454,14 @@ class SpatialCaptureStore {
       if (decoded is! Map<String, dynamic>) return false;
       if (decoded['schema'] != 'kubus.capture.frames/1') return false;
       final frames = decoded['frames'];
-      return frames is List && frames.isNotEmpty;
+      if (frames is! List || frames.isEmpty) return false;
+      if (frames.length != _samples.length) return false;
+      for (var index = 0; index < frames.length; index++) {
+        final frame = frames[index];
+        if (frame is! Map) return false;
+        if (frame['rgbPath'] != _samples[index].rgbPath) return false;
+      }
+      return true;
     } catch (_) {
       return false;
     }

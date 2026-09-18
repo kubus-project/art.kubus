@@ -29,6 +29,10 @@ class FakeKubusNode {
   /// package is no longer complete.
   final Set<String> rejectReconstructionFor = <String>{};
 
+  /// Durable captures by their client-supplied `localCaptureId`, as the real
+  /// node's commit idempotency keeps them.
+  final Map<String, String> capturesByLocalId = <String, String>{};
+
   /// Paths the node accepts and then does not actually keep.
   ///
   /// Models what a sweep running in a second process did on the owner's node:
@@ -259,8 +263,33 @@ class FakeKubusNode {
           },
         });
       }
+      final localCaptureId =
+          (draftMetadata[id]?['metadata'] as Map?)?['localCaptureId'];
+      if (localCaptureId is String) {
+        final existing = capturesByLocalId[localCaptureId];
+        // The real node answers a repeat commit with the capture it already
+        // holds — unless that capture can no longer be processed, in which
+        // case the repair replaces it rather than resurrecting the damage.
+        if (existing != null && !rejectReconstructionFor.contains(existing)) {
+          committedCaptureId = existing;
+          return _json(request, 201, {
+            'id': existing,
+            'state': 'stored',
+            'private': true,
+            'fileCount': draft.length,
+            'sizeBytes': draft.values.fold<int>(0, (sum, b) => sum + b.length),
+          });
+        }
+        if (existing != null) {
+          rejectReconstructionFor.remove(existing);
+          capturesByLocalId.remove(localCaptureId);
+        }
+      }
       committed.add(id);
       committedCaptureId = 'capture-$id';
+      if (localCaptureId is String) {
+        capturesByLocalId[localCaptureId] = committedCaptureId!;
+      }
       return _json(request, 201, {
         'id': committedCaptureId,
         'state': 'stored',
@@ -804,8 +833,33 @@ void main() {
     // an outside sweep did on the owner's node.
     node.losePaths.add('rgb/00000.jpg');
 
+    final frames = <SpatialTransferProgress>[];
+    library.addListener(() {
+      final live = library.transferFor(record.localSpatialId);
+      if (live != null) frames.add(live);
+    });
+
     final ready = await library.processWithOwnNode(record.localSpatialId);
 
+    // Repairing a gap takes the withdrawn bytes back out of the confirmed
+    // total. Without that the bar pins at 100%, the readout claims more
+    // delivered than the capture holds, and the countdown reads "1 sec" for
+    // the whole repair.
+    expect(frames, isNotEmpty);
+    for (final frame in frames) {
+      expect(
+        frame.uploadedBytes,
+        lessThanOrEqualTo(frame.totalBytes),
+        reason: 'no frame may claim more delivered than the capture contains',
+      );
+      expect(frame.confirmedBytes, greaterThanOrEqualTo(0));
+      expect(frame.uploadedFiles, lessThanOrEqualTo(frame.totalFiles));
+    }
+    expect(
+      frames.any((f) => f.phase == SpatialTransferPhase.repairing),
+      isTrue,
+      reason: 'the repair is a phase of its own, not silent',
+    );
     expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
     // One draft and one durable capture: the transfer was completed, not
     // started again.
@@ -854,8 +908,12 @@ void main() {
     final ready = await library.processWithOwnNode(record.localSpatialId);
 
     expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
-    // Re-uploaded rather than reprocessed, and still exactly one replica.
+    // Re-uploaded rather than reprocessed...
     expect(node.committed.length, 2);
-    expect(ready.nodeCaptureId, isNotNull);
+    // ...and the damaged replica was replaced, not joined: one local capture
+    // still maps to exactly one durable copy.
+    expect(node.capturesByLocalId, hasLength(1));
+    expect(ready.nodeCaptureId, isNot(firstReplica));
+    expect(node.capturesByLocalId.values.single, ready.nodeCaptureId);
   });
 }

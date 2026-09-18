@@ -105,6 +105,8 @@ class SpatialNodeUpload {
     SpatialTransferMeter? meter,
     this.stallTimeout = const Duration(seconds: 90),
     this.fileTimeout = const Duration(hours: 1),
+    this.progressInterval = const Duration(milliseconds: 120),
+    this.progressTick = const Duration(seconds: 1),
   })  : _service = service,
         _source = source,
         _meter = meter ?? SpatialTransferMeter();
@@ -124,6 +126,16 @@ class SpatialNodeUpload {
   /// finishing still terminates.
   final Duration fileTimeout;
 
+  /// The shortest gap between two byte-driven progress frames.
+  ///
+  /// A chunk callback fires far above frame rate on a fast link, and every
+  /// frame rebuilds whatever is watching.
+  final Duration progressInterval;
+
+  /// How often a live transfer republishes even when nothing has happened, so
+  /// a stall reaches the screen instead of leaving the last frame standing.
+  final Duration progressTick;
+
   final KubusNodeService _service;
   final SpatialCaptureStore _source;
   final SpatialTransferMeter _meter;
@@ -140,100 +152,87 @@ class SpatialNodeUpload {
     String? draftId,
     void Function(SpatialTransferProgress progress)? onProgress,
   }) async {
-    var progress = SpatialTransferProgress(
-      phase: SpatialTransferPhase.preparing,
-      route: _service.activeTransport,
+    final reporter = _ProgressReporter(
+      meter: _meter,
+      route: () => _service.activeTransport,
+      onProgress: onProgress,
+      minimumInterval: progressInterval,
+      tick: progressTick,
     );
-    onProgress?.call(progress);
+    try {
+      reporter.enter(SpatialTransferPhase.preparing);
 
-    // Validated before a draft is opened: a capture that cannot make a
-    // complete package must not reach the node at all.
-    final entries = await _source.validateTransferPackage();
-    final sizes = <String, int>{};
-    var totalBytes = 0;
-    for (final entry in entries) {
-      final length = await _source.fileAt(entry.path).length();
-      sizes[entry.path] = length;
-      totalBytes += length;
-    }
-
-    var draft = draftId;
-    var alreadyUploaded = const <String>{};
-    if (draft != null) {
-      try {
-        alreadyUploaded = (await _service.getCaptureDraft(draft)).files.toSet();
-      } on KubusNodeRequestException catch (error) {
-        // A draft the node no longer knows about is the only one worth
-        // abandoning. Drafts live in memory there, so a node restart drops
-        // them and the transfer starts again rather than pretending.
-        if (error.code != 'capture_draft_not_found') rethrow;
-        draft = null;
-        await rememberDraftId(null);
+      // Validated before a draft is opened: a capture that cannot make a
+      // complete package must not reach the node at all.
+      final entries = await _source.validateTransferPackage();
+      final sizes = <String, int>{};
+      var totalBytes = 0;
+      for (final entry in entries) {
+        final length = await _source.fileAt(entry.path).length();
+        sizes[entry.path] = length;
+        totalBytes += length;
       }
-    }
+      reporter.setWork(totalFiles: entries.length, totalBytes: totalBytes);
 
-    if (draft == null) {
-      final opened = await _service.beginCaptureDraft(
-        draftMetadata,
-        localCaptureId: localCaptureId,
-      );
-      draft = opened.id;
-      // Recorded before the first byte moves, so a crash mid-upload leaves a
-      // draft the next attempt can find instead of orphaning it on the node.
-      await rememberDraftId(draft);
-    }
+      var draft = draftId;
+      var alreadyUploaded = const <String>{};
+      if (draft != null) {
+        try {
+          alreadyUploaded =
+              (await _service.getCaptureDraft(draft)).files.toSet();
+        } on KubusNodeRequestException catch (error) {
+          // A draft the node no longer knows about is the only one worth
+          // abandoning. Drafts live in memory there, so a node restart drops
+          // them and the transfer starts again rather than pretending.
+          if (error.code != 'capture_draft_not_found') rethrow;
+          draft = null;
+          await rememberDraftId(null);
+        }
+      }
 
-    var confirmedBytes = 0;
-    var uploadedFiles = 0;
-
-    void publish(SpatialTransferPhase phase, {int inFlight = 0}) {
-      _meter.record(confirmedBytes + inFlight);
-      final remaining = totalBytes - confirmedBytes - inFlight;
-      progress = SpatialTransferProgress(
-        phase: phase,
-        uploadedFiles: uploadedFiles,
-        totalFiles: entries.length,
-        confirmedBytes: confirmedBytes,
-        inFlightBytes: inFlight,
-        totalBytes: totalBytes,
-        bytesPerSecond: _meter.bytesPerSecond,
-        eta: _meter.etaFor(remaining > 0 ? remaining : 0),
-        route: _service.activeTransport,
-        stalled: _meter.isStalled,
-      );
-      onProgress?.call(progress);
-    }
-
-    publish(SpatialTransferPhase.uploading);
-
-    for (final entry in entries) {
-      final length = sizes[entry.path]!;
-      if (!alreadyUploaded.contains(entry.path)) {
-        await _uploadFile(
-          draftId: draft,
-          entry: entry,
-          onBytesSent: (sent) =>
-              publish(SpatialTransferPhase.uploading, inFlight: sent),
+      if (draft == null) {
+        final opened = await _service.beginCaptureDraft(
+          draftMetadata,
+          localCaptureId: localCaptureId,
         );
+        draft = opened.id;
+        // Recorded before the first byte moves, so a crash mid-upload leaves
+        // a draft the next attempt can find instead of orphaning it.
+        await rememberDraftId(draft);
       }
-      // Confirmed only now: the response is what makes these bytes durable.
-      confirmedBytes += length;
-      uploadedFiles++;
-      publish(SpatialTransferPhase.uploading);
-    }
 
-    publish(SpatialTransferPhase.validating);
-    return _commit(
-      draftId: draft,
-      entries: entries,
-      sizes: sizes,
-      onRepairProgress: (inFlight) =>
-          publish(SpatialTransferPhase.repairing, inFlight: inFlight),
-      onValidating: () => publish(SpatialTransferPhase.validating),
-    );
+      reporter.enter(SpatialTransferPhase.uploading);
+      for (final entry in entries) {
+        if (!alreadyUploaded.contains(entry.path)) {
+          await _uploadFile(
+            draftId: draft,
+            entry: entry,
+            onBytesSent: reporter.inFlight,
+          );
+        }
+        // Confirmed only now: the response is what makes these bytes durable.
+        reporter.fileDelivered(sizes[entry.path]!);
+      }
+
+      reporter.enter(SpatialTransferPhase.validating);
+      return await _commit(
+        draftId: draft,
+        entries: entries,
+        sizes: sizes,
+        reporter: reporter,
+      );
+    } finally {
+      reporter.dispose();
+    }
   }
 
   /// Streams one file, failing it only once it has actually stopped moving.
+  ///
+  /// The abandoned request is not cancelled — the transport offers no handle
+  /// for that — so it may still complete in the background. That is harmless:
+  /// a draft file write is keyed by path and the node overwrites it, and the
+  /// node serializes writes within one draft, so a late arrival can only
+  /// rewrite the same bytes. [fileTimeout] is what bounds it.
   Future<void> _uploadFile({
     required String draftId,
     required SpatialCaptureUploadEntry entry,
@@ -286,8 +285,7 @@ class SpatialNodeUpload {
     required String draftId,
     required List<SpatialCaptureUploadEntry> entries,
     required Map<String, int> sizes,
-    required void Function(int inFlightBytes) onRepairProgress,
-    required void Function() onValidating,
+    required _ProgressReporter reporter,
   }) async {
     try {
       return await _service.commitCaptureDraft(draftId);
@@ -300,14 +298,23 @@ class SpatialNodeUpload {
       // only produce the same refusal.
       if (repairable.isEmpty || repairable.length != missing.length) rethrow;
 
+      // Those files were counted as delivered and are not. Taking them back
+      // out of the confirmed total is what keeps the meter honest: without
+      // it the bar sits at 100% and the readout claims more bytes delivered
+      // than the capture contains.
+      reporter.enter(SpatialTransferPhase.repairing);
+      for (final entry in repairable) {
+        reporter.fileWithdrawn(sizes[entry.path]!);
+      }
       for (final entry in repairable) {
         await _uploadFile(
           draftId: draftId,
           entry: entry,
-          onBytesSent: onRepairProgress,
+          onBytesSent: reporter.inFlight,
         );
+        reporter.fileDelivered(sizes[entry.path]!, countsAsNewFile: false);
       }
-      onValidating();
+      reporter.enter(SpatialTransferPhase.validating);
       // One repair attempt. A second refusal is a real disagreement about the
       // package, not a transfer that needs another nudge.
       return _service.commitCaptureDraft(draftId);
@@ -319,4 +326,130 @@ class SpatialNodeUpload {
     'capture_frame_file_missing',
     'capture_frames_missing',
   };
+}
+
+/// Turns transfer events into progress frames the UI can afford to watch.
+///
+/// Three jobs the upload itself should not be doing:
+///
+/// - **Keeping the totals honest.** Confirmed bytes only ever move by a whole
+///   delivered file, and a file the node turns out not to have is taken back
+///   out, so the meter cannot exceed the work or claim delivery that was
+///   withdrawn.
+/// - **Noticing silence.** A transfer that stops moving publishes nothing, so
+///   without a clock the last frame would sit there with its countdown intact.
+///   A ticker republishes while a transfer is live, which is the only way a
+///   stall can ever reach the screen.
+/// - **Not flooding the frame budget.** A 64 KiB chunk callback fires over a
+///   hundred times a second on a LAN; rebuilding the library screen and the
+///   live AR overlay that often is worse than useless. Byte updates are
+///   coalesced; anything structural is published at once.
+class _ProgressReporter {
+  _ProgressReporter({
+    required SpatialTransferMeter meter,
+    required KubusNodeTransportKind? Function() route,
+    required void Function(SpatialTransferProgress progress)? onProgress,
+    this.minimumInterval = const Duration(milliseconds: 120),
+    this.tick = const Duration(seconds: 1),
+  })  : _meter = meter,
+        _route = route,
+        _onProgress = onProgress;
+
+  /// The shortest gap between two byte-driven frames.
+  final Duration minimumInterval;
+
+  /// How often a live transfer republishes even when nothing has happened.
+  final Duration tick;
+
+  final SpatialTransferMeter _meter;
+  final KubusNodeTransportKind? Function() _route;
+  final void Function(SpatialTransferProgress progress)? _onProgress;
+
+  SpatialTransferPhase _phase = SpatialTransferPhase.idle;
+  int _totalFiles = 0;
+  int _totalBytes = 0;
+  int _confirmedBytes = 0;
+  int _deliveredFiles = 0;
+  int _inFlightBytes = 0;
+  bool _stalled = false;
+  Stopwatch? _sinceEmit;
+  Timer? _ticker;
+  bool _disposed = false;
+
+  void enter(SpatialTransferPhase phase) {
+    _phase = phase;
+    _inFlightBytes = 0;
+    _ticker ??= Timer.periodic(tick, (_) => _emit(force: true));
+    _emit(force: true);
+  }
+
+  void setWork({required int totalFiles, required int totalBytes}) {
+    _totalFiles = totalFiles;
+    _totalBytes = totalBytes;
+    _emit(force: true);
+  }
+
+  /// Bytes of the current file handed to the wire. Speculative until the
+  /// response arrives.
+  void inFlight(int sentBytes) {
+    _inFlightBytes = sentBytes;
+    _emit();
+  }
+
+  /// One file the node has acknowledged.
+  void fileDelivered(int bytes, {bool countsAsNewFile = true}) {
+    _confirmedBytes += bytes;
+    if (countsAsNewFile) _deliveredFiles++;
+    _inFlightBytes = 0;
+    _emit(force: true);
+  }
+
+  /// A file that was counted as delivered and turns out not to be there.
+  void fileWithdrawn(int bytes) {
+    _confirmedBytes -= bytes;
+    if (_confirmedBytes < 0) _confirmedBytes = 0;
+    if (_deliveredFiles > 0) _deliveredFiles--;
+    _emit(force: true);
+  }
+
+  void dispose() {
+    _disposed = true;
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
+  void _emit({bool force = false}) {
+    if (_disposed) return;
+    _meter.record(_confirmedBytes + _inFlightBytes);
+    final stalled = _meter.isStalled;
+    // A transfer falling silent, or finding its voice again, is exactly what
+    // the user needs to see — never coalesced away.
+    final changed = stalled != _stalled;
+    _stalled = stalled;
+
+    final elapsed = _sinceEmit;
+    if (!force &&
+        !changed &&
+        elapsed != null &&
+        elapsed.elapsed < minimumInterval) {
+      return;
+    }
+    _sinceEmit = Stopwatch()..start();
+
+    final remaining = _totalBytes - _confirmedBytes - _inFlightBytes;
+    _onProgress?.call(
+      SpatialTransferProgress(
+        phase: _phase,
+        uploadedFiles: _deliveredFiles,
+        totalFiles: _totalFiles,
+        confirmedBytes: _confirmedBytes,
+        inFlightBytes: _inFlightBytes,
+        totalBytes: _totalBytes,
+        bytesPerSecond: _meter.bytesPerSecond,
+        eta: _meter.etaFor(remaining > 0 ? remaining : 0),
+        route: _route(),
+        stalled: stalled,
+      ),
+    );
+  }
 }
