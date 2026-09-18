@@ -261,6 +261,8 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   }) async {
     // The actual file length is known here, so routing never has to guess how
     // big this transfer is — which is the whole reason a relay can be pushed
@@ -272,19 +274,26 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
         request,
         file: file,
         contentType: contentType,
+        // Each attempt counts from zero. A rung change therefore rewinds only
+        // the in-flight portion of this one file; bytes the node has already
+        // confirmed are held separately and never move backwards.
+        onBytesSent: onBytesSent,
+        cancellation: cancellation,
       ),
       _contextForOperation().copyWith(
         operationClass: NodeOperationClass.bulkUpload,
         expectedUploadBytes: length,
       ),
+      cancellation: cancellation,
     );
   }
 
   Future<KubusNodeResponse> _run(
     KubusNodeRequest request,
     Future<KubusNodeResponse> Function(KubusNodeTransport) operation,
-    TransportSelectionContext context,
-  ) async {
+    TransportSelectionContext context, {
+    NodeTransferCancellation? cancellation,
+  }) async {
     final ordered = candidates(context);
     if (ordered.isEmpty) {
       throw const KubusNodeUnreachableException(<KubusNodeTransportKind>[]);
@@ -300,8 +309,12 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     StackTrace? rejectionStack;
 
     for (final transport in ordered) {
+      // An abandoned transfer is over. Trying the next rung would restart the
+      // very write the caller just stopped.
+      cancellation?.throwIfCancelled();
       final record = _health[transport.kind]!;
       attempted.add(transport.kind);
+      final previousState = record.state;
       record.state = KubusTransportHealth.connecting;
       final guard = identityGuard;
       if (guard != null) {
@@ -325,6 +338,16 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
         _activeKind = transport.kind;
         return response;
       } on Object catch (error, stack) {
+        if (error is NodeTransferCancelledException ||
+            (cancellation?.isCancelled ?? false)) {
+          // The caller stopped this, not the route. Its health is left as it
+          // was, so one abandoned transfer cannot bench the only rung there is.
+          record.state = previousState;
+          Error.throwWithStackTrace(
+            const NodeTransferCancelledException(),
+            stack,
+          );
+        }
         if (!_isTransportFailure(error)) {
           // The route delivered the request; the failure belongs to the Node
           // or the caller. Do not blame the transport, and do not try another

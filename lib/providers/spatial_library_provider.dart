@@ -9,8 +9,10 @@ import '../models/kubus_node_models.dart';
 import '../models/spatial_capture_target.dart';
 import '../services/backend_api_service.dart';
 import '../services/kubus_node_service.dart';
+import '../services/node/node_transfer_cancellation.dart';
 import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
+import '../services/spatial_node_upload.dart';
 import '../services/spatial_result_importer.dart';
 import 'kubus_node_provider.dart';
 
@@ -214,11 +216,22 @@ class SpatialLibraryProvider extends ChangeNotifier {
       // Choosing the user's own Node retires any open network request: two
       // processors racing on one capture is never what the user asked for.
       await _retireNetworkRequest(localSpatialId);
-      final job = await node.startReconstruction(
-        captureId: record.nodeCaptureId!,
-        artworkId: record.artworkId,
-        markerId: record.markerId,
-      );
+      var job = await _startReconstruction(node, record);
+      if (job == null) {
+        // The node holds a replica it can no longer process. The raw capture
+        // is still here, so the replica is replaced rather than the user
+        // being told to reprocess something that cannot work. The node's
+        // idempotency key maps the repaired upload onto the same logical
+        // replica, so this cannot leave two.
+        record = await _replaceNodeReplica(localSpatialId, node);
+        // Straight through this time: a repaired package that is still
+        // refused is a real disagreement, and must surface as one.
+        job = await node.startReconstruction(
+          captureId: record.nodeCaptureId!,
+          artworkId: record.artworkId,
+          markerId: record.markerId,
+        );
+      }
       await store.recordJob(
         localSpatialId,
         jobId: job.id,
@@ -238,8 +251,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
           return record;
         }
         if (current.state == 'failed' || current.state == 'cancelled') {
-          throw StateError(
-            current.error?['code']?.toString() ?? 'processing_failed',
+          throw _NodeJobFailed(
+            current.error?['code']?.toString() ?? '',
+            cancelled: current.state == 'cancelled',
           );
         }
         await store.updateProcessing(
@@ -1003,7 +1017,81 @@ class SpatialLibraryProvider extends ChangeNotifier {
     await reload();
   }
 
+  /// Live transfer progress per record, for the screen that is watching.
+  ///
+  /// Held in memory and republished on every byte. The durable record is
+  /// written far less often — see [_publishTransfer].
+  final Map<String, SpatialTransferProgress> _transfers =
+      <String, SpatialTransferProgress>{};
+
+  /// Live progress for [localSpatialId], or null when nothing is in flight.
+  SpatialTransferProgress? transferFor(String localSpatialId) =>
+      _transfers[localSpatialId];
+
+  /// Publishes progress to the UI, and persists only what is durable.
+  ///
+  /// Bytes in flight are a live reading: persisting them would let a restart
+  /// resume against a file the node never confirmed and skip it. Only a
+  /// completed file changes the stored record, which also keeps a transfer of
+  /// thousands of frames from writing the library store on every chunk.
+  void _publishTransfer(String localSpatialId, SpatialTransferProgress next) {
+    final previous = _transfers[localSpatialId];
+    _transfers[localSpatialId] = next;
+    notifyListeners();
+    // While preparing, the counts are this device's view before the Node has
+    // been asked what it holds. Persisting them would record "0 of N" over a
+    // draft that may hold most of the capture, and a failed lookup would
+    // leave that on the record.
+    if (next.phase == SpatialTransferPhase.preparing) return;
+    // Nothing is known about the size of the work yet. Writing this frame
+    // would overwrite a previous attempt's real counts with zeros, and a
+    // resume would then report no progress against a draft that has plenty.
+    if (next.totalFiles == 0) return;
+    // A durable fact changed when a file completed, or when the size of the
+    // work itself became known. Bytes in flight alone are not a fact.
+    final unchanged = previous != null &&
+        previous.uploadedFiles == next.uploadedFiles &&
+        previous.totalFiles == next.totalFiles &&
+        previous.totalBytes == next.totalBytes;
+    if (unchanged) return;
+    unawaited(
+      () async {
+        try {
+          await store.recordNodeTransfer(
+            localSpatialId,
+            uploadedFiles: next.uploadedFiles,
+            totalFiles: next.totalFiles,
+            uploadedBytes: next.confirmedBytes,
+            totalBytes: next.totalBytes,
+          );
+        } catch (error) {
+          // Progress bookkeeping must never fail a transfer, and nothing
+          // awaits this. The record can legitimately vanish mid-upload if the
+          // user deletes it from another screen.
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+              'SpatialLibrary: progress not recorded: $error',
+            );
+          }
+        }
+      }(),
+    );
+  }
+
   Future<SpatialLibraryRecord> _uploadToNode(
+    String localSpatialId,
+    KubusNodeProvider node,
+  ) async {
+    try {
+      return await _streamToNode(localSpatialId, node);
+    } finally {
+      // However this ended, the transfer is no longer in flight. A live
+      // progress card left behind would sit above the failure it contradicts.
+      if (_transfers.remove(localSpatialId) != null) notifyListeners();
+    }
+  }
+
+  Future<SpatialLibraryRecord> _streamToNode(
     String localSpatialId,
     KubusNodeProvider node,
   ) async {
@@ -1037,27 +1125,23 @@ class SpatialLibraryProvider extends ChangeNotifier {
       SpatialLibraryProcessingState.uploading,
       target: 'ownNode',
     );
-    final entries = source.uploadEntries;
-    var totalBytes = 0;
-    for (final entry in entries) {
-      final file = source.fileAt(entry.path);
-      if (await file.exists()) totalBytes += await file.length();
-    }
-
-    var draftId = record.draftId ?? source.draftId;
-    var uploaded = const <String>{};
-    if (draftId != null) {
-      try {
-        uploaded = (await node.service.getCaptureDraft(draftId)).files.toSet();
-      } on KubusNodeRequestException catch (error) {
-        if (error.code != 'capture_draft_not_found') rethrow;
-        draftId = null;
-        await source.recordDraftId(null);
-        await store.recordNodeTransfer(localSpatialId, draftId: null);
-      }
-    }
-    if (draftId == null) {
-      final draft = await node.service.beginCaptureDraft(<String, dynamic>{
+    final committed = await SpatialNodeUpload(
+      service: node.service,
+      source: source,
+    ).run(
+      localCaptureId: record.localSpatialId,
+      draftId: record.draftId ?? source.draftId,
+      // Recorded in both places: the capture directory survives an app
+      // restart, the library record is what the Spatial screen reads.
+      rememberDraftId: (draft) async {
+        await source.recordDraftId(draft);
+        await store.recordNodeTransfer(
+          localSpatialId,
+          nodeId: node.service.nodeId,
+          draftId: draft,
+        );
+      },
+      draftMetadata: <String, dynamic>{
         'schema': 'kubus.capture/1',
         'artworkId': record.artworkId,
         if (record.markerId != null) 'markerId': record.markerId,
@@ -1072,44 +1156,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
           'private': true,
           'localCaptureId': record.localSpatialId,
         },
-      }, localCaptureId: record.localSpatialId);
-      draftId = draft.id;
-      await source.recordDraftId(draftId);
-      await store.recordNodeTransfer(
-        localSpatialId,
-        nodeId: node.service.nodeId,
-        draftId: draftId,
-        totalFiles: entries.length,
-        totalBytes: totalBytes,
-      );
-    }
-    var uploadedFiles = 0;
-    var uploadedBytes = 0;
-    for (final entry in entries) {
-      final file = source.fileAt(entry.path);
-      if (!await file.exists()) continue;
-      final length = await file.length();
-      if (!uploaded.contains(entry.path)) {
-        await node.service.uploadCaptureDraftFile(
-          draftId: draftId,
-          path: entry.path,
-          file: file,
-          mimeType: entry.mimeType,
-        );
-      }
-      uploadedFiles++;
-      uploadedBytes += length;
-      await store.recordNodeTransfer(
-        localSpatialId,
-        nodeId: node.service.nodeId,
-        draftId: draftId,
-        uploadedFiles: uploadedFiles,
-        totalFiles: entries.length,
-        uploadedBytes: uploadedBytes,
-        totalBytes: totalBytes,
-      );
-    }
-    final committed = await node.service.commitCaptureDraft(draftId);
+      },
+      onProgress: (progress) => _publishTransfer(localSpatialId, progress),
+    );
     final nodeCaptureId = committed['id']?.toString() ?? '';
     if (nodeCaptureId.isEmpty) throw StateError('capture_id_missing');
     await source.markTransferred();
@@ -1118,12 +1167,52 @@ class SpatialLibraryProvider extends ChangeNotifier {
       nodeId: node.service.nodeId,
       draftId: null,
       nodeCaptureId: nodeCaptureId,
-      uploadedFiles: entries.length,
-      totalFiles: entries.length,
-      uploadedBytes: totalBytes,
-      totalBytes: totalBytes,
     );
     return record;
+  }
+
+  /// Queues a reconstruction, or null when the node's replica is unusable.
+  ///
+  /// The node refuses to start GPU work against a capture whose package is
+  /// incomplete. That refusal is a repair instruction, not a dead end: unlike
+  /// a processing failure, there is something the app can actually do.
+  Future<KubusNodeJob?> _startReconstruction(
+    KubusNodeProvider node,
+    SpatialLibraryRecord record,
+  ) async {
+    try {
+      return await node.startReconstruction(
+        captureId: record.nodeCaptureId!,
+        artworkId: record.artworkId,
+        markerId: record.markerId,
+      );
+    } on KubusNodeRequestException catch (error) {
+      if (!_nodeCaptureFailures.contains(error.code)) rethrow;
+      return null;
+    }
+  }
+
+  /// Re-uploads the capture, replacing the node's unusable copy.
+  Future<SpatialLibraryRecord> _replaceNodeReplica(
+    String localSpatialId,
+    KubusNodeProvider node,
+  ) async {
+    final current = await store.get(localSpatialId);
+    if (current == null || !current.rawPresent) {
+      // Nothing on this device to repair from. Say so rather than looping.
+      throw StateError('node_capture_incomplete');
+    }
+    // Clearing the pointer is what makes the upload happen again; the node
+    // replaces the damaged replica under the same local capture id.
+    await store.recordNodeTransfer(
+      localSpatialId,
+      nodeId: node.service.nodeId,
+      nodeCaptureId: '',
+      draftId: null,
+      uploadedFiles: 0,
+      uploadedBytes: 0,
+    );
+    return _uploadToNode(localSpatialId, node);
   }
 
   /// Cancels and clears an open network request, best effort.
@@ -1149,19 +1238,76 @@ class SpatialLibraryProvider extends ChangeNotifier {
     String localSpatialId,
     Object error,
   ) async {
-    final identityMismatch = error is KubusNodeIdentityException;
+    final code = _processingFailureCode(error);
     await store.recordFailure(
       localSpatialId,
-      code: identityMismatch
-          ? 'node_identity_mismatch'
-          : error is SpatialResultValidationException
-              ? error.code
-              : 'processor_unavailable',
-      waitingForProcessor:
-          !identityMismatch && error is! SpatialResultValidationException,
+      code: code,
+      // `waitingForProcessor` means exactly one thing: the capture is fine
+      // and a processor will pick it up when one is there. A capture the node
+      // could not accept, or one this device cannot complete, is not waiting
+      // for anything — presenting it that way hides the only action that can
+      // actually fix it.
+      waitingForProcessor: _awaitsProcessor(code),
     );
     await reload();
   }
+
+  /// Keeps a failure's category rather than flattening it to "unavailable".
+  ///
+  /// The user's next step differs completely between a capture this device
+  /// cannot complete, an upload that did not finish, a node that refused the
+  /// package, and a processor that was not there.
+  static String _processingFailureCode(Object error) {
+    if (error is KubusNodeIdentityException) return 'node_identity_mismatch';
+    if (error is _NodeJobFailed) return error.failureCode;
+    if (error is SpatialResultValidationException) return error.code;
+    if (error is SpatialSourceIncomplete) return error.code;
+    if (error is KubusNodeRequestException) {
+      if (_nodeCaptureFailures.contains(error.code)) return error.code;
+      return 'node_unavailable';
+    }
+    if (error is KubusNodeUnsupportedException) return 'node_unavailable';
+    if (error is SocketException ||
+        error is TimeoutException ||
+        error is NodeTransferCancelledException) {
+      return 'upload_interrupted';
+    }
+    // A `StateError` carries a code only when this codebase put one there.
+    // Anything else is free text from a library and must not be persisted as
+    // a machine-readable code the UI then fails to recognize.
+    if (error is StateError && _knownStateCodes.contains(error.message)) {
+      return error.message;
+    }
+    return 'processor_unavailable';
+  }
+
+  /// Codes this codebase raises as `StateError` messages.
+  static const Set<String> _knownStateCodes = <String>{
+    'node_unavailable',
+    'node_identity_unavailable',
+    'processor_unavailable',
+    'node_capture_incomplete',
+    'raw_source_required',
+    'raw_source_unreadable',
+    'spatial_result_missing',
+    'capture_id_missing',
+  };
+
+  static const Set<String> _nodeCaptureFailures = <String>{
+    'capture_package_incomplete',
+    'capture_frame_file_missing',
+    'capture_frames_missing',
+    'capture_frames_invalid',
+    'capture_draft_not_found',
+  };
+
+  /// Whether a processor becoming available would resolve [code] on its own.
+  static bool _awaitsProcessor(String code) => const <String>{
+        'processor_unavailable',
+        'node_unavailable',
+        'upload_interrupted',
+        'network_compute_failed',
+      }.contains(code);
 
   KubusNodeProvider _requireNode() {
     final node = _node;
@@ -1188,4 +1334,33 @@ bool _deepJsonEquals(Object? left, Object? right) {
     return true;
   }
   return left == right;
+}
+
+/// A reconstruction job the Node ran and that ended without a result.
+///
+/// Kept apart from transport and availability failures: the processor was
+/// there and did the work, so presenting this as "waiting for a processor"
+/// would promise the user something that is not going to happen by itself.
+class _NodeJobFailed implements Exception {
+  const _NodeJobFailed(this.code, {this.cancelled = false});
+
+  /// The Node's own machine code, possibly empty.
+  final String code;
+  final bool cancelled;
+
+  /// The code the library records for this failure.
+  String get failureCode {
+    // The package the job read turned out to be incomplete: finishing the
+    // upload is the remedy, exactly as when the Node refuses it up front.
+    if (SpatialLibraryProvider._nodeCaptureFailures.contains(code)) return code;
+    // The worker was not there to run it, which a processor coming back does
+    // resolve.
+    if (code == 'worker_unavailable' || code == 'worker_unsupported') {
+      return 'processor_unavailable';
+    }
+    return cancelled ? 'processing_interrupted' : 'processing_failed';
+  }
+
+  @override
+  String toString() => '_NodeJobFailed($code)';
 }

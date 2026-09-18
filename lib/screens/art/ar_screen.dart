@@ -1571,8 +1571,13 @@ class _ARScreenState extends State<ARScreen>
           ),
           fraction: progress.fraction,
         );
-      case SpatialTransferPhase.committing:
-        return ArTransferReadout(label: l10n.spatialTransferCommitting);
+      case SpatialTransferPhase.validating:
+        return ArTransferReadout(label: l10n.spatialTransferValidating);
+      case SpatialTransferPhase.repairing:
+        return ArTransferReadout(
+          label: l10n.spatialTransferRepairing,
+          fraction: progress.fraction,
+        );
       case SpatialTransferPhase.idle:
       case SpatialTransferPhase.complete:
         return null;

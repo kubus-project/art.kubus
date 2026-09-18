@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,12 +9,26 @@ import 'kubus_node_transport.dart';
 /// A PUT whose body is read from disk as it is sent.
 ///
 /// Keeps a capture file out of Dart memory: the bytes flow from the file
-/// straight into the socket.
-class _StreamedFileRequest extends http.BaseRequest {
-  _StreamedFileRequest(super.method, super.url, this._file, this._length);
+/// straight into the socket. Abortable, so an upload the caller has given up
+/// on closes its connection instead of writing on in the background.
+class _StreamedFileRequest extends http.BaseRequest with http.Abortable {
+  _StreamedFileRequest(
+    super.method,
+    super.url,
+    this._file,
+    this._length,
+    this._onBytesSent,
+    this._cancellation,
+    this.abortTrigger,
+  );
 
   final File _file;
   final int _length;
+  final void Function(int sentBytes)? _onBytesSent;
+  final NodeTransferCancellation? _cancellation;
+
+  @override
+  final Future<void>? abortTrigger;
 
   @override
   int? get contentLength => _length;
@@ -21,7 +36,13 @@ class _StreamedFileRequest extends http.BaseRequest {
   @override
   http.ByteStream finalize() {
     super.finalize();
-    return http.ByteStream(_file.openRead());
+    return http.ByteStream(
+      guardedUploadBody(
+        _file.openRead(),
+        onBytesSent: _onBytesSent,
+        cancellation: _cancellation,
+      ),
+    );
   }
 }
 
@@ -72,21 +93,56 @@ class HttpNodeTransport implements KubusNodeTransport {
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   }) async {
+    cancellation?.throwIfCancelled();
     final length = await file.length();
+    // One abort for both ways a transfer can end early. A plain
+    // `Future.timeout` stops waiting and leaves the request writing, which is
+    // the exact failure this exists to prevent.
+    final abort = Completer<void>();
+    var timedOut = false;
+    final deadline = Timer(request.timeout, () {
+      timedOut = true;
+      if (!abort.isCompleted) abort.complete();
+    });
+    unawaited(cancellation?.whenCancelled.then((_) {
+      if (!abort.isCompleted) abort.complete();
+    }));
     final streamedRequest = _StreamedFileRequest(
       request.method,
       _resolve(request),
       file,
       length,
+      onBytesSent,
+      cancellation,
+      abort.future,
     );
     streamedRequest.headers.addAll({
       ..._headers(request),
       'Content-Type': contentType,
     });
-    final streamed =
-        await _client.send(streamedRequest).timeout(request.timeout);
-    return _toResponse(await http.Response.fromStream(streamed), request.path);
+    try {
+      final streamed = await _client.send(streamedRequest);
+      return _toResponse(
+        await http.Response.fromStream(streamed),
+        request.path,
+      );
+    } on Object {
+      if (cancellation?.isCancelled ?? false) {
+        throw const NodeTransferCancelledException();
+      }
+      if (timedOut) {
+        throw TimeoutException('Node upload timed out', request.timeout);
+      }
+      rethrow;
+    } finally {
+      deadline.cancel();
+      // The response is fully read or the request has failed, so there is
+      // nothing left to abort; this only releases the client's listener.
+      if (!abort.isCompleted) abort.complete();
+    }
   }
 
   @override

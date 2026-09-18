@@ -12,6 +12,7 @@ import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/kubus_node_service.dart';
 import 'package:art_kubus/services/node/node_identity_proof.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
+import 'package:art_kubus/services/spatial_capture_store.dart';
 import 'package:art_kubus/services/spatial_library_store.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +25,24 @@ import 'package:flutter_test/flutter_test.dart';
 class FakeKubusNode {
   FakeKubusNode({this.failUploadsBefore = 0, this.supportsDrafts = true});
 
+  /// Capture ids the node refuses to reconstruct, because their stored
+  /// package is no longer complete.
+  final Set<String> rejectReconstructionFor = <String>{};
+
+  /// Durable captures by their client-supplied `localCaptureId`, as the real
+  /// node's commit idempotency keeps them.
+  final Map<String, String> capturesByLocalId = <String, String>{};
+
+  /// Paths the node accepts and then does not actually keep.
+  ///
+  /// Models what a sweep running in a second process did on the owner's node:
+  /// the upload is acknowledged, the file is not there at commit time. Cleared
+  /// once reported, so the client's repair can succeed.
+  final Set<String> losePaths = <String>{};
+
+  /// Paths that were accepted and lost, awaiting a commit to report them.
+  final Set<String> lostPaths = <String>{};
+
   /// Number of file uploads to reject before starting to accept them, so a
   /// resumable transfer can be exercised.
   int failUploadsBefore;
@@ -31,6 +50,18 @@ class FakeKubusNode {
   /// When false, draft routes 404 the way a node predating the streaming API
   /// would.
   final bool supportsDrafts;
+
+  /// Accept this many file uploads, then refuse every later one, so a
+  /// transfer can be interrupted part-way through.
+  int? failUploadsAfter;
+  int _acceptedUploads = 0;
+
+  /// When true, asking for a draft's progress fails, as a lookup that times
+  /// out over a bad link would.
+  bool failDraftLookup = false;
+
+  /// When set, the reconstruction job ends `failed` with this code.
+  String? failJobWith;
 
   HttpServer? _server;
   Uri get endpoint => Uri.parse('http://127.0.0.1:${_server!.port}');
@@ -112,6 +143,17 @@ class FakeKubusNode {
     }
 
     if (request.method == 'POST' && path == '/local/v1/jobs') {
+      final body = jsonDecode(await utf8.decoder.bind(request).join());
+      final input = body is Map ? body['input'] : null;
+      final captureId = input is Map ? input['captureId'] : null;
+      if (captureId is String && rejectReconstructionFor.contains(captureId)) {
+        // The stored package is no longer complete, so no GPU work starts.
+        return _json(request, 422, {
+          'error': 'capture_package_incomplete',
+          'code': 'capture_package_incomplete',
+          'details': {'missingPaths': <String>[], 'missingCount': 1},
+        });
+      }
       return _json(request, 201, {
         'id': 'job-1',
         'type': 'spatial.reconstruct',
@@ -121,6 +163,16 @@ class FakeKubusNode {
     }
 
     if (request.method == 'GET' && path == '/local/v1/jobs/job-1') {
+      final failure = failJobWith;
+      if (failure != null) {
+        return _json(request, 200, {
+          'id': 'job-1',
+          'type': 'spatial.reconstruct',
+          'state': 'failed',
+          'progress': null,
+          'error': {'code': failure, 'message': 'worker reported $failure'},
+        });
+      }
       return _json(request, 200, {
         'id': 'job-1',
         'type': 'spatial.reconstruct',
@@ -190,12 +242,22 @@ class FakeKubusNode {
       if (_uploadAttempts <= failUploadsBefore) {
         return _json(request, 503, {'error': 'node_busy'});
       }
+      final cutoff = failUploadsAfter;
+      if (cutoff != null && _acceptedUploads >= cutoff) {
+        return _json(request, 503, {'error': 'node_busy'});
+      }
+      _acceptedUploads++;
       final draft = drafts[id];
       if (draft == null) {
         return _json(request, 404, {'error': 'capture_draft_not_found'});
       }
-      // Re-uploading a path overwrites it, so a retry converges.
-      draft[filePath] = bytes;
+      if (losePaths.remove(filePath)) {
+        // Acknowledged, not kept.
+        lostPaths.add(filePath);
+      } else {
+        // Re-uploading a path overwrites it, so a retry converges.
+        draft[filePath] = bytes;
+      }
       return _json(request, 200, {
         'id': id,
         'state': 'draft',
@@ -215,8 +277,46 @@ class FakeKubusNode {
       if (draft.isEmpty) {
         return _json(request, 400, {'error': 'capture_package_empty'});
       }
+      if (lostPaths.isNotEmpty) {
+        final missing = lostPaths.toList()..sort();
+        lostPaths.clear();
+        // The real node keeps the draft so the client sends only the gap.
+        return _json(request, 422, {
+          'error': 'capture_package_incomplete',
+          'code': 'capture_package_incomplete',
+          'details': {
+            'missingPaths': missing,
+            'missingCount': missing.length,
+          },
+        });
+      }
+      final localCaptureId =
+          (draftMetadata[id]?['metadata'] as Map?)?['localCaptureId'];
+      if (localCaptureId is String) {
+        final existing = capturesByLocalId[localCaptureId];
+        // The real node answers a repeat commit with the capture it already
+        // holds — unless that capture can no longer be processed, in which
+        // case the repair replaces it rather than resurrecting the damage.
+        if (existing != null && !rejectReconstructionFor.contains(existing)) {
+          committedCaptureId = existing;
+          return _json(request, 201, {
+            'id': existing,
+            'state': 'stored',
+            'private': true,
+            'fileCount': draft.length,
+            'sizeBytes': draft.values.fold<int>(0, (sum, b) => sum + b.length),
+          });
+        }
+        if (existing != null) {
+          rejectReconstructionFor.remove(existing);
+          capturesByLocalId.remove(localCaptureId);
+        }
+      }
       committed.add(id);
       committedCaptureId = 'capture-$id';
+      if (localCaptureId is String) {
+        capturesByLocalId[localCaptureId] = committedCaptureId!;
+      }
       return _json(request, 201, {
         'id': committedCaptureId,
         'state': 'stored',
@@ -237,6 +337,9 @@ class FakeKubusNode {
       if (request.method == 'DELETE') {
         drafts.remove(id);
         return _json(request, 200, {'discarded': true});
+      }
+      if (failDraftLookup) {
+        return _json(request, 500, {'error': 'internal_error'});
       }
       return _json(request, 200, {
         'id': id,
@@ -750,5 +853,164 @@ void main() {
     expect(networkProvider.acknowledged, isTrue);
     expect(await File(ready.resultVariantPaths['spatial_mobile']!).exists(),
         isTrue);
+  });
+
+  test('a commit the Node refuses is repaired, not restarted', () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    // The node acknowledges this frame and then does not keep it, exactly as
+    // an outside sweep did on the owner's node.
+    node.losePaths.add('rgb/00000.jpg');
+
+    final frames = <SpatialTransferProgress>[];
+    library.addListener(() {
+      final live = library.transferFor(record.localSpatialId);
+      if (live != null) frames.add(live);
+    });
+
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    // Repairing a gap takes the withdrawn bytes back out of the confirmed
+    // total. Without that the bar pins at 100%, the readout claims more
+    // delivered than the capture holds, and the countdown reads "1 sec" for
+    // the whole repair.
+    expect(frames, isNotEmpty);
+    for (final frame in frames) {
+      expect(
+        frame.uploadedBytes,
+        lessThanOrEqualTo(frame.totalBytes),
+        reason: 'no frame may claim more delivered than the capture contains',
+      );
+      expect(frame.confirmedBytes, greaterThanOrEqualTo(0));
+      expect(frame.uploadedFiles, lessThanOrEqualTo(frame.totalFiles));
+    }
+    expect(
+      frames.any((f) => f.phase == SpatialTransferPhase.repairing),
+      isTrue,
+      reason: 'the repair is a phase of its own, not silent',
+    );
+    // A repaired file is withdrawn and then delivered again: counted back
+    // in, so the transfer does not end claiming files are still missing.
+    final lastMoving = frames.lastWhere(
+      (f) => f.phase == SpatialTransferPhase.validating,
+    );
+    expect(lastMoving.uploadedFiles, lastMoving.totalFiles);
+    expect(ready.uploadedFiles, ready.totalFiles);
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    // One draft and one durable capture: the transfer was completed, not
+    // started again.
+    expect(node.drafts, hasLength(1));
+    expect(node.committed, hasLength(1));
+    expect(node.drafts.values.single.containsKey('rgb/00000.jpg'), isTrue);
+  });
+
+  test('a resume that cannot reach its draft keeps the progress it had',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failUploadsAfter = 5;
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+    final interrupted = await library.store.get(record.localSpatialId);
+    expect(interrupted!.uploadedFiles, 5);
+
+    // The next attempt cannot even ask the node what it holds.
+    node.failDraftLookup = true;
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final after = await library.store.get(record.localSpatialId);
+    expect(after!.uploadedFiles, 5,
+        reason: 'the draft still holds five files; "0 of N" would be false');
+    expect(after.totalFiles, interrupted.totalFiles);
+  });
+
+  test('a job the Node ran and failed is not "waiting for a processor"',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failJobWith = 'worker_failed';
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'processing_failed');
+    expect(failed.processingState,
+        isNot(SpatialLibraryProcessingState.waitingForProcessor));
+  });
+
+  test('a job that found the package incomplete offers the upload again',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failJobWith = 'capture_frame_file_missing';
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'capture_frame_file_missing');
+  });
+
+  test('a capture missing a file on this device never reaches the Node',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    final stored = await library.store.get(record.localSpatialId);
+    await File('${stored!.sourcePath}/rgb/00000.jpg').delete();
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(isA<SpatialSourceIncomplete>()),
+    );
+
+    // Nothing was opened on the node, so nothing can be committed from it.
+    expect(node.drafts, isEmpty);
+    expect(node.committed, isEmpty);
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'source_incomplete');
+    // The raw capture is still the user's, minus the file that vanished.
+    expect(failed.rawPresent, isTrue);
+  });
+
+  test(
+      'a Node replica that can no longer be processed is replaced, not retried',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    await library.processWithOwnNode(record.localSpatialId);
+    final first = await library.store.get(record.localSpatialId);
+    final firstReplica = first!.nodeCaptureId;
+    expect(firstReplica, isNotNull);
+
+    // The node's copy lost files after it was stored, so it refuses to start
+    // GPU work against it.
+    node.rejectReconstructionFor.add(firstReplica!);
+
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    // Re-uploaded rather than reprocessed...
+    expect(node.committed.length, 2);
+    // ...and the damaged replica was replaced, not joined: one local capture
+    // still maps to exactly one durable copy.
+    expect(node.capturesByLocalId, hasLength(1));
+    expect(ready.nodeCaptureId, isNot(firstReplica));
+    expect(node.capturesByLocalId.values.single, ready.nodeCaptureId);
   });
 }

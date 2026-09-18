@@ -29217,6 +29217,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not update permissions. This Node kept its existing credential.'**
   String get kubusPermissionUpdateFailed;
+
+  /// No description provided for @spatialTransferValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the upload on your node…'**
+  String get spatialTransferValidating;
+
+  /// No description provided for @spatialTransferRepairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Completing the upload…'**
+  String get spatialTransferRepairing;
+
+  /// No description provided for @spatialTransferWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your node…'**
+  String get spatialTransferWaiting;
+
+  /// Transferred bytes over total, both already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String spatialTransferBytes(String done, String total);
+
+  /// Measured transfer speed, already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/s'**
+  String spatialTransferThroughput(String rate);
+
+  /// Evidence-based estimate of time left.
+  ///
+  /// In en, this message translates to:
+  /// **'About {duration} remaining'**
+  String spatialTransferEta(String duration);
+
+  /// Files delivered over total.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total} files'**
+  String spatialTransferFiles(int done, int total);
+
+  /// No description provided for @spatialTransferRouteLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network'**
+  String get spatialTransferRouteLocal;
+
+  /// No description provided for @spatialTransferRouteRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure internet connection'**
+  String get spatialTransferRouteRemote;
+
+  /// No description provided for @spatialTransferRouteDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct connection'**
+  String get spatialTransferRouteDirect;
+
+  /// No description provided for @spatialTransferRouteRelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Relayed connection'**
+  String get spatialTransferRouteRelay;
+
+  /// No description provided for @spatialDurationSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} sec'**
+  String spatialDurationSeconds(int seconds);
+
+  /// No description provided for @spatialDurationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String spatialDurationMinutes(int minutes);
+
+  /// No description provided for @spatialDurationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String spatialDurationHours(int hours, int minutes);
+
+  /// No description provided for @spatialFailureSourceIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture is missing files on this device'**
+  String get spatialFailureSourceIncomplete;
+
+  /// No description provided for @spatialFailureSourceUnrepairable.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture cannot be processed'**
+  String get spatialFailureSourceUnrepairable;
+
+  /// No description provided for @spatialFailureNodeCaptureIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload did not finish'**
+  String get spatialFailureNodeCaptureIncomplete;
+
+  /// No description provided for @spatialFailureNodeValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your node could not accept this capture'**
+  String get spatialFailureNodeValidation;
+
+  /// No description provided for @spatialUploadIncompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture upload incomplete'**
+  String get spatialUploadIncompleteTitle;
+
+  /// No description provided for @spatialUploadIncompleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your node is missing {count, plural, =1{1 file} other{{count} files}} from this capture.'**
+  String spatialUploadIncompleteBody(int count);
+
+  /// No description provided for @spatialUploadAvailableFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{available} / {expected} files available'**
+  String spatialUploadAvailableFiles(int available, int expected);
+
+  /// No description provided for @spatialUploadResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume upload'**
+  String get spatialUploadResume;
 }
 
 class _AppLocalizationsDelegate

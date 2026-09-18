@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'node_idempotency_key.dart';
+import 'node_transfer_cancellation.dart';
+
+export 'node_transfer_cancellation.dart';
 
 /// How a request reached the paired Node.
 ///
@@ -131,10 +134,22 @@ abstract class KubusNodeTransport {
   ///
   /// Spatial captures are far too large to buffer, so this is a first-class
   /// transport operation rather than a convenience built on [request].
+  ///
+  /// [onBytesSent] reports cumulative bytes handed to the wire for this one
+  /// file. Every rung reports it, so the progress the user sees does not
+  /// depend on which route the transfer happens to be using. These bytes are
+  /// in flight, not delivered: only the response makes them durable.
+  ///
+  /// When [cancellation] fires, the rung stops putting bytes on the wire, tells
+  /// the Node to discard the partial file where the protocol allows it, stops
+  /// calling [onBytesSent], and completes with
+  /// [NodeTransferCancelledException]. It is never retried on another rung.
   Future<KubusNodeResponse> streamUpload(
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   });
 
   /// Releases any underlying connection resources.

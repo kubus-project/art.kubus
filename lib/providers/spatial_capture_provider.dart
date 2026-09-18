@@ -9,8 +9,14 @@ import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_policy.dart';
 import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
+import '../services/spatial_node_upload.dart';
 import 'kubus_node_provider.dart';
 import '../config/config.dart';
+
+// The transfer progress model lives with the transfer itself; re-exported so
+// screens that watch this provider do not need a second import.
+export '../services/spatial_node_upload.dart'
+    show SpatialTransferPhase, SpatialTransferProgress;
 
 enum SpatialCaptureState {
   idle,
@@ -64,40 +70,6 @@ enum SpatialCaptureGuidance {
 
   /// Enough coverage and diversity to finish.
   coverageReady,
-}
-
-/// Stage of a streaming transfer to the paired node.
-enum SpatialTransferPhase { idle, preparing, uploading, committing, complete }
-
-/// Honest progress of a streaming capture transfer.
-///
-/// Every field is measured, never interpolated: the file counts come from the
-/// upload loop and the byte totals from the files actually on disk.
-@immutable
-class SpatialTransferProgress {
-  const SpatialTransferProgress({
-    this.phase = SpatialTransferPhase.idle,
-    this.uploadedFiles = 0,
-    this.totalFiles = 0,
-    this.uploadedBytes = 0,
-    this.totalBytes = 0,
-  });
-
-  final SpatialTransferPhase phase;
-  final int uploadedFiles;
-  final int totalFiles;
-  final int uploadedBytes;
-  final int totalBytes;
-
-  bool get isActive =>
-      phase != SpatialTransferPhase.idle &&
-      phase != SpatialTransferPhase.complete;
-
-  /// Fraction of bytes delivered, or `null` while the total is not yet known.
-  double? get fraction {
-    if (totalBytes <= 0) return null;
-    return (uploadedBytes / totalBytes).clamp(0.0, 1.0);
-  }
 }
 
 /// A capture cannot be finished because it does not yet cover enough of the
@@ -712,40 +684,14 @@ class SpatialCaptureProvider extends ChangeNotifier {
       },
     );
 
-    final entries = store.uploadEntries;
-    var totalBytes = 0;
-    for (final entry in entries) {
-      final file = store.fileAt(entry.path);
-      if (await file.exists()) totalBytes += await file.length();
-    }
-
-    // Resume against an existing draft when one survived, so the retry sends
-    // only the files that never landed.
-    var draftId = store.draftId;
-    var alreadyUploaded = const <String>{};
-    if (draftId != null) {
-      try {
-        final progress = await node.service.getCaptureDraft(draftId);
-        alreadyUploaded = progress.files.toSet();
-      } on KubusNodeRequestException catch (error) {
-        // Only a draft the node no longer knows about is worth abandoning.
-        // Drafts live in memory there, so a node restart drops them.
-        if (error.code != 'capture_draft_not_found') rethrow;
-        draftId = null;
-        await store.recordDraftId(null);
-      } on KubusNodeUnsupportedException {
-        // The draft routes are gone entirely: report it rather than silently
-        // re-uploading against an endpoint that does not exist.
-        rethrow;
-      }
-      // Any other failure — a dropped connection, a timeout — propagates, so
-      // the next retry resumes against this same draft instead of discarding
-      // everything already delivered.
-    }
-
-    if (draftId == null) {
-      final draft = await node.service
-          .beginCaptureDraft(localCaptureId: store.captureId, <String, dynamic>{
+    final record = await SpatialNodeUpload(
+      service: node.service,
+      source: store,
+    ).run(
+      localCaptureId: store.captureId,
+      draftId: store.draftId,
+      rememberDraftId: store.recordDraftId,
+      draftMetadata: <String, dynamic>{
         'schema': 'kubus.capture/1',
         'artworkId': store.artworkId,
         if (store.markerId != null) 'markerId': store.markerId,
@@ -764,56 +710,12 @@ class SpatialCaptureProvider extends ChangeNotifier {
           // The node returns the already-committed record instead.
           'localCaptureId': store.captureId,
         },
-      });
-      draftId = draft.id;
-      // Record before the first byte moves: a crash mid-upload must leave a
-      // draft the next attempt can find instead of orphaning it on the node.
-      await store.recordDraftId(draftId);
-    }
-
-    var uploadedFiles = 0;
-    var uploadedBytes = 0;
-    _transfer = SpatialTransferProgress(
-      phase: SpatialTransferPhase.uploading,
-      totalFiles: entries.length,
-      totalBytes: totalBytes,
+      },
+      onProgress: (progress) {
+        _transfer = progress;
+        notifyListeners();
+      },
     );
-    notifyListeners();
-
-    for (final entry in entries) {
-      final file = store.fileAt(entry.path);
-      if (!await file.exists()) continue;
-      final length = await file.length();
-      if (!alreadyUploaded.contains(entry.path)) {
-        await node.service.uploadCaptureDraftFile(
-          draftId: draftId,
-          path: entry.path,
-          file: file,
-          mimeType: entry.mimeType,
-        );
-      }
-      uploadedFiles++;
-      uploadedBytes += length;
-      _transfer = SpatialTransferProgress(
-        phase: SpatialTransferPhase.uploading,
-        uploadedFiles: uploadedFiles,
-        totalFiles: entries.length,
-        uploadedBytes: uploadedBytes,
-        totalBytes: totalBytes,
-      );
-      notifyListeners();
-    }
-
-    _transfer = SpatialTransferProgress(
-      phase: SpatialTransferPhase.committing,
-      uploadedFiles: uploadedFiles,
-      totalFiles: entries.length,
-      uploadedBytes: uploadedBytes,
-      totalBytes: totalBytes,
-    );
-    notifyListeners();
-
-    final record = await node.service.commitCaptureDraft(draftId);
     final captureId = record['id']?.toString();
     if (captureId == null || captureId.isEmpty) {
       throw const KubusNodeRequestException(
@@ -827,10 +729,11 @@ class SpatialCaptureProvider extends ChangeNotifier {
     await store.markTransferred();
     _transfer = SpatialTransferProgress(
       phase: SpatialTransferPhase.complete,
-      uploadedFiles: uploadedFiles,
-      totalFiles: entries.length,
-      uploadedBytes: uploadedBytes,
-      totalBytes: totalBytes,
+      uploadedFiles: _transfer.totalFiles,
+      totalFiles: _transfer.totalFiles,
+      confirmedBytes: _transfer.totalBytes,
+      totalBytes: _transfer.totalBytes,
+      route: _transfer.route,
     );
   }
 

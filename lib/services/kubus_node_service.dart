@@ -29,12 +29,27 @@ class KubusNodeRequestException implements Exception {
   const KubusNodeRequestException({
     required this.statusCode,
     required this.code,
+    this.details = const <String, dynamic>{},
   });
 
   final int statusCode;
 
   /// The node's machine-readable error code, or `node_request_failed`.
   final String code;
+
+  /// Structured facts the node attached to the failure.
+  ///
+  /// A rejected capture commit carries the capture-relative paths it is
+  /// missing, which is what lets the app repair the gap instead of restarting
+  /// the whole transfer.
+  final Map<String, dynamic> details;
+
+  /// Capture-relative paths the node reported missing, if any.
+  List<String> get missingPaths {
+    final raw = details['missingPaths'];
+    if (raw is! List) return const <String>[];
+    return raw.whereType<String>().toList(growable: false);
+  }
 
   @override
   String toString() => 'KubusNodeRequestException($statusCode): $code';
@@ -1163,6 +1178,8 @@ class KubusNodeService {
     required File file,
     required String mimeType,
     Duration timeout = const Duration(minutes: 5),
+    void Function(int sentBytes)? onBytesSent,
+    NodeTransferCancellation? cancellation,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     final response = await _transport.streamUpload(
@@ -1181,6 +1198,8 @@ class KubusNodeService {
       ),
       file: file,
       contentType: mimeType,
+      onBytesSent: onBytesSent,
+      cancellation: cancellation,
     );
     return KubusCaptureDraft.fromJson(_decode(response));
   }
@@ -1583,9 +1602,15 @@ class KubusNodeService {
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      // `code` is the machine-readable fact; `error` is its message, which
+      // for a typed node failure is the same string but for an unexpected one
+      // is free text.
       final code = body is Map
-          ? (body['error'] ?? body['code'] ?? 'node_request_failed').toString()
+          ? (body['code'] ?? body['error'] ?? 'node_request_failed').toString()
           : 'node_request_failed';
+      final details = body is Map && body['details'] is Map
+          ? Map<String, dynamic>.from(body['details'] as Map)
+          : const <String, dynamic>{};
       // A node that has never heard of a route is a version mismatch, not a
       // transient failure: the client asks the user to update it.
       if (response.statusCode == 404 &&
@@ -1602,6 +1627,7 @@ class KubusNodeService {
       throw KubusNodeRequestException(
         statusCode: response.statusCode,
         code: code,
+        details: details,
       );
     }
     if (body is Map<String, dynamic> &&

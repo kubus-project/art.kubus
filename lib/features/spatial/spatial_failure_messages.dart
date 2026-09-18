@@ -13,11 +13,30 @@ class SpatialFailureMessages {
     final normalized = (code ?? '').trim();
     if (normalized.isEmpty) return null;
     switch (normalized) {
+      // The capture on this device cannot make a complete package. Neither
+      // the node nor the processor can do anything about it, and offering a
+      // retry of either sends the user round a loop that cannot succeed.
+      case 'source_incomplete':
+        return l10n.spatialFailureSourceIncomplete;
+      case 'source_frames_unrepairable':
+        return l10n.spatialFailureSourceUnrepairable;
+      // The node holds an incomplete copy. The source is still here, so the
+      // remedy is finishing the upload — not reprocessing.
+      case 'node_capture_incomplete':
+      case 'capture_package_incomplete':
+      case 'capture_frame_file_missing':
+      case 'capture_frames_missing':
+        return l10n.spatialFailureNodeCaptureIncomplete;
+      case 'node_validation_failed':
+      case 'capture_frames_invalid':
+        return l10n.spatialFailureNodeValidation;
       case 'node_unavailable':
       case 'processor_unavailable':
+        return l10n.spatialFailureNodeUnavailable;
       case 'node_identity_mismatch':
         return l10n.spatialFailureNodeUnavailable;
       case 'upload_interrupted':
+      case 'upload_failed':
         return l10n.spatialFailureUploadInterrupted;
       case 'provider_declined':
         return l10n.spatialFailureProcessorDeclined;
@@ -28,6 +47,8 @@ class SpatialFailureMessages {
       case 'result_download_interrupted':
       case 'spatial_result_missing':
         return l10n.spatialFailureResultDownload;
+      case 'result_validation_failed':
+        return l10n.spatialFailureResultVerification;
       case 'network_request_expired':
         return l10n.spatialFailureRequestExpired;
       case 'publication_interrupted':
@@ -45,6 +66,20 @@ class SpatialFailureMessages {
         return l10n.spatialFailureGeneric;
     }
   }
+
+  /// Whether [code] means the capture on the node is incomplete.
+  ///
+  /// The one failure class whose remedy is finishing the transfer rather than
+  /// retrying the processor, so the UI can offer the action that can actually
+  /// work.
+  static bool isRepairableUpload(String? code) => const <String>{
+        'node_capture_incomplete',
+        'capture_package_incomplete',
+        'capture_frame_file_missing',
+        'capture_frames_missing',
+        'upload_interrupted',
+        'upload_failed',
+      }.contains((code ?? '').trim());
 
   /// The reassurance that belongs beside every failure: nothing was lost.
   static String? rawIntact(AppLocalizations l10n, {required bool rawPresent}) =>
