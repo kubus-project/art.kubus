@@ -261,6 +261,7 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
   }) async {
     // The actual file length is known here, so routing never has to guess how
     // big this transfer is — which is the whole reason a relay can be pushed
@@ -272,6 +273,10 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
         request,
         file: file,
         contentType: contentType,
+        // Each attempt counts from zero. A rung change therefore rewinds only
+        // the in-flight portion of this one file; bytes the node has already
+        // confirmed are held separately and never move backwards.
+        onBytesSent: onBytesSent,
       ),
       _contextForOperation().copyWith(
         operationClass: NodeOperationClass.bulkUpload,

@@ -160,6 +160,10 @@ class SpatialCaptureStore {
   /// swept out from under a live session.
   static const Duration emptyCaptureGrace = Duration(hours: 6);
 
+  /// Enough missing paths for the user to act on, bounded so a badly damaged
+  /// capture cannot produce an unbounded error.
+  static const int _missingPathLimit = 50;
+
   final String captureId;
   final Directory directory;
   final String _artworkId;
@@ -256,7 +260,8 @@ class SpatialCaptureStore {
     } catch (error) {
       if (kDebugMode) {
         AppConfig.debugPrint(
-            'SpatialCaptureStore: unreadable manifest: $error');
+          'SpatialCaptureStore: unreadable manifest: $error',
+        );
       }
       return null;
     }
@@ -267,8 +272,9 @@ class SpatialCaptureStore {
       artworkId: manifest['artworkId']?.toString() ?? '',
       markerId: manifest['markerId']?.toString(),
       capturedBy: metadata is Map ? metadata['capturedBy']?.toString() : null,
-      startedAt: DateTime.tryParse(manifest['capturedAt']?.toString() ?? '')
-              ?.toUtc() ??
+      startedAt: DateTime.tryParse(
+            manifest['capturedAt']?.toString() ?? '',
+          )?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
     store._state = _stateFromManifest(manifest);
@@ -408,6 +414,86 @@ class SpatialCaptureStore {
     }
   }
 
+  /// Rebuilds `frames.json` from the durable sample index when it is absent
+  /// or unreadable.
+  ///
+  /// `frames.jsonl` is appended as each sample lands, so it survives a crash;
+  /// `frames.json` is only written when a capture is finished. A capture
+  /// interrupted before that — or one written by a build that predates the
+  /// canonical document — reopens with usable samples and no manifest, and the
+  /// node rightly refuses it.
+  ///
+  /// Nothing is invented. The document is rebuilt from the same sample records
+  /// the index already holds, so a capture whose index carries no samples stays
+  /// unrepairable rather than gaining fabricated poses or intrinsics. Idempotent:
+  /// a second pass over a repaired capture does nothing.
+  Future<bool> ensureCanonicalFrames() async {
+    if (_discarded) return false;
+    if (await _canonicalFramesUsable()) return true;
+    if (_samples.isEmpty) return false;
+    await _enqueueMetadata(() async {
+      await _writeAtomic(_framesFile, utf8.encode(jsonEncode(framesDocument)));
+    });
+    return _canonicalFramesUsable();
+  }
+
+  /// Whether `frames.json` exists and parses as the document the node expects.
+  Future<bool> _canonicalFramesUsable() async {
+    final file = File(p.join(directory.path, _framesFile));
+    if (!await file.exists()) return false;
+    try {
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map<String, dynamic>) return false;
+      if (decoded['schema'] != 'kubus.capture.frames/1') return false;
+      final frames = decoded['frames'];
+      return frames is List && frames.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Checks that every file the transfer will send is actually on disk.
+  ///
+  /// Called before a node draft is opened. A required file that is missing
+  /// must never be skipped on the way past: the node would then store a
+  /// package it cannot process, and the failure would surface as a raw
+  /// filesystem error from a GPU worker minutes later.
+  Future<List<SpatialCaptureUploadEntry>> validateTransferPackage() async {
+    if (!await ensureCanonicalFrames()) {
+      throw const SpatialSourceIncomplete(
+        problem: SpatialSourceProblem.framesUnrepairable,
+      );
+    }
+    final entries = uploadEntries;
+    final missing = <String>[];
+    var available = 0;
+    for (final entry in entries) {
+      final file = fileAt(entry.path);
+      var present = false;
+      try {
+        present = await file.exists() && await file.length() > 0;
+      } catch (_) {
+        present = false;
+      }
+      if (present) {
+        available++;
+        continue;
+      }
+      // Bounded: `expectedFiles - availableFiles` still carries the true
+      // total, so a badly damaged capture cannot produce an unbounded error.
+      if (missing.length < _missingPathLimit) missing.add(entry.path);
+    }
+    if (available != entries.length) {
+      throw SpatialSourceIncomplete(
+        problem: SpatialSourceProblem.filesMissing,
+        missingPaths: List.unmodifiable(missing),
+        availableFiles: available,
+        expectedFiles: entries.length,
+      );
+    }
+    return entries;
+  }
+
   /// Absolute path of a stored file, for streaming upload.
   File fileAt(String relativePath) =>
       File(p.join(directory.path, relativePath));
@@ -489,7 +575,8 @@ class SpatialCaptureStore {
     _metadataQueue = next.catchError((Object error) {
       if (kDebugMode) {
         AppConfig.debugPrint(
-            'SpatialCaptureStore: metadata write failed: $error');
+          'SpatialCaptureStore: metadata write failed: $error',
+        );
       }
     });
     return next;
@@ -526,7 +613,8 @@ class SpatialCaptureStore {
     } catch (error) {
       if (kDebugMode) {
         AppConfig.debugPrint(
-            'SpatialCaptureStore: unreadable sample index: $error');
+          'SpatialCaptureStore: unreadable sample index: $error',
+        );
       }
       return;
     }
@@ -585,28 +673,32 @@ class SpatialCaptureStore {
         final declared = metadata is Map && metadata['frameCount'] is int
             ? metadata['frameCount'] as int
             : 0;
-        found.add(InterruptedSpatialCapture(
-          captureId: json['captureId']?.toString() ?? p.basename(entity.path),
-          directory: entity,
-          startedAt: DateTime.tryParse(json['capturedAt']?.toString() ?? '')
-                  ?.toUtc() ??
-              DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-          sampleCount: indexed > declared ? indexed : declared,
-          transferred: state == SpatialCaptureDirectoryState.transferred,
-          state: state,
-          artworkId: json['artworkId']?.toString(),
-          markerId: json['markerId']?.toString(),
-          capturedBy:
-              metadata is Map ? metadata['capturedBy']?.toString() : null,
-          byteSize: metadata is Map && metadata['byteSize'] is int
-              ? metadata['byteSize'] as int
-              : 0,
-          draftId: json['draftId']?.toString(),
-        ));
+        found.add(
+          InterruptedSpatialCapture(
+            captureId: json['captureId']?.toString() ?? p.basename(entity.path),
+            directory: entity,
+            startedAt: DateTime.tryParse(
+                  json['capturedAt']?.toString() ?? '',
+                )?.toUtc() ??
+                DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+            sampleCount: indexed > declared ? indexed : declared,
+            transferred: state == SpatialCaptureDirectoryState.transferred,
+            state: state,
+            artworkId: json['artworkId']?.toString(),
+            markerId: json['markerId']?.toString(),
+            capturedBy:
+                metadata is Map ? metadata['capturedBy']?.toString() : null,
+            byteSize: metadata is Map && metadata['byteSize'] is int
+                ? metadata['byteSize'] as int
+                : 0,
+            draftId: json['draftId']?.toString(),
+          ),
+        );
       } catch (error) {
         if (kDebugMode) {
           AppConfig.debugPrint(
-              'SpatialCaptureStore: unreadable manifest: $error');
+            'SpatialCaptureStore: unreadable manifest: $error',
+          );
         }
       }
     }
@@ -671,6 +763,50 @@ class SpatialCaptureStore {
     }
     return removed;
   }
+}
+
+/// Why a capture cannot be handed to a node.
+///
+/// The product has to tell these apart. A source package that is missing
+/// files is not a transport failure and not a processing failure: retrying
+/// the upload or the processor cannot invent the bytes, and saying otherwise
+/// sends the user round a loop that can never succeed.
+enum SpatialSourceProblem {
+  /// Files the frame document references are gone from the capture directory.
+  filesMissing,
+
+  /// No canonical frame document, and too little durable metadata to rebuild
+  /// one. Never repaired by fabricating poses.
+  framesUnrepairable,
+}
+
+/// A capture that cannot be transferred, with what is needed to say why.
+class SpatialSourceIncomplete implements Exception {
+  const SpatialSourceIncomplete({
+    required this.problem,
+    this.missingPaths = const <String>[],
+    this.availableFiles = 0,
+    this.expectedFiles = 0,
+  });
+
+  final SpatialSourceProblem problem;
+
+  /// Capture-relative paths, bounded so an error stays small.
+  final List<String> missingPaths;
+  final int availableFiles;
+  final int expectedFiles;
+
+  int get missingCount => expectedFiles - availableFiles;
+
+  /// The code the library record stores and the UI maps to copy.
+  String get code => switch (problem) {
+        SpatialSourceProblem.filesMissing => 'source_incomplete',
+        SpatialSourceProblem.framesUnrepairable => 'source_frames_unrepairable',
+      };
+
+  @override
+  String toString() =>
+      'SpatialSourceIncomplete($code, $availableFiles/$expectedFiles files)';
 }
 
 /// One file to stream to the node, identified by its path within the capture.

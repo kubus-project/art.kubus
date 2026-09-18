@@ -28,6 +28,7 @@ class _FakeTransport implements KubusNodeTransport {
     KubusNodeRequest req, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
   }) =>
       request(req);
 

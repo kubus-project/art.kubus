@@ -11,6 +11,7 @@ import '../services/backend_api_service.dart';
 import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
+import '../services/spatial_node_upload.dart';
 import '../services/spatial_result_importer.dart';
 import 'kubus_node_provider.dart';
 
@@ -1003,6 +1004,45 @@ class SpatialLibraryProvider extends ChangeNotifier {
     await reload();
   }
 
+  /// Live transfer progress per record, for the screen that is watching.
+  ///
+  /// Held in memory and republished on every byte. The durable record is
+  /// written far less often — see [_publishTransfer].
+  final Map<String, SpatialTransferProgress> _transfers =
+      <String, SpatialTransferProgress>{};
+
+  /// Live progress for [localSpatialId], or null when nothing is in flight.
+  SpatialTransferProgress? transferFor(String localSpatialId) =>
+      _transfers[localSpatialId];
+
+  /// Publishes progress to the UI, and persists only what is durable.
+  ///
+  /// Bytes in flight are a live reading: persisting them would let a restart
+  /// resume against a file the node never confirmed and skip it. Only a
+  /// completed file changes the stored record, which also keeps a transfer of
+  /// thousands of frames from writing the library store on every chunk.
+  void _publishTransfer(String localSpatialId, SpatialTransferProgress next) {
+    final previous = _transfers[localSpatialId];
+    _transfers[localSpatialId] = next;
+    notifyListeners();
+    // A durable fact changed when a file completed, or when the size of the
+    // work itself became known. Bytes in flight alone are not a fact.
+    final unchanged = previous != null &&
+        previous.uploadedFiles == next.uploadedFiles &&
+        previous.totalFiles == next.totalFiles &&
+        previous.totalBytes == next.totalBytes;
+    if (unchanged) return;
+    unawaited(
+      store.recordNodeTransfer(
+        localSpatialId,
+        uploadedFiles: next.uploadedFiles,
+        totalFiles: next.totalFiles,
+        uploadedBytes: next.confirmedBytes,
+        totalBytes: next.totalBytes,
+      ),
+    );
+  }
+
   Future<SpatialLibraryRecord> _uploadToNode(
     String localSpatialId,
     KubusNodeProvider node,
@@ -1037,27 +1077,23 @@ class SpatialLibraryProvider extends ChangeNotifier {
       SpatialLibraryProcessingState.uploading,
       target: 'ownNode',
     );
-    final entries = source.uploadEntries;
-    var totalBytes = 0;
-    for (final entry in entries) {
-      final file = source.fileAt(entry.path);
-      if (await file.exists()) totalBytes += await file.length();
-    }
-
-    var draftId = record.draftId ?? source.draftId;
-    var uploaded = const <String>{};
-    if (draftId != null) {
-      try {
-        uploaded = (await node.service.getCaptureDraft(draftId)).files.toSet();
-      } on KubusNodeRequestException catch (error) {
-        if (error.code != 'capture_draft_not_found') rethrow;
-        draftId = null;
-        await source.recordDraftId(null);
-        await store.recordNodeTransfer(localSpatialId, draftId: null);
-      }
-    }
-    if (draftId == null) {
-      final draft = await node.service.beginCaptureDraft(<String, dynamic>{
+    final committed = await SpatialNodeUpload(
+      service: node.service,
+      source: source,
+    ).run(
+      localCaptureId: record.localSpatialId,
+      draftId: record.draftId ?? source.draftId,
+      // Recorded in both places: the capture directory survives an app
+      // restart, the library record is what the Spatial screen reads.
+      rememberDraftId: (draft) async {
+        await source.recordDraftId(draft);
+        await store.recordNodeTransfer(
+          localSpatialId,
+          nodeId: node.service.nodeId,
+          draftId: draft,
+        );
+      },
+      draftMetadata: <String, dynamic>{
         'schema': 'kubus.capture/1',
         'artworkId': record.artworkId,
         if (record.markerId != null) 'markerId': record.markerId,
@@ -1072,56 +1108,18 @@ class SpatialLibraryProvider extends ChangeNotifier {
           'private': true,
           'localCaptureId': record.localSpatialId,
         },
-      }, localCaptureId: record.localSpatialId);
-      draftId = draft.id;
-      await source.recordDraftId(draftId);
-      await store.recordNodeTransfer(
-        localSpatialId,
-        nodeId: node.service.nodeId,
-        draftId: draftId,
-        totalFiles: entries.length,
-        totalBytes: totalBytes,
-      );
-    }
-    var uploadedFiles = 0;
-    var uploadedBytes = 0;
-    for (final entry in entries) {
-      final file = source.fileAt(entry.path);
-      if (!await file.exists()) continue;
-      final length = await file.length();
-      if (!uploaded.contains(entry.path)) {
-        await node.service.uploadCaptureDraftFile(
-          draftId: draftId,
-          path: entry.path,
-          file: file,
-          mimeType: entry.mimeType,
-        );
-      }
-      uploadedFiles++;
-      uploadedBytes += length;
-      await store.recordNodeTransfer(
-        localSpatialId,
-        nodeId: node.service.nodeId,
-        draftId: draftId,
-        uploadedFiles: uploadedFiles,
-        totalFiles: entries.length,
-        uploadedBytes: uploadedBytes,
-        totalBytes: totalBytes,
-      );
-    }
-    final committed = await node.service.commitCaptureDraft(draftId);
+      },
+      onProgress: (progress) => _publishTransfer(localSpatialId, progress),
+    );
     final nodeCaptureId = committed['id']?.toString() ?? '';
     if (nodeCaptureId.isEmpty) throw StateError('capture_id_missing');
     await source.markTransferred();
+    _transfers.remove(localSpatialId);
     record = await store.recordNodeTransfer(
       localSpatialId,
       nodeId: node.service.nodeId,
       draftId: null,
       nodeCaptureId: nodeCaptureId,
-      uploadedFiles: entries.length,
-      totalFiles: entries.length,
-      uploadedBytes: totalBytes,
-      totalBytes: totalBytes,
     );
     return record;
   }

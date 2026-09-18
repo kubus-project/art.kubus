@@ -16788,4 +16788,97 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get kubusPermissionUpdateFailed =>
       'Could not update permissions. This Node kept its existing credential.';
+
+  @override
+  String get spatialTransferValidating => 'Checking the upload on your node…';
+
+  @override
+  String get spatialTransferRepairing => 'Completing the upload…';
+
+  @override
+  String get spatialTransferWaiting => 'Waiting for your node…';
+
+  @override
+  String spatialTransferBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String spatialTransferThroughput(String rate) {
+    return '$rate/s';
+  }
+
+  @override
+  String spatialTransferEta(String duration) {
+    return 'About $duration remaining';
+  }
+
+  @override
+  String spatialTransferFiles(int done, int total) {
+    return '$done / $total files';
+  }
+
+  @override
+  String get spatialTransferRouteLocal => 'Local network';
+
+  @override
+  String get spatialTransferRouteRemote => 'Secure internet connection';
+
+  @override
+  String get spatialTransferRouteDirect => 'Direct connection';
+
+  @override
+  String get spatialTransferRouteRelay => 'Relayed connection';
+
+  @override
+  String spatialDurationSeconds(int seconds) {
+    return '$seconds sec';
+  }
+
+  @override
+  String spatialDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String spatialDurationHours(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String get spatialFailureSourceIncomplete =>
+      'This capture is missing files on this device';
+
+  @override
+  String get spatialFailureSourceUnrepairable =>
+      'This capture cannot be processed';
+
+  @override
+  String get spatialFailureNodeCaptureIncomplete => 'The upload did not finish';
+
+  @override
+  String get spatialFailureNodeValidation =>
+      'Your node could not accept this capture';
+
+  @override
+  String get spatialUploadIncompleteTitle => 'Capture upload incomplete';
+
+  @override
+  String spatialUploadIncompleteBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+    );
+    return 'Your node is missing $_temp0 from this capture.';
+  }
+
+  @override
+  String spatialUploadAvailableFiles(int available, int expected) {
+    return '$available / $expected files available';
+  }
+
+  @override
+  String get spatialUploadResume => 'Resume upload';
 }

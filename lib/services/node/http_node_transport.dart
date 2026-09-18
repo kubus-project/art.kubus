@@ -10,10 +10,17 @@ import 'kubus_node_transport.dart';
 /// Keeps a capture file out of Dart memory: the bytes flow from the file
 /// straight into the socket.
 class _StreamedFileRequest extends http.BaseRequest {
-  _StreamedFileRequest(super.method, super.url, this._file, this._length);
+  _StreamedFileRequest(
+    super.method,
+    super.url,
+    this._file,
+    this._length,
+    this._onBytesSent,
+  );
 
   final File _file;
   final int _length;
+  final void Function(int sentBytes)? _onBytesSent;
 
   @override
   int? get contentLength => _length;
@@ -21,7 +28,14 @@ class _StreamedFileRequest extends http.BaseRequest {
   @override
   http.ByteStream finalize() {
     super.finalize();
-    return http.ByteStream(_file.openRead());
+    final report = _onBytesSent;
+    if (report == null) return http.ByteStream(_file.openRead());
+    var sent = 0;
+    return http.ByteStream(_file.openRead().map((chunk) {
+      sent += chunk.length;
+      report(sent);
+      return chunk;
+    }));
   }
 }
 
@@ -72,6 +86,7 @@ class HttpNodeTransport implements KubusNodeTransport {
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
   }) async {
     final length = await file.length();
     final streamedRequest = _StreamedFileRequest(
@@ -79,6 +94,7 @@ class HttpNodeTransport implements KubusNodeTransport {
       _resolve(request),
       file,
       length,
+      onBytesSent,
     );
     streamedRequest.headers.addAll({
       ..._headers(request),

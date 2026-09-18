@@ -131,10 +131,16 @@ abstract class KubusNodeTransport {
   ///
   /// Spatial captures are far too large to buffer, so this is a first-class
   /// transport operation rather than a convenience built on [request].
+  ///
+  /// [onBytesSent] reports cumulative bytes handed to the wire for this one
+  /// file. Every rung reports it, so the progress the user sees does not
+  /// depend on which route the transfer happens to be using. These bytes are
+  /// in flight, not delivered: only the response makes them durable.
   Future<KubusNodeResponse> streamUpload(
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
   });
 
   /// Releases any underlying connection resources.

@@ -6731,5 +6731,106 @@
   "kubusPermissionUpdateWorking": "Posodabljanje dovoljenj vozlišča …",
   "kubusPermissionUpdateDone": "Dovoljenja so posodobljena. Vozlišče se ponovno zaganja, da jih uporabi.",
   "kubusPermissionUpdateDeclined": "Posodobitev je zavrnjena. Vozlišče ohrani trenutna dovoljenja.",
-  "kubusPermissionUpdateFailed": "Dovoljenj ni bilo mogoče posodobiti. Vozlišče je ohranilo obstoječo poverilnico."
+  "kubusPermissionUpdateFailed": "Dovoljenj ni bilo mogoče posodobiti. Vozlišče je ohranilo obstoječo poverilnico.",
+  "spatialTransferValidating": "Preverjam nalaganje na vašem vozlišču …",
+  "spatialTransferRepairing": "Dokončujem nalaganje …",
+  "spatialTransferWaiting": "Čakam na vaše vozlišče …",
+  "spatialTransferBytes": "{done} / {total}",
+  "@spatialTransferBytes": {
+    "description": "Prenesene bajte glede na skupno, oboje že oblikovano.",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferThroughput": "{rate}/s",
+  "@spatialTransferThroughput": {
+    "description": "Izmerjena hitrost prenosa, že oblikovana.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferEta": "Še približno {duration}",
+  "@spatialTransferEta": {
+    "description": "Na meritvah temelječa ocena preostalega časa.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferFiles": "{done} / {total} datotek",
+  "@spatialTransferFiles": {
+    "description": "Prenesene datoteke glede na skupno.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialTransferRouteLocal": "Lokalno omrežje",
+  "spatialTransferRouteRemote": "Varna internetna povezava",
+  "spatialTransferRouteDirect": "Neposredna povezava",
+  "spatialTransferRouteRelay": "Posredovana povezava",
+  "spatialDurationSeconds": "{seconds} s",
+  "@spatialDurationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationMinutes": "{minutes} min",
+  "@spatialDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationHours": "{hours} h {minutes} min",
+  "@spatialDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialFailureSourceIncomplete": "Temu zajemu na tej napravi manjkajo datoteke",
+  "spatialFailureSourceUnrepairable": "Tega zajema ni mogoče obdelati",
+  "spatialFailureNodeCaptureIncomplete": "Nalaganje se ni dokončalo",
+  "spatialFailureNodeValidation": "Vaše vozlišče tega zajema ni moglo sprejeti",
+  "spatialUploadIncompleteTitle": "Nalaganje zajema ni dokončano",
+  "spatialUploadIncompleteBody": "Vašemu vozlišču manjka {count, plural, one{1 datoteka} two{{count} datoteki} few{{count} datoteke} other{{count} datotek}} iz tega zajema.",
+  "@spatialUploadIncompleteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadAvailableFiles": "Na voljo {available} / {expected} datotek",
+  "@spatialUploadAvailableFiles": {
+    "placeholders": {
+      "available": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadResume": "Nadaljuj nalaganje"
 }

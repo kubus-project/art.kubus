@@ -16961,4 +16961,100 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get kubusPermissionUpdateFailed =>
       'Dovoljenj ni bilo mogoče posodobiti. Vozlišče je ohranilo obstoječo poverilnico.';
+
+  @override
+  String get spatialTransferValidating =>
+      'Preverjam nalaganje na vašem vozlišču …';
+
+  @override
+  String get spatialTransferRepairing => 'Dokončujem nalaganje …';
+
+  @override
+  String get spatialTransferWaiting => 'Čakam na vaše vozlišče …';
+
+  @override
+  String spatialTransferBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String spatialTransferThroughput(String rate) {
+    return '$rate/s';
+  }
+
+  @override
+  String spatialTransferEta(String duration) {
+    return 'Še približno $duration';
+  }
+
+  @override
+  String spatialTransferFiles(int done, int total) {
+    return '$done / $total datotek';
+  }
+
+  @override
+  String get spatialTransferRouteLocal => 'Lokalno omrežje';
+
+  @override
+  String get spatialTransferRouteRemote => 'Varna internetna povezava';
+
+  @override
+  String get spatialTransferRouteDirect => 'Neposredna povezava';
+
+  @override
+  String get spatialTransferRouteRelay => 'Posredovana povezava';
+
+  @override
+  String spatialDurationSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String spatialDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String spatialDurationHours(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String get spatialFailureSourceIncomplete =>
+      'Temu zajemu na tej napravi manjkajo datoteke';
+
+  @override
+  String get spatialFailureSourceUnrepairable =>
+      'Tega zajema ni mogoče obdelati';
+
+  @override
+  String get spatialFailureNodeCaptureIncomplete => 'Nalaganje se ni dokončalo';
+
+  @override
+  String get spatialFailureNodeValidation =>
+      'Vaše vozlišče tega zajema ni moglo sprejeti';
+
+  @override
+  String get spatialUploadIncompleteTitle => 'Nalaganje zajema ni dokončano';
+
+  @override
+  String spatialUploadIncompleteBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count datotek',
+      few: '$count datoteke',
+      two: '$count datoteki',
+      one: '1 datoteka',
+    );
+    return 'Vašemu vozlišču manjka $_temp0 iz tega zajema.';
+  }
+
+  @override
+  String spatialUploadAvailableFiles(int available, int expected) {
+    return 'Na voljo $available / $expected datotek';
+  }
+
+  @override
+  String get spatialUploadResume => 'Nadaljuj nalaganje';
 }

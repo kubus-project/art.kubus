@@ -6758,5 +6758,106 @@
   "kubusPermissionUpdateWorking": "Updating this Node's permissions…",
   "kubusPermissionUpdateDone": "Permissions updated. Your Node is restarting to use them.",
   "kubusPermissionUpdateDeclined": "Update declined. This Node keeps its current permissions.",
-  "kubusPermissionUpdateFailed": "Could not update permissions. This Node kept its existing credential."
+  "kubusPermissionUpdateFailed": "Could not update permissions. This Node kept its existing credential.",
+  "spatialTransferValidating": "Checking the upload on your node…",
+  "spatialTransferRepairing": "Completing the upload…",
+  "spatialTransferWaiting": "Waiting for your node…",
+  "spatialTransferBytes": "{done} / {total}",
+  "@spatialTransferBytes": {
+    "description": "Transferred bytes over total, both already formatted.",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferThroughput": "{rate}/s",
+  "@spatialTransferThroughput": {
+    "description": "Measured transfer speed, already formatted.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferEta": "About {duration} remaining",
+  "@spatialTransferEta": {
+    "description": "Evidence-based estimate of time left.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferFiles": "{done} / {total} files",
+  "@spatialTransferFiles": {
+    "description": "Files delivered over total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialTransferRouteLocal": "Local network",
+  "spatialTransferRouteRemote": "Secure internet connection",
+  "spatialTransferRouteDirect": "Direct connection",
+  "spatialTransferRouteRelay": "Relayed connection",
+  "spatialDurationSeconds": "{seconds} sec",
+  "@spatialDurationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationMinutes": "{minutes} min",
+  "@spatialDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationHours": "{hours} h {minutes} min",
+  "@spatialDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialFailureSourceIncomplete": "This capture is missing files on this device",
+  "spatialFailureSourceUnrepairable": "This capture cannot be processed",
+  "spatialFailureNodeCaptureIncomplete": "The upload did not finish",
+  "spatialFailureNodeValidation": "Your node could not accept this capture",
+  "spatialUploadIncompleteTitle": "Capture upload incomplete",
+  "spatialUploadIncompleteBody": "Your node is missing {count, plural, =1{1 file} other{{count} files}} from this capture.",
+  "@spatialUploadIncompleteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadAvailableFiles": "{available} / {expected} files available",
+  "@spatialUploadAvailableFiles": {
+    "placeholders": {
+      "available": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadResume": "Resume upload"
 }

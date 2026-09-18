@@ -108,8 +108,28 @@ class WebRtcNodeTransport implements KubusNodeTransport {
     KubusNodeRequest request, {
     required File file,
     required String contentType,
+    void Function(int sentBytes)? onBytesSent,
   }) =>
-      _perform(request, body: file.openRead(), contentType: contentType);
+      _perform(
+        request,
+        body: _counted(file.openRead(), onBytesSent),
+        contentType: contentType,
+      );
+
+  /// Reports cumulative bytes as they pass, so a peer-to-peer transfer shows
+  /// the same live progress as a LAN one.
+  static Stream<List<int>> _counted(
+    Stream<List<int>> source,
+    void Function(int sentBytes)? onBytesSent,
+  ) {
+    if (onBytesSent == null) return source;
+    var sent = 0;
+    return source.map((chunk) {
+      sent += chunk.length;
+      onBytesSent(sent);
+      return chunk;
+    });
+  }
 
   Future<KubusNodeResponse> _perform(
     KubusNodeRequest request, {

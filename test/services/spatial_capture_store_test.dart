@@ -295,4 +295,164 @@ void main() {
       },
     );
   });
+
+  group('transfer package validation', () {
+    test('a complete capture validates and lists every file in upload order',
+        () async {
+      final store = await openStore();
+      await store.writeSample(
+        rgb: bytes(64),
+        depth: bytes(32),
+        confidence: bytes(16),
+        metadata: const {'timestampNanos': 1},
+      );
+      await store
+          .writeSample(rgb: bytes(64), metadata: const {'timestampNanos': 2});
+      await store.writeManifest();
+
+      final entries = await store.validateTransferPackage();
+
+      expect(
+        entries.map((e) => e.path),
+        <String>[
+          'rgb/00000.jpg',
+          'depth/00000.bin',
+          'confidence/00000.bin',
+          'rgb/00001.jpg',
+          'frames.json',
+        ],
+      );
+    });
+
+    test('a missing image is a typed source failure, never a silent skip',
+        () async {
+      final store = await openStore();
+      await store
+          .writeSample(rgb: bytes(64), metadata: const {'timestampNanos': 1});
+      await store
+          .writeSample(rgb: bytes(64), metadata: const {'timestampNanos': 2});
+      await store.writeManifest();
+      // Exactly the shape the node reported: the manifest references the
+      // frame, the file is gone.
+      await store.fileAt('rgb/00000.jpg').delete();
+
+      await expectLater(
+        store.validateTransferPackage(),
+        throwsA(
+          isA<SpatialSourceIncomplete>()
+              .having((e) => e.problem, 'problem',
+                  SpatialSourceProblem.filesMissing)
+              .having((e) => e.missingPaths, 'missingPaths', ['rgb/00000.jpg'])
+              .having((e) => e.code, 'code', 'source_incomplete')
+              .having((e) => e.availableFiles, 'availableFiles', 2)
+              .having((e) => e.expectedFiles, 'expectedFiles', 3),
+        ),
+      );
+    });
+
+    test('an empty file counts as missing', () async {
+      final store = await openStore();
+      await store
+          .writeSample(rgb: bytes(64), metadata: const {'timestampNanos': 1});
+      await store.writeManifest();
+      await store.fileAt('rgb/00000.jpg').writeAsBytes(const <int>[]);
+
+      await expectLater(
+        store.validateTransferPackage(),
+        throwsA(isA<SpatialSourceIncomplete>()
+            .having((e) => e.missingPaths, 'missingPaths', ['rgb/00000.jpg'])),
+      );
+    });
+  });
+
+  group('legacy captures without a canonical frame document', () {
+    /// A capture interrupted before it was finished: samples and their files
+    /// are on disk and indexed, `frames.json` was never written.
+    Future<SpatialCaptureStore> legacyCapture({int samples = 2}) async {
+      final store = await openStore();
+      for (var index = 0; index < samples; index++) {
+        await store.writeSample(
+          rgb: bytes(64),
+          depth: bytes(32),
+          confidence: bytes(16),
+          metadata: {'timestampNanos': index},
+        );
+      }
+      // No writeManifest(): this is what a crash mid-capture leaves.
+      await store.fileAt('frames.json').delete().catchError((_) => File(''));
+      final reopened = await SpatialCaptureStore.open(store.directory);
+      return reopened!;
+    }
+
+    test('is repaired from the durable sample index before transfer', () async {
+      final store = await legacyCapture();
+      expect(await store.fileAt('frames.json').exists(), isFalse);
+
+      final entries = await store.validateTransferPackage();
+
+      expect(await store.fileAt('frames.json').exists(), isTrue);
+      final document =
+          jsonDecode(await store.fileAt('frames.json').readAsString())
+              as Map<String, dynamic>;
+      expect(document['schema'], 'kubus.capture.frames/1');
+      expect((document['frames'] as List).length, 2);
+      expect(entries.map((e) => e.path), contains('frames.json'));
+    });
+
+    test('rebuilds only what the index already recorded', () async {
+      final store = await legacyCapture(samples: 1);
+
+      await store.ensureCanonicalFrames();
+
+      final frames = (jsonDecode(
+        await store.fileAt('frames.json').readAsString(),
+      ) as Map<String, dynamic>)['frames'] as List;
+      final frame = frames.single as Map<String, dynamic>;
+      expect(frame['rgbPath'], 'rgb/00000.jpg');
+      expect(frame['depthPath'], 'depth/00000.bin');
+      expect(frame['timestampNanos'], 0);
+      // Nothing the capture never recorded appears in the rebuilt document.
+      expect(frame.containsKey('poseTranslation'), isFalse);
+    });
+
+    test('a second repair pass is a no-op', () async {
+      final store = await legacyCapture();
+      expect(await store.ensureCanonicalFrames(), isTrue);
+      final first = await store.fileAt('frames.json').readAsString();
+
+      expect(await store.ensureCanonicalFrames(), isTrue);
+
+      expect(await store.fileAt('frames.json').readAsString(), first);
+    });
+
+    test('an unreadable frame document is rebuilt rather than trusted',
+        () async {
+      final store = await legacyCapture();
+      await store.fileAt('frames.json').writeAsString('{truncated');
+
+      expect(await store.ensureCanonicalFrames(), isTrue);
+
+      final document =
+          jsonDecode(await store.fileAt('frames.json').readAsString())
+              as Map<String, dynamic>;
+      expect((document['frames'] as List).length, 2);
+    });
+
+    test('a capture with no recorded samples stays unrepairable and intact',
+        () async {
+      final store = await openStore();
+
+      expect(await store.ensureCanonicalFrames(), isFalse);
+      await expectLater(
+        store.validateTransferPackage(),
+        throwsA(isA<SpatialSourceIncomplete>()
+            .having((e) => e.problem, 'problem',
+                SpatialSourceProblem.framesUnrepairable)
+            .having((e) => e.code, 'code', 'source_frames_unrepairable')),
+      );
+      // Preserved, not destroyed: an unrepairable capture is still the user's.
+      expect(await store.directory.exists(), isTrue);
+      expect(await store.fileAt('frames.json').exists(), isFalse);
+    });
+  });
 }
