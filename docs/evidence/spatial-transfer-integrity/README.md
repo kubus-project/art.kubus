@@ -150,6 +150,45 @@ layout reaches an end-user surface.
   moving, not when it turns out to be large.
 - Failure categories preserved end to end, EN and SL.
 
+### Review round (both PRs)
+
+kubus-node, after review of #21:
+
+- A restart inside the 30-minute grace period no longer strands an abandoned
+  upload: the serving process — the one that owns the draft map — re-sweeps
+  every 15 minutes. `status` and `doctor` still never touch disk. Ownership is
+  re-checked synchronously immediately before each removal; a long single
+  file refreshes its marker mid-stream; whole-package `create()` uploads are
+  claimed while they are written.
+- Repairing a damaged replica validates the replacement first and swaps the
+  records in one state write; the old directory goes only afterwards. An
+  incomplete or malformed repair, a failed state write, or a job still reading
+  the old replica (`409 capture_in_use`) leaves the existing capture untouched
+  and the draft resumable. Commits are serialized.
+- `frames.json` is untrusted input: `null`, arrays, strings, null or primitive
+  frames and mistyped paths are `422 capture_frames_invalid`, never a 500.
+- Reconstruction deduplication is atomic per capture; simultaneous requests
+  queue exactly one job.
+- A discard racing a commit answers `409 capture_draft_committed` instead of
+  deleting the committed directory; draft status never waits behind a stuck
+  write.
+
+art.kubus, after review of #174:
+
+- A stalled file upload is cancelled at the transport — HTTP (LAN, remote
+  HTTPS) closes its connection via `Abortable`; WebRTC (direct, TURN) stops the
+  body and sends a Cancel frame — and the failure is reported only once the
+  upload has actually stopped. No rung reports bytes after cancellation; a
+  retry cannot overlap the abandoned write.
+- Stall clock, throughput and ETA start when bytes are due, not during
+  preparation; bytes credited from an earlier attempt are not counted as speed.
+- A repaired file is counted back into the file total; a resume whose draft
+  lookup fails keeps its persisted progress; a job the Node ran and failed is
+  `processing_failed`, not "waiting for a processor".
+- CI: `setup-android` was pinned to a version whose default package list
+  includes the removed `tools` package; the Android job now names
+  `platform-tools` explicitly and compiles again.
+
 ### art.kubus-backend
 
 **No change.** The defect is entirely phone ↔ node over the local API; the
@@ -161,15 +200,15 @@ backend is not on this path. The gitlink is left at `ee3b8806`.
 
 | Suite | `AUTOMATED` |
 |---|---|
-| kubus-node `npm test` | 489 passed, 5 skipped, 51 files |
-| kubus-node `npm run typecheck` | clean |
+| kubus-node `npm test` | 527 passed, 5 skipped, 52 files |
+| kubus-node `npm run typecheck` / `npm run build` | clean |
 | kubus-node `docker compose config` | valid |
-| kubus-node image build | `kubus-node-fix:test`, builds clean |
-| art.kubus `flutter test` | 2,972 passed |
-| art.kubus `flutter analyze --fatal-infos --fatal-warnings` | clean |
-| art.kubus `scripts/architecture_guard.mjs` | passed, 3,718 file checks |
+| kubus-node PR CI (quality, Docker smoke, release/npm packages, Windows EXE, installer contract) | green on `91c96c7` |
+| art.kubus `flutter test` | 2,984 passed, 5 skipped |
+| art.kubus `flutter analyze --fatal-infos --fatal-warnings`, `custom_lint` | clean |
+| art.kubus `scripts/architecture_guard.mjs` | passed, 3,722 file checks |
 | art.kubus `scripts/kubus-lint-ratchet.mjs --check` | OK, no deltas |
-| art.kubus `flutter build apk --release` | built, 220.4 MB |
+| art.kubus PR CI incl. Android release compile, iOS compile, web build | green on `25fe5077` |
 
 New coverage worth naming:
 
@@ -194,6 +233,56 @@ New coverage worth naming:
 
 ---
 
+## `PRODUCTION` — kubus Node 0.8.0-alpha.11
+
+Released by the repository's own `release.yml` from tag `v0.8.0-alpha.11` →
+`9bd1eec6b18d848e6429c392f21bfa538a9cd09a` (master, merge of #21).
+
+| | |
+|---|---|
+| Node image | `ghcr.io/kubus-project/kubus-node@sha256:89a425d8fe4455f2e93da617a7e9588828822ea3a6c82ea9296850a559f76440` — pulled; labels `0.8.0-alpha.11` / `9bd1eec6` |
+| Worker image | `ghcr.io/kubus-project/kubus-spatial-worker@sha256:406563413fc8c13a8ea45b29133c8da1d36f91cf7eaf1874f3eab47c7f8db423` |
+| Release Compose | sha256 `7c769e2e…1279`, matches the manifest |
+| npm | `@kubus/kubus-node@0.8.0-alpha.11` on `edge`, signed provenance |
+| GitHub release | pre-release, EXE, Windows ZIP/tar, npm tarball, SBOMs, manifest; every asset matches `SHA256SUMS` |
+
+## `REAL NODE` — the owner's Node, upgraded
+
+The owner's GPU Node runs from the source checkout with the `spatial` profile
+(the documented GPU route — see Known limitations for why not the installer).
+It was fast-forwarded to `9bd1eec6` and rebuilt; volumes were reused, a backup
+of the state volume was taken first.
+
+- Agent reports `0.8.0-alpha.11`; all three containers healthy; the worker sees
+  the RTX 3080 Ti.
+- Identity preserved, compared field by field before and after: node id
+  `2dc017f8-84ef-4ac1-9138-19c11fe3c729`, Ed25519 public key, identity /
+  config / worker-key hashes, libp2p peer id, compute identity, the phone's
+  pairing credential, 163 pinned CIDs, both damaged capture records. The Node
+  re-registered and sent its heartbeat.
+
+### `REAL NODE` — the original failure class, on the upgraded Node
+
+A temporary probe credential streamed a 13-file capture into the serving
+process over 85 s (revoked and deleted afterwards):
+
+```
+3 real Docker healthchecks and 6 manual `status` runs during the upload
+files on disk after each manual healthcheck: 2, 4, 6, 8, 10, 12   (never fewer)
+commit 201 stored, validation ok, 12/12 frames
+```
+
+The same Node refuses what alpha.10 would have certified:
+
+```
+frames.json names rgb/00001.jpg, never uploaded → 422 capture_frame_file_missing,
+    draft kept open, jobs 5 → 5
+reconstruct 7773f051 → 422 capture_package_incomplete (72 missing), no job
+reconstruct 4e70e6f1 → 422 capture_package_incomplete (19 missing), no job
+```
+
+---
+
 ## Not yet done
 
 **`REAL DEVICE` — none.** No Android device was attached (`adb devices` empty)
@@ -205,9 +294,6 @@ library — has **not** been run.
 **`REAL GPU` — none.** No reconstruction was executed, because there is no
 valid real capture to execute one against.
 
-**`PRODUCTION` — none.** 0.8.0-alpha.11 is committed but not released or
-installed. The image built here is a local build, which is not a
-published-release acceptance.
 
 ### The two damaged captures
 
@@ -225,8 +311,16 @@ from the raw capture if the device still holds it.
   integrity boundary. A package arrives there in one request so it cannot be
   half-transferred; anything unusable declared there is caught at
   `JobRuntime.create`, before a GPU is reserved. Documented in `captureStore.ts`.
-- `DRAFT_IDLE_GRACE_MS` is 30 minutes. A directory stranded by a crash is held
-  that long before a later `start` reclaims it.
+- `DRAFT_IDLE_GRACE_MS` is 30 minutes and the serving process re-sweeps every
+  15, so a directory stranded by a crash is reclaimed within about 45 minutes.
+  A draft the *running* process still owns is never reclaimed while it runs; an
+  abandoned one is freed at the next restart.
+- **The installer path cannot run the GPU worker.** The release Compose puts
+  the worker behind the `spatial` profile, which neither the npm CLI nor the
+  Windows installer enables, and gives it no GPU device reservation. GPU
+  processing therefore still requires the source route
+  (`docker compose --profile spatial up`). Pre-existing, not part of this fix;
+  needs its own change and release.
 - The commit repair makes exactly one attempt. A second refusal is a real
   disagreement about the package and surfaces as one.
 - Reconstruction progress within Nerfstudio is still indeterminate. The worker
