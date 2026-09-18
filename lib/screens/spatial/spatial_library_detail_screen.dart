@@ -29,6 +29,7 @@ import '../../services/spatial_library_store.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
+import '../../widgets/spatial/spatial_upload_progress.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
 import '../node/my_nodes_screen.dart';
 import 'spatial_capture_launch.dart';
@@ -108,6 +109,9 @@ class _SpatialLibraryDetailScreenState
     );
     final actions = SpatialRecordActions.of(record);
     final lineage = provider.lineageOf(record);
+    // Live, byte-level progress for a transfer in flight. Absent otherwise:
+    // the record's own status carries everything else.
+    final transfer = provider.transferFor(widget.localSpatialId);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,6 +134,10 @@ class _SpatialLibraryDetailScreenState
         padding: const EdgeInsets.all(KubusSpacing.md),
         children: <Widget>[
           _Hero(record: record, display: display, artwork: artwork),
+          if (transfer != null) ...<Widget>[
+            const SizedBox(height: KubusSpacing.md),
+            KubusCard(child: SpatialUploadProgress(progress: transfer)),
+          ],
           if (record.hasLocalResult) ...<Widget>[
             const SizedBox(height: KubusSpacing.md),
             _viewer(context, provider, record, l10n),

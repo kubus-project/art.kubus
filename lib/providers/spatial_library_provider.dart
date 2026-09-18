@@ -215,11 +215,22 @@ class SpatialLibraryProvider extends ChangeNotifier {
       // Choosing the user's own Node retires any open network request: two
       // processors racing on one capture is never what the user asked for.
       await _retireNetworkRequest(localSpatialId);
-      final job = await node.startReconstruction(
-        captureId: record.nodeCaptureId!,
-        artworkId: record.artworkId,
-        markerId: record.markerId,
-      );
+      var job = await _startReconstruction(node, record);
+      if (job == null) {
+        // The node holds a replica it can no longer process. The raw capture
+        // is still here, so the replica is replaced rather than the user
+        // being told to reprocess something that cannot work. The node's
+        // idempotency key maps the repaired upload onto the same logical
+        // replica, so this cannot leave two.
+        record = await _replaceNodeReplica(localSpatialId, node);
+        // Straight through this time: a repaired package that is still
+        // refused is a real disagreement, and must surface as one.
+        job = await node.startReconstruction(
+          captureId: record.nodeCaptureId!,
+          artworkId: record.artworkId,
+          markerId: record.markerId,
+        );
+      }
       await store.recordJob(
         localSpatialId,
         jobId: job.id,
@@ -1124,6 +1135,50 @@ class SpatialLibraryProvider extends ChangeNotifier {
     return record;
   }
 
+  /// Queues a reconstruction, or null when the node's replica is unusable.
+  ///
+  /// The node refuses to start GPU work against a capture whose package is
+  /// incomplete. That refusal is a repair instruction, not a dead end: unlike
+  /// a processing failure, there is something the app can actually do.
+  Future<KubusNodeJob?> _startReconstruction(
+    KubusNodeProvider node,
+    SpatialLibraryRecord record,
+  ) async {
+    try {
+      return await node.startReconstruction(
+        captureId: record.nodeCaptureId!,
+        artworkId: record.artworkId,
+        markerId: record.markerId,
+      );
+    } on KubusNodeRequestException catch (error) {
+      if (!_nodeCaptureFailures.contains(error.code)) rethrow;
+      return null;
+    }
+  }
+
+  /// Re-uploads the capture, replacing the node's unusable copy.
+  Future<SpatialLibraryRecord> _replaceNodeReplica(
+    String localSpatialId,
+    KubusNodeProvider node,
+  ) async {
+    final current = await store.get(localSpatialId);
+    if (current == null || !current.rawPresent) {
+      // Nothing on this device to repair from. Say so rather than looping.
+      throw StateError('node_capture_incomplete');
+    }
+    // Clearing the pointer is what makes the upload happen again; the node
+    // replaces the damaged replica under the same local capture id.
+    await store.recordNodeTransfer(
+      localSpatialId,
+      nodeId: node.service.nodeId,
+      nodeCaptureId: '',
+      draftId: null,
+      uploadedFiles: 0,
+      uploadedBytes: 0,
+    );
+    return _uploadToNode(localSpatialId, node);
+  }
+
   /// Cancels and clears an open network request, best effort.
   Future<void> _retireNetworkRequest(String localSpatialId) async {
     final record = await store.get(localSpatialId);
@@ -1147,19 +1202,56 @@ class SpatialLibraryProvider extends ChangeNotifier {
     String localSpatialId,
     Object error,
   ) async {
-    final identityMismatch = error is KubusNodeIdentityException;
+    final code = _processingFailureCode(error);
     await store.recordFailure(
       localSpatialId,
-      code: identityMismatch
-          ? 'node_identity_mismatch'
-          : error is SpatialResultValidationException
-              ? error.code
-              : 'processor_unavailable',
-      waitingForProcessor:
-          !identityMismatch && error is! SpatialResultValidationException,
+      code: code,
+      // `waitingForProcessor` means exactly one thing: the capture is fine
+      // and a processor will pick it up when one is there. A capture the node
+      // could not accept, or one this device cannot complete, is not waiting
+      // for anything — presenting it that way hides the only action that can
+      // actually fix it.
+      waitingForProcessor: _awaitsProcessor(code),
     );
     await reload();
   }
+
+  /// Keeps a failure's category rather than flattening it to "unavailable".
+  ///
+  /// The user's next step differs completely between a capture this device
+  /// cannot complete, an upload that did not finish, a node that refused the
+  /// package, and a processor that was not there.
+  static String _processingFailureCode(Object error) {
+    if (error is KubusNodeIdentityException) return 'node_identity_mismatch';
+    if (error is SpatialResultValidationException) return error.code;
+    if (error is SpatialSourceIncomplete) return error.code;
+    if (error is KubusNodeRequestException) {
+      if (_nodeCaptureFailures.contains(error.code)) return error.code;
+      return 'node_unavailable';
+    }
+    if (error is KubusNodeUnsupportedException) return 'node_unavailable';
+    if (error is SocketException || error is TimeoutException) {
+      return 'upload_interrupted';
+    }
+    if (error is StateError && error.message.isNotEmpty) return error.message;
+    return 'processor_unavailable';
+  }
+
+  static const Set<String> _nodeCaptureFailures = <String>{
+    'capture_package_incomplete',
+    'capture_frame_file_missing',
+    'capture_frames_missing',
+    'capture_frames_invalid',
+    'capture_draft_not_found',
+  };
+
+  /// Whether a processor becoming available would resolve [code] on its own.
+  static bool _awaitsProcessor(String code) => const <String>{
+        'processor_unavailable',
+        'node_unavailable',
+        'upload_interrupted',
+        'network_compute_failed',
+      }.contains(code);
 
   KubusNodeProvider _requireNode() {
     final node = _node;

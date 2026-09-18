@@ -12,6 +12,7 @@ import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/kubus_node_service.dart';
 import 'package:art_kubus/services/node/node_identity_proof.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
+import 'package:art_kubus/services/spatial_capture_store.dart';
 import 'package:art_kubus/services/spatial_library_store.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// shapes the node actually implements, rather than a shape invented here.
 class FakeKubusNode {
   FakeKubusNode({this.failUploadsBefore = 0, this.supportsDrafts = true});
+
+  /// Capture ids the node refuses to reconstruct, because their stored
+  /// package is no longer complete.
+  final Set<String> rejectReconstructionFor = <String>{};
+
+  /// Paths the node accepts and then does not actually keep.
+  ///
+  /// Models what a sweep running in a second process did on the owner's node:
+  /// the upload is acknowledged, the file is not there at commit time. Cleared
+  /// once reported, so the client's repair can succeed.
+  final Set<String> losePaths = <String>{};
+
+  /// Paths that were accepted and lost, awaiting a commit to report them.
+  final Set<String> lostPaths = <String>{};
 
   /// Number of file uploads to reject before starting to accept them, so a
   /// resumable transfer can be exercised.
@@ -112,6 +127,17 @@ class FakeKubusNode {
     }
 
     if (request.method == 'POST' && path == '/local/v1/jobs') {
+      final body = jsonDecode(await utf8.decoder.bind(request).join());
+      final input = body is Map ? body['input'] : null;
+      final captureId = input is Map ? input['captureId'] : null;
+      if (captureId is String && rejectReconstructionFor.contains(captureId)) {
+        // The stored package is no longer complete, so no GPU work starts.
+        return _json(request, 422, {
+          'error': 'capture_package_incomplete',
+          'code': 'capture_package_incomplete',
+          'details': {'missingPaths': <String>[], 'missingCount': 1},
+        });
+      }
       return _json(request, 201, {
         'id': 'job-1',
         'type': 'spatial.reconstruct',
@@ -194,8 +220,13 @@ class FakeKubusNode {
       if (draft == null) {
         return _json(request, 404, {'error': 'capture_draft_not_found'});
       }
-      // Re-uploading a path overwrites it, so a retry converges.
-      draft[filePath] = bytes;
+      if (losePaths.remove(filePath)) {
+        // Acknowledged, not kept.
+        lostPaths.add(filePath);
+      } else {
+        // Re-uploading a path overwrites it, so a retry converges.
+        draft[filePath] = bytes;
+      }
       return _json(request, 200, {
         'id': id,
         'state': 'draft',
@@ -214,6 +245,19 @@ class FakeKubusNode {
       }
       if (draft.isEmpty) {
         return _json(request, 400, {'error': 'capture_package_empty'});
+      }
+      if (lostPaths.isNotEmpty) {
+        final missing = lostPaths.toList()..sort();
+        lostPaths.clear();
+        // The real node keeps the draft so the client sends only the gap.
+        return _json(request, 422, {
+          'error': 'capture_package_incomplete',
+          'code': 'capture_package_incomplete',
+          'details': {
+            'missingPaths': missing,
+            'missingCount': missing.length,
+          },
+        });
       }
       committed.add(id);
       committedCaptureId = 'capture-$id';
@@ -750,5 +794,68 @@ void main() {
     expect(networkProvider.acknowledged, isTrue);
     expect(await File(ready.resultVariantPaths['spatial_mobile']!).exists(),
         isTrue);
+  });
+
+  test('a commit the Node refuses is repaired, not restarted', () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    // The node acknowledges this frame and then does not keep it, exactly as
+    // an outside sweep did on the owner's node.
+    node.losePaths.add('rgb/00000.jpg');
+
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    // One draft and one durable capture: the transfer was completed, not
+    // started again.
+    expect(node.drafts, hasLength(1));
+    expect(node.committed, hasLength(1));
+    expect(node.drafts.values.single.containsKey('rgb/00000.jpg'), isTrue);
+  });
+
+  test('a capture missing a file on this device never reaches the Node',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    final stored = await library.store.get(record.localSpatialId);
+    await File('${stored!.sourcePath}/rgb/00000.jpg').delete();
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(isA<SpatialSourceIncomplete>()),
+    );
+
+    // Nothing was opened on the node, so nothing can be committed from it.
+    expect(node.drafts, isEmpty);
+    expect(node.committed, isEmpty);
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'source_incomplete');
+    // The raw capture is still the user's, minus the file that vanished.
+    expect(failed.rawPresent, isTrue);
+  });
+
+  test(
+      'a Node replica that can no longer be processed is replaced, not retried',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    await library.processWithOwnNode(record.localSpatialId);
+    final first = await library.store.get(record.localSpatialId);
+    final firstReplica = first!.nodeCaptureId;
+    expect(firstReplica, isNotNull);
+
+    // The node's copy lost files after it was stored, so it refuses to start
+    // GPU work against it.
+    node.rejectReconstructionFor.add(firstReplica!);
+
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    // Re-uploaded rather than reprocessed, and still exactly one replica.
+    expect(node.committed.length, 2);
+    expect(ready.nodeCaptureId, isNotNull);
   });
 }

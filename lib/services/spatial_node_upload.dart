@@ -103,9 +103,26 @@ class SpatialNodeUpload {
     required KubusNodeService service,
     required SpatialCaptureStore source,
     SpatialTransferMeter? meter,
+    this.stallTimeout = const Duration(seconds: 90),
+    this.fileTimeout = const Duration(hours: 1),
   })  : _service = service,
         _source = source,
         _meter = meter ?? SpatialTransferMeter();
+
+  /// How long one file may make no progress at all before it is abandoned.
+  ///
+  /// A transfer is judged on whether it is moving, not on how big it is. A
+  /// wall clock fails a healthy upload of a large frame over a relay while
+  /// letting a genuinely dead connection hang for just as long; this fails the
+  /// dead one quickly and lets the slow one finish.
+  final Duration stallTimeout;
+
+  /// The outer bound on a single file, so nothing can hang forever.
+  ///
+  /// Deliberately generous: [stallTimeout] is the real guard, and this only
+  /// exists so a connection that somehow dribbles bytes without ever
+  /// finishing still terminates.
+  final Duration fileTimeout;
 
   final KubusNodeService _service;
   final SpatialCaptureStore _source;
@@ -192,11 +209,9 @@ class SpatialNodeUpload {
     for (final entry in entries) {
       final length = sizes[entry.path]!;
       if (!alreadyUploaded.contains(entry.path)) {
-        await _service.uploadCaptureDraftFile(
+        await _uploadFile(
           draftId: draft,
-          path: entry.path,
-          file: _source.fileAt(entry.path),
-          mimeType: entry.mimeType,
+          entry: entry,
           onBytesSent: (sent) =>
               publish(SpatialTransferPhase.uploading, inFlight: sent),
         );
@@ -216,6 +231,50 @@ class SpatialNodeUpload {
           publish(SpatialTransferPhase.repairing, inFlight: inFlight),
       onValidating: () => publish(SpatialTransferPhase.validating),
     );
+  }
+
+  /// Streams one file, failing it only once it has actually stopped moving.
+  Future<void> _uploadFile({
+    required String draftId,
+    required SpatialCaptureUploadEntry entry,
+    required void Function(int sentBytes) onBytesSent,
+  }) async {
+    final stalled = Completer<void>();
+    Timer? watchdog;
+    void arm() {
+      watchdog?.cancel();
+      watchdog = Timer(stallTimeout, () {
+        if (!stalled.isCompleted) {
+          stalled.completeError(
+            TimeoutException('upload_stalled', stallTimeout),
+          );
+        }
+      });
+    }
+
+    arm();
+    try {
+      await Future.any<void>(<Future<void>>[
+        _service.uploadCaptureDraftFile(
+          draftId: draftId,
+          path: entry.path,
+          file: _source.fileAt(entry.path),
+          mimeType: entry.mimeType,
+          timeout: fileTimeout,
+          onBytesSent: (sent) {
+            // Every byte is evidence the transfer is alive.
+            arm();
+            onBytesSent(sent);
+          },
+        ),
+        stalled.future,
+      ]);
+    } finally {
+      watchdog?.cancel();
+      // Nothing awaits this once the upload has settled; completing it keeps
+      // an unhandled error from surfacing later.
+      if (!stalled.isCompleted) stalled.complete();
+    }
   }
 
   /// Commits, filling any gap the node reports rather than starting over.
@@ -242,11 +301,9 @@ class SpatialNodeUpload {
       if (repairable.isEmpty || repairable.length != missing.length) rethrow;
 
       for (final entry in repairable) {
-        await _service.uploadCaptureDraftFile(
+        await _uploadFile(
           draftId: draftId,
-          path: entry.path,
-          file: _source.fileAt(entry.path),
-          mimeType: entry.mimeType,
+          entry: entry,
           onBytesSent: onRepairProgress,
         );
       }
