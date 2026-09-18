@@ -201,15 +201,24 @@ class SpatialNodeUpload {
         await rememberDraftId(draft);
       }
 
+      // Credited before measurement starts. These bytes crossed the wire on
+      // an earlier attempt; counted inside the uploading phase they would
+      // read as hundreds of megabytes moved in an instant, and the first
+      // throughput and ETA of a resumed transfer would be fiction.
+      for (final entry in entries) {
+        if (alreadyUploaded.contains(entry.path)) {
+          reporter.fileDelivered(sizes[entry.path]!);
+        }
+      }
+
       reporter.enter(SpatialTransferPhase.uploading);
       for (final entry in entries) {
-        if (!alreadyUploaded.contains(entry.path)) {
-          await _uploadFile(
-            draftId: draft,
-            entry: entry,
-            onBytesSent: reporter.inFlight,
-          );
-        }
+        if (alreadyUploaded.contains(entry.path)) continue;
+        await _uploadFile(
+          draftId: draft,
+          entry: entry,
+          onBytesSent: reporter.inFlight,
+        );
         // Confirmed only now: the response is what makes these bytes durable.
         reporter.fileDelivered(sizes[entry.path]!);
       }
@@ -320,7 +329,9 @@ class SpatialNodeUpload {
           entry: entry,
           onBytesSent: reporter.inFlight,
         );
-        reporter.fileDelivered(sizes[entry.path]!, countsAsNewFile: false);
+        // Counted back in: [fileWithdrawn] took it out of the file count as
+        // well as the bytes.
+        reporter.fileDelivered(sizes[entry.path]!);
       }
       reporter.enter(SpatialTransferPhase.validating);
       // One repair attempt. A second refusal is a real disagreement about the
@@ -409,9 +420,9 @@ class _ProgressReporter {
   }
 
   /// One file the node has acknowledged.
-  void fileDelivered(int bytes, {bool countsAsNewFile = true}) {
+  void fileDelivered(int bytes) {
     _confirmedBytes += bytes;
-    if (countsAsNewFile) _deliveredFiles++;
+    _deliveredFiles++;
     _inFlightBytes = 0;
     _emit(force: true);
   }
@@ -433,7 +444,12 @@ class _ProgressReporter {
   void _emit({bool force = false}) {
     if (_disposed) return;
     _meter.record(_confirmedBytes + _inFlightBytes);
-    final stalled = _meter.isStalled;
+    // Speed, countdown and silence describe bytes on the wire. Outside the
+    // phases that move them there is nothing to measure, and a figure there
+    // would be built from bookkeeping rather than transfer.
+    final moving = _phase == SpatialTransferPhase.uploading ||
+        _phase == SpatialTransferPhase.repairing;
+    final stalled = moving && _meter.isStalled;
     // A transfer falling silent, or finding its voice again, is exactly what
     // the user needs to see — never coalesced away.
     final changed = stalled != _stalled;
@@ -457,8 +473,8 @@ class _ProgressReporter {
         confirmedBytes: _confirmedBytes,
         inFlightBytes: _inFlightBytes,
         totalBytes: _totalBytes,
-        bytesPerSecond: _meter.bytesPerSecond,
-        eta: _meter.etaFor(remaining > 0 ? remaining : 0),
+        bytesPerSecond: moving ? _meter.bytesPerSecond : null,
+        eta: moving ? _meter.etaFor(remaining > 0 ? remaining : 0) : null,
         route: _route(),
         stalled: stalled,
       ),

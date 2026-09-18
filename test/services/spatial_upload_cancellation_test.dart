@@ -54,6 +54,9 @@ class _RunawayTransport implements KubusNodeTransport {
   /// Runs on every non-upload request, so a test can make them slow.
   void Function()? onRequest;
 
+  /// Files the draft already holds, as a resumed transfer finds it.
+  List<String> draftFiles = <String>[];
+
   @override
   KubusNodeTransportKind get kind => KubusNodeTransportKind.localDirect;
 
@@ -78,9 +81,9 @@ class _RunawayTransport implements KubusNodeTransport {
       return _json(200, <String, dynamic>{
         'id': 'draft-1',
         'state': 'draft',
-        'fileCount': 0,
+        'fileCount': draftFiles.length,
         'sizeBytes': 0,
-        'files': <String>[],
+        'files': draftFiles,
       });
     }
     if (request.path.endsWith('/commit')) {
@@ -315,6 +318,69 @@ void main() {
           .toList();
       expect(uploading, isNotEmpty);
       expect(uploading.first.stalled, isFalse);
+    });
+  });
+
+  group('a resumed transfer', () {
+    test('does not count what an earlier attempt sent as throughput', () async {
+      final store = await SpatialCaptureStore.create(
+        captureId: 'cap-resume',
+        artworkId: 'art-1',
+        markerId: 'marker-1',
+        capturedBy: 'user-1',
+        startedAt: DateTime.utc(2026, 1, 1),
+        root: root,
+      );
+      // Most of the capture already reached the node on an earlier attempt.
+      await store.writeSample(
+        rgb: Uint8List.fromList(List<int>.filled(4 * 1024 * 1024, 7)),
+        metadata: const <String, dynamic>{'timestampNanos': 1},
+      );
+      await store.writeSample(
+        rgb: Uint8List.fromList(List<int>.filled(4096, 7)),
+        metadata: const <String, dynamic>{'timestampNanos': 2},
+      );
+      await store.writeManifest();
+      final entries = await store.validateTransferPackage();
+      final transport = _RunawayTransport()
+        ..cooperative = true
+        ..draftFiles = entries
+            .map((entry) => entry.path)
+            .where((path) => path != 'rgb/00001.jpg')
+            .toList();
+      // Every reading of the clock is one second later: the remaining 4 KiB
+      // cannot honestly have moved at more than a few KiB per second.
+      var now = DateTime.utc(2026, 1, 1);
+      final frames = <SpatialTransferProgress>[];
+
+      await SpatialNodeUpload(
+        service: await pairedService(transport),
+        source: store,
+        meter: SpatialTransferMeter(
+          minimumSampleSpan: Duration.zero,
+          clock: () => now = now.add(const Duration(seconds: 1)),
+        ),
+        progressInterval: Duration.zero,
+      ).run(
+        draftMetadata: const <String, dynamic>{},
+        localCaptureId: 'local-1',
+        draftId: 'draft-1',
+        rememberDraftId: (_) async {},
+        onProgress: frames.add,
+      );
+
+      expect(transport.uploadsStarted, 1);
+      for (final frame in frames) {
+        final rate = frame.bytesPerSecond;
+        if (rate == null) continue;
+        expect(rate, lessThan(8 * 1024),
+            reason: 'bytes credited from the earlier attempt are not speed');
+      }
+      final moving = frames
+          .where((frame) => frame.phase == SpatialTransferPhase.uploading)
+          .first;
+      expect(moving.uploadedFiles, entries.length - 1,
+          reason: 'credited before the uploading phase begins');
     });
   });
 

@@ -251,8 +251,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
           return record;
         }
         if (current.state == 'failed' || current.state == 'cancelled') {
-          throw StateError(
-            current.error?['code']?.toString() ?? 'processing_failed',
+          throw _NodeJobFailed(
+            current.error?['code']?.toString() ?? '',
+            cancelled: current.state == 'cancelled',
           );
         }
         await store.updateProcessing(
@@ -1037,6 +1038,11 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final previous = _transfers[localSpatialId];
     _transfers[localSpatialId] = next;
     notifyListeners();
+    // While preparing, the counts are this device's view before the Node has
+    // been asked what it holds. Persisting them would record "0 of N" over a
+    // draft that may hold most of the capture, and a failed lookup would
+    // leave that on the record.
+    if (next.phase == SpatialTransferPhase.preparing) return;
     // Nothing is known about the size of the work yet. Writing this frame
     // would overwrite a previous attempt's real counts with zeros, and a
     // resume would then report no progress against a draft that has plenty.
@@ -1253,6 +1259,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
   /// package, and a processor that was not there.
   static String _processingFailureCode(Object error) {
     if (error is KubusNodeIdentityException) return 'node_identity_mismatch';
+    if (error is _NodeJobFailed) return error.failureCode;
     if (error is SpatialResultValidationException) return error.code;
     if (error is SpatialSourceIncomplete) return error.code;
     if (error is KubusNodeRequestException) {
@@ -1327,4 +1334,33 @@ bool _deepJsonEquals(Object? left, Object? right) {
     return true;
   }
   return left == right;
+}
+
+/// A reconstruction job the Node ran and that ended without a result.
+///
+/// Kept apart from transport and availability failures: the processor was
+/// there and did the work, so presenting this as "waiting for a processor"
+/// would promise the user something that is not going to happen by itself.
+class _NodeJobFailed implements Exception {
+  const _NodeJobFailed(this.code, {this.cancelled = false});
+
+  /// The Node's own machine code, possibly empty.
+  final String code;
+  final bool cancelled;
+
+  /// The code the library records for this failure.
+  String get failureCode {
+    // The package the job read turned out to be incomplete: finishing the
+    // upload is the remedy, exactly as when the Node refuses it up front.
+    if (SpatialLibraryProvider._nodeCaptureFailures.contains(code)) return code;
+    // The worker was not there to run it, which a processor coming back does
+    // resolve.
+    if (code == 'worker_unavailable' || code == 'worker_unsupported') {
+      return 'processor_unavailable';
+    }
+    return cancelled ? 'processing_interrupted' : 'processing_failed';
+  }
+
+  @override
+  String toString() => '_NodeJobFailed($code)';
 }

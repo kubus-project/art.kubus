@@ -51,6 +51,18 @@ class FakeKubusNode {
   /// would.
   final bool supportsDrafts;
 
+  /// Accept this many file uploads, then refuse every later one, so a
+  /// transfer can be interrupted part-way through.
+  int? failUploadsAfter;
+  int _acceptedUploads = 0;
+
+  /// When true, asking for a draft's progress fails, as a lookup that times
+  /// out over a bad link would.
+  bool failDraftLookup = false;
+
+  /// When set, the reconstruction job ends `failed` with this code.
+  String? failJobWith;
+
   HttpServer? _server;
   Uri get endpoint => Uri.parse('http://127.0.0.1:${_server!.port}');
 
@@ -151,6 +163,16 @@ class FakeKubusNode {
     }
 
     if (request.method == 'GET' && path == '/local/v1/jobs/job-1') {
+      final failure = failJobWith;
+      if (failure != null) {
+        return _json(request, 200, {
+          'id': 'job-1',
+          'type': 'spatial.reconstruct',
+          'state': 'failed',
+          'progress': null,
+          'error': {'code': failure, 'message': 'worker reported $failure'},
+        });
+      }
       return _json(request, 200, {
         'id': 'job-1',
         'type': 'spatial.reconstruct',
@@ -220,6 +242,11 @@ class FakeKubusNode {
       if (_uploadAttempts <= failUploadsBefore) {
         return _json(request, 503, {'error': 'node_busy'});
       }
+      final cutoff = failUploadsAfter;
+      if (cutoff != null && _acceptedUploads >= cutoff) {
+        return _json(request, 503, {'error': 'node_busy'});
+      }
+      _acceptedUploads++;
       final draft = drafts[id];
       if (draft == null) {
         return _json(request, 404, {'error': 'capture_draft_not_found'});
@@ -310,6 +337,9 @@ class FakeKubusNode {
       if (request.method == 'DELETE') {
         drafts.remove(id);
         return _json(request, 200, {'discarded': true});
+      }
+      if (failDraftLookup) {
+        return _json(request, 500, {'error': 'internal_error'});
       }
       return _json(request, 200, {
         'id': id,
@@ -860,12 +890,79 @@ void main() {
       isTrue,
       reason: 'the repair is a phase of its own, not silent',
     );
+    // A repaired file is withdrawn and then delivered again: counted back
+    // in, so the transfer does not end claiming files are still missing.
+    final lastMoving = frames.lastWhere(
+      (f) => f.phase == SpatialTransferPhase.validating,
+    );
+    expect(lastMoving.uploadedFiles, lastMoving.totalFiles);
+    expect(ready.uploadedFiles, ready.totalFiles);
     expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
     // One draft and one durable capture: the transfer was completed, not
     // started again.
     expect(node.drafts, hasLength(1));
     expect(node.committed, hasLength(1));
     expect(node.drafts.values.single.containsKey('rgb/00000.jpg'), isTrue);
+  });
+
+  test('a resume that cannot reach its draft keeps the progress it had',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failUploadsAfter = 5;
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+    final interrupted = await library.store.get(record.localSpatialId);
+    expect(interrupted!.uploadedFiles, 5);
+
+    // The next attempt cannot even ask the node what it holds.
+    node.failDraftLookup = true;
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final after = await library.store.get(record.localSpatialId);
+    expect(after!.uploadedFiles, 5,
+        reason: 'the draft still holds five files; "0 of N" would be false');
+    expect(after.totalFiles, interrupted.totalFiles);
+  });
+
+  test('a job the Node ran and failed is not "waiting for a processor"',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failJobWith = 'worker_failed';
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'processing_failed');
+    expect(failed.processingState,
+        isNot(SpatialLibraryProcessingState.waitingForProcessor));
+  });
+
+  test('a job that found the package incomplete offers the upload again',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    node.failJobWith = 'capture_frame_file_missing';
+
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.lastErrorCode, 'capture_frame_file_missing');
   });
 
   test('a capture missing a file on this device never reaches the Node',
