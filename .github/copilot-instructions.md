@@ -5,7 +5,7 @@ These rules exist to keep the Flutter + Node.js stack stable and to stop duplica
 ---
 
 ## Mission
-Ship production-ready Flutter features (AR, Solana, OrbitDB, storage) without breaking:
+Ship production-ready art.kubus product changes without breaking:
 - feature flags
 - theme system
 - provider initialization order
@@ -13,6 +13,20 @@ Ship production-ready Flutter features (AR, Solana, OrbitDB, storage) without br
 - IPFS/HTTP/S3 fallbacks
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
+
+For UI, map, SEO or public-entry work, also read `CLAUDE.md`,
+`docs/PRODUCT_UX_SEO_PROGRAM.md`, `docs/DESIGN_SYSTEM_V2.md` and
+`docs/APP_NATIVE_PUBLIC_ENTRY.md`. The current visual references are
+`art.kubus.site@redesign/a1-foundation` (WORLD) and
+`kubus.site@redesign/k1-foundation` (TIME), not their older master-site
+appearance.
+
+Do not remove semantic public-entity HTML in favor of a Flutter-only SEO
+surface. Make semantic HTML the app-native first frame and keep the same
+canonical localized URL through web takeover and native platform handoff.
+Do not run an app-wide cosmetic restyle before the task-flow/screen audit has
+classified what should be kept, refined, redesigned, merged or removed.
+
 
 Branch and deployment governance is defined in [`docs/engineering/branching-and-deployment.md`](../docs/engineering/branching-and-deployment.md). Work from current `origin/dev` on a topic branch, preferably in a dedicated worktree. Never commit directly to `dev` or `master`; ordinary PRs target `dev`, while only `dev` release PRs and `hotfix/*` PRs target `master`. Do not merge PRs, deploy production, approve production environments, or change environment secrets without explicit authorization.
 
