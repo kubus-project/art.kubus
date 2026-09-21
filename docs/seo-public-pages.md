@@ -1,5 +1,24 @@
 # Public entity pages and technical SEO
 
+> **Target update 2026-09-21 (decision D-12).** The semantic entity
+> renderer remains mandatory, but it is no longer intended to look or behave as
+> a separate SEO/marketing page. For a canonical artwork/profile/institution/etc.
+> URL, the semantic response is the **first app.kubus product frame**: same
+> information hierarchy, current kubus-family visual grammar, and no generic
+> marketing header/footer or bridge CTA before the entity. Flutter continues on
+> the exact same localized canonical URL and should consume the same normalized
+> public presentation/bootstrap data where safe. The same canonical URL is the
+> preferred verified native-app link.
+>
+> The current implementation still contains a 1500 ms readiness fallback in
+> `web/public_flutter_takeover.js` that can synthesize
+> `kubus:public-entity-ready` before the entity screen itself declares a
+> meaningful frame. This is a known implementation violation of the readiness
+> contract below and is scheduled for removal in the public-entry phase. Until
+> that work lands, do not cite the fallback as intended architecture.
+>
+> Canonical planning detail: `APP_NATIVE_PUBLIC_ENTRY.md`.
+
 > **Updated 2026-07-24 (decision log D-11).** `/`, `/en` and `/sl` now boot the
 > Flutter application directly (indexable app shell), not a generic
 > server-rendered homepage. Semantic SEO/AEO described below applies to the
@@ -21,8 +40,9 @@
 The renderer reads the existing PostgreSQL public models. It does not call an
 authenticated API or branch on user agent. The semantic response is complete
 before any optional Flutter, MapLibre, wallet, or application JavaScript runs.
-With takeover disabled or unavailable, the existing “Open in art.kubus” bridge
-continues to target `/app/<compact-entity-path>`.
+With takeover disabled or unavailable, the semantic entity frame remains the
+usable fallback. The existing “Open in art.kubus” `/app/<compact-entity-path>`
+bridge is transitional/rollback compatibility, not the target public-entry UX.
 
 The Flutter handoff and authenticated-action boundary are defined in
 [`public-entry-access-policy.md`](public-entry-access-policy.md). In particular,
