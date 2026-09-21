@@ -8,6 +8,7 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 
 - **Branching, CI, and deployment**: [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md)
 - **Current product / SEO / UI-UX programme**: [`PRODUCT_UX_SEO_PROGRAM.md`](PRODUCT_UX_SEO_PROGRAM.md)
+- **Agent sequencing / work packages**: [`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md)
 - **Current design direction**: [`DESIGN_SYSTEM_V2.md`](DESIGN_SYSTEM_V2.md)
 - **Canonical public-entry target**: [`APP_NATIVE_PUBLIC_ENTRY.md`](APP_NATIVE_PUBLIC_ENTRY.md)
 - **Setup / run / build**: `GETTING_STARTED.md`
