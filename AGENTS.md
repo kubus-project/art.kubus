@@ -2,11 +2,40 @@
 
 Model compatibility: GPT-5.x Codex-compliant agents.
 
-Mission: keep the Flutter + Node.js stack stable while extending AR, Solana, OrbitDB, and storage features without breaking theme, feature flags, or fallbacks.
+Mission: keep the Flutter + Node.js stack stable while consolidating public entry, SEO, discovery, UI/UX, spatial/map, institutional, Web3 and governance surfaces without breaking feature flags, data contracts, native/web parity, or fallbacks.
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
 Security handbook: `art.kubus-threat-model.md` is the living security baseline and hardening backlog.
 Engineering workflow: `docs/engineering/branching-and-deployment.md` is the canonical branch, CI, deployment, and release guide.
+
+## Current product/design programme (read before UI, map, SEO, or public-entry work)
+
+The active programme is documented in:
+
+- `CLAUDE.md` — current agent entrypoint and reference branches.
+- `docs/PRODUCT_UX_SEO_PROGRAM.md` — ordered programme and agent work packages.
+- `docs/DESIGN_SYSTEM_V2.md` — current kubus family/product design direction.
+- `docs/APP_NATIVE_PUBLIC_ENTRY.md` — canonical app.kubus.site entity-entry target.
+- `docs/seo-public-pages.md` and `docs/seo/domain-ownership.md` — renderer and URL ownership contracts.
+
+The current visual references are **not** the old public-site master layouts:
+`art.kubus.site@redesign/a1-foundation` is the WORLD reference and
+`kubus.site@redesign/k1-foundation` is the TIME reference. They establish the
+family direction: Sofia Sans/technical mono, flat structural surfaces,
+hairlines, real data/geography, restrained motion, and no generic
+glass-first/SaaS/bento/gradient-card language.
+
+For app work, preserve platform-native controls and interaction density. Share
+the family grammar; do not copy an editorial website layout into Flutter.
+
+For canonical public entities, semantic server HTML remains mandatory for
+crawlability and real status codes, but it must become the **app-native first
+frame** rather than a separate SEO/marketing page. The canonical localized URL
+is also the preferred native deep-link URL.
+
+For broad UI work, audit first. Classify major screens KEEP / REFINE / REDESIGN /
+MERGE / REMOVE before spending effort cosmetically polishing obsolete flows.
+
 
 ## Branch, worktree, CI, and release governance
 
