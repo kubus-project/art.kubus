@@ -6,6 +6,9 @@ Last updated: 2026-09-21.
 This is the ordered programme for the next major art.kubus work. Agents must
 not collapse the phases into one giant redesign PR.
 
+For dependency/file-ownership sequencing, use
+[`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md).
+
 ## 0. Repository baselines
 
 ### Product repositories
