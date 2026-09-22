@@ -8,4 +8,4 @@ These screenshots were captured from the backend's local public-only SEO preview
 - `wave2-profile-en-1440-light.png`: artist profile content order at 1440 × 900, light theme.
 - `wave2-profile-nojs-1440-light.png`: the semantic profile page with JavaScript resources blocked.
 
-The missing local Flutter web build means after-takeover screenshots, slow-boot timing, and Flutter bundle failure visual states could not be captured. The browser verified that the SSR remains visible when the local Flutter bootstrap asset is absent. Flutter/Dart analysis and the Flutter widget tests remain unrun because neither SDK is installed in this execution environment.
+The missing local Flutter web build means after-takeover screenshots, slow-boot timing, and Flutter bundle failure visual states could not be captured. The browser verified that the SSR remains visible when the local Flutter bootstrap asset is absent. Dart 3.12.2 formatting was run through a temporary standalone SDK. The Flutter SDK, Flutter analysis, and widget tests are unavailable locally; those gates are being checked by PR CI.
