@@ -25,7 +25,8 @@ class DeepLinkBootstrapScreen extends StatefulWidget {
   final Uri initialUri;
 
   @override
-  State<DeepLinkBootstrapScreen> createState() => _DeepLinkBootstrapScreenState();
+  State<DeepLinkBootstrapScreen> createState() =>
+      _DeepLinkBootstrapScreenState();
 }
 
 class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
@@ -37,14 +38,13 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     if (_seeded) return;
     _seeded = true;
     if (kDebugMode) {
-      debugPrint('DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}');
+      debugPrint(
+        'DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}',
+      );
     }
     context.read<DeepLinkProvider>().setPending(widget.target);
     final takeover = context.read<PublicEntityTakeoverProvider>();
-    takeover.seed(
-          initialUri: widget.initialUri,
-          target: widget.target,
-        );
+    takeover.seed(initialUri: widget.initialUri, target: widget.target);
     final bootstrap = takeover.validateBootstrap(
       raw: readPublicEntityBootstrap(),
       initialUri: widget.initialUri,
@@ -55,20 +55,33 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     final publicPresentation = Map<String, dynamic>.from(presentation);
     switch (publicPresentation['type']) {
       case 'artwork':
-        context.read<ArtworkProvider>().seedPublicPresentation(publicPresentation);
+        context.read<ArtworkProvider>().seedPublicPresentation(
+          publicPresentation,
+        );
         final id = publicPresentation['id']?.toString() ?? '';
         if (id.isNotEmpty) {
-          unawaited(context.read<ArtworkProvider>().refreshArtwork(id).catchError((_) => null));
+          unawaited(
+            context
+                .read<ArtworkProvider>()
+                .refreshArtwork(id)
+                .catchError((_) => null),
+          );
         }
         break;
       case 'event':
-        context.read<EventsProvider>().seedPublicPresentation(publicPresentation);
+        context.read<EventsProvider>().seedPublicPresentation(
+          publicPresentation,
+        );
         break;
       case 'exhibition':
-        context.read<ExhibitionsProvider>().seedPublicPresentation(publicPresentation);
+        context.read<ExhibitionsProvider>().seedPublicPresentation(
+          publicPresentation,
+        );
         break;
       case 'collection':
-        context.read<CollectionsProvider>().seedPublicPresentation(publicPresentation);
+        context.read<CollectionsProvider>().seedPublicPresentation(
+          publicPresentation,
+        );
         break;
       default:
         // Other public entity types retain the validated presentation on the

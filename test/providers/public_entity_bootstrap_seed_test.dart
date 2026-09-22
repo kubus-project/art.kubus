@@ -5,7 +5,9 @@ import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const media = <String, dynamic>{'url': 'https://images.example.test/art.webp'};
+  const media = <String, dynamic>{
+    'url': 'https://images.example.test/art.webp',
+  };
   const place = <String, dynamic>{
     'label': 'Ljubljana',
     'city': 'Ljubljana',
@@ -29,7 +31,10 @@ void main() {
           'license': 'CC BY-SA 4.0',
           'sourceUrl': 'https://commons.wikimedia.org/wiki/File:art.webp',
         },
-        'source': <String, dynamic>{'name': 'Wikimedia Commons', 'id': 'File:art.webp'},
+        'source': <String, dynamic>{
+          'name': 'Wikimedia Commons',
+          'id': 'File:art.webp',
+        },
       },
     });
 
@@ -43,31 +48,37 @@ void main() {
     expect(artwork?.walletAddress, isNull);
   });
 
-  test('event and exhibition bootstrap seeds remain eligible for API revalidation', () {
-    final events = EventsProvider();
-    events.seedPublicPresentation(<String, dynamic>{
-      'id': 'event-1',
-      'title': 'Art by the River',
-      'description': 'A public walk in Ljubljana.',
-      'dates': <String, dynamic>{'start': '2026-09-12T17:00:00Z'},
-      'primaryMedia': media,
-      'place': place,
-    });
-    expect(events.eventById('event-1')?.title, 'Art by the River');
-    expect(events.isEventDetailHydrated('event-1'), isFalse);
+  test(
+    'event and exhibition bootstrap seeds remain eligible for API revalidation',
+    () {
+      final events = EventsProvider();
+      events.seedPublicPresentation(<String, dynamic>{
+        'id': 'event-1',
+        'title': 'Art by the River',
+        'description': 'A public walk in Ljubljana.',
+        'dates': <String, dynamic>{'start': '2026-09-12T17:00:00Z'},
+        'primaryMedia': media,
+        'place': place,
+      });
+      expect(events.eventById('event-1')?.title, 'Art by the River');
+      expect(events.isEventDetailHydrated('event-1'), isFalse);
 
-    final exhibitions = ExhibitionsProvider();
-    exhibitions.seedPublicPresentation(<String, dynamic>{
-      'id': 'exhibition-1',
-      'title': 'Shared Currents',
-      'description': 'A public exhibition in Ljubljana.',
-      'dates': <String, dynamic>{'start': '2026-09-01T10:00:00Z'},
-      'primaryMedia': media,
-      'place': place,
-    });
-    expect(exhibitions.exhibitionById('exhibition-1')?.title, 'Shared Currents');
-    expect(exhibitions.isExhibitionDetailHydrated('exhibition-1'), isFalse);
-  });
+      final exhibitions = ExhibitionsProvider();
+      exhibitions.seedPublicPresentation(<String, dynamic>{
+        'id': 'exhibition-1',
+        'title': 'Shared Currents',
+        'description': 'A public exhibition in Ljubljana.',
+        'dates': <String, dynamic>{'start': '2026-09-01T10:00:00Z'},
+        'primaryMedia': media,
+        'place': place,
+      });
+      expect(
+        exhibitions.exhibitionById('exhibition-1')?.title,
+        'Shared Currents',
+      );
+      expect(exhibitions.isExhibitionDetailHydrated('exhibition-1'), isFalse);
+    },
+  );
 
   test('collection bootstrap seeds an immediate public cache entry', () {
     final provider = CollectionsProvider();

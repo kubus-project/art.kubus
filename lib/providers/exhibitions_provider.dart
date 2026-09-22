@@ -13,8 +13,8 @@ class ExhibitionsProvider extends ChangeNotifier {
   final TelemetryService _telemetry;
 
   ExhibitionsProvider({BackendApiService? api, TelemetryService? telemetry})
-      : _api = api ?? BackendApiService(),
-        _telemetry = telemetry ?? TelemetryService();
+    : _api = api ?? BackendApiService(),
+      _telemetry = telemetry ?? TelemetryService();
 
   final List<Exhibition> _exhibitions = <Exhibition>[];
   final List<Exhibition> _myExhibitions = <Exhibition>[];
@@ -54,11 +54,17 @@ class ExhibitionsProvider extends ChangeNotifier {
   /// marking it detail-hydrated, so the detail endpoint still revalidates it.
   void seedPublicPresentation(Map<String, dynamic> presentation) {
     final dates = presentation['dates'];
-    final dateMap = dates is Map ? Map<String, dynamic>.from(dates) : const <String, dynamic>{};
+    final dateMap = dates is Map
+        ? Map<String, dynamic>.from(dates)
+        : const <String, dynamic>{};
     final place = presentation['place'];
-    final placeMap = place is Map ? Map<String, dynamic>.from(place) : const <String, dynamic>{};
+    final placeMap = place is Map
+        ? Map<String, dynamic>.from(place)
+        : const <String, dynamic>{};
     final media = presentation['primaryMedia'];
-    final mediaMap = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final mediaMap = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
     final exhibition = Exhibition.fromJson(<String, dynamic>{
       'id': presentation['id']?.toString() ?? '',
       'title': presentation['title']?.toString() ?? '',
@@ -99,7 +105,8 @@ class ExhibitionsProvider extends ChangeNotifier {
       _poapByExhibitionId[exhibitionId];
 
   List<KubusEvent> programEventsFor(String exhibitionId) => List.unmodifiable(
-      _programEventsByExhibitionId[exhibitionId] ?? const <KubusEvent>[]);
+    _programEventsByExhibitionId[exhibitionId] ?? const <KubusEvent>[],
+  );
 
   Future<void> initialize({bool refresh = false}) async {
     if (_initialized && !refresh) return;
@@ -262,7 +269,9 @@ class ExhibitionsProvider extends ChangeNotifier {
   /// Editing an existing exhibition is not a new contribution, so it emits
   /// nothing.
   Future<Exhibition?> updateExhibition(
-      String id, Map<String, dynamic> updates) async {
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     _setFlag(_Flag.mutating, true);
     _error = null;
     try {
@@ -293,9 +302,7 @@ class ExhibitionsProvider extends ChangeNotifier {
         fileBytes: bytes,
         fileName: fileName,
         fileType: 'exhibition_cover',
-        metadata: const <String, String>{
-          'folder': 'exhibitions/covers',
-        },
+        metadata: const <String, String>{'folder': 'exhibitions/covers'},
       );
       final url = result['uploadedUrl']?.toString();
       return (url != null && url.trim().isNotEmpty) ? url.trim() : null;
@@ -331,12 +338,16 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<void> linkExhibitionArtworks(
-      String exhibitionId, List<String> artworkIds) async {
+    String exhibitionId,
+    List<String> artworkIds,
+  ) async {
     _setFlag(_Flag.relation, true);
     _error = null;
     try {
-      final result =
-          await _api.linkExhibitionArtworks(exhibitionId, artworkIds);
+      final result = await _api.linkExhibitionArtworks(
+        exhibitionId,
+        artworkIds,
+      );
 
       // Update local exhibition immediately so the UI reflects linked artworks
       // even if the backend detail endpoint doesn't yet return artworkIds.
@@ -346,7 +357,8 @@ class ExhibitionsProvider extends ChangeNotifier {
 
       final addedRaw =
           payload['addedArtworkIds'] ?? payload['added_artwork_ids'];
-      final requestedRaw = payload['requestedArtworkIds'] ??
+      final requestedRaw =
+          payload['requestedArtworkIds'] ??
           payload['requested_artwork_ids'] ??
           artworkIds;
 
@@ -371,8 +383,11 @@ class ExhibitionsProvider extends ChangeNotifier {
 
       final current = _byId[exhibitionId];
       if (current != null) {
-        final merged =
-            <String>{...current.artworkIds, ...requested, ...added}.toList();
+        final merged = <String>{
+          ...current.artworkIds,
+          ...requested,
+          ...added,
+        }.toList();
         final updated = current.copyWith(artworkIds: merged);
         _upsert(updated, notify: false);
         if (_selected?.id == exhibitionId) _selected = updated;
@@ -388,7 +403,9 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<void> unlinkExhibitionArtwork(
-      String exhibitionId, String artworkId) async {
+    String exhibitionId,
+    String artworkId,
+  ) async {
     _setFlag(_Flag.relation, true);
     _error = null;
     try {
@@ -397,8 +414,9 @@ class ExhibitionsProvider extends ChangeNotifier {
       // Keep UI responsive by updating local cache immediately.
       final current = _byId[exhibitionId];
       if (current != null) {
-        final nextIds =
-            current.artworkIds.where((id) => id != artworkId).toList();
+        final nextIds = current.artworkIds
+            .where((id) => id != artworkId)
+            .toList();
         final updated = current.copyWith(artworkIds: nextIds);
         _upsert(updated, notify: false);
         if (_selected?.id == exhibitionId) _selected = updated;
@@ -414,7 +432,9 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<void> linkExhibitionMarkers(
-      String exhibitionId, List<String> markerIds) async {
+    String exhibitionId,
+    List<String> markerIds,
+  ) async {
     _setFlag(_Flag.relation, true);
     _error = null;
     try {
@@ -429,7 +449,9 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<void> unlinkExhibitionMarker(
-      String exhibitionId, String markerId) async {
+    String exhibitionId,
+    String markerId,
+  ) async {
     _setFlag(_Flag.relation, true);
     _error = null;
     try {
@@ -452,8 +474,11 @@ class ExhibitionsProvider extends ChangeNotifier {
   }) async {
     _setFlag(_Flag.relation, true);
     try {
-      final events = await _api.listExhibitionEvents(exhibitionId,
-          limit: limit, offset: offset);
+      final events = await _api.listExhibitionEvents(
+        exhibitionId,
+        limit: limit,
+        offset: offset,
+      );
       if (refresh) {
         _programEventsByExhibitionId[exhibitionId] = events;
       } else {
@@ -498,14 +523,17 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<void> unlinkExhibitionEvent(
-      String exhibitionId, String eventId) async {
+    String exhibitionId,
+    String eventId,
+  ) async {
     _setFlag(_Flag.relation, true);
     try {
       await _api.unlinkExhibitionEvent(exhibitionId, eventId);
       final existing = _programEventsByExhibitionId[exhibitionId];
       if (existing != null) {
-        _programEventsByExhibitionId[exhibitionId] =
-            existing.where((e) => e.id != eventId).toList();
+        _programEventsByExhibitionId[exhibitionId] = existing
+            .where((e) => e.id != eventId)
+            .toList();
         notifyListeners();
       }
     } catch (e) {
@@ -516,8 +544,10 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<ExhibitionPoapStatus?> fetchExhibitionPoap(String exhibitionId,
-      {bool force = false}) async {
+  Future<ExhibitionPoapStatus?> fetchExhibitionPoap(
+    String exhibitionId, {
+    bool force = false,
+  }) async {
     if (!force && _poapByExhibitionId.containsKey(exhibitionId)) {
       return _poapByExhibitionId[exhibitionId];
     }
@@ -540,7 +570,9 @@ class ExhibitionsProvider extends ChangeNotifier {
 
   /// Creator-side POAP badge configuration (enable/update/disable).
   Future<void> upsertExhibitionPoap(
-      String exhibitionId, Map<String, dynamic> payload) async {
+    String exhibitionId,
+    Map<String, dynamic> payload,
+  ) async {
     _setFlag(_Flag.relation, true);
     try {
       await _api.upsertExhibitionPoap(exhibitionId, payload);

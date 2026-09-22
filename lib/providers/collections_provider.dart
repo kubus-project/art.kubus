@@ -9,7 +9,7 @@ class CollectionsProvider extends ChangeNotifier {
   final BackendApiService _api;
 
   CollectionsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+    : _api = api ?? BackendApiService();
 
   final List<CollectionRecord> _collections = <CollectionRecord>[];
   bool _listLoading = false;
@@ -32,7 +32,9 @@ class CollectionsProvider extends ChangeNotifier {
   /// request revalidates this seed while the current screen can paint it.
   void seedPublicPresentation(Map<String, dynamic> presentation) {
     final media = presentation['primaryMedia'];
-    final mediaMap = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final mediaMap = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
     final count = presentation['itemCount'];
     final record = CollectionRecord.fromMap(<String, dynamic>{
       'id': presentation['id']?.toString() ?? '',
@@ -99,11 +101,14 @@ class CollectionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<CollectionRecord?> fetchCollection(String id,
-      {bool force = false}) async {
+  Future<CollectionRecord?> fetchCollection(
+    String id, {
+    bool force = false,
+  }) async {
     final collectionId = id.trim();
     if (collectionId.isEmpty) return null;
-    if (!force && _byId.containsKey(collectionId) &&
+    if (!force &&
+        _byId.containsKey(collectionId) &&
         !_publicBootstrapSeededIds.remove(collectionId)) {
       return _byId[collectionId];
     }
@@ -181,9 +186,7 @@ class CollectionsProvider extends ChangeNotifier {
         fileBytes: bytes,
         fileName: fileName,
         fileType: 'collection_cover',
-        metadata: const <String, String>{
-          'folder': 'collections/covers',
-        },
+        metadata: const <String, String>{'folder': 'collections/covers'},
       );
       return _extractUploadedUrl(result);
     } catch (e) {
@@ -201,7 +204,7 @@ class CollectionsProvider extends ChangeNotifier {
       'uploadedUrl',
       'url',
       'fileUrl',
-      'mediaUrl'
+      'mediaUrl',
     ]) {
       final value = response[key]?.toString().trim();
       if (value != null && value.isNotEmpty) {
@@ -216,7 +219,7 @@ class CollectionsProvider extends ChangeNotifier {
         'uploadedUrl',
         'url',
         'fileUrl',
-        'mediaUrl'
+        'mediaUrl',
       ]) {
         final value = data[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
@@ -232,7 +235,7 @@ class CollectionsProvider extends ChangeNotifier {
         'uploadedUrl',
         'url',
         'fileUrl',
-        'mediaUrl'
+        'mediaUrl',
       ]) {
         final value = result[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
@@ -250,12 +253,14 @@ class CollectionsProvider extends ChangeNotifier {
   /// will refresh the collection list and attempt to match the new collection
   /// by name and wallet address + recent timestamp.
   Future<
-      ({
-        bool success,
-        String? collectionId,
-        CollectionRecord? record,
-        bool refreshRequired
-      })> createCollection({
+    ({
+      bool success,
+      String? collectionId,
+      CollectionRecord? record,
+      bool refreshRequired,
+    })
+  >
+  createCollection({
     required String name,
     String? description,
     bool isPublic = true,
@@ -268,7 +273,7 @@ class CollectionsProvider extends ChangeNotifier {
         success: false,
         collectionId: null,
         record: null,
-        refreshRequired: false
+        refreshRequired: false,
       );
     }
 
@@ -360,7 +365,7 @@ class CollectionsProvider extends ChangeNotifier {
         success: false,
         collectionId: null,
         record: null,
-        refreshRequired: false
+        refreshRequired: false,
       );
     }
   }
@@ -374,13 +379,15 @@ class CollectionsProvider extends ChangeNotifier {
     if (normalizedName.isEmpty) return null;
     final normalizedWallet = WalletUtils.canonical(walletAddress ?? '');
 
-    final candidates = _collections.where((collection) {
-      if (_normalizeCollectionName(collection.name) != normalizedName) {
-        return false;
-      }
-      if (normalizedWallet.isEmpty) return true;
-      return WalletUtils.equals(collection.walletAddress, normalizedWallet);
-    }).toList(growable: false);
+    final candidates = _collections
+        .where((collection) {
+          if (_normalizeCollectionName(collection.name) != normalizedName) {
+            return false;
+          }
+          if (normalizedWallet.isEmpty) return true;
+          return WalletUtils.equals(collection.walletAddress, normalizedWallet);
+        })
+        .toList(growable: false);
     if (candidates.isEmpty) return null;
 
     DateTime? realTimestamp(CollectionRecord collection) {
@@ -392,20 +399,28 @@ class CollectionsProvider extends ChangeNotifier {
     }
 
     final threshold = createdAfter?.toUtc();
-    final timestamped = candidates
-        .map((collection) =>
-            (collection: collection, timestamp: realTimestamp(collection)))
-        .where((entry) {
-      final timestamp = entry.timestamp;
-      if (timestamp == null) return false;
-      return threshold == null || !timestamp.toUtc().isBefore(threshold);
-    }).toList(growable: false)
-      ..sort((a, b) => b.timestamp!.compareTo(a.timestamp!));
+    final timestamped =
+        candidates
+            .map(
+              (collection) => (
+                collection: collection,
+                timestamp: realTimestamp(collection),
+              ),
+            )
+            .where((entry) {
+              final timestamp = entry.timestamp;
+              if (timestamp == null) return false;
+              return threshold == null ||
+                  !timestamp.toUtc().isBefore(threshold);
+            })
+            .toList(growable: false)
+          ..sort((a, b) => b.timestamp!.compareTo(a.timestamp!));
 
     if (timestamped.isNotEmpty) return timestamped.first.collection;
 
-    final everyCandidateHasNoTimestamp =
-        candidates.every((collection) => realTimestamp(collection) == null);
+    final everyCandidateHasNoTimestamp = candidates.every(
+      (collection) => realTimestamp(collection) == null,
+    );
     if (normalizedWallet.isNotEmpty && everyCandidateHasNoTimestamp) {
       return candidates.first;
     }
@@ -444,7 +459,7 @@ class CollectionsProvider extends ChangeNotifier {
         for (final key in const <String>[
           'id',
           'collectionId',
-          'collection_id'
+          'collection_id',
         ]) {
           final raw = data[key]?.toString();
           final value = raw?.trim();
@@ -467,7 +482,7 @@ class CollectionsProvider extends ChangeNotifier {
         for (final key in const <String>[
           'id',
           'collectionId',
-          'collection_id'
+          'collection_id',
         ]) {
           final raw = result[key]?.toString();
           final value = raw?.trim();
@@ -486,7 +501,8 @@ class CollectionsProvider extends ChangeNotifier {
       }
     } else if (payload is Map) {
       return _extractCollectionIdFromResponse(
-          Map<String, dynamic>.from(payload));
+        Map<String, dynamic>.from(payload),
+      );
     } else if (payload is List) {
       for (final item in payload) {
         final nestedId = _extractCollectionIdFromResponse(item);
@@ -657,7 +673,8 @@ class CollectionsProvider extends ChangeNotifier {
   }) {
     final parsed = CollectionRecord.fromMap(response);
     final resolvedId = parsed.id.isNotEmpty ? parsed.id : collectionId;
-    final base = previous ??
+    final base =
+        previous ??
         CollectionRecord(
           id: resolvedId,
           walletAddress: '',
@@ -671,10 +688,12 @@ class CollectionsProvider extends ChangeNotifier {
     return base.copyWith(
       name: parsed.name.isNotEmpty ? parsed.name : (name ?? base.name),
       description: parsed.description ?? description ?? base.description,
-      isPublic:
-          parsed.id.isNotEmpty ? parsed.isPublic : (isPublic ?? base.isPublic),
-      artworkCount:
-          parsed.artworkCount != 0 ? parsed.artworkCount : base.artworkCount,
+      isPublic: parsed.id.isNotEmpty
+          ? parsed.isPublic
+          : (isPublic ?? base.isPublic),
+      artworkCount: parsed.artworkCount != 0
+          ? parsed.artworkCount
+          : base.artworkCount,
       thumbnailUrl: parsed.thumbnailUrl ?? thumbnailUrl ?? base.thumbnailUrl,
       artworks: parsed.artworks.isNotEmpty ? parsed.artworks : base.artworks,
       updatedAt: parsed.updatedAt ?? DateTime.now(),
@@ -682,7 +701,8 @@ class CollectionsProvider extends ChangeNotifier {
   }
 
   CollectionRecord _bumpArtworkCount(CollectionRecord? previous, int delta) {
-    final base = previous ??
+    final base =
+        previous ??
         const CollectionRecord(
           id: '',
           walletAddress: '',
@@ -697,8 +717,11 @@ class CollectionsProvider extends ChangeNotifier {
   }
 
   CollectionRecord _removeArtworkLocally(
-      CollectionRecord? previous, String artworkId) {
-    final base = previous ??
+    CollectionRecord? previous,
+    String artworkId,
+  ) {
+    final base =
+        previous ??
         const CollectionRecord(
           id: '',
           walletAddress: '',

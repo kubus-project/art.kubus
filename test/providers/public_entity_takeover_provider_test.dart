@@ -123,90 +123,118 @@ void main() {
     },
   );
 
-  test('accepts a fresh bootstrap only when identity and canonical path match', () {
-    final provider = PublicEntityTakeoverProvider();
-    const target = ShareDeepLinkTarget(
-      type: ShareEntityType.artwork,
-      id: 'art-42',
-      localeCode: 'en',
-    );
-    final now = DateTime.utc(2026, 9, 23, 12);
-    provider.seed(
-      initialUri: Uri.parse('/en/artworks/art-42?from=search#details'),
-      target: target,
-    );
-    final presentation = <String, dynamic>{
-      'version': 1,
-      'type': 'artwork',
-      'id': 'art-42',
-      'locale': 'en',
-      'canonicalPath': '/en/artworks/art-42',
-      'title': 'River Memory',
-    };
-    final payload = <String, dynamic>{
-      'version': 1,
-      'identity': <String, dynamic>{
+  test(
+    'accepts a fresh bootstrap only when identity and canonical path match',
+    () {
+      final provider = PublicEntityTakeoverProvider();
+      const target = ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-42',
+        localeCode: 'en',
+      );
+      final now = DateTime.utc(2026, 9, 23, 12);
+      provider.seed(
+        initialUri: Uri.parse('/en/artworks/art-42?from=search#details'),
+        target: target,
+      );
+      final presentation = <String, dynamic>{
+        'version': 1,
         'type': 'artwork',
         'id': 'art-42',
         'locale': 'en',
         'canonicalPath': '/en/artworks/art-42',
-      },
-      'revision': List.filled(64, 'a').join(),
-      'generatedAt': now.toIso8601String(),
-      'expiresAt': now.add(const Duration(minutes: 10)).toIso8601String(),
-      'presentation': presentation,
-    };
+        'title': 'River Memory',
+      };
+      final payload = <String, dynamic>{
+        'version': 1,
+        'identity': <String, dynamic>{
+          'type': 'artwork',
+          'id': 'art-42',
+          'locale': 'en',
+          'canonicalPath': '/en/artworks/art-42',
+        },
+        'revision': List.filled(64, 'a').join(),
+        'generatedAt': now.toIso8601String(),
+        'expiresAt': now.add(const Duration(minutes: 10)).toIso8601String(),
+        'presentation': presentation,
+      };
 
-    expect(
-      provider.validateBootstrap(
-        raw: payload,
-        initialUri: Uri.parse('/en/artworks/art-42?from=search#details'),
-        target: target,
-        now: now,
-      )?['presentation']['title'],
-      'River Memory',
-    );
-    expect(
-      provider.validateBootstrap(
-        raw: payload,
-        initialUri: Uri.parse('/en/artworks/other'),
-        target: target,
-        now: now,
-      ),
-      isNull,
-    );
-    expect(provider.bootstrap, isNull);
-  });
-
-  test('rejects wrong type, locale, unsupported version, malformed, and expired bootstraps', () {
-    final provider = PublicEntityTakeoverProvider();
-    const target = ShareDeepLinkTarget(
-      type: ShareEntityType.event,
-      id: 'event-7',
-      localeCode: 'sl',
-    );
-    final uri = Uri.parse('/sl/dogodki/event-7');
-    provider.seed(initialUri: uri, target: target);
-    final now = DateTime.utc(2026, 9, 23, 12);
-    Map<String, dynamic> payload({int version = 1, String type = 'event', String locale = 'sl', String id = 'event-7', String expires = '2026-09-23T12:10:00Z'}) => <String, dynamic>{
-      'version': version,
-      'identity': <String, dynamic>{'type': type, 'id': id, 'locale': locale, 'canonicalPath': '/sl/dogodki/event-7'},
-      'revision': List.filled(64, 'b').join(),
-      'generatedAt': '2026-09-23T12:00:00Z',
-      'expiresAt': expires,
-      'presentation': <String, dynamic>{'version': 1, 'type': type, 'id': id, 'locale': locale, 'canonicalPath': '/sl/dogodki/event-7'},
-    };
-    for (final raw in <Map<String, dynamic>>[
-      payload(type: 'artwork'),
-      payload(locale: 'en'),
-      payload(version: 2),
-      payload(expires: '2026-09-23T11:59:00Z'),
-      <String, dynamic>{'version': 1},
-    ]) {
       expect(
-        provider.validateBootstrap(raw: raw, initialUri: uri, target: target, now: now),
+        provider.validateBootstrap(
+          raw: payload,
+          initialUri: Uri.parse('/en/artworks/art-42?from=search#details'),
+          target: target,
+          now: now,
+        )?['presentation']['title'],
+        'River Memory',
+      );
+      expect(
+        provider.validateBootstrap(
+          raw: payload,
+          initialUri: Uri.parse('/en/artworks/other'),
+          target: target,
+          now: now,
+        ),
         isNull,
       );
-    }
-  });
+      expect(provider.bootstrap, isNull);
+    },
+  );
+
+  test(
+    'rejects wrong type, locale, unsupported version, malformed, and expired bootstraps',
+    () {
+      final provider = PublicEntityTakeoverProvider();
+      const target = ShareDeepLinkTarget(
+        type: ShareEntityType.event,
+        id: 'event-7',
+        localeCode: 'sl',
+      );
+      final uri = Uri.parse('/sl/dogodki/event-7');
+      provider.seed(initialUri: uri, target: target);
+      final now = DateTime.utc(2026, 9, 23, 12);
+      Map<String, dynamic> payload({
+        int version = 1,
+        String type = 'event',
+        String locale = 'sl',
+        String id = 'event-7',
+        String expires = '2026-09-23T12:10:00Z',
+      }) => <String, dynamic>{
+        'version': version,
+        'identity': <String, dynamic>{
+          'type': type,
+          'id': id,
+          'locale': locale,
+          'canonicalPath': '/sl/dogodki/event-7',
+        },
+        'revision': List.filled(64, 'b').join(),
+        'generatedAt': '2026-09-23T12:00:00Z',
+        'expiresAt': expires,
+        'presentation': <String, dynamic>{
+          'version': 1,
+          'type': type,
+          'id': id,
+          'locale': locale,
+          'canonicalPath': '/sl/dogodki/event-7',
+        },
+      };
+      for (final raw in <Map<String, dynamic>>[
+        payload(type: 'artwork'),
+        payload(locale: 'en'),
+        payload(version: 2),
+        payload(expires: '2026-09-23T11:59:00Z'),
+        <String, dynamic>{'version': 1},
+      ]) {
+        expect(
+          provider.validateBootstrap(
+            raw: raw,
+            initialUri: uri,
+            target: target,
+            now: now,
+          ),
+          isNull,
+        );
+      }
+    },
+  );
 }

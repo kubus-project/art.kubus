@@ -88,22 +88,31 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (type == null || locale == null || path == null || id.isEmpty) {
       return null;
     }
-    if (identity['type'] != type || identity['id'] != id ||
-        identity['locale'] != locale || identity['canonicalPath'] != path ||
-        presentation['version'] != 1 || presentation['type'] != type ||
-        presentation['id'] != id || presentation['locale'] != locale ||
-        presentation['canonicalPath'] != path || initialUri.path != path) {
+    if (identity['type'] != type ||
+        identity['id'] != id ||
+        identity['locale'] != locale ||
+        identity['canonicalPath'] != path ||
+        presentation['version'] != 1 ||
+        presentation['type'] != type ||
+        presentation['id'] != id ||
+        presentation['locale'] != locale ||
+        presentation['canonicalPath'] != path ||
+        initialUri.path != path) {
       return null;
     }
     final revision = raw['revision'];
     if (revision is! String || !RegExp(r'^[a-f0-9]{64}$').hasMatch(revision)) {
       return null;
     }
-    final generatedAt = DateTime.tryParse('${raw['generatedAt'] ?? ''}')?.toUtc();
+    final generatedAt = DateTime.tryParse(
+      '${raw['generatedAt'] ?? ''}',
+    )?.toUtc();
     final expiresAt = DateTime.tryParse('${raw['expiresAt'] ?? ''}')?.toUtc();
     final current = (now ?? DateTime.now()).toUtc();
-    if (generatedAt == null || expiresAt == null ||
-        !expiresAt.isAfter(generatedAt) || !current.isBefore(expiresAt) ||
+    if (generatedAt == null ||
+        expiresAt == null ||
+        !expiresAt.isAfter(generatedAt) ||
+        !current.isBefore(expiresAt) ||
         generatedAt.isAfter(current.add(const Duration(minutes: 1)))) {
       return null;
     }
@@ -139,10 +148,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return markEntityReady(ShareEntityType.artwork, artworkId);
   }
 
-  Future<void> markEntityReady(
-    ShareEntityType type,
-    String entityId,
-  ) {
+  Future<void> markEntityReady(ShareEntityType type, String entityId) {
     final current = _target;
     if (current == null ||
         current.type != _wireType(type) ||
