@@ -199,25 +199,26 @@ void main() {
         String locale = 'sl',
         String id = 'event-7',
         String expires = '2026-09-23T12:10:00Z',
-      }) => <String, dynamic>{
-        'version': version,
-        'identity': <String, dynamic>{
-          'type': type,
-          'id': id,
-          'locale': locale,
-          'canonicalPath': '/sl/dogodki/event-7',
-        },
-        'revision': List.filled(64, 'b').join(),
-        'generatedAt': '2026-09-23T12:00:00Z',
-        'expiresAt': expires,
-        'presentation': <String, dynamic>{
-          'version': 1,
-          'type': type,
-          'id': id,
-          'locale': locale,
-          'canonicalPath': '/sl/dogodki/event-7',
-        },
-      };
+      }) =>
+          <String, dynamic>{
+            'version': version,
+            'identity': <String, dynamic>{
+              'type': type,
+              'id': id,
+              'locale': locale,
+              'canonicalPath': '/sl/dogodki/event-7',
+            },
+            'revision': List.filled(64, 'b').join(),
+            'generatedAt': '2026-09-23T12:00:00Z',
+            'expiresAt': expires,
+            'presentation': <String, dynamic>{
+              'version': 1,
+              'type': type,
+              'id': id,
+              'locale': locale,
+              'canonicalPath': '/sl/dogodki/event-7',
+            },
+          };
       for (final raw in <Map<String, dynamic>>[
         payload(type: 'artwork'),
         payload(locale: 'en'),

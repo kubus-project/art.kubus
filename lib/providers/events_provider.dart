@@ -14,8 +14,8 @@ class EventsProvider extends ChangeNotifier {
   final TelemetryService _telemetry;
 
   EventsProvider({BackendApiService? api, TelemetryService? telemetry})
-    : _api = api ?? BackendApiService(),
-      _telemetry = telemetry ?? TelemetryService();
+      : _api = api ?? BackendApiService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final List<KubusEvent> _events = <KubusEvent>[];
   final Map<String, KubusEvent> _byId = <String, KubusEvent>{};
@@ -367,9 +367,8 @@ class EventsProvider extends ChangeNotifier {
       await _api.unlinkEventExhibition(eventId, exhibitionId);
       final existing = _exhibitionsByEventId[eventId];
       if (existing != null) {
-        _exhibitionsByEventId[eventId] = existing
-            .where((e) => e.id != exhibitionId)
-            .toList();
+        _exhibitionsByEventId[eventId] =
+            existing.where((e) => e.id != exhibitionId).toList();
         notifyListeners();
       }
     } catch (e) {

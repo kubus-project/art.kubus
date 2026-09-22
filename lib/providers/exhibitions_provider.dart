@@ -13,8 +13,8 @@ class ExhibitionsProvider extends ChangeNotifier {
   final TelemetryService _telemetry;
 
   ExhibitionsProvider({BackendApiService? api, TelemetryService? telemetry})
-    : _api = api ?? BackendApiService(),
-      _telemetry = telemetry ?? TelemetryService();
+      : _api = api ?? BackendApiService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final List<Exhibition> _exhibitions = <Exhibition>[];
   final List<Exhibition> _myExhibitions = <Exhibition>[];
@@ -105,8 +105,8 @@ class ExhibitionsProvider extends ChangeNotifier {
       _poapByExhibitionId[exhibitionId];
 
   List<KubusEvent> programEventsFor(String exhibitionId) => List.unmodifiable(
-    _programEventsByExhibitionId[exhibitionId] ?? const <KubusEvent>[],
-  );
+        _programEventsByExhibitionId[exhibitionId] ?? const <KubusEvent>[],
+      );
 
   Future<void> initialize({bool refresh = false}) async {
     if (_initialized && !refresh) return;
@@ -357,8 +357,7 @@ class ExhibitionsProvider extends ChangeNotifier {
 
       final addedRaw =
           payload['addedArtworkIds'] ?? payload['added_artwork_ids'];
-      final requestedRaw =
-          payload['requestedArtworkIds'] ??
+      final requestedRaw = payload['requestedArtworkIds'] ??
           payload['requested_artwork_ids'] ??
           artworkIds;
 
@@ -414,9 +413,8 @@ class ExhibitionsProvider extends ChangeNotifier {
       // Keep UI responsive by updating local cache immediately.
       final current = _byId[exhibitionId];
       if (current != null) {
-        final nextIds = current.artworkIds
-            .where((id) => id != artworkId)
-            .toList();
+        final nextIds =
+            current.artworkIds.where((id) => id != artworkId).toList();
         final updated = current.copyWith(artworkIds: nextIds);
         _upsert(updated, notify: false);
         if (_selected?.id == exhibitionId) _selected = updated;
@@ -531,9 +529,8 @@ class ExhibitionsProvider extends ChangeNotifier {
       await _api.unlinkExhibitionEvent(exhibitionId, eventId);
       final existing = _programEventsByExhibitionId[exhibitionId];
       if (existing != null) {
-        _programEventsByExhibitionId[exhibitionId] = existing
-            .where((e) => e.id != eventId)
-            .toList();
+        _programEventsByExhibitionId[exhibitionId] =
+            existing.where((e) => e.id != eventId).toList();
         notifyListeners();
       }
     } catch (e) {

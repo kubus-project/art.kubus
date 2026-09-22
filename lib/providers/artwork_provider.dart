@@ -44,10 +44,10 @@ class ArtworkProvider extends ChangeNotifier {
   bool _historyLoaded = false;
 
   ArtworkProvider({ArtworkBackendApi? backendApi})
-    : _backendApi = backendApi ?? BackendApiService(),
-      _spatialApi = backendApi == null
-          ? BackendApiService()
-          : (backendApi is BackendApiService ? backendApi : null);
+      : _backendApi = backendApi ?? BackendApiService(),
+        _spatialApi = backendApi == null
+            ? BackendApiService()
+            : (backendApi is BackendApiService ? backendApi : null);
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
@@ -136,9 +136,8 @@ class ArtworkProvider extends ChangeNotifier {
         ? Map<String, dynamic>.from(media)
         : const <String, dynamic>{};
     final authorship = presentation['authorship'];
-    final artist = authorship is Map
-        ? (authorship['name']?.toString() ?? '')
-        : '';
+    final artist =
+        authorship is Map ? (authorship['name']?.toString() ?? '') : '';
     final place = presentation['place'];
     final placeData = place is Map
         ? Map<String, dynamic>.from(place)
@@ -313,12 +312,10 @@ class ArtworkProvider extends ChangeNotifier {
       return const <Artwork>[];
     }
 
-    final matches = _artworks
-        .where((artwork) {
-          final artworkWallet = WalletUtils.normalize(artwork.walletAddress);
-          return artworkWallet == normalizedWallet;
-        })
-        .toList(growable: false);
+    final matches = _artworks.where((artwork) {
+      final artworkWallet = WalletUtils.normalize(artwork.walletAddress);
+      return artworkWallet == normalizedWallet;
+    }).toList(growable: false);
 
     matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return matches;
@@ -1271,8 +1268,7 @@ class ViewHistoryEntry {
   factory ViewHistoryEntry.fromJson(Map<String, dynamic> json) {
     return ViewHistoryEntry(
       artworkId: json['artworkId']?.toString() ?? '',
-      viewedAt:
-          DateTime.tryParse(json['viewedAt']?.toString() ?? '') ??
+      viewedAt: DateTime.tryParse(json['viewedAt']?.toString() ?? '') ??
           DateTime.now(),
       markerId: json['markerId']?.toString(),
     );

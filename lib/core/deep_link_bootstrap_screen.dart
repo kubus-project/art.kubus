@@ -56,8 +56,8 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     switch (publicPresentation['type']) {
       case 'artwork':
         context.read<ArtworkProvider>().seedPublicPresentation(
-          publicPresentation,
-        );
+              publicPresentation,
+            );
         final id = publicPresentation['id']?.toString() ?? '';
         if (id.isNotEmpty) {
           unawaited(
@@ -70,18 +70,18 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
         break;
       case 'event':
         context.read<EventsProvider>().seedPublicPresentation(
-          publicPresentation,
-        );
+              publicPresentation,
+            );
         break;
       case 'exhibition':
         context.read<ExhibitionsProvider>().seedPublicPresentation(
-          publicPresentation,
-        );
+              publicPresentation,
+            );
         break;
       case 'collection':
         context.read<CollectionsProvider>().seedPublicPresentation(
-          publicPresentation,
-        );
+              publicPresentation,
+            );
         break;
       default:
         // Other public entity types retain the validated presentation on the
