@@ -8,12 +8,14 @@ Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`,
 Security handbook: `art.kubus-threat-model.md` is the living security baseline and hardening backlog.
 Engineering workflow: `docs/engineering/branching-and-deployment.md` is the canonical branch, CI, deployment, and release guide.
 
-## Current product/design programme (read before UI, map, SEO, or public-entry work)
+## Current product/design programme (mandatory before scoped work)
 
 The active programme is documented in:
 
 - `CLAUDE.md` — current agent entrypoint and reference branches.
-- `docs/PRODUCT_UX_SEO_PROGRAM.md` — ordered programme and agent work packages.
+- `docs/PRODUCT_UX_SEO_PROGRAM.md` — the one canonical master roadmap and dependency gates.
+- `docs/AGENT_EXECUTION_PLAN.md` — bounded agent package, file ownership,
+  tests, visual QA and stop conditions for every wave.
 - `docs/DESIGN_SYSTEM_V2.md` — current kubus family/product design direction.
 - `docs/APP_NATIVE_PUBLIC_ENTRY.md` — canonical app.kubus.site entity-entry target.
 - `docs/seo-public-pages.md` and `docs/seo/domain-ownership.md` — renderer and URL ownership contracts.
@@ -21,7 +23,9 @@ The active programme is documented in:
 The current visual references are **not** the old public-site master layouts:
 `art.kubus.site@redesign/a1-foundation` is the WORLD reference and
 `kubus.site@redesign/k1-foundation` is the TIME reference. They establish the
-family direction: Sofia Sans/technical mono, flat structural surfaces,
+family v5 direction: Sofia Sans plus the approved Space Mono structural/system
+register (identity, controls, notions, ordinals, selected metadata and exact
+machine values; neither machine-only nor blanket uppercase mono), flat structural surfaces,
 hairlines, real data/geography, restrained motion, and no generic
 glass-first/SaaS/bento/gradient-card language.
 
@@ -35,6 +39,14 @@ is also the preferred native deep-link URL.
 
 For broad UI work, audit first. Classify major screens KEEP / REFINE / REDESIGN /
 MERGE / REMOVE before spending effort cosmetically polishing obsolete flows.
+
+Before **SEO, public-entry, map redesign, broad UI, institution redesign,
+editorial redesign, DAO redesign or spatial-delivery redesign**, read the master
+roadmap and the matching work package. State what is true now, what remains,
+exact files owned/excluded, data contract, tests, screenshot evidence and stop
+condition. Wave 1 is read-only; do not change index policy, canonicals or
+production data as part of an audit. `node.kubus.site` is the public website;
+`kubus-node` is the runtime. Keep their analytics separate.
 
 
 ## Branch, worktree, CI, and release governance

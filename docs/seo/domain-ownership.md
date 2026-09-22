@@ -4,7 +4,7 @@ Authoritative cross-repository ownership model. Any new public page must be
 placed under exactly one owner below. If two domains could plausibly own a
 surface, this file decides it.
 
-Last updated: 2026-09-21.
+Last updated: 2026-09-22.
 
 ---
 
@@ -38,7 +38,10 @@ Repository: `kubus-project/art.kubus.site` (generated static EN/SL HTML).
 
 Owns search acquisition, cultural-geography/editorial discovery and product explanation: public-art discovery guides,
 city pages, murals and street-art guides, artist and institution participation
-guides, the download/distribution page, and SEO/AEO editorial pages.
+guides, routes/guides, field notes, the download/distribution page, and SEO/AEO
+editorial pages. Broad open-data city ingestion does not justify mass-generated
+city guides; preserve proven URLs such as Ljubljana while place maturity is
+audited.
 
 Rules:
 
@@ -56,7 +59,7 @@ Repository: `kubus-project/art.kubus` (`web/` transport) +
 
 Owns the canonical URL for every public application entity: artworks, profiles,
 artists, institutions, events, exhibitions, collections, public posts and public
-map records.
+map records that represent a distinct public entity.
 
 ```
 /                          → 200 Flutter app shell (indexable; PWA start_url)
@@ -82,6 +85,14 @@ Rules:
 - The localized canonical entity URL is also the preferred Android App Link /
   future iOS Universal Link surface; native handoff must not require a compact
   alias.
+- Artwork owns cultural authorship and the search canonical when a linked
+  marker is only its spatial representation. A genuinely distinct place/marker
+  may own a separate canonical; inspect `marker.artwork_id` and actual
+  semantics before any policy change.
+- Cultural routes are future first-class PRODUCT entities after the place
+  model stabilizes; acquisition city guides connect to route → start walk →
+  PRODUCT map → artwork → artist/institution. Do not invent route canonicals
+  or generate pages before the data/URL contract is approved.
 
 ## Native store application
 
@@ -115,7 +126,14 @@ Rule: ordinary discovery and account creation must never require a wallet.
 | Ljubljana city guide | art.kubus.site | Editorial hub; links to entities |
 | Research essay on cultural infrastructure | kubus.site | Project research, not product |
 | Download / install page | art.kubus.site | Acquisition |
+| A cultural walking route (future) | app.kubus.site | Product entity and active walk; city guide stays editorial |
+| node.kubus.site install/explanation | node.kubus.site | Public website, separate from runtime |
 | The running application | app.kubus.site canonical/root routes | Product surface; `/app/*` is compatibility/internal routing |
+
+`kubus-project/kubus-node` owns local archive/runtime, processing, storage,
+operator GUI and distributed participation. It is not the
+`kubus-project/node.kubus.site` public website. In admin, visitor analytics
+for that website stay separate from PLATFORM / Nodes fleet state.
 
 ## Entity distinction: kubus vs art.kubus
 

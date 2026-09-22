@@ -1,245 +1,50 @@
-# kubus Design System v2 — product + web family contract
+# kubus family contract v5 — PRODUCT application
 
-Status: **current direction / implementation contract**
-Last updated: 2026-09-21.
+Status: authoritative design contract for the next PRODUCT work. Reviewed 2026-09-22 against `art.kubus.site@redesign/a1-foundation` (`1ca922c6`) and `kubus.site@redesign/k1-foundation` (`8174330c`). The public websites' mirrored `docs/WEB-FAMILY.md` v5 and actual implementations define the approved visual use. This document supersedes the earlier machine-only mono direction in this PR and the July glass/gradient notes in `docs/DESIGN_UNIFICATION_NOTES.md`; those notes remain history.
 
-This document supersedes the visual direction implied by the older
-`docs/DESIGN_UNIFICATION_NOTES.md` creator-flow pass. That pass remains useful
-as an implementation history, but its glass/gradient-heavy surface treatment is
-not the target for the next product-wide redesign.
+## Four siblings
 
-## 1. Source material
+| Surface | Role | Composition |
+| --- | --- | --- |
+| `kubus.site` | TIME | research, history, monograph, project lineage and scroll-linked temporal field |
+| `art.kubus.site` | WORLD | cultural geography and editorial reading with an interactive MapLibre globe |
+| `app.kubus.site` / native `art.kubus` | PRODUCT | canonical entities, discovery and direct actions in a platform-native application |
+| `node.kubus.site` / kubus node | INFRASTRUCTURE | public runtime explanation and local operator tooling, respectively |
 
-The current design direction is grounded in shipped/in-progress repository work,
-not a hypothetical moodboard.
+`node.kubus.site` is a public website; `kubus-node` is the local/distributed runtime. Their analytics and architecture are separate. The three public websites share their existing family shell. PRODUCT shares the grammar, **not** that shell: use app bars, mobile navigation, desktop rails/panels, safe areas, touch targets, sheets, forms, navigation history, keyboard handling and transient map controls.
 
-### WORLD — art.kubus.site
+## Typography and case
 
-Reference branch: `kubus-project/art.kubus.site@redesign/a1-foundation`.
+| Register | Typeface | Use |
+| --- | --- | --- |
+| Primary | Sofia Sans | Display, headings, ledes, body, ordinary interface language and major product text |
+| Structural | Space Mono | Approved family identity and `kubus / art / node` register; compact established controls; notions; archive/register language; chapter, step and ordinal labels; selected metadata terms; technical state, coordinates, IDs, versions, hashes, ports, paths and protocol values |
 
-Its active agent contract defines the site as:
+Space Mono is **not machine-data-only**. It is also **not a blanket style for every button, metadata string or screen**. Preserve its approved use on the current web family; introduce it selectively through central PRODUCT primitives after audit. Case follows semantic role: brand names stay lowercase (`kubus`, `art.kubus`, `kubus node`, `kubus / art / node`); website structural notions and controls may be uppercase; machine values retain exact case; prose uses authored case. Never rename technical identifiers such as `kubus-node`, `NODE_GUI_TOKEN`, package names, environment variables or classes.
 
-- spatial-first;
-- typographic;
-- editorial;
-- cartographic;
-- archival;
-- data-driven.
+The current Flutter app still uses Inter in `lib/utils/design_tokens.dart`. That describes the present code, not the destination. No mechanical app-wide font swap belongs in this documentation pass. Wave 4 establishes central type roles and visual parity; Wave 7 inventories affected screens before broad migration.
 
-It explicitly rejects glass-first layouts, floating rounded product cards,
-large decorative gradients, generic bento/SaaS composition, decorative glow,
-shimmer/float effects, and generic AI-looking visual language.
+## Visual grammar
 
-The world/globe is a semantic surface carrying real records, not wallpaper.
+- Semantic ground, surface, foreground, secondary, rule and active roles; 1px hairline structure; strong spacing and readable measures.
+- Real records, media, geography and provenance lead. Restrained elevation supports interactions, not decoration.
+- Avoid generic SaaS bento layouts, decorative AI gradients, floating rounded cards as a default, arbitrary glass nesting, glow/particles and pseudo-terminal theatre.
+- Glass can serve transient PRODUCT/map chrome when the map remains legible. WORLD's optical reading veil is an editorial readability treatment, not an app shell.
+- Marker category colour is **data semantics**. Keep subject/category, promotion/signal tier and selected state distinct; do not recolour categories for theme harmony.
+- Theme switching on WORLD/TIME is an in-place state change, not a style reload. The public websites share an explicit `kubus_theme` choice and `kubus_cookie_consent` decision. Native PRODUCT has its own privacy and navigation surfaces; do not paste the website consent band into it.
 
-### TIME — kubus.site
+## WORLD behaviour to port, composition to leave on the website
 
-Reference branch: `kubus-project/kubus.site@redesign/k1-foundation`.
+`art.kubus.site` uses a right-two-thirds WORLD composition beside editorial text on wide layouts. PRODUCT normally gives the map the viewport. Port continuous world-to-street geography, camera ownership/continuity, marker identity, semantic LOD and performance principles into the **existing** Flutter architecture. `src/map/recordLayers.ts` currently defines `iconStart: 5`, `iconFull: 7`, `coverStart: 10`, `coverFull: 10.5`, `maxCovers: 32`; these are reference values to retune on devices, not immutable Flutter constants.
 
-It uses the same structural vocabulary while keeping a different content model:
-TIME rather than WORLD. The redesign moves structural tokens into
-`src/styles/tokens.css`, removes the old duplicated Tailwind theme and replaces
-the previous generic card/cube-marketing system with shell/index/colophon and
-flat editorial composition.
+The behaviour contract is far GPU dots → mid canonical kubus marker → close artwork cover **inside** canonical geometry; selected records remain represented and heavy covers stay bounded. Preserve clusters, same-coordinate grouping, spiderfy, promotion/signal state, subject/category meaning and complete archive in GPU-native layers. Never turn all artworks into Flutter widget markers. The renderer owns inspection camera motion; narrative scroll must not wrest it away. Respect reduced motion and usable WebGL/capability fallbacks.
 
-### INFRASTRUCTURE — kubus Node
+## PRODUCT public entity frame
 
-The node remains an operator surface. It can be denser and more utilitarian
-than public editorial pages, but should use the same family identity,
-typographic discipline, semantic colours and restrained elevation.
+The semantic server frame and Flutter entity detail share a public presentation and hierarchy: product navigation, primary media, title, **artwork authorship**, place/context, compact facts, contextual actions, description, map relation, related entities, platform contribution and provenance/verification. Artist attribution must never be inferred from uploader ownership. Private, disputed or unverified information must respect the public disclosure policy. See `APP_NATIVE_PUBLIC_ENTRY.md`.
 
-### PRODUCT — app.kubus.site / native art.kubus
+## Audit and evidence
 
-The app is not another editorial site. It is the interactive product member of
-the family. It should inherit family identity and structural grammar while
-retaining platform-native navigation, touch targets, safe areas, app bars,
-sheets, menus, forms and high-frequency controls.
+Wave 7 classifies each task and major screen KEEP / REFINE / REDESIGN / MERGE / REMOVE, with P0–P3 severity, across guest, account, artist, institution and advanced users; mobile, desktop web and Android; EN/SL and light/dark; loading, empty, error, offline, permission and auth states. Do not polish REMOVE screens.
 
-## 2. Shared family grammar
-
-### Typography
-
-Target family:
-
-- **Sofia Sans** — display, headings, body and ordinary metadata.
-- **Space Mono** (or the approved technical mono fallback on surfaces that cannot
-  ship it) — coordinates, identifiers, versions, exact dates/times, system
-  state and machine values.
-
-The mono face is a recorded/technical register, not cyberpunk decoration.
-
-Flutter currently uses Inter through `lib/utils/design_tokens.dart`. Do not
-blindly replace typography throughout the app in one mechanical pass. The UI/UX
-audit must identify typography-sensitive controls and establish migration
-coverage first; then migrate centrally rather than per screen.
-
-### Structure
-
-Prefer:
-
-- semantic ground / surface / foreground / secondary / rule / active roles;
-- 1px hairlines;
-- open layouts;
-- strong spacing hierarchy;
-- asymmetric composition where appropriate;
-- readable text measures;
-- real media and real geographic context;
-- restrained elevation only when interaction requires it.
-
-Avoid as a default language:
-
-- glass-on-glass nesting;
-- `rounded-2xl` everywhere;
-- large shadows;
-- floating marketing cards;
-- gradient panels;
-- decorative blur;
-- bento grids;
-- duplicated framed containers around every content group.
-
-Glass remains valid for genuinely overlapping transient app chrome where the
-underlying map/content must remain spatially legible. It is not the base surface.
-
-### Colour
-
-Do not collapse semantic roles into one brand accent.
-
-- Interaction/state needs its own role.
-- Error/success/warning remain semantic.
-- Marker colour remains **data meaning** and must not be recoloured to match a
-  theme.
-- Promotional/signal-tier state must remain distinct from subject/category.
-
-The current Flutter token system remains the authoritative implementation until
-v2 tokens are migrated. New v2 roles should be introduced centrally and tested,
-not hard-coded screen by screen.
-
-## 3. Public entity composition
-
-Artwork/profile/institution/event/exhibition pages on `app.kubus.site` must
-look like first-class product screens, not SEO documents.
-
-A public artwork first frame should generally be:
-
-1. product-family shell/chrome;
-2. primary media;
-3. title + attribution/creator + place/context;
-4. compact factual metadata;
-5. primary actions;
-6. description/context;
-7. location/map relation;
-8. related entities;
-9. provenance/source/verification;
-10. claim/correction action when relevant.
-
-The semantic HTML first frame and Flutter/native detail screen must use the same
-information hierarchy even when implementation differs.
-
-## 4. Map / WORLD contract
-
-The app map should converge on the spatial model proven in
-`art.kubus.site@redesign/a1-foundation`.
-
-### Globe
-
-- WORLD framing uses a MapLibre globe where the runtime supports it.
-- Locale/default framing remains meaningful (e.g. Slovenia vs Europe) but the
-  globe is the continuous spatial surface.
-- Theme/time lighting and optical veil are presentation concerns and must not
-  distort marker semantics or map data.
-- Reduced motion, WebGL failure and low-capability devices require usable
-  fallbacks.
-
-### Marker LOD
-
-The current web-family implementation in
-`src/map/recordLayers.ts` establishes the reference progression:
-
-- zoom < 5: data-coloured dots;
-- zoom 5–10: canonical kubus marker sprites;
-- zoom >= 10: close visible records may become cover-image markers;
-- cover reveal completes around 10.5;
-- selected record stays represented even outside the normal cover set;
-- DOM-heavy cover markers are bounded (currently max 32);
-- complete archive remains in GPU-native map layers;
-- marker lifecycle is independent of camera animation.
-
-These numbers are a starting cross-surface contract, not untouchable constants:
-validate them on phone, tablet, desktop, Android and web before freezing them in
-shared map configuration.
-
-### Canonical marker identity
-
-The redesign branch already consumes exported canonical Flutter marker pixels
-instead of redrawing an approximate web glyph. App and web must preserve the
-same marker subject + signal tier + selected/promoted state identity.
-
-At high zoom, the artwork cover fills the marker body while retaining the
-canonical outline/stem/state language so a cover image does not become a random
-square thumbnail pinned to a map.
-
-## 5. Product density
-
-The same design language supports different density modes:
-
-- **editorial** — kubus.site, long-form art.kubus.site content;
-- **discovery** — globe, city, route and entity exploration;
-- **product** — app details, community, contribution and account flows;
-- **operator** — institution tools, admin, kubus Node;
-- **governance** — DAO proposals/reviews/votes after the deep-polish phase.
-
-Do not make every mode visually identical. Consistency means shared rules, not
-one template.
-
-## 6. App audit rules
-
-Before broad app restyling, every major flow is classified:
-
-- KEEP;
-- REFINE;
-- REDESIGN;
-- MERGE;
-- REMOVE.
-
-Audit dimensions:
-
-- task purpose;
-- information architecture;
-- navigation/back behaviour;
-- primary action hierarchy;
-- guest/auth boundary;
-- loading/empty/error/offline state;
-- mobile/desktop/native parity;
-- accessibility;
-- localization;
-- performance;
-- duplication of components or domain concepts.
-
-A screen that should be merged or removed must not receive a cosmetic polish
-first.
-
-## 7. QA contract
-
-Visual changes require evidence, not only tests.
-
-For web/public-entry/map work:
-
-- Chromium + Firefox;
-- desktop + phone widths;
-- EN + SL where copy affects layout;
-- light + dark;
-- 200% zoom;
-- reduced motion;
-- keyboard/focus;
-- slow bootstrap/no-JS public entity;
-- WebGL unavailable/degraded map fallback.
-
-For native:
-
-- Android phone baseline;
-- safe areas and keyboard;
-- deep-link cold/warm start;
-- low-memory/back-stack recovery;
-- permission-denied paths for location/camera.
-
-Keep screenshots or structured visual evidence with the work when practical.
+Visual changes require screenshots of the relevant before/after states. Public web work covers Chromium and Firefox, desktop/phone, EN/SL, light/dark, 200% zoom, reduced motion, keyboard, slow/no JS and failed map/bootstrap. Native work includes Android safe areas, keyboard, deep links and permission-denied paths. Tests alone do not prove visual continuity.

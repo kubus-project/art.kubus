@@ -1,78 +1,29 @@
-# art.kubus — Claude Code entrypoint
+# art.kubus — agent entrypoint
 
-Last updated: 2026-09-21.
+Reviewed 2026-09-22. Read `AGENTS.md` and nested instructions before editing. The **single canonical master roadmap** is `docs/PRODUCT_UX_SEO_PROGRAM.md`; `docs/AGENT_EXECUTION_PLAN.md` supplies the bounded wave package and stop conditions. Read both before SEO, public entry, map, broad UI, institution, editorial, admin/DAO or spatial-delivery work. This documentation pass is Wave 0; it does not implement the product redesign.
 
-Read this file first, then `AGENTS.md`. The implementation rules in `AGENTS.md`
-remain binding; this file records the current cross-repository product/design
-programme so Claude agents do not optimize against stale July-era UI assumptions.
+## Source of truth
 
-## Current programme
+1. Current explicit user instruction and fetched repository/source state.
+2. `docs/PRODUCT_UX_SEO_PROGRAM.md` — dependencies and ownership; `docs/AGENT_EXECUTION_PLAN.md` — scoped work and acceptance.
+3. `docs/DESIGN_SYSTEM_V2.md` — final family v5 application; public websites' mirrored `docs/WEB-FAMILY.md` v5 is the approved type/visual reference.
+4. `docs/APP_NATIVE_PUBLIC_ENTRY.md`, `docs/seo-public-pages.md`, `docs/seo/domain-ownership.md`, `docs/public-entry-access-policy.md` — entity, renderer, URL and auth boundaries.
+5. `docs/engineering/branching-and-deployment.md` — branch/CI/release rules.
 
-The next major work is a staged **public-entry + SEO + UI/UX consolidation**.
-Do not treat it as a generic visual refresh.
+Re-fetch before implementation. At this review, `art.kubus` `dev@35db11ee`, WORLD `art.kubus.site@redesign/a1-foundation@1ca922c6` (PR #17), and TIME `kubus.site@redesign/k1-foundation@8174330c` (PR #3). **Old public-site master visuals are not references.** Preserve current verified work on those branches.
 
-Canonical planning documents:
+## Family and PRODUCT
 
-1. `docs/PRODUCT_UX_SEO_PROGRAM.md` — ordered programme and agent waves.
-2. `docs/DESIGN_SYSTEM_V2.md` — current design-family direction.
-3. `docs/APP_NATIVE_PUBLIC_ENTRY.md` — app.kubus.site entity-entry contract.
-4. `docs/seo-public-pages.md` — current renderer / technical SEO architecture.
-5. `docs/seo/domain-ownership.md` — domain and route ownership.
-6. `docs/public-entry-access-policy.md` — public-read vs authenticated-action boundary.
-7. `docs/engineering/branching-and-deployment.md` — branch/CI/deployment governance.
+TIME (`kubus.site`), WORLD (`art.kubus.site`), PRODUCT (`app.kubus.site`/native art.kubus) and INFRASTRUCTURE (`node.kubus.site` public website; `kubus-node` runtime) are siblings. PRODUCT uses platform-native app bars, navigation, rails, safe areas, sheets, forms and map chrome. It does not copy WORLD's right-two-thirds editorial layout. Sofia Sans carries content and major interface text. Space Mono is an approved **structural/system register** for current family identity/controls/notions/ordinals/selected metadata and exact machine values; it is neither machine-only nor a blanket uppercase style. Brand prose remains lowercase.
 
-## Visual reference branches
+WORLD's proven MapLibre globe, explicit camera ownership, continuous drag/pinch/scroll, canonical markers, dot→pin→cover LOD, bounded covers, selection continuity and in-place theme switching are behaviour references. Flutter's existing `KubusMapController`, `MapLayersManager` and `KubusMapMarkerSyncEngine` remain the technical owners. Test globe capability before implementation; never create a parallel map.
 
-Do not use the old public-site `master` layouts as the redesign target.
+## Public ownership and sequence
 
-The current reference work is:
+`kubus.site` owns research/history. `art.kubus.site` owns acquisition, geography, guides, city/editorial and participation explanation. `app.kubus.site` owns canonical public entities and product interactions. `node.kubus.site` visitors are not `kubus-node` fleet telemetry.
 
-- `kubus-project/art.kubus.site@redesign/a1-foundation`
-  - WORLD / spatial-first direction;
-  - Sofia Sans + Space Mono;
-  - flat structural surfaces, hairlines, asymmetric editorial composition;
-  - MapLibre globe, camera-continuity QA, canonical marker sprites;
-  - marker LOD: dot → canonical icon → cover image at high zoom.
-- `kubus-project/kubus.site@redesign/k1-foundation`
-  - TIME direction;
-  - same family typography / semantic structural roles;
-  - no generic marketing cards, glass-first surfaces, bento layouts or decorative gradients.
-- `kubus-project/kubus-node`
-  - INFRASTRUCTURE/operator surface;
-  - functional density is allowed, but it remains part of the same family.
+Start with the **read-only** SEO/data audit. Keep semantic entity HTML, metadata, JSON-LD, no-JS and true 404/503, but make it the first PRODUCT frame. Current backend HTML is a generic Inter/header/card/CTA renderer; current web takeover has a synthetic 1500 ms readiness event; current artwork creator query can prefer uploader profile to artist. These are documented implementation defects. Exact entity screen readiness, separated authorship/contribution/provenance, same canonical URL and later verified Android links are target work, not completed facts.
 
-The app is the PRODUCT surface. It should share the family grammar without
-copying an editorial website layout.
+Audit every task/screen before broad polish. Classify KEEP/REFINE/REDESIGN/MERGE/REMOVE; do not polish REMOVE. Institution model/workspace, existing editorial CMS, participation funnels, admin/DAO lifecycle, Ljubljana field sessions and spatial derivative delivery follow the roadmap gates. Do not mass-deindex, change canonical policy, mutate production data or build a third CMS as incidental work.
 
-## Priority order
-
-1. Ground and audit existing SEO/public-entry/data quality.
-2. Redesign canonical `app.kubus.site` entity entry so the semantic first frame
-   already looks and behaves like the app.
-3. Make canonical web URLs open the native app directly where platform link
-   verification allows it.
-4. Bring the app map to the WORLD model: globe + coherent marker LOD + cover
-   markers at close zoom, reusing the art.kubus.site implementation contract
-   rather than inventing another renderer model.
-5. Run a complete screen/task-flow UI/UX audit and then perform the deep polish.
-6. Only after that, consolidate QA/moderation/editorial/governance systems across
-   admin and in-app DAO surfaces.
-
-## Hard rules for the programme
-
-- Preserve semantic server-rendered entity HTML for crawlability and real HTTP
-  status codes. The goal is to make it **indistinguishable from the app's first
-  public frame**, not to delete SEO HTML.
-- No generic SEO bridge page, marketing header/footer, or duplicate
-  "Explore/Open in app" experience before the actual entity.
-- The canonical localized entity URL remains the browser URL during web
-  takeover and is also the platform-native deep-link URL.
-- No user-agent cloaking.
-- No second map/marker system. Reuse `KubusMapController`,
-  `MapLayersManager`, canonical marker assets and shared data contracts.
-- No broad screen restyling before the audit has classified KEEP / REFINE /
-  REDESIGN / MERGE / REMOVE.
-- Do not preserve obsolete pre-launch flows merely for compatibility. Replace
-  cleanly when the new contract is proven and tested.
-- Visual changes require screenshot evidence on desktop + mobile and Chromium +
-  Firefox for web-facing work.
+Agents must name the current state, files owned and excluded, exact data contract, tests, screenshot evidence and a stop condition before changing code. Do not merge or deploy without authorization.

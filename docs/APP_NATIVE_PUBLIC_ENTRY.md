@@ -1,7 +1,7 @@
 # app.kubus.site — app-native public entity entry
 
 Status: **target architecture for the next SEO/web phase**
-Last updated: 2026-09-21.
+Last updated: 2026-09-22. Implementation package: `AGENT_EXECUTION_PLAN.md` Wave 2; native association is Wave 3.
 
 ## 1. Problem
 
@@ -73,6 +73,18 @@ product URL.
 Refactor `art.kubus-backend/src/services/seoPublicPagesService.js` so entity
 responses render the same hierarchy as the corresponding app detail.
 
+Current implementation evidence: `seoPublicPagesService.js` uses Inter, an
+independent header/footer, rounded hero/related cards and strings such as
+“Explore this artwork” and “Open interactive artist profile”. The target is
+PRODUCT composition, not WORLD's editorial two-thirds layout. The current
+backend `seoPublicPagesRepository.js` can select
+`COALESCE(profile.display_name, profile.username, artwork.artist_name)`;
+that can show an uploader as artist. The normalized presentation must keep
+**artwork authorship** (artist/attributed/unknown), **platform contribution**
+(uploaded/documented/managed by) and **provenance** (source URL/ID,
+verification, image photographer/Commons credit) separate. Missing authorship
+stays unknown; do not infer it from the account.
+
 Remove the generic marketing-page treatment:
 
 - no separate marketing site header;
@@ -96,13 +108,15 @@ same product information hierarchy as Flutter.
 
 ## 5. Bootstrap and data continuity
 
-The semantic response should embed a safe serialized public entity bootstrap
+The semantic response should embed a versioned, escaped, size-bounded public
+entity bootstrap
 payload derived from the same normalized presentation used to render HTML.
 
 Flutter startup should:
 
 1. parse the canonical localized route;
-2. consume the bootstrap payload when it matches type + stable ID + path;
+2. consume the bootstrap payload only when its type + stable ID + locale +
+   canonical path (and validity marker) match; otherwise fetch normally;
 3. render the exact entity without an avoidable duplicate fetch;
 4. revalidate in the background where necessary;
 5. signal readiness only after the correct entity frame is meaningful.
@@ -110,7 +124,15 @@ Flutter startup should:
 This reduces the visual/time gap between HTML and Flutter.
 
 The serialized payload is public entity data only. Never include auth/session
-state, private moderation fields or secrets.
+state, private moderation fields, unpublished content or secrets. Escaping
+must prevent a script terminator or untrusted markup from changing the page.
+The existing route/parser owners include
+`lib/services/share/share_deep_link_parser.dart`,
+`lib/core/deep_link_startup_routing.dart`,
+`lib/core/deep_link_bootstrap_screen.dart`,
+`lib/providers/public_entity_takeover_provider.dart` and
+`lib/widgets/public_entity_takeover_ready.dart`; inspect their actual
+contracts before modifying the handoff.
 
 ## 6. Takeover correctness
 
@@ -134,7 +156,7 @@ same layout/token contract.
 
 ### Android
 
-The app already declares verified links for compact/legacy path families, but
+The app already declares `autoVerify` links for compact/legacy path families, but
 the manifest must also claim the actual localized canonical families used by
 search results.
 
@@ -185,6 +207,10 @@ Do not mass-deindex blindly. Introduce a measured quality tier and roll out
 When a map marker is merely the spatial representation of an artwork, the
 artwork should own the search canonical. A marker should have an independent
 indexable document only when it is genuinely a distinct public entity/place.
+The “875 URLs” in an earlier performance export were URLs with impressions,
+**not** the indexed count. Near-10k indexed overall is a separate Search
+Console baseline to refresh. Audit first; do not change `seoIndexingPolicy.js`
+or mass-deindex in the entry implementation package.
 
 ## 10. Acceptance
 

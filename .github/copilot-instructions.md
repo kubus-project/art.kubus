@@ -14,12 +14,20 @@ Ship production-ready art.kubus product changes without breaking:
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
 
-For UI, map, SEO or public-entry work, also read `CLAUDE.md`,
-`docs/PRODUCT_UX_SEO_PROGRAM.md`, `docs/DESIGN_SYSTEM_V2.md` and
-`docs/APP_NATIVE_PUBLIC_ENTRY.md`. The current visual references are
+For SEO, public-entry, map, broad UI, institution, editorial, DAO or spatial
+delivery work, read `CLAUDE.md`, the canonical
+`docs/PRODUCT_UX_SEO_PROGRAM.md` roadmap, and the matching
+`docs/AGENT_EXECUTION_PLAN.md` package before editing. Then read the relevant
+design/domain contract. The current visual references are
 `art.kubus.site@redesign/a1-foundation` (WORLD) and
 `kubus.site@redesign/k1-foundation` (TIME), not their older master-site
 appearance.
+
+Family contract v5 keeps Sofia Sans for content and Space Mono for deliberate
+structural/system language, including current family identity, controls,
+notions, ordinals, selected metadata and technical values. It is not
+machine-data-only or blanket uppercase mono. PRODUCT retains native app
+navigation rather than the public website shell.
 
 Do not remove semantic public-entity HTML in favor of a Flutter-only SEO
 surface. Make semantic HTML the app-native first frame and keep the same
