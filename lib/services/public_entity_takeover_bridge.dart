@@ -21,3 +21,6 @@ void dispatchPublicEntityReady({
 }) {
   implementation.dispatchPublicEntityReady(type: type, id: id, path: path);
 }
+
+Map<String, dynamic>? readPublicEntityBootstrap() =>
+    implementation.readPublicEntityBootstrap();

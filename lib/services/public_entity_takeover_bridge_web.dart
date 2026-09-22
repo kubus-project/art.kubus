@@ -19,6 +19,20 @@ void dispatchPublicEntityReady({
   _dispatch('kubus:public-entity-ready', type: type, id: id, path: path);
 }
 
+Map<String, dynamic>? readPublicEntityBootstrap() {
+  final element = web.document.getElementById('kubus-public-entity-bootstrap');
+  final text = element?.textContent;
+  if (text == null || text.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(text);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
 void _dispatch(
   String eventName, {
   required String type,

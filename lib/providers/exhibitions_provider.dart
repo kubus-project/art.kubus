@@ -50,6 +50,32 @@ class ExhibitionsProvider extends ChangeNotifier {
   Exhibition? get selectedExhibition => _selected;
   Exhibition? exhibitionById(String id) => _byId[id.trim()];
 
+  /// Adds a public SSR presentation to the existing exhibition cache without
+  /// marking it detail-hydrated, so the detail endpoint still revalidates it.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final dates = presentation['dates'];
+    final dateMap = dates is Map ? Map<String, dynamic>.from(dates) : const <String, dynamic>{};
+    final place = presentation['place'];
+    final placeMap = place is Map ? Map<String, dynamic>.from(place) : const <String, dynamic>{};
+    final media = presentation['primaryMedia'];
+    final mediaMap = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final exhibition = Exhibition.fromJson(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'description': presentation['description']?.toString() ?? '',
+      'starts_at': dateMap['start'],
+      'ends_at': dateMap['end'],
+      'location_name': placeMap['label'],
+      'lat': placeMap['latitude'],
+      'lng': placeMap['longitude'],
+      'cover_url': mediaMap['url'],
+      'status': 'published',
+    });
+    if (exhibition.id.trim().isNotEmpty && exhibition.title.trim().isNotEmpty) {
+      _upsert(exhibition, notify: true, detailHydrated: false);
+    }
+  }
+
   /// Whether [exhibitionById] would return a detail-loaded record for [id].
   bool isExhibitionDetailHydrated(String id) =>
       _detailHydratedIds.contains(id.trim());

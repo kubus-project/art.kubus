@@ -129,6 +129,60 @@ class ArtworkProvider extends ChangeNotifier {
   /// Get artwork by ID
   Artwork? getArtworkById(String id) => _artworkById[id];
 
+  /// Seeds the normal detail cache from the server's public presentation.
+  /// The caller revalidates this value in the background; private/account
+  /// fields are intentionally not part of this conversion.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final media = presentation['primaryMedia'];
+    final primaryMedia = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final authorship = presentation['authorship'];
+    final artist = authorship is Map ? (authorship['name']?.toString() ?? '') : '';
+    final place = presentation['place'];
+    final placeData = place is Map ? Map<String, dynamic>.from(place) : const <String, dynamic>{};
+    final provenance = presentation['provenance'];
+    final provenanceData = provenance is Map
+        ? Map<String, dynamic>.from(provenance)
+        : const <String, dynamic>{};
+    final imageCredit = provenanceData['imageCredit'];
+    final imageCreditData = imageCredit is Map
+        ? Map<String, dynamic>.from(imageCredit)
+        : const <String, dynamic>{};
+    final source = provenanceData['source'];
+    final sourceData = source is Map
+        ? Map<String, dynamic>.from(source)
+        : const <String, dynamic>{};
+    final latitude = placeData['latitude'];
+    final longitude = placeData['longitude'];
+    final artwork = Artwork.fromMap(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'artist': artist,
+      'description': presentation['description']?.toString() ?? '',
+      'imageUrl': primaryMedia['url'],
+      'latitude': latitude is num ? latitude.toDouble() : 0.0,
+      'longitude': longitude is num ? longitude.toDouble() : 0.0,
+      'isPublic': true,
+      'isActive': true,
+      'isNft': false,
+      'category': 'Public artwork',
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'metadata': <String, dynamic>{
+        if (imageCreditData['credit'] != null)
+          'imageAuthor': imageCreditData['credit'],
+        if (imageCreditData['license'] != null)
+          'imageLicense': imageCreditData['license'],
+        if (imageCreditData['sourceUrl'] != null)
+          'imageSourceUrl': imageCreditData['sourceUrl'],
+        if (sourceData['name'] != null) 'sourceName': sourceData['name'],
+        if (sourceData['id'] != null) 'sourceId': sourceData['id'],
+        if (sourceData['url'] != null) 'sourceUrl': sourceData['url'],
+      },
+    });
+    if (artwork.id.trim().isNotEmpty && artwork.title.trim().isNotEmpty) {
+      addOrUpdateArtwork(artwork, retainWhenListRefresh: true);
+    }
+  }
+
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
     final key = artworkId.trim();

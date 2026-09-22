@@ -17,6 +17,7 @@ class CollectionsProvider extends ChangeNotifier {
   String? _listError;
 
   final Map<String, CollectionRecord> _byId = <String, CollectionRecord>{};
+  final Set<String> _publicBootstrapSeededIds = <String>{};
   final Set<String> _loadingIds = <String>{};
   final Map<String, String> _errorsById = <String, String>{};
 
@@ -26,6 +27,27 @@ class CollectionsProvider extends ChangeNotifier {
   String? get listError => _listError;
 
   CollectionRecord? getCollectionById(String id) => _byId[id.trim()];
+
+  /// Seeds the regular collection cache from public SSR data. The next detail
+  /// request revalidates this seed while the current screen can paint it.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final media = presentation['primaryMedia'];
+    final mediaMap = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final count = presentation['itemCount'];
+    final record = CollectionRecord.fromMap(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'name': presentation['title']?.toString() ?? '',
+      'description': presentation['description']?.toString() ?? '',
+      'thumbnailUrl': mediaMap['url'],
+      'artwork_count': count is num ? count.toInt() : 0,
+      'is_public': true,
+      'artworks': const <dynamic>[],
+    });
+    if (record.id.trim().isEmpty || record.name.trim().isEmpty) return;
+    _upsertCollection(record);
+    _publicBootstrapSeededIds.add(record.id.trim());
+    notifyListeners();
+  }
 
   CollectionRecord? findLikelyCollectionByNameAndWallet({
     required String name,
@@ -81,13 +103,17 @@ class CollectionsProvider extends ChangeNotifier {
       {bool force = false}) async {
     final collectionId = id.trim();
     if (collectionId.isEmpty) return null;
-    if (!force && _byId.containsKey(collectionId)) return _byId[collectionId];
+    if (!force && _byId.containsKey(collectionId) &&
+        !_publicBootstrapSeededIds.remove(collectionId)) {
+      return _byId[collectionId];
+    }
 
     _setLoading(collectionId, true);
     _errorsById.remove(collectionId);
 
     try {
       final record = await _loadCollection(collectionId);
+      _publicBootstrapSeededIds.remove(collectionId);
       notifyListeners();
       return record;
     } catch (e) {

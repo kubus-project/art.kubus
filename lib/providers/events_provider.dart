@@ -46,6 +46,34 @@ class EventsProvider extends ChangeNotifier {
   KubusEvent? get selectedEvent => _selected;
   KubusEvent? eventById(String id) => _byId[id.trim()];
 
+  /// Adds a public SSR presentation to the existing event cache without
+  /// marking it detail-hydrated, so the detail endpoint still revalidates it.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final dates = presentation['dates'];
+    final dateMap = dates is Map ? Map<String, dynamic>.from(dates) : const <String, dynamic>{};
+    final place = presentation['place'];
+    final placeMap = place is Map ? Map<String, dynamic>.from(place) : const <String, dynamic>{};
+    final media = presentation['primaryMedia'];
+    final mediaMap = media is Map ? Map<String, dynamic>.from(media) : const <String, dynamic>{};
+    final event = KubusEvent.fromJson(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'description': presentation['description']?.toString() ?? '',
+      'starts_at': dateMap['start'],
+      'ends_at': dateMap['end'],
+      'location_name': placeMap['label'],
+      'city': placeMap['city'],
+      'country': placeMap['country'],
+      'latitude': placeMap['latitude'],
+      'longitude': placeMap['longitude'],
+      'cover_url': mediaMap['url'],
+      'status': 'published',
+    });
+    if (event.id.trim().isNotEmpty && event.title.trim().isNotEmpty) {
+      _upsertEvent(event, notify: true, detailHydrated: false);
+    }
+  }
+
   /// Whether [eventById] would return a detail-loaded record for [id].
   bool isEventDetailHydrated(String id) =>
       _detailHydratedIds.contains(id.trim());
