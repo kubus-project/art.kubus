@@ -375,11 +375,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
-                final details = _EventDetailsCard(
-                  event: event,
-                  exhibitionsCount: exhibitions.length,
-                  publicDesktopLayout: isCanonicalPublicEntry && isWide,
-                );
                 final secondaryActions = DetailSecondaryActionCluster(
                   maxVisible: 5,
                   actions: [
@@ -439,6 +434,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     ),
                   ],
                 );
+                final details = _EventDetailsCard(
+                  event: event,
+                  exhibitionsCount: exhibitions.length,
+                  publicDesktopLayout: isCanonicalPublicEntry && isWide,
+                  publicCompactEntry: isCanonicalPublicEntry && !isWide,
+                  afterDescription: isCanonicalPublicEntry && !isWide
+                      ? secondaryActions
+                      : null,
+                );
 
                 final eventPoapCard = _EventPoapCard(
                   poap: eventPoap,
@@ -478,7 +482,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   ],
                   if (isCanonicalPublicEntry) ...[
                     const SizedBox(height: DetailSpacing.cardGap),
-                    secondaryActions,
+                    if (isWide) secondaryActions,
                   ],
                   const SizedBox(height: DetailSpacing.cardGap),
                   eventPoapCard,
@@ -557,11 +561,15 @@ class _EventDetailsCard extends StatelessWidget {
   const _EventDetailsCard(
       {required this.event,
       required this.exhibitionsCount,
-      this.publicDesktopLayout = false});
+      this.publicDesktopLayout = false,
+      this.publicCompactEntry = false,
+      this.afterDescription});
 
   final KubusEvent event;
   final int exhibitionsCount;
   final bool publicDesktopLayout;
+  final bool publicCompactEntry;
+  final Widget? afterDescription;
 
   @override
   Widget build(BuildContext context) {
@@ -597,10 +605,12 @@ class _EventDetailsCard extends StatelessWidget {
                 l10n.commonUnknown,
           );
 
-    // The poster leads mobile content. Wide public entry keeps it alongside
-    // identity, matching the server-rendered first frame.
+    // Public canonical entry keeps identity and event context ahead of its
+    // media at compact widths, matching the server-rendered first frame.
+    // Ordinary in-app event detail retains its established poster-first order.
     final coverBlock = (coverUrl != null && coverUrl.isNotEmpty)
         ? ClipRRect(
+            key: const ValueKey<String>('public-event-cover'),
             borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: AspectRatio(
               aspectRatio: publicDesktopLayout ? 0.73 : 16 / 9,
@@ -730,7 +740,7 @@ class _EventDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (coverBlock != null) ...[
+        if (!publicCompactEntry && coverBlock != null) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
@@ -745,6 +755,14 @@ class _EventDetailsCard extends StatelessWidget {
               text: event.description!.trim(),
             ),
           ),
+        ],
+        if (afterDescription != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          afterDescription!,
+        ],
+        if (publicCompactEntry && coverBlock != null) ...[
+          const SizedBox(height: DetailSpacing.heroGap),
+          coverBlock,
         ],
       ],
     );

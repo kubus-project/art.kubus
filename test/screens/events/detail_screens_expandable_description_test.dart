@@ -16,6 +16,7 @@ import 'package:art_kubus/screens/events/exhibition_list_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/services/collab_api.dart';
 import 'package:art_kubus/widgets/detail/expandable_detail_text.dart';
+import 'package:art_kubus/widgets/detail/detail_shell_primitives.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -235,6 +236,76 @@ void main() {
 
     expect(find.text(l10n.detailShowLess), findsOneWidget);
     await _settleNetwork(tester);
+  });
+
+  testWidgets(
+      'compact canonical event keeps identity and context before its media',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const title = 'Art by the River';
+    const description =
+        'A public walk connecting artworks, artists and river landscapes.';
+    final event = KubusEvent(
+      id: 'ev-public',
+      title: title,
+      description: description,
+      coverUrl: 'https://example.test/event-cover.jpg',
+      locationName: 'Špica',
+      city: 'Ljubljana',
+      startsAt: DateTime.utc(2026, 9, 12),
+      status: 'published',
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        child: DesktopShellScope(
+          pushScreen: (_) {},
+          popScreen: () {},
+          navigateToRoute: (_) {},
+          openNotifications: () {},
+          openFunctionsPanel: (_, {content}) {},
+          setFunctionsPanelContent: (_) {},
+          closeFunctionsPanel: () {},
+          canPop: false,
+          isCanonicalPublicEntry: true,
+          child: EventDetailScreen(eventId: event.id, initialEvent: event),
+        ),
+      ),
+    );
+    await _settleNetwork(tester);
+
+    final cover = find.byKey(const ValueKey<String>('public-event-cover'));
+    expect(find.text(title), findsOneWidget);
+    expect(find.text(description), findsOneWidget);
+    expect(cover, findsOneWidget);
+    expect(tester.getTopLeft(cover).dy,
+        greaterThan(tester.getTopLeft(find.text(description)).dy));
+  });
+
+  testWidgets('ordinary compact event retains its existing media-first order',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final event = KubusEvent(
+      id: 'ev-in-app',
+      title: 'In-app Event',
+      coverUrl: 'https://example.test/event-cover.jpg',
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        child: EventDetailScreen(eventId: event.id, initialEvent: event),
+      ),
+    );
+    await _settleNetwork(tester);
+
+    final cover = find.byKey(const ValueKey<String>('public-event-cover'));
+    expect(cover, findsOneWidget);
+    expect(tester.getTopLeft(cover).dy,
+        lessThan(tester.getTopLeft(find.byType(DetailIdentityBlock)).dy));
   });
 
   testWidgets('ExhibitionListScreen create header uses a LiquidGlass surface',
