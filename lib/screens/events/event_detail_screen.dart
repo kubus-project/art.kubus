@@ -375,11 +375,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
-                final secondaryActions = DetailSecondaryActionCluster(
-                  maxVisible: 5,
-                  actions: [
-                    if (event.lat != null && event.lng != null)
-                      DetailSecondaryAction(
+                final mapAction = event.lat != null && event.lng != null
+                    ? DetailSecondaryAction(
                         icon: Icons.map_outlined,
                         label: l10n.commonOpenOnMap,
                         onTap: () {
@@ -391,7 +388,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           );
                         },
                         tooltip: l10n.commonOpenOnMap,
-                      ),
+                      )
+                    : null;
+                final publicCompactMapAction =
+                    isCanonicalPublicEntry && !isWide && mapAction != null
+                        ? DetailSecondaryActionCluster(
+                            maxVisible: 1,
+                            actions: [mapAction],
+                          )
+                        : null;
+                final secondaryActions = DetailSecondaryActionCluster(
+                  maxVisible: 5,
+                  actions: [
+                    if (mapAction != null && publicCompactMapAction == null)
+                      mapAction,
                     if (canPromote)
                       DetailSecondaryAction(
                         icon: Icons.campaign_outlined,
@@ -437,11 +447,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 final details = _EventDetailsCard(
                   event: event,
                   exhibitionsCount: exhibitions.length,
+                  publicEntry: isCanonicalPublicEntry,
                   publicDesktopLayout: isCanonicalPublicEntry && isWide,
                   publicCompactEntry: isCanonicalPublicEntry && !isWide,
-                  afterDescription: isCanonicalPublicEntry && !isWide
-                      ? secondaryActions
-                      : null,
+                  afterDescription: publicCompactMapAction,
                 );
 
                 final eventPoapCard = _EventPoapCard(
@@ -482,7 +491,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   ],
                   if (isCanonicalPublicEntry) ...[
                     const SizedBox(height: DetailSpacing.cardGap),
-                    if (isWide) secondaryActions,
+                    secondaryActions,
                   ],
                   const SizedBox(height: DetailSpacing.cardGap),
                   eventPoapCard,
@@ -561,12 +570,14 @@ class _EventDetailsCard extends StatelessWidget {
   const _EventDetailsCard(
       {required this.event,
       required this.exhibitionsCount,
+      this.publicEntry = false,
       this.publicDesktopLayout = false,
       this.publicCompactEntry = false,
       this.afterDescription});
 
   final KubusEvent event;
   final int exhibitionsCount;
+  final bool publicEntry;
   final bool publicDesktopLayout;
   final bool publicCompactEntry;
   final Widget? afterDescription;
@@ -638,15 +649,18 @@ class _EventDetailsCard extends StatelessWidget {
     // Identity reads as open typography on the page; only the practical
     // metadata sits in a calm card below it.
     Widget buildIdentityBlock(double availableWidth) {
-      final titleStyle = publicDesktopLayout
+      final titleStyle = publicDesktopLayout || publicCompactEntry
           ? KubusTextStyles.responsiveTitleStyle(
               context,
               KubusTypography.content(
-                fontSize: 64,
+                fontSize: publicDesktopLayout ? 64 : 40,
                 fontWeight: FontWeight.w700,
               ),
               availableWidth: availableWidth,
-            ).copyWith(height: 1.02, letterSpacing: -0.65)
+            ).copyWith(
+              height: 1.02,
+              letterSpacing: publicDesktopLayout ? -0.65 : -0.4,
+            )
           : null;
       return DetailIdentityBlock(
         title: event.title,
@@ -665,24 +679,26 @@ class _EventDetailsCard extends StatelessWidget {
               DetailMetaItem(icon: Icons.schedule, label: dateRange),
             if (location != null)
               DetailMetaItem(icon: Icons.place_outlined, label: location),
-            if ((event.status ?? '').trim().isNotEmpty)
+            if (!publicEntry && (event.status ?? '').trim().isNotEmpty)
               DetailMetaItem(
                 icon: Icons.event_available_outlined,
                 label: _labelForStatus(l10n, event.status),
               ),
           ],
         ),
-        const SizedBox(height: DetailSpacing.lg),
-        DetailContextCluster(
-          compact: true,
-          items: [
-            DetailContextItem(
-              icon: AppColorUtils.exhibitionIcon,
-              value: '$exhibitionsCount',
-              label: l10n.eventDetailLinkedExhibitionsLabel,
-            ),
-          ],
-        ),
+        if (!publicEntry) ...[
+          const SizedBox(height: DetailSpacing.lg),
+          DetailContextCluster(
+            compact: true,
+            items: [
+              DetailContextItem(
+                icon: AppColorUtils.exhibitionIcon,
+                value: '$exhibitionsCount',
+                label: l10n.eventDetailLinkedExhibitionsLabel,
+              ),
+            ],
+          ),
+        ],
       ],
     );
     final overviewCard = publicDesktopLayout
@@ -744,7 +760,10 @@ class _EventDetailsCard extends StatelessWidget {
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
-        buildIdentityBlock(double.infinity),
+        LayoutBuilder(
+          builder: (context, constraints) =>
+              buildIdentityBlock(constraints.maxWidth),
+        ),
         const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
         if (hasDescription) ...[

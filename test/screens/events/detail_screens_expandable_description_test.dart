@@ -201,6 +201,8 @@ void main() {
         greaterThan(tester.getTopLeft(find.text(title)).dy));
     expect(tester.getTopLeft(media).dy,
         greaterThan(tester.getTopLeft(find.text(description)).dy));
+    expect(tester.widget<Text>(find.text(title)).style?.fontSize,
+        greaterThanOrEqualTo(32));
   });
 
   testWidgets('EventDetailScreen clamps a long description and expands it',
@@ -254,6 +256,8 @@ void main() {
       coverUrl: 'https://example.test/event-cover.jpg',
       locationName: 'Špica',
       city: 'Ljubljana',
+      lat: 46.05,
+      lng: 14.5,
       startsAt: DateTime.utc(2026, 9, 12),
       status: 'published',
     );
@@ -279,9 +283,18 @@ void main() {
     final cover = find.byKey(const ValueKey<String>('public-event-cover'));
     expect(find.text(title), findsOneWidget);
     expect(find.text(description), findsOneWidget);
+    expect(tester.widget<Text>(find.text(title)).style?.fontSize,
+        greaterThanOrEqualTo(32));
     expect(cover, findsOneWidget);
+    final mapAction = find.text(
+      AppLocalizations.of(tester.element(find.byType(EventDetailScreen)))!
+          .commonOpenOnMap,
+    );
+    expect(mapAction, findsOneWidget);
     expect(tester.getTopLeft(cover).dy,
         greaterThan(tester.getTopLeft(find.text(description)).dy));
+    expect(
+        tester.getTopLeft(mapAction).dy, lessThan(tester.getTopLeft(cover).dy));
   });
 
   testWidgets('ordinary compact event retains its existing media-first order',

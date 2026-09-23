@@ -1569,7 +1569,17 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               fontSize: 64,
               fontWeight: FontWeight.w700,
             ).copyWith(height: 1.02, letterSpacing: -0.65)
-          : null,
+          : publicCompactIdentityFirst
+              ? KubusTextStyles.responsiveTitleStyle(
+                  context,
+                  KubusTypography.content(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  availableWidth:
+                      MediaQuery.sizeOf(context).width - DetailSpacing.lg * 2,
+                ).copyWith(height: 1.02, letterSpacing: -0.4)
+              : null,
     );
 
     final overviewContent = Column(
