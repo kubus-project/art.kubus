@@ -39,6 +39,7 @@ import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
+import '../desktop_shell_scope.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -258,6 +259,11 @@ class _DesktopArtworkDetailScreenState
         }
 
         _scheduleTakeoverReady(artwork.id);
+        final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+          context,
+          type: 'artwork',
+          id: artwork.id,
+        );
         final coverUrl = ArtworkMediaResolver.resolveCover(
           artwork: artwork,
           metadata: artwork.metadata,
@@ -279,6 +285,7 @@ class _DesktopArtworkDetailScreenState
             coverUrl: coverUrl,
             artworkProvider: artworkProvider,
             isSignedIn: isSignedIn,
+            isCanonicalPublicEntry: isCanonicalPublicEntry,
           ),
         );
       },
@@ -290,6 +297,7 @@ class _DesktopArtworkDetailScreenState
     required String? coverUrl,
     required ArtworkProvider artworkProvider,
     required bool isSignedIn,
+    required bool isCanonicalPublicEntry,
   }) {
     final l10n = AppLocalizations.of(context)!;
 
@@ -302,7 +310,9 @@ class _DesktopArtworkDetailScreenState
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final useComposedHero = constraints.maxWidth >= 900;
+          final useComposedHero = constraints.maxWidth >= 900 ||
+              (isCanonicalPublicEntry &&
+                  MediaQuery.sizeOf(context).width >= 900);
           final publicPlaceLabel = _publicEntryPlaceLabel(artwork.id);
           final identity = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,6 +339,15 @@ class _DesktopArtworkDetailScreenState
               _buildActionsRow(artwork, artworkProvider, isSignedIn),
             ],
           );
+          final publicDesktopContext = isCanonicalPublicEntry
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    identity,
+                    _buildDescription(artwork),
+                  ],
+                )
+              : identity;
 
           return SingleChildScrollView(
             controller: _pageScrollController,
@@ -355,7 +374,7 @@ class _DesktopArtworkDetailScreenState
                             padding: const EdgeInsets.only(
                               top: DetailSpacing.lg,
                             ),
-                            child: identity,
+                            child: publicDesktopContext,
                           ),
                         ),
                       ],
@@ -366,7 +385,8 @@ class _DesktopArtworkDetailScreenState
                     identity,
                   ],
                   const SizedBox(height: DetailSpacing.cardGap),
-                  _buildDescription(artwork),
+                  if (!isCanonicalPublicEntry || !useComposedHero)
+                    _buildDescription(artwork),
                   _buildGallerySection(artwork, coverUrl),
                   Padding(
                     padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
