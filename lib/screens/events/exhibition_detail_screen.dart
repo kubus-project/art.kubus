@@ -1191,6 +1191,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       showAttendanceHint:
                           (widget.attendanceMarkerId ?? '').trim().isNotEmpty,
                       publicDesktopLayout: isCanonicalPublicEntry && isWide,
+                      publicCompactIdentityFirst:
+                          isCanonicalPublicEntry && !isWide,
                     ),
                     _buildAttendanceConfirmSection(),
                   ],
@@ -1419,6 +1421,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     this.isPoapLoading = false,
     this.canManage = false,
     this.publicDesktopLayout = false,
+    this.publicCompactIdentityFirst = false,
   });
 
   final Exhibition exhibition;
@@ -1430,6 +1433,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   final bool isPoapLoading;
   final bool canManage;
   final bool publicDesktopLayout;
+  final bool publicCompactIdentityFirst;
 
   @override
   Widget build(BuildContext context) {
@@ -1537,29 +1541,15 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    // Mobile keeps the cover above the details. Wide public entry places it
-    // beside identity to match the server-rendered first frame.
+    // Ordinary mobile details keep the cover above identity. Canonical public
+    // entry mirrors its server frame: identity and useful context lead, while
+    // wide desktop places media beside the identity block.
     final coverBlock = coverUrl != null
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: AspectRatio(
-              aspectRatio: publicDesktopLayout ? 0.73 : 16 / 9,
-              child: Image.network(
-                coverUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: publicDesktopLayout
-                      ? roles.surfaceRaised
-                      : scheme.surfaceContainerHighest,
-                  alignment: Alignment.center,
-                  child: Icon(Icons.broken_image_outlined,
-                      size: 48,
-                      color: publicDesktopLayout
-                          ? roles.foregroundSubtle
-                          : scheme.onSurface.withValues(alpha: 0.35)),
-                ),
-              ),
-            ),
+        ? _ExhibitionCoverFrame(
+            url: coverUrl,
+            title: exhibition.title,
+            portrait: publicDesktopLayout,
+            publicSurface: publicDesktopLayout || publicCompactIdentityFirst,
           )
         : null;
 
@@ -1734,7 +1724,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (coverBlock != null) ...[
+        if (coverBlock != null && !publicCompactIdentityFirst) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
@@ -1748,6 +1738,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         if (poapCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           poapCard,
+        ],
+        if (coverBlock != null && publicCompactIdentityFirst) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          coverBlock,
         ],
       ],
     );
@@ -1766,6 +1760,54 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     if (v == 'published') return l10n.commonPublished;
     if (v == 'draft') return l10n.commonDraft;
     return v;
+  }
+}
+
+class _ExhibitionCoverFrame extends StatelessWidget {
+  const _ExhibitionCoverFrame({
+    required this.url,
+    required this.title,
+    required this.portrait,
+    required this.publicSurface,
+  });
+
+  final String url;
+  final String title;
+  final bool portrait;
+  final bool publicSurface;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    return Semantics(
+      key: const ValueKey<String>('public-exhibition-cover'),
+      image: true,
+      label: title,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        child: AspectRatio(
+          aspectRatio: portrait ? 0.73 : 16 / 9,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: publicSurface
+                  ? roles.surfaceRaised
+                  : scheme.surfaceContainerHighest,
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.broken_image_outlined,
+                size: 48,
+                color: publicSurface
+                    ? roles.foregroundSubtle
+                    : scheme.onSurface.withValues(alpha: 0.35),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
