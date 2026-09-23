@@ -12,6 +12,23 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
 const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
+test('successful web release retains its host-side rollback command outside httpdocs', () => {
+  const action = deployAction();
+  assert.match(action, /\$RELEASE_ROOT\/host-scripts\/\$SOURCE_SHA\.sh/);
+  assert.match(action, /chmod 700 "\$RELEASE_ROOT\/host-scripts\/\$SOURCE_SHA\.sh"/);
+  assert.ok(action.indexOf('host-scripts/$SOURCE_SHA.sh') < action.lastIndexOf('rm -rf "$INCOMING_DIR"'));
+});
+
+test('Netcup artifact serves raw WebAssembly without precompressed rewrite companions', () => {
+  const artifactWorkflow = workflow('web-artifact.yml');
+  const htaccess = readFileSync(resolve(repositoryRoot, 'web/.htaccess'), 'utf8');
+  assert.match(artifactWorkflow, /Netcup-compatible WebAssembly/);
+  assert.match(artifactWorkflow, /-name '\*\.wasm\.br'/);
+  assert.match(artifactWorkflow, /-name '\*\.wasm\.gz'/);
+  assert.doesNotMatch(artifactWorkflow, /brotli -f|gzip -n -kf/);
+  assert.doesNotMatch(htaccess, /Content-Encoding br|Content-Encoding gzip|REQUEST_FILENAME\.br|REQUEST_FILENAME\.gz/);
+});
+
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
   assert.equal(result.docs, true);
@@ -88,14 +105,16 @@ test('PR validation is deployment-secret-free and has a stable aggregate', () =>
 test('branch deployments have isolated sources, environments, and concurrency', () => {
   const development = workflow('deploy-development.yml');
   const production = workflow('release-production.yml');
-  assert.match(development, /branches:\s*\n\s*- dev/);
+  assert.doesNotMatch(development, /\bpush:/);
   assert.match(development, /\bworkflow_dispatch:/);
+  assert.match(development, /test "\$SOURCE_REF" = refs\/heads\/dev/);
   assert.doesNotMatch(development, /\bpull_request:|\bpull_request_target:/);
   assert.match(development, /group:\s*deploy-development/);
   assert.match(development, /environment_name:\s*development-web/);
   assert.doesNotMatch(development, /production-web|branches:\s*\n\s*- master/);
   assert.doesNotMatch(development, /secrets:\s*inherit/);
-  assert.match(production, /branches:\s*\n\s*- master/);
+  assert.doesNotMatch(production, /\bpush:/);
+  assert.match(production, /test "\$SOURCE_REF" = refs\/heads\/master/);
   assert.match(production, /group:\s*deploy-production/);
   assert.match(production, /environment_name:\s*production-web/);
   assert.doesNotMatch(production, /development-web|branches:\s*\n\s*- dev/);
@@ -130,7 +149,7 @@ test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback
   assert.match(content, /atomic_web_release\.sh" rollback/);
   assert.match(
     content,
-    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Atomically promote prepared release[\s\S]*?atomic_web_release\.sh" promote/,
+    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Promote prepared physical release with guarded rollback[\s\S]*?atomic_web_release\.sh" promote/,
   );
   assert.match(content, /Verify production release is free of staging protection/);
   assert.doesNotMatch(content, /DEV_HTPASSWD_FILE|\/home\//);
@@ -191,7 +210,7 @@ test('composite deploy action is context-safe and fed environment config by its 
   );
 });
 
-test('production deployment forwards the WAF smoke-bypass secret to the production smoke', () => {
+test('Netcup callers do not forward the historical Domenca WAF bypass secret', () => {
   const action = deployAction();
   const production = workflow('release-production.yml');
   const development = workflow('deploy-development.yml');
@@ -207,9 +226,11 @@ test('production deployment forwards the WAF smoke-bypass secret to the producti
     /id: production_smoke[\s\S]*?SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}[\s\S]*?smoke_production_web\.sh/,
   );
 
-  // Both environment-bound callers forward the environment-scoped secret.
+  // The legacy token remains optional inside the action for a future measured
+  // Netcup filter, but no caller forwards the Domenca Environment secret.
   for (const caller of [production, development]) {
-    assert.match(caller, /smoke_bypass_token:\s*\$\{\{ secrets\.SMOKE_BYPASS_TOKEN \}\}/);
+    assert.match(caller, /smoke_bypass_token:\s*''/);
+    assert.doesNotMatch(caller, /secrets\.SMOKE_BYPASS_TOKEN/);
   }
 
   // The token is never exposed as a plain repository variable or echoed.
@@ -217,7 +238,7 @@ test('production deployment forwards the WAF smoke-bypass secret to the producti
   assert.doesNotMatch(action, /echo[^\n]*SMOKE_BYPASS_TOKEN/);
 });
 
-test('optional SSH smoke egress is opt-in, verified, and torn down for both environments', () => {
+test('optional SSH smoke egress remains verified but is disabled on Netcup callers', () => {
   const action = deployAction();
 
   // Declared optional input, defaulting off.
@@ -239,9 +260,10 @@ test('optional SSH smoke egress is opt-in, verified, and torn down for both envi
     'the egress tunnel must open before the production smoke',
   );
 
-  // Both environment-bound callers forward the flag from environment vars.
+  // Both Netcup callers disable the old optional remote DNS path.
   for (const name of ['deploy-development.yml', 'release-production.yml']) {
-    assert.match(workflow(name), /use_ssh_smoke_egress:\s*\$\{\{ vars\.USE_SSH_SMOKE_EGRESS \}\}/);
+    assert.match(workflow(name), /use_ssh_smoke_egress:\s*false/);
+    assert.doesNotMatch(workflow(name), /vars\.USE_SSH_SMOKE_EGRESS/);
   }
 });
 

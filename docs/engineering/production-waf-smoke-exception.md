@@ -1,5 +1,10 @@
 # Production post-deploy smoke: WAF exception setup
 
+> Historical Domenca LiteSpeed/Imunify360 incident runbook. The Netcup origin
+> has not shown this filter behavior. Do not apply these WHM/cPanel instructions
+> to Netcup; use the candidate-origin procedure in
+> [`branching-and-deployment.md`](branching-and-deployment.md).
+
 This document is the server-side runbook for letting the production release
 smoke reach `https://app.kubus.site` from a GitHub-hosted runner. It is the
 missing host-side half of the `SMOKE_BYPASS_TOKEN` / `X-Deploy-Smoke` mechanism
