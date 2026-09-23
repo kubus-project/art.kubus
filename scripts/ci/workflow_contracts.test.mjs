@@ -203,7 +203,7 @@ test('composite deploy action is context-safe and fed environment config by its 
   );
 });
 
-test('production deployment forwards the WAF smoke-bypass secret to the production smoke', () => {
+test('Netcup callers do not forward the historical Domenca WAF bypass secret', () => {
   const action = deployAction();
   const production = workflow('release-production.yml');
   const development = workflow('deploy-development.yml');
@@ -219,9 +219,11 @@ test('production deployment forwards the WAF smoke-bypass secret to the producti
     /id: production_smoke[\s\S]*?SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}[\s\S]*?smoke_production_web\.sh/,
   );
 
-  // Both environment-bound callers forward the environment-scoped secret.
+  // The legacy token remains optional inside the action for a future measured
+  // Netcup filter, but no caller forwards the Domenca Environment secret.
   for (const caller of [production, development]) {
-    assert.match(caller, /smoke_bypass_token:\s*\$\{\{ secrets\.SMOKE_BYPASS_TOKEN \}\}/);
+    assert.match(caller, /smoke_bypass_token:\s*''/);
+    assert.doesNotMatch(caller, /secrets\.SMOKE_BYPASS_TOKEN/);
   }
 
   // The token is never exposed as a plain repository variable or echoed.
@@ -229,7 +231,7 @@ test('production deployment forwards the WAF smoke-bypass secret to the producti
   assert.doesNotMatch(action, /echo[^\n]*SMOKE_BYPASS_TOKEN/);
 });
 
-test('optional SSH smoke egress is opt-in, verified, and torn down for both environments', () => {
+test('optional SSH smoke egress remains verified but is disabled on Netcup callers', () => {
   const action = deployAction();
 
   // Declared optional input, defaulting off.
@@ -251,9 +253,10 @@ test('optional SSH smoke egress is opt-in, verified, and torn down for both envi
     'the egress tunnel must open before the production smoke',
   );
 
-  // Both environment-bound callers forward the flag from environment vars.
+  // Both Netcup callers disable the old optional remote DNS path.
   for (const name of ['deploy-development.yml', 'release-production.yml']) {
-    assert.match(workflow(name), /use_ssh_smoke_egress:\s*\$\{\{ vars\.USE_SSH_SMOKE_EGRESS \}\}/);
+    assert.match(workflow(name), /use_ssh_smoke_egress:\s*false/);
+    assert.doesNotMatch(workflow(name), /vars\.USE_SSH_SMOKE_EGRESS/);
   }
 });
 

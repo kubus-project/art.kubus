@@ -200,9 +200,9 @@ Both web environments define separate values for these secrets:
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
 
-Optional per-environment secret `SMOKE_BYPASS_TOKEN`: leave unset for Netcup unless a measured Netcup-origin filter blocks CI and Netcup support provides a verified token-based exception. The smoke sends it only to the deployment origin. The old Domenca WAF procedure in [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md) is historical and must not be applied to Netcup without fresh evidence. The token value must never appear in a repository variable, source file, artifact, log, screenshot, or PR text.
+The Netcup callers pass no smoke bypass token. Remove the historical Domenca `SMOKE_BYPASS_TOKEN` Environment secret after validating the new candidate smoke. A future Netcup filter exception requires fresh evidence and a separately reviewed workflow change. The old Domenca WAF procedure in [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md) is historical. A token value must never appear in a repository variable, source file, artifact, log, screenshot, or PR text.
 
-Optional per-environment variable `USE_SSH_SMOKE_EGRESS`: set to `true` to route the post-deploy smoke through a verified SSH SOCKS tunnel to the deployment host, so it egresses from the host's own trusted IP instead of the runner's greylisted datacenter IP. This needs no host-admin change (only that the deploy user may open an SSH tunnel, i.e. `AllowTcpForwarding`), keeps GitHub-hosted runners, and is an optional fallback only if Netcup permits forwarding and direct candidate smoke is blocked. The tunnel is verified against `SFTP_HOST_FINGERPRINT` and fails closed if forwarding is refused; the smoke suite runs unchanged through it. See [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md).
+The Netcup callers disable `USE_SSH_SMOKE_EGRESS`. Their runner pins the candidate Netcup IP directly while retaining hostname and SNI. Remove the old Environment variable after candidate smoke passes. The action retains a fingerprint-verified SOCKS option only for a separately reviewed response to a measured Netcup egress problem.
 
 No htpasswd location is configured in GitHub. The development remote script accepts only the fixed private Netcup auth path and never emits password contents.
 
@@ -259,7 +259,7 @@ Administrative bypass is for emergencies only. Default-branch changes wait until
 - Failed PR validation: reproduce the failing job; do not bypass it.
 - Upload/checksum failure: no promotion occurred; remove only the SHA-specific incoming directory and retry.
 - Post-promotion smoke failure: run the automated rollback, verify the prior revision, and preserve diagnostics.
-- Production smoke `root did not boot the Flutter application ... got 415`: the origin WAF is blocking the runner, not an application regression. Read the printed WAF diagnosis to tell apart a missing/unforwarded `SMOKE_BYPASS_TOKEN`, a host rule that is not installed (bypass-header request still `415`), a transient WAF state, or an ordinary app failure. Fix per [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md); confirm with `scripts/deploy/waf_smoke_probe.sh` before re-releasing. The rollback already restored the prior release, so production stayed healthy.
+- Production smoke `root did not boot the Flutter application ... got 415`: inspect the Netcup response and logs before changing any filter. The old Domenca token and WAF runbook are historical. The rollback restores the previous release when smoke fails.
 - Production failure before environment approval: no production mutation occurred.
 - Hotfix release: reconcile the exact fix into `dev` before ordinary development proceeds.
 - Lost or rotated credentials: stop deployment, rotate through environment settings, verify the host fingerprint out of band, and never commit replacement material.
