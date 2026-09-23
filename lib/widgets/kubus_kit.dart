@@ -5,15 +5,17 @@
 ///
 /// | Need | Use |
 /// |---|---|
-/// | Screen background | `AnimatedGradientBackground` |
-/// | Glass panel/card | `LiquidGlassPanel` / `LiquidGlassCard` / `KubusCard` |
+/// | Screen background | `KubusProductBackground` |
+/// | Ordinary content surface | `KubusCard` (flat by default) |
+/// | Spatial/media overlay | `LiquidGlassPanel` / `LiquidGlassCard` (explicit) |
 /// | Long-form reading section (descriptions, bios, curatorial text) | `KubusReadingSurface` (never glass) |
-/// | Small floating glass (chips/info) | `FrostedContainer` |
+/// | Small floating media controls | `FrostedContainer` (explicit spatial use) |
 /// | Bottom sheet | `BackdropGlassSheet` (inside `showModalBottomSheet`) |
 /// | Dialog | `KubusAlertDialog` via `showKubusDialog` |
-/// | Primary/secondary button | `KubusButton` |
+/// | Primary/secondary/quiet/destructive action | `KubusButton` |
 /// | Icon button on glass/map | `KubusGlassIconButton` |
-/// | Filter/selection chip | `KubusGlassChip` |
+/// | Neutral filter/selection chip | `KubusChip` |
+/// | Chip floating over map/media | `KubusGlassChip` |
 /// | Status/count/label pill | `KubusBadge` |
 /// | Text input | `KubusTextField` (creator flows: `CreatorTextField`) |
 /// | Search input | `KubusSearchBar` |
@@ -26,9 +28,12 @@
 /// | Borders | `KubusBorders.*` (never raw `Border.all`) |
 /// | Contextual gradients | `KubusAccentGradients.*` (never inline colors) |
 ///
-/// Colors: `Theme.of(context).colorScheme`, `KubusColorRoles.of(context)`,
-/// `KubusColors`. Spacing/radius/typography: `KubusSpacing`, `KubusRadius`,
-/// `KubusTextStyles`. Enforced by `packages/kubus_lints`.
+/// Colors: `KubusColorRoles.of(context)` for ground, surfaces, rules, active,
+/// focus and semantic status; use `ColorScheme` for Material integration.
+/// Map/category colors remain in their data token family. Typography:
+/// `KubusTextStyles` or `KubusTypography.content/structural/machine`.
+/// Spacing/radius: `KubusSpacing`, `KubusRadius`. Enforced by
+/// `packages/kubus_lints`.
 library;
 
 export '../utils/design_tokens.dart';
