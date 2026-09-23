@@ -108,4 +108,4 @@ Backend endpoints are not guaranteed to exist in dev; the app must remain usable
 - Search before creating new code (`rg` first).
 - Prefer typed models over `Map<String, dynamic>` unless parsing API JSON.
 - Keep changes minimal, coherent, and production-grade.
-- Investigate CI failures instead of bypassing required checks. Preserve immutable artifacts, host verification, atomic promotion, smoke testing, and rollback in deployment code.
+- Investigate CI failures instead of bypassing required checks. Preserve immutable artifacts, host verification, guarded physical promotion on Netcup, smoke testing, and rollback in deployment code.

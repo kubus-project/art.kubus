@@ -136,16 +136,13 @@ jobs:
           --source-sha '${{ inputs.source_sha }}'
           --directory build/web
 
-      - name: Compress WebAssembly and generate checksums
+      - name: Seal Netcup-compatible WebAssembly and generate checksums
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -y >/dev/null
-          sudo apt-get install -y --no-install-recommends brotli >/dev/null
-          find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' file; do
-            brotli -f -q 9 "$file"
-            gzip -n -kf6 "$file"
-          done
+          # Plesk's Nginx/Apache combination double-encodes precompressed
+          # .wasm.br/.wasm.gz rewrites. Serve the original .wasm instead.
+          find build/web -type f \( -name '*.wasm.br' -o -name '*.wasm.gz' \) -delete
           (
             cd build/web
             manifest="$(mktemp)"

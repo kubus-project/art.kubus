@@ -20,8 +20,8 @@ Engineering workflow: `docs/engineering/branching-and-deployment.md` is the cano
 - After any `dev -> master` release merges, reconcile that ancestry back into `dev` before resuming development: `git rev-list --left-right --cherry-pick --count origin/master...origin/dev` must report `0` commits only on `master` (`--cherry-pick` so a cherry-picked hotfix already in `dev` does not count). Use a non-rewriting merge-commit reconciliation (`npm run verify:branch-reconciliation` guards this; see `docs/engineering/branching-and-deployment.md`).
 - Agents must not merge pull requests, deploy production, approve a protected production environment, or change environment secrets without explicit user authorization.
 - Investigate CI failures; never bypass, weaken, or rename required checks merely to obtain a green result.
-- Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, atomic promotion, revision-aware smoke tests, and automatic rollback.
-- Development Basic Auth is a host-local policy applied and verified before atomic promotion; never place its resolved account path in repository configuration, CI artifacts, or logs. Production must reject development authentication policy.
+- Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, guarded physical promotion on Netcup, revision-aware smoke tests, and automatic rollback.
+- Development Basic Auth is a host-local policy applied and verified before physical promotion; never place password contents in repository configuration, CI artifacts, or logs. Production must reject development authentication policy.
 - UI changes require responsive validation and visual evidence where layout or appearance changes. Backend schema changes must continue to update both schema snapshots.
 - Keep these rules consistent across nested `AGENTS.md` files, Copilot instructions, contributor documentation, and the canonical engineering guide.
 

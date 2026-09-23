@@ -155,7 +155,23 @@ runs:
         echo 'SSH deployment endpoint remained unreachable; no remote files were changed.' >&2
         exit 1
 
-    - name: Verify remote atomic deployment capabilities
+    - name: Pin the Netcup candidate origin before DNS cutover
+      if: steps.source_current.outputs.stale != 'true'
+      shell: bash
+      env:
+        SFTP_SERVER: ${{ inputs.sftp_server }}
+        WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
+      run: |
+        set -euo pipefail
+        case "$WEB_SMOKE_URL" in
+          https://app.kubus.site*) host=app.kubus.site ;;
+          https://dev.kubus.site*) host=dev.kubus.site ;;
+          *) echo 'Unapproved candidate origin.' >&2; exit 1 ;;
+        esac
+        printf '%s %s\n' "$SFTP_SERVER" "$host" | sudo tee -a /etc/hosts >/dev/null
+        test "$(getent ahostsv4 "$host" | awk 'NR == 1 {print $1}')" = "$SFTP_SERVER"
+
+    - name: Verify remote physical deployment capabilities
       if: steps.source_current.outputs.stale != 'true'
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
       env:
@@ -172,17 +188,18 @@ runs:
         script_stop: true
         script: |
           set -eu
-          for command_name in awk grep sed sha256sum tar readlink ln mv; do command -v "$command_name" >/dev/null; done
+          for command_name in grep sed cut tr sha256sum tar cp mv find chmod; do command -v "$command_name" >/dev/null; done
           probe="$RELEASE_ROOT/capability-$SOURCE_SHA"
           trap 'rm -rf "$probe"' EXIT HUP INT TERM
           rm -rf "$probe"
           mkdir -p "$probe/a" "$probe/b"
           printf 'capability\n' > "$probe/a/value"
           (cd "$probe/a" && sha256sum value > SHA256SUMS && sha256sum -c SHA256SUMS)
-          ln -s "$probe/a" "$probe/current"
-          ln -s "$probe/b" "$probe/current.next"
-          mv -Tf "$probe/current.next" "$probe/current"
-          test "$(readlink "$probe/current")" = "$probe/b"
+          cp -a "$probe/a" "$probe/current"
+          test -f "$probe/current/value"
+          mv "$probe/current" "$probe/previous"
+          mv "$probe/b" "$probe/current"
+          test -d "$probe/previous" && test -d "$probe/current"
 
     - name: Upload approved bootstrap helper
       if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root == 'true' }}
@@ -240,7 +257,7 @@ runs:
         script_stop: true
         script: |
           set -eu
-          test -L "$LIVE_DIR"
+          test -d "$LIVE_DIR" && test ! -L "$LIVE_DIR"
           if [ -e "$RELEASE_DIR" ]; then test -d "$RELEASE_DIR"; fi
           rm -rf "$INCOMING_DIR"
           mkdir -p "$INCOMING_DIR" "$RELEASE_ROOT/releases"
@@ -306,7 +323,7 @@ runs:
         script_stop: true
         script: sh "$INCOMING_DIR/atomic_web_release.sh" prepare
 
-    - name: Atomically promote prepared release
+    - name: Promote prepared physical release with guarded rollback
       if: steps.source_current.outputs.stale != 'true'
       id: promote
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1

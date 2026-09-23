@@ -1,13 +1,9 @@
 # shellcheck shell=sh
 # Shared, token-safe WAF diagnosis for the production post-deploy smoke.
 #
-# The production origin (app.kubus.site) is a LiteSpeed host fronted by an
-# Imunify360-style reverse-proxy bot filter. That filter greylists datacenter
-# IP ranges and answers them with HTTP 415, while a normal client IP receives
-# the direct application shell (HTTP 200) at the root. The GitHub-hosted runner
-# therefore
-# cannot reach the origin unless the host is configured to skip that filter for
-# requests carrying the secret `X-Deploy-Smoke: <SMOKE_BYPASS_TOKEN>` header.
+# This optional classifier remains available if a Netcup origin filter is
+# observed. The old Domenca LiteSpeed/Imunify360 415 incident is historical;
+# a 415 on Netcup must be diagnosed independently before adding a host rule.
 #
 # When the smoke fails, an opaque "got 415" is not actionable. `waf_diagnose`
 # turns it into a classified message that names the exact failure mode without
@@ -82,7 +78,7 @@ waf_diagnose() {
     fi
     if [ "$_wd_with_header_status" = 415 ] || [ "$_wd_no_header_status" = 415 ] \
       || [ "$_wd_observed_status" = 415 ]; then
-      echo "  cause: the host WAF exception for X-Deploy-Smoke is NOT active. Requests that carry the bypass header are still answered with 415 (root -> $_wd_with_header_status), so the origin is ignoring the header. Install or repair the host rule (root/WHM step) per docs/engineering/production-waf-smoke-exception.md; an .htaccess rule cannot fix this because the reverse-proxy filter runs before LiteSpeed reads .htaccess." >&2
+      echo "  cause: the host WAF exception for X-Deploy-Smoke is NOT active. Requests carrying the header still return 415 (root -> $_wd_with_header_status). Verify the Netcup response and any host filter with Netcup support before adding an origin exception; do not apply the old Domenca rule." >&2
       return 1
     fi
     echo "  cause: the origin did not respond as expected even with the bypass header (root -> $_wd_with_header_status). Investigate origin/application health." >&2
@@ -91,7 +87,7 @@ waf_diagnose() {
 
   # No token configured in this step.
   if [ "$_wd_no_header_status" = 415 ] || [ "$_wd_observed_status" = 415 ]; then
-    echo "  cause: SMOKE_BYPASS_TOKEN is empty in this step. Either the secret is unset in the production-web GitHub Environment or the caller workflow did not forward it, so no bypass header was sent. The origin WAF (LiteSpeed/Imunify360) is blocking the CI runner's datacenter IP with 415. See docs/engineering/production-waf-smoke-exception.md." >&2
+    echo "  cause: SMOKE_BYPASS_TOKEN is empty in this step and the origin returned 415. Investigate the Netcup response and any host filter before setting an optional bypass secret." >&2
     return 1
   fi
   echo "  cause: this is not a WAF IP block (the origin is reachable without a bypass header). Investigate as an ordinary application/routing/SEO smoke failure, not a network filter." >&2

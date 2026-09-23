@@ -12,6 +12,16 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
 const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
+test('Netcup artifact serves raw WebAssembly without precompressed rewrite companions', () => {
+  const artifactWorkflow = workflow('web-artifact.yml');
+  const htaccess = readFileSync(resolve(repositoryRoot, 'web/.htaccess'), 'utf8');
+  assert.match(artifactWorkflow, /Netcup-compatible WebAssembly/);
+  assert.match(artifactWorkflow, /-name '\*\.wasm\.br'/);
+  assert.match(artifactWorkflow, /-name '\*\.wasm\.gz'/);
+  assert.doesNotMatch(artifactWorkflow, /brotli -f|gzip -n -kf/);
+  assert.doesNotMatch(htaccess, /Content-Encoding br|Content-Encoding gzip|REQUEST_FILENAME\.br|REQUEST_FILENAME\.gz/);
+});
+
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
   assert.equal(result.docs, true);
@@ -88,14 +98,16 @@ test('PR validation is deployment-secret-free and has a stable aggregate', () =>
 test('branch deployments have isolated sources, environments, and concurrency', () => {
   const development = workflow('deploy-development.yml');
   const production = workflow('release-production.yml');
-  assert.match(development, /branches:\s*\n\s*- dev/);
+  assert.doesNotMatch(development, /\bpush:/);
   assert.match(development, /\bworkflow_dispatch:/);
+  assert.match(development, /test "\$SOURCE_REF" = refs\/heads\/dev/);
   assert.doesNotMatch(development, /\bpull_request:|\bpull_request_target:/);
   assert.match(development, /group:\s*deploy-development/);
   assert.match(development, /environment_name:\s*development-web/);
   assert.doesNotMatch(development, /production-web|branches:\s*\n\s*- master/);
   assert.doesNotMatch(development, /secrets:\s*inherit/);
-  assert.match(production, /branches:\s*\n\s*- master/);
+  assert.doesNotMatch(production, /\bpush:/);
+  assert.match(production, /test "\$SOURCE_REF" = refs\/heads\/master/);
   assert.match(production, /group:\s*deploy-production/);
   assert.match(production, /environment_name:\s*production-web/);
   assert.doesNotMatch(production, /development-web|branches:\s*\n\s*- dev/);
@@ -130,7 +142,7 @@ test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback
   assert.match(content, /atomic_web_release\.sh" rollback/);
   assert.match(
     content,
-    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Atomically promote prepared release[\s\S]*?atomic_web_release\.sh" promote/,
+    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Promote prepared physical release with guarded rollback[\s\S]*?atomic_web_release\.sh" promote/,
   );
   assert.match(content, /Verify production release is free of staging protection/);
   assert.doesNotMatch(content, /DEV_HTPASSWD_FILE|\/home\//);

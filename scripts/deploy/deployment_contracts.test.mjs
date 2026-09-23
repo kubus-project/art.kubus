@@ -87,15 +87,15 @@ test('deployment target validation rejects host confusion and emits safe SHA pat
     DEPLOYMENT_ENVIRONMENT: 'development',
     ENVIRONMENT_NAME: 'development',
     SOURCE_SHA: '0123456789abcdef0123456789abcdef01234567',
-    SFTP_SERVER: 'staging-upload.example.net',
-    SFTP_USERNAME: 'deploy-user',
+    SFTP_SERVER: '89.58.21.59',
+    SFTP_USERNAME: 'hosting249437',
     SFTP_PRIVATE_KEY: 'test-only-key',
     SFTP_HOST_FINGERPRINT: 'SHA256:test-only',
     SFTP_PORT: '22',
-    WEB_SERVER_DIR: '/home/{SFTP_USERNAME}/dev.kubus.site',
-    WEB_RELEASES_DIR: '/home/{SFTP_USERNAME}/.art-kubus-development-releases',
+    WEB_SERVER_DIR: '/dev.kubus.site/httpdocs',
+    WEB_RELEASES_DIR: '/deploy/dev.kubus.site',
     WEB_SMOKE_URL: 'https://dev.kubus.site/',
-    EXPECTED_DEPLOYMENT_HOST: 'staging-upload.example.net',
+    EXPECTED_DEPLOYMENT_HOST: '89.58.21.59',
     RETAIN_RELEASE_COUNT: '3',
     GITHUB_OUTPUT: output,
   };
@@ -103,6 +103,7 @@ test('deployment target validation rejects host confusion and emits safe SHA pat
   const emitted = await readFile(output, 'utf8');
   assert.match(emitted, /incoming-0123456789abcdef0123456789abcdef01234567/);
   await assert.rejects(run(bash, [path.join(scriptDir, 'validate_deployment_target.sh')], { ...common, EXPECTED_DEPLOYMENT_HOST: 'production-upload.example.net', GITHUB_OUTPUT: path.join(temp, 'bad-output') }));
+  await assert.rejects(run(bash, [path.join(scriptDir, 'validate_deployment_target.sh')], { ...common, WEB_SERVER_DIR: '/tmp/unsafe', GITHUB_OUTPUT: path.join(temp, 'bad-path-output') }));
 });
 
 test('development smoke validates Basic Auth, revision, routes, and noindex without credentials in URLs', async () => {
@@ -202,14 +203,15 @@ test('host-local policy is applied remotely without changing original artifact p
     'utf8',
   );
 
-  assert.match(release, /"\$HOME"\/\.htpasswds\/\*\/passwd/);
+  assert.match(release, /\/deploy\/dev\.kubus\.site\/auth\/passwd/);
+  assert.doesNotMatch(release, /\.htpasswds|cPanel-managed/);
   assert.match(release, /write_host_policy_manifest/);
   assert.match(release, /application_htaccess_sha256/);
   assert.doesNotMatch(release, /DEV_HTPASSWD_FILE|\/home\//);
   assert.doesNotMatch(action + artifactWorkflow, /DEV_HTPASSWD_FILE|\/home\//);
   assert.match(
     action,
-    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Atomically promote prepared release[\s\S]*?atomic_web_release\.sh" promote/,
+    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Promote prepared physical release with guarded rollback[\s\S]*?atomic_web_release\.sh" promote/,
   );
   assert.match(release, /verify_artifact_release "\$candidate"[\s\S]*?apply_development_policy "\$candidate"/);
   assert.doesNotMatch(release, /(?:mv|cp).+SHA256SUMS|sha256sum.+>\s*["']?\$[^ \n]*SHA256SUMS/);

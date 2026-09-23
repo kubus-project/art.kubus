@@ -1,13 +1,10 @@
 name: Deploy development web
 
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
     inputs:
       bootstrap_web_root:
-        description: One-time approved migration of the staging web root to the atomic symlink layout
+        description: One-time physical Netcup document root preflight
         required: false
         default: false
         type: boolean

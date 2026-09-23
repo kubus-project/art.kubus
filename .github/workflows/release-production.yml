@@ -1,13 +1,10 @@
 name: Release production web
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
     inputs:
       bootstrap_web_root:
-        description: One-time explicitly approved migration of the production web root to the atomic symlink layout
+        description: One-time physical Netcup document root preflight
         required: false
         default: false
         type: boolean

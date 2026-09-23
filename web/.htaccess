@@ -2,10 +2,8 @@
   # Keep the renderer's stricter CSP on proxied public HTML. Static Flutter
   # responses do not set one, so they receive the established app policy.
   #
-  # This is scoped by filename rather than written as `Header setifempty`,
-  # because LiteSpeed's mod_headers does not implement that verb: it parsed
-  # "setifempty" as the header NAME and shipped a literal `setifempty:` response
-  # header, so the app policy was never actually applied. Public documents are
+  # This is scoped by filename rather than relying on server-specific
+  # `Header setifempty` behavior. Public documents are
   # internally rewritten to seo-proxy.php (below), which sets its own stricter
   # policy; only the static documents resolve to a real .html file, so matching
   # on that extension applies the app policy exactly where it was intended and
@@ -15,8 +13,7 @@
   </FilesMatch>
 
   # --- Caching ---------------------------------------------------------------
-  # LiteSpeed defaults to "Cache-Control: private", which prevents any CDN/edge
-  # caching and offers no benefit to repeat visits. Override explicitly.
+  # Set explicit caching rules for consistent behavior across shared hosts.
   #
   # App entry points + version manifests must ALWAYS revalidate so a new deploy
   # is picked up immediately (prevents the classic "stale main.dart.js after
@@ -33,27 +30,10 @@
     Header set Cache-Control "public, max-age=86400"
   </FilesMatch>
 
-  # Pre-compressed wasm (see rewrite rules below): keep the wasm content type
-  # and declare the applied encoding so browsers decompress transparently.
-  <FilesMatch "\.wasm\.br$">
-    ForceType application/wasm
-    Header set Content-Encoding br
-    Header append Vary Accept-Encoding
-    Header set Cache-Control "public, max-age=86400"
-  </FilesMatch>
-  <FilesMatch "\.wasm\.gz$">
-    ForceType application/wasm
-    Header set Content-Encoding gzip
-    Header append Vary Accept-Encoding
-    Header set Cache-Control "public, max-age=86400"
-  </FilesMatch>
 </IfModule>
 
 <IfModule mod_mime.c>
   AddType application/wasm .wasm
-  # .br/.gz are content-encoding suffixes here, not language/type hints.
-  RemoveLanguage .br
-  RemoveType .br .gz
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -62,19 +42,6 @@
   # Useful, index-safe error document for paths outside the finite Flutter and
   # public-document route sets below. ErrorDocument preserves the original 404.
   ErrorDocument 404 /404.html
-
-  # canvaskit.wasm is ~5.7MB and LiteSpeed does not compress application/wasm
-  # dynamically. CI ships pre-compressed .wasm.br/.wasm.gz next to each .wasm;
-  # serve those when the client advertises support (~1.3MB over the wire).
-  RewriteCond %{HTTP:Accept-Encoding} br
-  RewriteCond %{REQUEST_FILENAME} \.wasm$
-  RewriteCond %{REQUEST_FILENAME}.br -f
-  RewriteRule ^(.*)$ $1.br [QSA,L]
-
-  RewriteCond %{HTTP:Accept-Encoding} gzip
-  RewriteCond %{REQUEST_FILENAME} \.wasm$
-  RewriteCond %{REQUEST_FILENAME}.gz -f
-  RewriteRule ^(.*)$ $1.gz [QSA,L]
 
   # Avoid SPA rewrites serving index.html for missing source maps (noise in DevTools).
   RewriteCond %{REQUEST_URI} \.map$ [NC]
@@ -90,7 +57,7 @@
 
   # Public HTML, sitemaps, robots and legacy aliases are rendered by the
   # existing Node service. Route through the local fixed-origin PHP gateway so
-  # shared LiteSpeed/cPanel hosting does not require a server-level External
+  # shared hosting does not require a server-level External
   # App or mod_proxy privilege. The gateway accepts only this finite surface,
   # never forwards cookies/authentication, and preserves upstream status and
   # cache/security headers.

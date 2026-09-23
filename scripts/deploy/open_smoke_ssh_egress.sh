@@ -3,10 +3,9 @@ set -euo pipefail
 
 # Open a verified SSH dynamic (SOCKS5) tunnel to the deployment host so the
 # post-deploy smoke can egress from the *host's own IP* instead of the CI
-# runner's datacenter IP. The origin's Imunify360/LiteSpeed bot filter greylists
-# datacenter IPs (HTTP 415) but trusts the server itself, so routing the smoke
-# through this tunnel reaches the real vhost/TLS/.htaccess/app while sidestepping
-# the false-positive IP block. Every smoke assertion still runs unchanged.
+# runner's datacenter IP. If a measured origin filter blocks the runner but
+# permits traffic from the host, the tunnel reaches the same vhost, TLS,
+# .htaccess and app. Every smoke assertion still runs unchanged.
 #
 # This uses the same SSH credentials already trusted for deployment (SFTP key +
 # verified host fingerprint). It fails closed:

@@ -8,7 +8,7 @@ This document is the canonical engineering contract for the `kubus-project/art.k
 
 | Branch | Purpose | Accepted pull requests | Deployment |
 | --- | --- | --- | --- |
-| `dev` | Protected integration branch | Ordinary topic branches | Automatic web staging to `development-web` / `https://dev.kubus.site` |
+| `dev` | Protected integration branch | Ordinary topic branches | Manual protected web staging to `development-web` / `https://dev.kubus.site` during the Netcup migration |
 | `master` | Protected production release branch | `dev` release PRs and `hotfix/*` emergency PRs only | Protected web production to `production-web` / `https://app.kubus.site` |
 
 Direct development and direct commits on both long-lived branches are forbidden. Ordinary branches use `feature/`, `fix/`, `refactor/`, `ci/`, `docs/`, or `chore/`. Emergency branches use `hotfix/`; coordinated release preparation may use `release/` when needed.
@@ -112,28 +112,17 @@ CI failures must be investigated. Do not bypass a required check, convert failur
 
 ## Staging deployment
 
-`deploy-development.yml` runs only for the exact `dev` head or a manual dispatch selected on `dev`. It builds web from that SHA, adds `kubus-web-revision.txt`, creates per-file checksums, applies staging-only noindex/robots policy, validates locally, and uploads a versioned release. Immediately before any remote change it checks the current remote `dev` SHA; an obsolete queued deployment exits successfully without promotion.
+`deploy-development.yml` runs only after a manual dispatch selected on the exact `dev` head while Netcup credentials and TLS are being established. It builds web from that SHA, adds `kubus-web-revision.txt`, creates per-file checksums, applies staging-only noindex/robots policy, validates locally, and uploads a versioned release. Immediately before any remote change it checks the current remote `dev` SHA; an obsolete queued deployment exits successfully without promotion.
 
-The privileged job uses only the `development-web` environment. Promotion is serialized by `deploy-development` with cancellation disabled. An unauthenticated smoke requires the configured protected response and authentication challenge. Authenticated smoke checks `/app`, localized routes, the revision, `X-Robots-Tag`, and the deny-all `robots.txt`. If smoke fails after promotion, the previous symlink is restored automatically.
+The privileged job uses only the `development-web` environment. Promotion is serialized by `deploy-development` with cancellation disabled. An unauthenticated smoke requires the configured protected response and authentication challenge. Authenticated smoke checks `/app`, localized routes, the revision, `X-Robots-Tag`, and the deny-all `robots.txt`. If smoke fails after promotion, the previous physical document root is restored automatically.
 
-### cPanel Basic Auth across atomic releases
+### Netcup development protection and physical releases
 
-cPanel Directory Privacy writes its Basic Auth directives into the active document root's `.htaccess`. The atomic deployment makes that document root a symlink to an immutable release and changes the symlink target during promotion. Directory Privacy therefore protected the old target, but the newly built target initially contained only the application's routing rules. The post-promotion smoke correctly detected the resulting unauthenticated `200` and rolled back.
+Netcup returned HTTP 403 for symlinked `httpdocs` on both app and dev, including a symlink inside the domain directory. A physical directory moved into `httpdocs` returned HTTP 200. The release script therefore verifies a complete immutable release in `/deploy/<site>/releases/<SHA>`, copies it to a sibling of the physical document root, and promotes with guarded directory renames. The previous root remains under `/deploy/<site>/rollback-<SHA>` for an automatic or manual rollback. The two renames have a small interval between them; a failed second move immediately restores the first root.
 
-Development now has a remote, pre-promotion host-policy phase. After the uploaded archive and its original CI checksums are verified, the remote release script:
+Development protection uses the hashed password database at `/deploy/dev.kubus.site/auth/passwd`, outside `httpdocs`. The source artifact must contain only application routing rules. Before promotion, the remote script verifies the password file and prepends one deterministic Basic Auth block to a copy of the application's `.htaccess`. It verifies the original application rules against the CI checksum manifest and records the final policy digest privately. Production rejects all development-auth directives. A missing password file, altered application rules, or invalid host policy stops deployment before promotion. The development smoke checks the unauthenticated challenge and an authenticated response using `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD` from the `development-web` Environment.
 
-1. reads the existing cPanel-managed `AuthUserFile` directive from the currently protected release;
-2. accepts it only when it resolves within the authenticated account's cPanel-managed password area and names a readable, non-empty credential file;
-3. prepends one deterministic development auth block to a fresh copy of the application's complete `.htaccess`;
-4. verifies that the application rules are byte-for-byte identical to the rules covered by the original artifact manifest;
-5. records a separate host-policy digest outside the document root, without recording the resolved path; and
-6. permits the live symlink switch only after those checks pass.
-
-The original `SHA256SUMS` is never regenerated after the host-local overlay. A retry reuses and verifies an existing immutable SHA directory without duplicating the auth block; it never deletes or replaces that directory. The freshly uploaded artifact manifest must exactly match the existing release's original manifest, and a freshly prepared overlay must exactly match the existing release's host policy, or preparation fails closed. If the current cPanel policy, password file, application `.htaccess`, overlay structure, environment boundary, or separate policy record cannot be verified, preparation fails before promotion and the current live release stays selected.
-
-The htpasswd path remains server-local. Do not add it, an account username, or an account home directory to a GitHub variable, secret description, workflow, artifact, log, screenshot, or pull request. `DEV_HTPASSWD_FILE` is not part of the deployment contract. Normal cPanel access is sufficient; no WHM, reseller package, or vhost edit is required.
-
-Production uses a separate preparation branch that rejects the development markers and all `AuthType`, `AuthUserFile`, and `Require valid-user` directives. It never derives or installs the cPanel policy.
+No password file or plaintext credential belongs in the repository, public artifact or document root. The existing hashed development password database was transferred to the Netcup private path without logging its contents during the initial mirror; rotate it later through a separately approved credential change.
 
 Staging must emit:
 
@@ -167,23 +156,17 @@ Run the workflow manually from the `dev` ref with:
 gh workflow run deploy-development.yml --ref dev -f bootstrap_web_root=false
 ```
 
-The bootstrap input remains `false` for ordinary retries. Set it only for the separately approved one-time migration of a physical document root to the atomic symlink layout.
+The bootstrap input remains `false` for ordinary retries. Its Netcup preflight validates only the approved physical document root and private release pair; it never replaces `httpdocs` with a symlink.
 
 ## Production deployment
 
-`release-production.yml` runs only for the exact `master` head or a manual dispatch selected on `master`. It builds a fresh immutable artifact for that exact commit, validates checksums and deployment scripts locally, then enters `production-web`. Repository settings should require an approval before the privileged job continues.
+`release-production.yml` runs only after a manual dispatch selected on the exact `master` head during the Netcup migration. It builds a fresh immutable artifact for that exact commit, validates checksums and deployment scripts locally, then enters `production-web`. Repository settings should require an approval before the privileged job continues.
 
-Production retains the existing security and recovery contract: immutable SHA directories, verified SSH fingerprint, safe absolute paths, archive and per-file SHA-256 verification, symlink-based atomic promotion, exact revision verification, app/routing/canonical/SEO/takeover smoke, rollback after any post-promotion critical failure, and cleanup only after success. Production deployment is never authorized merely because a workflow or PR exists.
+Production retains the existing security and recovery contract: immutable SHA directories, verified SSH fingerprint, safe absolute paths, archive and per-file SHA-256 verification, guarded physical-directory promotion, exact revision verification, app/routing/canonical/SEO/takeover smoke, rollback after any post-promotion critical failure, and cleanup only after success. Production deployment is never authorized merely because a workflow or PR exists.
 
-### Post-promotion smoke and the origin WAF (HTTP 415)
+### Netcup candidate smoke before DNS cutover
 
-The production origin (`app.kubus.site`) is a LiteSpeed host fronted by an Imunify360-style reverse-proxy bot filter. That filter greylists datacenter IP ranges and answers them with `HTTP 415`, while an ordinary client IP receives the direct application shell (`HTTP 200`) at the root (verified: the `415` appears only from the GitHub-hosted runner and even a wrong `X-Deploy-Smoke` header from a normal IP still returns `200`, so the block is keyed on IP reputation, not content). The post-promotion smoke runs on a GitHub-hosted runner, so without an exception it receives `415`, fails the root direct-entry assertion, and rolls back a good release.
-
-Every production smoke client already sends `X-Deploy-Smoke: <SMOKE_BYPASS_TOKEN>` scoped to the deployment origin, and `release-production.yml` forwards the environment secret. The remaining piece is a **host-side** rule that recognises the header. It cannot be an `.htaccess` directive: the reverse-proxy filter decides before LiteSpeed reads `.htaccess`, so a blocked request never reaches Apache/LiteSpeed rewrite or header processing. The setup and verification runbook is [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md).
-
-On shared cPanel hosting (no WHM/root), the recommended path is instead `USE_SSH_SMOKE_EGRESS=true`, which routes the whole smoke through a verified SSH SOCKS tunnel so it leaves from the host's own trusted IP and never meets the greylist. It needs no host-admin change and keeps GitHub-hosted runners. The alternatives are a WHM/root WAF header exception or a trusted-IP runner; all three are documented in the runbook.
-
-Until the host rule exists, the smoke **fails closed** with a token-safe diagnosis that names the exact mode instead of an opaque `got 415`: missing/unforwarded token, host rule not installed (header ignored, still `415`), transient WAF state, or an ordinary application/routing/SEO failure. A `415` is never converted into a pass. The shared classifier is `scripts/deploy/waf_smoke_diagnostics.sh`; the read-only verifier is `scripts/deploy/waf_smoke_probe.sh`. Neither ever prints the token.
+The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. Netcup currently presents an untrusted certificate, so a protected CI deployment must wait for a trusted origin certificate. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.
 
 ## Mobile releases
 
@@ -217,13 +200,13 @@ Both web environments define separate values for these secrets:
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
 
-Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright), scoped to the deployment origin so third-party hosts never receive it, while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted or trusted-IP runner). The host-side rule is **not** an `.htaccess` change; see [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md) for the exact root/WHM setup, the trusted-runner fallback, and the read-only verification probe. The token value must never appear in a repository variable, source file, artifact, log, screenshot, or PR text.
+Optional per-environment secret `SMOKE_BYPASS_TOKEN`: leave unset for Netcup unless a measured Netcup-origin filter blocks CI and Netcup support provides a verified token-based exception. The smoke sends it only to the deployment origin. The old Domenca WAF procedure in [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md) is historical and must not be applied to Netcup without fresh evidence. The token value must never appear in a repository variable, source file, artifact, log, screenshot, or PR text.
 
-Optional per-environment variable `USE_SSH_SMOKE_EGRESS`: set to `true` to route the post-deploy smoke through a verified SSH SOCKS tunnel to the deployment host, so it egresses from the host's own trusted IP instead of the runner's greylisted datacenter IP. This needs no host-admin change (only that the deploy user may open an SSH tunnel, i.e. `AllowTcpForwarding`), keeps GitHub-hosted runners, and is the recommended path on cPanel-only shared hosting where a WHM/root WAF exception is not available. The tunnel is verified against `SFTP_HOST_FINGERPRINT` and fails closed if forwarding is refused; the smoke suite runs unchanged through it. See [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md).
+Optional per-environment variable `USE_SSH_SMOKE_EGRESS`: set to `true` to route the post-deploy smoke through a verified SSH SOCKS tunnel to the deployment host, so it egresses from the host's own trusted IP instead of the runner's greylisted datacenter IP. This needs no host-admin change (only that the deploy user may open an SSH tunnel, i.e. `AllowTcpForwarding`), keeps GitHub-hosted runners, and is an optional fallback only if Netcup permits forwarding and direct candidate smoke is blocked. The tunnel is verified against `SFTP_HOST_FINGERPRINT` and fails closed if forwarding is refused; the smoke suite runs unchanged through it. See [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md).
 
-No htpasswd location is configured in GitHub. The development remote script derives it from cPanel's current server-local Directory Privacy policy and never emits it.
+No htpasswd location is configured in GitHub. The development remote script accepts only the fixed private Netcup auth path and never emits password contents.
 
-The current repository-scoped deployment secrets must be copied by a human into `production-web`, independently provisioned for `development-web`, and then removed from repository scope. Until that move is complete, environment separation is not cryptographically complete and staging deployment must remain disabled.
+The old Domenca deployment credentials must be replaced in both web Environments with a dedicated Netcup GitHub Actions key and the verified Netcup host fingerprint. Do not copy the operator's local migration key or the old Domenca CI key. Remove obsolete repository-scoped deployment secrets only after Netcup CI and rollback are proven.
 
 ## Backend coordination
 
@@ -267,12 +250,12 @@ Administrative bypass is for emergencies only. Default-branch changes wait until
 
 ## Failure recovery
 
-- No deployment run: first verify that the event was a push to `dev` or a manual dispatch on `dev`. Opening or closing an unmerged pull request is not a deployment trigger.
+- No deployment run: first verify that the event was a manual dispatch on `dev`. Opening or closing an unmerged pull request is not a deployment trigger.
 - Waiting for `development-web`: the deploy job has reached a GitHub Environment approval gate; no privileged deployment step has started until approval is granted.
 - Failed build: inspect the reusable artifact job. No remote promotion occurred.
 - Stale staging run: the latest-head guard exits before remote mutation; allow the newer serialized run to continue.
-- Failed preparation or promotion: inspect the named host-policy/checksum or atomic-promotion step. A host-policy failure occurs before the live symlink changes.
-- Failed post-promotion smoke with successful rollback: the candidate was selected, a runtime assertion failed, and the rollback step restored the prior symlink. Treat the workflow as failed even though rollback succeeded.
+- Failed preparation or promotion: inspect the named host-policy/checksum or atomic-promotion step. A host-policy failure occurs before the physical webroot changes.
+- Failed post-promotion smoke with successful rollback: the candidate was selected, a runtime assertion failed, and the rollback step restored the prior physical webroot. Treat the workflow as failed even though rollback succeeded.
 - Failed PR validation: reproduce the failing job; do not bypass it.
 - Upload/checksum failure: no promotion occurred; remove only the SHA-specific incoming directory and retry.
 - Post-promotion smoke failure: run the automated rollback, verify the prior revision, and preserve diagnostics.
@@ -281,13 +264,13 @@ Administrative bypass is for emergencies only. Default-branch changes wait until
 - Hotfix release: reconcile the exact fix into `dev` before ordinary development proceeds.
 - Lost or rotated credentials: stop deployment, rotate through environment settings, verify the host fingerprint out of band, and never commit replacement material.
 
-## First-release migration procedure
+## Historical branch-governance first-release procedure (not the Netcup host cutover)
 
 1. Verify `master`, create `dev` at that exact commit, and create the migration topic branch from `origin/dev`.
 2. Retarget ordinary open PRs only after confirming their old base equals or is contained by `dev` and their diff does not expand.
 3. Merge the workflow/governance PR into `dev` only after local and PR validation pass.
 4. Configure `development-web` with independently provisioned staging credentials, paths, host fingerprint, Basic Auth, and branch restriction.
-5. Run the first staging deployment; verify SSH/SCP, symlinks, atomic rename, remote SHA-256, Basic Auth, noindex, exact revision, smoke, and a safe rollback drill.
+5. Run the first staging deployment; verify SSH/SCP, guarded physical promotion, remote SHA-256, Basic Auth, noindex, exact revision, smoke, and a safe rollback drill.
 6. Move production deployment values from repository scope into `production-web`, add the `master` restriction and approval gate, and validate the workflow locally without dispatching it.
 7. Activate `dev` and `master` rulesets with the stable aggregate check. Confirm the staging deployment gate if the plan supports it.
 8. Retarget or close remaining ordinary `master` PRs. Do not merge them during governance migration unless separately authorized.

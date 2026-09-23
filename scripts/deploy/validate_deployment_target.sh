@@ -35,9 +35,7 @@ printf '%s' "$RETAIN_RELEASE_COUNT" | grep -Eq '^[0-9]+$' || die "RETAIN_RELEASE
 [ "$RETAIN_RELEASE_COUNT" -le 50 ] || die "RETAIN_RELEASE_COUNT must not exceed 50"
 
 live_dir="${WEB_SERVER_DIR%/}"
-live_dir="${live_dir//\{SFTP_USERNAME\}/$SFTP_USERNAME}"
 release_root="${WEB_RELEASES_DIR%/}"
-release_root="${release_root//\{SFTP_USERNAME\}/$SFTP_USERNAME}"
 for value in "$live_dir" "$release_root"; do
   printf '%s' "$value" | grep -Eq '^/[A-Za-z0-9_./-]+$' || die "deployment paths must be safe absolute paths"
   case "$value" in *..*) die "deployment paths must not contain '..'" ;; esac
@@ -46,10 +44,20 @@ done
 [ "$live_dir" != "$release_root" ] || die "live and release directories must differ"
 case "$release_root/" in "$live_dir/"*) die "release root must not be inside the live directory" ;; esac
 
+[ "$SFTP_SERVER" = '89.58.21.59' ] || die "deployment host is not the approved Netcup target"
+[ "$SFTP_USERNAME" = 'hosting249437' ] || die "deployment user is not the approved Netcup account"
+[ "$SFTP_PORT" = '22' ] || die "deployment port is not the approved Netcup SSH port"
+case "$DEPLOYMENT_ENVIRONMENT:$live_dir:$release_root" in
+  production:/app.kubus.site/httpdocs:/deploy/app.kubus.site|development:/dev.kubus.site/httpdocs:/deploy/dev.kubus.site) ;;
+  *) die "deployment directories are not the approved Netcup environment pair" ;;
+esac
+
 printf '%s' "$WEB_SMOKE_URL" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/.*)?$' || die "WEB_SMOKE_URL must be an HTTPS URL without credentials"
 case "$WEB_SMOKE_URL" in *'@'*) die "WEB_SMOKE_URL must not contain credentials" ;; esac
 if [ "$DEPLOYMENT_ENVIRONMENT" = development ]; then
   printf '%s' "$WEB_SMOKE_URL" | grep -Eq '^https://dev\.kubus\.site(/|$)' || die "development smoke URL must use dev.kubus.site"
+else
+  printf '%s' "$WEB_SMOKE_URL" | grep -Eq '^https://app\.kubus\.site(/|$)' || die "production smoke URL must use app.kubus.site"
 fi
 
 {
