@@ -1,4 +1,4 @@
-import 'package:art_kubus/screens/art/art_detail_route.dart';
+import 'package:art_kubus/screens/art/artwork_detail_route.dart';
 import 'package:art_kubus/screens/art/art_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'package:flutter/material.dart';

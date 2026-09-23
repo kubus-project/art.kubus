@@ -38,7 +38,10 @@ function ensure(condition, message) {
 }
 
 function slug(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function screenshotName(...parts) {
@@ -166,13 +169,37 @@ async function layoutMetrics(page) {
   return page.evaluate(() => {
     const flutterView = document.querySelector('flutter-view');
     const bounds = flutterView?.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const documentWidth = document.documentElement.scrollWidth;
+    const bodyWidth = document.body.scrollWidth;
+    const overflowOffenders = documentWidth > viewportWidth || bodyWidth > viewportWidth
+      ? [...document.body.querySelectorAll('*')]
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            id: element.id || null,
+            className: typeof element.className === 'string'
+              ? element.className.slice(0, 100)
+              : null,
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            width: Math.round(rect.width),
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          };
+        })
+        .filter((item) => item.right > viewportWidth + 1 || item.left < -1)
+        .slice(0, 12)
+      : [];
     return {
       innerWidth: window.innerWidth,
-      documentWidth: document.documentElement.scrollWidth,
-      bodyWidth: document.body.scrollWidth,
+      documentWidth,
+      bodyWidth,
       flutterLeft: bounds ? Math.round(bounds.left) : null,
       flutterRight: bounds ? Math.round(bounds.right) : null,
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      overflowOffenders,
     };
   });
 }
@@ -372,9 +399,12 @@ async function validateFailureStates(browser, browserName) {
   await failurePage.route('**/main.dart.js', (route) => route.abort('failed'));
   try {
     const path = `/en/artworks/${ids.artwork}`;
-    const response = await failurePage.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' });
+    const response = await failurePage.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
     await failurePage.waitForTimeout(1200);
-    ensure(response?.status() === 200, 'Flutter bundle failure changed public HTTP status');
+    ensure(
+      response?.status() === 200,
+      `Flutter bundle failure changed public HTTP status: ${response?.status() ?? 'no navigation response'}`,
+    );
     ensure(await failurePage.locator('#public-document').getAttribute('aria-hidden') === null, 'Flutter bundle failure hid SSR');
     ensure(await failurePage.locator('#flutter-host').getAttribute('aria-hidden') === 'true', 'failed Flutter host became visible');
     await failurePage.screenshot({ path: screenshotName('artwork-en', 1440, 'bundle-failure-ssr', browserName) });
