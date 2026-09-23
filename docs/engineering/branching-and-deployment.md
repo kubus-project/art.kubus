@@ -164,6 +164,8 @@ The bootstrap input remains `false` for ordinary retries. Its Netcup preflight v
 
 Production retains the existing security and recovery contract: immutable SHA directories, verified SSH fingerprint, safe absolute paths, archive and per-file SHA-256 verification, guarded physical-directory promotion, exact revision verification, app/routing/canonical/SEO/takeover smoke, rollback after any post-promotion critical failure, and cleanup only after success. Production deployment is never authorized merely because a workflow or PR exists.
 
+After a successful release, the rollback script for that source revision remains private at `/deploy/app.kubus.site/host-scripts/<SHA>.sh` or `/deploy/dev.kubus.site/host-scripts/<SHA>.sh`; the captured predecessor remains at `rollback-<SHA>`. The script still requires the exact environment, source SHA and approved paths, so it refuses a stale rollback.
+
 ### Netcup candidate smoke before DNS cutover
 
 The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. Netcup currently presents an untrusted certificate, so a protected CI deployment must wait for a trusted origin certificate. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.

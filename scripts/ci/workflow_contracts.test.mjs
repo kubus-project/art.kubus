@@ -12,6 +12,13 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
 const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
+test('successful web release retains its host-side rollback command outside httpdocs', () => {
+  const action = deployAction();
+  assert.match(action, /\$RELEASE_ROOT\/host-scripts\/\$SOURCE_SHA\.sh/);
+  assert.match(action, /chmod 700 "\$RELEASE_ROOT\/host-scripts\/\$SOURCE_SHA\.sh"/);
+  assert.ok(action.indexOf('host-scripts/$SOURCE_SHA.sh') < action.lastIndexOf('rm -rf "$INCOMING_DIR"'));
+});
+
 test('Netcup artifact serves raw WebAssembly without precompressed rewrite companions', () => {
   const artifactWorkflow = workflow('web-artifact.yml');
   const htaccess = readFileSync(resolve(repositoryRoot, 'web/.htaccess'), 'utf8');

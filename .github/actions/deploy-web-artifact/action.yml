@@ -466,6 +466,9 @@ runs:
         script: |
           set -eu
           sh "$INCOMING_DIR/atomic_web_release.sh" finalize
+          mkdir -p "$RELEASE_ROOT/host-scripts"
+          cp "$INCOMING_DIR/atomic_web_release.sh" "$RELEASE_ROOT/host-scripts/$SOURCE_SHA.sh"
+          chmod 700 "$RELEASE_ROOT/host-scripts/$SOURCE_SHA.sh"
           rm -rf "$INCOMING_DIR"
 
     - name: Close SSH smoke egress
