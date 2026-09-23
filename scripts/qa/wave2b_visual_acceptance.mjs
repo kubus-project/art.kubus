@@ -18,16 +18,28 @@ const ids = {
     '99999999-9999-4999-8999-999999999999',
   event: '33333333-3333-4333-8333-333333333333',
   exhibition: '44444444-4444-4444-8444-444444444444',
+  collectible: '55555555-5555-4555-8555-555555555555',
+  post: '66666666-6666-4666-8666-666666666666',
+  collection: '77777777-7777-4777-8777-777777777777',
+  marker: '88888888-8888-4888-8888-888888888888',
 };
 const artworkCases = [
   { locale: 'en', path: `/en/artworks/${ids.artwork}` },
   { locale: 'sl', path: `/sl/umetnine/${ids.artwork}` },
 ];
 const productCases = [
-  { name: 'artist-profile', path: `/en/profiles/${ids.artist}` },
-  { name: 'institution-profile', path: `/en/profiles/${ids.institution}` },
-  { name: 'event', path: `/en/events/${ids.event}` },
-  { name: 'exhibition', path: `/en/exhibitions/${ids.exhibition}` },
+  { name: 'artist-profile-en', type: 'profile', path: `/en/profiles/${ids.artist}` },
+  { name: 'artist-profile-sl', type: 'profile', path: `/sl/profili/${ids.artist}` },
+  { name: 'institution-profile-en', type: 'profile', path: `/en/profiles/${ids.institution}` },
+  { name: 'institution-profile-sl', type: 'profile', path: `/sl/profili/${ids.institution}` },
+  { name: 'event-en', type: 'event', path: `/en/events/${ids.event}` },
+  { name: 'exhibition-en', type: 'exhibition', path: `/en/exhibitions/${ids.exhibition}` },
+];
+const supportingRouteCases = [
+  { name: 'collection-route-smoke', path: `/en/collections/${ids.collection}`, expectedHeading: 'River Works' },
+  { name: 'post-route-smoke', path: `/en/posts/${ids.post}`, expectedHeading: 'Maja Novak' },
+  { name: 'marker-route-smoke', path: `/en/map/${ids.marker}`, expectedHeading: 'River Memory' },
+  { name: 'collectible-route-smoke', path: `/en/collectibles/${ids.collectible}`, expectedHeading: 'River Memory Edition' },
 ];
 const widths = [390, 1440];
 const themes = ['light', 'dark'];
@@ -35,6 +47,14 @@ const results = [];
 
 function ensure(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function focusPublicDocumentLink(page) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (await page.locator('#public-document a:focus').count() > 0) return;
+    await page.keyboard.press('Tab');
+  }
+  ensure(false, 'SSR keyboard navigation did not reach a public document link');
 }
 
 function slug(value) {
@@ -79,14 +99,21 @@ async function captureSsr(browser, browserName, testCase, viewport, colorScheme)
     });
     ensure(response?.status() === 200, `${testCase.path} SSR returned ${response?.status()}`);
     await page.locator('#public-document h1').waitFor();
+    if (testCase.expectedHeading) {
+      const heading = (await page.locator('#public-document h1').textContent())?.trim() || '';
+      ensure(heading.includes(testCase.expectedHeading), `unexpected public heading for ${testCase.path}: ${heading}`);
+    }
     ensure(await page.locator('flutter-view').count() === 0, 'JavaScript-disabled SSR mounted Flutter');
     const canonical = await page.locator('link[rel="canonical"]').getAttribute('href');
     ensure(canonical === `${baseUrl}${testCase.path}`, `wrong canonical for ${testCase.path}: ${canonical}`);
-    await page.keyboard.press('Tab');
-    const focusedLink = await page.locator('a:focus').count();
-    ensure(focusedLink > 0, `SSR keyboard focus did not reach a link for ${testCase.path}`);
+    const visualScreenshot = screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'ssr', browserName);
     await page.screenshot({
-      path: screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'ssr', browserName),
+      path: visualScreenshot,
+    });
+    await focusPublicDocumentLink(page);
+    const keyboardScreenshot = screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'ssr-keyboard-focused', browserName);
+    await page.screenshot({
+      path: keyboardScreenshot,
     });
     return {
       browser: browserName,
@@ -96,6 +123,7 @@ async function captureSsr(browser, browserName, testCase, viewport, colorScheme)
       theme: colorScheme,
       canonical,
       keyboardFocus: true,
+      screenshotFiles: [visualScreenshot, keyboardScreenshot],
     };
   } finally {
     await context.close();
@@ -187,6 +215,18 @@ async function verifyFlutterKeyboard(page) {
   };
 }
 
+// Keep browser evidence self-contained and away from production APIs. Flutter's
+// release artifact has the production API origin baked in, so proxy anonymous
+// requests back to the public-only local SSR preview used by this matrix.
+async function installLocalPreviewApiProxy(page) {
+  await page.route('https://api.kubus.site/**', async (route) => {
+    const requested = new URL(route.request().url());
+    const localUrl = `${baseUrl}${requested.pathname}${requested.search}`;
+    const response = await route.fetch({ url: localUrl });
+    await route.fulfill({ response });
+  });
+}
+
 async function installProfileApiFixture(page) {
   await page.route('**/api/profiles/*', async (route) => {
     const id = new URL(route.request().url()).pathname.split('/').at(-1);
@@ -229,6 +269,38 @@ async function installProfileApiFixture(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ success: true, data: record }),
+    });
+  });
+
+  await page.route('**/api/stats/user/*', async (route) => {
+    const id = new URL(route.request().url()).pathname.split('/').at(-1);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          entityType: 'user',
+          entityId: id,
+          scope: 'public',
+          metrics: ['posts', 'followers', 'following', 'publicStreetArtAdded'],
+          counters: {
+            posts: 0,
+            followers: 0,
+            following: 0,
+            publicStreetArtAdded: id === ids.artist ? 4 : 12,
+          },
+          generatedAt: '2026-09-22T10:00:00.000Z',
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/community/posts*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [] }),
     });
   });
 }
@@ -279,7 +351,8 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
     reducedMotion: 'reduce',
   });
   const page = await context.newPage();
-  if (testCase.path.includes('/profiles/')) {
+  await installLocalPreviewApiProxy(page);
+  if (testCase.path.includes('/profiles/') || testCase.path.includes('/profili/')) {
     await installProfileApiFixture(page);
   }
   let releaseMain;
@@ -305,7 +378,8 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
     ensure(mainWasRequested, `Flutter entry bundle did not request for ${testCase.path}`);
     ensure(await page.locator('#public-document').evaluate((node) => !node.inert), 'SSR became inert before takeover');
     const initial = await layoutMetrics(page);
-    await page.screenshot({ path: screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'loading', browserName) });
+    const loadingScreenshot = screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'loading', browserName);
+    await page.screenshot({ path: loadingScreenshot });
 
     releaseMain();
     await waitForExactTakeover(page, testCase);
@@ -315,7 +389,8 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
     ensure(metrics.bodyWidth <= metrics.innerWidth, `body overflow ${metrics.bodyWidth}px at ${metrics.innerWidth}px for ${testCase.path}`);
     ensure(metrics.flutterLeft === 0 && metrics.flutterRight === metrics.innerWidth, `Flutter viewport does not match CSS viewport for ${testCase.path}`);
     ensure(metrics.reducedMotion, 'reduced-motion preference was not applied');
-    await page.screenshot({ path: screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'flutter', browserName) });
+    const flutterScreenshot = screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'flutter', browserName);
+    await page.screenshot({ path: flutterScreenshot });
     let keyboard = null;
     if (testCase.path === artworkCases[0].path && viewport.width === 390 && colorScheme === 'light') {
       keyboard = await verifyFlutterKeyboard(page);
@@ -331,6 +406,7 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
       theme: colorScheme,
       initial,
       metrics,
+      screenshotFiles: [loadingScreenshot, flutterScreenshot],
       ...(keyboard ? { keyboard } : {}),
     };
   } finally {
@@ -380,7 +456,9 @@ async function installLongArtworkFixture(page, locale) {
     await route.fulfill({ status: response.status(), headers, body: html });
   });
   await page.route(`**/api/artworks/${ids.artwork}`, async (route) => {
-    const response = await route.fetch();
+    const response = await route.fetch({
+      url: `${baseUrl}/api/artworks/${ids.artwork}`,
+    });
     const payload = await response.json();
     if (payload.data && typeof payload.data === 'object') {
       Object.assign(payload.data, {
@@ -408,16 +486,19 @@ async function validateResponsiveArtwork(browser, browserName, locale) {
   });
   const page = await context.newPage();
   try {
+    await installLocalPreviewApiProxy(page);
     const fixture = await installLongArtworkFixture(page, locale);
     const response = await page.goto(`${baseUrl}${fixture.path}`, { waitUntil: 'domcontentloaded' });
     ensure(response?.status() === 200, `long-text fixture returned ${response?.status()}`);
     await page.locator('#public-document h1').waitFor();
     ensure((await page.locator('#public-document h1').textContent())?.includes(fixture.title), 'SSR long title fixture was not installed');
-    await page.screenshot({ path: screenshotName(`artwork-${locale}-long-text`, 390, 'ssr', browserName) });
+    const ssrScreenshot = screenshotName(`artwork-${locale}-long-text`, 390, 'ssr', browserName);
+    await page.screenshot({ path: ssrScreenshot });
     const testCase = { path: fixture.path };
     await waitForExactTakeover(page, testCase);
 
     const viewportResults = [];
+    const screenshotFiles = [ssrScreenshot];
     for (const width of [320, 360, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
       await page.waitForFunction(
@@ -434,7 +515,9 @@ async function validateResponsiveArtwork(browser, browserName, locale) {
       ensure(metrics.documentWidth <= width, `long-text document overflows ${width}px viewport: ${JSON.stringify(metrics)}`);
       ensure(metrics.bodyWidth <= width, `long-text body overflows ${width}px viewport: ${JSON.stringify(metrics)}`);
       ensure(metrics.flutterLeft === 0 && metrics.flutterRight === width, `Flutter view does not fit ${width}px viewport: ${JSON.stringify(metrics)}`);
-      await page.screenshot({ path: screenshotName(`artwork-${locale}-long-text`, width, 'flutter', browserName) });
+      const screenshot = screenshotName(`artwork-${locale}-long-text`, width, 'flutter', browserName);
+      await page.screenshot({ path: screenshot });
+      screenshotFiles.push(screenshot);
       viewportResults.push({ width, metrics });
     }
     return {
@@ -445,6 +528,7 @@ async function validateResponsiveArtwork(browser, browserName, locale) {
       title: fixture.title,
       artist: fixture.artist,
       viewports: viewportResults,
+      screenshotFiles,
     };
   } finally {
     await context.close();
@@ -452,12 +536,16 @@ async function validateResponsiveArtwork(browser, browserName, locale) {
 }
 
 async function validateFailureStates(browser, browserName) {
+  let slowSsrScreenshot;
+  let slowFlutterScreenshot;
+  let failureScreenshot;
   const slowContext = await browser.newContext({
     viewport: { width: 390, height: 844 },
     colorScheme: 'dark',
     reducedMotion: 'reduce',
   });
   const slowPage = await slowContext.newPage();
+  await installLocalPreviewApiProxy(slowPage);
   await slowPage.route('**/main.dart.js', async (route) => {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 2400));
     await route.continue();
@@ -468,9 +556,11 @@ async function validateFailureStates(browser, browserName) {
     await slowPage.locator('#public-document h1').waitFor();
     await slowPage.waitForTimeout(500);
     ensure(await slowPage.locator('#public-document').evaluate((node) => !node.inert), 'slow Flutter load hid usable SSR');
-    await slowPage.screenshot({ path: screenshotName('artwork-sl', 390, 'slow-loading-ssr', browserName) });
+    slowSsrScreenshot = screenshotName('artwork-sl', 390, 'slow-loading-ssr', browserName);
+    await slowPage.screenshot({ path: slowSsrScreenshot });
     await waitForExactTakeover(slowPage, { path });
-    await slowPage.screenshot({ path: screenshotName('artwork-sl', 390, 'slow-loading-flutter', browserName) });
+    slowFlutterScreenshot = screenshotName('artwork-sl', 390, 'slow-loading-flutter', browserName);
+    await slowPage.screenshot({ path: slowFlutterScreenshot });
   } finally {
     await slowContext.close();
   }
@@ -481,6 +571,7 @@ async function validateFailureStates(browser, browserName) {
     reducedMotion: 'reduce',
   });
   const failurePage = await failureContext.newPage();
+  await installLocalPreviewApiProxy(failurePage);
   await failurePage.route('**/main.dart.js', (route) => route.abort('failed'));
   try {
     const path = `/en/artworks/${ids.artwork}`;
@@ -492,21 +583,23 @@ async function validateFailureStates(browser, browserName) {
     );
     ensure(await failurePage.locator('#public-document').getAttribute('aria-hidden') === null, 'Flutter bundle failure hid SSR');
     ensure(await failurePage.locator('#flutter-host').getAttribute('aria-hidden') === 'true', 'failed Flutter host became visible');
-    await failurePage.keyboard.press('Tab');
-    ensure(await failurePage.locator('#public-document a:focus').count() > 0, 'SSR lost keyboard navigation after bundle failure');
-    await failurePage.screenshot({ path: screenshotName('artwork-en', 1440, 'bundle-failure-ssr', browserName) });
+    await focusPublicDocumentLink(failurePage);
+    failureScreenshot = screenshotName('artwork-en', 1440, 'bundle-failure-ssr', browserName);
+    await failurePage.screenshot({ path: failureScreenshot });
   } finally {
     await failureContext.close();
   }
   return {
     browser: browserName,
     state: 'failure-states',
+    route: `/en/artworks/${ids.artwork}`,
     slowFlutter: 'SSR remained accessible before exact takeover',
     bundleFailure: 'SSR remained visible and host stayed hidden',
+    screenshotFiles: [slowSsrScreenshot, slowFlutterScreenshot, failureScreenshot],
   };
 }
 
-async function validateZoom(browser, browserName) {
+async function validateNarrowViewport(browser, browserName) {
   const context = await browser.newContext({
     viewport: { width: 195, height: 422 },
     deviceScaleFactor: 2,
@@ -515,18 +608,93 @@ async function validateZoom(browser, browserName) {
   });
   const page = await context.newPage();
   try {
+    await installLocalPreviewApiProxy(page);
     const path = `/en/artworks/${ids.artwork}`;
     await page.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
     await waitForExactTakeover(page, { path });
     const metrics = await layoutMetrics(page);
-    ensure(metrics.innerWidth === 195, `200% zoom-effective CSS width was ${metrics.innerWidth}`);
-    ensure(metrics.documentWidth <= 195 && metrics.bodyWidth <= 195, `200% zoom-effective layout overflowed: ${JSON.stringify(metrics)}`);
-    await page.screenshot({ path: screenshotName('artwork-en', 390, '200-percent-zoom-effective', browserName) });
+    ensure(metrics.innerWidth === 195, `narrow simulation CSS width was ${metrics.innerWidth}`);
+    ensure(metrics.documentWidth <= 195 && metrics.bodyWidth <= 195, `narrow simulation overflowed: ${JSON.stringify(metrics)}`);
+    const screenshot = screenshotName('artwork-en', 390, 'narrow-viewport-simulation-not-zoom', browserName);
+    await page.screenshot({ path: screenshot });
     return {
       browser: browserName,
-      state: 'zoom-effective-width',
+      state: 'narrow-css-viewport-simulation-not-browser-zoom',
+      route: `/en/artworks/${ids.artwork}`,
+      zoomMode: 'viewport-simulation-not-browser-zoom',
       viewport: { width: 195, height: 422, deviceScaleFactor: 2 },
       metrics,
+      screenshotFiles: [screenshot],
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+async function validateRealBrowserZoom(browser, browserName) {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  try {
+    await installLocalPreviewApiProxy(page);
+    const path = `/en/artworks/${ids.artwork}`;
+    await page.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
+    await waitForExactTakeover(page, { path });
+    const before = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      devicePixelRatio: window.devicePixelRatio,
+      visualViewportScale: window.visualViewport?.scale ?? null,
+    }));
+
+    let after = before;
+    for (let step = 0; step < 7; step += 1) {
+      await page.keyboard.press('Control+Shift+=').catch(() => {});
+      await page.waitForTimeout(120);
+      after = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        devicePixelRatio: window.devicePixelRatio,
+        visualViewportScale: window.visualViewport?.scale ?? null,
+      }));
+      if (after.devicePixelRatio >= before.devicePixelRatio * 1.9 ||
+          after.innerWidth <= before.innerWidth / 1.9) {
+        break;
+      }
+    }
+
+    const applied = after.devicePixelRatio >= before.devicePixelRatio * 1.9 ||
+        after.innerWidth <= before.innerWidth / 1.9;
+    if (!applied) {
+      return {
+        browser: browserName,
+        state: 'real-browser-zoom-unverified',
+        route: `/en/artworks/${ids.artwork}`,
+        zoomMode: 'keyboard-shortcut-attempted',
+        reason: 'Browser did not report a 200% page zoom after Ctrl+Plus attempts.',
+        before,
+        after,
+      };
+    }
+
+    const metrics = await layoutMetrics(page);
+    ensure(metrics.documentWidth <= metrics.innerWidth, `real browser zoom caused document overflow: ${JSON.stringify(metrics)}`);
+    ensure(metrics.bodyWidth <= metrics.innerWidth, `real browser zoom caused body overflow: ${JSON.stringify(metrics)}`);
+    const screenshot = screenshotName('artwork-en', 'real-browser-200-percent-zoom', browserName);
+    await page.screenshot({
+      path: screenshot,
+      fullPage: true,
+    });
+    return {
+      browser: browserName,
+      state: 'real-browser-zoom-passed',
+      route: `/en/artworks/${ids.artwork}`,
+      zoomMode: 'browser-keyboard-shortcut',
+      before,
+      after,
+      metrics,
+      screenshotFiles: [screenshot],
     };
   } finally {
     await context.close();
@@ -546,7 +714,27 @@ async function runBrowser(browserName, browserType) {
       }
     }
     for (const testCase of productCases) {
-      const viewport = { width: 1440, height: 900 };
+      const themesForEntity = testCase.type === 'profile' ? themes : ['light'];
+      for (const width of [390, 1440]) {
+        const viewport = { width, height: width === 390 ? 844 : 900 };
+        for (const colorScheme of themesForEntity) {
+          results.push(await captureSsr(browser, browserName, testCase, viewport, colorScheme));
+          results.push(await captureTakeover(browser, browserName, testCase, viewport, colorScheme));
+        }
+      }
+    }
+    for (const testCase of supportingRouteCases) {
+      results.push(await captureSsr(
+        browser,
+        browserName,
+        testCase,
+        { width: 390, height: 844 },
+        'light',
+      ));
+    }
+    for (const width of [900, 1024, 1280]) {
+      const testCase = artworkCases[0];
+      const viewport = { width, height: 900 };
       results.push(await captureSsr(browser, browserName, testCase, viewport, 'light'));
       results.push(await captureTakeover(browser, browserName, testCase, viewport, 'light'));
     }
@@ -554,7 +742,8 @@ async function runBrowser(browserName, browserType) {
       results.push(await validateResponsiveArtwork(browser, browserName, locale));
     }
     results.push(await validateFailureStates(browser, browserName));
-    results.push(await validateZoom(browser, browserName));
+    results.push(await validateNarrowViewport(browser, browserName));
+    results.push(await validateRealBrowserZoom(browser, browserName));
   } finally {
     await browser.close();
   }
@@ -574,8 +763,49 @@ const report = {
   sourceSha: process.env.WAVE2B_SOURCE_SHA || null,
   previewOrigin: baseUrl,
   fixtureScope: 'local public-only demo entities; no production data',
+  apiEvidencePolicy: 'api.kubus.site requests are proxied to the local public-only preview',
   generatedAt: new Date().toISOString(),
-  results,
+  results: results.map((result) => {
+    const pathname = result.route || `/en/artworks/${ids.artwork}`;
+    const segments = pathname.split('/').filter(Boolean);
+    const entityType = ({
+      artworks: 'artwork',
+      umetnine: 'artwork',
+      profiles: 'profile',
+      profili: 'profile',
+      events: 'event',
+      dogodki: 'event',
+      exhibitions: 'exhibition',
+      razstave: 'exhibition',
+      collections: 'collection',
+      zbirke: 'collection',
+      posts: 'post',
+      objave: 'post',
+      map: 'marker',
+      collectibles: 'collectible',
+    })[segments[1]] || 'artwork';
+    const entityId = segments[2] || ids.artwork;
+    return {
+      sourceSha: process.env.WAVE2B_SOURCE_SHA || null,
+      browser: result.browser,
+      viewport: result.viewport || { width: 1440, height: 900 },
+      theme: result.theme || 'light',
+      locale: result.locale || (segments[0] === 'sl' ? 'sl' : 'en'),
+      entityType,
+      entityId,
+      fixtureIdentity: 'synthetic public-only local preview fixture',
+      state: result.state,
+      javascriptState: result.state === 'ssr-no-js'
+        ? 'disabled'
+        : result.state === 'failure-states'
+          ? 'enabled; bundle delayed or blocked'
+          : 'enabled',
+      reducedMotion: 'reduce',
+      zoomMode: result.zoomMode || 'browser-default-100-percent',
+      screenshotFiles: result.screenshotFiles || [],
+      ...result,
+    };
+  }),
 };
 await writeFile(resolve(outputDir, 'visual-matrix.json'), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify({ outputDir, cases: results.length, browsers: [...requestedBrowsers] }, null, 2));
