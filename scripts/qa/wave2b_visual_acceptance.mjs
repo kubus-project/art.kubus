@@ -50,11 +50,12 @@ function ensure(condition, message) {
 }
 
 async function focusPublicDocumentLink(page) {
+  const focusedLink = '#public-document a:focus, #content a:focus, main a:focus';
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (await page.locator('#public-document a:focus').count() > 0) return;
+    if (await page.locator(focusedLink).count() > 0) return;
     await page.keyboard.press('Tab');
   }
-  ensure(false, 'SSR keyboard navigation did not reach a public document link');
+  ensure(false, 'SSR keyboard navigation did not reach a public entity link');
 }
 
 function slug(value) {
@@ -98,9 +99,10 @@ async function captureSsr(browser, browserName, testCase, viewport, colorScheme)
       waitUntil: 'domcontentloaded',
     });
     ensure(response?.status() === 200, `${testCase.path} SSR returned ${response?.status()}`);
-    await page.locator('#public-document h1').waitFor();
+    const h1 = page.locator('#public-document h1, #content h1, main h1').first();
+    await h1.waitFor({ state: 'visible' });
     if (testCase.expectedHeading) {
-      const heading = (await page.locator('#public-document h1').textContent())?.trim() || '';
+      const heading = (await h1.textContent())?.trim() || '';
       ensure(heading.includes(testCase.expectedHeading), `unexpected public heading for ${testCase.path}: ${heading}`);
     }
     ensure(await page.locator('flutter-view').count() === 0, 'JavaScript-disabled SSR mounted Flutter');
