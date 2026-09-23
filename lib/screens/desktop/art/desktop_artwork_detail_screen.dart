@@ -264,7 +264,7 @@ class _DesktopArtworkDetailScreenState
         );
 
         return Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: scheme.surface,
           appBar: widget.showAppBar
               ? AppBar(
                   title: KubusHeaderText(
@@ -634,21 +634,31 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildHeader(Artwork artwork) {
     final category = artwork.category.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DetailIdentityBlock(
-          title: artwork.title,
-          kicker:
-              category.isNotEmpty && category != 'General' ? category : null,
-        ),
-        const SizedBox(height: DetailSpacing.sm),
-        ArtworkCreatorByline(
-          artwork: artwork,
-          style: DetailTypography.caption(context),
-          maxLines: 2,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailIdentityBlock(
+            title: artwork.title,
+            kicker:
+                category.isNotEmpty && category != 'General' ? category : null,
+            titleStyle: KubusTextStyles.responsiveTitleStyle(
+              context,
+              KubusTypography.textTheme.displayMedium!,
+              availableWidth: constraints.maxWidth,
+            ).copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: DetailSpacing.sm),
+          ArtworkCreatorByline(
+            artwork: artwork,
+            style: DetailTypography.caption(context),
+            maxLines: 2,
+          ),
+        ],
+      ),
     );
   }
 

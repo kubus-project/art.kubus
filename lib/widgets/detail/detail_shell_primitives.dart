@@ -731,12 +731,14 @@ class DetailIdentityBlock extends StatelessWidget {
     this.kicker,
     this.subtitle,
     this.trailing,
+    this.titleStyle,
   });
 
   final String title;
   final String? kicker;
   final String? subtitle;
   final Widget? trailing;
+  final TextStyle? titleStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -765,10 +767,11 @@ class DetailIdentityBlock extends StatelessWidget {
                 title,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: DetailTypography.screenTitle(context).copyWith(
-                  fontSize: KubusHeaderMetrics.screenTitle,
-                  height: 1.16,
-                ),
+                style: titleStyle ??
+                    DetailTypography.screenTitle(context).copyWith(
+                      fontSize: KubusHeaderMetrics.screenTitle,
+                      height: 1.16,
+                    ),
               ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: DetailSpacing.sm),

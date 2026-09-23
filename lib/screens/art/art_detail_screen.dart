@@ -29,7 +29,6 @@ import '../../services/map_data_controller.dart';
 import '../../services/nft_minting_service.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../models/collectible.dart';
-import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../utils/artwork_location_actions.dart';
@@ -190,7 +189,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         if (_artworkLoading) {
           return AnimatedGradientBackground(
             child: Scaffold(
-              backgroundColor: Colors.transparent,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               appBar: AppBar(
                 title: Text(
                   l10n.artDetailLoadingTitle,
@@ -300,7 +299,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         _scheduleTakeoverReady(artwork.id);
         return AnimatedGradientBackground(
           child: Scaffold(
-            backgroundColor: Colors.transparent,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             body: CustomScrollView(
               controller: _scrollController,
               slivers: [
@@ -551,9 +550,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         ],
         Text(
           artwork.title,
-          style: KubusTextStyles.responsiveHeroTitle(context).copyWith(
+          style: KubusTextStyles.responsiveTitleStyle(
+            context,
+            KubusTypography.textTheme.displayLarge!,
+            availableWidth: MediaQuery.sizeOf(context).width -
+                (DetailSpacing.lg * 2),
+          ).copyWith(
             color: Theme.of(context).colorScheme.onSurface,
-            height: 1.15,
+            height: 1.08,
           ),
         ),
         const SizedBox(height: DetailSpacing.sm),
@@ -849,7 +853,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   Widget _buildDescription(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           l10n.commonDescription,
