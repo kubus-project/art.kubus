@@ -356,10 +356,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       appBar: isDesktopCanonicalPublicEntry
           ? null
           : AppBar(
-              backgroundColor: Colors.transparent,
+              backgroundColor:
+                  isCanonicalPublicEntry ? roles.surface : Colors.transparent,
               elevation: 0,
-              title: Text(event.title,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+              title: Text(
+                isCanonicalPublicEntry ? 'art.kubus' : event.title,
+                style: isCanonicalPublicEntry
+                    ? KubusTextStyles.screenTitle
+                    : KubusTypography.inter(fontWeight: FontWeight.w600),
+              ),
               actions: const [],
             ),
       body: Center(

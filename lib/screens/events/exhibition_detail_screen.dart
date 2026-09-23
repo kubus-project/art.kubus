@@ -1140,8 +1140,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       appBar: widget.embedded || isDesktopCanonicalPublicEntry
           ? null
           : AppBar(
-              title: Text(ex.title,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+              title: Text(
+                isCanonicalPublicEntry ? 'art.kubus' : ex.title,
+                style: isCanonicalPublicEntry
+                    ? KubusTextStyles.screenTitle
+                    : KubusTypography.inter(fontWeight: FontWeight.w600),
+              ),
               actions: const [],
             ),
       body: Center(
