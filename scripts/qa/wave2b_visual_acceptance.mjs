@@ -114,9 +114,77 @@ async function waitForExactTakeover(page, testCase) {
     `SSR accessibility ownership was not released for ${testCase.path}`,
   );
   ensure(
+    await page.locator('#public-document').evaluate((node) => node.inert),
+    `SSR remained keyboard-interactive after Flutter takeover for ${testCase.path}`,
+  );
+  ensure(
     await page.locator('#flutter-host').getAttribute('aria-hidden') === null,
     `Flutter remained hidden after takeover for ${testCase.path}`,
   );
+}
+
+async function verifyFlutterKeyboard(page) {
+  let placeholderFocused = false;
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    await page.keyboard.press('Tab');
+    placeholderFocused = await page.evaluate(
+      () => document.activeElement?.matches('flt-semantics-placeholder') === true,
+    );
+    if (placeholderFocused) break;
+  }
+  ensure(placeholderFocused, 'keyboard could not focus Flutter accessibility entry');
+
+  const entryFocus = await page.evaluate(() => {
+    const element = document.activeElement;
+    const style = getComputedStyle(element);
+    return {
+      label: element?.getAttribute('aria-label'),
+      outlineWidth: Number.parseFloat(style.outlineWidth) || 0,
+      outlineStyle: style.outlineStyle,
+    };
+  });
+  ensure(entryFocus.label === 'Enable accessibility', 'Flutter keyboard entry has no clear label');
+  ensure(entryFocus.outlineWidth > 0 && entryFocus.outlineStyle !== 'none', 'Flutter keyboard entry focus is not visible');
+
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelectorAll('flt-semantics-host flt-semantics').length > 0,
+  );
+
+  let focusedControl = null;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await page.keyboard.press('Tab');
+    focusedControl = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (element?.tagName !== 'FLT-SEMANTICS' || element.getAttribute('role') !== 'button') {
+        return null;
+      }
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        label: element.textContent?.trim() || element.getAttribute('aria-label') || null,
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        outlineWidth: Number.parseFloat(style.outlineWidth) || 0,
+        outlineStyle: style.outlineStyle,
+      };
+    });
+    if (focusedControl) break;
+  }
+  ensure(focusedControl, 'keyboard did not reach a Flutter entity action');
+  ensure(focusedControl.width > 0 && focusedControl.height > 0, 'focused Flutter action has no visible bounds');
+  ensure(
+    focusedControl.outlineWidth > 0 && focusedControl.outlineStyle !== 'none',
+    'Flutter entity action focus is not visible',
+  );
+
+  return {
+    ssrBecameInert: true,
+    accessibilityEntry: entryFocus,
+    semanticControl: focusedControl,
+  };
 }
 
 async function installProfileApiFixture(page) {
@@ -248,6 +316,13 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
     ensure(metrics.flutterLeft === 0 && metrics.flutterRight === metrics.innerWidth, `Flutter viewport does not match CSS viewport for ${testCase.path}`);
     ensure(metrics.reducedMotion, 'reduced-motion preference was not applied');
     await page.screenshot({ path: screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'flutter', browserName) });
+    let keyboard = null;
+    if (testCase.path === artworkCases[0].path && viewport.width === 390 && colorScheme === 'light') {
+      keyboard = await verifyFlutterKeyboard(page);
+      await page.screenshot({
+        path: screenshotName('artwork-en', 390, colorScheme, 'flutter-keyboard-focused', browserName),
+      });
+    }
     return {
       browser: browserName,
       route: testCase.path,
@@ -256,6 +331,7 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
       theme: colorScheme,
       initial,
       metrics,
+      ...(keyboard ? { keyboard } : {}),
     };
   } finally {
     releaseMain();
@@ -344,7 +420,16 @@ async function validateResponsiveArtwork(browser, browserName, locale) {
     const viewportResults = [];
     for (const width of [320, 360, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
-      await page.waitForTimeout(180);
+      await page.waitForFunction(
+        (expectedWidth) => {
+          const view = document.querySelector('flutter-view');
+          const bounds = view?.getBoundingClientRect();
+          return window.innerWidth === expectedWidth && bounds &&
+            Math.round(bounds.left) === 0 && Math.round(bounds.right) === expectedWidth;
+        },
+        width,
+        { timeout: 5000 },
+      );
       const metrics = await layoutMetrics(page);
       ensure(metrics.documentWidth <= width, `long-text document overflows ${width}px viewport: ${JSON.stringify(metrics)}`);
       ensure(metrics.bodyWidth <= width, `long-text body overflows ${width}px viewport: ${JSON.stringify(metrics)}`);
@@ -407,11 +492,18 @@ async function validateFailureStates(browser, browserName) {
     );
     ensure(await failurePage.locator('#public-document').getAttribute('aria-hidden') === null, 'Flutter bundle failure hid SSR');
     ensure(await failurePage.locator('#flutter-host').getAttribute('aria-hidden') === 'true', 'failed Flutter host became visible');
+    await failurePage.keyboard.press('Tab');
+    ensure(await failurePage.locator('#public-document a:focus').count() > 0, 'SSR lost keyboard navigation after bundle failure');
     await failurePage.screenshot({ path: screenshotName('artwork-en', 1440, 'bundle-failure-ssr', browserName) });
   } finally {
     await failureContext.close();
   }
-  return { browser: browserName, slowFlutter: 'SSR remained accessible before exact takeover', bundleFailure: 'SSR remained visible and host stayed hidden' };
+  return {
+    browser: browserName,
+    state: 'failure-states',
+    slowFlutter: 'SSR remained accessible before exact takeover',
+    bundleFailure: 'SSR remained visible and host stayed hidden',
+  };
 }
 
 async function validateZoom(browser, browserName) {
@@ -430,7 +522,12 @@ async function validateZoom(browser, browserName) {
     ensure(metrics.innerWidth === 195, `200% zoom-effective CSS width was ${metrics.innerWidth}`);
     ensure(metrics.documentWidth <= 195 && metrics.bodyWidth <= 195, `200% zoom-effective layout overflowed: ${JSON.stringify(metrics)}`);
     await page.screenshot({ path: screenshotName('artwork-en', 390, '200-percent-zoom-effective', browserName) });
-    return { browser: browserName, viewport: { width: 195, height: 422, deviceScaleFactor: 2 }, metrics };
+    return {
+      browser: browserName,
+      state: 'zoom-effective-width',
+      viewport: { width: 195, height: 422, deviceScaleFactor: 2 },
+      metrics,
+    };
   } finally {
     await context.close();
   }
