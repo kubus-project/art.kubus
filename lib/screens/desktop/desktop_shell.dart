@@ -459,28 +459,6 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
-  List<Color>? _backgroundColorsForRoute(BuildContext context, String route) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = _activeScreenAccent(context, route: route);
-    return _blendAccentIntoAnimatedBase(
-      base: isDark
-          ? KubusGradients.animatedDarkColors
-          : KubusGradients.animatedLightColors,
-      accent: accent,
-      isDark: isDark,
-    );
-  }
-
-  Color _fallbackBackdropColorForRoute(BuildContext context, String route) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = _activeScreenAccent(context, route: route);
-    final base =
-        isDark ? KubusColors.backgroundDark : KubusColors.backgroundLight;
-    return Color.lerp(base, accent, isDark ? 0.10 : 0.05) ?? base;
-  }
-
   bool _isInvitesScreenActive() {
     if (_screenStack.isEmpty) return false;
     final top = _screenStack.last;
@@ -489,29 +467,6 @@ class _DesktopShellState extends State<DesktopShell>
       return true;
     }
     return false;
-  }
-
-  List<Color> _blendAccentIntoAnimatedBase({
-    required List<Color> base,
-    required Color accent,
-    required bool isDark,
-  }) {
-    if (base.isEmpty) return <Color>[accent];
-    if (base.length == 1) return <Color>[base.first, accent];
-
-    // Blend factors tuned to keep the background subtle while still matching
-    // the screen's accent.
-    final f1 = isDark ? 0.16 : 0.10;
-    final f2 = isDark ? 0.22 : 0.14;
-    final f3 = isDark ? 0.14 : 0.10;
-
-    Color lerp(Color a, Color b, double t) => Color.lerp(a, b, t) ?? b;
-
-    final c0 = base[0];
-    final c1 = lerp(base.length > 1 ? base[1] : base[0], accent, f1);
-    final c2 = lerp(base.length > 2 ? base[2] : base.last, accent, f2);
-    final c3 = lerp(base.length > 3 ? base[3] : base.last, accent, f3);
-    return <Color>[c0, c1, c2, c3];
   }
 
   Widget _buildCurrentScreen(String route) {
@@ -716,20 +671,9 @@ class _DesktopShellState extends State<DesktopShell>
                         child: ColoredBox(
                           key: const ValueKey<String>(
                               'desktop-shell-fallback-backdrop'),
-                          color: _fallbackBackdropColorForRoute(
-                              context, effectiveRoute),
+                          color: KubusColorRoles.of(context).ground,
                         ),
                       ),
-                      if (!(kIsWeb && effectiveRoute == '/explore'))
-                        Positioned.fill(
-                          child: AnimatedGradientBackground(
-                            duration: const Duration(seconds: 12),
-                            intensity: 0.25,
-                            colors: _backgroundColorsForRoute(
-                                context, effectiveRoute),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
                       Scaffold(
                         backgroundColor: Colors.transparent,
                         body: Row(
