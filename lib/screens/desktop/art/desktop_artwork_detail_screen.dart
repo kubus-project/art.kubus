@@ -61,17 +61,18 @@ class _DesktopArtworkDetailScreenState
     extends State<DesktopArtworkDetailScreen> {
   final ArtworkCommentsPanelController _commentsPanelController =
       ArtworkCommentsPanelController();
+  final ScrollController _pageScrollController = ScrollController();
+  final GlobalKey _commentsSectionKey = GlobalKey();
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
-  bool _commentsSidebarExpanded = true;
   bool _takeoverReadyScheduled = false;
 
   String _publicReturnRoute(BuildContext context) {
     try {
-      return context
-              .read<PublicEntityTakeoverProvider>()
-              .returnRouteForArtwork(widget.artworkId) ??
+      return context.read<PublicEntityTakeoverProvider>().returnRouteForArtwork(
+                widget.artworkId,
+              ) ??
           '/a/${Uri.encodeComponent(widget.artworkId)}';
     } catch (_) {
       return '/a/${Uri.encodeComponent(widget.artworkId)}';
@@ -124,6 +125,7 @@ class _DesktopArtworkDetailScreenState
 
   @override
   void dispose() {
+    _pageScrollController.dispose();
     super.dispose();
   }
 
@@ -266,94 +268,153 @@ class _DesktopArtworkDetailScreenState
           appBar: widget.showAppBar
               ? AppBar(
                   title: KubusHeaderText(
-                    title: artwork.title,
+                    title: 'art.kubus',
                     kind: KubusHeaderKind.screen,
                     compact: true,
                   ),
                 )
               : null,
-          body: Padding(
-            padding: const EdgeInsets.all(DetailSpacing.xl),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final showTwoColumns = constraints.maxWidth >= 900;
-                if (showTwoColumns) {
-                  final sidePanelWidth =
-                      (constraints.maxWidth * 0.34).clamp(332.0, 430.0);
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: _buildLeftPane(
-                          artwork: artwork,
-                          coverUrl: coverUrl,
-                          artworkProvider: artworkProvider,
-                          isSignedIn: isSignedIn,
-                        ),
-                      ),
-                      const SizedBox(width: DetailSpacing.lg),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        width: _commentsSidebarExpanded ? sidePanelWidth : 72,
-                        child: _commentsSidebarExpanded
-                            ? _buildDesktopSidePanel(
-                                artwork,
-                                artworkProvider,
-                                isSignedIn,
-                                onToggleVisibility: () {
-                                  setState(() {
-                                    _commentsSidebarExpanded = false;
-                                  });
-                                },
-                              )
-                            : _buildCommentsSidebarToggleButton(),
-                      ),
-                    ],
-                  );
-                }
-
-                final commentsHeight =
-                    (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
-                return Column(
-                  children: [
-                    Expanded(
-                      child: _buildLeftPane(
-                        artwork: artwork,
-                        coverUrl: coverUrl,
-                        artworkProvider: artworkProvider,
-                        isSignedIn: isSignedIn,
-                      ),
-                    ),
-                    const SizedBox(height: DetailSpacing.lg),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        height: commentsHeight,
-                        width: double.infinity,
-                        child: ArtworkCommentsExpandableCard(
-                          artwork: artwork,
-                          isSignedIn: isSignedIn,
-                          controller: _commentsPanelController,
-                          layoutMode: ArtworkCommentsLayoutMode.fill,
-                          signInArguments: {
-                            'redirectRoute': _publicReturnRoute(context),
-                            'redirectArguments': {
-                              'artworkId': artwork.id,
-                              'attendanceMarkerId': widget.attendanceMarkerId ??
-                                  artwork.arMarkerId,
-                            },
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+          body: _buildDesktopPage(
+            artwork: artwork,
+            coverUrl: coverUrl,
+            artworkProvider: artworkProvider,
+            isSignedIn: isSignedIn,
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDesktopPage({
+    required Artwork artwork,
+    required String? coverUrl,
+    required ArtworkProvider artworkProvider,
+    required bool isSignedIn,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Padding(
+      padding: DetailSpacing.contentPaddingDesktop,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final useComposedHero = constraints.maxWidth >= 900;
+          final identity = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(artwork),
+              const SizedBox(height: DetailSpacing.md),
+              if (ArtworkLocationActions.hasValidLocation(artwork))
+                DetailContextCluster(
+                  compact: true,
+                  items: [
+                    DetailContextItem(
+                      icon: Icons.place_outlined,
+                      value: '${artwork.position.latitude.toStringAsFixed(4)}, '
+                          '${artwork.position.longitude.toStringAsFixed(4)}',
+                    ),
+                  ],
+                ),
+              const SizedBox(height: DetailSpacing.lg),
+              _buildActionsRow(artwork, artworkProvider, isSignedIn),
+            ],
+          );
+
+          return SingleChildScrollView(
+            controller: _pageScrollController,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (useComposedHero)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 6,
+                          child: _buildMedia(artwork, coverUrl),
+                        ),
+                        const SizedBox(width: DetailSpacing.xl),
+                        Expanded(flex: 4, child: identity),
+                      ],
+                    )
+                  else ...[
+                    _buildMedia(artwork, coverUrl),
+                    const SizedBox(height: DetailSpacing.heroGap),
+                    identity,
+                  ],
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  _buildDescription(artwork),
+                  _buildGallerySection(artwork, coverUrl),
+                  Padding(
+                    padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
+                    child: ArtworkSpatialArchiveSection(
+                      artwork: artwork,
+                      contextMarkerId: widget.attendanceMarkerId,
+                    ),
+                  ),
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  DetailSectionLabel(label: l10n.commonDetails),
+                  DetailContextCluster(
+                    compact: true,
+                    items: [
+                      DetailContextItem(
+                        icon: Icons.visibility,
+                        value: '${artwork.viewsCount}',
+                      ),
+                      if (artwork.discoveryCount > 0)
+                        DetailContextItem(
+                          icon: Icons.explore,
+                          value: '${artwork.discoveryCount}',
+                        ),
+                      if (artwork.actualRewards > 0)
+                        DetailContextItem(
+                          icon: Icons.token,
+                          value: '${artwork.actualRewards}',
+                          label: 'KUB8',
+                        ),
+                    ],
+                  ),
+                  _buildAttendanceConfirmSection(
+                    artwork: artwork,
+                    isSignedIn: isSignedIn,
+                  ),
+                  _buildArSetupSection(artwork),
+                  _buildPoapInfoCard(artwork),
+                  if (AppConfig.isFeatureEnabled('collabInvites') &&
+                      isSignedIn) ...[
+                    const SizedBox(height: DetailSpacing.cardGap),
+                    ArtworkCollaboratorsExpandableCard(
+                      artwork: artwork,
+                      initiallyExpanded: false,
+                    ),
+                  ],
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  KeyedSubtree(
+                    key: _commentsSectionKey,
+                    child: ArtworkCommentsExpandableCard(
+                      artwork: artwork,
+                      isSignedIn: isSignedIn,
+                      initiallyExpanded: false,
+                      controller: _commentsPanelController,
+                      layoutMode: ArtworkCommentsLayoutMode.compact,
+                      signInArguments: {
+                        'redirectRoute': _publicReturnRoute(context),
+                        'redirectArguments': {
+                          'artworkId': artwork.id,
+                          'attendanceMarkerId':
+                              widget.attendanceMarkerId ?? artwork.arMarkerId,
+                        },
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 96),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -364,73 +425,12 @@ class _DesktopArtworkDetailScreenState
       if (!mounted) return;
       try {
         unawaited(
-          context
-              .read<PublicEntityTakeoverProvider>()
-              .markArtworkReady(artworkId),
+          context.read<PublicEntityTakeoverProvider>().markArtworkReady(
+                artworkId,
+              ),
         );
       } catch (_) {}
     });
-  }
-
-  Widget _buildLeftPane({
-    required Artwork artwork,
-    required String? coverUrl,
-    required ArtworkProvider artworkProvider,
-    required bool isSignedIn,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return ListView(
-      children: [
-        _buildMedia(artwork, coverUrl),
-        const SizedBox(height: DetailSpacing.heroGap),
-        DetailCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(artwork),
-              const SizedBox(height: DetailSpacing.md),
-              DetailSectionLabel(label: l10n.commonDetails),
-              DetailContextCluster(
-                compact: true,
-                items: [
-                  DetailContextItem(
-                    icon: Icons.visibility,
-                    value: '${artwork.viewsCount}',
-                  ),
-                  if (artwork.discoveryCount > 0)
-                    DetailContextItem(
-                      icon: Icons.explore,
-                      value: '${artwork.discoveryCount}',
-                    ),
-                  if (artwork.actualRewards > 0)
-                    DetailContextItem(
-                      icon: Icons.token,
-                      value: '${artwork.actualRewards}',
-                      label: 'KUB8',
-                    ),
-                ],
-              ),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildActionsRow(artwork, artworkProvider, isSignedIn),
-            ],
-          ),
-        ),
-        _buildGallerySection(artwork, coverUrl),
-        _buildAttendanceConfirmSection(
-            artwork: artwork, isSignedIn: isSignedIn),
-        _buildArSetupSection(artwork),
-        Padding(
-          padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
-          child: ArtworkSpatialArchiveSection(
-            artwork: artwork,
-            contextMarkerId: widget.attendanceMarkerId,
-          ),
-        ),
-        _buildDescription(artwork),
-        _buildPoapInfoCard(artwork),
-      ],
-    );
   }
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
@@ -438,10 +438,7 @@ class _DesktopArtworkDetailScreenState
     final primaryCover = <String>[
       if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
       ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
-    ].firstWhere(
-      (url) => url.isNotEmpty,
-      orElse: () => '',
-    );
+    ].firstWhere((url) => url.isNotEmpty, orElse: () => '');
 
     if (primaryCover.isEmpty) {
       return ClipRRect(
@@ -450,8 +447,10 @@ class _DesktopArtworkDetailScreenState
           aspectRatio: 14 / 9,
           child: Container(
             color: scheme.surfaceContainerHighest,
-            child:
-                Icon(Icons.image_not_supported, color: scheme.onSurfaceVariant),
+            child: Icon(
+              Icons.image_not_supported,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -459,11 +458,9 @@ class _DesktopArtworkDetailScreenState
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Image-led: let the cover fill the pane width at its natural 14:9
-        // framing instead of capping it at a 320px strip. The upper clamp
-        // only guards ultra-wide panes.
-        final tunedCoverHeight =
-            (constraints.maxWidth / (14 / 9)).clamp(260.0, 620.0).toDouble();
+        // The public server frame presents the primary artwork in a near
+        // square crop; keep that media geometry through the native handoff.
+        final tunedCoverHeight = constraints.maxWidth.clamp(320.0, 680.0);
         return ArtworkGalleryView(
           imageUrls: [primaryCover],
           height: tunedCoverHeight,
@@ -513,45 +510,6 @@ class _DesktopArtworkDetailScreenState
     final title = artwork.title.trim();
     if (title.isEmpty) return null;
     return '$title image';
-  }
-
-  Widget _buildDesktopSidePanel(
-    Artwork artwork,
-    ArtworkProvider provider,
-    bool isSignedIn, {
-    VoidCallback? onToggleVisibility,
-  }) {
-    final showCollaboration =
-        AppConfig.isFeatureEnabled('collabInvites') && isSignedIn;
-
-    return Column(
-      children: [
-        if (showCollaboration) ...[
-          ArtworkCollaboratorsExpandableCard(
-            artwork: artwork,
-            initiallyExpanded: false,
-          ),
-          const SizedBox(height: DetailSpacing.md),
-        ],
-        Expanded(
-          child: ArtworkCommentsExpandableCard(
-            artwork: artwork,
-            isSignedIn: isSignedIn,
-            controller: _commentsPanelController,
-            onClose: onToggleVisibility,
-            layoutMode: ArtworkCommentsLayoutMode.fill,
-            signInArguments: {
-              'redirectRoute': _publicReturnRoute(context),
-              'redirectArguments': {
-                'artworkId': artwork.id,
-                'attendanceMarkerId':
-                    widget.attendanceMarkerId ?? artwork.arMarkerId,
-              },
-            },
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildArSetupSection(Artwork artwork) {
@@ -615,8 +573,10 @@ class _DesktopArtworkDetailScreenState
               children: [
                 Icon(Icons.view_in_ar_rounded, color: color),
                 const SizedBox(width: KubusSpacing.sm),
-                Text(l10n.mapMarkerLayerArExperience,
-                    style: KubusTextStyles.sectionTitle),
+                Text(
+                  l10n.mapMarkerLayerArExperience,
+                  style: KubusTextStyles.sectionTitle,
+                ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -773,8 +733,10 @@ class _DesktopArtworkDetailScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.exhibitionDetailPoapTitle,
-                style: KubusTextStyles.sectionTitle),
+            Text(
+              l10n.exhibitionDetailPoapTitle,
+              style: KubusTextStyles.sectionTitle,
+            ),
             const SizedBox(height: DetailSpacing.sm),
             Text(infoLines.join('\n'), style: DetailTypography.body(context)),
             if (canOpenClaim) ...[
@@ -797,7 +759,10 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildActionsRow(
-      Artwork artwork, ArtworkProvider artworkProvider, bool _) {
+    Artwork artwork,
+    ArtworkProvider artworkProvider,
+    bool _,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     final isSaved = context.select<SavedItemsProvider, bool>(
       (provider) => provider.isArtworkSaved(artwork.id),
@@ -880,11 +845,16 @@ class _DesktopArtworkDetailScreenState
           icon: Icons.comment_outlined,
           label: '${artwork.commentsCount}',
           onTap: () {
-            if (!_commentsSidebarExpanded &&
-                MediaQuery.sizeOf(context).width >= 900) {
-              setState(() {
-                _commentsSidebarExpanded = true;
-              });
+            final commentsContext = _commentsSectionKey.currentContext;
+            if (commentsContext != null) {
+              unawaited(
+                Scrollable.ensureVisible(
+                  commentsContext,
+                  alignment: 0.08,
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                ),
+              );
             }
             _commentsPanelController.openAndScrollToTop();
           },
@@ -909,9 +879,8 @@ class _DesktopArtworkDetailScreenState
           DetailSecondaryAction(
             icon: Icons.fact_check_outlined,
             label: l10n.mapMarkerClaimButton,
-            onTap: () => unawaited(
-              _openStreetArtClaimsForMarkerId(markerIdCandidate),
-            ),
+            onTap: () =>
+                unawaited(_openStreetArtClaimsForMarkerId(markerIdCandidate)),
             tooltip: l10n.mapMarkerClaimButton,
           ),
       ],
@@ -1081,12 +1050,14 @@ class _DesktopArtworkDetailScreenState
       final parts = <String>[
         wasIdempotent
             ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
-            : l10n.exhibitionDetailAttendanceConfirmedToast
+            : l10n.exhibitionDetailAttendanceConfirmedToast,
       ];
       if (awarded != null && awarded > 0) {
-        parts.add(l10n.exhibitionDetailAttendanceRewardPending(
-          awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1),
-        ));
+        parts.add(
+          l10n.exhibitionDetailAttendanceRewardPending(
+            awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1),
+          ),
+        );
       }
       if (poapStatus.isNotEmpty &&
           poapStatus != 'none' &&
@@ -1100,9 +1071,8 @@ class _DesktopArtworkDetailScreenState
         if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
           action = SnackBarAction(
             label: l10n.exhibitionDetailPoapClaimAction,
-            onPressed: () => unawaited(
-              launchUrl(uri, mode: LaunchMode.externalApplication),
-            ),
+            onPressed: () =>
+                unawaited(launchUrl(uri, mode: LaunchMode.externalApplication)),
           );
         }
       }
@@ -1117,10 +1087,9 @@ class _DesktopArtworkDetailScreenState
       );
 
       unawaited(
-        context
-            .read<ArtworkProvider>()
-            .refreshArtwork(artwork.id)
-            .catchError((e) {
+        context.read<ArtworkProvider>().refreshArtwork(artwork.id).catchError((
+          e,
+        ) {
           AppConfig.debugPrint(
             'DesktopArtworkDetailScreen: refreshArtwork failed: $e',
           );
@@ -1186,62 +1155,13 @@ class _DesktopArtworkDetailScreenState
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-            content: Text(l10n.commonSomethingWentWrong,
-                style: KubusTypography.inter())),
+          content: Text(
+            l10n.commonSomethingWentWrong,
+            style: KubusTypography.inter(),
+          ),
+        ),
         tone: KubusSnackBarTone.error,
       );
     }
-  }
-
-  Widget _buildCommentsSidebarToggleButton() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    return DetailCard(
-      padding: EdgeInsets.zero,
-      borderRadius: DetailRadius.lg,
-      child: Center(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Tooltip(
-            message: l10n.commonComments,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(DetailRadius.lg),
-              onTap: () {
-                setState(() {
-                  _commentsSidebarExpanded = true;
-                });
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DetailSpacing.xs,
-                  vertical: DetailSpacing.md,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.comment_outlined,
-                      color: scheme.onSurface,
-                    ),
-                    const SizedBox(height: DetailSpacing.xs),
-                    Text(
-                      l10n.commonComments,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: DetailTypography.label(context).copyWith(
-                        fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
