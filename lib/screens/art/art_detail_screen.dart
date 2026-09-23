@@ -533,6 +533,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   Widget _buildArtInfo(Artwork artwork) {
     final category = artwork.category.trim();
+    final publicPlaceLabel = _publicEntryPlaceLabel(artwork.id);
     final showKicker = category.isNotEmpty && category != 'General';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,8 +554,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           style: KubusTextStyles.responsiveTitleStyle(
             context,
             KubusTypography.textTheme.displayLarge!,
-            availableWidth: MediaQuery.sizeOf(context).width -
-                (DetailSpacing.lg * 2),
+            availableWidth:
+                MediaQuery.sizeOf(context).width - (DetailSpacing.lg * 2),
           ).copyWith(
             color: Theme.of(context).colorScheme.onSurface,
             height: 1.08,
@@ -570,9 +571,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           spacing: DetailSpacing.sm,
           runSpacing: DetailSpacing.sm,
           children: [
+            if (publicPlaceLabel != null)
+              _buildInfoChip(Icons.place_outlined, publicPlaceLabel),
             if (ArtworkLocationActions.hasValidLocation(artwork))
               _buildInfoChip(
-                Icons.place_outlined,
+                Icons.my_location_outlined,
                 '${artwork.position.latitude.toStringAsFixed(4)}, '
                 '${artwork.position.longitude.toStringAsFixed(4)}',
               ),
@@ -601,6 +604,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           ),
       ],
     );
+  }
+
+  String? _publicEntryPlaceLabel(String artworkId) {
+    try {
+      return context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPlaceLabelForCanonicalPath(
+            type: 'artwork',
+            id: artworkId,
+            pathname: Uri.base.path,
+          );
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildPrimaryActionButtons(Artwork artwork) {

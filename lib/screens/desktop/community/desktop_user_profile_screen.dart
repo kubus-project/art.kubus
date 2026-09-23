@@ -28,6 +28,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
 import '../../../providers/saved_items_provider.dart';
 import '../../../providers/profile_package_controller.dart';
+import '../../../providers/public_entity_takeover_provider.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -244,6 +245,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final isCommunityOverlay =
         DesktopProfilePresentationScope.maybeOf(context) ==
             DesktopProfilePresentation.communityOverlay;
+    final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+      context,
+      type: 'profile',
+      id: widget.userId,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = !isCommunityOverlay && screenWidth >= 1200;
 
@@ -322,10 +328,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.md
-                              : KubusSpacing.lg,
+                              : isCanonicalPublicEntry
+                                  ? KubusSpacing.xl
+                                  : KubusSpacing.lg,
                         ),
-                        _buildProfileCard(
-                            themeProvider, isArtist, isInstitution, l10n),
+                        if (isCanonicalPublicEntry)
+                          _buildPublicEntryProfileHero(
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
+                            l10n: l10n,
+                          ),
+                        if (!isCanonicalPublicEntry)
+                          _buildProfileCard(
+                              themeProvider, isArtist, isInstitution, l10n),
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.lg
@@ -344,12 +359,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.sm + KubusSpacing.xs
                               : KubusSpacing.md,
                         ),
-                        _buildStatsCards(
-                          themeProvider,
-                          isLarge,
-                          l10n,
-                          isCommunityOverlay: isCommunityOverlay,
-                        ),
+                        if (!isCanonicalPublicEntry)
+                          _buildStatsCards(
+                            themeProvider,
+                            isLarge,
+                            l10n,
+                            isCommunityOverlay: isCommunityOverlay,
+                          ),
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.sm + KubusSpacing.xs
@@ -358,7 +374,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         // Wide two-column content begins at ~1200px so
                         // intermediate desktop widths do not inherit the mobile
                         // single-column layout.
-                        if (isLarge)
+                        if (isCanonicalPublicEntry)
+                          _buildSingleColumnContent(
+                            themeProvider: themeProvider,
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
+                            isCanonicalPublicEntry: true,
+                            l10n: l10n,
+                          )
+                        else if (isLarge)
                           _buildTwoColumnLayout(
                             themeProvider: themeProvider,
                             isArtist: isArtist,
@@ -370,8 +394,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             themeProvider: themeProvider,
                             isArtist: isArtist,
                             isInstitution: isInstitution,
+                            isCanonicalPublicEntry: false,
                             l10n: l10n,
                           ),
+                        if (isCanonicalPublicEntry) ...[
+                          const SizedBox(height: KubusSpacing.lg),
+                          _buildStatsCards(themeProvider, isLarge, l10n),
+                        ],
                         const SizedBox(height: KubusSpacing.lg),
                       ],
                     ),
@@ -457,6 +486,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required ThemeProvider themeProvider,
     required bool isArtist,
     required bool isInstitution,
+    required bool isCanonicalPublicEntry,
     required AppLocalizations l10n,
   }) {
     final showAchievements = user?.showAchievements ?? true;
@@ -464,8 +494,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAddedPublicArtSection(themeProvider, l10n),
-        const SizedBox(height: KubusSpacing.md),
+        if (!isCanonicalPublicEntry) ...[
+          _buildAddedPublicArtSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+        ],
         if (isArtist) ...[
           _buildArtistPortfolioSection(themeProvider, l10n),
           const SizedBox(height: KubusSpacing.md),
@@ -473,6 +505,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           const SizedBox(height: KubusSpacing.md),
         ] else if (isInstitution) ...[
           _buildInstitutionHighlightsSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+          if (isCanonicalPublicEntry) ...[
+            _buildAddedPublicArtSection(themeProvider, l10n),
+            const SizedBox(height: KubusSpacing.md),
+          ],
+        ],
+        if (isCanonicalPublicEntry && !isArtist && !isInstitution) ...[
+          _buildAddedPublicArtSection(themeProvider, l10n),
           const SizedBox(height: KubusSpacing.md),
         ],
         if (showAchievements) ...[
@@ -549,6 +589,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   /// so the name and handle never repeat within one viewport and the handle
   /// never shares horizontal space with an action control.
   Widget _buildHeader(AppLocalizations l10n) {
+    final shellScope = DesktopShellScope.of(context);
+    final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+      context,
+      type: 'profile',
+      id: widget.userId,
+    );
     return Row(
       children: [
         ProfileUtilityActions(
@@ -559,10 +605,161 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               tooltip: l10n.commonBack,
               onPressed: _handleBack,
             ),
+            if (shellScope?.isCanonicalPublicEntry ?? false)
+              ProfileUtilityAction(
+                icon: Icons.menu,
+                tooltip: l10n.commonMore,
+                onPressed: shellScope!.openPublicEntryNavigation,
+              ),
           ],
         ),
         const Spacer(),
-        ProfileUtilityActions(actions: _profileUtilityActions(l10n)),
+        ProfileUtilityActions(
+          actions: isCanonicalPublicEntry
+              ? [
+                  ProfileUtilityAction(
+                    icon: Icons.share_outlined,
+                    tooltip: l10n.commonShare,
+                    onPressed: _handleShare,
+                  ),
+                ]
+              : _profileUtilityActions(l10n),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublicEntryProfileHero({
+    required bool isArtist,
+    required bool isInstitution,
+    required AppLocalizations l10n,
+  }) {
+    final profile = user!;
+    final roles = KubusColorRoles.of(context);
+    final placeLabel = _publicEntryPlaceLabel();
+    final titleStyle = KubusTextStyles.responsiveTitleStyle(
+      context,
+      KubusTypography.content(
+        fontSize: 64,
+        fontWeight: FontWeight.w700,
+      ),
+      availableWidth: MediaQuery.sizeOf(context).width,
+    ).copyWith(height: 1.02, letterSpacing: -0.65);
+    final roleLabel = isInstitution
+        ? l10n.settingsRoleInstitutionTitle
+        : l10n.settingsRoleArtistTitle;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          roleLabel,
+          style: KubusTextStyles.structuralLabel.copyWith(
+            color: roles.foregroundMuted,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        ProfileIdentityBlock(
+          displayName: profile.name,
+          handle: profile.username,
+          isVerified: profile.isVerified,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          density: ProfileIdentityDensity.spacious,
+          nameStyle: titleStyle,
+          handleStyle: KubusTextStyles.metadataRegister,
+          nameColor: roles.foreground,
+          handleColor: roles.foregroundMuted,
+        ),
+        if (placeLabel != null) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          _buildPublicEntryPlaceLine(placeLabel),
+        ],
+        if (isArtist) ...[
+          const SizedBox(height: KubusSpacing.lg),
+          _buildPublicEntryArtCount(l10n),
+        ],
+        Container(
+          height: KubusSizes.hairline,
+          margin: const EdgeInsets.symmetric(vertical: KubusSpacing.lg),
+          color: roles.rule,
+        ),
+        if (profile.bio.trim().isNotEmpty)
+          ExpandableDetailText(
+            text: profile.bio.trim(),
+            collapsedMaxLines: 5,
+            style: KubusTextStyles.lede.copyWith(color: roles.foreground),
+          ),
+        if (isArtist) ...[
+          const SizedBox(height: KubusSpacing.md),
+          ProfileArtistInfoFields(
+            fieldOfWork: profile.fieldOfWork,
+            yearsActive: profile.yearsActive,
+            textAlign: TextAlign.left,
+          ),
+        ],
+      ],
+    );
+  }
+
+  String? _publicEntryPlaceLabel() {
+    try {
+      return context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPlaceLabelForCanonicalPath(
+            type: 'profile',
+            id: widget.userId,
+            pathname: Uri.base.path,
+          );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildPublicEntryPlaceLine(String label) {
+    final roles = KubusColorRoles.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            Icons.place_outlined,
+            size: 18,
+            color: roles.foregroundMuted,
+          ),
+        ),
+        const SizedBox(width: KubusSpacing.xs),
+        Expanded(
+          child: Text(
+            label,
+            style: KubusTextStyles.bodySmall.copyWith(
+              color: roles.foregroundMuted,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublicEntryArtCount(AppLocalizations l10n) {
+    final roles = KubusColorRoles.of(context);
+    return Row(
+      children: [
+        Text(
+          _formatCount(_publicStreetArtAddedCount),
+          style: KubusTypography.content(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          ).copyWith(color: roles.foreground),
+        ),
+        const SizedBox(width: KubusSpacing.md),
+        Text(
+          l10n.profilePerformancePublicStreetArtAddedTitle,
+          style: KubusTextStyles.metadataRegister.copyWith(
+            color: roles.foregroundMuted,
+          ),
+        ),
       ],
     );
   }

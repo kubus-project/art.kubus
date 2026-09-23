@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
 import 'detail_shell_sections.dart';
@@ -743,6 +744,7 @@ class DetailIdentityBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,7 +760,7 @@ class DetailIdentityBlock extends StatelessWidget {
                     fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
-                    color: scheme.primary,
+                    color: roles.foregroundMuted,
                   ),
                 ),
                 const SizedBox(height: DetailSpacing.xs),

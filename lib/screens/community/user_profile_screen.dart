@@ -13,6 +13,7 @@ import '../../services/block_list_service.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../desktop/desktop_shell_scope.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -28,6 +29,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/profile_package_controller.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -388,49 +390,98 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             daoReview.isInstitutionApplication &&
             daoReview.isApproved);
 
-    final content = AnimatedGradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
-          title: Text(
-            user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
-            style: KubusTextStyles.mobileAppBarTitle,
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: KubusSpacing.sm),
-              child: ProfileUtilityActions(
-                actions: [
-                  ProfileUtilityAction(
-                    icon: Icons.more_horiz,
-                    tooltip: l10n.commonMore,
-                    onPressed: _showMoreOptions,
+    final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+      context,
+      type: 'profile',
+      id: widget.userId,
+    );
+    final roles = KubusColorRoles.of(context);
+
+    final scaffold = Scaffold(
+      backgroundColor:
+          isCanonicalPublicEntry ? roles.surface : Colors.transparent,
+      appBar: AppBar(
+        backgroundColor:
+            isCanonicalPublicEntry ? roles.surface : Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: isCanonicalPublicEntry ? roles.surface : null,
+        scrolledUnderElevation: 0,
+        flexibleSpace: isCanonicalPublicEntry
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: roles.rule),
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              )
+            : const KubusGlassAppBarBackdrop(showBottomDivider: true),
+        title: Text(
+          isCanonicalPublicEntry
+              ? 'art.kubus'
+              : user!.name.isNotEmpty
+                  ? user!.name
+                  : l10n.userProfileTitle,
+          style: isCanonicalPublicEntry
+              ? KubusTextStyles.screenTitle.copyWith(
+                  color: roles.foreground,
+                )
+              : KubusTextStyles.mobileAppBarTitle,
         ),
-        body: RefreshIndicator(
-          onRefresh: _handleRefresh,
-          color: themeProvider.accentColor,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
-              child: Column(
-                children: [
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: KubusSpacing.sm),
+            child: ProfileUtilityActions(
+              actions: [
+                ProfileUtilityAction(
+                  icon: Icons.more_horiz,
+                  tooltip: l10n.commonMore,
+                  onPressed: _showMoreOptions,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color:
+            isCanonicalPublicEntry ? roles.active : themeProvider.accentColor,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal:
+                  isCanonicalPublicEntry ? KubusSpacing.md : DetailSpacing.xl,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isCanonicalPublicEntry)
+                  _buildCanonicalPublicEntryProfileHero(
+                    isArtist: isArtist,
+                    isInstitution: isInstitution,
+                    l10n: l10n,
+                  )
+                else
                   _buildProfileHeader(
                     themeProvider,
                     isArtist: isArtist,
                     isInstitution: isInstitution,
                   ),
+                const SizedBox(height: DetailSpacing.md),
+                if (isCanonicalPublicEntry) ...[
+                  if (isArtist) ...[
+                    _buildArtistHighlightsGrid(l10n),
+                    const SizedBox(height: DetailSpacing.xl),
+                  ],
+                  if (isInstitution)
+                    _buildInstitutionHighlights(l10n)
+                  else if (!isArtist && (user?.showAchievements ?? true))
+                    _buildAchievements(themeProvider, l10n),
                   const SizedBox(height: DetailSpacing.md),
+                  _buildStatsRow(l10n),
+                ] else ...[
                   _buildStatsRow(l10n),
                   const SizedBox(height: DetailSpacing.md),
                   _buildAddedPublicArtSection(l10n),
@@ -444,20 +495,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       : ((user?.showAchievements ?? true)
                           ? _buildAchievements(themeProvider, l10n)
                           : const SizedBox.shrink()),
-                  const SizedBox(height: DetailSpacing.xl),
-                  _buildPostsSection(l10n),
-                  if (isArtist) ...[
-                    const SizedBox(height: DetailSpacing.xl),
-                    _buildArtistEventsShowcase(l10n),
-                  ],
-                  const SizedBox(height: DetailSpacing.xxl),
                 ],
-              ),
+                const SizedBox(height: DetailSpacing.xl),
+                _buildPostsSection(l10n),
+                if (isArtist) ...[
+                  const SizedBox(height: DetailSpacing.xl),
+                  _buildArtistEventsShowcase(l10n),
+                ],
+                const SizedBox(height: DetailSpacing.xxl),
+              ],
             ),
           ),
         ),
       ),
     );
+    final content = isCanonicalPublicEntry
+        ? scaffold
+        : AnimatedGradientBackground(child: scaffold);
     return PublicEntityTakeoverReady(
       type: ShareEntityType.profile,
       entityId: widget.userId,
@@ -725,6 +779,157 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCanonicalPublicEntryProfileHero({
+    required bool isArtist,
+    required bool isInstitution,
+    required AppLocalizations l10n,
+  }) {
+    final profile = user!;
+    final roles = KubusColorRoles.of(context);
+    final placeLabel = _publicEntryPlaceLabel();
+    final roleLabel = isInstitution
+        ? l10n.settingsRoleInstitutionTitle
+        : isArtist
+            ? l10n.settingsRoleArtistTitle
+            : l10n.userProfileTitle;
+    final titleStyle = KubusTextStyles.responsiveTitleStyle(
+      context,
+      KubusTypography.content(
+        fontSize: 40,
+        fontWeight: FontWeight.w700,
+      ),
+      availableWidth: MediaQuery.sizeOf(context).width - (KubusSpacing.md * 2),
+    ).copyWith(height: 1.02, letterSpacing: -0.45);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: KubusSpacing.lg),
+        Text(
+          roleLabel.toUpperCase(),
+          style: KubusTextStyles.structuralLabel.copyWith(
+            color: roles.foregroundMuted,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        ProfileIdentityBlock(
+          displayName: profile.name,
+          handle: profile.username,
+          isVerified: profile.isVerified,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          density: ProfileIdentityDensity.spacious,
+          nameStyle: titleStyle,
+          handleStyle: KubusTextStyles.metadataRegister,
+          nameColor: roles.foreground,
+          handleColor: roles.foregroundMuted,
+        ),
+        if (placeLabel != null) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          _buildPublicEntryPlaceLine(placeLabel),
+        ],
+        if (isArtist) ...[
+          const SizedBox(height: KubusSpacing.md),
+          _buildPublicEntryArtCount(l10n),
+        ],
+        Container(
+          height: KubusSizes.hairline,
+          margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+          color: roles.rule,
+        ),
+        if (profile.bio.trim().isNotEmpty)
+          ExpandableDetailText(
+            text: profile.bio.trim(),
+            collapsedMaxLines: 5,
+            style: KubusTextStyles.lede.copyWith(color: roles.foreground),
+          ),
+        if (isArtist &&
+            (profile.fieldOfWork.isNotEmpty || profile.yearsActive > 0)) ...[
+          const SizedBox(height: KubusSpacing.md),
+          ProfileArtistInfoFields(
+            fieldOfWork: profile.fieldOfWork,
+            yearsActive: profile.yearsActive,
+            textAlign: TextAlign.left,
+          ),
+        ],
+        const SizedBox(height: KubusSpacing.md),
+        ProfileRelationshipActions(
+          isFollowing: profile.isFollowing,
+          isFollowLoading: _isFollowMutationInFlight,
+          onFollow: () => unawaited(_toggleFollow()),
+          onMessage: () => unawaited(_openMessageConversation(l10n)),
+          followLabel: l10n.userProfileFollowButton,
+          followingLabel: l10n.userProfileFollowingButton,
+          messageLabel: l10n.userProfileMessageButtonLabel,
+        ),
+      ],
+    );
+  }
+
+  String? _publicEntryPlaceLabel() {
+    try {
+      return context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPlaceLabelForCanonicalPath(
+            type: 'profile',
+            id: widget.userId,
+            pathname: Uri.base.path,
+          );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildPublicEntryPlaceLine(String label) {
+    final roles = KubusColorRoles.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            Icons.place_outlined,
+            size: 17,
+            color: roles.foregroundMuted,
+          ),
+        ),
+        const SizedBox(width: KubusSpacing.xs),
+        Expanded(
+          child: Text(
+            label,
+            style: KubusTextStyles.bodySmall.copyWith(
+              color: roles.foregroundMuted,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublicEntryArtCount(AppLocalizations l10n) {
+    final roles = KubusColorRoles.of(context);
+    return Row(
+      children: [
+        Text(
+          _formatCount(_publicStreetArtAddedCount),
+          style: KubusTypography.content(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          ).copyWith(color: roles.foreground),
+        ),
+        const SizedBox(width: KubusSpacing.md),
+        Flexible(
+          child: Text(
+            l10n.profilePerformancePublicStreetArtAddedTitle,
+            style: KubusTextStyles.metadataRegister.copyWith(
+              color: roles.foregroundMuted,
+            ),
           ),
         ),
       ],

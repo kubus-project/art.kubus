@@ -29,6 +29,76 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
   bool get isReady => _readyDispatched;
   Map<String, dynamic>? get bootstrap => _bootstrap;
 
+  /// True only while this provider's seeded identity still owns the current
+  /// canonical pathname. Screens use this to select the public first-frame
+  /// composition on compact routes that do not use the desktop shell scope.
+  bool matchesCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    final current = _target;
+    return current != null &&
+        current.type == type &&
+        current.id == id.trim() &&
+        current.path == pathname;
+  }
+
+  /// Returns the normalized public presentation only while its exact seeded
+  /// canonical route still owns the current screen. Callers should use this
+  /// for first-frame public fields, not as a replacement for entity loading.
+  Map<String, dynamic>? publicPresentationForCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    if (!matchesCanonicalPath(type: type, id: id, pathname: pathname)) {
+      return null;
+    }
+
+    final raw = _bootstrap;
+    if (raw == null || raw['version'] != 1) return null;
+    final identity = _asStringMap(raw['identity']);
+    final presentation = _asStringMap(raw['presentation']);
+    final current = _target;
+    if (identity == null || presentation == null || current == null) {
+      return null;
+    }
+    final identityMatches = identity['type'] == current.type &&
+        identity['id'] == current.id &&
+        identity['canonicalPath'] == current.path;
+    final presentationMatches = presentation['version'] == 1 &&
+        presentation['type'] == current.type &&
+        presentation['id'] == current.id &&
+        presentation['canonicalPath'] == current.path;
+    final expiresAt = DateTime.tryParse('${raw['expiresAt'] ?? ''}')?.toUtc();
+    if (!identityMatches ||
+        !presentationMatches ||
+        expiresAt == null ||
+        !DateTime.now().toUtc().isBefore(expiresAt)) {
+      return null;
+    }
+    return Map<String, dynamic>.unmodifiable(presentation);
+  }
+
+  /// The normalized place label is public profile context used by SSR and the
+  /// Flutter first frame. Do not infer it from profile bio or account fields.
+  String? publicPlaceLabelForCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    final presentation = publicPresentationForCanonicalPath(
+      type: type,
+      id: id,
+      pathname: pathname,
+    );
+    final place = _asStringMap(presentation?['place']);
+    final label = place?['label'];
+    if (label is! String || label.trim().isEmpty) return null;
+    return label.trim();
+  }
+
   void seed({required Uri initialUri, required ShareDeepLinkTarget target}) {
     if (!AppConfig.isFeatureEnabled('publicFlutterTakeover')) {
       return;

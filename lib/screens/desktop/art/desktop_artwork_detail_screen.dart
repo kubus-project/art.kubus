@@ -294,10 +294,16 @@ class _DesktopArtworkDetailScreenState
     final l10n = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: DetailSpacing.contentPaddingDesktop,
+      padding: const EdgeInsets.fromLTRB(
+        DetailSpacing.xl,
+        DetailSpacing.xl + DetailSpacing.lg,
+        DetailSpacing.xl,
+        DetailSpacing.xl,
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final useComposedHero = constraints.maxWidth >= 900;
+          final publicPlaceLabel = _publicEntryPlaceLabel(artwork.id);
           final identity = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -307,8 +313,13 @@ class _DesktopArtworkDetailScreenState
                 DetailContextCluster(
                   compact: true,
                   items: [
+                    if (publicPlaceLabel != null)
+                      DetailContextItem(
+                        icon: Icons.place_outlined,
+                        value: publicPlaceLabel,
+                      ),
                     DetailContextItem(
-                      icon: Icons.place_outlined,
+                      icon: Icons.my_location_outlined,
                       value: '${artwork.position.latitude.toStringAsFixed(4)}, '
                           '${artwork.position.longitude.toStringAsFixed(4)}',
                     ),
@@ -331,11 +342,22 @@ class _DesktopArtworkDetailScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 6,
+                          flex: 4,
                           child: _buildMedia(artwork, coverUrl),
                         ),
-                        const SizedBox(width: DetailSpacing.xl),
-                        Expanded(flex: 4, child: identity),
+                        const SizedBox(width: 56),
+                        Expanded(
+                          flex: 3,
+                          child: Padding(
+                            // The server's artwork identity sits just below
+                            // the media's top edge. Keep that hierarchy through
+                            // takeover while the media remains the datum.
+                            padding: const EdgeInsets.only(
+                              top: DetailSpacing.lg,
+                            ),
+                            child: identity,
+                          ),
+                        ),
                       ],
                     )
                   else ...[
@@ -644,11 +666,14 @@ class _DesktopArtworkDetailScreenState
                 category.isNotEmpty && category != 'General' ? category : null,
             titleStyle: KubusTextStyles.responsiveTitleStyle(
               context,
-              KubusTypography.textTheme.displayMedium!,
+              KubusTextStyles.display.copyWith(
+                fontSize: 60,
+                fontWeight: FontWeight.w700,
+              ),
               availableWidth: constraints.maxWidth,
             ).copyWith(
               color: Theme.of(context).colorScheme.onSurface,
-              height: 1.1,
+              height: 1.02,
             ),
           ),
           const SizedBox(height: DetailSpacing.sm),
@@ -660,6 +685,20 @@ class _DesktopArtworkDetailScreenState
         ],
       ),
     );
+  }
+
+  String? _publicEntryPlaceLabel(String artworkId) {
+    try {
+      return context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPlaceLabelForCanonicalPath(
+            type: 'artwork',
+            id: artworkId,
+            pathname: Uri.base.path,
+          );
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildDescription(Artwork artwork) {

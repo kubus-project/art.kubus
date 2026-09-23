@@ -27,6 +27,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -1094,6 +1095,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+      context,
+      type: 'exhibition',
+      id: widget.exhibitionId,
+    );
+    final isDesktopCanonicalPublicEntry =
+        DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
     final provider = context.watch<ExhibitionsProvider>();
     final isSignedIn =
         context.watch<WalletProvider>().authority.hasAccountSession;
@@ -1127,7 +1135,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     );
 
     final content = Scaffold(
-      appBar: widget.embedded
+      backgroundColor:
+          isCanonicalPublicEntry ? KubusColorRoles.of(context).surface : null,
+      appBar: widget.embedded || isDesktopCanonicalPublicEntry
           ? null
           : AppBar(
               title: Text(ex.title,
@@ -1180,6 +1190,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           poap?.claimed == true ? null : _claimExhibitionPoap,
                       showAttendanceHint:
                           (widget.attendanceMarkerId ?? '').trim().isNotEmpty,
+                      publicDesktopLayout: isCanonicalPublicEntry && isWide,
                     ),
                     _buildAttendanceConfirmSection(),
                   ],
@@ -1223,7 +1234,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   myRole: ex.myRole,
                 );
 
-                if (isWide) {
+                if (isWide && !isCanonicalPublicEntry) {
                   return Stack(
                     children: [
                       SingleChildScrollView(
@@ -1272,8 +1283,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
                 return ListView(
                   children: [
-                    topActions,
                     details,
+                    const SizedBox(height: DetailSpacing.cardGap),
+                    topActions,
                     const SizedBox(height: DetailSpacing.cardGap),
                     programCard,
                     const SizedBox(height: DetailSpacing.cardGap),
@@ -1406,6 +1418,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     required this.showAttendanceHint,
     this.isPoapLoading = false,
     this.canManage = false,
+    this.publicDesktopLayout = false,
   });
 
   final Exhibition exhibition;
@@ -1416,11 +1429,13 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   final bool showAttendanceHint;
   final bool isPoapLoading;
   final bool canManage;
+  final bool publicDesktopLayout;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
@@ -1522,22 +1537,26 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    // The exhibition cover leads the page as real content: it renders
-    // edge-to-edge above the overview card instead of inside glass framing.
+    // Mobile keeps the cover above the details. Wide public entry places it
+    // beside identity to match the server-rendered first frame.
     final coverBlock = coverUrl != null
         ? ClipRRect(
-            borderRadius: BorderRadius.circular(DetailRadius.md),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: AspectRatio(
-              aspectRatio: 16 / 9,
+              aspectRatio: publicDesktopLayout ? 0.73 : 16 / 9,
               child: Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  color: scheme.surfaceContainerHighest,
+                  color: publicDesktopLayout
+                      ? roles.surfaceRaised
+                      : scheme.surfaceContainerHighest,
                   alignment: Alignment.center,
                   child: Icon(Icons.broken_image_outlined,
                       size: 48,
-                      color: scheme.onSurface.withValues(alpha: 0.35)),
+                      color: publicDesktopLayout
+                          ? roles.foregroundSubtle
+                          : scheme.onSurface.withValues(alpha: 0.35)),
                 ),
               ),
             ),
@@ -1551,42 +1570,60 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       kicker: l10n.commonExhibition,
       subtitle: hostLabel,
       trailing: null,
+      titleStyle: publicDesktopLayout
+          ? KubusTypography.content(
+              fontSize: 64,
+              fontWeight: FontWeight.w700,
+            ).copyWith(height: 1.02, letterSpacing: -0.65)
+          : null,
     );
 
-    final overviewCard = DetailCard(
-      borderRadius: DetailRadius.md,
-      padding: DetailSpacing.editorialCardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DetailMetadataBlock(
-            items: [
-              if (dateRange != null)
-                DetailMetaItem(icon: Icons.schedule_outlined, label: dateRange),
-              if (location != null)
-                DetailMetaItem(icon: Icons.place_outlined, label: location),
-              DetailMetaItem(
-                icon: AppColorUtils.exhibitionIcon,
-                label: l10n.exhibitionDetailStatusRowLabel(
-                  _labelForStatus(l10n, exhibition.status),
-                ),
+    final overviewContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailMetadataBlock(
+          items: [
+            if (dateRange != null)
+              DetailMetaItem(icon: Icons.schedule_outlined, label: dateRange),
+            if (location != null)
+              DetailMetaItem(icon: Icons.place_outlined, label: location),
+            DetailMetaItem(
+              icon: AppColorUtils.exhibitionIcon,
+              label: l10n.exhibitionDetailStatusRowLabel(
+                _labelForStatus(l10n, exhibition.status),
               ),
-            ],
-          ),
-          const SizedBox(height: DetailSpacing.lg),
-          DetailContextCluster(
-            items: [
-              DetailContextItem(
-                icon: Icons.art_track,
-                value: '${exhibition.artworkIds.length}',
-                label: l10n.exhibitionDetailArtworksTitle,
-              ),
-            ],
-            compact: true,
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DetailSpacing.lg),
+        DetailContextCluster(
+          items: [
+            DetailContextItem(
+              icon: Icons.art_track,
+              value: '${exhibition.artworkIds.length}',
+              label: l10n.exhibitionDetailArtworksTitle,
+            ),
+          ],
+          compact: true,
+        ),
+      ],
     );
+    final overviewCard = publicDesktopLayout
+        ? Container(
+            padding: const EdgeInsets.symmetric(vertical: DetailSpacing.md),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: roles.rule),
+                bottom: BorderSide(color: roles.rule),
+              ),
+            ),
+            child: overviewContent,
+          )
+        : DetailCard(
+            borderRadius: DetailRadius.md,
+            padding: DetailSpacing.editorialCardPadding,
+            child: overviewContent,
+          );
 
     // Curatorial text reads long-form on the quiet reading surface (never
     // glass) and can expand cleanly without crowding the overview metadata.
@@ -1663,6 +1700,34 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
           claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
         ),
+      );
+    }
+
+    final publicContextColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        identityBlock,
+        const SizedBox(height: DetailSpacing.heroGap),
+        overviewCard,
+        if (aboutCard != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          aboutCard,
+        ],
+        if (poapCard != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          poapCard,
+        ],
+      ],
+    );
+
+    if (publicDesktopLayout && coverBlock != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 4, child: publicContextColumn),
+          const SizedBox(width: 56),
+          Expanded(flex: 3, child: coverBlock),
+        ],
       );
     }
 
