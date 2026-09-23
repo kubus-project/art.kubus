@@ -1,7 +1,7 @@
 import 'package:art_kubus/utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
-import 'package:flutter/gestures.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -58,6 +58,12 @@ void main() {
         theme: ThemeData(
           brightness: Brightness.dark,
           colorScheme: const ColorScheme.dark(primary: oxblood),
+          extensions: <ThemeExtension<dynamic>>[
+            KubusColorRoles.dark.copyWith(
+              userAccent: oxblood,
+              onUserAccent: Colors.white,
+            ),
+          ],
         ),
         home: Scaffold(
           body: Center(
@@ -82,6 +88,12 @@ void main() {
       MaterialApp(
         theme: ThemeData(
           colorScheme: const ColorScheme.light(primary: amberGold),
+          extensions: <ThemeExtension<dynamic>>[
+            KubusColorRoles.light.copyWith(
+              userAccent: amberGold,
+              onUserAccent: Colors.black,
+            ),
+          ],
         ),
         home: Scaffold(
           body: Center(
@@ -134,7 +146,8 @@ void main() {
     expect(find.byIcon(Icons.add_rounded), findsNothing);
   });
 
-  testWidgets('hover lifts the button with a soft glow', (tester) async {
+  testWidgets('state overlays are restrained and do not add a glow',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(
         KubusButton(
@@ -144,32 +157,17 @@ void main() {
       ),
     );
 
-    AnimatedContainer interactionContainer() => tester.widget(
-          find
-              .descendant(
-                of: find.byType(KubusButton),
-                matching: find.byType(AnimatedContainer),
-              )
-              .first,
-        );
-
-    BoxDecoration decorationOf(AnimatedContainer container) =>
-        container.decoration! as BoxDecoration;
-
-    expect(decorationOf(interactionContainer()).boxShadow, isEmpty);
-
-    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await gesture.addPointer(location: Offset.zero);
-    addTearDown(gesture.removePointer);
-    await tester.pump();
-    await gesture.moveTo(tester.getCenter(find.byType(KubusButton)));
-    await tester.pumpAndSettle();
-
-    expect(decorationOf(interactionContainer()).boxShadow, isNotEmpty);
-
-    await gesture.moveTo(Offset.zero);
-    await tester.pumpAndSettle();
-    expect(decorationOf(interactionContainer()).boxShadow, isEmpty);
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    final overlay = button.style!.overlayColor!;
+    expect(
+      overlay.resolve(<WidgetState>{WidgetState.hovered})!.a,
+      lessThan(0.1),
+    );
+    expect(
+      overlay.resolve(<WidgetState>{WidgetState.focused})!.a,
+      greaterThan(0.2),
+    );
+    expect(find.byType(AnimatedContainer), findsNothing);
   });
 
   testWidgets('reduced motion collapses interaction animations to zero',

@@ -6,15 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// Loads real text + icon fonts so QA captures show readable glyphs instead of
 /// the `flutter test` placeholder boxes.
 ///
-/// Fonts come from the pinned Flutter SDK's `material_fonts` artifact cache and
-/// from the repository's checked-in Material Symbols subset, so no network
-/// access is involved and every run is deterministic.
-///
-/// `GoogleFonts.inter(...)` resolves to family `Inter` at runtime; in a test
-/// process the Google Fonts asset is unavailable, so Roboto is registered under
-/// that family name too. Metrics differ slightly from shipped Inter, which is
-/// noted in the QA report — layout structure, wrapping and clipping are still
-/// faithfully represented.
+/// Sofia Sans and Space Mono are loaded from the same checked-in local font
+/// assets used by Flutter builds. Outfit remains a map-attribution compatibility
+/// face and is represented by Roboto in tests because it is not PRODUCT text.
 class QaFontLoader {
   QaFontLoader._();
 
@@ -26,16 +20,32 @@ class QaFontLoader {
   static Future<void> ensureLoaded() async {
     if (_loaded) return;
 
+    final sofia =
+        File('assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf');
+    if (sofia.existsSync()) {
+      await (FontLoader('Sofia Sans')..addFont(_bytes(sofia))).load();
+      loadedFamilies.add('Sofia Sans');
+    }
+
+    final spaceMonoRegular =
+        File('assets/fonts/product-v5/space-mono/SpaceMono-Regular.ttf');
+    final spaceMonoBold =
+        File('assets/fonts/product-v5/space-mono/SpaceMono-Bold.ttf');
+    if (spaceMonoRegular.existsSync() && spaceMonoBold.existsSync()) {
+      final loader = FontLoader('Space Mono')
+        ..addFont(_bytes(spaceMonoRegular))
+        ..addFont(_bytes(spaceMonoBold));
+      await loader.load();
+      loadedFamilies.add('Space Mono');
+    }
+
     final robotoRegular = _sdkFont('roboto-regular.ttf');
     final robotoMedium = _sdkFont('roboto-medium.ttf');
     final robotoBold = _sdkFont('roboto-bold.ttf');
 
     if (robotoRegular != null) {
-      // `google_fonts` resolves e.g. `GoogleFonts.inter(fontWeight: w600)` to
-      // the family name `Inter_600` (weight 400 becomes `Inter_regular`), with
-      // the bare family as a fallback. Register a real face under every one of
-      // those names so no text falls back to the placeholder box font.
-      for (final base in const ['Inter', 'Outfit']) {
+      // Outfit's one remaining helper is reserved for map attribution.
+      for (final base in const ['Outfit']) {
         for (final variant in const [
           'regular',
           '100',
