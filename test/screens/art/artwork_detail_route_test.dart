@@ -9,8 +9,10 @@ void main() {
     testWidgets('$width px selects the compact artwork detail screen', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(Size(width.toDouble(), 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width.toDouble(), 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       late Widget selectedScreen;
       await tester.pumpWidget(
@@ -36,8 +38,10 @@ void main() {
     testWidgets('$width px selects the desktop artwork detail screen', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(Size(width.toDouble(), 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width.toDouble(), 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       late Widget selectedScreen;
       await tester.pumpWidget(
