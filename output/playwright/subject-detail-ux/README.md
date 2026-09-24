@@ -55,3 +55,25 @@ node .\scripts\qa\wave2b_visual_acceptance.mjs
 ```
 
 The local preview service and its fixture-only configuration are not part of production deployment instructions. Do not treat these images as production-data evidence.
+
+## Event and exhibition SSR ordering closeout
+
+The responsive SSR renderer follow-up is tracked in backend PR #68 (`fix/subject-detail-ssr-ordering`). It keeps the semantic detail-first HTML and applies compact-only visual ordering for Event and Exhibition. Event uses its labeled date/location facts without repeating the same venue as a loose line; Exhibition keeps institution context ahead of date facts. The target recapture is in `ssr-ordering-closeout/continuity.json` with the paired SSR and Flutter screenshots. It covers Event and Exhibition at 390 px in Chromium and Firefox, and at 1440 px in Chromium. SSR ordering was also measured at 900, 1024, and 1280 px. The fixtures are synthetic public-only local preview records.
+
+Both compact subjects pass the continuity check: media starts at y=70 and the title at y=584. Event date/location facts follow the title at y=650. Exhibition institution context follows the title at y=643, then date/location facts at y=690. Both browsers report a 390 px document width and scroll position 0. Flutter takeover keeps the same canonical path and scroll position, fills the viewport, and has no horizontal overflow. In the paired screenshots, media stays first and the title and identity/context follow it after takeover. Desktop remains a two-column detail-left/media-right composition at 900, 1024, 1280, and 1440 px; the 1440 SSR/Flutter screenshots are included.
+
+Reproduce the focused recapture with `node scripts/qa/subject_detail_ssr_ordering_closeout.mjs` while the backend's fixture-only SEO preview is running at `http://127.0.0.1:4177`.
+
+## Human 200% browser zoom check (required; not yet performed)
+
+Automated genuine browser zoom is unavailable in this environment. The previous browser shortcut attempts did not alter browser page zoom; viewport changes, DPR changes, and CSS zoom are not accepted as substitutes. A human must complete and record this check before calling 200% zoom verified:
+
+1. Open the integrated #182 build in Chrome or Firefox.
+2. Set browser zoom to 200% using the browser UI.
+3. Check representative Artwork desktop, Event, Exhibition, Artist profile, and Institution profile pages.
+4. For each page, verify there is no horizontal page overflow, no clipped title, no inaccessible action, no hidden Share/Save/Discuss action, no action bar collision, and no content hidden under navigation.
+5. Verify keyboard focus remains visible.
+6. Enter each subject from its canonical URL and verify SSR → Flutter takeover remains usable.
+7. Record browser name, version, and the result for each representative page.
+
+Status remains `TRUE 200% BROWSER ZOOM REQUIRES HUMAN VERIFICATION` until a human records the check.
