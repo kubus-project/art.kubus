@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, firefox } from 'playwright';
 
@@ -394,10 +394,12 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
     const flutterScreenshot = screenshotName(testCase.name || `artwork-${testCase.locale}`, viewport.width, colorScheme, 'flutter', browserName);
     await page.screenshot({ path: flutterScreenshot });
     let keyboard = null;
+    let keyboardScreenshot = null;
     if (testCase.path === artworkCases[0].path && viewport.width === 390 && colorScheme === 'light') {
       keyboard = await verifyFlutterKeyboard(page);
+      keyboardScreenshot = screenshotName('artwork-en', 390, colorScheme, 'flutter-keyboard-focused', browserName);
       await page.screenshot({
-        path: screenshotName('artwork-en', 390, colorScheme, 'flutter-keyboard-focused', browserName),
+        path: keyboardScreenshot,
       });
     }
     return {
@@ -408,7 +410,11 @@ async function captureTakeover(browser, browserName, testCase, viewport, colorSc
       theme: colorScheme,
       initial,
       metrics,
-      screenshotFiles: [loadingScreenshot, flutterScreenshot],
+      screenshotFiles: [
+        loadingScreenshot,
+        flutterScreenshot,
+        ...(keyboardScreenshot ? [keyboardScreenshot] : []),
+      ],
       ...(keyboard ? { keyboard } : {}),
     };
   } finally {
@@ -788,6 +794,7 @@ const report = {
     })[segments[1]] || 'artwork';
     const entityId = segments[2] || ids.artwork;
     return {
+      ...result,
       sourceSha: process.env.WAVE2B_SOURCE_SHA || null,
       browser: result.browser,
       viewport: result.viewport || { width: 1440, height: 900 },
@@ -804,8 +811,8 @@ const report = {
           : 'enabled',
       reducedMotion: 'reduce',
       zoomMode: result.zoomMode || 'browser-default-100-percent',
-      screenshotFiles: result.screenshotFiles || [],
-      ...result,
+      screenshotFiles: (result.screenshotFiles || []).map((file) =>
+        relative(outputDir, file).replaceAll('\\', '/')),
     };
   }),
 };

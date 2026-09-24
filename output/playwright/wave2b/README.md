@@ -1,5 +1,7 @@
 # Wave 2B visual acceptance evidence
 
+> **Superseded for current acceptance review.** This 56-case capture predates the PRODUCT v5 token foundation. Keep it as historical evidence only. Use the refreshed Chromium/Firefox capture in [`wave2b-v5-c23c776b`](../wave2b-v5-c23c776b/README.md).
+
 Captured 2026-09-23 from the local public renderer and the exact app web artifact built by CI for app source `5f8f03df1529b3008574877aaf21b5e2f2781d52`. The backend preview used the focused SSR zoom reflow change at `ea0782c0552601d8b01f4d7a138e298eaf6387e3`.
 
 These are synthetic, public-only preview fixtures. They contain no production entity IDs or production record content. The screenshots demonstrate layout and handoff behavior; they do not establish production data behavior. The fixture image is the local public preview asset.
