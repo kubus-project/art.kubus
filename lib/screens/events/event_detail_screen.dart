@@ -21,11 +21,13 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/poap_detail_card.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
@@ -315,6 +317,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
+      context,
+      type: 'event',
+      id: widget.eventId,
+    );
+    final isDesktopCanonicalPublicEntry =
+        DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
+    final roles = KubusColorRoles.of(context);
     final events = context.watch<EventsProvider>();
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
 
@@ -340,183 +350,213 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final canManage = _canManageEvent(event);
     final eventPoap = events.poapStatusFor(widget.eventId);
 
-    final content = AnimatedGradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(event.title,
-              style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-          actions: const [],
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: Padding(
-              padding: const EdgeInsets.all(DetailSpacing.lg),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 900;
-                  final details = _EventDetailsCard(
-                    event: event,
-                    exhibitionsCount: exhibitions.length,
-                  );
-                  final secondaryActions = DetailSecondaryActionCluster(
-                    maxVisible: 5,
-                    actions: [
-                      if (event.lat != null && event.lng != null)
-                        DetailSecondaryAction(
-                          icon: Icons.map_outlined,
-                          label: l10n.commonOpenOnMap,
-                          onTap: () {
-                            MapNavigation.open(
-                              context,
-                              center: LatLng(event.lat!, event.lng!),
-                              zoom: 16,
-                              autoFollow: false,
-                            );
-                          },
-                          tooltip: l10n.commonOpenOnMap,
-                        ),
-                      if (canPromote)
-                        DetailSecondaryAction(
-                          icon: Icons.campaign_outlined,
-                          label: l10n.eventDetailPromoteLabel,
-                          onTap: () => _openPromotionFlow(event),
-                          tooltip: l10n.eventDetailPromoteTooltip,
-                        ),
-                      DetailSecondaryAction(
-                        icon: Icons.share_outlined,
-                        label: l10n.commonShare,
+    final eventScaffold = Scaffold(
+      backgroundColor:
+          isCanonicalPublicEntry ? roles.surface : Colors.transparent,
+      appBar: isDesktopCanonicalPublicEntry
+          ? null
+          : AppBar(
+              backgroundColor:
+                  isCanonicalPublicEntry ? roles.surface : Colors.transparent,
+              elevation: 0,
+              title: Text(
+                isCanonicalPublicEntry ? 'art.kubus' : event.title,
+                style: isCanonicalPublicEntry
+                    ? KubusTextStyles.screenTitle
+                    : KubusTypography.inter(fontWeight: FontWeight.w600),
+              ),
+              actions: const [],
+            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: Padding(
+            padding: const EdgeInsets.all(DetailSpacing.lg),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 900;
+                final mapAction = event.lat != null && event.lng != null
+                    ? DetailSecondaryAction(
+                        icon: Icons.map_outlined,
+                        label: l10n.commonOpenOnMap,
                         onTap: () {
-                          ShareService().showShareSheet(
+                          MapNavigation.open(
                             context,
-                            target: ShareTarget.event(
-                              eventId: widget.eventId,
-                              title: event.title,
-                            ),
-                            sourceScreen: 'event_detail',
+                            center: LatLng(event.lat!, event.lng!),
+                            zoom: 16,
+                            autoFollow: false,
                           );
                         },
-                        tooltip: l10n.commonShare,
-                      ),
+                        tooltip: l10n.commonOpenOnMap,
+                      )
+                    : null;
+                final publicCompactMapAction =
+                    isCanonicalPublicEntry && !isWide && mapAction != null
+                        ? DetailSecondaryActionCluster(
+                            maxVisible: 1,
+                            actions: [mapAction],
+                          )
+                        : null;
+                final secondaryActions = DetailSecondaryActionCluster(
+                  maxVisible: 5,
+                  actions: [
+                    if (mapAction != null && publicCompactMapAction == null)
+                      mapAction,
+                    if (canPromote)
                       DetailSecondaryAction(
-                        icon: Icons.inbox_outlined,
-                        label: l10n.eventDetailInvitesLabel,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const InvitesInboxScreen(),
-                            ),
-                          );
-                        },
-                        tooltip: l10n.eventDetailInvitesTooltip,
+                        icon: Icons.campaign_outlined,
+                        label: l10n.eventDetailPromoteLabel,
+                        onTap: () => _openPromotionFlow(event),
+                        tooltip: l10n.eventDetailPromoteTooltip,
                       ),
-                      DetailSecondaryAction(
-                        icon: Icons.refresh,
-                        label: l10n.commonRefresh,
-                        onTap: _load,
-                        tooltip: l10n.commonRefresh,
-                      ),
-                    ],
-                  );
+                    DetailSecondaryAction(
+                      icon: Icons.share_outlined,
+                      label: l10n.commonShare,
+                      onTap: () {
+                        ShareService().showShareSheet(
+                          context,
+                          target: ShareTarget.event(
+                            eventId: widget.eventId,
+                            title: event.title,
+                          ),
+                          sourceScreen: 'event_detail',
+                        );
+                      },
+                      tooltip: l10n.commonShare,
+                    ),
+                    DetailSecondaryAction(
+                      icon: Icons.inbox_outlined,
+                      label: l10n.eventDetailInvitesLabel,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const InvitesInboxScreen(),
+                          ),
+                        );
+                      },
+                      tooltip: l10n.eventDetailInvitesTooltip,
+                    ),
+                    DetailSecondaryAction(
+                      icon: Icons.refresh,
+                      label: l10n.commonRefresh,
+                      onTap: _load,
+                      tooltip: l10n.commonRefresh,
+                    ),
+                  ],
+                );
+                final details = _EventDetailsCard(
+                  event: event,
+                  exhibitionsCount: exhibitions.length,
+                  publicEntry: isCanonicalPublicEntry,
+                  publicDesktopLayout: isCanonicalPublicEntry && isWide,
+                  publicCompactEntry: isCanonicalPublicEntry && !isWide,
+                  afterDescription: publicCompactMapAction,
+                );
 
-                  final eventPoapCard = _EventPoapCard(
-                    poap: eventPoap,
-                    isLoading: events.isPoapLoading,
-                    isClaiming: events.isPoapClaiming,
-                    isSignedIn: isSignedIn,
-                    onClaim: _claimEventPoap,
-                  );
+                final eventPoapCard = _EventPoapCard(
+                  poap: eventPoap,
+                  isLoading: events.isPoapLoading,
+                  isClaiming: events.isPoapClaiming,
+                  isSignedIn: isSignedIn,
+                  onClaim: _claimEventPoap,
+                );
 
-                  final exhibitionPoapSection = _LinkedExhibitionPoapSection(
-                    exhibitions: exhibitions,
-                    exhibitionsProvider: exhibitionsProvider,
-                  );
+                final exhibitionPoapSection = _LinkedExhibitionPoapSection(
+                  exhibitions: exhibitions,
+                  exhibitionsProvider: exhibitionsProvider,
+                );
 
-                  final linkedExhibitionsSection = _LinkedExhibitionsSection(
-                    exhibitions: exhibitions,
-                    canManage: canManage,
-                    isSyncing: events.isRelationSyncing,
-                    onOpen: _openExhibition,
-                    onLink: _showLinkExhibitionsDialog,
-                    onCreate: _createExhibitionForEvent,
-                    onUnlink: _unlinkExhibition,
-                  );
+                final linkedExhibitionsSection = _LinkedExhibitionsSection(
+                  exhibitions: exhibitions,
+                  canManage: canManage,
+                  isSyncing: events.isRelationSyncing,
+                  onOpen: _openExhibition,
+                  onLink: _showLinkExhibitionsDialog,
+                  onCreate: _createExhibitionForEvent,
+                  onUnlink: _unlinkExhibition,
+                );
 
-                  final collab = CollaborationPanel(
-                    entityType: 'events',
-                    entityId: widget.eventId,
-                    myRole: event.myRole,
-                  );
+                final collab = CollaborationPanel(
+                  entityType: 'events',
+                  entityId: widget.eventId,
+                  myRole: event.myRole,
+                );
 
-                  final mainChildren = <Widget>[
+                final mainChildren = <Widget>[
+                  if (isCanonicalPublicEntry) details,
+                  if (!isCanonicalPublicEntry) ...[
                     secondaryActions,
                     const SizedBox(height: DetailSpacing.cardGap),
                     details,
+                  ],
+                  if (isCanonicalPublicEntry) ...[
                     const SizedBox(height: DetailSpacing.cardGap),
-                    eventPoapCard,
-                    const SizedBox(height: DetailSpacing.cardGap),
-                    linkedExhibitionsSection,
-                    const SizedBox(height: DetailSpacing.cardGap),
-                    exhibitionPoapSection,
-                  ];
+                    secondaryActions,
+                  ],
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  eventPoapCard,
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  linkedExhibitionsSection,
+                  const SizedBox(height: DetailSpacing.cardGap),
+                  exhibitionPoapSection,
+                ];
 
-                  if (isWide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 8,
-                          child: ListView(
-                            children: [
-                              ...mainChildren,
-                              if (events.isDetailLoading)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: InlineLoading(
-                                      height: 4,
-                                      borderRadius: BorderRadius.circular(2),
-                                      color: scheme.primary),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: DetailSpacing.xl),
-                        Expanded(
-                          flex: 3,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 380),
-                            child: collab,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return ListView(
+                if (isWide && !isCanonicalPublicEntry) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ...mainChildren,
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      collab,
-                      if (events.isDetailLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: InlineLoading(
-                              height: 4,
-                              borderRadius: BorderRadius.circular(2),
-                              color: scheme.primary),
+                      Expanded(
+                        flex: 8,
+                        child: ListView(
+                          children: [
+                            ...mainChildren,
+                            if (events.isDetailLoading)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: InlineLoading(
+                                    height: 4,
+                                    borderRadius: BorderRadius.circular(2),
+                                    color: scheme.primary),
+                              ),
+                          ],
                         ),
+                      ),
+                      const SizedBox(width: DetailSpacing.xl),
+                      Expanded(
+                        flex: 3,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 380),
+                          child: collab,
+                        ),
+                      ),
                     ],
                   );
-                },
-              ),
+                }
+
+                return ListView(
+                  children: [
+                    ...mainChildren,
+                    const SizedBox(height: DetailSpacing.cardGap),
+                    collab,
+                    if (events.isDetailLoading)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: InlineLoading(
+                            height: 4,
+                            borderRadius: BorderRadius.circular(2),
+                            color: scheme.primary),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
     );
+    final content = isCanonicalPublicEntry
+        ? eventScaffold
+        : AnimatedGradientBackground(child: eventScaffold);
     if (exactEvent == null) return content;
     return PublicEntityTakeoverReady(
       type: ShareEntityType.event,
@@ -528,15 +568,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
 class _EventDetailsCard extends StatelessWidget {
   const _EventDetailsCard(
-      {required this.event, required this.exhibitionsCount});
+      {required this.event,
+      required this.exhibitionsCount,
+      this.publicEntry = false,
+      this.publicDesktopLayout = false,
+      this.publicCompactEntry = false,
+      this.afterDescription});
 
   final KubusEvent event;
   final int exhibitionsCount;
+  final bool publicEntry;
+  final bool publicDesktopLayout;
+  final bool publicCompactEntry;
+  final Widget? afterDescription;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
 
     String? dateRange;
@@ -566,23 +616,29 @@ class _EventDetailsCard extends StatelessWidget {
                 l10n.commonUnknown,
           );
 
-    // The poster leads the page as real content: it renders edge-to-edge
-    // above the overview card instead of being framed inside glass.
+    // Public canonical entry keeps identity and event context ahead of its
+    // media at compact widths, matching the server-rendered first frame.
+    // Ordinary in-app event detail retains its established poster-first order.
     final coverBlock = (coverUrl != null && coverUrl.isNotEmpty)
         ? ClipRRect(
-            borderRadius: BorderRadius.circular(DetailRadius.md),
+            key: const ValueKey<String>('public-event-cover'),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: AspectRatio(
-              aspectRatio: 16 / 9,
+              aspectRatio: publicDesktopLayout ? 0.73 : 16 / 9,
               child: Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  color: scheme.surfaceContainerHighest,
+                  color: publicDesktopLayout
+                      ? roles.surfaceRaised
+                      : scheme.surfaceContainerHighest,
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.broken_image_outlined,
                     size: 46,
-                    color: scheme.onSurface.withValues(alpha: 0.38),
+                    color: publicDesktopLayout
+                        ? roles.foregroundSubtle
+                        : scheme.onSurface.withValues(alpha: 0.38),
                   ),
                 ),
               ),
@@ -592,31 +648,45 @@ class _EventDetailsCard extends StatelessWidget {
 
     // Identity reads as open typography on the page; only the practical
     // metadata sits in a calm card below it.
-    final identityBlock = DetailIdentityBlock(
-      title: event.title,
-      kicker: l10n.mapMarkerSubjectTypeEvent,
-      subtitle: hostLabel,
-    );
+    Widget buildIdentityBlock(double availableWidth) {
+      final titleStyle = publicDesktopLayout || publicCompactEntry
+          ? KubusTextStyles.responsiveTitleStyle(
+              context,
+              KubusTypography.content(
+                fontSize: publicDesktopLayout ? 64 : 40,
+                fontWeight: FontWeight.w700,
+              ),
+              availableWidth: availableWidth,
+            ).copyWith(
+              height: 1.02,
+              letterSpacing: publicDesktopLayout ? -0.65 : -0.4,
+            )
+          : null;
+      return DetailIdentityBlock(
+        title: event.title,
+        kicker: l10n.mapMarkerSubjectTypeEvent,
+        subtitle: hostLabel,
+        titleStyle: titleStyle,
+      );
+    }
 
-    final overviewCard = DetailCard(
-      borderRadius: DetailRadius.md,
-      padding: DetailSpacing.editorialCardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DetailMetadataBlock(
-            items: [
-              if (dateRange != null)
-                DetailMetaItem(icon: Icons.schedule, label: dateRange),
-              if (location != null)
-                DetailMetaItem(icon: Icons.place_outlined, label: location),
-              if ((event.status ?? '').trim().isNotEmpty)
-                DetailMetaItem(
-                  icon: Icons.event_available_outlined,
-                  label: _labelForStatus(l10n, event.status),
-                ),
-            ],
-          ),
+    final overviewContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DetailMetadataBlock(
+          items: [
+            if (dateRange != null)
+              DetailMetaItem(icon: Icons.schedule, label: dateRange),
+            if (location != null)
+              DetailMetaItem(icon: Icons.place_outlined, label: location),
+            if (!publicEntry && (event.status ?? '').trim().isNotEmpty)
+              DetailMetaItem(
+                icon: Icons.event_available_outlined,
+                label: _labelForStatus(l10n, event.status),
+              ),
+          ],
+        ),
+        if (!publicEntry) ...[
           const SizedBox(height: DetailSpacing.lg),
           DetailContextCluster(
             compact: true,
@@ -629,21 +699,71 @@ class _EventDetailsCard extends StatelessWidget {
             ],
           ),
         ],
-      ),
+      ],
     );
+    final overviewCard = publicDesktopLayout
+        ? Container(
+            padding: const EdgeInsets.symmetric(vertical: DetailSpacing.md),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: roles.rule),
+                bottom: BorderSide(color: roles.rule),
+              ),
+            ),
+            child: overviewContent,
+          )
+        : DetailCard(
+            borderRadius: DetailRadius.md,
+            padding: DetailSpacing.editorialCardPadding,
+            child: overviewContent,
+          );
 
     final hasDescription = (event.description ?? '').trim().isNotEmpty;
 
     // Editorial description reads long-form on the quiet reading surface
     // (never glass) and can expand cleanly without crowding the metadata.
+    final publicContextColumn = LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          buildIdentityBlock(constraints.maxWidth),
+          const SizedBox(height: DetailSpacing.heroGap),
+          overviewCard,
+          if (hasDescription) ...[
+            const SizedBox(height: DetailSpacing.cardGap),
+            KubusReadingSurface(
+              padding: DetailSpacing.editorialCardPadding,
+              child: ExpandableDetailText(
+                text: event.description!.trim(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (publicDesktopLayout && coverBlock != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 4, child: publicContextColumn),
+          const SizedBox(width: 56),
+          Expanded(flex: 3, child: coverBlock),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (coverBlock != null) ...[
+        if (!publicCompactEntry && coverBlock != null) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
-        identityBlock,
+        LayoutBuilder(
+          builder: (context, constraints) =>
+              buildIdentityBlock(constraints.maxWidth),
+        ),
         const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
         if (hasDescription) ...[
@@ -654,6 +774,14 @@ class _EventDetailsCard extends StatelessWidget {
               text: event.description!.trim(),
             ),
           ),
+        ],
+        if (afterDescription != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          afterDescription!,
+        ],
+        if (publicCompactEntry && coverBlock != null) ...[
+          const SizedBox(height: DetailSpacing.heroGap),
+          coverBlock,
         ],
       ],
     );

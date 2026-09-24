@@ -84,8 +84,7 @@ import 'screens/auth/verify_email_screen.dart';
 import 'screens/auth/email_verification_success_screen.dart';
 import 'screens/onboarding/onboarding_flow_screen.dart';
 import 'screens/art/ar_screen.dart';
-import 'screens/art/art_detail_screen.dart';
-import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
+import 'screens/art/artwork_detail_route.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'screens/node/kubus_node_screen.dart';
 import 'screens/spatial/spatial_library_detail_screen.dart';
@@ -980,17 +979,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             final l10n = AppLocalizations.of(context)!;
             return Scaffold(body: Center(child: Text(l10n.artworkNotFound)));
           }
-          final isDesktop = DesktopBreakpoints.isDesktop(context);
-          return isDesktop
-              ? DesktopArtworkDetailScreen(
-                  artworkId: artworkId,
-                  showAppBar: true,
-                  attendanceMarkerId: attendanceMarkerId,
-                )
-              : ArtDetailScreen(
-                  artworkId: artworkId,
-                  attendanceMarkerId: attendanceMarkerId,
-                );
+          return buildArtworkDetailRoute(
+            context,
+            artworkId: artworkId,
+            showAppBar: true,
+            attendanceMarkerId: attendanceMarkerId,
+          );
         },
         '/exhibition': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
@@ -1405,7 +1399,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     // an unrelated screen — see `AppStartupGate` for the full rationale.
     handler.onNavigate = (route, params) {
       AppStartupGate.runWhenReady(
-          () => _dispatchNotificationRoute(route, params));
+        () => _dispatchNotificationRoute(route, params),
+      );
     };
 
     handler.initialize();

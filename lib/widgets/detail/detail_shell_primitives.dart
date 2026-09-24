@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
 import 'detail_shell_sections.dart';
@@ -731,16 +732,19 @@ class DetailIdentityBlock extends StatelessWidget {
     this.kicker,
     this.subtitle,
     this.trailing,
+    this.titleStyle,
   });
 
   final String title;
   final String? kicker;
   final String? subtitle;
   final Widget? trailing;
+  final TextStyle? titleStyle;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,7 +760,7 @@ class DetailIdentityBlock extends StatelessWidget {
                     fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
-                    color: scheme.primary,
+                    color: roles.foregroundMuted,
                   ),
                 ),
                 const SizedBox(height: DetailSpacing.xs),
@@ -765,10 +769,11 @@ class DetailIdentityBlock extends StatelessWidget {
                 title,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: DetailTypography.screenTitle(context).copyWith(
-                  fontSize: KubusHeaderMetrics.screenTitle,
-                  height: 1.16,
-                ),
+                style: titleStyle ??
+                    DetailTypography.screenTitle(context).copyWith(
+                      fontSize: KubusHeaderMetrics.screenTitle,
+                      height: 1.16,
+                    ),
               ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: DetailSpacing.sm),

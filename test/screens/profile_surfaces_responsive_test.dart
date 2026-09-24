@@ -1,4 +1,5 @@
 import 'package:art_kubus/models/user.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/artist_badge.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
 import 'package:art_kubus/widgets/detail/profile_relationship_actions.dart';
@@ -63,8 +64,9 @@ void main() {
   group('handle integrity across widths and variants', () {
     for (final entry in variants.entries) {
       for (final width in mobileWidths) {
-        testWidgets('mobile public • ${entry.key} @ ${width.toInt()}',
-            (tester) async {
+        testWidgets('mobile public • ${entry.key} @ ${width.toInt()}', (
+          tester,
+        ) async {
           await pumpProfileSurface(
             tester,
             surface: ProfileSurface.mobilePublic,
@@ -76,8 +78,9 @@ void main() {
       }
 
       for (final width in desktopWidths) {
-        testWidgets('desktop public • ${entry.key} @ ${width.toInt()}',
-            (tester) async {
+        testWidgets('desktop public • ${entry.key} @ ${width.toInt()}', (
+          tester,
+        ) async {
           await pumpProfileSurface(
             tester,
             surface: ProfileSurface.desktopPublic,
@@ -87,8 +90,9 @@ void main() {
           _assertHandleIntegrity(tester, entry.value);
         });
 
-        testWidgets('community overlay • ${entry.key} @ ${width.toInt()}',
-            (tester) async {
+        testWidgets('community overlay • ${entry.key} @ ${width.toInt()}', (
+          tester,
+        ) async {
           await pumpProfileSurface(
             tester,
             surface: ProfileSurface.communityOverlay,
@@ -116,8 +120,9 @@ void main() {
       expect(find.textContaining('Ana Kovač'), findsWidgets);
     });
 
-    testWidgets('community overlay hides provisional user_ identifiers',
-        (tester) async {
+    testWidgets('community overlay hides provisional user_ identifiers', (
+      tester,
+    ) async {
       await pumpProfileSurface(
         tester,
         surface: ProfileSurface.communityOverlay,
@@ -129,6 +134,24 @@ void main() {
       );
       expect(find.textContaining('@'), findsNothing);
     });
+  });
+
+  testWidgets('desktop generic profile uses the generic role label', (
+    tester,
+  ) async {
+    await pumpProfileSurface(
+      tester,
+      surface: ProfileSurface.desktopPublic,
+      user: ProfileFixtures.user(),
+      size: const Size(1024, 900),
+      canonicalPublicEntry: true,
+    );
+
+    final context = tester.element(find.byType(ProfileIdentityBlock).first);
+    final l10n = AppLocalizations.of(context)!;
+    expect(find.text(l10n.userProfileTitle), findsWidgets);
+    expect(find.text(l10n.settingsRoleArtistTitle), findsNothing);
+    expect(find.text(l10n.settingsRoleInstitutionTitle), findsNothing);
   });
 
   group('locale, theme and text scale', () {
@@ -147,7 +170,10 @@ void main() {
               size: const Size(360, 900),
               user: variants['long name + long handle'],
             );
-            _assertHandleIntegrity(tester, variants['long name + long handle']!);
+            _assertHandleIntegrity(
+              tester,
+              variants['long name + long handle']!,
+            );
           });
 
           testWidgets(
@@ -162,7 +188,10 @@ void main() {
               size: const Size(1024, 1000),
               user: variants['long name + long handle'],
             );
-            _assertHandleIntegrity(tester, variants['long name + long handle']!);
+            _assertHandleIntegrity(
+              tester,
+              variants['long name + long handle']!,
+            );
           });
         }
       }
@@ -170,8 +199,9 @@ void main() {
   });
 
   group('action hierarchy and geometry', () {
-    testWidgets('overlay utility actions all meet the 44px target',
-        (tester) async {
+    testWidgets('overlay utility actions all meet the 44px target', (
+      tester,
+    ) async {
       await pumpProfileSurface(
         tester,
         surface: ProfileSurface.communityOverlay,
@@ -193,8 +223,9 @@ void main() {
       }
     });
 
-    testWidgets('Follow precedes Message, and both precede statistics',
-        (tester) async {
+    testWidgets('Follow precedes Message, and both precede statistics', (
+      tester,
+    ) async {
       await pumpProfileSurface(
         tester,
         surface: ProfileSurface.mobilePublic,
@@ -218,8 +249,9 @@ void main() {
       expect(tester.getRect(actions).top, greaterThan(identity.top));
     });
 
-    testWidgets('role badges stay visible next to the identity',
-        (tester) async {
+    testWidgets('role badges stay visible next to the identity', (
+      tester,
+    ) async {
       await pumpProfileSurface(
         tester,
         surface: ProfileSurface.mobilePublic,
@@ -271,10 +303,7 @@ void _assertHandleIntegrity(WidgetTester tester, User user) {
 }
 
 /// No utility action may overlap the handle's horizontal band.
-void _assertHandleDoesNotShareWidthWithActions(
-  WidgetTester tester,
-  User user,
-) {
+void _assertHandleDoesNotShareWidthWithActions(WidgetTester tester, User user) {
   final handleFinder = find.text('@${user.username}');
   if (handleFinder.evaluate().isEmpty) return;
 

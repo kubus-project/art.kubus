@@ -1,0 +1,1282 @@
+{
+  "sourceSha": "5f8f03df1529b3008574877aaf21b5e2f2781d52",
+  "previewOrigin": "http://127.0.0.1:4182",
+  "fixtureScope": "local public-only demo entities; no production data",
+  "generatedAt": "2026-09-23T11:01:07.345Z",
+  "results": [
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "keyboard": {
+        "ssrBecameInert": true,
+        "accessibilityEntry": {
+          "label": "Enable accessibility",
+          "outlineWidth": 3,
+          "outlineStyle": "auto"
+        },
+        "semanticControl": {
+          "label": "Back",
+          "x": 8,
+          "y": 8,
+          "width": 40,
+          "height": 40,
+          "outlineWidth": 1,
+          "outlineStyle": "auto"
+        }
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "en",
+      "title": "A Long Public Artwork Title for Responsive Layout Verification",
+      "artist": "Maja Novak and collaborators from the public art archive",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ]
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "sl",
+      "title": "Dolgo slovensko ime javnega umetniškega dela za preverjanje postavitve",
+      "artist": "Maja Novak in sodelavci iz lokalnega umetniškega arhiva",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ]
+    },
+    {
+      "browser": "chromium",
+      "state": "failure-states",
+      "slowFlutter": "SSR remained accessible before exact takeover",
+      "bundleFailure": "SSR remained visible and host stayed hidden"
+    },
+    {
+      "browser": "chromium",
+      "state": "zoom-effective-width",
+      "viewport": {
+        "width": 195,
+        "height": 422,
+        "deviceScaleFactor": 2
+      },
+      "metrics": {
+        "innerWidth": 195,
+        "documentWidth": 195,
+        "bodyWidth": 195,
+        "flutterLeft": 0,
+        "flutterRight": 195,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "keyboard": {
+        "ssrBecameInert": true,
+        "accessibilityEntry": {
+          "label": "Enable accessibility",
+          "outlineWidth": 3,
+          "outlineStyle": "auto"
+        },
+        "semanticControl": {
+          "label": "Share",
+          "x": 310,
+          "y": 8,
+          "width": 40,
+          "height": 40,
+          "outlineWidth": 1,
+          "outlineStyle": "auto"
+        }
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4182/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4182/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "en",
+      "title": "A Long Public Artwork Title for Responsive Layout Verification",
+      "artist": "Maja Novak and collaborators from the public art archive",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ]
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "sl",
+      "title": "Dolgo slovensko ime javnega umetniškega dela za preverjanje postavitve",
+      "artist": "Maja Novak in sodelavci iz lokalnega umetniškega arhiva",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ]
+    },
+    {
+      "browser": "firefox",
+      "state": "failure-states",
+      "slowFlutter": "SSR remained accessible before exact takeover",
+      "bundleFailure": "SSR remained visible and host stayed hidden"
+    },
+    {
+      "browser": "firefox",
+      "state": "zoom-effective-width",
+      "viewport": {
+        "width": 195,
+        "height": 422,
+        "deviceScaleFactor": 2
+      },
+      "metrics": {
+        "innerWidth": 195,
+        "documentWidth": 195,
+        "bodyWidth": 195,
+        "flutterLeft": 0,
+        "flutterRight": 195,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      }
+    }
+  ]
+}

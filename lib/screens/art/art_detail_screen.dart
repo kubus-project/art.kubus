@@ -29,7 +29,6 @@ import '../../services/map_data_controller.dart';
 import '../../services/nft_minting_service.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../models/collectible.dart';
-import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../utils/artwork_location_actions.dart';
@@ -68,11 +67,7 @@ class ArtDetailScreen extends StatefulWidget {
   State<ArtDetailScreen> createState() => _ArtDetailScreenState();
 }
 
-class _ArtDetailScreenState extends State<ArtDetailScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+class _ArtDetailScreenState extends State<ArtDetailScreen> {
   late TextEditingController _commentController;
   late ScrollController _scrollController;
   bool _showComments = false;
@@ -126,7 +121,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   String? _replyToCommentId;
   String? _replyToAuthorName;
   String? _prefetchedAttendanceMarkerId;
-  bool _animationsInitialized = false;
   bool _artworkLoading = true;
   String? _artworkError;
   bool _takeoverReadyScheduled = false;
@@ -140,11 +134,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     super.initState();
     _commentController = TextEditingController();
     _scrollController = ScrollController();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
     // Defer context-dependent work until after the first frame so inherited
     // widgets (localizations/theme) are available.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -163,37 +152,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    if (!_animationsInitialized) {
-      final animationTheme = context.animationTheme;
-
-      _animationController.duration = animationTheme.long;
-
-      _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: animationTheme.fadeCurve,
-        ),
-      );
-
-      _slideAnimation =
-          Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: animationTheme.defaultCurve,
-        ),
-      );
-
-      _animationController.forward();
-      _animationsInitialized = true;
-    }
-  }
-
-  @override
   void dispose() {
-    _animationController.dispose();
     _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -230,7 +189,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         if (_artworkLoading) {
           return AnimatedGradientBackground(
             child: Scaffold(
-              backgroundColor: Colors.transparent,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               appBar: AppBar(
                 title: Text(
                   l10n.artDetailLoadingTitle,
@@ -340,70 +299,80 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _scheduleTakeoverReady(artwork.id);
         return AnimatedGradientBackground(
           child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        _buildAppBar(artwork),
-                        SliverPadding(
-                          padding: const EdgeInsets.all(DetailSpacing.xl),
-                          sliver: SliverList(
-                            // Editorial rhythm: major zones breathe with the
-                            // larger card gap instead of packing tightly.
-                            delegate: SliverChildListDelegate([
-                              _buildArtInfo(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildGallerySection(artwork),
-                              if (artwork.galleryUrls.isNotEmpty)
-                                const SizedBox(
-                                  height: DetailSpacing.cardGap,
-                                ),
-                              _buildDescription(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              ArtworkSpatialArchiveSection(
-                                artwork: artwork,
-                                contextMarkerId: widget.attendanceMarkerId,
-                              ),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildSocialStats(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildActionButtons(
-                                artwork,
-                                isOwner: isOwner,
-                                canManage: canManage,
-                              ),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              if (AppConfig.isFeatureEnabled(
-                                    'collabInvites',
-                                  ) &&
-                                  isSignedIn) ...[
-                                CollaborationPanel(
-                                  entityType: 'artworks',
-                                  entityId: artwork.id,
-                                  myRole: isOwner ? 'owner' : null,
-                                ),
-                                const SizedBox(height: DetailSpacing.xl),
-                              ],
-                              _buildCommentsSection(
-                                artwork,
-                                artworkProvider,
-                              ),
-                              const SizedBox(height: 100), // Bottom padding
-                            ]),
-                          ),
-                        ),
-                      ],
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            body: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                _buildAppBar(artwork),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DetailSpacing.lg,
+                      DetailSpacing.md,
+                      DetailSpacing.lg,
+                      0,
+                    ),
+                    child: AspectRatio(
+                      // The server frame uses the portrait public
+                      // artwork crop at this same compact width.
+                      aspectRatio: 0.77,
+                      child: _buildPreviewCoverImage(
+                        ArtworkMediaResolver.resolveCover(artwork: artwork),
+                        semanticLabel: artwork.title.trim().isEmpty
+                            ? 'Artwork image'
+                            : '${artwork.title} image',
+                      ),
                     ),
                   ),
-                );
-              },
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DetailSpacing.lg,
+                    DetailSpacing.xl,
+                    DetailSpacing.lg,
+                    DetailSpacing.xl,
+                  ),
+                  sliver: SliverList(
+                    // Editorial rhythm: major zones breathe with the
+                    // larger card gap instead of packing tightly.
+                    delegate: SliverChildListDelegate([
+                      _buildArtInfo(artwork),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      _buildPrimaryActionButtons(artwork),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      _buildDescription(artwork),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      _buildGallerySection(artwork),
+                      if (artwork.galleryUrls.isNotEmpty)
+                        const SizedBox(height: DetailSpacing.cardGap),
+                      ArtworkSpatialArchiveSection(
+                        artwork: artwork,
+                        contextMarkerId: widget.attendanceMarkerId,
+                      ),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      _buildSocialStats(artwork),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      _buildAdditionalActions(
+                        artwork,
+                        isOwner: isOwner,
+                        canManage: canManage,
+                      ),
+                      const SizedBox(height: DetailSpacing.cardGap),
+                      if (AppConfig.isFeatureEnabled('collabInvites') &&
+                          isSignedIn) ...[
+                        CollaborationPanel(
+                          entityType: 'artworks',
+                          entityId: artwork.id,
+                          myRole: isOwner ? 'owner' : null,
+                        ),
+                        const SizedBox(height: DetailSpacing.xl),
+                      ],
+                      _buildCommentsSection(artwork, artworkProvider),
+                      const SizedBox(height: 100), // Bottom padding
+                    ]),
+                  ),
+                ),
+              ],
             ),
             floatingActionButton: (_showComments && isSignedIn)
                 ? _buildCommentFAB(artwork)
@@ -478,28 +447,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
   Widget _buildAppBar(Artwork artwork) {
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-
-    // Immersive, image-led opening: the artwork takes roughly half the
-    // viewport instead of a fixed 320px strip.
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final heroHeight = (screenHeight * 0.52).clamp(320.0, 520.0).toDouble();
 
     return SliverAppBar(
-      expandedHeight: heroHeight,
+      expandedHeight: kToolbarHeight,
+      collapsedHeight: kToolbarHeight,
+      toolbarHeight: kToolbarHeight,
       floating: false,
       pinned: true,
       backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('art.kubus'),
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.arrow_back),
-        ),
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        icon: const Icon(Icons.arrow_back),
       ),
       actions: [
         IconButton(
@@ -513,14 +474,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               sourceScreen: 'art_detail',
             );
           },
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: scheme.surface.withValues(alpha: 0.9),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.share_outlined),
-          ),
+          tooltip: AppLocalizations.of(context)!.commonShare,
+          icon: const Icon(Icons.share_outlined),
         ),
         Consumer2<ArtworkProvider, SavedItemsProvider>(
           builder: (context, provider, savedItemsProvider, child) {
@@ -529,46 +484,18 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             return IconButton(
               tooltip: l10n.commonSave,
               onPressed: () => _toggleSaved(provider, artwork.id),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  color: isSaved ? scheme.primary : scheme.onSurfaceVariant,
-                ),
+              icon: Icon(
+                isSaved ? Icons.bookmark : Icons.bookmark_border,
+                color: isSaved ? scheme.primary : scheme.onSurfaceVariant,
               ),
             );
           },
         ),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildPreviewCoverImage(coverUrl),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.05),
-                    Colors.black.withValues(alpha: 0.22),
-                    Colors.black.withValues(alpha: 0.55),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildPreviewCoverImage(String? imageUrl) {
+  Widget _buildPreviewCoverImage(String? imageUrl, {String? semanticLabel}) {
     final scheme = Theme.of(context).colorScheme;
     final resolved = (imageUrl ?? '').trim();
     final placeholder = Container(
@@ -589,6 +516,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     return Image.network(
       resolved,
       fit: BoxFit.cover,
+      semanticLabel: semanticLabel,
       errorBuilder: (_, __, ___) => placeholder,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
@@ -605,6 +533,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
   Widget _buildArtInfo(Artwork artwork) {
     final category = artwork.category.trim();
+    final publicPlaceLabel = _publicEntryPlaceLabel(artwork.id);
     final showKicker = category.isNotEmpty && category != 'General';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,9 +551,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ],
         Text(
           artwork.title,
-          style: KubusTextStyles.responsiveHeroTitle(context).copyWith(
+          style: KubusTextStyles.responsiveTitleStyle(
+            context,
+            KubusTypography.textTheme.displayLarge!,
+            availableWidth:
+                MediaQuery.sizeOf(context).width - (DetailSpacing.lg * 2),
+          ).copyWith(
             color: Theme.of(context).colorScheme.onSurface,
-            height: 1.15,
+            height: 1.08,
           ),
         ),
         const SizedBox(height: DetailSpacing.sm),
@@ -637,6 +571,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           spacing: DetailSpacing.sm,
           runSpacing: DetailSpacing.sm,
           children: [
+            if (publicPlaceLabel != null)
+              _buildInfoChip(Icons.place_outlined, publicPlaceLabel),
+            if (ArtworkLocationActions.hasValidLocation(artwork))
+              _buildInfoChip(
+                Icons.my_location_outlined,
+                '${artwork.position.latitude.toStringAsFixed(4)}, '
+                '${artwork.position.longitude.toStringAsFixed(4)}',
+              ),
             if (artwork.arEnabled)
               _buildInfoChip(
                 Icons.view_in_ar_rounded,
@@ -660,7 +602,102 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             runSpacing: DetailSpacing.sm,
             children: artwork.tags.map((tag) => _buildTag(tag)).toList(),
           ),
-        _buildPoapInfoCard(artwork),
+      ],
+    );
+  }
+
+  String? _publicEntryPlaceLabel(String artworkId) {
+    try {
+      return context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPlaceLabelForCanonicalPath(
+            type: 'artwork',
+            id: artworkId,
+            pathname: Uri.base.path,
+          );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildPrimaryActionButtons(Artwork artwork) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Consumer<ArtworkProvider>(
+                builder: (context, provider, child) {
+                  final isLiked = artwork.isLikedByCurrentUser;
+                  return DetailActionButton(
+                    icon: isLiked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    label: isLiked
+                        ? l10n.artworkDetailLiked
+                        : l10n.artworkDetailLike,
+                    isActive: isLiked,
+                    activeColor: scheme.error,
+                    onPressed: () => _toggleArtworkLike(provider, artwork.id),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: DetailSpacing.md),
+            Expanded(
+              child: DetailActionButton(
+                icon: _showComments
+                    ? Icons.chat_bubble_rounded
+                    : Icons.chat_bubble_outline_rounded,
+                label: _showComments
+                    ? l10n.artworkDetailHideComments
+                    : l10n.commonComments,
+                isActive: _showComments,
+                activeColor: scheme.primary,
+                onPressed: () {
+                  setState(() {
+                    _showComments = !_showComments;
+                  });
+                  if (_showComments) {
+                    context.read<ArtworkProvider>().loadComments(
+                          widget.artworkId,
+                        );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        if (hasLocation) ...[
+          const SizedBox(height: DetailSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: DetailActionButton(
+              icon: Icons.navigation_rounded,
+              label: l10n.commonNavigate,
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              onPressed: () => ArtworkLocationActions.showNavigationOptions(
+                context,
+                artwork,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () =>
+                  ArtworkLocationActions.showOnMap(context, artwork),
+              icon: const Icon(Icons.map_outlined),
+              label: Text(l10n.artDetailShowOnMap),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -833,7 +870,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   Widget _buildDescription(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           l10n.commonDescription,
@@ -915,7 +952,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
   }
 
-  Widget _buildActionButtons(
+  Widget _buildAdditionalActions(
     Artwork artwork, {
     required bool isOwner,
     required bool canManage,
@@ -930,55 +967,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
             markerIdCandidate.isNotEmpty;
-    final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Consumer<ArtworkProvider>(
-                builder: (context, provider, child) {
-                  final isLiked = artwork.isLikedByCurrentUser;
-                  return DetailActionButton(
-                    icon: isLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    label: isLiked
-                        ? l10n.artworkDetailLiked
-                        : l10n.artworkDetailLike,
-                    isActive: isLiked,
-                    activeColor: scheme.error,
-                    onPressed: () => _toggleArtworkLike(provider, artwork.id),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: DetailSpacing.md),
-            Expanded(
-              child: DetailActionButton(
-                icon: _showComments
-                    ? Icons.chat_bubble_rounded
-                    : Icons.chat_bubble_outline_rounded,
-                label: _showComments
-                    ? l10n.artworkDetailHideComments
-                    : l10n.commonComments,
-                isActive: _showComments,
-                activeColor: scheme.primary,
-                onPressed: () {
-                  setState(() {
-                    _showComments = !_showComments;
-                  });
-                  if (_showComments) {
-                    context.read<ArtworkProvider>().loadComments(
-                          widget.artworkId,
-                        );
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
         if (canManage) ...[
           const SizedBox(height: DetailSpacing.md),
           DetailActionButton(
@@ -1020,41 +1012,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     },
                   ),
           ),
-        if (hasLocation) ...[
-          if (artwork.arEnabled &&
-              (artwork.arStatus == ArtworkArStatus.ready || isOwner))
-            const SizedBox(height: DetailSpacing.md),
-          // Navigate is the accent-filled primary location action; Show on
-          // map is its quiet secondary. Both foregrounds come from the
-          // scheme's contrast-computed on* pairs — never local colors.
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: DetailActionButton(
-                  icon: Icons.navigation_rounded,
-                  label: l10n.commonNavigate,
-                  backgroundColor: scheme.primary,
-                  foregroundColor: scheme.onPrimary,
-                  onPressed: () => ArtworkLocationActions.showNavigationOptions(
-                    context,
-                    artwork,
-                  ),
-                ),
-              ),
-              const SizedBox(width: DetailSpacing.md),
-              Expanded(
-                flex: 2,
-                child: DetailActionButton(
-                  icon: Icons.map_outlined,
-                  label: l10n.artDetailShowOnMap,
-                  onPressed: () =>
-                      ArtworkLocationActions.showOnMap(context, artwork),
-                ),
-              ),
-            ],
-          ),
-        ],
         if (canShowStreetArtClaimCta) ...[
           const SizedBox(height: DetailSpacing.md),
           Row(
@@ -1100,6 +1057,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               },
             ),
           ),
+        _buildPoapInfoCard(artwork),
       ],
     );
   }
@@ -2483,10 +2441,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
   }
 
-  String _collectibleTypeLabel(
-    AppLocalizations l10n,
-    CollectibleType type,
-  ) {
+  String _collectibleTypeLabel(AppLocalizations l10n, CollectibleType type) {
     return switch (type) {
       CollectibleType.nft => l10n.artworkEditionTypeStandard,
       CollectibleType.poap => l10n.artworkEditionTypeAttendanceRecord,
