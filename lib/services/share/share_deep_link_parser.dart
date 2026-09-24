@@ -135,11 +135,46 @@ class ShareDeepLinkTarget {
 class ShareDeepLinkCodec {
   const ShareDeepLinkCodec();
 
+  static const Map<String, AppRouteIntentType> _localizedCanonicalHeads = {
+    'en/artworks': AppRouteIntentType.artwork,
+    'sl/umetnine': AppRouteIntentType.artwork,
+    'en/profiles': AppRouteIntentType.profile,
+    'sl/profili': AppRouteIntentType.profile,
+    'en/events': AppRouteIntentType.event,
+    'sl/dogodki': AppRouteIntentType.event,
+    'en/exhibitions': AppRouteIntentType.exhibition,
+    'sl/razstave': AppRouteIntentType.exhibition,
+    'en/posts': AppRouteIntentType.post,
+    'sl/objave': AppRouteIntentType.post,
+    'en/collections': AppRouteIntentType.collection,
+    'sl/zbirke': AppRouteIntentType.collection,
+    'en/collectibles': AppRouteIntentType.nft,
+    'sl/zbirateljski-predmeti': AppRouteIntentType.nft,
+    'en/map': AppRouteIntentType.marker,
+    'sl/zemljevid': AppRouteIntentType.marker,
+  };
+
   AppRouteIntent? parseIntent(Uri uri) {
-    final segments = uri.pathSegments
+    // Uri.pathSegments and Uri.queryParameters are already percent-decoded.
+    // Keep the unfiltered path here so malformed canonical paths cannot become
+    // valid after an empty or extra segment is discarded.
+    final pathSegments = uri.pathSegments;
+    final segments = pathSegments
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList(growable: false);
+
+    if (pathSegments.length >= 2) {
+      final locale = pathSegments[0].trim().toLowerCase();
+      final head = pathSegments[1].trim().toLowerCase();
+      final canonicalType = _localizedCanonicalHeads['$locale/$head'];
+      if (canonicalType != null) {
+        if (pathSegments.length != 3) return null;
+        final id = pathSegments[2].trim();
+        if (id.isEmpty) return null;
+        return _intentFromType(canonicalType, id, uri: uri, segmentIndex: 1);
+      }
+    }
 
     if (segments.isNotEmpty && segments.first.toLowerCase() == 'map') {
       final lat = _tryParseDouble(uri.queryParameters['lat']);
@@ -161,7 +196,9 @@ class ShareDeepLinkCodec {
         final rawId = segments[i + 1];
         if (rawId.isEmpty) continue;
 
-        final id = Uri.decodeComponent(rawId).trim();
+        // pathSegments have already been decoded by dart:core. Decoding a
+        // second time can throw for a valid ID containing a literal percent.
+        final id = rawId.trim();
         if (id.isEmpty) continue;
 
         return _intentFromType(intentType, id, uri: uri, segmentIndex: i);
@@ -169,9 +206,7 @@ class ShareDeepLinkCodec {
     }
 
     final queryType = _intentTypeForHead((uri.queryParameters['type'] ?? ''));
-    final queryId = Uri.decodeComponent(
-      (uri.queryParameters['id'] ?? '').trim(),
-    );
+    final queryId = (uri.queryParameters['id'] ?? '').trim();
     if (queryType != null && queryId.isNotEmpty) {
       return _intentFromType(queryType, queryId, uri: uri);
     }
@@ -408,34 +443,45 @@ class ShareDeepLinkCodec {
     final head = headRaw.trim().toLowerCase();
     switch (head) {
       case 'p':
+      case 'post':
       case 'posts':
       case 'objave':
         return AppRouteIntentType.post;
+      case 'artwork':
       case 'a':
       case 'artworks':
       case 'umetnine':
         return AppRouteIntentType.artwork;
+      case 'marker':
       case 'm':
       case 'map':
       case 'zemljevid':
         return AppRouteIntentType.marker;
+      case 'collection':
       case 'c':
       case 'collections':
       case 'zbirke':
         return AppRouteIntentType.collection;
+      case 'event':
       case 'e':
       case 'events':
       case 'dogodki':
         return AppRouteIntentType.event;
+      case 'exhibition':
       case 'x':
       case 'exhibitions':
       case 'razstave':
         return AppRouteIntentType.exhibition;
+      case 'profile':
+      case 'user':
       case 'u':
       case 'profiles':
       case 'profili':
         return AppRouteIntentType.profile;
       case 'n':
+      case 'nft':
+      case 'nfts':
+      case 'collectible':
       case 'collectibles':
       case 'zbirateljski-predmeti':
         return AppRouteIntentType.nft;
