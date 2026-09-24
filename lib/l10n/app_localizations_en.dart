@@ -217,7 +217,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
-    return '+$amount KUB8 recognition';
+    return '+$amount recognition';
+  }
+
+  @override
+  String recentActivityKub8AmountDescription(Object amount) {
+    return '+$amount KUB8';
+  }
+
+  @override
+  String recentActivityAchievementKub8Description(Object title, Object amount) {
+    return '$title (+$amount KUB8)';
   }
 
   @override
@@ -241,6 +251,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
+
+  @override
+  String get notificationArtworkDiscoveredTitle => 'Artwork discovered';
+
+  @override
+  String notificationArtworkDiscoveredBody(Object title, Object artist) {
+    return 'Discovered “$title” by $artist';
+  }
+
+  @override
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title) {
+    return 'Discovered “$title”';
+  }
 
   @override
   String get pushArchiveObjectCreatingTitle => 'Creating digital edition...';
@@ -381,6 +404,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add this place to your collection';
 
   @override
+  String get activationGateSaveCollectionTitle =>
+      'Save this collection for later';
+
+  @override
   String get activationGateSavePostTitle => 'Save this post to your collection';
 
   @override
@@ -432,6 +459,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activationConfirmSaveExhibition => 'Save this place?';
+
+  @override
+  String get activationConfirmSaveCollection => 'Save this collection?';
 
   @override
   String get activationConfirmSavePost => 'Save this post?';
@@ -4930,10 +4960,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapSortNewest => 'Newest';
 
   @override
-  String get mapSortRarity => 'Rarity';
+  String get mapSortHighestRewards => 'Most recognition';
 
   @override
-  String get mapSortHighestRewards => 'Most recognition';
+  String get mapSortRarity => 'Rarity';
 
   @override
   String get mapSortMostViewed => 'Most viewed';
@@ -5113,6 +5143,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonActions => 'Actions';
+
+  @override
+  String get subjectActionsSocialHeading => 'Social';
+
+  @override
+  String get subjectActionsSpatialHeading => 'Place and movement';
+
+  @override
+  String get subjectActionsMoreHeading => 'More actions';
+
+  @override
+  String get subjectActionsProvenanceHeading => 'Provenance';
+
+  @override
+  String get subjectSpatialArchiveEmpty => 'No spatial record yet.';
+
+  @override
+  String get artworkProvenanceImageCreator => 'Image creator';
+
+  @override
+  String get artworkProvenanceLicense => 'Image license';
+
+  @override
+  String get artworkProvenanceCredit => 'Image credit';
+
+  @override
+  String get artworkProvenanceSource => 'Image source';
 
   @override
   String get commonCurrentlyOn => 'Currently ON';

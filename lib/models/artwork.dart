@@ -99,7 +99,12 @@ class Artwork {
   final String? nftMetadataUri;
   final bool arEnabled;
   final int spatialCaptureCount;
-  final int rewards; // KUB8 tokens
+  /// Legacy API transport value retained for compatibility only.
+  ///
+  /// This is not a cultural-entity price, bounty, or contribution score and
+  /// must not be shown in ordinary artwork or map presentation.
+  @Deprecated('Legacy artwork transport field; do not present as a reward.')
+  final int rewards;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? discoveredAt;
@@ -246,9 +251,8 @@ class Artwork {
   /// Check if artwork is favorite
   bool get isFavorite => status == ArtworkStatus.favorite;
 
-  /// Backward-compatible alias used by legacy UI/widgets.
-  ///
-  /// Prefer reading `rewards` directly.
+  /// Backward-compatible legacy alias. Do not use in presentation.
+  @Deprecated('Legacy artwork reward alias; do not present as artwork value.')
   int get actualRewards => rewards;
 
   /// Convert to Map for storage/API

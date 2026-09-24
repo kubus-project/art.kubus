@@ -11,6 +11,9 @@ import '../../models/promotion.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../services/backend_api_service.dart'
@@ -26,6 +29,7 @@ import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/subject_action_group.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
@@ -119,6 +123,28 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
+  Future<void> _toggleEventSaved(KubusEvent event) async {
+    final l10n = AppLocalizations.of(context)!;
+    final returnRoute =
+        context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                  ShareEntityType.event,
+                  event.id,
+                ) ??
+            Uri.base.path;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: returnRoute,
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.event,
+      targetId: event.id,
+      targetLabel: event.title,
+      sourceScreen: 'event_detail',
+    );
+    if (!authenticated || !mounted) return;
+    await context.read<SavedItemsProvider>().toggleEventSaved(event.id);
+  }
+
   Future<void> _claimEventPoap() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -200,8 +226,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return KubusAlertDialog(
-              title: Text(l10n.selectExhibitionsDialogTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              title: Text(
+                l10n.selectExhibitionsDialogTitle,
+                style: KubusTypography.inter(fontWeight: FontWeight.w700),
+              ),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -223,8 +251,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       },
                       title: Text(
                         exhibition.title,
-                        style:
-                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
@@ -235,16 +264,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child:
-                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                  child: Text(
+                    l10n.commonCancel,
+                    style: KubusTypography.inter(),
+                  ),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
-                  child: Text(l10n.commonLink,
-                      style:
-                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    l10n.commonLink,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             );
@@ -327,6 +359,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final roles = KubusColorRoles.of(context);
     final events = context.watch<EventsProvider>();
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final savedItems = context.watch<SavedItemsProvider>();
 
     KubusEvent? loadedEvent;
     for (final candidate in events.events) {
@@ -339,10 +372,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         widget.initialEvent?.id == widget.eventId ? widget.initialEvent : null;
     final exactEvent = loadedEvent ?? initialEvent;
     final event = exactEvent ??
-        KubusEvent(
-          id: widget.eventId,
-          title: l10n.mapMarkerSubjectTypeEvent,
-        );
+        KubusEvent(id: widget.eventId, title: l10n.mapMarkerSubjectTypeEvent);
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
     final exhibitionsProvider = context.watch<ExhibitionsProvider>();
@@ -375,7 +405,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
-                final mapAction = event.lat != null && event.lng != null
+                final hasValidCoordinates = event.lat != null &&
+                    event.lng != null &&
+                    event.lat!.isFinite &&
+                    event.lng!.isFinite &&
+                    event.lat! >= -90 &&
+                    event.lat! <= 90 &&
+                    event.lng! >= -180 &&
+                    event.lng! <= 180;
+                final mapAction = hasValidCoordinates
                     ? DetailSecondaryAction(
                         icon: Icons.map_outlined,
                         label: l10n.commonOpenOnMap,
@@ -390,18 +428,59 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         tooltip: l10n.commonOpenOnMap,
                       )
                     : null;
-                final publicCompactMapAction =
-                    isCanonicalPublicEntry && !isWide && mapAction != null
-                        ? DetailSecondaryActionCluster(
-                            maxVisible: 1,
-                            actions: [mapAction],
-                          )
-                        : null;
+                final publicEntryActions = isCanonicalPublicEntry
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SubjectActionGroup(
+                            label: l10n.subjectActionsSocialHeading,
+                            actions: [
+                              SubjectAction(
+                                icon: savedItems.isEventSaved(event.id)
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                label: l10n.commonSave,
+                                selectedLabel: l10n.commonSavedToast,
+                                isSelected: savedItems.isEventSaved(event.id),
+                                onPressed: () =>
+                                    unawaited(_toggleEventSaved(event)),
+                              ),
+                              SubjectAction(
+                                icon: Icons.share_outlined,
+                                label: l10n.commonShare,
+                                onPressed: () {
+                                  ShareService().showShareSheet(
+                                    context,
+                                    target: ShareTarget.event(
+                                      eventId: widget.eventId,
+                                      title: event.title,
+                                    ),
+                                    sourceScreen: 'event_detail',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          if (mapAction != null) ...[
+                            const SizedBox(height: DetailSpacing.md),
+                            SubjectActionGroup(
+                              label: l10n.subjectActionsSpatialHeading,
+                              actions: [
+                                SubjectAction(
+                                  icon: Icons.map_outlined,
+                                  label: l10n.commonOpenOnMap,
+                                  onPressed: mapAction.onTap,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      )
+                    : null;
                 final secondaryActions = DetailSecondaryActionCluster(
                   maxVisible: 5,
                   actions: [
-                    if (mapAction != null && publicCompactMapAction == null)
-                      mapAction,
+                    if (mapAction != null && !isCanonicalPublicEntry) mapAction,
                     if (canPromote)
                       DetailSecondaryAction(
                         icon: Icons.campaign_outlined,
@@ -409,21 +488,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         onTap: () => _openPromotionFlow(event),
                         tooltip: l10n.eventDetailPromoteTooltip,
                       ),
-                    DetailSecondaryAction(
-                      icon: Icons.share_outlined,
-                      label: l10n.commonShare,
-                      onTap: () {
-                        ShareService().showShareSheet(
-                          context,
-                          target: ShareTarget.event(
-                            eventId: widget.eventId,
-                            title: event.title,
-                          ),
-                          sourceScreen: 'event_detail',
-                        );
-                      },
-                      tooltip: l10n.commonShare,
-                    ),
+                    if (!isCanonicalPublicEntry)
+                      DetailSecondaryAction(
+                        icon: Icons.share_outlined,
+                        label: l10n.commonShare,
+                        onTap: () {
+                          ShareService().showShareSheet(
+                            context,
+                            target: ShareTarget.event(
+                              eventId: widget.eventId,
+                              title: event.title,
+                            ),
+                            sourceScreen: 'event_detail',
+                          );
+                        },
+                        tooltip: l10n.commonShare,
+                      ),
                     DetailSecondaryAction(
                       icon: Icons.inbox_outlined,
                       label: l10n.eventDetailInvitesLabel,
@@ -450,7 +530,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   publicEntry: isCanonicalPublicEntry,
                   publicDesktopLayout: isCanonicalPublicEntry && isWide,
                   publicCompactEntry: isCanonicalPublicEntry && !isWide,
-                  afterDescription: publicCompactMapAction,
+                  afterOverview: publicEntryActions,
                 );
 
                 final eventPoapCard = _EventPoapCard(
@@ -514,9 +594,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 16),
                                 child: InlineLoading(
-                                    height: 4,
-                                    borderRadius: BorderRadius.circular(2),
-                                    color: scheme.primary),
+                                  height: 4,
+                                  borderRadius: BorderRadius.circular(2),
+                                  color: scheme.primary,
+                                ),
                               ),
                           ],
                         ),
@@ -542,9 +623,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
                         child: InlineLoading(
-                            height: 4,
-                            borderRadius: BorderRadius.circular(2),
-                            color: scheme.primary),
+                          height: 4,
+                          borderRadius: BorderRadius.circular(2),
+                          color: scheme.primary,
+                        ),
                       ),
                   ],
                 );
@@ -567,20 +649,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 }
 
 class _EventDetailsCard extends StatelessWidget {
-  const _EventDetailsCard(
-      {required this.event,
-      required this.exhibitionsCount,
-      this.publicEntry = false,
-      this.publicDesktopLayout = false,
-      this.publicCompactEntry = false,
-      this.afterDescription});
+  const _EventDetailsCard({
+    required this.event,
+    required this.exhibitionsCount,
+    this.publicEntry = false,
+    this.publicDesktopLayout = false,
+    this.publicCompactEntry = false,
+    this.afterOverview,
+  });
 
   final KubusEvent event;
   final int exhibitionsCount;
   final bool publicEntry;
   final bool publicDesktopLayout;
   final bool publicCompactEntry;
-  final Widget? afterDescription;
+  final Widget? afterOverview;
 
   @override
   Widget build(BuildContext context) {
@@ -729,13 +812,15 @@ class _EventDetailsCard extends StatelessWidget {
           buildIdentityBlock(constraints.maxWidth),
           const SizedBox(height: DetailSpacing.heroGap),
           overviewCard,
+          if (afterOverview != null) ...[
+            const SizedBox(height: DetailSpacing.cardGap),
+            afterOverview!,
+          ],
           if (hasDescription) ...[
             const SizedBox(height: DetailSpacing.cardGap),
             KubusReadingSurface(
               padding: DetailSpacing.editorialCardPadding,
-              child: ExpandableDetailText(
-                text: event.description!.trim(),
-              ),
+              child: ExpandableDetailText(text: event.description!.trim()),
             ),
           ],
         ],
@@ -766,18 +851,16 @@ class _EventDetailsCard extends StatelessWidget {
         ),
         const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
+        if (afterOverview != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          afterOverview!,
+        ],
         if (hasDescription) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           KubusReadingSurface(
             padding: DetailSpacing.editorialCardPadding,
-            child: ExpandableDetailText(
-              text: event.description!.trim(),
-            ),
+            child: ExpandableDetailText(text: event.description!.trim()),
           ),
-        ],
-        if (afterDescription != null) ...[
-          const SizedBox(height: DetailSpacing.cardGap),
-          afterDescription!,
         ],
         if (publicCompactEntry && coverBlock != null) ...[
           const SizedBox(height: DetailSpacing.heroGap),
@@ -895,8 +978,9 @@ class _EventPoapCard extends StatelessWidget {
       contextItems.add(
         DetailContextItem(
           icon: Icons.schedule_outlined,
-          value: MaterialLocalizations.of(context)
-              .formatMediumDate(status.latestAttendanceAt!.toLocal()),
+          value: MaterialLocalizations.of(
+            context,
+          ).formatMediumDate(status.latestAttendanceAt!.toLocal()),
           label: l10n.exhibitionDetailPoapLatestCheckInLabel,
         ),
       );
@@ -977,7 +1061,8 @@ class _LinkedExhibitionsSection extends StatelessWidget {
             children: [
               Expanded(
                 child: DetailSectionLabel(
-                    label: l10n.eventDetailLinkedExhibitionsTitle),
+                  label: l10n.eventDetailLinkedExhibitionsTitle,
+                ),
               ),
               if (isSyncing)
                 const SizedBox(
@@ -1119,11 +1204,15 @@ class _LinkedExhibitionCard extends StatelessWidget {
                       runSpacing: DetailSpacing.sm,
                       children: [
                         if (dateRange != null)
-                          Text(dateRange,
-                              style: DetailTypography.caption(context)),
+                          Text(
+                            dateRange,
+                            style: DetailTypography.caption(context),
+                          ),
                         if (statusLabel != null)
-                          Text(statusLabel,
-                              style: DetailTypography.caption(context)),
+                          Text(
+                            statusLabel,
+                            style: DetailTypography.caption(context),
+                          ),
                       ],
                     ),
                   ],
@@ -1190,8 +1279,9 @@ class _LinkedExhibitionPoapSection extends StatelessWidget {
         items.add(
           DetailContextItem(
             icon: Icons.schedule_outlined,
-            value: MaterialLocalizations.of(context)
-                .formatMediumDate(poap.latestAttendanceAt!.toLocal()),
+            value: MaterialLocalizations.of(
+              context,
+            ).formatMediumDate(poap.latestAttendanceAt!.toLocal()),
             label: l10n.exhibitionDetailPoapLatestCheckInLabel,
           ),
         );

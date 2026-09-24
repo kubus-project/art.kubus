@@ -12,6 +12,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
 import '../models/art_marker.dart';
+import '../utils/reward_semantics.dart';
 
 /// Push notification service for AR proximity alerts and community updates
 class PushNotificationService {
@@ -361,13 +362,16 @@ class PushNotificationService {
     required String artworkId,
     required String title,
     required String artist,
-    required int rewards,
   }) async {
     if (!_permissionGranted) return;
+    final l10n = _l10n;
+    final body = artist.trim().isEmpty
+        ? l10n.notificationArtworkDiscoveredTitleOnlyBody(title)
+        : l10n.notificationArtworkDiscoveredBody(title, artist);
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'artwork_discovery', 'artworkId': artworkId, 'title': title, 'artist': artist, 'rewards': rewards, 'actionUrl': 'app://artwork/$artworkId'};
-        await webshow.showNotification('Art Discovered! 🎉', '$title by $artist (+$rewards KUB8)', mapData);
+        final mapData = {'type': 'artwork_discovery', 'artworkId': artworkId, 'title': title, 'artist': artist, 'actionUrl': 'app://artwork/$artworkId'};
+        await webshow.showNotification(l10n.notificationArtworkDiscoveredTitle, body, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showArtworkDiscoveryNotification failed: $e');
@@ -405,8 +409,8 @@ class PushNotificationService {
 
     await _flutterLocalNotificationsPlugin.show(
       id: artworkId.hashCode,
-      title: 'Art Discovered! 🎉',
-      body: '$title by $artist (+$rewards KUB8)',
+      title: l10n.notificationArtworkDiscoveredTitle,
+      body: body,
       notificationDetails: details,
       payload: payload,
     );
@@ -417,13 +421,21 @@ class PushNotificationService {
     required String title,
     required int amount,
     required String reason,
+    String? currency,
   }) async {
     if (!_permissionGranted) return;
     final l10n = _l10n;
+    final hasKub8Unit = isExplicitKub8Currency(currency);
+    final reasonText = reason.trim();
+    final body = hasKub8Unit
+        ? '+$amount KUB8${reasonText.isEmpty ? '' : ' - $reasonText'}'
+        : (reasonText.isEmpty
+            ? l10n.recentActivityNewRecognitionDescription
+            : reasonText);
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'reward', 'amount': amount, 'reason': reason, 'actionUrl': 'app://rewards'};
-        await webshow.showNotification(title, '+$amount KUB8 - $reason', mapData);
+        final mapData = {'type': 'reward', if (hasKub8Unit) 'amount': amount, if (hasKub8Unit) 'currency': 'KUB8', 'reason': reason, 'actionUrl': 'app://rewards'};
+        await webshow.showNotification(title, body, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showRewardNotification failed: $e');
@@ -455,14 +467,15 @@ class PushNotificationService {
 
     final payload = jsonEncode({
       'type': 'reward',
-      'amount': amount,
+      if (hasKub8Unit) 'amount': amount,
+      if (hasKub8Unit) 'currency': 'KUB8',
       'actionUrl': 'app://rewards',
     });
 
     await _flutterLocalNotificationsPlugin.show(
       id: DateTime.now().millisecondsSinceEpoch,
       title: title,
-      body: '+$amount KUB8 - $reason',
+      body: body,
       notificationDetails: details,
       payload: payload,
     );

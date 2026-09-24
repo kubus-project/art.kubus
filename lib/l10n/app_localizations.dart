@@ -452,8 +452,20 @@ abstract class AppLocalizations {
   /// No description provided for @recentActivityRecognitionAmountDescription.
   ///
   /// In en, this message translates to:
-  /// **'+{amount} KUB8 recognition'**
+  /// **'+{amount} recognition'**
   String recentActivityRecognitionAmountDescription(Object amount);
+
+  /// No description provided for @recentActivityKub8AmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} KUB8'**
+  String recentActivityKub8AmountDescription(Object amount);
+
+  /// No description provided for @recentActivityAchievementKub8Description.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} (+{amount} KUB8)'**
+  String recentActivityAchievementKub8Description(Object title, Object amount);
 
   /// No description provided for @recentActivityNewRecognitionDescription.
   ///
@@ -491,6 +503,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recognition recorded'**
   String get notificationRecognitionRecordedTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork discovered'**
+  String get notificationArtworkDiscoveredTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}” by {artist}'**
+  String notificationArtworkDiscoveredBody(Object title, Object artist);
+
+  /// No description provided for @notificationArtworkDiscoveredTitleOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}”'**
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title);
 
   /// No description provided for @pushArchiveObjectCreatingTitle.
   ///
@@ -714,6 +744,12 @@ abstract class AppLocalizations {
   /// **'Add this place to your collection'**
   String get activationGateSaveExhibitionTitle;
 
+  /// No description provided for @activationGateSaveCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection for later'**
+  String get activationGateSaveCollectionTitle;
+
   /// No description provided for @activationGateSavePostTitle.
   ///
   /// In en, this message translates to:
@@ -809,6 +845,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save this place?'**
   String get activationConfirmSaveExhibition;
+
+  /// No description provided for @activationConfirmSaveCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection?'**
+  String get activationConfirmSaveCollection;
 
   /// No description provided for @activationConfirmSavePost.
   ///
@@ -8791,17 +8833,17 @@ abstract class AppLocalizations {
   /// **'Newest'**
   String get mapSortNewest;
 
-  /// No description provided for @mapSortRarity.
-  ///
-  /// In en, this message translates to:
-  /// **'Rarity'**
-  String get mapSortRarity;
-
   /// No description provided for @mapSortHighestRewards.
   ///
   /// In en, this message translates to:
   /// **'Most recognition'**
   String get mapSortHighestRewards;
+
+  /// No description provided for @mapSortRarity.
+  ///
+  /// In en, this message translates to:
+  /// **'Rarity'**
+  String get mapSortRarity;
 
   /// No description provided for @mapSortMostViewed.
   ///
@@ -9102,6 +9144,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions'**
   String get commonActions;
+
+  /// No description provided for @subjectActionsSocialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get subjectActionsSocialHeading;
+
+  /// No description provided for @subjectActionsSpatialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Place and movement'**
+  String get subjectActionsSpatialHeading;
+
+  /// No description provided for @subjectActionsMoreHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get subjectActionsMoreHeading;
+
+  /// No description provided for @subjectActionsProvenanceHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Provenance'**
+  String get subjectActionsProvenanceHeading;
+
+  /// No description provided for @subjectSpatialArchiveEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No spatial record yet.'**
+  String get subjectSpatialArchiveEmpty;
+
+  /// No description provided for @artworkProvenanceImageCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Image creator'**
+  String get artworkProvenanceImageCreator;
+
+  /// No description provided for @artworkProvenanceLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'Image license'**
+  String get artworkProvenanceLicense;
+
+  /// No description provided for @artworkProvenanceCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Image credit'**
+  String get artworkProvenanceCredit;
+
+  /// No description provided for @artworkProvenanceSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Image source'**
+  String get artworkProvenanceSource;
 
   /// No description provided for @commonCurrentlyOn.
   ///

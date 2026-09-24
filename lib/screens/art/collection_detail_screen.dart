@@ -9,8 +9,11 @@ import 'package:provider/provider.dart';
 import '../../models/collection_record.dart';
 import '../../providers/collections_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/saved_items_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -19,6 +22,7 @@ import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/subject_action_group.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
 import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
@@ -62,6 +66,38 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
   void _reload() {
     unawaited(_load(force: true));
+  }
+
+  Future<void> _toggleCollectionSaved(CollectionRecord collection) async {
+    final l10n = AppLocalizations.of(context)!;
+    final returnRoute =
+        context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                  ShareEntityType.collection,
+                  collection.id,
+                ) ??
+            Uri.base.path;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: returnRoute,
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.collection,
+      targetId: collection.id,
+      targetLabel: collection.name,
+      sourceScreen: 'collection_detail',
+    );
+    if (!authenticated || !mounted) return;
+    await context.read<SavedItemsProvider>().toggleCollectionSaved(
+          collection.id,
+        );
+  }
+
+  void _shareCollection(CollectionRecord collection, String name) {
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.collection(collectionId: collection.id, title: name),
+      sourceScreen: 'collection_detail',
+    );
   }
 
   Widget _buildEmbeddedHeader({
@@ -173,21 +209,6 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
             label: l10n.commonEdit,
             onSelected: () => _openEditor(collection),
           ),
-        SubjectOptionsAction(
-          id: 'share',
-          icon: Icons.share_outlined,
-          label: l10n.commonShare,
-          onSelected: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.collection(
-                collectionId: collection.id,
-                title: collection.name,
-              ),
-              sourceScreen: 'collection_detail',
-            );
-          },
-        ),
         if (canEdit)
           SubjectOptionsAction(
             id: 'delete',
@@ -261,10 +282,11 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: Consumer2<CollectionsProvider, WalletProvider>(
-        builder: (context, collectionsProvider, walletProvider, _) {
-          final collection =
-              collectionsProvider.getCollectionById(widget.collectionId);
+      body: Consumer3<CollectionsProvider, WalletProvider, SavedItemsProvider>(
+        builder: (context, collectionsProvider, walletProvider, savedItems, _) {
+          final collection = collectionsProvider.getCollectionById(
+            widget.collectionId,
+          );
           final isLoading = collectionsProvider.isLoading(widget.collectionId);
           final error = collectionsProvider.errorFor(widget.collectionId);
 
@@ -352,21 +374,6 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           label: l10n.commonEdit,
                           onSelected: () => _openEditor(resolved),
                         ),
-                      SubjectOptionsAction(
-                        id: 'share',
-                        icon: Icons.share_outlined,
-                        label: l10n.commonShare,
-                        onSelected: () {
-                          ShareService().showShareSheet(
-                            context,
-                            target: ShareTarget.collection(
-                              collectionId: widget.collectionId,
-                              title: name,
-                            ),
-                            sourceScreen: 'collection_detail',
-                          );
-                        },
-                      ),
                       if (canEdit)
                         SubjectOptionsAction(
                           id: 'delete',
@@ -427,56 +434,77 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 DetailSpacing.xl,
               ),
               sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  [
-                    if (AppConfig.isFeatureEnabled('collabInvites')) ...[
-                      CollaborationPanel(
-                        entityType: 'collections',
-                        entityId: widget.collectionId,
+                delegate: SliverChildListDelegate([
+                  SubjectActionGroup(
+                    label: l10n.subjectActionsSocialHeading,
+                    actions: [
+                      SubjectAction(
+                        icon: savedItems.isCollectionSaved(resolved.id)
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        label: l10n.commonSave,
+                        selectedLabel: l10n.commonSavedToast,
+                        isSelected: savedItems.isCollectionSaved(resolved.id),
+                        onPressed: () =>
+                            unawaited(_toggleCollectionSaved(resolved)),
                       ),
-                      const SizedBox(
-                          height: DetailSpacing.lg + DetailSpacing.xs),
-                    ],
-                    if (description.isNotEmpty) ...[
-                      Text(
-                        l10n.collectionDetailDescription,
-                        style: DetailTypography.sectionTitle(context),
+                      SubjectAction(
+                        icon: Icons.share_outlined,
+                        label: l10n.commonShare,
+                        onPressed: () => _shareCollection(resolved, name),
                       ),
-                      const SizedBox(height: DetailSpacing.sm),
-                      Text(description, style: DetailTypography.body(context)),
-                      const SizedBox(
-                          height: DetailSpacing.lg + DetailSpacing.xs),
                     ],
-                    SectionHeader(
-                      title: l10n.collectionDetailArtworks,
-                      trailing: null,
+                  ),
+                  const SizedBox(height: DetailSpacing.lg),
+                  if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                    CollaborationPanel(
+                      entityType: 'collections',
+                      entityId: widget.collectionId,
                     ),
-                    const SizedBox(height: DetailSpacing.md),
-                    if ((error ?? '').isNotEmpty && collection != null)
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: DetailSpacing.md),
-                        child: Text(
-                          l10n.collectionDetailLoadFailedMessage,
-                          style: KubusTypography.inter(
-                              fontSize: 12, color: scheme.error),
+                    const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                  ],
+                  if (description.isNotEmpty) ...[
+                    Text(
+                      l10n.collectionDetailDescription,
+                      style: DetailTypography.sectionTitle(context),
+                    ),
+                    const SizedBox(height: DetailSpacing.sm),
+                    Text(description, style: DetailTypography.body(context)),
+                    const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                  ],
+                  SectionHeader(
+                    title: l10n.collectionDetailArtworks,
+                    trailing: null,
+                  ),
+                  const SizedBox(height: DetailSpacing.md),
+                  if ((error ?? '').isNotEmpty && collection != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: DetailSpacing.md),
+                      child: Text(
+                        l10n.collectionDetailLoadFailedMessage,
+                        style: KubusTypography.inter(
+                          fontSize: 12,
+                          color: scheme.error,
                         ),
                       ),
-                    if (artworks.isEmpty)
-                      Text(l10n.collectionDetailNoArtworksYet,
-                          style: DetailTypography.caption(context))
-                    else
-                      ...artworks.map((art) => _ArtworkRow(artwork: art)),
-                    if (isLoading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                        child: InlineLoading(
-                            height: 4,
-                            borderRadius: BorderRadius.circular(2),
-                            color: scheme.primary),
+                    ),
+                  if (artworks.isEmpty)
+                    Text(
+                      l10n.collectionDetailNoArtworksYet,
+                      style: DetailTypography.caption(context),
+                    )
+                  else
+                    ...artworks.map((art) => _ArtworkRow(artwork: art)),
+                  if (isLoading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+                      child: InlineLoading(
+                        height: 4,
+                        borderRadius: BorderRadius.circular(2),
+                        color: scheme.primary,
                       ),
-                  ],
-                ),
+                    ),
+                ]),
               ),
             ),
           ];
@@ -531,8 +559,10 @@ class _ArtworkRow extends StatelessWidget {
                 height: 56,
                 color: scheme.surfaceContainerHighest,
                 child: imageUrl == null
-                    ? Icon(Icons.image_outlined,
-                        color: scheme.onSurface.withValues(alpha: 0.4))
+                    ? Icon(
+                        Icons.image_outlined,
+                        color: scheme.onSurface.withValues(alpha: 0.4),
+                      )
                     : Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
@@ -552,8 +582,10 @@ class _ArtworkRow extends StatelessWidget {
                 style: DetailTypography.cardTitle(context),
               ),
             ),
-            Icon(Icons.chevron_right,
-                color: scheme.onSurface.withValues(alpha: 0.4)),
+            Icon(
+              Icons.chevron_right,
+              color: scheme.onSurface.withValues(alpha: 0.4),
+            ),
           ],
         ),
       ),

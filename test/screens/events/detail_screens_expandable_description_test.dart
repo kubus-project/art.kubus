@@ -8,6 +8,7 @@ import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/events_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
@@ -81,6 +82,7 @@ Widget _wrap({
       ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
       ChangeNotifierProvider(create: (_) => EventsProvider()),
       ChangeNotifierProvider(create: (_) => ProfileProvider()),
+      ChangeNotifierProvider(create: (_) => SavedItemsProvider()),
       ChangeNotifierProvider(create: (_) => WalletProvider(deferInit: true)),
       ChangeNotifierProvider(create: (_) => ArtworkProvider()),
       ChangeNotifierProvider(
@@ -196,6 +198,9 @@ void main() {
     expect(find.text(title), findsOneWidget);
     expect(find.text(location), findsOneWidget);
     expect(find.text(description), findsOneWidget);
+    expect(find.text('Social'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(media, findsOneWidget);
     expect(tester.getTopLeft(media).dy,
         greaterThan(tester.getTopLeft(find.text(title)).dy));
@@ -283,6 +288,9 @@ void main() {
     final cover = find.byKey(const ValueKey<String>('public-event-cover'));
     expect(find.text(title), findsOneWidget);
     expect(find.text(description), findsOneWidget);
+    expect(find.text('Social'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(tester.widget<Text>(find.text(title)).style?.fontSize,
         greaterThanOrEqualTo(32));
     expect(cover, findsOneWidget);

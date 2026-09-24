@@ -52,7 +52,7 @@ Selected states use both labels and semantic toggled state; color is additional 
 
 Prose is an editorial reading surface, not a generic stat card. Image author, image credit/license, source, record contributor, verification, and cultural artist attribution are separate facts. The renderer may show only facts supplied by the public model; it must not infer an artist from a photographer, uploader, wallet, contributor, or import profile.
 
-The spatial archive is state-based. A public spatial record can show its capture/version summary and open the record. A capture action is shown only to an eligible authenticated artist/institution under the existing feature gate. If no public record and no permitted capture action exist, the section stays absent rather than occupying space with an empty panel. Technical network identifiers remain in deeper record details.
+The spatial archive is state-based. A public spatial record can show its capture/version summary and open the record. Once a successful history read confirms there is no public record, the archive can say so; a capture action is shown only to an eligible authenticated artist/institution under the existing feature gate. Unknown/loading history does not claim that the archive is empty, and a stored nonzero capture count is not overwritten by an empty-history message. Technical network identifiers remain in deeper record details.
 
 ## Data and compatibility boundaries
 

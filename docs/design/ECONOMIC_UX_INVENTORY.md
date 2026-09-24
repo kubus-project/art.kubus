@@ -6,6 +6,21 @@ The pre-edit baseline is app `dev` commit `94c9ad6c3539b8cd4cf6beb2ce1a4959713d2
 
 The inventory separates explicit token economics from recognition and legacy fields. It does not infer that a configured number was actually paid, nor does source search establish production balances or user counts.
 
+The CSV's screening buckets contain the following line-reference counts. These are audit work queues, not counts of distinct features, payouts, or records:
+
+| Screening bucket | Matching lines |
+| --- | ---: |
+| Explicit economy or infrastructure review | 474 |
+| Legacy or context review | 187 |
+| Cultural presentation review | 44 |
+| Notification semantics review | 32 |
+| Unverified legacy config | 5 |
+| Localized copy | 364 |
+| Test fixture or assertion | 240 |
+| Documentation | 5 |
+
+The semantic classes below apply to confirmed runtime contracts/call sites, not mechanically to every documentation, translation, asset, and test line. Counting those 1,351 line references as economic surfaces would overstate behavior.
+
 ## Classification
 
 | Class | Current references and meaning | Disposition |
@@ -24,7 +39,7 @@ The inventory separates explicit token economics from recognition and legacy fie
 - `lib/screens/desktop/art/desktop_artwork_detail_screen.dart`: `actualRewards` was displayed as a detail statistic. This is an artwork-presentation bug.
 - `lib/screens/desktop/desktop_map_screen.dart`: selected artwork details repeated the same statistic. This is an artwork-presentation bug; map composition itself is out of scope.
 - `lib/widgets/map/nearby/kubus_nearby_art_panel_items.dart`: list and grid each displayed `artwork.rewards` as KUB8. Remove those labels while retaining image, title, artist, and distance.
-- `lib/widgets/map/nearby/kubus_nearby_art_panel_body.dart` and `...types.dart`: reward sorting uses the legacy field and a “recognition” label. Remove that misleading sort; nearest/newest/popular remain.
+- `lib/widgets/map/nearby/kubus_nearby_art_panel_body.dart` and `...types.dart`: reward sorting uses the legacy field and a recognition label. Remove that misleading sort; nearest/newest/popular remain.
 - `lib/services/push_notification_service.dart`: discovery notices append a KUB8 amount even though discovery is a count update. Generic reward notice has no currency argument. Achievement notices are separate and have an explicit KUB8 model.
 - `lib/services/nft_minting_service.dart`: the local mint flow displayed `+50 KUB8` through the generic reward notice without a token transfer operation. Keep mint-success notification; do not claim this payout.
 

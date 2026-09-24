@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
 import '../models/recent_activity.dart';
+import '../utils/reward_semantics.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/user_action_service.dart';
@@ -256,7 +257,15 @@ class RecentActivityProvider extends ChangeNotifier {
     final resolvedDescription = _string(raw['message']) ??
         _string(raw['description']) ??
       _string(raw['body']) ??
-        _defaultDescription(category, actorName, data);
+        _defaultDescription(
+          category,
+          actorName,
+          data,
+          activityType: _string(data['eventType']) ??
+              _string(data['interactionType']) ??
+              _string(data['category']) ??
+              type,
+        );
     final actionUrl = _string(raw['actionUrl']) ??
         _string(raw['action_url']) ??
         _string(data['actionUrl']) ??
@@ -399,7 +408,11 @@ class RecentActivityProvider extends ChangeNotifier {
   }
 
   String _defaultDescription(
-      ActivityCategory category, String? actor, Map<String, dynamic> data) {
+    ActivityCategory category,
+    String? actor,
+    Map<String, dynamic> data, {
+    String? activityType,
+  }) {
     final l10n = _l10n;
     final actorName = actor ?? l10n.notificationSomeoneFallback;
     switch (category) {
@@ -414,10 +427,14 @@ class RecentActivityProvider extends ChangeNotifier {
             ? 'Discovered ${data['artworkTitle']}'
             : 'A new artwork was discovered';
       case ActivityCategory.reward:
-        final amount =
-            data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
-        return amount != null
-            ? l10n.recentActivityRecognitionAmountDescription(amount)
+        final amount = data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
+        return hasExplicitKub8ActivityAmount(
+                  data,
+                  isAchievement: false,
+                  activityType: activityType,
+                ) &&
+                amount != null
+            ? l10n.recentActivityKub8AmountDescription(amount)
             : l10n.recentActivityNewRecognitionDescription;
       case ActivityCategory.follow:
         return '$actorName started following you';
@@ -441,9 +458,21 @@ class RecentActivityProvider extends ChangeNotifier {
             'item';
         return '$actorName saved ${targetTitle.toString()}';
       case ActivityCategory.achievement:
-        return data['title'] != null
-            ? '${data['title']} (+${data['rewardTokens'] ?? data['amount'] ?? 0} KUB8)'
-            : 'You unlocked a new achievement';
+        final title = data['title']?.toString();
+        if (title == null || title.isEmpty) {
+          return 'You unlocked a new achievement';
+        }
+        if (!hasExplicitKub8ActivityAmount(
+          data,
+          isAchievement: true,
+          activityType: activityType,
+        )) {
+          return title;
+        }
+        final amount = data['rewardTokens'] ?? data['amount'];
+        return amount == null
+            ? title
+            : l10n.recentActivityAchievementKub8Description(title, amount);
       case ActivityCategory.system:
         return data['message']?.toString() ?? 'Stay tuned for more updates';
     }
