@@ -7,6 +7,13 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 ## Start here
 
 - **Branching, CI, and deployment**: [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md)
+- **Current product / SEO / UI-UX programme**: [`PRODUCT_UX_SEO_PROGRAM.md`](PRODUCT_UX_SEO_PROGRAM.md)
+- **Agent sequencing / work packages**: [`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md)
+- **Current design direction**: [`DESIGN_SYSTEM_V2.md`](DESIGN_SYSTEM_V2.md)
+- **Canonical public-entry target**: [`APP_NATIVE_PUBLIC_ENTRY.md`](APP_NATIVE_PUBLIC_ENTRY.md)
+- **Places, routes and field evidence**: [`PLACES_ROUTES_FIELD.md`](PLACES_ROUTES_FIELD.md)
+- **Institution, editorial and lifecycle**: [`INSTITUTION_EDITORIAL_LIFECYCLE.md`](INSTITUTION_EDITORIAL_LIFECYCLE.md)
+- **Future spatial delivery**: [`SPATIAL_DELIVERY_ROADMAP.md`](SPATIAL_DELIVERY_ROADMAP.md)
 - **Setup / run / build**: `GETTING_STARTED.md`
 - **What the app does**: `FEATURES.md`
 - **Where things live in the UI**: `SCREENS.md`
