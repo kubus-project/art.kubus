@@ -16,7 +16,8 @@ import '../utils/reward_semantics.dart';
 
 /// Push notification service for AR proximity alerts and community updates
 class PushNotificationService {
-  static final PushNotificationService _instance = PushNotificationService._internal();
+  static final PushNotificationService _instance =
+      PushNotificationService._internal();
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
@@ -33,13 +34,14 @@ class PushNotificationService {
         ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
     return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
   }
-  
+
   // Callbacks for notification actions
   Function(String)? onNotificationTap;
   Function(String, Map<String, dynamic>)? onNotificationReceived;
 
   final List<Function(String)> _notificationTapListeners = <Function(String)>[];
-  final List<Function(String, Map<String, dynamic>)> _notificationReceivedListeners =
+  final List<Function(String, Map<String, dynamic>)>
+      _notificationReceivedListeners =
       <Function(String, Map<String, dynamic>)>[];
 
   void addOnNotificationTapListener(Function(String) listener) {
@@ -51,12 +53,14 @@ class PushNotificationService {
     _notificationTapListeners.remove(listener);
   }
 
-  void addOnNotificationReceivedListener(Function(String, Map<String, dynamic>) listener) {
+  void addOnNotificationReceivedListener(
+      Function(String, Map<String, dynamic>) listener) {
     if (_notificationReceivedListeners.contains(listener)) return;
     _notificationReceivedListeners.add(listener);
   }
 
-  void removeOnNotificationReceivedListener(Function(String, Map<String, dynamic>) listener) {
+  void removeOnNotificationReceivedListener(
+      Function(String, Map<String, dynamic>) listener) {
     _notificationReceivedListeners.remove(listener);
   }
 
@@ -74,7 +78,8 @@ class PushNotificationService {
       requestSoundPermission: false,
     );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -98,7 +103,8 @@ class PushNotificationService {
       // On web (including Chromium), rely on the browser's Notification permission
       // instead of plugin/shared pref state.
       _permissionGranted = await isWebNotificationPermissionGranted();
-      await prefs.setBool('notification_permission_granted', _permissionGranted);
+      await prefs.setBool(
+          'notification_permission_granted', _permissionGranted);
       return _permissionGranted;
     }
 
@@ -109,15 +115,17 @@ class PushNotificationService {
     try {
       final permissionStatus = await Permission.notification.status;
       _permissionGranted = permissionStatus.isGranted;
-      await prefs.setBool('notification_permission_granted', _permissionGranted);
+      await prefs.setBool(
+          'notification_permission_granted', _permissionGranted);
       return _permissionGranted;
     } catch (e) {
-      debugPrint('PushNotificationService: Runtime permission check failed: $e');
+      debugPrint(
+          'PushNotificationService: Runtime permission check failed: $e');
     }
 
     _permissionGranted =
         prefs.getBool('notification_permission_granted') ?? false;
-    
+
     return _permissionGranted;
   }
 
@@ -214,18 +222,21 @@ class PushNotificationService {
         final type = data['type'] as String?;
         onNotificationTap?.call(payload);
 
-        for (final listener in List<Function(String)>.from(_notificationTapListeners)) {
+        for (final listener
+            in List<Function(String)>.from(_notificationTapListeners)) {
           try {
             listener(payload);
           } catch (_) {
             // Ignore listener errors.
           }
         }
-        
+
         if (type != null) {
           onNotificationReceived?.call(type, data);
 
-          for (final listener in List<Function(String, Map<String, dynamic>)>.from(_notificationReceivedListeners)) {
+          for (final listener
+              in List<Function(String, Map<String, dynamic>)>.from(
+                  _notificationReceivedListeners)) {
             try {
               listener(type, data);
             } catch (_) {
@@ -247,15 +258,24 @@ class PushNotificationService {
     if (!_permissionGranted) return;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'ar_proximity', 'markerId': marker.id, 'artworkId': marker.artworkId, 'distance': distance, 'actionUrl': 'app://artwork/${marker.artworkId}'};
-        await webshow.showNotification('AR Artwork Nearby! 🎨', '${marker.name} is ${distance.round()}m away', mapData);
+        final mapData = {
+          'type': 'ar_proximity',
+          'markerId': marker.id,
+          'artworkId': marker.artworkId,
+          'distance': distance,
+          'actionUrl': 'app://artwork/${marker.artworkId}'
+        };
+        await webshow.showNotification('AR Artwork Nearby! 🎨',
+            '${marker.name} is ${distance.round()}m away', mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showARProximityNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showARProximityNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'ar_proximity',
       'AR Proximity',
       channelDescription: 'Notifications for nearby AR artworks',
@@ -304,7 +324,8 @@ class PushNotificationService {
   }) async {
     if (!_permissionGranted) return;
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'community',
       'Community',
       channelDescription: 'Notifications for community posts and interactions',
@@ -341,10 +362,14 @@ class PushNotificationService {
           if (imageUrl != null) 'imageUrl': imageUrl,
           'actionUrl': 'app://posts/$postId'
         };
-        await webshow.showNotification('New post from $authorName', content.length > 60 ? '${content.substring(0, 60)}...' : content, mapData);
+        await webshow.showNotification(
+            'New post from $authorName',
+            content.length > 60 ? '${content.substring(0, 60)}...' : content,
+            mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showCommunityNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showCommunityNotification failed: $e');
       }
     }
 
@@ -370,15 +395,24 @@ class PushNotificationService {
         : l10n.notificationArtworkDiscoveredBody(title, artist);
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'artwork_discovery', 'artworkId': artworkId, 'title': title, 'artist': artist, 'actionUrl': 'app://artwork/$artworkId'};
-        await webshow.showNotification(l10n.notificationArtworkDiscoveredTitle, body, mapData);
+        final mapData = {
+          'type': 'artwork_discovery',
+          'artworkId': artworkId,
+          'title': title,
+          'artist': artist,
+          'actionUrl': 'app://artwork/$artworkId'
+        };
+        await webshow.showNotification(
+            l10n.notificationArtworkDiscoveredTitle, body, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showArtworkDiscoveryNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showArtworkDiscoveryNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'artwork_discovery',
       'Artwork Discovery',
       channelDescription: 'Notifications for discovered artworks',
@@ -434,15 +468,23 @@ class PushNotificationService {
             : reasonText);
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'reward', if (hasKub8Unit) 'amount': amount, if (hasKub8Unit) 'currency': 'KUB8', 'reason': reason, 'actionUrl': 'app://rewards'};
+        final mapData = {
+          'type': 'reward',
+          if (hasKub8Unit) 'amount': amount,
+          if (hasKub8Unit) 'currency': 'KUB8',
+          'reason': reason,
+          'actionUrl': 'app://rewards'
+        };
         await webshow.showNotification(title, body, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showRewardNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showRewardNotification failed: $e');
       }
     }
 
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'rewards',
       l10n.pushRecognitionChannelName,
       channelDescription: l10n.pushRecognitionChannelDescription,
@@ -507,7 +549,14 @@ class PushNotificationService {
     final l10n = _l10n;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'nft_minting', 'artworkId': artworkId, 'artworkTitle': artworkTitle, 'status': status, 'transactionId': transactionId, 'actionUrl': 'app://artwork/$artworkId'};
+        final mapData = {
+          'type': 'nft_minting',
+          'artworkId': artworkId,
+          'artworkTitle': artworkTitle,
+          'status': status,
+          'transactionId': transactionId,
+          'actionUrl': 'app://artwork/$artworkId'
+        };
         String titleText = '';
         String bodyText = '';
         switch (status) {
@@ -527,11 +576,13 @@ class PushNotificationService {
         await webshow.showNotification(titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showNFTMintingNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showNFTMintingNotification failed: $e');
       }
     }
 
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'nft_minting',
       l10n.pushArchiveObjectCreationChannelName,
       channelDescription: l10n.pushArchiveObjectCreationChannelDescription,
@@ -564,7 +615,7 @@ class PushNotificationService {
 
     String title = '';
     String body = '';
-    
+
     switch (status) {
       case 'started':
         title = l10n.pushArchiveObjectCreatingTitle;
@@ -592,7 +643,8 @@ class PushNotificationService {
   /// Show trading notification
   Future<void> showTradingNotification({
     required String tradeId,
-    required String type, // 'offer_received', 'offer_accepted', 'sale_completed'
+    required String
+        type, // 'offer_received', 'offer_accepted', 'sale_completed'
     required String artworkTitle,
     required double amount,
     String? buyerName,
@@ -601,13 +653,23 @@ class PushNotificationService {
     if (!_permissionGranted) return;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'trading', 'tradeId': tradeId, 'tradeType': type, 'artworkTitle': artworkTitle, 'amount': amount, 'buyerName': buyerName, 'sellerName': sellerName, 'actionUrl': 'app://trade/$tradeId'};
+        final mapData = {
+          'type': 'trading',
+          'tradeId': tradeId,
+          'tradeType': type,
+          'artworkTitle': artworkTitle,
+          'amount': amount,
+          'buyerName': buyerName,
+          'sellerName': sellerName,
+          'actionUrl': 'app://trade/$tradeId'
+        };
         String titleText = '';
         String bodyText = '';
         switch (type) {
           case 'offer_received':
             titleText = 'New Offer! 💰';
-            bodyText = '${buyerName ?? 'Someone'} offered $amount SOL for "$artworkTitle"';
+            bodyText =
+                '${buyerName ?? 'Someone'} offered $amount SOL for "$artworkTitle"';
             break;
           case 'offer_accepted':
             titleText = 'Offer Accepted! ✅';
@@ -621,11 +683,13 @@ class PushNotificationService {
         await webshow.showNotification(titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showTradingNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showTradingNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'trading',
       'Trading',
       channelDescription: 'Notifications for artwork trading activities',
@@ -658,11 +722,12 @@ class PushNotificationService {
 
     String title = '';
     String body = '';
-    
+
     switch (type) {
       case 'offer_received':
         title = 'New Offer! 💰';
-        body = '${buyerName ?? 'Someone'} offered $amount SOL for "$artworkTitle"';
+        body =
+            '${buyerName ?? 'Someone'} offered $amount SOL for "$artworkTitle"';
         break;
       case 'offer_accepted':
         title = 'Offer Accepted! ✅';
@@ -694,15 +759,25 @@ class PushNotificationService {
     if (!_permissionGranted) return;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'achievement', 'achievementId': achievementId, 'title': title, 'description': description, 'rewardTokens': rewardTokens, 'actionUrl': 'app://achievement/$achievementId'};
-        await webshow.showNotification('🏆 Achievement Unlocked!', '$title - $description (+$rewardTokens KUB8)', mapData);
+        final mapData = {
+          'type': 'achievement',
+          'achievementId': achievementId,
+          'title': title,
+          'description': description,
+          'rewardTokens': rewardTokens,
+          'actionUrl': 'app://achievement/$achievementId'
+        };
+        await webshow.showNotification('🏆 Achievement Unlocked!',
+            '$title - $description (+$rewardTokens KUB8)', mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showAchievementNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showAchievementNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'achievements',
       'Achievements',
       channelDescription: 'Notifications for unlocked achievements',
@@ -749,7 +824,8 @@ class PushNotificationService {
   }) async {
     if (!_permissionGranted) return;
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'community_interactions',
       'Community Interactions',
       channelDescription: 'Notifications for likes, comments, and shares',
@@ -780,12 +856,19 @@ class PushNotificationService {
 
     final formatted = _formatCommunityMessage(type, userName, comment);
     final title = formatted['title'] ?? 'New Activity';
-    final body = formatted['body'] ?? ''; 
+    final body = formatted['body'] ?? '';
 
     if (kIsWeb) {
       // For web, use the browser/unified notification helper to show a notification via service worker or Notification API
       try {
-        final mapData = {'type': 'community_interaction', 'interactionType': type, 'postId': postId, 'userName': userName, 'comment': comment, 'actionUrl': 'app://posts/$postId'};
+        final mapData = {
+          'type': 'community_interaction',
+          'interactionType': type,
+          'postId': postId,
+          'userName': userName,
+          'comment': comment,
+          'actionUrl': 'app://posts/$postId'
+        };
         await webshow.showNotification(title, body, mapData);
         return;
       } catch (e) {
@@ -804,19 +887,33 @@ class PushNotificationService {
   }
 
   // Local helper for consistent community message formatting
-  Map<String, String> _formatCommunityMessage(String type, String userName, [String? comment]) {
+  Map<String, String> _formatCommunityMessage(String type, String userName,
+      [String? comment]) {
     switch (type) {
       case 'like':
         return {'title': '❤️ New Like', 'body': '$userName liked your post'};
       case 'comment':
-        final b = comment != null && comment.isNotEmpty ? comment.length > 60 ? '${comment.substring(0, 60)}...' : comment : 'commented on your post';
+        final b = comment != null && comment.isNotEmpty
+            ? comment.length > 60
+                ? '${comment.substring(0, 60)}...'
+                : comment
+            : 'commented on your post';
         return {'title': '💬 New Comment', 'body': '$userName: $b'};
       case 'share':
-        return {'title': '🔄 Post Shared', 'body': '$userName shared your post'};
+        return {
+          'title': '🔄 Post Shared',
+          'body': '$userName shared your post'
+        };
       case 'mention':
-        return {'title': '📢 You were mentioned', 'body': '$userName mentioned you in a post'};
+        return {
+          'title': '📢 You were mentioned',
+          'body': '$userName mentioned you in a post'
+        };
       default:
-        return {'title': 'New activity', 'body': '$userName interacted with your post'};
+        return {
+          'title': 'New activity',
+          'body': '$userName interacted with your post'
+        };
     }
   }
 
@@ -829,15 +926,24 @@ class PushNotificationService {
     if (!_permissionGranted) return;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'follower', 'userId': userId, 'userName': userName, 'userAvatar': userAvatar, 'actionUrl': 'app://user/$userId'};
-        await webshow.showNotification('👥 New Follower', '$userName started following you', mapData);
+        final mapData = {
+          'type': 'follower',
+          'userId': userId,
+          'userName': userName,
+          'userAvatar': userAvatar,
+          'actionUrl': 'app://user/$userId'
+        };
+        await webshow.showNotification(
+            '👥 New Follower', '$userName started following you', mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showFollowerNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showFollowerNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'followers',
       'Followers',
       channelDescription: 'Notifications for new followers',
@@ -883,13 +989,21 @@ class PushNotificationService {
     if (!_permissionGranted) return;
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'collection', 'collectionType': type, 'artworkTitle': artworkTitle, 'collectorName': collectorName, 'collectionCount': collectionCount, 'actionUrl': 'app://collections'};
+        final mapData = {
+          'type': 'collection',
+          'collectionType': type,
+          'artworkTitle': artworkTitle,
+          'collectorName': collectorName,
+          'collectionCount': collectionCount,
+          'actionUrl': 'app://collections'
+        };
         String titleText = '';
         String bodyText = '';
         switch (type) {
           case 'added':
             titleText = '⭐ Added to Collection';
-            bodyText = '${collectorName ?? 'Someone'} added "$artworkTitle" to their collection';
+            bodyText =
+                '${collectorName ?? 'Someone'} added "$artworkTitle" to their collection';
             break;
           case 'milestone':
             titleText = '🎯 Collection Milestone!';
@@ -899,11 +1013,13 @@ class PushNotificationService {
         await webshow.showNotification(titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showCollectionNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showCollectionNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'collections',
       'Collections',
       channelDescription: 'Notifications for collection activities',
@@ -932,11 +1048,12 @@ class PushNotificationService {
 
     String title = '';
     String body = '';
-    
+
     switch (type) {
       case 'added':
         title = '⭐ Added to Collection';
-        body = '${collectorName ?? 'Someone'} added "$artworkTitle" to their collection';
+        body =
+            '${collectorName ?? 'Someone'} added "$artworkTitle" to their collection';
         break;
       case 'milestone':
         title = '🎯 Collection Milestone!';
@@ -966,11 +1083,13 @@ class PushNotificationService {
         await webshow.showNotification(title, message, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showSystemNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showSystemNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'system',
       'System',
       channelDescription: 'Important system notifications',
@@ -1027,7 +1146,8 @@ class PushNotificationService {
         bodyText = 'Auction started for "$artworkTitle"';
         break;
       case 'bid_placed':
-        bodyText = '${bidderName ?? 'Someone'} placed a bid of ${currentBid ?? 0}';
+        bodyText =
+            '${bidderName ?? 'Someone'} placed a bid of ${currentBid ?? 0}';
         break;
       case 'outbid':
         bodyText = 'You were outbid for "$artworkTitle"';
@@ -1042,16 +1162,26 @@ class PushNotificationService {
 
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'auction', 'auctionId': auctionId, 'eventType': type, 'artworkTitle': artworkTitle, 'currentBid': currentBid, 'bidderName': bidderName, 'actionUrl': 'app://auction/$auctionId'};
+        final mapData = {
+          'type': 'auction',
+          'auctionId': auctionId,
+          'eventType': type,
+          'artworkTitle': artworkTitle,
+          'currentBid': currentBid,
+          'bidderName': bidderName,
+          'actionUrl': 'app://auction/$auctionId'
+        };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('auction', titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showAuctionNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showAuctionNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'auction',
       'Auctions',
       channelDescription: 'Notifications for auction activity',
@@ -1109,10 +1239,12 @@ class PushNotificationService {
     String bodyText = '';
     switch (type) {
       case 'invited':
-        bodyText = '${collaboratorName ?? 'Someone'} invited you to collaborate on "$projectTitle"';
+        bodyText =
+            '${collaboratorName ?? 'Someone'} invited you to collaborate on "$projectTitle"';
         break;
       case 'contribution':
-        bodyText = '${collaboratorName ?? 'Someone'} contributed to "$projectTitle"';
+        bodyText =
+            '${collaboratorName ?? 'Someone'} contributed to "$projectTitle"';
         break;
       case 'completed':
         bodyText = 'Your project "$projectTitle" was completed';
@@ -1121,16 +1253,26 @@ class PushNotificationService {
 
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'collaboration', 'projectId': projectId, 'eventType': type, 'projectTitle': projectTitle, 'collaboratorName': collaboratorName, 'actionUrl': 'app://project/$projectId'};
+        final mapData = {
+          'type': 'collaboration',
+          'projectId': projectId,
+          'eventType': type,
+          'projectTitle': projectTitle,
+          'collaboratorName': collaboratorName,
+          'actionUrl': 'app://project/$projectId'
+        };
         await webshow.showNotification(titleText, bodyText, mapData);
-        await _storeInAppNotification('collaboration', titleText, bodyText, mapData);
+        await _storeInAppNotification(
+            'collaboration', titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showCollaborationNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showCollaborationNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'collaboration',
       'Collaborations',
       channelDescription: 'Notifications for collaborative projects',
@@ -1168,7 +1310,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('collaboration', titleText, bodyText, payloadData);
+    await _storeInAppNotification(
+        'collaboration', titleText, bodyText, payloadData);
   }
 
   /// Push notification for collaboration invites on events/exhibitions.
@@ -1186,9 +1329,12 @@ class PushNotificationService {
     final normalizedType = entityType.trim().toLowerCase();
     final itemLabel = (normalizedType == 'events' || normalizedType == 'event')
         ? 'event'
-        : ((normalizedType == 'exhibitions' || normalizedType == 'exhibition') ? 'exhibition' : 'item');
+        : ((normalizedType == 'exhibitions' || normalizedType == 'exhibition')
+            ? 'exhibition'
+            : 'item');
 
-    final safeInviter = (inviterName ?? '').trim().isNotEmpty ? inviterName!.trim() : 'Someone';
+    final safeInviter =
+        (inviterName ?? '').trim().isNotEmpty ? inviterName!.trim() : 'Someone';
     final safeTitle = (entityTitle ?? '').trim();
 
     const titleText = 'New invite';
@@ -1210,14 +1356,17 @@ class PushNotificationService {
     if (kIsWeb) {
       try {
         await webshow.showNotification(titleText, bodyText, payloadData);
-        await _storeInAppNotification('collab_invite', titleText, bodyText, payloadData);
+        await _storeInAppNotification(
+            'collab_invite', titleText, bodyText, payloadData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showCollabInviteNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showCollabInviteNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'collab_invites',
       'Collaboration Invites',
       channelDescription: 'Invites to collaborate on events and exhibitions',
@@ -1246,7 +1395,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('collab_invite', titleText, bodyText, payloadData);
+    await _storeInAppNotification(
+        'collab_invite', titleText, bodyText, payloadData);
   }
 
   /// Push notification for AR events
@@ -1278,16 +1428,25 @@ class PushNotificationService {
 
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'ar_event', 'eventId': eventId, 'eventTitle': eventTitle, 'eventType': type, 'startTime': startTime?.toIso8601String(), 'actionUrl': 'app://ar_event/$eventId'};
+        final mapData = {
+          'type': 'ar_event',
+          'eventId': eventId,
+          'eventTitle': eventTitle,
+          'eventType': type,
+          'startTime': startTime?.toIso8601String(),
+          'actionUrl': 'app://ar_event/$eventId'
+        };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('ar_event', titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showAREventNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showAREventNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'ar_events',
       'AR Events',
       channelDescription: 'Notifications for AR events',
@@ -1355,16 +1514,27 @@ class PushNotificationService {
 
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'challenge', 'challengeId': challengeId, 'eventType': type, 'challengeTitle': challengeTitle, 'progress': progress, 'total': total, 'actionUrl': 'app://challenge/$challengeId'};
+        final mapData = {
+          'type': 'challenge',
+          'challengeId': challengeId,
+          'eventType': type,
+          'challengeTitle': challengeTitle,
+          'progress': progress,
+          'total': total,
+          'actionUrl': 'app://challenge/$challengeId'
+        };
         await webshow.showNotification(titleText, bodyText, mapData);
-        await _storeInAppNotification('challenge', titleText, bodyText, mapData);
+        await _storeInAppNotification(
+            'challenge', titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showChallengeNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showChallengeNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'challenges',
       'Challenges',
       channelDescription: 'Notifications for challenges',
@@ -1403,7 +1573,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('challenge', titleText, bodyText, payloadData);
+    await _storeInAppNotification(
+        'challenge', titleText, bodyText, payloadData);
   }
 
   /// Push notification for token staking updates
@@ -1419,10 +1590,12 @@ class PushNotificationService {
     String bodyText = '';
     switch (type) {
       case 'reward':
-        bodyText = 'You earned ${rewardAmount ?? 0} from staking in ${poolName ?? 'the pool'}';
+        bodyText =
+            'You earned ${rewardAmount ?? 0} from staking in ${poolName ?? 'the pool'}';
         break;
       case 'unstake_ready':
-        bodyText = 'Your staked tokens are ready to withdraw from ${poolName ?? 'the pool'}';
+        bodyText =
+            'Your staked tokens are ready to withdraw from ${poolName ?? 'the pool'}';
         break;
       case 'pool_update':
         bodyText = 'Pool update: ${poolName ?? ''}';
@@ -1431,16 +1604,24 @@ class PushNotificationService {
 
     if (kIsWeb) {
       try {
-        final mapData = {'type': 'staking', 'eventType': type, 'rewardAmount': rewardAmount, 'poolName': poolName, 'actionUrl': 'app://staking'};
+        final mapData = {
+          'type': 'staking',
+          'eventType': type,
+          'rewardAmount': rewardAmount,
+          'poolName': poolName,
+          'actionUrl': 'app://staking'
+        };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('staking', titleText, bodyText, mapData);
         return;
       } catch (e) {
-        debugPrint('PushNotificationService (web) showStakingNotification failed: $e');
+        debugPrint(
+            'PushNotificationService (web) showStakingNotification failed: $e');
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'staking',
       'Staking',
       channelDescription: 'Notifications for staking activity',
@@ -1494,7 +1675,8 @@ class PushNotificationService {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final existing = prefs.getStringList('in_app_notifications') ?? <String>[];
+      final existing =
+          prefs.getStringList('in_app_notifications') ?? <String>[];
       final entry = <String, dynamic>{
         'type': type,
         'title': title,
@@ -1508,7 +1690,8 @@ class PushNotificationService {
       }
       await prefs.setStringList('in_app_notifications', existing);
     } catch (e) {
-      debugPrint('PushNotificationService: failed to store in-app notification: $e');
+      debugPrint(
+          'PushNotificationService: failed to store in-app notification: $e');
     }
   }
 
@@ -1523,7 +1706,8 @@ class PushNotificationService {
         final decoded = jsonDecode(item) as Map<String, dynamic>;
         out.add(decoded);
       } catch (e) {
-        debugPrint('PushNotificationService.getInAppNotifications: failed to decode item: $e');
+        debugPrint(
+            'PushNotificationService.getInAppNotifications: failed to decode item: $e');
       }
     }
     return out;

@@ -256,7 +256,7 @@ class RecentActivityProvider extends ChangeNotifier {
         _string(raw['title']) ?? _defaultTitle(category, actorName, data);
     final resolvedDescription = _string(raw['message']) ??
         _string(raw['description']) ??
-      _string(raw['body']) ??
+        _string(raw['body']) ??
         _defaultDescription(
           category,
           actorName,
@@ -271,14 +271,13 @@ class RecentActivityProvider extends ChangeNotifier {
         _string(data['actionUrl']) ??
         _string(data['action_url']);
     final explicitRead =
-      _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? _bool(raw['read']);
-    final explicitUnread =
-      _bool(raw['isUnread']) ?? _bool(raw['is_unread']);
+        _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? _bool(raw['read']);
+    final explicitUnread = _bool(raw['isUnread']) ?? _bool(raw['is_unread']);
     final isLikelyInAppNotification =
-      raw.containsKey('payload') && raw.containsKey('body');
+        raw.containsKey('payload') && raw.containsKey('body');
     final isRead = explicitRead ??
-      (explicitUnread != null ? !explicitUnread : null) ??
-      (isLikelyInAppNotification ? false : true);
+        (explicitUnread != null ? !explicitUnread : null) ??
+        (isLikelyInAppNotification ? false : true);
 
     final metadata = <String, dynamic>{
       ...customMetadata,
@@ -427,7 +426,8 @@ class RecentActivityProvider extends ChangeNotifier {
             ? 'Discovered ${data['artworkTitle']}'
             : 'A new artwork was discovered';
       case ActivityCategory.reward:
-        final amount = data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
+        final amount =
+            data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
         return hasExplicitKub8ActivityAmount(
                   data,
                   isAchievement: false,

@@ -99,6 +99,7 @@ class Artwork {
   final String? nftMetadataUri;
   final bool arEnabled;
   final int spatialCaptureCount;
+
   /// Legacy API transport value retained for compatibility only.
   ///
   /// This is not a cultural-entity price, bounty, or contribution score and
