@@ -85,6 +85,7 @@ class _SubjectActionButton extends StatelessWidget {
       container: true,
       button: true,
       enabled: action.onPressed != null,
+      focusable: action.onPressed != null,
       toggled: action.isSelected,
       label: label,
       onTap: action.onPressed,

@@ -186,13 +186,23 @@ async function verifyFlutterKeyboard(page) {
     await page.keyboard.press('Tab');
     focusedControl = await page.evaluate(() => {
       const element = document.activeElement;
-      if (element?.tagName !== 'FLT-SEMANTICS' || element.getAttribute('role') !== 'button') {
+      if (
+        element?.tagName !== 'FLT-SEMANTICS' ||
+        !['button', 'switch'].includes(element.getAttribute('role'))
+      ) {
+        return null;
+      }
+      const label = (element.getAttribute('aria-label') || element.textContent || '')
+        .trim()
+        .toLowerCase();
+      if (!['like', 'liked', 'save', 'saved', 'comments', 'share', 'show on map', 'navigate'].includes(label)) {
         return null;
       }
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       return {
-        label: element.textContent?.trim() || element.getAttribute('aria-label') || null,
+        label,
+        role: element.getAttribute('role'),
         x: Math.round(rect.x),
         y: Math.round(rect.y),
         width: Math.round(rect.width),
