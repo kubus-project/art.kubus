@@ -177,15 +177,7 @@ class _MainAppState extends State<MainApp> {
       child: MobileShellExitScope(
         child: mapNeedsPlatformViewBackgroundPassthrough
             ? scaffold
-            : AnimatedGradientBackground(
-                // The app's base gradient needs to paint behind BOTH the app
-                // bar area (status bar) and the bottom navigation bar.
-                // Screens should keep their scaffolds transparent so this
-                // background remains visible.
-                animate: true,
-                intensity: 0.22,
-                child: scaffold,
-              ),
+            : KubusProductBackground(child: scaffold),
       ),
     );
 

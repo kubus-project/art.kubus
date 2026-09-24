@@ -2,19 +2,26 @@ import 'package:flutter/material.dart';
 import '../providers/glass_capabilities_provider.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import 'glass_components.dart';
 import 'inline_loading.dart';
 
 enum KubusButtonVariant {
-  /// Monochrome hero action (white-on-dark / dark-on-white).
+  /// One strong family-active action.
   primary,
 
-  /// Quiet surface-tinted action.
+  /// Surface-raised action with a structural rule.
   secondary,
 
-  /// Accent-filled emphasis action. The foreground is contrast-computed from
-  /// the actual fill so user-selectable dark accents can never produce a
-  /// dark-on-dark button.
+  /// Low-chrome supporting action.
+  quiet,
+
+  /// Explicit semantic/data colour supplied by the caller.
+  contextual,
+
+  /// Compatibility variant for user-selected accents. Prefer `contextual`
+  /// with a real semantic color when the action communicates context.
+  @Deprecated('Use quiet or contextual for new PRODUCT buttons.')
   accent,
 
   /// Destructive action filled with the theme error color.
@@ -23,20 +30,16 @@ enum KubusButtonVariant {
 
 /// Shared hover/press micro-interaction shell for kubus buttons.
 ///
-/// Desktop hover gets a soft glow lift, press gets a subtle scale-down.
+/// Hover and focus use Material's restrained state overlay; press scales down.
 /// All motion collapses to zero duration when the platform requests reduced
 /// motion (`MediaQuery.disableAnimations`).
 class _KubusButtonInteraction extends StatefulWidget {
   const _KubusButtonInteraction({
     required this.enabled,
-    required this.borderRadius,
-    required this.glowColor,
     required this.child,
   });
 
   final bool enabled;
-  final BorderRadius borderRadius;
-  final Color glowColor;
   final Widget child;
 
   @override
@@ -45,7 +48,6 @@ class _KubusButtonInteraction extends StatefulWidget {
 }
 
 class _KubusButtonInteractionState extends State<_KubusButtonInteraction> {
-  bool _hovered = false;
   bool _pressed = false;
 
   @override
@@ -55,16 +57,10 @@ class _KubusButtonInteractionState extends State<_KubusButtonInteraction> {
     final duration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 130);
     final active = widget.enabled;
-    final hovered = active && _hovered;
     final pressed = active && _pressed;
 
     return MouseRegion(
       cursor: active ? SystemMouseCursors.click : MouseCursor.defer,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
       child: Listener(
         onPointerDown: (_) => setState(() => _pressed = true),
         onPointerUp: (_) => setState(() => _pressed = false),
@@ -73,23 +69,7 @@ class _KubusButtonInteractionState extends State<_KubusButtonInteraction> {
           scale: pressed ? 0.985 : 1.0,
           duration: duration,
           curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration: duration,
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              borderRadius: widget.borderRadius,
-              boxShadow: hovered && !pressed
-                  ? [
-                      BoxShadow(
-                        color: widget.glowColor.withValues(alpha: 0.22),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : const <BoxShadow>[],
-            ),
-            child: widget.child,
-          ),
+          child: widget.child,
         ),
       ),
     );
@@ -109,6 +89,7 @@ class KubusButton extends StatelessWidget {
   final Color? backgroundColor;
   final Color? foregroundColor;
   final KubusButtonVariant variant;
+  final bool useGlassOverlay;
 
   const KubusButton({
     super.key,
@@ -121,55 +102,52 @@ class KubusButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.variant = KubusButtonVariant.primary,
+    this.useGlassOverlay = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
+    final allowBlur = useGlassOverlay &&
+        GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
     final isEnabled = !isLoading && onPressed != null;
+    final roles = KubusColorRoles.of(context);
 
     final defaultBackground = switch (variant) {
-      KubusButtonVariant.primary =>
-        isDark ? Colors.white : KubusColors.surfaceDark,
-      KubusButtonVariant.secondary =>
-        scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
-      KubusButtonVariant.accent => scheme.primary,
-      KubusButtonVariant.destructive => scheme.error,
+      KubusButtonVariant.primary => roles.active,
+      KubusButtonVariant.secondary => roles.surfaceRaised,
+      KubusButtonVariant.quiet => Colors.transparent,
+      KubusButtonVariant.contextual => roles.surfaceRaised,
+      KubusButtonVariant.accent => roles.userAccent,
+      KubusButtonVariant.destructive => roles.destructive,
     };
     final effectiveBackground = backgroundColor ?? defaultBackground;
     final defaultForeground = switch (variant) {
-      KubusButtonVariant.primary =>
-        isDark ? KubusColors.surfaceDark : Colors.white,
-      KubusButtonVariant.secondary => scheme.onSurface,
+      KubusButtonVariant.primary => roles.onActive,
+      KubusButtonVariant.secondary ||
+      KubusButtonVariant.quiet =>
+        roles.foreground,
       // Contrast is computed from the resolved fill (which may be a caller
       // override), never assumed from the theme.
-      KubusButtonVariant.accent ||
-      KubusButtonVariant.destructive =>
-        AppColorUtils.onColor(effectiveBackground),
+      KubusButtonVariant.contextual => backgroundColor == null
+          ? roles.foreground
+          : AppColorUtils.onColor(effectiveBackground),
+      KubusButtonVariant.accent => backgroundColor == null
+          ? roles.onUserAccent
+          : AppColorUtils.onColor(effectiveBackground),
+      KubusButtonVariant.destructive => roles.onDestructive,
     };
     final effectiveForeground = foregroundColor ?? defaultForeground;
-    final isFilled = variant == KubusButtonVariant.primary ||
-        variant == KubusButtonVariant.accent ||
-        variant == KubusButtonVariant.destructive;
-    final glassTint = isFilled
-        ? effectiveBackground.withValues(
-            alpha: isEnabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
-          )
-        : effectiveBackground.withValues(
-            alpha: isEnabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
-          );
-    final radius = KubusRadius.circular(KubusRadius.sm);
-    final borderColor = isFilled
-        ? effectiveBackground.withValues(
-            alpha: isEnabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
-          )
-        : scheme.outlineVariant.withValues(
-            alpha:
-                isDark ? (isEnabled ? 0.24 : 0.14) : (isEnabled ? 0.16 : 0.10),
-          );
+    final hasFill = variant != KubusButtonVariant.quiet;
+    final radius = KubusRadius.circular(KubusRadius.control);
+    final borderColor = switch (variant) {
+      KubusButtonVariant.secondary => roles.rule,
+      KubusButtonVariant.quiet => Colors.transparent,
+      KubusButtonVariant.primary ||
+      KubusButtonVariant.contextual ||
+      KubusButtonVariant.accent ||
+      KubusButtonVariant.destructive =>
+        Colors.transparent,
+    };
 
     final displayIcon = isSuccess && !isLoading ? Icons.check_rounded : icon;
 
@@ -202,22 +180,35 @@ class KubusButton extends StatelessWidget {
 
     final buttonChild = ElevatedButton(
       onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: effectiveForeground,
-        overlayColor:
-            effectiveForeground.withValues(alpha: isDark ? 0.10 : 0.08),
-        shadowColor: Colors.transparent,
-        disabledBackgroundColor: Colors.transparent,
-        disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
-        padding: const EdgeInsets.symmetric(
+      style: ButtonStyle(
+        backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return effectiveForeground.withValues(alpha: 0.55);
+          }
+          return effectiveForeground;
+        }),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return roles.focus.withValues(alpha: 0.22);
+          }
+          if (states.contains(WidgetState.pressed)) {
+            return effectiveForeground.withValues(alpha: 0.14);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return effectiveForeground.withValues(alpha: 0.07);
+          }
+          return Colors.transparent;
+        }),
+        shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
           horizontal: KubusSpacing.lg,
           vertical: KubusSpacing.md,
-        ),
-        shape: RoundedRectangleBorder(
+        )),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
           borderRadius: radius,
-        ),
-        elevation: 0,
+        )),
+        elevation: const WidgetStatePropertyAll(0),
       ),
       child: content,
     );
@@ -228,16 +219,16 @@ class KubusButton extends StatelessWidget {
             margin: EdgeInsets.zero,
             borderRadius: radius,
             showBorder: false,
-            backgroundColor: glassTint,
+            backgroundColor: effectiveBackground.withValues(
+              alpha: isEnabled ? 0.84 : 0.68,
+            ),
             child: buttonChild,
           )
         : DecoratedBox(
             decoration: BoxDecoration(
-              color: isFilled
-                  ? effectiveBackground.withValues(
-                      alpha: isEnabled ? 1.0 : 0.82,
-                    )
-                  : glassTint,
+              color: hasFill
+                  ? effectiveBackground.withValues(alpha: isEnabled ? 1 : 0.54)
+                  : Colors.transparent,
               borderRadius: radius,
             ),
             child: buttonChild,
@@ -245,12 +236,13 @@ class KubusButton extends StatelessWidget {
 
     final button = _KubusButtonInteraction(
       enabled: isEnabled,
-      borderRadius: radius,
-      glowColor: isFilled ? effectiveBackground : scheme.onSurface,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: radius,
-          border: Border.all(color: borderColor),
+          border: Border.all(
+            color: borderColor,
+            width: KubusSizes.hairline,
+          ),
         ),
         child: buttonSurface,
       ),
@@ -281,23 +273,14 @@ class KubusOutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
     final isEnabled = !isLoading && onPressed != null;
 
-    // Outline button: white text/border in dark mode, dark in light mode
-    final contentColor = isDark
-        ? Colors.white.withValues(alpha: 0.9)
-        : KubusColors.surfaceDark.withValues(alpha: 0.9);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: isEnabled ? 0.3 : 0.16)
-        : KubusColors.surfaceDark.withValues(alpha: isEnabled ? 0.3 : 0.16);
+    final contentColor =
+        roles.foreground.withValues(alpha: isEnabled ? 1 : 0.55);
+    final borderColor = roles.rule.withValues(alpha: isEnabled ? 1 : 0.55);
 
-    final radius = KubusRadius.circular(KubusRadius.sm);
-    final glassTint = colorScheme.surface.withValues(
-      alpha: isEnabled ? (isDark ? 0.16 : 0.10) : (isDark ? 0.10 : 0.06),
-    );
+    final radius = KubusRadius.circular(KubusRadius.control);
 
     Widget content = isLoading
         ? SizedBox(
@@ -328,35 +311,40 @@ class KubusOutlineButton extends StatelessWidget {
 
     final button = _KubusButtonInteraction(
       enabled: isEnabled,
-      borderRadius: radius,
-      glowColor: contentColor,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: radius,
           border: Border.all(color: borderColor),
         ),
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          showBorder: false,
-          backgroundColor: glassTint,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: roles.surface,
+            borderRadius: radius,
+          ),
           child: OutlinedButton(
             onPressed: isLoading ? null : onPressed,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: contentColor,
-              backgroundColor: Colors.transparent,
-              overlayColor:
-                  contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
-              shadowColor: Colors.transparent,
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(
+            style: ButtonStyle(
+              foregroundColor: WidgetStatePropertyAll(contentColor),
+              backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.focused)) {
+                  return roles.focus.withValues(alpha: 0.22);
+                }
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed)) {
+                  return roles.foreground.withValues(alpha: 0.08);
+                }
+                return Colors.transparent;
+              }),
+              shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+              side: const WidgetStatePropertyAll(BorderSide.none),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
                 horizontal: KubusSpacing.lg,
                 vertical: KubusSpacing.md,
-              ),
-              shape: RoundedRectangleBorder(
+              )),
+              shape: WidgetStatePropertyAll(RoundedRectangleBorder(
                 borderRadius: radius,
-              ),
+              )),
             ),
             child: content,
           ),

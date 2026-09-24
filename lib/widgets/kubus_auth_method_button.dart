@@ -340,6 +340,8 @@ class KubusAuthMethodButtonStyle {
         isDark ? Colors.white : KubusColors.surfaceDark,
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
+      KubusButtonVariant.quiet => Colors.transparent,
+      KubusButtonVariant.contextual => backgroundColor ?? scheme.primary,
       KubusButtonVariant.accent => scheme.primary,
       KubusButtonVariant.destructive => scheme.error,
     };
@@ -347,13 +349,18 @@ class KubusAuthMethodButtonStyle {
     final defaultForeground = switch (variant) {
       KubusButtonVariant.primary =>
         isDark ? KubusColors.surfaceDark : Colors.white,
-      KubusButtonVariant.secondary => scheme.onSurface,
+      KubusButtonVariant.secondary ||
+      KubusButtonVariant.quiet =>
+        scheme.onSurface,
+      KubusButtonVariant.contextual =>
+        AppColorUtils.onColor(effectiveBackground),
       KubusButtonVariant.accent ||
       KubusButtonVariant.destructive =>
         AppColorUtils.onColor(effectiveBackground),
     };
     final effectiveForeground = foregroundColor ?? defaultForeground;
-    final isFilled = variant != KubusButtonVariant.secondary;
+    final isFilled = variant != KubusButtonVariant.secondary &&
+        variant != KubusButtonVariant.quiet;
     final glassTint = isFilled
         ? effectiveBackground.withValues(
             alpha: enabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),

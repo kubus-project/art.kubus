@@ -172,8 +172,14 @@ Future<T?> showKubusDialog<T>({
   );
 }
 
-/// A reusable animated gradient background that provides subtle
-/// movement and life to screens. Supports both dark and light modes.
+/// Legacy animated full-screen gradient background.
+///
+/// Prefer [KubusProductBackground] for ordinary PRODUCT pages. Retain this
+/// only for explicit media, spatial, or transitional contexts during migration.
+@Deprecated(
+  'Use KubusProductBackground for ordinary PRODUCT pages; reserve gradients '
+  'for deliberate media or spatial contexts.',
+)
 class AnimatedGradientBackground extends StatelessWidget {
   final Widget child;
 

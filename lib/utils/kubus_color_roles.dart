@@ -11,6 +11,26 @@ import 'design_tokens.dart';
 @immutable
 class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   const KubusColorRoles({
+    required this.ground,
+    required this.surface,
+    required this.surfaceRaised,
+    required this.surfaceOverlay,
+    required this.foreground,
+    required this.foregroundMuted,
+    required this.foregroundSubtle,
+    required this.rule,
+    required this.ruleStrong,
+    required this.active,
+    required this.onActive,
+    required this.userAccent,
+    required this.onUserAccent,
+    required this.focus,
+    required this.destructive,
+    required this.onDestructive,
+    required this.success,
+    required this.warning,
+    required this.error,
+    required this.onError,
     required this.likeAction,
     required this.tagChipBackground,
     required this.tagChipForeground,
@@ -27,6 +47,39 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     required this.achievementGold,
     required this.artistStudioRed,
   });
+
+  /// Application/page base.
+  final Color ground;
+
+  /// Ordinary flat PRODUCT content surface.
+  final Color surface;
+
+  /// Dialogs and sheets that need a distinct surface level.
+  final Color surfaceRaised;
+
+  /// Transient surface placed over map, image, or spatial media.
+  final Color surfaceOverlay;
+
+  final Color foreground;
+  final Color foregroundMuted;
+  final Color foregroundSubtle;
+  final Color rule;
+  final Color ruleStrong;
+
+  /// Family active/selection color. Independent of the personal accent.
+  final Color active;
+  final Color onActive;
+
+  /// Optional personalized accent, exposed only for explicit highlighting.
+  final Color userAccent;
+  final Color onUserAccent;
+  final Color focus;
+  final Color destructive;
+  final Color onDestructive;
+  final Color success;
+  final Color warning;
+  final Color error;
+  final Color onError;
 
   /// Like/favorite action color - RED across all screens
   final Color likeAction;
@@ -217,9 +270,29 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
 
   /// Default dark theme roles
   static const dark = KubusColorRoles(
+    ground: KubusProductPalette.groundDark,
+    surface: KubusProductPalette.surfaceDark,
+    surfaceRaised: KubusProductPalette.surfaceRaisedDark,
+    surfaceOverlay: KubusProductPalette.surfaceOverlayDark,
+    foreground: KubusProductPalette.foregroundDark,
+    foregroundMuted: KubusProductPalette.foregroundMutedDark,
+    foregroundSubtle: KubusProductPalette.foregroundSubtleDark,
+    rule: KubusProductPalette.ruleDark,
+    ruleStrong: KubusProductPalette.ruleStrongDark,
+    active: KubusProductPalette.activeDark,
+    onActive: KubusProductPalette.foregroundLight,
+    userAccent: KubusProductPalette.activeDark,
+    onUserAccent: Colors.white,
+    focus: KubusProductPalette.focusDark,
+    destructive: KubusProductPalette.destructiveDark,
+    onDestructive: Color(0xFF26090B),
+    success: KubusProductPalette.successDark,
+    warning: KubusProductPalette.warningDark,
+    error: KubusProductPalette.destructiveDark,
+    onError: Color(0xFF26090B),
     likeAction: KubusColors.errorDark, // Coral red - consistent across app
-    tagChipBackground: KubusColors.primaryVariantDark,
-    tagChipForeground: KubusColors.textPrimaryDark,
+    tagChipBackground: KubusProductPalette.surfaceRaisedDark,
+    tagChipForeground: KubusProductPalette.foregroundDark,
     positiveAction: KubusColors.successDark,
     negativeAction: KubusColors.errorDark,
     warningAction: KubusColors.warningDark,
@@ -236,9 +309,29 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
 
   /// Default light theme roles
   static const light = KubusColorRoles(
+    ground: KubusProductPalette.groundLight,
+    surface: KubusProductPalette.surfaceLight,
+    surfaceRaised: KubusProductPalette.surfaceRaisedLight,
+    surfaceOverlay: KubusProductPalette.surfaceOverlayLight,
+    foreground: KubusProductPalette.foregroundLight,
+    foregroundMuted: KubusProductPalette.foregroundMutedLight,
+    foregroundSubtle: KubusProductPalette.foregroundSubtleLight,
+    rule: KubusProductPalette.ruleLight,
+    ruleStrong: KubusProductPalette.ruleStrongLight,
+    active: KubusProductPalette.activeLight,
+    onActive: Colors.white,
+    userAccent: KubusProductPalette.activeLight,
+    onUserAccent: Colors.white,
+    focus: KubusProductPalette.focusLight,
+    destructive: KubusProductPalette.destructiveLight,
+    onDestructive: Colors.white,
+    success: KubusProductPalette.successLight,
+    warning: KubusProductPalette.warningLight,
+    error: KubusProductPalette.destructiveLight,
+    onError: Colors.white,
     likeAction: KubusColors.error, // Material red 600
-    tagChipBackground: KubusColors.primaryVariantLight,
-    tagChipForeground: KubusColors.textPrimaryLight,
+    tagChipBackground: KubusProductPalette.surfaceRaisedLight,
+    tagChipForeground: KubusProductPalette.foregroundLight,
     positiveAction: KubusColors.success, // Green 600
     negativeAction: KubusColors.error, // Red 600
     warningAction: KubusColors.warning, // Amber 700
@@ -252,16 +345,36 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     achievementGold: KubusColors.achievementGoldLight,
     artistStudioRed: KubusColors.error,
   );
-  
-
 
   /// Convenience accessor from BuildContext
   static KubusColorRoles of(BuildContext context) {
-    return Theme.of(context).extension<KubusColorRoles>() ?? dark;
+    final theme = Theme.of(context);
+    return theme.extension<KubusColorRoles>() ??
+        (theme.brightness == Brightness.dark ? dark : light);
   }
 
   @override
   KubusColorRoles copyWith({
+    Color? ground,
+    Color? surface,
+    Color? surfaceRaised,
+    Color? surfaceOverlay,
+    Color? foreground,
+    Color? foregroundMuted,
+    Color? foregroundSubtle,
+    Color? rule,
+    Color? ruleStrong,
+    Color? active,
+    Color? onActive,
+    Color? userAccent,
+    Color? onUserAccent,
+    Color? focus,
+    Color? destructive,
+    Color? onDestructive,
+    Color? success,
+    Color? warning,
+    Color? error,
+    Color? onError,
     Color? likeAction,
     Color? tagChipBackground,
     Color? tagChipForeground,
@@ -279,6 +392,26 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     Color? artistStudioRed,
   }) {
     return KubusColorRoles(
+      ground: ground ?? this.ground,
+      surface: surface ?? this.surface,
+      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
+      surfaceOverlay: surfaceOverlay ?? this.surfaceOverlay,
+      foreground: foreground ?? this.foreground,
+      foregroundMuted: foregroundMuted ?? this.foregroundMuted,
+      foregroundSubtle: foregroundSubtle ?? this.foregroundSubtle,
+      rule: rule ?? this.rule,
+      ruleStrong: ruleStrong ?? this.ruleStrong,
+      active: active ?? this.active,
+      onActive: onActive ?? this.onActive,
+      userAccent: userAccent ?? this.userAccent,
+      onUserAccent: onUserAccent ?? this.onUserAccent,
+      focus: focus ?? this.focus,
+      destructive: destructive ?? this.destructive,
+      onDestructive: onDestructive ?? this.onDestructive,
+      success: success ?? this.success,
+      warning: warning ?? this.warning,
+      error: error ?? this.error,
+      onError: onError ?? this.onError,
       likeAction: likeAction ?? this.likeAction,
       tagChipBackground: tagChipBackground ?? this.tagChipBackground,
       tagChipForeground: tagChipForeground ?? this.tagChipForeground,
@@ -292,7 +425,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statAmber: statAmber ?? this.statAmber,
       statPurple: statPurple ?? this.statPurple,
       statBlue: statBlue ?? this.statBlue,
-      achievementGold: achievementGold ?? this.achievementGold, 
+      achievementGold: achievementGold ?? this.achievementGold,
       artistStudioRed: artistStudioRed ?? this.artistStudioRed,
     );
   }
@@ -301,6 +434,27 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   KubusColorRoles lerp(covariant KubusColorRoles? other, double t) {
     if (other == null) return this;
     return KubusColorRoles(
+      ground: Color.lerp(ground, other.ground, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      surfaceRaised: Color.lerp(surfaceRaised, other.surfaceRaised, t)!,
+      surfaceOverlay: Color.lerp(surfaceOverlay, other.surfaceOverlay, t)!,
+      foreground: Color.lerp(foreground, other.foreground, t)!,
+      foregroundMuted: Color.lerp(foregroundMuted, other.foregroundMuted, t)!,
+      foregroundSubtle:
+          Color.lerp(foregroundSubtle, other.foregroundSubtle, t)!,
+      rule: Color.lerp(rule, other.rule, t)!,
+      ruleStrong: Color.lerp(ruleStrong, other.ruleStrong, t)!,
+      active: Color.lerp(active, other.active, t)!,
+      onActive: Color.lerp(onActive, other.onActive, t)!,
+      userAccent: Color.lerp(userAccent, other.userAccent, t)!,
+      onUserAccent: Color.lerp(onUserAccent, other.onUserAccent, t)!,
+      focus: Color.lerp(focus, other.focus, t)!,
+      destructive: Color.lerp(destructive, other.destructive, t)!,
+      onDestructive: Color.lerp(onDestructive, other.onDestructive, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      error: Color.lerp(error, other.error, t)!,
+      onError: Color.lerp(onError, other.onError, t)!,
       likeAction: Color.lerp(likeAction, other.likeAction, t)!,
       tagChipBackground:
           Color.lerp(tagChipBackground, other.tagChipBackground, t)!,
@@ -317,7 +471,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statPurple: Color.lerp(statPurple, other.statPurple, t)!,
       statBlue: Color.lerp(statBlue, other.statBlue, t)!,
       achievementGold: Color.lerp(achievementGold, other.achievementGold, t)!,
-      artistStudioRed: Color.lerp(artistStudioRed, other.artistStudioRed, t)!, 
+      artistStudioRed: Color.lerp(artistStudioRed, other.artistStudioRed, t)!,
     );
   }
 }

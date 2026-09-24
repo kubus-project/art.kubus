@@ -431,9 +431,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 // Safety net: if any route uses transparency and forgets to
                 // paint its own backdrop, we'd otherwise see the host page's
                 // HTML background.
-                return AnimatedGradientBackground(
-                  animate: false,
-                  intensity: 0.22,
+                return KubusProductBackground(
                   child: child ?? const SizedBox.shrink(),
                 );
               },
@@ -1532,9 +1530,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             TelemetryService().setLocale(
               Localizations.localeOf(context).languageCode,
             );
-            return AnimatedGradientBackground(
-              animate: false,
-              intensity: 0.22,
+            return KubusProductBackground(
               child: SecurityGateOverlay(
                 // Mounted above the navigator so a restored pending action can
                 // be confirmed on whichever entity the visitor was returned to,
