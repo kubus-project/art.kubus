@@ -650,7 +650,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     ).copyWith(height: 1.02, letterSpacing: -0.65);
     final roleLabel = isInstitution
         ? l10n.settingsRoleInstitutionTitle
-        : l10n.settingsRoleArtistTitle;
+        : isArtist
+            ? l10n.settingsRoleArtistTitle
+            : l10n.userProfileTitle;
 
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -319,22 +319,14 @@ class _DesktopArtworkDetailScreenState
             children: [
               _buildHeader(artwork),
               const SizedBox(height: DetailSpacing.md),
-              if (ArtworkLocationActions.hasValidLocation(artwork))
-                DetailContextCluster(
-                  compact: true,
-                  items: [
-                    if (publicPlaceLabel != null)
-                      DetailContextItem(
-                        icon: Icons.place_outlined,
-                        value: publicPlaceLabel,
-                      ),
-                    DetailContextItem(
-                      icon: Icons.my_location_outlined,
-                      value: '${artwork.position.latitude.toStringAsFixed(4)}, '
-                          '${artwork.position.longitude.toStringAsFixed(4)}',
-                    ),
-                  ],
-                ),
+              ArtworkPlaceContext(
+                compact: true,
+                placeLabel: publicPlaceLabel,
+                coordinates: ArtworkLocationActions.hasValidLocation(artwork)
+                    ? '${artwork.position.latitude.toStringAsFixed(4)}, '
+                        '${artwork.position.longitude.toStringAsFixed(4)}'
+                    : null,
+              ),
               const SizedBox(height: DetailSpacing.lg),
               _buildActionsRow(artwork, artworkProvider, isSignedIn),
             ],
@@ -342,10 +334,7 @@ class _DesktopArtworkDetailScreenState
           final publicDesktopContext = isCanonicalPublicEntry
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    identity,
-                    _buildDescription(artwork),
-                  ],
+                  children: [identity, _buildDescription(artwork)],
                 )
               : identity;
 

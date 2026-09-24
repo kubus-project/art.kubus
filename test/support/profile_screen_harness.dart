@@ -20,13 +20,15 @@ import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
-import 'package:art_kubus/screens/community/profile_screen.dart' as mobile_owner;
+import 'package:art_kubus/screens/community/profile_screen.dart'
+    as mobile_owner;
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
     as mobile_public;
 import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
     as desktop_owner;
 import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop_public;
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +65,8 @@ const List<String> _knownPreExistingOverflows = <String>[
 
 /// Errors raised while rendering the surface, excluding
 /// [_knownPreExistingOverflows].
-final List<FlutterErrorDetails> unexpectedRenderErrors = <FlutterErrorDetails>[];
+final List<FlutterErrorDetails> unexpectedRenderErrors =
+    <FlutterErrorDetails>[];
 
 Future<void> pumpProfileSurface(
   WidgetTester tester, {
@@ -73,6 +76,7 @@ Future<void> pumpProfileSurface(
   Locale locale = const Locale('en'),
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
+  bool canonicalPublicEntry = false,
 }) async {
   final resolvedUser = user ?? ProfileFixtures.user();
 
@@ -101,7 +105,11 @@ Future<void> pumpProfileSurface(
     profileProvider.setCurrentUser(_ownerProfileFrom(resolvedUser));
   }
 
-  final child = _surfaceWidget(surface, resolvedUser);
+  final child = _surfaceWidget(
+    surface,
+    resolvedUser,
+    canonicalPublicEntry: canonicalPublicEntry,
+  );
 
   await tester.pumpWidget(
     MultiProvider(
@@ -173,7 +181,11 @@ void expectNoUnexpectedRenderErrors() {
   );
 }
 
-Widget _surfaceWidget(ProfileSurface surface, User user) {
+Widget _surfaceWidget(
+  ProfileSurface surface,
+  User user, {
+  bool canonicalPublicEntry = false,
+}) {
   final critical = ProfileFixtures.critical(user: user);
   final extended = Future<ProfileExtendedPackage?>.value(
     ProfileFixtures.extended(),
@@ -187,14 +199,31 @@ Widget _surfaceWidget(ProfileSurface surface, User user) {
         initialExtendedPackageFuture: extended,
       );
     case ProfileSurface.desktopPublic:
-      return DesktopProfilePresentationScope(
-        presentation: DesktopProfilePresentation.shellSubScreen,
-        child: desktop_public.UserProfileScreen(
+      {
+        final screen = desktop_public.UserProfileScreen(
           userId: user.id,
           initialCriticalPackage: critical,
           initialExtendedPackageFuture: extended,
-        ),
-      );
+        );
+        final publicEntryScreen = canonicalPublicEntry
+            ? DesktopShellScope(
+                pushScreen: (_) {},
+                popScreen: () {},
+                navigateToRoute: (_) {},
+                openNotifications: () {},
+                openFunctionsPanel: (_, {content}) {},
+                setFunctionsPanelContent: (_) {},
+                closeFunctionsPanel: () {},
+                canPop: false,
+                isCanonicalPublicEntry: true,
+                child: screen,
+              )
+            : screen;
+        return DesktopProfilePresentationScope(
+          presentation: DesktopProfilePresentation.shellSubScreen,
+          child: publicEntryScreen,
+        );
+      }
     case ProfileSurface.communityOverlay:
       return DesktopProfilePresentationScope(
         presentation: DesktopProfilePresentation.communityOverlay,
