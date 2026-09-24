@@ -699,9 +699,8 @@ class _EventDetailsCard extends StatelessWidget {
                 l10n.commonUnknown,
           );
 
-    // Public canonical entry keeps identity and event context ahead of its
-    // media at compact widths, matching the server-rendered first frame.
-    // Ordinary in-app event detail retains its established poster-first order.
+    // Public event entry leads with the event's own cover at compact widths;
+    // wide desktop keeps the cover composed beside the identity/context column.
     final coverBlock = (coverUrl != null && coverUrl.isNotEmpty)
         ? ClipRRect(
             key: const ValueKey<String>('public-event-cover'),
@@ -841,7 +840,7 @@ class _EventDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!publicCompactEntry && coverBlock != null) ...[
+        if (coverBlock != null) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
@@ -861,10 +860,6 @@ class _EventDetailsCard extends StatelessWidget {
             padding: DetailSpacing.editorialCardPadding,
             child: ExpandableDetailText(text: event.description!.trim()),
           ),
-        ],
-        if (publicCompactEntry && coverBlock != null) ...[
-          const SizedBox(height: DetailSpacing.heroGap),
-          coverBlock,
         ],
       ],
     );

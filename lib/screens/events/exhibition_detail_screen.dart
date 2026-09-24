@@ -1684,9 +1684,8 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    // Ordinary mobile details keep the cover above identity. Canonical public
-    // entry mirrors its server frame: identity and useful context lead, while
-    // wide desktop places media beside the identity block.
+    // Compact exhibition detail leads with its own cover. Canonical wide
+    // desktop places that media beside the identity/context block.
     final coverBlock = coverUrl != null
         ? _ExhibitionCoverFrame(
             url: coverUrl,
@@ -1882,7 +1881,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (coverBlock != null && !publicCompactIdentityFirst) ...[
+        if (coverBlock != null) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
@@ -1900,10 +1899,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         if (poapCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           poapCard,
-        ],
-        if (coverBlock != null && publicCompactIdentityFirst) ...[
-          const SizedBox(height: DetailSpacing.cardGap),
-          coverBlock,
         ],
       ],
     );
