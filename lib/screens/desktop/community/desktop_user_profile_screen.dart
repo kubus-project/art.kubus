@@ -337,6 +337,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             isArtist: isArtist,
                             isInstitution: isInstitution,
                             l10n: l10n,
+                            isWide: isLarge,
                           ),
                         if (!isCanonicalPublicEntry)
                           _buildProfileCard(
@@ -633,10 +634,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required bool isArtist,
     required bool isInstitution,
     required AppLocalizations l10n,
+    required bool isWide,
   }) {
     final profile = user!;
     final roles = KubusColorRoles.of(context);
     final placeLabel = _publicEntryPlaceLabel();
+    final coverImageUrl = _normalizeMediaUrl(profile.coverImageUrl);
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
       KubusTypography.content(
@@ -649,7 +652,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ? l10n.settingsRoleInstitutionTitle
         : l10n.settingsRoleArtistTitle;
 
-    return Column(
+    final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -698,6 +701,49 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             textAlign: TextAlign.left,
           ),
         ],
+      ],
+    );
+
+    if (coverImageUrl == null || coverImageUrl.isEmpty) return identity;
+
+    final cover = AspectRatio(
+      aspectRatio: 0.73,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        child: Image.network(
+          coverImageUrl,
+          fit: BoxFit.cover,
+          semanticLabel: profile.name,
+          errorBuilder: (context, error, stackTrace) => ColoredBox(
+            color: roles.surfaceRaised,
+            child: Center(
+              child: Icon(
+                Icons.image_not_supported_outlined,
+                color: roles.foregroundMuted,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (isWide) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 7, child: identity),
+          const SizedBox(width: KubusSpacing.xl),
+          Expanded(flex: 5, child: cover),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        identity,
+        const SizedBox(height: KubusSpacing.md),
+        cover,
       ],
     );
   }

@@ -471,6 +471,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                 const SizedBox(height: DetailSpacing.md),
                 if (isCanonicalPublicEntry) ...[
+                  if (_canonicalPublicCoverUrl != null) ...[
+                    _buildCanonicalPublicCoverMedia(
+                      _canonicalPublicCoverUrl!,
+                    ),
+                    const SizedBox(height: DetailSpacing.md),
+                  ],
                   if (isArtist) ...[
                     _buildArtistHighlightsGrid(l10n),
                     const SizedBox(height: DetailSpacing.xl),
@@ -869,6 +875,48 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           messageLabel: l10n.userProfileMessageButtonLabel,
         ),
       ],
+    );
+  }
+
+  String? get _canonicalPublicCoverUrl {
+    final profile = user;
+    if (profile == null) return null;
+    final url = _normalizeMediaUrl(profile.coverImageUrl);
+    if (url == null || url.isEmpty || url == _failedCoverImageUrl) {
+      return null;
+    }
+    return url;
+  }
+
+  Widget _buildCanonicalPublicCoverMedia(String imageUrl) {
+    final roles = KubusColorRoles.of(context);
+    return AspectRatio(
+      aspectRatio: 0.78,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          semanticLabel: user?.name,
+          errorBuilder: (context, error, stackTrace) {
+            if (_failedCoverImageUrl != imageUrl) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() => _failedCoverImageUrl = imageUrl);
+              });
+            }
+            return ColoredBox(
+              color: roles.surfaceRaised,
+              child: Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: roles.foregroundMuted,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
