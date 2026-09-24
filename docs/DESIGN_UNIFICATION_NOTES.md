@@ -1,3 +1,14 @@
+> **Status: historical implementation record (2026-09-21).**
+> This document records the earlier creator/manager unification pass; it is not
+> the visual target for the next app-wide redesign. The current direction is
+> `DESIGN_SYSTEM_V2.md`, grounded in
+> `art.kubus.site@redesign/a1-foundation` and
+> `kubus.site@redesign/k1-foundation`. Existing CreatorKit components remain
+> valid code to audit/reuse, but glass-heavy cards, animated gradients and
+> rounded container nesting must not be propagated merely for consistency.
+> During the full UI/UX audit each affected screen is classified KEEP / REFINE /
+> REDESIGN / MERGE / REMOVE before further polish.
+
 # Design Unification Notes - Creator/Manager Flows
 
 ## Overview
