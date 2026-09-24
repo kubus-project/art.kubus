@@ -17,6 +17,7 @@ class CollectionsProvider extends ChangeNotifier {
   String? _listError;
 
   final Map<String, CollectionRecord> _byId = <String, CollectionRecord>{};
+  final Set<String> _publicBootstrapSeededIds = <String>{};
   final Set<String> _loadingIds = <String>{};
   final Map<String, String> _errorsById = <String, String>{};
 
@@ -26,6 +27,29 @@ class CollectionsProvider extends ChangeNotifier {
   String? get listError => _listError;
 
   CollectionRecord? getCollectionById(String id) => _byId[id.trim()];
+
+  /// Seeds the regular collection cache from public SSR data. The next detail
+  /// request revalidates this seed while the current screen can paint it.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final media = presentation['primaryMedia'];
+    final mediaMap = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
+    final count = presentation['itemCount'];
+    final record = CollectionRecord.fromMap(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'name': presentation['title']?.toString() ?? '',
+      'description': presentation['description']?.toString() ?? '',
+      'thumbnailUrl': mediaMap['url'],
+      'artwork_count': count is num ? count.toInt() : 0,
+      'is_public': true,
+      'artworks': const <dynamic>[],
+    });
+    if (record.id.trim().isEmpty || record.name.trim().isEmpty) return;
+    _upsertCollection(record);
+    _publicBootstrapSeededIds.add(record.id.trim());
+    notifyListeners();
+  }
 
   CollectionRecord? findLikelyCollectionByNameAndWallet({
     required String name,
@@ -77,17 +101,24 @@ class CollectionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<CollectionRecord?> fetchCollection(String id,
-      {bool force = false}) async {
+  Future<CollectionRecord?> fetchCollection(
+    String id, {
+    bool force = false,
+  }) async {
     final collectionId = id.trim();
     if (collectionId.isEmpty) return null;
-    if (!force && _byId.containsKey(collectionId)) return _byId[collectionId];
+    if (!force &&
+        _byId.containsKey(collectionId) &&
+        !_publicBootstrapSeededIds.remove(collectionId)) {
+      return _byId[collectionId];
+    }
 
     _setLoading(collectionId, true);
     _errorsById.remove(collectionId);
 
     try {
       final record = await _loadCollection(collectionId);
+      _publicBootstrapSeededIds.remove(collectionId);
       notifyListeners();
       return record;
     } catch (e) {
@@ -155,9 +186,7 @@ class CollectionsProvider extends ChangeNotifier {
         fileBytes: bytes,
         fileName: fileName,
         fileType: 'collection_cover',
-        metadata: const <String, String>{
-          'folder': 'collections/covers',
-        },
+        metadata: const <String, String>{'folder': 'collections/covers'},
       );
       return _extractUploadedUrl(result);
     } catch (e) {
@@ -175,7 +204,7 @@ class CollectionsProvider extends ChangeNotifier {
       'uploadedUrl',
       'url',
       'fileUrl',
-      'mediaUrl'
+      'mediaUrl',
     ]) {
       final value = response[key]?.toString().trim();
       if (value != null && value.isNotEmpty) {
@@ -190,7 +219,7 @@ class CollectionsProvider extends ChangeNotifier {
         'uploadedUrl',
         'url',
         'fileUrl',
-        'mediaUrl'
+        'mediaUrl',
       ]) {
         final value = data[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
@@ -206,7 +235,7 @@ class CollectionsProvider extends ChangeNotifier {
         'uploadedUrl',
         'url',
         'fileUrl',
-        'mediaUrl'
+        'mediaUrl',
       ]) {
         final value = result[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
@@ -228,7 +257,7 @@ class CollectionsProvider extends ChangeNotifier {
         bool success,
         String? collectionId,
         CollectionRecord? record,
-        bool refreshRequired
+        bool refreshRequired,
       })> createCollection({
     required String name,
     String? description,
@@ -242,7 +271,7 @@ class CollectionsProvider extends ChangeNotifier {
         success: false,
         collectionId: null,
         record: null,
-        refreshRequired: false
+        refreshRequired: false,
       );
     }
 
@@ -334,7 +363,7 @@ class CollectionsProvider extends ChangeNotifier {
         success: false,
         collectionId: null,
         record: null,
-        refreshRequired: false
+        refreshRequired: false,
       );
     }
   }
@@ -367,8 +396,12 @@ class CollectionsProvider extends ChangeNotifier {
 
     final threshold = createdAfter?.toUtc();
     final timestamped = candidates
-        .map((collection) =>
-            (collection: collection, timestamp: realTimestamp(collection)))
+        .map(
+      (collection) => (
+        collection: collection,
+        timestamp: realTimestamp(collection),
+      ),
+    )
         .where((entry) {
       final timestamp = entry.timestamp;
       if (timestamp == null) return false;
@@ -378,8 +411,9 @@ class CollectionsProvider extends ChangeNotifier {
 
     if (timestamped.isNotEmpty) return timestamped.first.collection;
 
-    final everyCandidateHasNoTimestamp =
-        candidates.every((collection) => realTimestamp(collection) == null);
+    final everyCandidateHasNoTimestamp = candidates.every(
+      (collection) => realTimestamp(collection) == null,
+    );
     if (normalizedWallet.isNotEmpty && everyCandidateHasNoTimestamp) {
       return candidates.first;
     }
@@ -418,7 +452,7 @@ class CollectionsProvider extends ChangeNotifier {
         for (final key in const <String>[
           'id',
           'collectionId',
-          'collection_id'
+          'collection_id',
         ]) {
           final raw = data[key]?.toString();
           final value = raw?.trim();
@@ -441,7 +475,7 @@ class CollectionsProvider extends ChangeNotifier {
         for (final key in const <String>[
           'id',
           'collectionId',
-          'collection_id'
+          'collection_id',
         ]) {
           final raw = result[key]?.toString();
           final value = raw?.trim();
@@ -460,7 +494,8 @@ class CollectionsProvider extends ChangeNotifier {
       }
     } else if (payload is Map) {
       return _extractCollectionIdFromResponse(
-          Map<String, dynamic>.from(payload));
+        Map<String, dynamic>.from(payload),
+      );
     } else if (payload is List) {
       for (final item in payload) {
         final nestedId = _extractCollectionIdFromResponse(item);
@@ -671,7 +706,9 @@ class CollectionsProvider extends ChangeNotifier {
   }
 
   CollectionRecord _removeArtworkLocally(
-      CollectionRecord? previous, String artworkId) {
+    CollectionRecord? previous,
+    String artworkId,
+  ) {
     final base = previous ??
         const CollectionRecord(
           id: '',

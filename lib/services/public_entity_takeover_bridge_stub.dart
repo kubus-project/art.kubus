@@ -9,3 +9,5 @@ void dispatchPublicEntityReady({
   required String id,
   required String path,
 }) {}
+
+Map<String, dynamic>? readPublicEntityBootstrap() => null;

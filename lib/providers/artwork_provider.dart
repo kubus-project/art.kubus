@@ -74,9 +74,7 @@ class ArtworkProvider extends ChangeNotifier {
       ..addAll(artworks);
     _artworkById
       ..clear()
-      ..addEntries(
-        artworks.map((artwork) => MapEntry(artwork.id, artwork)),
-      );
+      ..addEntries(artworks.map((artwork) => MapEntry(artwork.id, artwork)));
     notifyListeners();
   }
 
@@ -129,6 +127,65 @@ class ArtworkProvider extends ChangeNotifier {
   /// Get artwork by ID
   Artwork? getArtworkById(String id) => _artworkById[id];
 
+  /// Seeds the normal detail cache from the server's public presentation.
+  /// The caller revalidates this value in the background; private/account
+  /// fields are intentionally not part of this conversion.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final media = presentation['primaryMedia'];
+    final primaryMedia = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
+    final authorship = presentation['authorship'];
+    final artist =
+        authorship is Map ? (authorship['name']?.toString() ?? '') : '';
+    final place = presentation['place'];
+    final placeData = place is Map
+        ? Map<String, dynamic>.from(place)
+        : const <String, dynamic>{};
+    final provenance = presentation['provenance'];
+    final provenanceData = provenance is Map
+        ? Map<String, dynamic>.from(provenance)
+        : const <String, dynamic>{};
+    final imageCredit = provenanceData['imageCredit'];
+    final imageCreditData = imageCredit is Map
+        ? Map<String, dynamic>.from(imageCredit)
+        : const <String, dynamic>{};
+    final source = provenanceData['source'];
+    final sourceData = source is Map
+        ? Map<String, dynamic>.from(source)
+        : const <String, dynamic>{};
+    final latitude = placeData['latitude'];
+    final longitude = placeData['longitude'];
+    final artwork = Artwork.fromMap(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'artist': artist,
+      'description': presentation['description']?.toString() ?? '',
+      'imageUrl': primaryMedia['url'],
+      'latitude': latitude is num ? latitude.toDouble() : 0.0,
+      'longitude': longitude is num ? longitude.toDouble() : 0.0,
+      'isPublic': true,
+      'isActive': true,
+      'isNft': false,
+      'category': 'Public artwork',
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'metadata': <String, dynamic>{
+        if (imageCreditData['credit'] != null)
+          'imageAuthor': imageCreditData['credit'],
+        if (imageCreditData['license'] != null)
+          'imageLicense': imageCreditData['license'],
+        if (imageCreditData['sourceUrl'] != null)
+          'imageSourceUrl': imageCreditData['sourceUrl'],
+        if (sourceData['name'] != null) 'sourceName': sourceData['name'],
+        if (sourceData['id'] != null) 'sourceId': sourceData['id'],
+        if (sourceData['url'] != null) 'sourceUrl': sourceData['url'],
+      },
+    });
+    if (artwork.id.trim().isNotEmpty && artwork.title.trim().isNotEmpty) {
+      addOrUpdateArtwork(artwork, retainWhenListRefresh: true);
+    }
+  }
+
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
     final key = artworkId.trim();
@@ -173,8 +230,9 @@ class ArtworkProvider extends ChangeNotifier {
     if (wanted.isEmpty) return const <String>{};
 
     try {
-      final fetched =
-          await _backendApi.getArtworks(ids: wanted.toList(growable: false));
+      final fetched = await _backendApi.getArtworks(
+        ids: wanted.toList(growable: false),
+      );
       var updated = false;
       for (final artwork in fetched) {
         if (!wanted.contains(artwork.id)) continue;
@@ -232,7 +290,8 @@ class ArtworkProvider extends ChangeNotifier {
   List<Artwork> get favoriteArtworks {
     return _artworks
         .where(
-            (artwork) => artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+          (artwork) => artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+        )
         .toList();
   }
 
@@ -325,10 +384,7 @@ class ArtworkProvider extends ChangeNotifier {
       final coverUrl = await ArtContentService.uploadMedia(
         coverImageBytes,
         coverImageFilename,
-        metadata: {
-          'type': 'artwork_cover',
-          'title': title,
-        },
+        metadata: {'type': 'artwork_cover', 'title': title},
       );
 
       String? modelCid;
@@ -337,11 +393,7 @@ class ArtworkProvider extends ChangeNotifier {
         final uploadResult = await ARContentService.uploadContent(
           modelBytes!,
           modelFilename!,
-          metadata: {
-            'type': 'ar_model',
-            'title': title,
-            'artist': artistName,
-          },
+          metadata: {'type': 'ar_model', 'title': title, 'artist': artistName},
         );
         modelCid = uploadResult['cid'];
         modelUrl = uploadResult['url'];
@@ -474,7 +526,9 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   Future<Artwork?> updateArtwork(
-      String artworkId, Map<String, dynamic> updates) async {
+    String artworkId,
+    Map<String, dynamic> updates,
+  ) async {
     final id = artworkId.trim();
     if (id.isEmpty) return null;
     final operation = 'update_artwork_$id';
@@ -607,11 +661,7 @@ class ArtworkProvider extends ChangeNotifier {
       }
 
       if (artwork != null) {
-        addOrUpdateArtwork(
-          artwork.copyWith(
-            isFavoriteByCurrentUser: saved,
-          ),
-        );
+        addOrUpdateArtwork(artwork.copyWith(isFavoriteByCurrentUser: saved));
       }
 
       if (saved) {
@@ -663,8 +713,9 @@ class ArtworkProvider extends ChangeNotifier {
 
         // Sync with backend and reconcile server discovery count.
         try {
-          final serverCount =
-              await _backendApi.discoverArtworkWithCount(artworkId);
+          final serverCount = await _backendApi.discoverArtworkWithCount(
+            artworkId,
+          );
           if (serverCount != null) {
             final latest = getArtworkById(artworkId);
             if (latest != null) {
@@ -720,7 +771,10 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtworkComments(
-          artworkId: artworkId, page: 1, limit: 100);
+        artworkId: artworkId,
+        page: 1,
+        limit: 100,
+      );
       // Keep ordering consistent with Community comments: oldest-first so threads read naturally.
       // Backend provides an ORDER BY, but sort defensively to keep behavior stable.
       final sorted = [...fetched]
@@ -841,7 +895,9 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       await _backendApi.editArtworkComment(
-          commentId: commentId, content: content);
+        commentId: commentId,
+        content: content,
+      );
       await loadComments(artworkId, force: true);
     } catch (e) {
       _commentSubmitErrors[artworkId] = 'Failed to edit comment: $e';
@@ -1005,15 +1061,17 @@ class ArtworkProvider extends ChangeNotifier {
       final raw = prefs.getStringList(_viewHistoryPrefsKey) ?? <String>[];
       _viewHistory
         ..clear()
-        ..addAll(raw.map((item) {
-          try {
-            final map = jsonDecode(item);
-            if (map is Map<String, dynamic>) {
-              return ViewHistoryEntry.fromJson(map);
-            }
-          } catch (_) {}
-          return null;
-        }).whereType<ViewHistoryEntry>());
+        ..addAll(
+          raw.map((item) {
+            try {
+              final map = jsonDecode(item);
+              if (map is Map<String, dynamic>) {
+                return ViewHistoryEntry.fromJson(map);
+              }
+            } catch (_) {}
+            return null;
+          }).whereType<ViewHistoryEntry>(),
+        );
       _historyLoaded = true;
       notifyListeners();
     } catch (e) {
@@ -1128,7 +1186,9 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   ArtworkComment? _findArtworkCommentById(
-      List<ArtworkComment> roots, String commentId) {
+    List<ArtworkComment> roots,
+    String commentId,
+  ) {
     for (final c in roots) {
       if (c.id == commentId) return c;
       final hit = _findArtworkCommentById(c.replies, commentId);
