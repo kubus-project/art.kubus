@@ -1,12 +1,30 @@
 # Public entity pages and technical SEO
 
-> **Updated 2026-07-24 (decision log D-11).** `/`, `/en` and `/sl` now boot the
-> Flutter application directly (indexable app shell), not a generic
-> server-rendered homepage. Semantic SEO/AEO described below applies to the
-> **deeper** public-entity routes (`/{locale}/{segment}/{id}`, compact aliases,
-> sitemaps, robots), which are unchanged. Where this document still describes a
-> semantic `/en`/`/sl` homepage or a `/ → 308 /en` redirect, that is superseded
-> history.
+> **Target update 2026-09-22 (decision D-12).** The semantic entity
+> renderer remains mandatory, but it is no longer intended to look or behave as
+> a separate SEO/marketing page. For a canonical artwork/profile/institution/etc.
+> URL, the semantic response is the **first app.kubus product frame**: same
+> information hierarchy, current kubus-family visual grammar, and no generic
+> marketing header/footer or bridge CTA before the entity. Flutter continues on
+> the exact same localized canonical URL and should consume the same normalized
+> public presentation/bootstrap data where safe. The same canonical URL is the
+> preferred verified native-app link.
+>
+> The current implementation still contains a 1500 ms readiness fallback in
+> `web/public_flutter_takeover.js` that can synthesize
+> `kubus:public-entity-ready` before the entity screen itself declares a
+> meaningful frame. This is a known implementation violation of the readiness
+> contract below and is scheduled for removal in the public-entry phase. Until
+> that work lands, do not cite the fallback as intended architecture.
+>
+> Canonical planning detail: `APP_NATIVE_PUBLIC_ENTRY.md`; bounded work:
+> `AGENT_EXECUTION_PLAN.md` Waves 1–3. No indexing or canonical policy change
+> is authorized by these target notes.
+
+`/`, `/en` and `/sl` boot the Flutter application directly as an indexable
+app shell. Semantic server entity rendering applies to deeper public routes,
+compact aliases, sitemaps and robots. Root and locale shell routes are not
+redirects to a separate SEO homepage.
 
 ## Architecture
 
@@ -21,8 +39,12 @@
 The renderer reads the existing PostgreSQL public models. It does not call an
 authenticated API or branch on user agent. The semantic response is complete
 before any optional Flutter, MapLibre, wallet, or application JavaScript runs.
-With takeover disabled or unavailable, the existing “Open in art.kubus” bridge
-continues to target `/app/<compact-entity-path>`.
+With takeover disabled or unavailable, the semantic entity frame remains the
+usable fallback. The existing “Open in art.kubus” `/app/<compact-entity-path>`
+bridge is current transitional/rollback compatibility, not the target
+public-entry UX. The current backend renderer still uses Inter, independent
+site header/footer, hero/cards and generic “Explore/Open interactive” CTAs;
+these are documented defects, not PRODUCT visual references.
 
 The Flutter handoff and authenticated-action boundary are defined in
 [`public-entry-access-policy.md`](public-entry-access-policy.md). In particular,
@@ -40,8 +62,10 @@ With the takeover flag enabled, an eligible `200` entity response contains its
 complete semantic document, an inert full-viewport Flutter host, and
 non-blocking root-relative bootstrap resources. Flutter 3.44.2 uses the
 single-view `hostElement` engine option; multi-view mode is not needed. The
-application dispatches `kubus:public-entity-ready` only after the requested
-entity screen has produced a meaningful frame. The controller validates entity
+application **must** dispatch `kubus:public-entity-ready` only after the requested
+entity screen has produced a meaningful frame. Today
+`web/public_flutter_takeover.js` can synthesize that event after 1500 ms;
+Wave 2 removes that violation. The controller validates entity
 type, stable ID, and current pathname before atomically switching accessibility
 state and crossfading for 200 ms. Reduced-motion clients switch without the
 crossfade. A generic engine frame, loader completion, or fixed delay is never a
@@ -128,7 +152,12 @@ published, non-deleted, non-moderated, non-placeholder, substantive content and
 applies entity-specific checks. The same policy gates documents, hubs, and
 sitemaps.
 
-Visible content and JSON-LD share the same normalized presentation:
+Target: visible content, safe bootstrap and JSON-LD share one normalized
+public presentation. The current renderer does not yet satisfy the PRODUCT
+first-frame or safe shared-bootstrap target. Its attribution path can put the
+record owner before the artwork artist; Wave 1 measures that, Wave 2 separates
+authorship, contribution and provenance. The following schema types remain the
+technical contract:
 
 - artwork: `VisualArtwork`
 - artist profile: `ProfilePage` plus `Person`
@@ -140,7 +169,8 @@ Visible content and JSON-LD share the same normalized presentation:
 - collectible: `VisualArtwork`
 - map marker: `Place`
 - every entity: `BreadcrumbList`
-- localized homepage: `WebSite`, `Organization`, and `WebApplication`
+- backend home renderer, where used: `WebSite`, `Organization`, and
+  `WebApplication` (the public root and locale shells are Flutter)
 
 All text is stripped, normalized, escaped, and truncated at a word boundary.
 JSON-LD is serialized with `<`, `>`, `&`, and Unicode line separators escaped.
