@@ -53,7 +53,7 @@ class SubjectAction {
     required this.label,
     required this.onPressed,
     this.selectedLabel,
-    this.isSelected = false,
+    this.isSelected,
     this.selectedColor,
   });
 
@@ -61,7 +61,9 @@ class SubjectAction {
   final String label;
   final String? selectedLabel;
   final VoidCallback? onPressed;
-  final bool isSelected;
+
+  /// `null` for one-shot actions; set for persistent toggle actions.
+  final bool? isSelected;
   final Color? selectedColor;
 }
 
@@ -74,12 +76,12 @@ class _SubjectActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final activeColor = action.selectedColor ?? roles.active;
-    final label = action.isSelected
-        ? (action.selectedLabel ?? action.label)
-        : action.label;
+    final isSelected = action.isSelected == true;
+    final label =
+        isSelected ? (action.selectedLabel ?? action.label) : action.label;
     final background =
-        action.isSelected ? activeColor.withValues(alpha: 0.10) : roles.surface;
-    final foreground = action.isSelected ? activeColor : roles.foreground;
+        isSelected ? activeColor.withValues(alpha: 0.10) : roles.surface;
+    final foreground = isSelected ? activeColor : roles.foreground;
 
     return Semantics(
       container: true,
@@ -106,7 +108,7 @@ class _SubjectActionButton extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: action.isSelected ? activeColor : roles.rule,
+                    color: isSelected ? activeColor : roles.rule,
                   ),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
@@ -124,9 +126,8 @@ class _SubjectActionButton extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: KubusTextStyles.actionLabel.copyWith(
                           color: foreground,
-                          fontWeight: action.isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
                         ),
                       ),
                     ),

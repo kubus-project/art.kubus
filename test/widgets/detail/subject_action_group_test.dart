@@ -92,6 +92,69 @@ void main() {
     );
     semantics.dispose();
   });
+
+  testWidgets('one-shot actions do not declare toggle semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_app(
+      const SubjectActionGroup(
+        label: 'Actions',
+        actions: [
+          SubjectAction(
+            icon: Icons.share_outlined,
+            label: 'Share',
+            onPressed: _noop,
+          ),
+          SubjectAction(
+            icon: Icons.navigation_outlined,
+            label: 'Navigate',
+            onPressed: _noop,
+          ),
+          SubjectAction(
+            icon: Icons.map_outlined,
+            label: 'Open on map',
+            onPressed: _noop,
+          ),
+        ],
+      ),
+    ));
+
+    for (final label in const ['Share', 'Navigate', 'Open on map']) {
+      final actionSemantics = find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.label == label,
+      );
+      expect(actionSemantics, findsOneWidget);
+      expect(
+          tester.widget<Semantics>(actionSemantics).properties.toggled, isNull);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('unselected stateful action declares a false toggle state',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_app(
+      const SubjectActionGroup(
+        label: 'Actions',
+        actions: [
+          SubjectAction(
+            icon: Icons.favorite_border,
+            label: 'Like',
+            selectedLabel: 'Liked',
+            isSelected: false,
+            onPressed: _noop,
+          ),
+        ],
+      ),
+    ));
+
+    final action = find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.label == 'Like',
+    );
+    expect(action, findsOneWidget);
+    expect(tester.widget<Semantics>(action).properties.toggled, isFalse);
+    semantics.dispose();
+  });
 }
 
 Widget _app(Widget child) => MaterialApp(

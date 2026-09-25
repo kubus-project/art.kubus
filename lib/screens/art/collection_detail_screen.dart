@@ -133,11 +133,12 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: l10n.commonActions,
-                onPressed: () => _showCollectionOptions(collection, canEdit),
-                icon: const Icon(Icons.more_horiz),
-              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: l10n.commonActions,
+                  onPressed: () => _showCollectionOptions(collection, canEdit),
+                  icon: const Icon(Icons.more_horiz),
+                ),
             ],
           ),
           const SizedBox(height: DetailSpacing.md),
@@ -363,18 +364,17 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 elevation: 0,
                 foregroundColor: scheme.onSurface,
                 actions: [
-                  CreatorSubjectActionsButton(
-                    title: name,
-                    subtitle: l10n.collectionSettingsTitle,
-                    actions: [
-                      if (canEdit)
+                  if (canEdit)
+                    CreatorSubjectActionsButton(
+                      title: name,
+                      subtitle: l10n.collectionSettingsTitle,
+                      actions: [
                         SubjectOptionsAction(
                           id: 'edit',
                           icon: Icons.edit_outlined,
                           label: l10n.commonEdit,
                           onSelected: () => _openEditor(resolved),
                         ),
-                      if (canEdit)
                         SubjectOptionsAction(
                           id: 'delete',
                           icon: Icons.delete_outline,
@@ -382,8 +382,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           isDestructive: true,
                           onSelected: () => _deleteCollection(resolved),
                         ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
