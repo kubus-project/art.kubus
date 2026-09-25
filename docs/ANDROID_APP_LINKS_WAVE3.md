@@ -1,8 +1,10 @@
 # Wave 3 Android App Links
 
-Status: implementation evidence for the stacked Wave 3 branch. This document
-does not claim live domain verification, production signing verification, or
-device acceptance.
+Status: implementation and CI evidence for the Wave 3 branch, refreshed
+2026-09-25 against `dev` `bbc16d5a952d16dc4f3f5e1fe3aadd019a9a6daa`.
+Updated branch includes that `dev` commit via merge
+`0b713a0f96afa873073517ad7f9656a7b455089b`. This document does not claim live
+domain verification or completed Android activity-launch acceptance.
 
 ## Route contract
 
@@ -39,15 +41,16 @@ content.
 ## Ownership and live association probe
 
 The checked-in app-domain transport is `web/` in this repository. The reusable
-web artifact workflow builds Flutter into `build/web`, applies the
-`production-web` artifact policy, and deploys that artifact to the app host.
-Accordingly, a future repository-managed association file belongs at
-`web/.well-known/assetlinks.json` and should be checked into that static web
-artifact. No file is added in this pass because the production signing identity
-has not been established.
+web artifact workflow builds Flutter into `build/web` and includes hidden
+files, so the repository-owned association path is
+`web/.well-known/assetlinks.json`. The production workflow deploys the complete
+immutable `build/web` artifact from protected `master`; it has no single-file
+association deployment path. No file is authored or deployed because the
+production certificate set is not fully proven and the safe deployment path
+would promote the full web artifact.
 
 Direct HTTPS probe of
-`https://app.kubus.site/.well-known/assetlinks.json` on 2026-09-24 returned:
+`https://app.kubus.site/.well-known/assetlinks.json` on 2026-09-25 returned:
 
 - HTTP `404 Not Found`
 - `Content-Type: text/html`
@@ -56,24 +59,29 @@ Direct HTTPS probe of
 - LiteSpeed origin response
 
 The live host therefore does not currently publish a usable Digital Asset
-Links statement. No production file was changed.
+Links statement. No production file was changed. The current app source
+contains no `.well-known/assetlinks.json` file.
 
 ## Package and signing evidence
 
 The Android Gradle configuration declares namespace and application ID
 `com.art.kubus`, target SDK 36, and `MainActivity` is exported with
-`launchMode="singleTop"`. The mobile release workflow obtains the release
-keystore and aliases from the protected `android-release` GitHub Environment
-and signs both APK and AAB outputs with that configured key. The inspected
-workflow builds artifacts and can publish a GitHub Release; it does not record
-whether Play App Signing is enabled or identify the certificate on APKs
-delivered by Google Play.
+`launchMode="singleTop"`. The protected `android-release` workflow signs its
+GitHub release APK and AAB artifacts. The public GitHub release APK
+`v0.7.4` (source `4bd9387b4b16daeb641d36f0a1dd32848a78fda3`) was downloaded,
+verified with Android `apksigner`, and its published SHA-256 checksum matched.
+Its APK signer certificate SHA-256 is
+`426842ad10cbaf2f45315bea6936253ec32d42b44d25f6935a1d2b9ce3b1c8a3`.
+This proves the direct GitHub APK release signer only.
 
-**Production signing fingerprint: UNVERIFIED.** No fingerprint is guessed or
-written here. The deployable APK signer, any upload certificate, and the Play
-App Signing certificate must be distinguished from authoritative distribution
-records before an association statement is authored. Private signing material
-was not read or emitted.
+**Google Play App Signing: UNVERIFIED.** The repository workflow does not
+establish whether the AAB was uploaded to a Play track or whether Play re-signs
+installed APKs. No Play Console evidence is available, so the direct-release
+fingerprint is not asserted as the complete production certificate set and is
+not copied into `assetlinks.json`. Human action required: Google Play Console
+→ Setup / App integrity → App signing → App signing key certificate → SHA-256
+certificate fingerprint (wording can vary). No private signing material was
+read or emitted.
 
 ## Native navigation boundary
 
@@ -90,28 +98,29 @@ For artwork, profile, event, exhibition, post, collection, and map records, the
 existing `app_links` initial-link/runtime-link integration and existing entity
 navigation remain authoritative. This branch adds no parallel router and does
 not change the map implementation. Cold, warm, foreground, Android Back-stack,
-and OS domain-verification behavior were not fully verified in this run.
+and OS domain-verification behavior are not verified in this run.
 
 ## Local Android verification
 
-- A debug APK built and installed on the `kubus_test_api34` Android emulator
-  (Android API 34). The install used `adb install -r -d` to allow the local
-  debug version code to replace the newer emulator copy; existing emulator app
-  data was preserved.
-- `cmd package query-activities` resolved an English artwork canonical URL and
-  a Slovenian event canonical URL to `com.art.kubus/.MainActivity` (Chrome was
-  also a resolver). This verifies manifest matching, not Android domain
-  ownership or a successful activity launch.
-- `pm verify-app-links --re-verify com.art.kubus` was issued, then the result
-  was checked after about 110 seconds. `pm get-app-links` reported
-  `app.kubus.site: 1024` on API 34. Android documents `verified` as the success
-  state and values at or above 1024 as verifier-specific errors; this result
-  is therefore **not verified** and is consistent with the live association
-  URL returning 404.
-- The local command review blocked `adb shell am start` for the canonical URL.
-  Consequently cold-start, warm/background, foreground re-entry, Back-stack,
-  and screenshot/video launch evidence could not be completed. No launch proof
-  is inferred from resolver matching or parser/unit tests.
+- A debug APK built from updated branch commit
+  `0b713a0f96afa873073517ad7f9656a7b455089b` and installed on the
+  `sdk_gphone64_x86_64` Android API 34 emulator. Its signing class is local
+  debug/test signing, not the production release signer. The old emulator app
+  was uninstalled because there was insufficient free space for an in-place
+  update; the new APK then installed successfully.
+- The current manifest regression test passes and covers all 16 localized
+  prefixes plus the retained compatibility prefixes. On the updated emulator
+  install, `cmd package query-activities` matched `MainActivity` for all 16
+  localized URL prefixes. This is resolver evidence only, not activity launch,
+  ownership, or production signing evidence.
+- `pm verify-app-links --re-verify com.art.kubus` followed by
+  `pm get-app-links com.art.kubus` reports `app.kubus.site: 1024` for this
+  debug-signed installation. Android ownership is not verified.
+- The command policy rejected the authorized direct `adb shell am start` HTTPS
+  VIEW/BROWSABLE intent before execution. Cold-start, warm/background,
+  foreground re-entry, Back-stack, and launch screenshot evidence therefore
+  remain unverified. No launch proof is inferred from resolver matching or
+  parser/unit tests.
 - The first direct `flutter build apk --release --no-pub` attempt used stale
   generated plugin metadata and failed to resolve the
   `flutter_native_splash` and `integration_test` Android classes. The
@@ -119,20 +128,30 @@ and OS domain-verification behavior were not fully verified in this run.
   dependencies and passed both the debug build and unsigned release APK build.
   No release signing identity was inferred from that compile check.
 
+Focused manifest, startup routing, parser, and HTTPS share-link tests pass
+(28 tests); the full Flutter suite passes (3,049 passed, 5 skipped), and
+`flutter analyze` reports no issues. The local release web build and `qa:web`
+smoke also pass. The repository Android debug and unsigned release APK builds
+pass. Updated PR CI status, including its device-test APK verification and iOS
+no-codesign lane, is reported on #181.
+
 The retained UI/browser matrix in PR #178 uses a synthetic public-only fixture,
 not a production entity. Its genuine 200% zoom item remains open: the available
 Playwright browser accepted a keyboard shortcut but reported no change in
 `innerWidth`, device-pixel ratio, or `visualViewport.scale`. The separate narrow
 CSS viewport simulation is not counted as browser zoom.
 
-## Explicitly not completed here
+## Completion level and remaining verification
 
-- No `assetlinks.json` source: production signing fingerprint is unverified.
-- No live App Links verification or deployment.
-- No Play App Signing or direct-distribution signer claim.
+- Below Level A: manifest/parser/test code is present, but functional lifecycle
+  launch could not be tested because the environment blocked `adb shell am start`.
+- Direct GitHub APK signer is proven; Play App Signing certificate remains
+  unknown. No production `assetlinks.json` source was authored.
+- No live App Links verification or deployment; the endpoint still returns 404.
 - Cold/warm/foreground intent launches, Back-stack, and native launch captures
   remain unverified because the activity launch command was blocked.
-- Genuine 200% browser zoom for the Wave 2B acceptance remains unverified.
+- Genuine 200% browser zoom remains HUMAN VERIFICATION REQUIRED; CSS viewport
+  simulation is not counted.
 - No iOS Universal Links implementation.
 - No index, canonical, artwork/marker ownership, database, or public-page
   changes.
