@@ -146,14 +146,23 @@ class ArtworkProvider extends ChangeNotifier {
     final provenanceData = provenance is Map
         ? Map<String, dynamic>.from(provenance)
         : const <String, dynamic>{};
-    final imageCredit = provenanceData['imageCredit'];
-    final imageCreditData = imageCredit is Map
-        ? Map<String, dynamic>.from(imageCredit)
+    final isLegacyPresentation = presentation['version'] == 1;
+    final legacyImageCredit = provenanceData['imageCredit'];
+    final legacyImageCreditData = legacyImageCredit is Map
+        ? Map<String, dynamic>.from(legacyImageCredit)
         : const <String, dynamic>{};
-    final source = provenanceData['source'];
+    final source = provenanceData['recordSource'] ??
+        (isLegacyPresentation ? provenanceData['source'] : null);
     final sourceData = source is Map
         ? Map<String, dynamic>.from(source)
         : const <String, dynamic>{};
+    final imageCreator = primaryMedia['creator'] ??
+        (isLegacyPresentation ? legacyImageCreditData['credit'] : null);
+    final imageCreditText = primaryMedia['creditText'];
+    final imageLicense = primaryMedia['license'] ??
+        (isLegacyPresentation ? legacyImageCreditData['license'] : null);
+    final imageSourceUrl = primaryMedia['sourceUrl'] ??
+        (isLegacyPresentation ? legacyImageCreditData['sourceUrl'] : null);
     final latitude = placeData['latitude'];
     final longitude = placeData['longitude'];
     final artwork = Artwork.fromMap(<String, dynamic>{
@@ -170,12 +179,10 @@ class ArtworkProvider extends ChangeNotifier {
       'category': 'Public artwork',
       'createdAt': DateTime.now().toUtc().toIso8601String(),
       'metadata': <String, dynamic>{
-        if (imageCreditData['credit'] != null)
-          'imageAuthor': imageCreditData['credit'],
-        if (imageCreditData['license'] != null)
-          'imageLicense': imageCreditData['license'],
-        if (imageCreditData['sourceUrl'] != null)
-          'imageSourceUrl': imageCreditData['sourceUrl'],
+        if (imageCreator != null) 'imageAuthor': imageCreator,
+        if (imageCreditText != null) 'imageAttribution': imageCreditText,
+        if (imageLicense != null) 'imageLicense': imageLicense,
+        if (imageSourceUrl != null) 'imageSourceUrl': imageSourceUrl,
         if (sourceData['name'] != null) 'sourceName': sourceData['name'],
         if (sourceData['id'] != null) 'sourceId': sourceData['id'],
         if (sourceData['url'] != null) 'sourceUrl': sourceData['url'],
