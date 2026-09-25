@@ -94,9 +94,22 @@
   },
   "recentActivityRecognitionRecordedTitle": "Priznanje zabeleženo",
   "recentActivityArchiveObjectUpdateTitle": "Posodobitev digitalne izdaje",
-  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 priznanja",
+  "recentActivityRecognitionAmountDescription": "+{amount} priznanja",
   "@recentActivityRecognitionAmountDescription": {
     "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityKub8AmountDescription": "+{amount} KUB8",
+  "@recentActivityKub8AmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityAchievementKub8Description": "{title} (+{amount} KUB8)",
+  "@recentActivityAchievementKub8Description": {
+    "placeholders": {
+      "title": {},
       "amount": {}
     }
   },
@@ -112,6 +125,20 @@
   "notificationSomeoneFallback": "Nekdo",
   "notificationAchievementFallback": "Dosežek",
   "notificationRecognitionRecordedTitle": "Priznanje zabeleženo",
+  "notificationArtworkDiscoveredTitle": "Odkrito umetniško delo",
+  "notificationArtworkDiscoveredBody": "Odkrito: »{title}« · {artist}",
+  "@notificationArtworkDiscoveredBody": {
+    "placeholders": {
+      "title": {},
+      "artist": {}
+    }
+  },
+  "notificationArtworkDiscoveredTitleOnlyBody": "Odkrito: »{title}«",
+  "@notificationArtworkDiscoveredTitleOnlyBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "pushArchiveObjectCreatingTitle": "Ustvarjanje digitalne izdaje ...",
   "pushArchiveObjectCreatingBody": "Ustvarjanje digitalne izdaje umetnine \"{artworkTitle}\"",
   "@pushArchiveObjectCreatingBody": {
@@ -179,6 +206,7 @@
   "activationGateSaveArtworkTitle": "Shrani to umetnino v svojo zbirko",
   "activationGateSaveEventTitle": "Shrani ta dogodek v svojo zbirko",
   "activationGateSaveExhibitionTitle": "Dodaj ta kraj v svojo zbirko",
+  "activationGateSaveCollectionTitle": "Shrani to zbirko za pozneje",
   "activationGateSavePostTitle": "Shrani to objavo v svojo zbirko",
   "activationGateLikeArtworkTitle": "Všečkaj to umetnino",
   "activationGateFollowTitle": "Spremljaj tega umetnika",
@@ -202,6 +230,7 @@
   "activationConfirmSaveArtwork": "Želiš shraniti to umetnino?",
   "activationConfirmSaveEvent": "Želiš shraniti ta dogodek?",
   "activationConfirmSaveExhibition": "Želiš shraniti ta kraj?",
+  "activationConfirmSaveCollection": "Želiš shraniti to zbirko?",
   "activationConfirmSavePost": "Želiš shraniti to objavo?",
   "activationConfirmLikeArtwork": "Želiš všečkati to umetnino?",
   "activationConfirmFollow": "Želiš spremljati tega umetnika?",
@@ -1848,8 +1877,8 @@
   "mapMarkerTypeStreetArt": "Ulična umetnost",
   "mapSortNearest": "Najbližje",
   "mapSortNewest": "Najnovejše",
-  "mapSortRarity": "Redkost",
   "mapSortHighestRewards": "Največ priznanj",
+  "mapSortRarity": "Redkost",
   "mapSortMostViewed": "Največ ogledov",
   "mapArReadyChipLabel": "AR pripravljeno",
   "mapAlreadyDiscoveredTooltip": "Že odkrito",
@@ -1931,6 +1960,15 @@
   "arShareSuccessToast": "Umetnina je deljena!",
   "arShareFailedToast": "Deljenje ni uspelo. Poskusi znova.",
   "commonActions": "Dejanja",
+  "subjectActionsSocialHeading": "Skupnost",
+  "subjectActionsSpatialHeading": "Kraj in pot",
+  "subjectActionsMoreHeading": "Dodatna dejanja",
+  "subjectActionsProvenanceHeading": "Provenienca",
+  "subjectSpatialArchiveEmpty": "Prostorski zapis še ne obstaja.",
+  "artworkProvenanceImageCreator": "Avtor fotografije",
+  "artworkProvenanceLicense": "Licenca slike",
+  "artworkProvenanceCredit": "Zasluge za sliko",
+  "artworkProvenanceSource": "Vir slike",
   "commonCurrentlyOn": "Trenutno VKLOPLJENO",
   "commonCurrentlyOff": "Trenutno IZKLOPLJENO",
   "commonOk": "V redu",

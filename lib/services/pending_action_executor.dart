@@ -132,6 +132,16 @@ class PendingActionExecutor {
         return const PendingActionExecutionResult(
           PendingActionOutcome.completed,
         );
+      case PendingActionTargetType.collection:
+        if (savedItemsProvider.isCollectionSaved(intent.targetId)) {
+          return const PendingActionExecutionResult(
+            PendingActionOutcome.completed,
+          );
+        }
+        await savedItemsProvider.setCollectionSaved(intent.targetId, true);
+        return const PendingActionExecutionResult(
+          PendingActionOutcome.completed,
+        );
       case PendingActionTargetType.post:
         if (savedItemsProvider.isPostSaved(intent.targetId)) {
           return const PendingActionExecutionResult(

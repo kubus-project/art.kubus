@@ -13,8 +13,10 @@ import '../../common/kubus_cached_image.dart';
 import '../kubus_map_glass_surface.dart';
 
 class _SpatialArchiveBadge extends StatelessWidget {
-  const _SpatialArchiveBadge(
-      {required this.accentColor, required this.iconColor});
+  const _SpatialArchiveBadge({
+    required this.accentColor,
+    required this.iconColor,
+  });
 
   final Color accentColor;
   final Color iconColor;
@@ -140,16 +142,6 @@ class KubusNearbyArtArtworkListItem extends StatelessWidget {
                             ),
                       ),
                     ),
-                    const Spacer(),
-                    Text(
-                      '${artwork.rewards} KUB8',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize:
-                                KubusTypography.textTheme.labelMedium?.fontSize,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                    ),
                   ],
                 ),
               ],
@@ -258,15 +250,6 @@ class KubusNearbyArtArtworkGridItem extends StatelessWidget {
                       ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${artwork.rewards} KUB8',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: KubusTypography.textTheme.labelMedium?.fontSize,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
             ],
           ),
         ],
@@ -302,11 +285,9 @@ class _ArtworkThumbnail extends StatelessWidget {
     final cacheHeight = height.isFinite && height > 0
         ? (height * dpr).clamp(64.0, 1024.0).round()
         : null;
-    final resolved = MediaUrlResolver.resolveDisplayUrl(
-          url,
-          maxWidth: cacheWidth,
-        ) ??
-        (url ?? '').trim();
+    final resolved =
+        MediaUrlResolver.resolveDisplayUrl(url, maxWidth: cacheWidth) ??
+            (url ?? '').trim();
 
     Widget child;
     if (resolved.isEmpty) {

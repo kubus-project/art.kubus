@@ -51,6 +51,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      expect(find.textContaining('KUB8'), findsNothing);
+
       await tester.tap(find.byIcon(Icons.radar));
       await tester.pump();
 
