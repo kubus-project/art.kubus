@@ -382,7 +382,7 @@ void main() {
             'generatedAt': '2026-09-23T12:00:00Z',
             'expiresAt': expires,
             'presentation': <String, dynamic>{
-              'version': 1,
+              'version': version,
               'type': type,
               'id': id,
               'locale': locale,
@@ -392,7 +392,7 @@ void main() {
       for (final raw in <Map<String, dynamic>>[
         payload(type: 'artwork'),
         payload(locale: 'en'),
-        payload(version: 2),
+        payload(version: 3),
         payload(expires: '2026-09-23T11:59:00Z'),
         <String, dynamic>{'version': 1},
       ]) {
@@ -406,6 +406,15 @@ void main() {
           isNull,
         );
       }
+      expect(
+        provider.validateBootstrap(
+          raw: payload(version: 2),
+          initialUri: uri,
+          target: target,
+          now: now,
+        ),
+        isNotNull,
+      );
     },
   );
 }

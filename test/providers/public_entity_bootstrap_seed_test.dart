@@ -7,6 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const media = <String, dynamic>{
     'url': 'https://images.example.test/art.webp',
+    'creator': 'Miro Photographer',
+    'creditText': 'Courtesy of the artist',
+    'license': 'CC BY-SA 4.0',
+    'sourceUrl': 'https://commons.wikimedia.org/wiki/File:art.webp',
   };
   const place = <String, dynamic>{
     'label': 'Ljubljana',
@@ -26,12 +30,7 @@ void main() {
       'primaryMedia': media,
       'place': place,
       'provenance': <String, dynamic>{
-        'imageCredit': <String, dynamic>{
-          'credit': 'Miro Photographer',
-          'license': 'CC BY-SA 4.0',
-          'sourceUrl': 'https://commons.wikimedia.org/wiki/File:art.webp',
-        },
-        'source': <String, dynamic>{
+        'recordSource': <String, dynamic>{
           'name': 'Wikimedia Commons',
           'id': 'File:art.webp',
         },
@@ -42,10 +41,49 @@ void main() {
     expect(artwork?.title, 'River Memory');
     expect(artwork?.artist, 'Maja Novak');
     expect(artwork?.imageAuthor, 'Miro Photographer');
+    expect(artwork?.imageAttribution, 'Courtesy of the artist');
     expect(artwork?.imageLicense, 'CC BY-SA 4.0');
+    expect(
+      artwork?.imageSourceUrl,
+      'https://commons.wikimedia.org/wiki/File:art.webp',
+    );
     expect(artwork?.imageUrl, media['url']);
     expect(artwork?.isPublic, isTrue);
     expect(artwork?.walletAddress, isNull);
+  });
+
+  test(
+      'legacy artwork bootstrap preserves its previously normalized provenance',
+      () {
+    final provider = ArtworkProvider();
+    provider.seedPublicPresentation(<String, dynamic>{
+      'version': 1,
+      'id': 'artwork-legacy',
+      'title': 'Older public record',
+      'authorship': <String, dynamic>{'name': 'Maja Novak'},
+      'primaryMedia': <String, dynamic>{
+        'url': 'https://images.example.test/legacy.webp',
+      },
+      'provenance': <String, dynamic>{
+        'imageCredit': <String, dynamic>{
+          'credit': 'Legacy image credit',
+          'license': 'CC BY-SA 4.0',
+          'sourceUrl': 'https://commons.wikimedia.org/wiki/File:legacy.webp',
+        },
+        'source': <String, dynamic>{'name': 'Wikimedia Commons'},
+      },
+    });
+
+    final artwork = provider.getArtworkById('artwork-legacy');
+    final metadata = artwork?.metadata ?? const <String, dynamic>{};
+    expect(artwork?.imageAuthor, 'Legacy image credit');
+    expect(artwork?.imageAttribution, isNull);
+    expect(artwork?.imageLicense, 'CC BY-SA 4.0');
+    expect(
+      artwork?.imageSourceUrl,
+      'https://commons.wikimedia.org/wiki/File:legacy.webp',
+    );
+    expect(metadata['sourceName'], 'Wikimedia Commons');
   });
 
   test(

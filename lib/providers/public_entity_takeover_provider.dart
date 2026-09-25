@@ -29,6 +29,9 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
   bool get isReady => _readyDispatched;
   Map<String, dynamic>? get bootstrap => _bootstrap;
 
+  bool _supportsBootstrapVersion(dynamic version) =>
+      version == 1 || version == 2;
+
   /// True only while this provider's seeded identity still owns the current
   /// canonical pathname. Screens use this to select the public first-frame
   /// composition on compact routes that do not use the desktop shell scope.
@@ -57,7 +60,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     }
 
     final raw = _bootstrap;
-    if (raw == null || raw['version'] != 1) return null;
+    if (raw == null || !_supportsBootstrapVersion(raw['version'])) return null;
     final identity = _asStringMap(raw['identity']);
     final presentation = _asStringMap(raw['presentation']);
     final current = _target;
@@ -67,7 +70,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     final identityMatches = identity['type'] == current.type &&
         identity['id'] == current.id &&
         identity['canonicalPath'] == current.path;
-    final presentationMatches = presentation['version'] == 1 &&
+    final presentationMatches = presentation['version'] == raw['version'] &&
         presentation['type'] == current.type &&
         presentation['id'] == current.id &&
         presentation['canonicalPath'] == current.path;
@@ -148,7 +151,9 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (raw == null || initialUri.path != _target?.path) return null;
     final identity = _asStringMap(raw['identity']);
     final presentation = _asStringMap(raw['presentation']);
-    if (raw['version'] != 1 || identity == null || presentation == null) {
+    if (!_supportsBootstrapVersion(raw['version']) ||
+        identity == null ||
+        presentation == null) {
       return null;
     }
     final type = _wireType(target.type);
@@ -162,7 +167,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         identity['id'] != id ||
         identity['locale'] != locale ||
         identity['canonicalPath'] != path ||
-        presentation['version'] != 1 ||
+        presentation['version'] != raw['version'] ||
         presentation['type'] != type ||
         presentation['id'] != id ||
         presentation['locale'] != locale ||
