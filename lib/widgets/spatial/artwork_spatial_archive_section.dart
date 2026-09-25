@@ -16,6 +16,7 @@ import '../../providers/marker_management_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/spatial_library_provider.dart';
 import '../../services/spatial_library_store.dart';
+import '../inline_loading.dart';
 import '../../screens/spatial/spatial_capture_launch.dart';
 import '../../screens/spatial/spatial_library_detail_screen.dart';
 import '../../utils/design_tokens.dart';
@@ -100,7 +101,11 @@ class _ArtworkSpatialArchiveSectionState
     final hasPublic = history != null && history.history.isNotEmpty;
     final canCapture = _canCapture(context);
 
-    if (!hasPublic && knownCount == 0 && drafts.isEmpty && !canCapture) {
+    if (!hasPublic &&
+        knownCount == 0 &&
+        drafts.isEmpty &&
+        !canCapture &&
+        history == null) {
       return const SizedBox.shrink();
     }
 
@@ -140,6 +145,20 @@ class _ArtworkSpatialArchiveSectionState
                 Text(l10n.spatialCaptureCount(history.history.length)),
             ],
           ),
+          if (!hasPublic && history != null && knownCount == 0) ...<Widget>[
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              l10n.subjectSpatialArchiveEmpty,
+              style: KubusTextStyles.bodySmall.copyWith(
+                color: KubusColorRoles.of(context).foregroundMuted,
+              ),
+            ),
+          ],
+          if (!hasPublic && provider.isSpatialHistoryLoading(widget.artwork.id))
+            const Padding(
+              padding: EdgeInsets.only(top: KubusSpacing.sm),
+              child: InlineLoading(height: 2, tileSize: 1),
+            ),
           if (hasPublic) ...<Widget>[
             const SizedBox(height: KubusSpacing.sm),
             _PublicArchiveSummary(history: history),

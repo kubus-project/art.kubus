@@ -24,6 +24,8 @@ class ActivationCopy {
             return l10n.activationGateSaveEventTitle;
           case PendingActionTargetType.exhibition:
             return l10n.activationGateSaveExhibitionTitle;
+          case PendingActionTargetType.collection:
+            return l10n.activationGateSaveCollectionTitle;
           case PendingActionTargetType.post:
             return l10n.activationGateSavePostTitle;
           case PendingActionTargetType.artwork:
@@ -59,6 +61,8 @@ class ActivationCopy {
             return l10n.activationConfirmSaveEvent;
           case PendingActionTargetType.exhibition:
             return l10n.activationConfirmSaveExhibition;
+          case PendingActionTargetType.collection:
+            return l10n.activationConfirmSaveCollection;
           case PendingActionTargetType.post:
             return l10n.activationConfirmSavePost;
           case PendingActionTargetType.artwork:

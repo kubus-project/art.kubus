@@ -94,9 +94,22 @@
   },
   "recentActivityRecognitionRecordedTitle": "Recognition recorded",
   "recentActivityArchiveObjectUpdateTitle": "Digital edition update",
-  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",
+  "recentActivityRecognitionAmountDescription": "+{amount} recognition",
   "@recentActivityRecognitionAmountDescription": {
     "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityKub8AmountDescription": "+{amount} KUB8",
+  "@recentActivityKub8AmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityAchievementKub8Description": "{title} (+{amount} KUB8)",
+  "@recentActivityAchievementKub8Description": {
+    "placeholders": {
+      "title": {},
       "amount": {}
     }
   },
@@ -112,6 +125,20 @@
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
   "notificationRecognitionRecordedTitle": "Recognition recorded",
+  "notificationArtworkDiscoveredTitle": "Artwork discovered",
+  "notificationArtworkDiscoveredBody": "Discovered “{title}” by {artist}",
+  "@notificationArtworkDiscoveredBody": {
+    "placeholders": {
+      "title": {},
+      "artist": {}
+    }
+  },
+  "notificationArtworkDiscoveredTitleOnlyBody": "Discovered “{title}”",
+  "@notificationArtworkDiscoveredTitleOnlyBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "pushArchiveObjectCreatingTitle": "Creating digital edition...",
   "pushArchiveObjectCreatingBody": "Creating a digital edition of \"{artworkTitle}\"",
   "@pushArchiveObjectCreatingBody": {
@@ -179,6 +206,7 @@
   "activationGateSaveArtworkTitle": "Save this artwork to your collection",
   "activationGateSaveEventTitle": "Save this event to your collection",
   "activationGateSaveExhibitionTitle": "Add this place to your collection",
+  "activationGateSaveCollectionTitle": "Save this collection for later",
   "activationGateSavePostTitle": "Save this post to your collection",
   "activationGateLikeArtworkTitle": "Like this artwork",
   "activationGateFollowTitle": "Follow this artist",
@@ -202,6 +230,7 @@
   "activationConfirmSaveArtwork": "Save this artwork?",
   "activationConfirmSaveEvent": "Save this event?",
   "activationConfirmSaveExhibition": "Save this place?",
+  "activationConfirmSaveCollection": "Save this collection?",
   "activationConfirmSavePost": "Save this post?",
   "activationConfirmLikeArtwork": "Like this artwork?",
   "activationConfirmFollow": "Follow this artist?",
@@ -1887,8 +1916,8 @@
   "mapMarkerTypeStreetArt": "Street Art",
   "mapSortNearest": "Nearest",
   "mapSortNewest": "Newest",
-  "mapSortRarity": "Rarity",
   "mapSortHighestRewards": "Most recognition",
+  "mapSortRarity": "Rarity",
   "mapSortMostViewed": "Most viewed",
   "mapArReadyChipLabel": "AR ready",
   "mapAlreadyDiscoveredTooltip": "Already discovered",
@@ -1970,6 +1999,15 @@
   "arShareSuccessToast": "Artwork shared successfully!",
   "arShareFailedToast": "Share failed. Please try again.",
   "commonActions": "Actions",
+  "subjectActionsSocialHeading": "Social",
+  "subjectActionsSpatialHeading": "Place and movement",
+  "subjectActionsMoreHeading": "More actions",
+  "subjectActionsProvenanceHeading": "Provenance",
+  "subjectSpatialArchiveEmpty": "No spatial record yet.",
+  "artworkProvenanceImageCreator": "Image creator",
+  "artworkProvenanceLicense": "Image license",
+  "artworkProvenanceCredit": "Image credit",
+  "artworkProvenanceSource": "Image source",
   "commonCurrentlyOn": "Currently ON",
   "commonCurrentlyOff": "Currently OFF",
   "commonOk": "OK",

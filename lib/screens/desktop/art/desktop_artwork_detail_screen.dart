@@ -26,16 +26,18 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/artwork_location_actions.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import '../../../widgets/detail/artwork_provenance_section.dart';
+import '../../../widgets/detail/subject_action_group.dart';
 import '../../../widgets/detail/artwork_engagement_sections.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
 import '../../../widgets/common/kubus_reading_surface.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
-import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
@@ -334,7 +336,11 @@ class _DesktopArtworkDetailScreenState
           final publicDesktopContext = isCanonicalPublicEntry
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [identity, _buildDescription(artwork)],
+                  children: [
+                    identity,
+                    _buildDescription(artwork),
+                    ArtworkProvenanceSection(artwork: artwork),
+                  ],
                 )
               : identity;
 
@@ -376,6 +382,8 @@ class _DesktopArtworkDetailScreenState
                   const SizedBox(height: DetailSpacing.cardGap),
                   if (!isCanonicalPublicEntry || !useComposedHero)
                     _buildDescription(artwork),
+                  if (!isCanonicalPublicEntry || !useComposedHero)
+                    ArtworkProvenanceSection(artwork: artwork),
                   _buildGallerySection(artwork, coverUrl),
                   Padding(
                     padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
@@ -397,12 +405,6 @@ class _DesktopArtworkDetailScreenState
                         DetailContextItem(
                           icon: Icons.explore,
                           value: '${artwork.discoveryCount}',
-                        ),
-                      if (artwork.actualRewards > 0)
-                        DetailContextItem(
-                          icon: Icons.token,
-                          value: '${artwork.actualRewards}',
-                          label: 'KUB8',
                         ),
                     ],
                   ),
@@ -713,10 +715,7 @@ class _DesktopArtworkDetailScreenState
   Widget _buildDescription(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
     final text = (artwork.description).trim();
-    final hasAttribution =
-        ((artwork.imageAttribution ?? '').trim().isNotEmpty) ||
-            ((artwork.imageAuthor ?? '').trim().isNotEmpty);
-    if (text.isEmpty && !hasAttribution) return const SizedBox.shrink();
+    if (text.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
       // Long-form reading content belongs on the quiet tonal surface, not on
@@ -727,9 +726,7 @@ class _DesktopArtworkDetailScreenState
           children: [
             SectionHeader(title: l10n.commonDescription),
             const SizedBox(height: DetailSpacing.sm),
-            if (text.isNotEmpty) ExpandableDetailText(text: text),
-            // Photo author / licence attribution, below the description.
-            MarkerAttributionSection.fromArtwork(artwork),
+            ExpandableDetailText(text: text),
           ],
         ),
       ),
@@ -834,113 +831,109 @@ class _DesktopArtworkDetailScreenState
         AppConfig.isFeatureEnabled('streetArtClaims') &&
             markerIdCandidate.isNotEmpty;
 
-    // Navigate is the accent-filled primary location action (mirrors mobile);
-    // Show on map stays available as a quiet secondary chip.
-    return DetailActionsSection(
-      title: l10n.commonActions,
-      maxVisibleActions: 5,
-      primaryAction: hasLocation
-          ? SizedBox(
-              width: double.infinity,
-              child: DetailActionButton(
-                icon: Icons.navigation_rounded,
-                label: l10n.commonNavigate,
+    final roles = KubusColorRoles.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SubjectActionGroup(
+          label: l10n.subjectActionsSocialHeading,
+          actions: [
+            SubjectAction(
+              icon: artwork.isLikedByCurrentUser
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+              label: l10n.artworkDetailLike,
+              selectedLabel: l10n.artworkDetailLiked,
+              isSelected: artwork.isLikedByCurrentUser,
+              selectedColor: roles.likeAction,
+              onPressed: () => _toggleLike(artworkProvider, artwork),
+            ),
+            SubjectAction(
+              icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+              label: l10n.commonSave,
+              selectedLabel: l10n.commonSavedToast,
+              isSelected: isSaved,
+              onPressed: () => _toggleSaved(artworkProvider, artwork),
+            ),
+            SubjectAction(
+              icon: Icons.comment_outlined,
+              label: l10n.commonComments,
+              onPressed: () {
+                final commentsContext = _commentsSectionKey.currentContext;
+                if (commentsContext != null) {
+                  unawaited(
+                    Scrollable.ensureVisible(
+                      commentsContext,
+                      alignment: 0.08,
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                    ),
+                  );
+                }
+                _commentsPanelController.openAndScrollToTop();
+              },
+            ),
+            SubjectAction(
+              icon: Icons.share_outlined,
+              label: l10n.commonShare,
+              onPressed: () => ShareService().showShareSheet(
+                context,
+                target: ShareTarget.artwork(
+                  artworkId: artwork.id,
+                  title: artwork.title,
+                ),
+                sourceScreen: 'desktop_art_detail',
+              ),
+            ),
+          ],
+        ),
+        if (hasLocation || showArPrimaryAction) ...[
+          const SizedBox(height: DetailSpacing.md),
+          SubjectActionGroup(
+            label: l10n.subjectActionsSpatialHeading,
+            actions: [
+              if (hasLocation)
+                SubjectAction(
+                  icon: Icons.map_outlined,
+                  label: l10n.artDetailShowOnMap,
+                  onPressed: () =>
+                      ArtworkLocationActions.showOnMap(context, artwork),
+                ),
+              if (hasLocation)
+                SubjectAction(
+                  icon: Icons.navigation_outlined,
+                  label: l10n.commonNavigate,
+                  onPressed: () => unawaited(
+                    ArtworkLocationActions.showNavigationOptions(
+                      context,
+                      artwork,
+                    ),
+                  ),
+                ),
+              if (showArPrimaryAction)
+                SubjectAction(
+                  icon: Icons.view_in_ar_outlined,
+                  label: l10n.commonViewInAr,
+                  onPressed: () => Navigator.pushNamed(context, '/ar'),
+                ),
+            ],
+          ),
+        ],
+        if (canShowStreetArtClaimCta) ...[
+          const SizedBox(height: DetailSpacing.md),
+          SubjectActionGroup(
+            label: l10n.subjectActionsMoreHeading,
+            actions: [
+              SubjectAction(
+                icon: Icons.fact_check_outlined,
+                label: l10n.mapMarkerClaimButton,
                 onPressed: () => unawaited(
-                  ArtworkLocationActions.showNavigationOptions(
-                    context,
-                    artwork,
-                  ),
+                  _openStreetArtClaimsForMarkerId(markerIdCandidate),
                 ),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
-            )
-          : showArPrimaryAction
-              ? SizedBox(
-                  width: double.infinity,
-                  child: DetailActionButton(
-                    icon: Icons.view_in_ar,
-                    label: l10n.commonViewInAr,
-                    onPressed: () => Navigator.pushNamed(context, '/ar'),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                )
-              : null,
-      actions: [
-        if (hasLocation)
-          DetailSecondaryAction(
-            icon: Icons.map_outlined,
-            label: l10n.artDetailShowOnMap,
-            onTap: () => ArtworkLocationActions.showOnMap(context, artwork),
-            tooltip: l10n.artDetailShowOnMap,
+            ],
           ),
-        if (hasLocation && showArPrimaryAction)
-          DetailSecondaryAction(
-            icon: Icons.view_in_ar_outlined,
-            label: l10n.commonViewInAr,
-            onTap: () => Navigator.pushNamed(context, '/ar'),
-            tooltip: l10n.commonViewInAr,
-          ),
-        DetailSecondaryAction(
-          icon: artwork.isLikedByCurrentUser
-              ? Icons.favorite
-              : Icons.favorite_border,
-          label: '${artwork.likesCount}',
-          onTap: () => _toggleLike(artworkProvider, artwork),
-          isActive: artwork.isLikedByCurrentUser,
-          activeColor: Theme.of(context).colorScheme.error,
-          tooltip: l10n.commonLikes,
-        ),
-        DetailSecondaryAction(
-          icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-          label: isSaved ? l10n.commonSavedToast : l10n.commonSave,
-          onTap: () => _toggleSaved(artworkProvider, artwork),
-          isActive: isSaved,
-          tooltip: l10n.commonSave,
-        ),
-        DetailSecondaryAction(
-          icon: Icons.comment_outlined,
-          label: '${artwork.commentsCount}',
-          onTap: () {
-            final commentsContext = _commentsSectionKey.currentContext;
-            if (commentsContext != null) {
-              unawaited(
-                Scrollable.ensureVisible(
-                  commentsContext,
-                  alignment: 0.08,
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                ),
-              );
-            }
-            _commentsPanelController.openAndScrollToTop();
-          },
-          tooltip: l10n.commonComments,
-        ),
-        DetailSecondaryAction(
-          icon: Icons.share_outlined,
-          label: l10n.commonShare,
-          onTap: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.artwork(
-                artworkId: artwork.id,
-                title: artwork.title,
-              ),
-              sourceScreen: 'desktop_art_detail',
-            );
-          },
-          tooltip: l10n.commonShare,
-        ),
-        if (canShowStreetArtClaimCta)
-          DetailSecondaryAction(
-            icon: Icons.fact_check_outlined,
-            label: l10n.mapMarkerClaimButton,
-            onTap: () =>
-                unawaited(_openStreetArtClaimsForMarkerId(markerIdCandidate)),
-            tooltip: l10n.mapMarkerClaimButton,
-          ),
+        ],
       ],
     );
   }

@@ -73,9 +73,6 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
       case KubusNearbyArtSort.newest:
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
-      case KubusNearbyArtSort.rewards:
-        list.sort((a, b) => b.rewards.compareTo(a.rewards));
-        break;
       case KubusNearbyArtSort.popular:
         list.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
         break;

@@ -8,6 +8,7 @@ import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/events_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
@@ -81,6 +82,7 @@ Widget _wrap({
       ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
       ChangeNotifierProvider(create: (_) => EventsProvider()),
       ChangeNotifierProvider(create: (_) => ProfileProvider()),
+      ChangeNotifierProvider(create: (_) => SavedItemsProvider()),
       ChangeNotifierProvider(create: (_) => WalletProvider(deferInit: true)),
       ChangeNotifierProvider(create: (_) => ArtworkProvider()),
       ChangeNotifierProvider(
@@ -153,7 +155,7 @@ void main() {
   });
 
   testWidgets(
-      'compact canonical exhibition keeps identity and context before media',
+      'compact canonical exhibition leads with its media before identity',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -196,13 +198,58 @@ void main() {
     expect(find.text(title), findsOneWidget);
     expect(find.text(location), findsOneWidget);
     expect(find.text(description), findsOneWidget);
+    expect(find.text('Social'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(media, findsOneWidget);
     expect(tester.getTopLeft(media).dy,
-        greaterThan(tester.getTopLeft(find.text(title)).dy));
+        lessThan(tester.getTopLeft(find.text(title)).dy));
     expect(tester.getTopLeft(media).dy,
-        greaterThan(tester.getTopLeft(find.text(description)).dy));
+        lessThan(tester.getTopLeft(find.text(description)).dy));
     expect(tester.widget<Text>(find.text(title)).style?.fontSize,
         greaterThanOrEqualTo(32));
+  });
+
+  testWidgets('desktop canonical exhibition keeps media beside identity',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final exhibition = Exhibition(
+      id: 'ex-desktop-public',
+      title: 'Shared Currents',
+      coverUrl: 'https://example.test/shared-currents.jpg',
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        child: DesktopShellScope(
+          pushScreen: (_) {},
+          popScreen: () {},
+          navigateToRoute: (_) {},
+          openNotifications: () {},
+          openFunctionsPanel: (_, {content}) {},
+          setFunctionsPanelContent: (_) {},
+          closeFunctionsPanel: () {},
+          canPop: false,
+          isCanonicalPublicEntry: true,
+          child: ExhibitionDetailScreen(
+            exhibitionId: exhibition.id,
+            initialExhibition: exhibition,
+            embedded: true,
+          ),
+        ),
+      ),
+    );
+    await _settleNetwork(tester);
+
+    final media = find.byKey(const ValueKey<String>('public-exhibition-cover'));
+    final title = find.text('Shared Currents');
+    expect(media, findsOneWidget);
+    expect(
+        tester.getTopLeft(media).dx, greaterThan(tester.getTopLeft(title).dx));
+    expect(tester.getTopLeft(media).dy,
+        lessThanOrEqualTo(tester.getTopLeft(title).dy));
   });
 
   testWidgets('EventDetailScreen clamps a long description and expands it',
@@ -240,8 +287,7 @@ void main() {
     await _settleNetwork(tester);
   });
 
-  testWidgets(
-      'compact canonical event keeps identity and context before its media',
+  testWidgets('compact canonical event leads with its media before identity',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -283,6 +329,9 @@ void main() {
     final cover = find.byKey(const ValueKey<String>('public-event-cover'));
     expect(find.text(title), findsOneWidget);
     expect(find.text(description), findsOneWidget);
+    expect(find.text('Social'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(tester.widget<Text>(find.text(title)).style?.fontSize,
         greaterThanOrEqualTo(32));
     expect(cover, findsOneWidget);
@@ -292,9 +341,11 @@ void main() {
     );
     expect(mapAction, findsOneWidget);
     expect(tester.getTopLeft(cover).dy,
-        greaterThan(tester.getTopLeft(find.text(description)).dy));
+        lessThan(tester.getTopLeft(find.text(title)).dy));
+    expect(tester.getTopLeft(cover).dy,
+        lessThan(tester.getTopLeft(find.text(description)).dy));
     expect(
-        tester.getTopLeft(mapAction).dy, lessThan(tester.getTopLeft(cover).dy));
+        tester.getTopLeft(cover).dy, lessThan(tester.getTopLeft(mapAction).dy));
   });
 
   testWidgets('ordinary compact event retains its existing media-first order',
@@ -319,6 +370,45 @@ void main() {
     expect(cover, findsOneWidget);
     expect(tester.getTopLeft(cover).dy,
         lessThan(tester.getTopLeft(find.byType(DetailIdentityBlock)).dy));
+  });
+
+  testWidgets('desktop canonical event keeps media beside identity',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final event = KubusEvent(
+      id: 'ev-desktop-public',
+      title: 'Art by the River',
+      coverUrl: 'https://example.test/event-cover.jpg',
+      status: 'published',
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        child: DesktopShellScope(
+          pushScreen: (_) {},
+          popScreen: () {},
+          navigateToRoute: (_) {},
+          openNotifications: () {},
+          openFunctionsPanel: (_, {content}) {},
+          setFunctionsPanelContent: (_) {},
+          closeFunctionsPanel: () {},
+          canPop: false,
+          isCanonicalPublicEntry: true,
+          child: EventDetailScreen(eventId: event.id, initialEvent: event),
+        ),
+      ),
+    );
+    await _settleNetwork(tester);
+
+    final media = find.byKey(const ValueKey<String>('public-event-cover'));
+    final title = find.text('Art by the River');
+    expect(media, findsOneWidget);
+    expect(
+        tester.getTopLeft(media).dx, greaterThan(tester.getTopLeft(title).dx));
+    expect(tester.getTopLeft(media).dy,
+        lessThanOrEqualTo(tester.getTopLeft(title).dy));
   });
 
   testWidgets('ExhibitionListScreen create header uses a LiquidGlass surface',

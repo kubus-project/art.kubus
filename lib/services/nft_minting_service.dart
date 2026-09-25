@@ -238,13 +238,6 @@ class NFTMintingService {
         transactionId: transactionId,
       );
 
-      // Award tokens for minting
-      await _notificationService.showRewardNotification(
-        title: l10n.pushArchiveObjectCreatedTitle,
-        amount: 50,
-        reason: l10n.archiveObjectCreatedReason(artworkTitle, tokenId),
-      );
-
       // Check NFT minting achievements
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id') ?? 'demo_user';

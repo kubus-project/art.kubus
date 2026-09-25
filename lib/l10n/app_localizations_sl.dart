@@ -220,7 +220,17 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
-    return '+$amount KUB8 priznanja';
+    return '+$amount priznanja';
+  }
+
+  @override
+  String recentActivityKub8AmountDescription(Object amount) {
+    return '+$amount KUB8';
+  }
+
+  @override
+  String recentActivityAchievementKub8Description(Object title, Object amount) {
+    return '$title (+$amount KUB8)';
   }
 
   @override
@@ -243,6 +253,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get notificationRecognitionRecordedTitle => 'Priznanje zabeleženo';
+
+  @override
+  String get notificationArtworkDiscoveredTitle => 'Odkrito umetniško delo';
+
+  @override
+  String notificationArtworkDiscoveredBody(Object title, Object artist) {
+    return 'Odkrito: »$title« · $artist';
+  }
+
+  @override
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title) {
+    return 'Odkrito: »$title«';
+  }
 
   @override
   String get pushArchiveObjectCreatingTitle =>
@@ -384,6 +407,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'Dodaj ta kraj v svojo zbirko';
 
   @override
+  String get activationGateSaveCollectionTitle => 'Shrani to zbirko za pozneje';
+
+  @override
   String get activationGateSavePostTitle => 'Shrani to objavo v svojo zbirko';
 
   @override
@@ -435,6 +461,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get activationConfirmSaveExhibition => 'Želiš shraniti ta kraj?';
+
+  @override
+  String get activationConfirmSaveCollection => 'Želiš shraniti to zbirko?';
 
   @override
   String get activationConfirmSavePost => 'Želiš shraniti to objavo?';
@@ -4968,10 +4997,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapSortNewest => 'Najnovejše';
 
   @override
-  String get mapSortRarity => 'Redkost';
+  String get mapSortHighestRewards => 'Največ priznanj';
 
   @override
-  String get mapSortHighestRewards => 'Največ priznanj';
+  String get mapSortRarity => 'Redkost';
 
   @override
   String get mapSortMostViewed => 'Največ ogledov';
@@ -5152,6 +5181,33 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonActions => 'Dejanja';
+
+  @override
+  String get subjectActionsSocialHeading => 'Skupnost';
+
+  @override
+  String get subjectActionsSpatialHeading => 'Kraj in pot';
+
+  @override
+  String get subjectActionsMoreHeading => 'Dodatna dejanja';
+
+  @override
+  String get subjectActionsProvenanceHeading => 'Provenienca';
+
+  @override
+  String get subjectSpatialArchiveEmpty => 'Prostorski zapis še ne obstaja.';
+
+  @override
+  String get artworkProvenanceImageCreator => 'Avtor fotografije';
+
+  @override
+  String get artworkProvenanceLicense => 'Licenca slike';
+
+  @override
+  String get artworkProvenanceCredit => 'Zasluge za sliko';
+
+  @override
+  String get artworkProvenanceSource => 'Vir slike';
 
   @override
   String get commonCurrentlyOn => 'Trenutno VKLOPLJENO';

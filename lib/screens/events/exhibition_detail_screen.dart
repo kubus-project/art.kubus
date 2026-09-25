@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -17,12 +18,15 @@ import '../../providers/collab_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/saved_items_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart'
     show BackendApiRequestException;
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
@@ -31,9 +35,11 @@ import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/subject_action_group.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/creator_shell_navigation.dart';
+import '../../utils/map_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -89,8 +95,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final provider = context.read<ExhibitionsProvider>();
-      unawaited(provider.recordExhibitionView(widget.exhibitionId,
-          source: 'exhibition_detail'));
+      unawaited(
+        provider.recordExhibitionView(
+          widget.exhibitionId,
+          source: 'exhibition_detail',
+        ),
+      );
       unawaited(TelemetryService().trackExhibitionViewed(widget.exhibitionId));
       ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(_load());
@@ -187,6 +197,30 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     );
   }
 
+  Future<void> _toggleExhibitionSaved(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final returnRoute =
+        context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                  ShareEntityType.exhibition,
+                  exhibition.id,
+                ) ??
+            Uri.base.path;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: returnRoute,
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.exhibition,
+      targetId: exhibition.id,
+      targetLabel: exhibition.title,
+      sourceScreen: 'exhibition_detail',
+    );
+    if (!authenticated || !mounted) return;
+    await context.read<SavedItemsProvider>().toggleExhibitionSaved(
+          exhibition.id,
+        );
+  }
+
   // Labeled quiet actions matching the event detail pattern, so the two
   // detail screens present one action vocabulary instead of bare icons here.
   List<DetailSecondaryAction> _buildHeaderActions(
@@ -209,9 +243,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             );
             return;
           }
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
         },
       ),
       DetailSecondaryAction(
@@ -233,8 +267,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     if ((exhibition.status ?? '').trim().toLowerCase() == nextStatus) return;
 
     try {
-      await provider.updateExhibition(
-          exhibition.id, <String, dynamic>{'status': nextStatus});
+      await provider.updateExhibition(exhibition.id, <String, dynamic>{
+        'status': nextStatus,
+      });
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
@@ -246,8 +281,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonActionFailedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.commonActionFailedToast,
+            style: KubusTypography.inter(),
+          ),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -270,8 +307,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.exhibitionDetailDeleteDialogTitle),
-        content:
-            Text(l10n.exhibitionDetailDeleteDialogContent(exhibition.title)),
+        content: Text(
+          l10n.exhibitionDetailDeleteDialogContent(exhibition.title),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -418,8 +456,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (status == null) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.exhibitionDetailPoapClaimFailedToast,
-                style: KubusTypography.inter()),
+            content: Text(
+              l10n.exhibitionDetailPoapClaimFailedToast,
+              style: KubusTypography.inter(),
+            ),
             behavior: SnackBarBehavior.floating,
           ),
           tone: KubusSnackBarTone.warning,
@@ -432,10 +472,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-              status.eligibilityReason == 'already_claimed'
-                  ? l10n.scanProofAlreadyClaimedToast
-                  : l10n.exhibitionDetailPoapClaimSuccessToast,
-              style: KubusTypography.inter()),
+            status.eligibilityReason == 'already_claimed'
+                ? l10n.scanProofAlreadyClaimedToast
+                : l10n.exhibitionDetailPoapClaimSuccessToast,
+            style: KubusTypography.inter(),
+          ),
           behavior: SnackBarBehavior.floating,
         ),
         tone: KubusSnackBarTone.success,
@@ -488,8 +529,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailPoapClaimFailedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.exhibitionDetailPoapClaimFailedToast,
+            style: KubusTypography.inter(),
+          ),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -524,8 +567,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (bytes == null || bytes.isEmpty) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.commonActionFailedToast,
-                style: KubusTypography.inter()),
+            content: Text(
+              l10n.commonActionFailedToast,
+              style: KubusTypography.inter(),
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -542,8 +587,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (url == null || url.isEmpty) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.commonActionFailedToast,
-                style: KubusTypography.inter()),
+            content: Text(
+              l10n.commonActionFailedToast,
+              style: KubusTypography.inter(),
+            ),
             backgroundColor: scheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -551,8 +598,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return;
       }
 
-      await provider
-          .updateExhibition(exhibition.id, <String, dynamic>{'coverUrl': url});
+      await provider.updateExhibition(exhibition.id, <String, dynamic>{
+        'coverUrl': url,
+      });
 
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -565,8 +613,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonActionFailedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.commonActionFailedToast,
+            style: KubusTypography.inter(),
+          ),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -603,8 +653,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     if (!mounted) return;
 
-    final members =
-        collabProvider.collaboratorsFor('exhibitions', exhibition.id);
+    final members = collabProvider.collaboratorsFor(
+      'exhibitions',
+      exhibition.id,
+    );
     final allowedUserIds =
         members.map((m) => m.userId.trim()).where((v) => v.isNotEmpty).toSet();
     final allowedWalletsLower = members
@@ -633,14 +685,17 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       return false;
     }
 
-    final artworks =
-        List<Artwork>.from(artworkProvider.artworks.where(isMemberOwned));
+    final artworks = List<Artwork>.from(
+      artworkProvider.artworks.where(isMemberOwned),
+    );
     if (artworks.isEmpty) {
       if (mounted) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast,
-                style: KubusTypography.inter()),
+            content: Text(
+              l10n.exhibitionDetailNoArtworksAvailableToLinkToast,
+              style: KubusTypography.inter(),
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -656,8 +711,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return KubusAlertDialog(
-              title: Text(l10n.exhibitionDetailAddArtworksDialogTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              title: Text(
+                l10n.exhibitionDetailAddArtworksDialogTitle,
+                style: KubusTypography.inter(fontWeight: FontWeight.w700),
+              ),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -679,14 +736,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       },
                       title: Text(
                         art.title,
-                        style:
-                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : '\u2014',
                         style: KubusTypography.inter(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.75)),
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.75),
+                        ),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
@@ -697,16 +756,19 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child:
-                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                  child: Text(
+                    l10n.commonCancel,
+                    style: KubusTypography.inter(),
+                  ),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
-                  child: Text(l10n.commonLink,
-                      style:
-                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    l10n.commonLink,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             );
@@ -719,19 +781,25 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     try {
       await exhibitionsProvider.linkExhibitionArtworks(
-          exhibition.id, selectedIds.toList());
+        exhibition.id,
+        selectedIds.toList(),
+      );
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailArtworksLinkedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.exhibitionDetailArtworksLinkedToast,
+            style: KubusTypography.inter(),
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (_) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailLinkArtworksFailedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.exhibitionDetailLinkArtworksFailedToast,
+            style: KubusTypography.inter(),
+          ),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -804,8 +872,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return KubusAlertDialog(
-              title: Text(l10n.selectEventsDialogTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              title: Text(
+                l10n.selectEventsDialogTitle,
+                style: KubusTypography.inter(fontWeight: FontWeight.w700),
+              ),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -827,8 +897,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       },
                       title: Text(
                         event.title,
-                        style:
-                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
@@ -839,16 +910,19 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child:
-                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                  child: Text(
+                    l10n.commonCancel,
+                    style: KubusTypography.inter(),
+                  ),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
-                  child: Text(l10n.commonLink,
-                      style:
-                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    l10n.commonLink,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             );
@@ -861,7 +935,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     try {
       await exhibitionsProvider.linkExhibitionEvents(
-          exhibition.id, selectedIds.toList());
+        exhibition.id,
+        selectedIds.toList(),
+      );
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonSavedToast)),
@@ -884,7 +960,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   Future<void> _unlinkProgramEvent(
-      Exhibition exhibition, KubusEvent event) async {
+    Exhibition exhibition,
+    KubusEvent event,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ExhibitionsProvider>();
@@ -986,9 +1064,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                         : scheme.onPrimary,
                     onPressed: (alreadyAttended || isConfirming)
                         ? null
-                        : () => unawaited(
-                              _confirmAttendance(markerIdCandidate),
-                            ),
+                        : () =>
+                            unawaited(_confirmAttendance(markerIdCandidate)),
                   ),
                 ),
               ],
@@ -1010,9 +1087,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         !state.hasFreshProximity ||
         !proximity.withinRadius) {
       messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.exhibitionDetailAttendanceMoveCloserHint),
-        ),
+        SnackBar(content: Text(l10n.exhibitionDetailAttendanceMoveCloserHint)),
         tone: KubusSnackBarTone.warning,
       );
       return;
@@ -1043,7 +1118,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final parts = <String>[
         wasIdempotent
             ? l10n.exhibitionDetailAttendanceAlreadyCheckedInToast
-            : l10n.exhibitionDetailAttendanceConfirmedToast
+            : l10n.exhibitionDetailAttendanceConfirmedToast,
       ];
       if (awarded != null && awarded > 0) {
         parts.add(
@@ -1077,9 +1152,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           : l10n.exhibitionDetailAttendanceUnableToConfirmToast;
 
       messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(message),
-        ),
+        SnackBar(content: Text(message)),
         tone: KubusSnackBarTone.error,
       );
     } catch (_) {
@@ -1103,6 +1176,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final isDesktopCanonicalPublicEntry =
         DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
     final provider = context.watch<ExhibitionsProvider>();
+    final savedItems = context.watch<SavedItemsProvider>();
     final isSignedIn =
         context.watch<WalletProvider>().authority.hasAccountSession;
 
@@ -1119,20 +1193,14 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             : null;
     final exactExhibition = loadedExhibition ?? initialExhibition;
     final ex = exactExhibition ??
-        Exhibition(
-          id: widget.exhibitionId,
-          title: l10n.commonExhibition,
-        );
+        Exhibition(id: widget.exhibitionId, title: l10n.commonExhibition);
 
     final poap = provider.poapStatusFor(widget.exhibitionId);
 
     final canManage = _canManageExhibition(ex.myRole);
     final canPublish = _canPublishExhibition(ex.myRole);
     final canPromote = _canPromoteExhibition(ex);
-    final headerActions = _buildHeaderActions(
-      l10n,
-      ex,
-    );
+    final headerActions = _buildHeaderActions(l10n, ex);
 
     final content = Scaffold(
       backgroundColor:
@@ -1156,6 +1224,70 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
+                final hasValidCoordinates = ex.lat != null &&
+                    ex.lng != null &&
+                    ex.lat!.isFinite &&
+                    ex.lng!.isFinite &&
+                    ex.lat! >= -90 &&
+                    ex.lat! <= 90 &&
+                    ex.lng! >= -180 &&
+                    ex.lng! <= 180;
+                final publicEntryActions = isCanonicalPublicEntry
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SubjectActionGroup(
+                            label: l10n.subjectActionsSocialHeading,
+                            actions: [
+                              SubjectAction(
+                                icon: savedItems.isExhibitionSaved(ex.id)
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                label: l10n.commonSave,
+                                selectedLabel: l10n.commonSavedToast,
+                                isSelected: savedItems.isExhibitionSaved(ex.id),
+                                onPressed: () =>
+                                    unawaited(_toggleExhibitionSaved(ex)),
+                              ),
+                              SubjectAction(
+                                icon: Icons.share_outlined,
+                                label: l10n.commonShare,
+                                onPressed: () {
+                                  ShareService().showShareSheet(
+                                    context,
+                                    target: ShareTarget.exhibition(
+                                      exhibitionId: ex.id,
+                                      title: ex.title,
+                                    ),
+                                    sourceScreen: 'exhibition_detail',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          if (hasValidCoordinates) ...[
+                            const SizedBox(height: DetailSpacing.md),
+                            SubjectActionGroup(
+                              label: l10n.subjectActionsSpatialHeading,
+                              actions: [
+                                SubjectAction(
+                                  icon: Icons.map_outlined,
+                                  label: l10n.commonOpenOnMap,
+                                  onPressed: () {
+                                    MapNavigation.open(
+                                      context,
+                                      center: LatLng(ex.lat!, ex.lng!),
+                                      zoom: 16,
+                                      autoFollow: false,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      )
+                    : null;
                 final topActions = Padding(
                   padding: const EdgeInsets.only(bottom: DetailSpacing.md),
                   child: Align(
@@ -1197,6 +1329,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       publicDesktopLayout: isCanonicalPublicEntry && isWide,
                       publicCompactIdentityFirst:
                           isCanonicalPublicEntry && !isWide,
+                      afterOverview: publicEntryActions,
                     ),
                     _buildAttendanceConfirmSection(),
                   ],
@@ -1265,8 +1398,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                             Expanded(
                               flex: 3,
                               child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 380),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 380,
+                                ),
                                 child: collab,
                               ),
                             ),
@@ -1279,9 +1413,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           left: 0,
                           right: 0,
                           child: InlineLoading(
-                              height: 4,
-                              borderRadius: BorderRadius.circular(2),
-                              color: scheme.primary),
+                            height: 4,
+                            borderRadius: BorderRadius.circular(2),
+                            color: scheme.primary,
+                          ),
                         ),
                     ],
                   );
@@ -1302,9 +1437,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
                         child: InlineLoading(
-                            height: 4,
-                            borderRadius: BorderRadius.circular(2),
-                            color: scheme.primary),
+                          height: 4,
+                          borderRadius: BorderRadius.circular(2),
+                          color: scheme.primary,
+                        ),
                       ),
                   ],
                 );
@@ -1426,6 +1562,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     this.canManage = false,
     this.publicDesktopLayout = false,
     this.publicCompactIdentityFirst = false,
+    this.afterOverview,
   });
 
   final Exhibition exhibition;
@@ -1438,6 +1575,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   final bool canManage;
   final bool publicDesktopLayout;
   final bool publicCompactIdentityFirst;
+  final Widget? afterOverview;
 
   @override
   Widget build(BuildContext context) {
@@ -1489,8 +1627,9 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         );
       }
       if (poap?.latestAttendanceAt != null) {
-        final latest = MaterialLocalizations.of(context)
-            .formatMediumDate(poap!.latestAttendanceAt!.toLocal());
+        final latest = MaterialLocalizations.of(
+          context,
+        ).formatMediumDate(poap!.latestAttendanceAt!.toLocal());
         items.add(
           DetailContextItem(
             icon: Icons.schedule_outlined,
@@ -1545,9 +1684,8 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    // Ordinary mobile details keep the cover above identity. Canonical public
-    // entry mirrors its server frame: identity and useful context lead, while
-    // wide desktop places media beside the identity block.
+    // Compact exhibition detail leads with its own cover. Canonical wide
+    // desktop places that media beside the identity/context block.
     final coverBlock = coverUrl != null
         ? _ExhibitionCoverFrame(
             url: coverUrl,
@@ -1635,9 +1773,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     final aboutCard = hasDescription
         ? KubusReadingSurface(
             padding: DetailSpacing.editorialCardPadding,
-            child: ExpandableDetailText(
-              text: exhibition.description!.trim(),
-            ),
+            child: ExpandableDetailText(text: exhibition.description!.trim()),
           )
         : null;
 
@@ -1662,8 +1798,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         padding: DetailSpacing.editorialCardPadding,
         child: Row(
           children: [
-            Icon(Icons.confirmation_number_outlined,
-                size: 20, color: scheme.onSurface.withValues(alpha: 0.55)),
+            Icon(
+              Icons.confirmation_number_outlined,
+              size: 20,
+              color: scheme.onSurface.withValues(alpha: 0.55),
+            ),
             const SizedBox(width: DetailSpacing.md),
             Expanded(
               child: Text(
@@ -1713,6 +1852,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         identityBlock,
         const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
+        if (afterOverview != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          afterOverview!,
+        ],
         if (aboutCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           aboutCard,
@@ -1738,13 +1881,17 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (coverBlock != null && !publicCompactIdentityFirst) ...[
+        if (coverBlock != null) ...[
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
         identityBlock,
         const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
+        if (afterOverview != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          afterOverview!,
+        ],
         if (aboutCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           aboutCard,
@@ -1752,10 +1899,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         if (poapCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),
           poapCard,
-        ],
-        if (coverBlock != null && publicCompactIdentityFirst) ...[
-          const SizedBox(height: DetailSpacing.cardGap),
-          coverBlock,
         ],
       ],
     );
@@ -1941,9 +2084,9 @@ class _ProgramSection extends StatelessWidget {
             const SizedBox(height: DetailSpacing.xs),
             Text(
               l10n.exhibitionDetailProgramManage,
-              style: DetailTypography.caption(context).copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
+              style: DetailTypography.caption(
+                context,
+              ).copyWith(color: scheme.onSurface.withValues(alpha: 0.6)),
             ),
           ],
         ],
@@ -1974,8 +2117,9 @@ class _ProgramEventCard extends StatelessWidget {
 
     String? dateLabel;
     if (event.startsAt != null) {
-      dateLabel = MaterialLocalizations.of(context)
-          .formatMediumDate(event.startsAt!.toLocal());
+      dateLabel = MaterialLocalizations.of(
+        context,
+      ).formatMediumDate(event.startsAt!.toLocal());
     }
     final location = (event.locationName ?? '').trim();
     final statusLabel = (event.status ?? '').trim().toLowerCase() == 'published'
@@ -2000,8 +2144,10 @@ class _ProgramEventCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(event.title,
-                        style: DetailTypography.cardTitle(context)),
+                    Text(
+                      event.title,
+                      style: DetailTypography.cardTitle(context),
+                    ),
                     const SizedBox(height: DetailSpacing.md),
                     Wrap(
                       spacing: DetailSpacing.md,
@@ -2010,25 +2156,35 @@ class _ProgramEventCard extends StatelessWidget {
                       children: [
                         Text(
                           localizedEventRelationTypeLabel(
-                              l10n, event.relationType),
+                            l10n,
+                            event.relationType,
+                          ),
                           style: DetailTypography.caption(context).copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (dateLabel != null)
-                          Text(dateLabel,
-                              style: DetailTypography.caption(context)),
+                          Text(
+                            dateLabel,
+                            style: DetailTypography.caption(context),
+                          ),
                         if (location.isNotEmpty)
-                          Text(location,
-                              style: DetailTypography.caption(context)),
+                          Text(
+                            location,
+                            style: DetailTypography.caption(context),
+                          ),
                         if (statusLabel != null)
-                          Text(statusLabel,
-                              style: DetailTypography.caption(context)),
+                          Text(
+                            statusLabel,
+                            style: DetailTypography.caption(context),
+                          ),
                         if (hasPoap)
-                          Icon(Icons.confirmation_number_outlined,
-                              size: 14,
-                              color: scheme.onSurface.withValues(alpha: 0.65)),
+                          Icon(
+                            Icons.confirmation_number_outlined,
+                            size: 14,
+                            color: scheme.onSurface.withValues(alpha: 0.65),
+                          ),
                       ],
                     ),
                   ],

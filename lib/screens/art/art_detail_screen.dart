@@ -10,6 +10,8 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/artwork_provenance_section.dart';
+import '../../widgets/detail/subject_action_group.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,8 +42,6 @@ import '../../config/config.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../widgets/common/kubus_reading_surface.dart';
-import '../../widgets/common/marker_attribution_section.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
@@ -342,6 +342,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                       const SizedBox(height: DetailSpacing.cardGap),
                       _buildDescription(artwork),
                       const SizedBox(height: DetailSpacing.cardGap),
+                      ArtworkProvenanceSection(artwork: artwork),
+                      const SizedBox(height: DetailSpacing.cardGap),
                       _buildGallerySection(artwork),
                       if (artwork.galleryUrls.isNotEmpty)
                         const SizedBox(height: DetailSpacing.cardGap),
@@ -462,36 +464,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         tooltip: MaterialLocalizations.of(context).backButtonTooltip,
         icon: const Icon(Icons.arrow_back),
       ),
-      actions: [
-        IconButton(
-          onPressed: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.artwork(
-                artworkId: artwork.id,
-                title: artwork.title,
-              ),
-              sourceScreen: 'art_detail',
-            );
-          },
-          tooltip: AppLocalizations.of(context)!.commonShare,
-          icon: const Icon(Icons.share_outlined),
-        ),
-        Consumer2<ArtworkProvider, SavedItemsProvider>(
-          builder: (context, provider, savedItemsProvider, child) {
-            final l10n = AppLocalizations.of(context)!;
-            final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
-            return IconButton(
-              tooltip: l10n.commonSave,
-              onPressed: () => _toggleSaved(provider, artwork.id),
-              icon: Icon(
-                isSaved ? Icons.bookmark : Icons.bookmark_border,
-                color: isSaved ? scheme.primary : scheme.onSurfaceVariant,
-              ),
-            );
-          },
-        ),
-      ],
     );
   }
 
@@ -621,84 +593,90 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   }
 
   Widget _buildPrimaryActionButtons(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
+    final roles = KubusColorRoles.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    return Consumer2<ArtworkProvider, SavedItemsProvider>(
+      builder: (context, artworkProvider, savedItemsProvider, _) {
+        final isLiked = artwork.isLikedByCurrentUser;
+        final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Consumer<ArtworkProvider>(
-                builder: (context, provider, child) {
-                  final isLiked = artwork.isLikedByCurrentUser;
-                  return DetailActionButton(
-                    icon: isLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    label: isLiked
-                        ? l10n.artworkDetailLiked
-                        : l10n.artworkDetailLike,
-                    isActive: isLiked,
-                    activeColor: scheme.error,
-                    onPressed: () => _toggleArtworkLike(provider, artwork.id),
-                  );
-                },
-              ),
+            SubjectActionGroup(
+              label: l10n.subjectActionsSocialHeading,
+              actions: [
+                SubjectAction(
+                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                  label: l10n.artworkDetailLike,
+                  selectedLabel: l10n.artworkDetailLiked,
+                  isSelected: isLiked,
+                  selectedColor: roles.likeAction,
+                  onPressed: () =>
+                      _toggleArtworkLike(artworkProvider, artwork.id),
+                ),
+                SubjectAction(
+                  icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  label: l10n.commonSave,
+                  selectedLabel: l10n.commonSavedToast,
+                  isSelected: isSaved,
+                  onPressed: () => _toggleSaved(artworkProvider, artwork.id),
+                ),
+                SubjectAction(
+                  icon: _showComments
+                      ? Icons.chat_bubble
+                      : Icons.chat_bubble_outline,
+                  label: l10n.commonComments,
+                  selectedLabel: l10n.artworkDetailHideComments,
+                  isSelected: _showComments,
+                  onPressed: () {
+                    setState(() => _showComments = !_showComments);
+                    if (_showComments) {
+                      artworkProvider.loadComments(widget.artworkId);
+                    }
+                  },
+                ),
+                SubjectAction(
+                  icon: Icons.share_outlined,
+                  label: l10n.commonShare,
+                  onPressed: () => ShareService().showShareSheet(
+                    context,
+                    target: ShareTarget.artwork(
+                      artworkId: artwork.id,
+                      title: artwork.title,
+                    ),
+                    sourceScreen: 'art_detail',
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: DetailSpacing.md),
-            Expanded(
-              child: DetailActionButton(
-                icon: _showComments
-                    ? Icons.chat_bubble_rounded
-                    : Icons.chat_bubble_outline_rounded,
-                label: _showComments
-                    ? l10n.artworkDetailHideComments
-                    : l10n.commonComments,
-                isActive: _showComments,
-                activeColor: scheme.primary,
-                onPressed: () {
-                  setState(() {
-                    _showComments = !_showComments;
-                  });
-                  if (_showComments) {
-                    context.read<ArtworkProvider>().loadComments(
-                          widget.artworkId,
-                        );
-                  }
-                },
+            if (hasLocation) ...[
+              const SizedBox(height: DetailSpacing.md),
+              SubjectActionGroup(
+                label: l10n.subjectActionsSpatialHeading,
+                actions: [
+                  SubjectAction(
+                    icon: Icons.map_outlined,
+                    label: l10n.artDetailShowOnMap,
+                    onPressed: () =>
+                        ArtworkLocationActions.showOnMap(context, artwork),
+                  ),
+                  SubjectAction(
+                    icon: Icons.navigation_outlined,
+                    label: l10n.commonNavigate,
+                    onPressed: () =>
+                        ArtworkLocationActions.showNavigationOptions(
+                      context,
+                      artwork,
+                    ),
+                  ),
+                ],
               ),
-            ),
+            ],
           ],
-        ),
-        if (hasLocation) ...[
-          const SizedBox(height: DetailSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: DetailActionButton(
-              icon: Icons.navigation_rounded,
-              label: l10n.commonNavigate,
-              backgroundColor: scheme.primary,
-              foregroundColor: scheme.onPrimary,
-              onPressed: () => ArtworkLocationActions.showNavigationOptions(
-                context,
-                artwork,
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () =>
-                  ArtworkLocationActions.showOnMap(context, artwork),
-              icon: const Icon(Icons.map_outlined),
-              label: Text(l10n.artDetailShowOnMap),
-            ),
-          ),
-        ],
-      ],
+        );
+      },
     );
   }
 
@@ -869,6 +847,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   Widget _buildDescription(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
+    if (artwork.description.trim().isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -877,18 +856,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           style: DetailTypography.sectionTitle(context),
         ),
         const SizedBox(height: DetailSpacing.md),
-        // Long-form reading content sits on the quiet tonal surface (never
-        // glass) and clamps in place for long curatorial descriptions.
-        KubusReadingSurface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExpandableDetailText(text: artwork.description),
-              // Photo author / licence attribution, below the description.
-              MarkerAttributionSection.fromArtwork(artwork),
-            ],
-          ),
-        ),
+        ExpandableDetailText(text: artwork.description),
       ],
     );
   }
