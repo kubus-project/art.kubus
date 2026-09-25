@@ -120,7 +120,8 @@ void main() {
     expect(signedIn?.requiresSignIn, isFalse);
   });
 
-  test('verified canonical artwork entry preserves localized path and query', () {
+  test('verified canonical artwork entry preserves localized path and query',
+      () {
     const pending = ShareDeepLinkTarget(
       type: ShareEntityType.artwork,
       id: 'art-42',
@@ -133,11 +134,32 @@ void main() {
     );
 
     expect(decision?.internalRoutePath, '/a/art-42');
-    expect(decision?.browserRoutePath,
-        '/sl/umetnine/art-42?ref=search#details');
+    expect(
+        decision?.browserRoutePath, '/sl/umetnine/art-42?ref=search#details');
   });
 
-  test('mismatched localized URI cannot replace the internal route identity', () {
+  test(
+      'localized canonical entry preserves query and fragment for the exact target',
+      () {
+    const parser = ShareDeepLinkParser();
+    final initialUri = Uri.parse(
+      'https://app.kubus.site/sl/dogodki/event-42?source=qr#venue',
+    );
+    final pending = parser.parse(initialUri);
+    final decision = router.decide(
+      pending: pending,
+      hasValidSession: false,
+      initialUri: initialUri,
+    );
+
+    expect(pending?.type, ShareEntityType.event);
+    expect(pending?.id, 'event-42');
+    expect(pending?.localeCode, 'sl');
+    expect(decision?.browserRoutePath, '/sl/dogodki/event-42?source=qr#venue');
+  });
+
+  test('mismatched localized URI cannot replace the internal route identity',
+      () {
     const pending = ShareDeepLinkTarget(
       type: ShareEntityType.artwork,
       id: 'art-42',

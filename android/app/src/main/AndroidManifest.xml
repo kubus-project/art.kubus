@@ -104,6 +104,24 @@
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/exhibitions/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/x/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/n/" />
+
+                <!-- Localized canonical public entity routes. Keep these finite: the app does not claim the site's root, static assets, or internal endpoints. -->
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/artworks/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/umetnine/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/profiles/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/profili/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/events/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/dogodki/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/exhibitions/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/razstave/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/posts/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/objave/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/collections/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zbirke/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/collectibles/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zbirateljski-predmeti/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/map/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zemljevid/" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
