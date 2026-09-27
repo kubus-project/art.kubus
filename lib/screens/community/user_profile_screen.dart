@@ -761,6 +761,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ProfileArtistInfoFields(
               fieldOfWork: user!.fieldOfWork,
               yearsActive: user!.yearsActive,
+              textAlign: TextAlign.start,
             ),
             const SizedBox(height: KubusSpacing.xs),
             Text(

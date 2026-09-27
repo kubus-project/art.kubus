@@ -69,8 +69,15 @@ class ProfileArtistInfoFields extends StatelessWidget {
       );
     }
 
+    // Rows follow the text alignment so start-aligned About blocks do not
+    // centre the shorter line.
+    final crossAxis =
+        textAlign == TextAlign.start || textAlign == TextAlign.left
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center;
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: crossAxis,
       children: [
         if (showField)
           row(
