@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../providers/themeprovider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/collab_provider.dart';
@@ -40,7 +39,6 @@ import 'community/desktop_profile_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
-import '../../widgets/glass_components.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import 'components/desktop_notifications_panel.dart';
@@ -87,6 +85,10 @@ class _DesktopShellState extends State<DesktopShell>
   static const String _web3EntryRoute = '/web3';
   late String _activeRoute;
   bool _isNavigationExpanded = true;
+
+  /// Set once the viewer explicitly expands the rail below the large
+  /// breakpoint, so the automatic narrow-width collapse never fights them.
+  bool _userExpandedNarrowRail = false;
   late AnimationController _navExpandController;
   late Animation<double> _navExpandAnimation;
 
@@ -277,9 +279,12 @@ class _DesktopShellState extends State<DesktopShell>
     _syncRefreshVisibility();
   }
 
-  void _toggleNavigation() {
+  void _toggleNavigation({bool userInitiated = false}) {
     setState(() {
       _isNavigationExpanded = !_isNavigationExpanded;
+      if (userInitiated && !DesktopBreakpoints.isLarge(context)) {
+        _userExpandedNarrowRail = _isNavigationExpanded;
+      }
     });
     if (_isNavigationExpanded) {
       _navExpandController.forward();
@@ -625,7 +630,9 @@ class _DesktopShellState extends State<DesktopShell>
     }
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
-    final activeAccent = _activeScreenAccent(context, route: effectiveRoute);
+    // Navigation selection uses the family active role on every route; data
+    // and feature colours stay inside their own screens.
+    final activeAccent = KubusColorRoles.of(context).active;
     final isProfileSelected =
         _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
     final isNotificationsSelected =
@@ -638,7 +645,6 @@ class _DesktopShellState extends State<DesktopShell>
     final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);
     final isExpanded = DesktopBreakpoints.isExpanded(context);
-    final theme = Theme.of(context);
     const functionsPanelWidthLarge = 380.0;
     const functionsPanelWidthExpanded = 320.0;
     const functionsPanelWidthMedium = 300.0;
@@ -691,8 +697,10 @@ class _DesktopShellState extends State<DesktopShell>
       );
     }
 
-    // Auto-collapse navigation on medium screens
-    if (!isLarge && _isNavigationExpanded && !isExpanded) {
+    // Below the large breakpoint (900–1199 px) an expanded 180 px rail
+    // squeezes both its own labels and the content column, so the rail
+    // starts collapsed there unless the viewer explicitly expanded it.
+    if (!isLarge && _isNavigationExpanded && !_userExpandedNarrowRail) {
       if (!_pendingNavCollapse) {
         _pendingNavCollapse = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -761,83 +769,55 @@ class _DesktopShellState extends State<DesktopShell>
                                       (expandedWidth - collapsedWidth) *
                                           _navExpandAnimation.value;
 
-                                  final scheme = theme.colorScheme;
-                                  final glassTint = (Color.lerp(
-                                            theme.brightness == Brightness.dark
-                                                ? Colors.black
-                                                : Colors.white,
-                                            activeAccent,
-                                            theme.brightness == Brightness.dark
-                                                ? 0.18
-                                                : 0.10,
-                                          ) ??
-                                          scheme.surface)
-                                      .withValues(
-                                    alpha: theme.brightness == Brightness.dark
-                                        ? 0.24
-                                        : 0.28,
-                                  );
+                                  final roles = KubusColorRoles.of(context);
 
-                                  return ClipRRect(
+                                  return ClipRect(
                                     child: Container(
                                       width: currentWidth,
                                       decoration: BoxDecoration(
+                                        color: roles.surface,
                                         border: Border(
                                           right: BorderSide(
-                                            color: theme.brightness ==
-                                                    Brightness.dark
-                                                ? Colors.white
-                                                    .withValues(alpha: 0.06)
-                                                : scheme.outline
-                                                    .withValues(alpha: 0.15),
-                                            width: 1,
+                                            color: roles.rule,
+                                            width: KubusSizes.hairline,
                                           ),
                                         ),
                                       ),
-                                      child: LiquidGlassPanel(
-                                        padding: EdgeInsets.zero,
-                                        margin: EdgeInsets.zero,
-                                        borderRadius: BorderRadius.zero,
-                                        blurSigma:
-                                            KubusGlassEffects.blurSigmaLight,
-                                        showBorder: false,
-                                        backgroundColor: glassTint,
-                                        child: RepaintBoundary(
-                                          child: DesktopNavigation(
-                                            items: navItems,
-                                            activeAccent: activeAccent,
-                                            selectedIndex: selectedIndex < 0
-                                                ? 0
-                                                : selectedIndex,
-                                            onItemSelected: (index) =>
-                                                _onNavItemSelected(index,
-                                                    navItems, isSignedIn),
-                                            isExpanded: _isNavigationExpanded,
-                                            expandAnimation:
-                                                _navExpandAnimation,
-                                            onToggleExpand: _toggleNavigation,
-                                            isProfileSelected:
-                                                isProfileSelected,
-                                            isNotificationsSelected:
-                                                isNotificationsSelected,
-                                            isSettingsSelected:
-                                                isSettingsSelected,
-                                            isCollabInvitesSelected:
-                                                isCollabInvitesSelected,
-                                            onProfileTap: () =>
-                                                _showProfileMenu(context),
-                                            onSettingsTap: () =>
-                                                _showSettingsScreen(context),
-                                            onNotificationsTap: () => unawaited(
-                                                _toggleNotificationsPanel()),
-                                            onWalletTap: () =>
-                                                _handleWalletTap(isSignedIn),
-                                            onCollabInvitesTap: isSignedIn &&
-                                                    AppConfig.isFeatureEnabled(
-                                                        'collabInvites')
-                                                ? () => _showCollabInvites()
-                                                : null,
-                                          ),
+                                      child: RepaintBoundary(
+                                        child: DesktopNavigation(
+                                          items: navItems,
+                                          activeAccent: activeAccent,
+                                          selectedIndex: selectedIndex < 0
+                                              ? 0
+                                              : selectedIndex,
+                                          onItemSelected: (index) =>
+                                              _onNavItemSelected(
+                                                  index, navItems, isSignedIn),
+                                          isExpanded: _isNavigationExpanded,
+                                          expandAnimation: _navExpandAnimation,
+                                          onToggleExpand: () =>
+                                              _toggleNavigation(
+                                                  userInitiated: true),
+                                          isProfileSelected: isProfileSelected,
+                                          isNotificationsSelected:
+                                              isNotificationsSelected,
+                                          isSettingsSelected:
+                                              isSettingsSelected,
+                                          isCollabInvitesSelected:
+                                              isCollabInvitesSelected,
+                                          onProfileTap: () =>
+                                              _showProfileMenu(context),
+                                          onSettingsTap: () =>
+                                              _showSettingsScreen(context),
+                                          onNotificationsTap: () => unawaited(
+                                              _toggleNotificationsPanel()),
+                                          onWalletTap: () =>
+                                              _handleWalletTap(isSignedIn),
+                                          onCollabInvitesTap: isSignedIn &&
+                                                  AppConfig.isFeatureEnabled(
+                                                      'collabInvites')
+                                              ? () => _showCollabInvites()
+                                              : null,
                                         ),
                                       ),
                                     ),
@@ -1081,35 +1061,6 @@ class _DesktopShellState extends State<DesktopShell>
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const DesktopSettingsScreen()),
-    );
-  }
-
-  Color _activeScreenAccent(BuildContext context, {String? route}) {
-    final themeProvider = context.read<ThemeProvider>();
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-
-    if (_screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen) {
-      return roles.screenAccentForKey(
-        'settings',
-        scheme,
-        appAccent: themeProvider.accentColor,
-      );
-    }
-
-    final resolvedRoute = route ?? _activeRoute;
-    if (resolvedRoute == _web3EntryRoute) {
-      return roles.screenAccentForKey(
-        'home',
-        scheme,
-        appAccent: themeProvider.accentColor,
-      );
-    }
-
-    return roles.screenAccentForRoute(
-      resolvedRoute,
-      scheme,
-      appAccent: themeProvider.accentColor,
     );
   }
 

@@ -201,6 +201,9 @@ class KubusButton extends StatelessWidget {
           return Colors.transparent;
         }),
         shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+        // Core actions keep a 44 px minimum target on every platform.
+        minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+        tapTargetSize: MaterialTapTargetSize.padded,
         padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
           horizontal: KubusSpacing.lg,
           vertical: KubusSpacing.md,

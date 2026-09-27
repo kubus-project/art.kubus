@@ -45,6 +45,11 @@ class ContextualAuthGate {
   /// [actionLabel] is the human verb used for the generic fallback headline and
   /// for accessibility. Supply [actionType], [targetType] and [targetId]
   /// together to capture a replayable intent; omit them for privileged actions.
+  ///
+  /// [onAuthJourneyStarted] runs only when the visitor actually continues into
+  /// sign-in or onboarding (never when they dismiss the surface), so a caller
+  /// can remember a non-replayable surface, such as a composer, to reopen
+  /// once the account exists.
   Future<bool> ensureAuthenticated(
     BuildContext context, {
     required String actionLabel,
@@ -58,6 +63,7 @@ class ContextualAuthGate {
     Map<String, String> returnArguments = const <String, String>{},
     ProtectedActionRequirements requirements =
         ProtectedActionRequirements.participant,
+    VoidCallback? onAuthJourneyStarted,
   }) async {
     final missingStep = _missingCapabilityStep(context, requirements);
     if (missingStep == null) return true;
@@ -114,6 +120,7 @@ class ContextualAuthGate {
     // resumes exactly that structured step. It is not an acquisition case, so
     // never show Google/email/wallet choices again.
     if (BackendApiService().hasAuthSession) {
+      onAuthJourneyStarted?.call();
       await _openOnboarding(
         context,
         initialStepId: missingStep,
@@ -164,6 +171,8 @@ class ContextualAuthGate {
         targetType: targetKey,
       ),
     );
+
+    onAuthJourneyStarted?.call();
 
     // The same validation the intent gets. Without it an unsafe route that
     // `_buildIntent` already rejected would still reach the navigator.

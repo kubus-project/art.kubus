@@ -36,7 +36,6 @@ import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/detail/shared_section_widgets.dart';
 import '../widgets/detail/shared_settings_widgets.dart';
 import 'onboarding/onboarding_flow_screen.dart';
-import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
 import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
@@ -51,7 +50,6 @@ import '../utils/wallet_backup_status.dart';
 import '../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
-import '../config/api_keys.dart';
 
 part 'settings_screen_parts/settings_screen_p1.dart';
 part 'settings_screen_parts/settings_screen_p2.dart';
@@ -182,25 +180,33 @@ class _SettingsScreenState extends State<SettingsScreen>
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
                           if (isSignedIn) ...[
+                            _buildSettingsGroupHeading(
+                                l10n.settingsGroupAccount),
                             _buildUserSection(l10n),
-                            const SizedBox(height: 32),
-                          ],
-                          _buildThemeSection(l10n),
-                          const SizedBox(height: 24),
-                          _buildLanguageSection(l10n),
-                          const SizedBox(height: 24),
-                          if (isSignedIn) ...[
-                            _buildPlatformCapabilitiesSection(l10n),
                             const SizedBox(height: 24),
                             _buildProfileSection(l10n),
                             const SizedBox(height: 24),
-                            _buildWalletSection(l10n),
-                            const SizedBox(height: 24),
                             _buildSecuritySection(l10n),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 40),
                           ],
-                          _buildPrivacySection(l10n),
+                          _buildSettingsGroupHeading(
+                              l10n.settingsGroupExperience),
+                          _buildThemeSection(l10n),
                           const SizedBox(height: 24),
+                          _buildLanguageSection(l10n),
+                          const SizedBox(height: 40),
+                          // Analytics consent applies with or without an
+                          // account, so it is always reachable.
+                          _buildPrivacySection(l10n),
+                          const SizedBox(height: 40),
+                          if (isSignedIn) ...[
+                            _buildSettingsGroupHeading(
+                                l10n.settingsGroupInfrastructure),
+                            _buildPlatformCapabilitiesSection(l10n),
+                            const SizedBox(height: 24),
+                            _buildWalletSection(l10n),
+                            const SizedBox(height: 40),
+                          ],
                           _buildAboutSection(l10n),
                           const SizedBox(height: 24),
                           if (isSignedIn) _buildDangerZone(l10n),

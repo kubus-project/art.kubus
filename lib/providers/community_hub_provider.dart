@@ -517,6 +517,33 @@ class CommunityHubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  CommunityComposeIntent? _pendingComposeIntent;
+  DateTime? _pendingComposeIntentAt;
+
+  /// Remember which creation surface a guest asked for before they went
+  /// through sign-in, so Community can reopen it once they are signed in.
+  void rememberComposeIntentForAuth(CommunityComposeIntent intent) {
+    _pendingComposeIntent = intent;
+    _pendingComposeIntentAt = DateTime.now();
+  }
+
+  /// Returns and clears a remembered creation surface. Intents older than
+  /// [maxAge] are dropped so an abandoned sign-in never opens a composer
+  /// much later.
+  CommunityComposeIntent? takeComposeIntent({
+    Duration maxAge = const Duration(minutes: 30),
+  }) {
+    final intent = _pendingComposeIntent;
+    final at = _pendingComposeIntentAt;
+    _pendingComposeIntent = null;
+    _pendingComposeIntentAt = null;
+    if (intent == null || at == null) return null;
+    if (DateTime.now().difference(at) >= maxAge) return null;
+    return intent;
+  }
+
+  bool get hasPendingComposeIntent => _pendingComposeIntent != null;
+
   /// Request that a community composer opens (mobile sheet or desktop inline),
   /// optionally pre-seeded with a linked subject.
   void requestComposerOpen({
@@ -556,3 +583,6 @@ class CommunityHubProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+/// Creation surfaces in Community that a guest can request before signing in.
+enum CommunityComposeIntent { post, groupPost, artDrop, review, createGroup }

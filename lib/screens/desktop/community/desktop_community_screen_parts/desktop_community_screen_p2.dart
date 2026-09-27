@@ -109,13 +109,8 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
 
   Widget _buildTabBar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.md);
+    final roles = KubusColorRoles.of(context);
+    final radius = BorderRadius.circular(KubusRadius.surface);
     final icons = <String, IconData>{
       'discover': Icons.explore_outlined,
       'following': Icons.people_alt_outlined,
@@ -123,77 +118,55 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
       'art': Icons.palette_outlined,
     };
 
+    // Flat segmented control matching mobile: neutral surface and hairline,
+    // restrained active tint plus bold label for the selected tab.
     return Container(
       clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(KubusSpacing.xxs),
       decoration: BoxDecoration(
+        color: roles.surface,
         borderRadius: radius,
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.20),
-          width: KubusSizes.hairline,
-        ),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
-      child: LiquidGlassCard(
-        margin: EdgeInsets.zero,
-        padding: const EdgeInsets.all(KubusSpacing.xs),
-        borderRadius: radius,
-        blurSigma: panelStyle.blurSigma,
-        fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: panelStyle.tintColor,
-        child: TabBar(
-          controller: _tabController,
-          isScrollable: false,
-          tabAlignment: TabAlignment.fill,
-          labelColor: scheme.onSurface,
-          unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.68),
-          labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-          unselectedLabelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-          indicator: BoxDecoration(
-            color: themeProvider.accentColor.withValues(
-              alpha: themeProvider.isDarkMode ? 0.28 : 0.18,
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            border: Border.all(
-              color: themeProvider.accentColor.withValues(alpha: 0.32),
-              width: KubusSizes.hairline,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: themeProvider.accentColor.withValues(alpha: 0.14),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.all(KubusSpacing.xxs),
-          dividerColor: Colors.transparent,
-          overlayColor: WidgetStateProperty.all(Colors.transparent),
-          splashFactory: NoSplash.splashFactory,
-          padding: EdgeInsets.zero,
-          labelPadding: EdgeInsets.zero,
-          tabs: _tabs
-              .map(
-                (tab) => Tab(
-                  height: 64,
-                  iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
-                  icon: Icon(
-                    icons[tab] ?? Icons.circle_outlined,
-                    size: KubusHeaderMetrics.actionIcon,
-                  ),
-                  child: Text(
-                    _tabLabel(l10n, tab),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              )
-              .toList(),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: false,
+        tabAlignment: TabAlignment.fill,
+        labelColor: roles.foreground,
+        unselectedLabelColor: roles.foregroundMuted,
+        labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
         ),
+        unselectedLabelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        indicator: BoxDecoration(
+          color: roles.active.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(KubusRadius.control + 2),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        splashFactory: NoSplash.splashFactory,
+        padding: EdgeInsets.zero,
+        labelPadding: EdgeInsets.zero,
+        tabs: _tabs
+            .map(
+              (tab) => Tab(
+                height: 56,
+                iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
+                icon: Icon(
+                  icons[tab] ?? Icons.circle_outlined,
+                  size: KubusHeaderMetrics.actionIcon,
+                ),
+                child: Text(
+                  _tabLabel(l10n, tab),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -805,8 +778,8 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             label: l10n.desktopCommunityCreateOptionCreateGroup,
             onTap: () {
               _applyState(() => _isFabExpanded = false);
-              _showCreateGroupDialog(
-                  Provider.of<ThemeProvider>(context, listen: false));
+              unawaited(_requestCreateGroup(
+                  Provider.of<ThemeProvider>(context, listen: false)));
             },
           ),
           CommunityFabOption(
@@ -962,7 +935,8 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
-                        onPressed: () => _showCreateGroupDialog(themeProvider),
+                        onPressed: () =>
+                            unawaited(_requestCreateGroup(themeProvider)),
                         icon: const Icon(Icons.add),
                         label: Text(l10n.commonCreate),
                         style: ElevatedButton.styleFrom(
@@ -986,6 +960,36 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
         );
       },
     );
+  }
+
+  /// Guests meet the contextual account surface before the group form; when
+  /// they continue into sign-in the request is remembered and reopened by
+  /// `CommunityComposeIntentResumer`.
+  Future<void> _requestCreateGroup(ThemeProvider themeProvider) async {
+    final hub = context.read<CommunityHubProvider>();
+    final allowed = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.communityCreateGroupAuthAction,
+      returnRoute: '/community',
+      sourceScreen: 'desktop_community_screen',
+      onAuthJourneyStarted: () =>
+          hub.rememberComposeIntentForAuth(CommunityComposeIntent.createGroup),
+    );
+    if (!allowed || !mounted) return;
+    await _showCreateGroupDialog(themeProvider);
+  }
+
+  /// Reopens the creation surface a guest requested before signing in
+  /// (delivered by `CommunityComposeIntentResumer`).
+  void _resumeComposeIntent(CommunityComposeIntent intent) {
+    if (intent == CommunityComposeIntent.createGroup) {
+      unawaited(_requestCreateGroup(
+        Provider.of<ThemeProvider>(context, listen: false),
+      ));
+      return;
+    }
+    // The inline composer keeps any draft still held by this screen.
+    _applyState(() => _isComposerExpanded = true);
   }
 
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {

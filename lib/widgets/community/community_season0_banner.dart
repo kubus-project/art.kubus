@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 
 enum CommunitySeason0BannerVariant {
   mobile,
@@ -25,98 +26,73 @@ class CommunitySeason0Banner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final isMobile = variant == CommunitySeason0BannerVariant.mobile;
-    final content = GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: isMobile ? KubusSpacing.md : KubusSpacing.md,
-        ),
-        padding: EdgeInsets.all(isMobile ? KubusSpacing.md : KubusSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              accentColor.withValues(alpha: isMobile ? 0.15 : 0.12),
-              scheme.primaryContainer.withValues(alpha: isMobile ? 0.4 : 0.3),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: isMobile
-              ? KubusRadius.circular(KubusRadius.md)
-              : BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color: accentColor.withValues(alpha: isMobile ? 0.3 : 0.25),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: isMobile ? 40 : 48,
-              height: isMobile ? 40 : 48,
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: isMobile ? 0.18 : 0.15),
-                borderRadius: isMobile
-                    ? KubusRadius.circular(KubusRadius.sm)
-                    : BorderRadius.circular(KubusRadius.md),
-              ),
-              child: Icon(
-                Icons.rocket_launch_outlined,
-                color: accentColor,
-                size: isMobile ? 22 : 26,
-              ),
+    final radius = BorderRadius.circular(KubusRadius.surface);
+    // A flat, tappable programme notice: surface + hairline, no gradient or
+    // tinted icon tile. [accentColor] stays in the API for callers but no
+    // longer paints structural chrome.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: Semantics(
+        button: true,
+        label: '$title. $subtitle',
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: Material(
+            color: roles.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
             ),
-            SizedBox(width: isMobile ? 12 : 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: isMobile
-                        ? KubusTypography.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          )
-                        : KubusTextStyles.sectionTitle.copyWith(
-                            fontSize: KubusChromeMetrics.navLabel + 1,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              focusColor: roles.focus.withValues(alpha: 0.16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.md),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.rocket_launch_outlined,
+                        color: roles.foregroundMuted,
+                        size: 22,
+                      ),
+                      const SizedBox(width: KubusSpacing.sm + 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: (isMobile
+                                      ? KubusTypography.textTheme.bodyMedium
+                                      : KubusTypography.textTheme.bodyLarge)
+                                  ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: roles.foreground,
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.xxs),
+                            Text(
+                              subtitle,
+                              style: KubusTypography.textTheme.bodySmall
+                                  ?.copyWith(color: roles.foregroundMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: roles.foregroundSubtle),
+                    ],
                   ),
-                  SizedBox(
-                      height:
-                          isMobile ? KubusSpacing.xxs : KubusSpacing.xs - 1),
-                  Text(
-                    subtitle,
-                    style: isMobile
-                        ? KubusTypography.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.65),
-                          )
-                        : KubusTextStyles.navMetaLabel.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                  ),
-                ],
+                ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: scheme.onSurface.withValues(alpha: isMobile ? 0.4 : 0.35),
-            ),
-          ],
+          ),
         ),
       ),
-    );
-
-    if (isMobile) {
-      return content;
-    }
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: content,
     );
   }
 }

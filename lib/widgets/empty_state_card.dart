@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/themeprovider.dart';
 import '../utils/design_tokens.dart';
-import 'glass_components.dart';
+import '../utils/kubus_color_roles.dart';
+import 'kubus_button.dart';
+
+/// Flat PRODUCT v5 empty/error state: a surface with a hairline rule, a
+/// subtle icon, a title, one sentence of guidance and — only when the viewer
+/// can actually perform it — one secondary next-step action. Never glass.
 
 class EmptyStateCard extends StatelessWidget {
   final IconData icon;
@@ -26,13 +29,8 @@ class EmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(KubusRadius.lg);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final roles = KubusColorRoles.of(context);
+    final radius = BorderRadius.circular(KubusRadius.surface);
     final resolvedSemanticsLabel = semanticsLabel ?? '$title. $description';
 
     return LayoutBuilder(
@@ -51,18 +49,14 @@ class EmptyStateCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(
-                  icon,
-                  size: 48,
-                  color: scheme.onSurface.withAlpha((0.32 * 255).round()),
-                ),
+                Icon(icon, size: 32, color: roles.foregroundSubtle),
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
                   title,
                   textAlign: TextAlign.center,
                   style: KubusTextStyles.sectionTitle.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                    color: roles.foreground,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
@@ -70,15 +64,16 @@ class EmptyStateCard extends StatelessWidget {
                   description,
                   textAlign: TextAlign.center,
                   style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface.withAlpha((0.6 * 255).round()),
+                    color: roles.foregroundMuted,
+                    height: 1.4,
                   ),
                 ),
                 if (showAction && onAction != null && actionLabel != null) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  TextButton(
+                  const SizedBox(height: KubusSpacing.md),
+                  KubusButton(
                     onPressed: onAction,
-                    style: TextButton.styleFrom(foregroundColor: accent),
-                    child: Text(actionLabel!),
+                    label: actionLabel!,
+                    variant: KubusButtonVariant.secondary,
                   ),
                 ],
               ],
@@ -87,9 +82,19 @@ class EmptyStateCard extends StatelessWidget {
         );
 
         if (hasBoundedWidth || hasBoundedHeight) {
+          // The surface below adds padding and a hairline; size the content
+          // to what remains so a fixed-height slot never overflows.
+          const horizontalInset = KubusSpacing.md * 2 + KubusSizes.hairline * 2;
+          const verticalInset = KubusSpacing.lg * 2 + KubusSizes.hairline * 2;
           content = SizedBox(
-            width: hasBoundedWidth ? constraints.maxWidth : null,
-            height: hasBoundedHeight ? constraints.maxHeight : null,
+            width: hasBoundedWidth
+                ? (constraints.maxWidth - horizontalInset)
+                    .clamp(0.0, double.infinity)
+                : null,
+            height: hasBoundedHeight
+                ? (constraints.maxHeight - verticalInset)
+                    .clamp(0.0, double.infinity)
+                : null,
             child: content,
           );
         }
@@ -101,23 +106,19 @@ class EmptyStateCard extends StatelessWidget {
           label: resolvedSemanticsLabel,
           child: Container(
             width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              vertical: KubusSpacing.lg,
+              horizontal: KubusSpacing.md,
+            ),
             decoration: BoxDecoration(
+              color: roles.surface,
               borderRadius: radius,
               border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.14),
+                color: roles.rule,
+                width: KubusSizes.hairline,
               ),
             ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(
-                vertical: KubusSpacing.lg,
-                horizontal: KubusSpacing.md,
-              ),
-              margin: EdgeInsets.zero,
-              borderRadius: radius,
-              showBorder: false,
-              backgroundColor: glassTint,
-              child: content,
-            ),
+            child: content,
           ),
         );
       },
