@@ -347,26 +347,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.md,
                         ),
-                        // Identity -> relationship actions -> statistics.
-                        // Actions sit directly under the identity and ahead of
-                        // stats so statistics never dominate the first viewport.
+                        // Identity -> relationship actions -> work. Numbers
+                        // come after the work (same hierarchy as the mobile
+                        // profile), so statistics never lead the page.
                         _buildActionButtons(
                           themeProvider,
                           l10n,
                           isCommunityOverlay: isCommunityOverlay,
                         ),
-                        SizedBox(
-                          height: isCommunityOverlay
-                              ? KubusSpacing.sm + KubusSpacing.xs
-                              : KubusSpacing.md,
-                        ),
-                        if (!isCanonicalPublicEntry)
-                          _buildStatsCards(
-                            themeProvider,
-                            isLarge,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.sm + KubusSpacing.xs
@@ -398,9 +386,24 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             isCanonicalPublicEntry: false,
                             l10n: l10n,
                           ),
-                        if (isCanonicalPublicEntry) ...[
+                        const SizedBox(height: KubusSpacing.lg),
+                        if (isCanonicalPublicEntry)
+                          _buildStatsCards(themeProvider, isLarge, l10n)
+                        else
+                          _buildStatsCards(
+                            themeProvider,
+                            isLarge,
+                            l10n,
+                            isCommunityOverlay: isCommunityOverlay,
+                          ),
+                        // Non-canonical single column: achievements follow
+                        // the numbers, as on mobile. The wide layout keeps
+                        // them in its side column.
+                        if (!isCanonicalPublicEntry &&
+                            !isLarge &&
+                            (user?.showAchievements ?? true)) ...[
                           const SizedBox(height: KubusSpacing.lg),
-                          _buildStatsCards(themeProvider, isLarge, l10n),
+                          _buildAchievementsSection(themeProvider, l10n),
                         ],
                         const SizedBox(height: KubusSpacing.lg),
                       ],
@@ -420,7 +423,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  /// Two-column layout for wide desktop screens (>=1400px)
+  /// Two-column layout for wide desktop screens (>=1400px). Work reads
+  /// first; achievements sit in a trailing side column.
   Widget _buildTwoColumnLayout({
     required ThemeProvider themeProvider,
     required bool isArtist,
@@ -428,56 +432,50 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required AppLocalizations l10n,
   }) {
     final showAchievements = user?.showAchievements ?? true;
-
-    if (!showAchievements) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAddedPublicArtSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-          if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider, l10n),
-            const SizedBox(height: KubusSpacing.md),
-            _buildArtistCollectionsSection(themeProvider, l10n),
-            const SizedBox(height: KubusSpacing.md),
-          ] else if (isInstitution) ...[
-            _buildInstitutionHighlightsSection(themeProvider, l10n),
-            const SizedBox(height: KubusSpacing.md),
-          ],
-          _buildPostsSection(themeProvider, l10n),
-        ],
-      );
-    }
+    final work = _buildWorkSections(
+      themeProvider: themeProvider,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+      l10n: l10n,
+    );
+    if (!showAchievements) return work;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left column: Achievements (narrower)
+        Expanded(child: work),
+        const SizedBox(width: KubusSpacing.lg),
         SizedBox(
           width: 380,
           child: _buildAchievementsSection(themeProvider, l10n),
         ),
-        const SizedBox(width: KubusSpacing.lg),
-        // Right column: Content sections + Posts (wider)
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAddedPublicArtSection(themeProvider, l10n),
-              const SizedBox(height: KubusSpacing.md),
-              if (isArtist) ...[
-                _buildArtistPortfolioSection(themeProvider, l10n),
-                const SizedBox(height: KubusSpacing.md),
-                _buildArtistCollectionsSection(themeProvider, l10n),
-                const SizedBox(height: KubusSpacing.md),
-              ] else if (isInstitution) ...[
-                _buildInstitutionHighlightsSection(themeProvider, l10n),
-                const SizedBox(height: KubusSpacing.md),
-              ],
-              _buildPostsSection(themeProvider, l10n),
-            ],
-          ),
-        ),
+      ],
+    );
+  }
+
+  /// Non-canonical content order shared by both desktop layouts and the
+  /// mobile profile: practice/works, public art, then community posts.
+  Widget _buildWorkSections({
+    required ThemeProvider themeProvider,
+    required bool isArtist,
+    required bool isInstitution,
+    required AppLocalizations l10n,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isArtist) ...[
+          _buildArtistPortfolioSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+          _buildArtistCollectionsSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+        ] else if (isInstitution) ...[
+          _buildInstitutionHighlightsSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+        ],
+        _buildAddedPublicArtSection(themeProvider, l10n),
+        const SizedBox(height: KubusSpacing.md),
+        _buildPostsSection(themeProvider, l10n),
       ],
     );
   }
@@ -490,15 +488,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required bool isCanonicalPublicEntry,
     required AppLocalizations l10n,
   }) {
+    if (!isCanonicalPublicEntry) {
+      return _buildWorkSections(
+        themeProvider: themeProvider,
+        isArtist: isArtist,
+        isInstitution: isInstitution,
+        l10n: l10n,
+      );
+    }
     final showAchievements = user?.showAchievements ?? true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!isCanonicalPublicEntry) ...[
-          _buildAddedPublicArtSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ],
         if (isArtist) ...[
           _buildArtistPortfolioSection(themeProvider, l10n),
           const SizedBox(height: KubusSpacing.md),

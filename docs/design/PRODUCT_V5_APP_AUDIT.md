@@ -237,7 +237,7 @@ redesigned; the only change to a 4A component is a regression fix
 | Web3 onboarding carousels (Artist Studio, Institution Hub, Marketplace, DAO — mobile and desktop) | Full-bleed cyan/orange gradient pages, slide/overshoot animation | Flat page body (`Web3OnboardingPageBody`), structural label without trailing colon, text step count + neutral dots (reduced motion), secondary Back / primary Next | P2 |
 | Artist Studio / Institution Hub locked + role-blocked states | Tinted circle icon, raw OutlinedButton; 7 px bottom overflow on phones (baseline too) | `EmptyStateCard` in a scrollable centred slot; one secondary action (apply for review) | P1 (overflow) |
 | Achievements | Glass header, four tinted stat tiles with watermark icons, tinted card grid; stat labelled "Contribution recognition" while showing KUB8 on desktop; "+0 KUB8" on unlocked achievements without a reward | Progress line + meter, four plain counts, one readable list (title, description, progress meter, machine progress); KUB8 stat labelled "KUB8 earned from achievements" and sourced from the backend summary; unlocked without reward = "Unlocked" | P1 (truthfulness) |
-| Mobile public profile (non-canonical path) | Accent-gradient cover slab, glass About card, numbers before work | Flat cover band, left-aligned About (practice fields start-aligned too), practice/works → programme → public art → posts → numbers → achievements | P2 |
+| Public profile (non-canonical path, mobile + desktop) | Mobile: accent-gradient cover slab, glass About card, numbers before work. Desktop: stats cards above the work, achievements leading the wide layout | Flat cover band, left-aligned About (practice fields start-aligned too), practice/works → programme → public art → posts → numbers → achievements. Desktop follows the same order (stats after the work; wide layout keeps achievements in a trailing side column); desktop surfaces are not yet flattened (4C) | P2 |
 | `EmptyStateCard` sizing | Stretched to full screen height under `Center` | Fills only tight (fixed-height) slots | P2 |
 
 Economic truthfulness in 4B: no KUB8 was added to artwork, discovery,
@@ -286,7 +286,8 @@ Android: pinned comment composer above the keyboard, TalkBack on Like
 - 4C (optional, final split of Wave 4): wallet overview internals,
   marketplace listing grid and detail, promotion builder sheet, DAO hub
   internals, Artist Studio dashboard and Institution Hub tools after
-  onboarding, desktop public profile parity, profile edit and shared form
+  onboarding, desktop public profile visual flattening (section order
+  already matches mobile), profile edit and shared form
   language, loading skeleton / error taxonomy, Home quick-action and stat
   tiles, following/followers lists, collaboration inbox, profile section
   insets (highlight/works sections add a second 24 px inset on the
