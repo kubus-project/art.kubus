@@ -1,7 +1,7 @@
 {
   "note": "Curated Wave 4B pairs from deterministic widget-test captures with real fonts and local fixtures (no network writes, no analytics). before = dev@8fdcc750, after = feat/product-v5-wave4b working tree.",
   "beforeCommit": "8fdcc75010e777e8c7dfafbcb336afead292a02a",
-  "afterCommit": "8fdcc75010e777e8c7dfafbcb336afead292a02a + uncommitted feat/product-v5-wave4b changes (captured before the branch commits; code identical to the PR head except later profile/doc edits, recaptured for the profile pairs)",
+  "afterCommit": "feat/product-v5-wave4b working tree (reports record the commit they ran on and whether the tree was dirty; see per-folder report.json)",
   "captures": [
     {
       "screen": "search-results-narrow-light-sl",
@@ -255,7 +255,7 @@
       "locale": "en",
       "theme": "light",
       "textScale": 1.0,
-      "reason": "institution onboarding desktop",
+      "reason": "institution onboarding over the production DesktopInstitutionHubScreen",
       "path": "before-institution-hub-desktop-light-en.png",
       "renderErrors": [],
       "label": "before",
@@ -267,8 +267,56 @@
       "locale": "en",
       "theme": "light",
       "textScale": 1.0,
-      "reason": "institution onboarding desktop",
+      "reason": "institution onboarding over the production DesktopInstitutionHubScreen",
       "path": "after-institution-hub-desktop-light-en.png",
+      "renderErrors": [],
+      "label": "after",
+      "source": "test/qa/product_v5_wave4b_visual_matrix_test.dart"
+    },
+    {
+      "screen": "institution-hub-desktop-dashboard-light-en",
+      "viewport": "1440.0x900.0",
+      "locale": "en",
+      "theme": "light",
+      "textScale": 1.0,
+      "reason": "desktop institution split layout past onboarding: flat locked state; dashboard chrome is 4C",
+      "path": "before-institution-hub-desktop-dashboard-light-en.png",
+      "renderErrors": [],
+      "label": "before",
+      "source": "test/qa/product_v5_wave4b_visual_matrix_test.dart"
+    },
+    {
+      "screen": "institution-hub-desktop-dashboard-light-en",
+      "viewport": "1440.0x900.0",
+      "locale": "en",
+      "theme": "light",
+      "textScale": 1.0,
+      "reason": "desktop institution split layout past onboarding: flat locked state; dashboard chrome is 4C",
+      "path": "after-institution-hub-desktop-dashboard-light-en.png",
+      "renderErrors": [],
+      "label": "after",
+      "source": "test/qa/product_v5_wave4b_visual_matrix_test.dart"
+    },
+    {
+      "screen": "artist-studio-desktop-dashboard-light-en",
+      "viewport": "1440.0x900.0",
+      "locale": "en",
+      "theme": "light",
+      "textScale": 1.0,
+      "reason": "desktop studio past onboarding; dashboard chrome is 4C",
+      "path": "before-artist-studio-desktop-dashboard-light-en.png",
+      "renderErrors": [],
+      "label": "before",
+      "source": "test/qa/product_v5_wave4b_visual_matrix_test.dart"
+    },
+    {
+      "screen": "artist-studio-desktop-dashboard-light-en",
+      "viewport": "1440.0x900.0",
+      "locale": "en",
+      "theme": "light",
+      "textScale": 1.0,
+      "reason": "desktop studio past onboarding; dashboard chrome is 4C",
+      "path": "after-artist-studio-desktop-dashboard-light-en.png",
       "renderErrors": [],
       "label": "after",
       "source": "test/qa/product_v5_wave4b_visual_matrix_test.dart"
@@ -393,7 +441,7 @@
       "renderErrors": [],
       "label": "after",
       "source": "test/qa/profile_visual_matrix_test.dart",
-      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860+dirty"
+      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860"
     },
     {
       "screen": "profile-mobile-public-320x700",
@@ -419,7 +467,7 @@
       "renderErrors": [],
       "label": "after",
       "source": "test/qa/profile_visual_matrix_test.dart",
-      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860+dirty"
+      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860"
     },
     {
       "screen": "profile-theme-sl-light",
@@ -445,7 +493,7 @@
       "renderErrors": [],
       "label": "after",
       "source": "test/qa/profile_visual_matrix_test.dart",
-      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860+dirty"
+      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860"
     },
     {
       "screen": "profile-a11y-mobile-x1_6",
@@ -471,7 +519,7 @@
       "renderErrors": [],
       "label": "after",
       "source": "test/qa/profile_visual_matrix_test.dart",
-      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860+dirty"
+      "commit": "f4fddefea5225e8306743efd17cf049a9f72a860"
     }
   ]
 }

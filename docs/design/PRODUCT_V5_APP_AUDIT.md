@@ -286,7 +286,9 @@ Android: pinned comment composer above the keyboard, TalkBack on Like
 - 4C (optional, final split of Wave 4): wallet overview internals,
   marketplace listing grid and detail, promotion builder sheet, DAO hub
   internals, Artist Studio dashboard and Institution Hub tools after
-  onboarding, desktop public profile visual flattening (section order
+  onboarding (desktop right panel: tinted watermark stat tiles incl. a
+  "0 KUB8 Revenue" tile whose data source needs a truthfulness check),
+  desktop public profile visual flattening (section order
   already matches mobile), profile edit and shared form
   language, loading skeleton / error taxonomy, Home quick-action and stat
   tiles, following/followers lists, collaboration inbox, profile section

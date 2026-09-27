@@ -13,6 +13,7 @@ import 'package:art_kubus/screens/community/messages_screen.dart';
 import 'package:art_kubus/screens/community/post_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_artist_studio_screen.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_governance_hub_screen.dart';
+import 'package:art_kubus/screens/desktop/web3/desktop_institution_hub_screen.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_marketplace_screen.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_wallet_screen.dart';
 import 'package:art_kubus/screens/web3/achievements/achievements_page.dart';
@@ -258,7 +259,7 @@ void main() {
     ),
     'institution-hub': (
       () => const InstitutionHub(),
-      () => const InstitutionHub()
+      () => const DesktopInstitutionHubScreen()
     ),
     'wallet': (() => const WalletHome(), () => const DesktopWalletScreen()),
     'marketplace': (
@@ -285,6 +286,26 @@ void main() {
     });
     qaCase('${entry.key} desktop', (tester) async {
       await surface(tester, '${entry.key}-desktop-light-en', entry.value.$2,
+          size: _desktop, signedIn: owner);
+    });
+  }
+
+  // Past first-run onboarding: the production desktop composition (split
+  // layout + right panel) that the onboarding route otherwise covers.
+  final dashboards = <String, (String, Widget Function())>{
+    'institution-hub': (
+      'Institution Hub',
+      () => const DesktopInstitutionHubScreen()
+    ),
+    'artist-studio': ('Artist Studio', () => const DesktopArtistStudioScreen()),
+  };
+  for (final entry in dashboards.entries) {
+    qaCase('${entry.key} desktop dashboard', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        '${entry.value.$1}_onboarding_completed': true,
+      });
+      await surface(
+          tester, '${entry.key}-desktop-dashboard-light-en', entry.value.$2,
           size: _desktop, signedIn: owner);
     });
   }
