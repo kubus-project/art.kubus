@@ -145,8 +145,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             labelText: l10n.commonPassword,
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              onPressed: () =>
-                  setState(() => _showPassword = !_showPassword),
+              onPressed: () => setState(() => _showPassword = !_showPassword),
               icon: Icon(
                 _showPassword
                     ? Icons.visibility_off_outlined
@@ -233,8 +232,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           height: 100,
           radius: 20,
         ),
-        gradientStart: scheme.primary,
-        gradientEnd: roles.positiveAction,
         form: form,
       );
     }

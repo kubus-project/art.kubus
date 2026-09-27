@@ -625,9 +625,6 @@ class _SignInScreenState extends State<SignInScreen> {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final accentStart = colorScheme.primary;
-    final accentEnd = roles.positiveAction;
     final isDark = theme.brightness == Brightness.dark;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
@@ -657,8 +654,6 @@ class _SignInScreenState extends State<SignInScreen> {
       title: l10n.authSignInTitle,
       subtitle: l10n.authSignInSubtitle,
       heroIcon: Icons.login_rounded,
-      gradientStart: accentStart,
-      gradientEnd: accentEnd,
       allowMobilePageScroll: false,
       highlights: [
         l10n.authHighlightSignInMethods,

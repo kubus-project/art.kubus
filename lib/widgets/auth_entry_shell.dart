@@ -1,9 +1,9 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/material.dart';
 
@@ -14,8 +14,6 @@ class AuthEntryShell extends StatelessWidget {
     required this.subtitle,
     required this.form,
     required this.heroIcon,
-    required this.gradientStart,
-    required this.gradientEnd,
     this.highlights = const <String>[],
     this.topAction,
     this.footer,
@@ -27,8 +25,6 @@ class AuthEntryShell extends StatelessWidget {
   final String subtitle;
   final Widget form;
   final IconData heroIcon;
-  final Color gradientStart;
-  final Color gradientEnd;
   final List<String> highlights;
   final Widget? topAction;
   final Widget? footer;
@@ -38,7 +34,6 @@ class AuthEntryShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final isDesktop = DesktopBreakpoints.isDesktop(context);
     final keyboardVisible =
         !isDesktop && KeyboardInsetResolver.isKeyboardVisible(context);
@@ -53,15 +48,10 @@ class AuthEntryShell extends StatelessWidget {
       ),
     );
 
-    final bgStart = gradientStart.withValues(alpha: isDark ? 0.46 : 0.62);
-    final bgEnd = gradientEnd.withValues(alpha: isDark ? 0.42 : 0.56);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.5) ?? bgEnd)
-        .withValues(alpha: isDark ? 0.44 : 0.58);
-
-    return AnimatedGradientBackground(
-      duration: const Duration(seconds: 12),
-      intensity: 0.24,
-      colors: [bgStart, bgMid, bgEnd, bgStart],
+    // Account entry is calm and direct: flat page ground, no animated colour
+    // field. The form surface and type carry the hierarchy.
+    return ColoredBox(
+      color: KubusColorRoles.of(context).ground,
       child: Theme(
         data: shellTheme,
         child: Scaffold(
@@ -118,8 +108,6 @@ class AuthEntryShell extends StatelessWidget {
                                                 eyebrow: eyebrow,
                                                 highlights: highlights,
                                                 heroIcon: heroIcon,
-                                                gradientStart: gradientStart,
-                                                gradientEnd: gradientEnd,
                                                 compact: compactSurface,
                                               ),
                                             ),
@@ -356,8 +344,6 @@ class _HeroColumn extends StatelessWidget {
     required this.subtitle,
     required this.highlights,
     required this.heroIcon,
-    required this.gradientStart,
-    required this.gradientEnd,
     this.eyebrow,
     this.compact = false,
   });
@@ -366,69 +352,41 @@ class _HeroColumn extends StatelessWidget {
   final String subtitle;
   final List<String> highlights;
   final IconData heroIcon;
-  final Color gradientStart;
-  final Color gradientEnd;
   final String? eyebrow;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: compact ? 72 : 88,
-          height: compact ? 72 : 88,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(compact ? 24 : 30),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                gradientStart.withValues(alpha: 0.92),
-                gradientEnd.withValues(alpha: 0.92),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: gradientEnd.withValues(alpha: 0.22),
-                blurRadius: 28,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: Icon(
-            heroIcon,
-            size: compact ? 30 : 36,
-            color: Colors.white,
-          ),
-        ),
         if ((eyebrow ?? '').trim().isNotEmpty) ...[
-          const SizedBox(height: KubusSpacing.lg),
           Text(
-            eyebrow!,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.74),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+            eyebrow!.toUpperCase(),
+            style: KubusTextStyles.structuralLabel.copyWith(
+              color: roles.foregroundMuted,
+              letterSpacing: 0.8,
             ),
           ),
+          const SizedBox(height: KubusSpacing.sm),
         ],
-        SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.xl),
-        Text(
-          title,
-          softWrap: true,
-          style: (compact
-                  ? theme.textTheme.headlineMedium
-                  : theme.textTheme.displaySmall)
-              ?.copyWith(
-            color: scheme.onSurface,
-            fontWeight: FontWeight.w800,
-            height: 1.05,
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            softWrap: true,
+            style: (compact
+                    ? theme.textTheme.headlineMedium
+                    : theme.textTheme.displaySmall)
+                ?.copyWith(
+              color: roles.foreground,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+            ),
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -437,28 +395,21 @@ class _HeroColumn extends StatelessWidget {
           child: Text(
             subtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.74),
+              color: roles.foregroundMuted,
               height: 1.5,
             ),
           ),
         ),
         if (highlights.isNotEmpty) ...[
           SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
-          Wrap(
-            spacing: KubusSpacing.sm,
-            runSpacing: KubusSpacing.sm,
-            children: highlights
-                .map(
-                  (highlight) => _HighlightChip(label: highlight),
-                )
-                .toList(growable: false),
-          ),
+          for (final highlight in highlights) _HighlightChip(label: highlight),
         ],
       ],
     );
   }
 }
 
+/// A plain reassurance line (check + text); not a pill or a button.
 class _HighlightChip extends StatelessWidget {
   const _HighlightChip({required this.label});
 
@@ -466,38 +417,26 @@ class _HighlightChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.7),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 10,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle_outline_rounded,
-              size: 16,
-              color: scheme.primary,
+    final roles = KubusColorRoles.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(Icons.check, size: 18, color: roles.success),
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: roles.foreground,
+                  ),
             ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.84),
-                    ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -516,24 +455,13 @@ class _FormSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: isDark ? 0.2 : 0.86),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: isDark ? 0.16 : 0.08),
-            blurRadius: 34,
-            offset: const Offset(0, 18),
-          ),
-        ],
+        color: roles.surfaceRaised,
+        borderRadius: BorderRadius.circular(KubusRadius.sheet),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
       child: Padding(
         padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),

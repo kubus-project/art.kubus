@@ -192,8 +192,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           height: 100,
           radius: 20,
         ),
-        gradientStart: scheme.primary,
-        gradientEnd: roles.positiveAction,
         form: form,
       );
     }
