@@ -5,12 +5,17 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
 
-/// Desktop content card with hover effects and animations
+/// Desktop content card.
+///
+/// PRODUCT v5: flat by default (surface + hairline rule); hover strengthens
+/// the rule instead of lifting the card with a shadow. Glass remains an
+/// explicit `isGlass: true` option for overlays on media or the map.
 class DesktopCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -36,7 +41,7 @@ class DesktopCard extends StatefulWidget {
     this.borderRadius,
     this.backgroundColor,
     this.showBorder = true,
-    this.isGlass = true,
+    this.isGlass = false,
   });
 
   @override
@@ -51,14 +56,15 @@ class _DesktopCardState extends State<DesktopCard> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final animationTheme = context.animationTheme;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: widget.backgroundColor ?? scheme.surface,
     );
 
-    final radius = widget.borderRadius ?? BorderRadius.circular(KubusRadius.lg);
+    final roles = KubusColorRoles.of(context);
+    final radius =
+        widget.borderRadius ?? BorderRadius.circular(KubusRadius.surface);
     final glassTint = widget.backgroundColor ?? glassStyle.tintColor;
 
     Widget content = AnimatedContainer(
@@ -67,26 +73,15 @@ class _DesktopCardState extends State<DesktopCard> {
       width: widget.width,
       height: widget.height,
       margin: widget.margin,
-      transform:
-          _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
       decoration: BoxDecoration(
         borderRadius: radius,
         border: widget.showBorder
             ? Border.all(
-                color: _isHovered
-                    ? themeProvider.accentColor.withValues(alpha: 0.22)
-                    : scheme.outline.withValues(alpha: 0.14),
-                width: _isHovered ? 1.25 : 1,
+                color: _isHovered && widget.onTap != null
+                    ? roles.ruleStrong
+                    : roles.rule,
+                width: KubusSizes.hairline,
               )
-            : null,
-        boxShadow: _isHovered
-            ? [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.10),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ]
             : null,
       ),
       child: widget.isGlass
@@ -103,7 +98,7 @@ class _DesktopCardState extends State<DesktopCard> {
               child: widget.child,
             )
           : Material(
-              color: scheme.primaryContainer,
+              color: widget.backgroundColor ?? roles.surface,
               borderRadius: radius,
               child: InkWell(
                 onTap: widget.onTap,
@@ -418,9 +413,11 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
                   ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: InlineLoading(tileSize: 4, color: widget.isPrimary
-                            ? Colors.white
-                            : themeProvider.accentColor),
+                      child: InlineLoading(
+                          tileSize: 4,
+                          color: widget.isPrimary
+                              ? Colors.white
+                              : themeProvider.accentColor),
                     )
                   : Icon(widget.icon, size: KubusHeaderMetrics.actionIcon),
               label: Text(
