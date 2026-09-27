@@ -195,11 +195,15 @@ reset. No geospatial backend change is needed for that UI.
 
 ## Evidence
 
-`output/playwright/product-v5-wave4/before/` and `.../after/` each contain a
-`manifest.json` (screen, route, viewport, locale, theme, auth state, reason,
-horizontal-overflow flag, page errors) and PNGs. `output/playwright/` is not
-tracked by repository policy except for maintained scripts, so the PR links
-the captures as build artifacts rather than committing them.
+Ten curated before/after pairs and their manifest are committed in
+[`docs/evidence/product-v5-wave4/`](../evidence/product-v5-wave4/manifest.json)
+(mobile/desktop home, 900 and 320 px home, community light/dark, guest
+composer gate, settings, guest account, SL desktop home). The full matrix
+(28 scenes per build) is regenerated locally into
+`output/playwright/product-v5-wave4/{before,after}/`; each manifest records
+screen, route, viewport, locale, theme, auth state, reason,
+horizontal-overflow flag and page errors. Both final runs: 28/28 captured, no
+horizontal overflow, no page errors.
 
 ## Human validation still required
 
