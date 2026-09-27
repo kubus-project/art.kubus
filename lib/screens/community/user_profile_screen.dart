@@ -488,23 +488,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   const SizedBox(height: DetailSpacing.md),
                   _buildStatsRow(l10n),
                 ] else ...[
-                  _buildStatsRow(l10n),
-                  const SizedBox(height: DetailSpacing.md),
-                  _buildAddedPublicArtSection(l10n),
-                  const SizedBox(height: DetailSpacing.lg),
+                  // Cultural hierarchy: practice and works first, then
+                  // programme, community activity, and numbers last.
                   if (isArtist) ...[
                     _buildArtistHighlightsGrid(l10n),
                     const SizedBox(height: DetailSpacing.xl),
+                    _buildArtistEventsShowcase(l10n),
+                    const SizedBox(height: DetailSpacing.xl),
                   ],
-                  isInstitution
-                      ? _buildInstitutionHighlights(l10n)
-                      : ((user?.showAchievements ?? true)
-                          ? _buildAchievements(themeProvider, l10n)
-                          : const SizedBox.shrink()),
+                  if (isInstitution) ...[
+                    _buildInstitutionHighlights(l10n),
+                    const SizedBox(height: DetailSpacing.xl),
+                  ],
+                  _buildAddedPublicArtSection(l10n),
                 ],
                 const SizedBox(height: DetailSpacing.xl),
                 _buildPostsSection(l10n),
-                if (isArtist) ...[
+                if (!isCanonicalPublicEntry) ...[
+                  const SizedBox(height: DetailSpacing.xl),
+                  _buildStatsRow(l10n),
+                  if (!isInstitution && (user?.showAchievements ?? true)) ...[
+                    const SizedBox(height: DetailSpacing.lg),
+                    _buildAchievements(themeProvider, l10n),
+                  ],
+                ],
+                if (isCanonicalPublicEntry && isArtist) ...[
                   const SizedBox(height: DetailSpacing.xl),
                   _buildArtistEventsShowcase(l10n),
                 ],
@@ -517,7 +525,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
     final content = isCanonicalPublicEntry
         ? scaffold
-        : AnimatedGradientBackground(child: scaffold);
+        : ColoredBox(color: roles.ground, child: scaffold);
     return PublicEntityTakeoverReady(
       type: ShareEntityType.profile,
       entityId: widget.userId,
@@ -608,31 +616,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       children: [
         Stack(
           children: [
+            // A thin profile without a cover gets a quiet flat band, not an
+            // accent gradient slab.
             Container(
               width: double.infinity,
               height: hasCoverImage ? 220 : 150,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                gradient: !hasCoverImage
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
-                      )
-                    : null,
+                color: KubusColorRoles.of(context).surface,
+                borderRadius: BorderRadius.circular(KubusRadius.sheet),
+                border: hasCoverImage
+                    ? null
+                    : Border.all(
+                        color: KubusColorRoles.of(context).rule,
+                        width: KubusSizes.hairline,
+                      ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
+                borderRadius: BorderRadius.circular(KubusRadius.sheet),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -703,15 +703,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         color: scheme.outline.withValues(alpha: 0.24),
                         width: KubusSizes.hairline + 0.2,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context)
-                              .shadowColor
-                              .withValues(alpha: 0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(avatarRingPadding),
@@ -741,51 +732,44 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           isInstitution: isInstitution,
         ),
         const SizedBox(height: KubusSpacing.md),
-        LiquidGlassCard(
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(KubusRadius.xl),
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.lg,
-            vertical: KubusSpacing.md,
-          ),
-          child: Column(
-            children: [
-              UserActivityStatusLine(
-                walletAddress: user!.id,
-                textAlign: TextAlign.center,
-                textStyle: KubusTextStyles.detailCaption.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.62),
-                ),
+        // About reads as text, not as a glass card: status, bio, practice
+        // fields and join date, left-aligned.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            UserActivityStatusLine(
+              walletAddress: user!.id,
+              textAlign: TextAlign.start,
+              textStyle: KubusTextStyles.detailCaption.copyWith(
+                color: KubusColorRoles.of(context).foregroundMuted,
               ),
-              if (user!.bio.trim().isNotEmpty) ...[
-                const SizedBox(height: KubusSpacing.sm),
-                ExpandableDetailText(
-                  text: user!.bio,
-                  collapsedMaxLines: 4,
-                  textAlign: TextAlign.center,
-                  alignment: CrossAxisAlignment.center,
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.78),
-                  ),
-                ),
-              ],
+            ),
+            if (user!.bio.trim().isNotEmpty) ...[
               const SizedBox(height: KubusSpacing.sm),
-              ProfileArtistInfoFields(
-                fieldOfWork: user!.fieldOfWork,
-                yearsActive: user!.yearsActive,
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                _formatJoinedLabel(l10n, user!.joinedDate),
-                style: KubusTextStyles.detailCaption.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
+              ExpandableDetailText(
+                text: user!.bio,
+                collapsedMaxLines: 4,
+                textAlign: TextAlign.start,
+                alignment: CrossAxisAlignment.start,
+                style: KubusTextStyles.detailBody.copyWith(
+                  color: KubusColorRoles.of(context).foreground,
+                  height: 1.45,
                 ),
               ),
             ],
-          ),
+            const SizedBox(height: KubusSpacing.sm),
+            ProfileArtistInfoFields(
+              fieldOfWork: user!.fieldOfWork,
+              yearsActive: user!.yearsActive,
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              _formatJoinedLabel(l10n, user!.joinedDate),
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: KubusColorRoles.of(context).foregroundSubtle,
+              ),
+            ),
+          ],
         ),
       ],
     );
