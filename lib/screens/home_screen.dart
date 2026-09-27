@@ -24,14 +24,11 @@ import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
 import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
-import 'web3/wallet/wallet_home.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
-import '../widgets/artist_badge.dart';
-import '../widgets/institution_badge.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
@@ -69,6 +66,8 @@ import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
 import '../widgets/detail/shared_section_widgets.dart';
+import '../providers/main_tab_provider.dart';
+import '../widgets/home/home_discovery_intro.dart';
 import '../widgets/home/home_promotion_rail.dart';
 import '../widgets/search/kubus_general_search.dart';
 import '../widgets/search/kubus_search_config.dart';
@@ -78,7 +77,6 @@ import '../widgets/support/support_section.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../config/api_keys.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -534,10 +532,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
     final profileProvider = Provider.of<ProfileProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final headerDisplayName = resolveHomeHeaderDisplayName(
-      user: profileProvider.currentUser,
-      fallbackLabel: l10n.homeDefaultDisplayName,
-    );
+    // Guests are welcomed to the product rather than addressed as "there".
+    final headerDisplayName = profileProvider.isSignedIn
+        ? resolveHomeHeaderDisplayName(
+            user: profileProvider.currentUser,
+            fallbackLabel: l10n.homeDefaultDisplayName,
+          )
+        : l10n.homeGuestHeaderTitle;
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: animationTheme.fadeCurve,
@@ -650,7 +651,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final dashboardFirst = (currentUser?.isArtist ?? false) ||
         (currentUser?.isInstitution ?? false);
 
-    sections.add(animated(_buildWelcomeSection(headerDisplayName)));
+    sections.add(animated(HomeDiscoveryIntro(
+      onExploreMap: () => context.read<MainTabProvider>().setIndex(0),
+      onOpenCommunity: () => context.read<MainTabProvider>().setIndex(2),
+    )));
     sections.add(SizedBox(height: spacing));
     if (!dashboardFirst) {
       sections.add(animated(_buildHomeRails()));
@@ -669,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildQuickActions(),
                     SizedBox(height: spacing),
-                    _buildWeb3Section(),
+                    _buildRecentActivity(),
                   ],
                 ),
               ),
@@ -681,7 +685,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildStatsCards(),
                     SizedBox(height: spacing),
-                    _buildRecentActivity(),
+                    _buildWeb3Section(),
                   ],
                 ),
               ),
@@ -694,21 +698,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildQuickActions()));
       sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildWeb3Section()));
-      sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
     } else {
       sections.add(animated(_buildQuickActions()));
       sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildStatsCards()));
-      sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildWeb3Section()));
-      sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildStatsCards()));
     }
     if (dashboardFirst) {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildHomeRails()));
+    }
+    // Wallet, marketplace and governance are infrastructure: offered after
+    // the cultural content, never as the landing experience.
+    if (!desktopGuidedLayout) {
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildWeb3Section()));
     }
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));
@@ -1078,250 +1084,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case HomeSearchDestinationKind.none:
         return;
     }
-  }
-
-  Widget _buildWelcomeSection(String headerDisplayName) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final web3Provider = Provider.of<Web3Provider>(context);
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    final l10n = AppLocalizations.of(context)!;
-    final greeting = _getGreeting(l10n);
-    final isArtist = profileProvider.currentUser?.isArtist ?? false;
-    final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
-
-    // Foreground over the accent gradient is contrast-computed so light
-    // accents (amber gold, terracotta) never get unreadable white text.
-    final onAccent = themeProvider.onAccentColor;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
-        final padding = isSmallScreen
-            ? KubusChromeMetrics.compactCardPadding
-            : KubusSpacing.lg;
-        final iconBox = isSmallScreen
-            ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
-            : KubusChromeMetrics.heroIconBox;
-        final iconSize = isSmallScreen
-            ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
-            : KubusChromeMetrics.heroIcon;
-
-        return Container(
-          padding: EdgeInsets.all(padding),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                themeProvider.accentColor,
-                themeProvider.accentColor.withValues(alpha: 0.8),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.xl),
-            boxShadow: [
-              BoxShadow(
-                color: themeProvider.accentColor.withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '$greeting $headerDisplayName',
-                                style: KubusTextStyles.responsiveHeroTitle(
-                                  context,
-                                  availableWidth: isSmallScreen ? 220 : 320,
-                                ).copyWith(color: onAccent),
-                                maxLines: isSmallScreen ? 2 : 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isArtist) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              ArtistBadge(
-                                fontSize: isSmallScreen ? 9 : 10,
-                                useOnPrimary: true,
-                                iconOnly: true,
-                              ),
-                            ],
-                            if (isInstitution) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              InstitutionBadge(
-                                fontSize: isSmallScreen ? 9 : 10,
-                                useOnPrimary: true,
-                                iconOnly: true,
-                              ),
-                            ],
-                          ],
-                        ),
-                        SizedBox(
-                          height:
-                              isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-                        ),
-                        Text(
-                          l10n.homeWelcomeSubtitle,
-                          style: KubusTextStyles.heroSubtitle.copyWith(
-                            color: onAccent.withValues(alpha: 0.9),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: iconBox,
-                    height: iconBox,
-                    decoration: BoxDecoration(
-                      color: onAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    ),
-                    child: Icon(
-                      Icons.view_in_ar,
-                      color: onAccent,
-                      size: iconSize,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: isSmallScreen
-                    ? KubusSpacing.md
-                    : KubusChromeMetrics.cardPadding,
-              ),
-              if (web3Provider.hasWalletIdentity) ...[
-                Consumer<WalletProvider>(
-                  builder: (context, walletProvider, child) {
-                    // Get KUB8 balance
-                    final kub8Balance = walletProvider
-                                .getTokenByMint(ApiKeys.kub8MintAddress) !=
-                            null
-                        ? walletProvider
-                            .getTokenByMint(ApiKeys.kub8MintAddress)!
-                            .balance
-                        : 0.0;
-
-                    // Get SOL balance
-                    final solBalance = walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'SOL')
-                            .isNotEmpty
-                        ? walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'SOL')
-                            .first
-                            .balance
-                        : 0.0;
-
-                    return Row(
-                      children: [
-                        _buildBalanceChip(
-                            'KUB8', kub8Balance.toStringAsFixed(2)),
-                        const SizedBox(
-                            width: KubusSpacing.sm + KubusSpacing.xs),
-                        _buildBalanceChip('SOL', solBalance.toStringAsFixed(3)),
-                      ],
-                    );
-                  },
-                ),
-              ] else ...[
-                ElevatedButton.icon(
-                  onPressed: () => _showWalletOnboarding(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: onAccent,
-                    foregroundColor: AppColorUtils.onColor(onAccent),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
-                  icon: Icon(
-                    Icons.explore,
-                    size: isSmallScreen ? 16 : 18,
-                  ),
-                  label: Text(
-                    l10n.homeExploreWeb3Button,
-                    style: KubusTextStyles.actionTileTitle.copyWith(
-                      fontSize: isSmallScreen
-                          ? KubusChromeMetrics.navMetaLabel
-                          : KubusChromeMetrics.navLabel,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBalanceChip(String symbol, String amount) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const WalletHome()),
-        );
-      },
-      child: Builder(builder: (context) {
-        final themeProvider = Provider.of<ThemeProvider>(context);
-        final onAccent = themeProvider.onAccentColor;
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            vertical: KubusSpacing.xs + KubusSpacing.xxs,
-          ),
-          decoration: BoxDecoration(
-            color: onAccent.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: onAccent,
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Center(
-                  child: Text(
-                    symbol == 'KUB8' ? 'K' : 'S',
-                    style: KubusTextStyles.badgeCount.copyWith(
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-              Text(
-                '$amount $symbol',
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: onAccent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
   }
 
   Widget _buildQuickActions() {
