@@ -20,6 +20,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';
+import '../../widgets/community/community_compose_intent_resumer.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
@@ -391,11 +392,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final composerOpenNonce = context
         .select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
     _maybeHandleComposerOpenRequest(composerOpenNonce);
-    _maybeResumeComposeIntent(
-      context.select<ProfileProvider, bool>((p) => p.isSignedIn),
-    );
 
-    return Scaffold(
+    final screen = Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
@@ -458,6 +456,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           );
         },
       ),
+    );
+    return CommunityComposeIntentResumer(
+      isSignedIn: context.select<ProfileProvider, bool>((p) => p.isSignedIn),
+      onResume: (intent) => unawaited(_openComposeIntent(intent)),
+      child: screen,
     );
   }
 

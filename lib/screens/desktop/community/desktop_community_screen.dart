@@ -35,6 +35,7 @@ import '../../../services/share/share_types.dart' as share_types;
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
+import '../../../widgets/community/community_compose_intent_resumer.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
@@ -239,17 +240,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget build(BuildContext context) {
     final hub = context.watch<CommunityHubProvider>();
     _maybeHandleComposerOpenRequest(hub);
-    _maybeResumeComposeIntent(
-      hub,
-      context.select<ProfileProvider, bool>((p) => p.isSignedIn),
-    );
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
 
-    return DesktopProfilePresentationScope(
+    final screen = DesktopProfilePresentationScope(
       presentation: DesktopProfilePresentation.communityOverlay,
       child: PopScope(
         canPop: _paneStack.isEmpty,
@@ -311,6 +308,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ),
         ),
       ),
+    );
+    return CommunityComposeIntentResumer(
+      isSignedIn: context.select<ProfileProvider, bool>((p) => p.isSignedIn),
+      onResume: _resumeComposeIntent,
+      child: screen,
     );
   }
 }

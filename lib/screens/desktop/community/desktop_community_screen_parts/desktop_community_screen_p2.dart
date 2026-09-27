@@ -964,7 +964,7 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
 
   /// Guests meet the contextual account surface before the group form; when
   /// they continue into sign-in the request is remembered and reopened by
-  /// [_maybeResumeComposeIntent].
+  /// `CommunityComposeIntentResumer`.
   Future<void> _requestCreateGroup(ThemeProvider themeProvider) async {
     final hub = context.read<CommunityHubProvider>();
     final allowed = await const ContextualAuthGate().ensureAuthenticated(
@@ -979,22 +979,17 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     await _showCreateGroupDialog(themeProvider);
   }
 
-  /// Reopens the creation surface a guest requested before signing in.
-  void _maybeResumeComposeIntent(CommunityHubProvider hub, bool isSignedIn) {
-    if (!isSignedIn || !hub.hasPendingComposeIntent) return;
-    final intent = hub.takeComposeIntent();
-    if (intent == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (intent == CommunityComposeIntent.createGroup) {
-        unawaited(_requestCreateGroup(
-          Provider.of<ThemeProvider>(context, listen: false),
-        ));
-      } else {
-        // The inline composer keeps any draft still held by this screen.
-        _applyState(() => _isComposerExpanded = true);
-      }
-    });
+  /// Reopens the creation surface a guest requested before signing in
+  /// (delivered by `CommunityComposeIntentResumer`).
+  void _resumeComposeIntent(CommunityComposeIntent intent) {
+    if (intent == CommunityComposeIntent.createGroup) {
+      unawaited(_requestCreateGroup(
+        Provider.of<ThemeProvider>(context, listen: false),
+      ));
+      return;
+    }
+    // The inline composer keeps any draft still held by this screen.
+    _applyState(() => _isComposerExpanded = true);
   }
 
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {

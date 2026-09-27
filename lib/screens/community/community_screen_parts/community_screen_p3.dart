@@ -7,7 +7,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
   /// Guests meet the contextual account surface *before* the composer opens,
   /// instead of drafting a post that can only fail on submit. When they go on
   /// to sign in, the requested surface is remembered and reopened by
-  /// [_maybeResumeComposeIntent] once the account exists.
+  /// `CommunityComposeIntentResumer` once the account exists.
   Future<bool> _ensureCanCompose(
     CommunityComposeIntent intent, {
     String? actionLabel,
@@ -21,19 +21,6 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       sourceScreen: 'community_screen',
       onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
     );
-  }
-
-  /// Reopens a creation surface a guest requested before signing in.
-  void _maybeResumeComposeIntent(bool isSignedIn) {
-    if (!isSignedIn) return;
-    final hub = context.read<CommunityHubProvider>();
-    if (!hub.hasPendingComposeIntent) return;
-    final intent = hub.takeComposeIntent();
-    if (intent == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      unawaited(_openComposeIntent(intent));
-    });
   }
 
   Future<void> _openComposeIntent(CommunityComposeIntent intent) {

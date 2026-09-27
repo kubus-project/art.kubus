@@ -525,4 +525,63 @@ void main() {
     expect(result, isTrue);
     expect(find.text('Save this artwork to your collection'), findsNothing);
   });
+
+  group('onAuthJourneyStarted', () {
+    Widget gateButton(VoidCallback onStarted) => Builder(
+          builder: (context) => TextButton(
+            onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+              context,
+              actionLabel: 'write a post',
+              returnRoute: '/community',
+              onAuthJourneyStarted: onStarted,
+            ),
+            child: const Text('compose'),
+          ),
+        );
+
+    testWidgets('does not fire when the visitor dismisses the gate',
+        (tester) async {
+      var started = 0;
+      await tester.pumpWidget(_harness(child: gateButton(() => started++)));
+      await tester.tap(find.text('compose'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
+      expect(started, 0);
+    });
+
+    testWidgets('fires once when the visitor continues into onboarding',
+        (tester) async {
+      var started = 0;
+      await tester.pumpWidget(_harness(
+        routes: <String, WidgetBuilder>{
+          '/onboarding': (_) => const Scaffold(body: Text('onboarding route')),
+        },
+        child: gateButton(() => started++),
+      ));
+      await tester.tap(find.text('compose'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue with email'));
+      await tester.pumpAndSettle();
+      expect(find.text('onboarding route'), findsOneWidget);
+      expect(started, 1);
+    });
+
+    testWidgets('fires when an existing account chooses to sign in',
+        (tester) async {
+      var started = 0;
+      await tester.pumpWidget(_harness(
+        routes: <String, WidgetBuilder>{
+          '/sign-in': (_) => const Scaffold(body: Text('sign-in route')),
+        },
+        child: gateButton(() => started++),
+      ));
+      await tester.tap(find.text('compose'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Already have an account? Sign in'));
+      await tester.pumpAndSettle();
+      expect(find.text('sign-in route'), findsOneWidget);
+      expect(started, 1);
+    });
+  });
 }
