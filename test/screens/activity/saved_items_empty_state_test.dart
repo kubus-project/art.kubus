@@ -1,7 +1,9 @@
+import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/screens/activity/saved_items_screen.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/product_surface_harness.dart';
@@ -32,4 +34,38 @@ void main() {
       expect(find.text('Explore the map'), findsOneWidget);
     });
   }
+
+  testWidgets('only categories that hold items render a section',
+      (tester) async {
+    final errors = await pumpProductSurface(
+      tester,
+      child: const SavedItemsScreen(),
+      size: const Size(390, 1600),
+      extraProviders: [
+        ChangeNotifierProvider<SavedItemsProvider>(
+          create: (_) => _OneArtworkSaved(),
+        ),
+      ],
+    );
+
+    expect(errors, isEmpty);
+    expect(find.textContaining('Saved artworks'), findsOneWidget);
+    for (final other in const <String>[
+      'Saved events',
+      'Saved collections',
+      'Saved exhibitions',
+      'Saved posts',
+    ]) {
+      expect(find.textContaining(other), findsNothing, reason: other);
+    }
+  });
+}
+
+/// A library holding a single saved artwork and nothing else.
+class _OneArtworkSaved extends SavedItemsProvider {
+  @override
+  int get savedArtworksCount => 1;
+
+  @override
+  int get totalSavedCount => 1;
 }

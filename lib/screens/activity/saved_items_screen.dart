@@ -272,7 +272,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   countLabel: l10n.savedItemsSummaryCount(totalCount),
                 ),
               if (totalCount > 0) const SizedBox(height: KubusSpacing.md),
-              if (totalCount > 0)
+              if (savedProvider.savedArtworksCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.artwork),
@@ -289,7 +289,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     artworkProvider: artworkProvider,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedEventsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.event),
@@ -306,7 +306,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     eventsProvider: eventsProvider,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedCollectionsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.collection),
@@ -323,7 +323,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     collectionsProvider: collectionsProvider,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedExhibitionsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.exhibition),
@@ -340,7 +340,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     exhibitionsProvider: exhibitionsProvider,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedPostsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.communityPost),
@@ -356,7 +356,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     savedProvider: savedProvider,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedArtistsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.artist),
@@ -375,7 +375,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     icon: Icons.palette_outlined,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedInstitutionsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.institution),
@@ -394,7 +394,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     icon: Icons.apartment_outlined,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedGroupsCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.group),
@@ -413,7 +413,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     icon: Icons.groups_2_outlined,
                   ),
                 ),
-              if (totalCount > 0)
+              if (savedProvider.savedMarkersCount > 0)
                 _SavedItemsSection(
                   title: l10n.savedItemsSectionTitle(
                     _localizedTypeLabel(l10n, SavedItemType.marker),
