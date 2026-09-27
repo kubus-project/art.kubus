@@ -3176,7 +3176,7 @@
       "legacy_blue_cyan_hex": 8,
       "legacy_primary_variant": 6,
       "linear_gradient": 73,
-      "lines": 341637,
+      "lines": 341645,
       "liquid_glass_panel": 151,
       "material_card": 14,
       "material_chip": 31,
@@ -3346,7 +3346,7 @@
         "kub8_text": 3,
         "kubus_snackbar": 56,
         "linear_gradient": 13,
-        "lines": 15006,
+        "lines": 15014,
         "liquid_glass_panel": 11,
         "material_elevated_button": 3,
         "material_text_button": 26,
@@ -4192,7 +4192,7 @@
         "raw_snackbar": 11,
         "show_dialog": 2,
         "show_bottom_sheet": 1,
-        "lines": 1702
+        "lines": 1703
       },
       "lib/screens/desktop/art/desktop_artwork_detail_screen.dart": {
         "area": "04_subject_detail_reference",
