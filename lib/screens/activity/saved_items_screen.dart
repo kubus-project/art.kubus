@@ -19,18 +19,20 @@ import '../../providers/saved_items_provider.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../providers/main_tab_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/empty_state_card.dart';
+import '../../widgets/kubus_button.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../art/collection_detail_screen.dart';
 import '../community/post_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
+import '../desktop/desktop_shell_scope.dart';
 
-const double _kSavedSummaryCompactWidth = 480;
-const double _kSavedSectionCompactWidth = 440;
 const double _kSavedTileCompactWidth = 460;
 const double _kSavedTileCompactThumbnailSize = 56;
 const double _kSavedTileRegularThumbnailSize = 68;
@@ -199,21 +201,30 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     final totalCount = savedProvider.totalSavedCount;
     final lastSaved = savedProvider.mostRecentSave;
 
-    return AnimatedGradientBackground(
+    final roles = KubusColorRoles.of(context);
+    return ColoredBox(
+      color: roles.ground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: widget.embedded
             ? null
             : AppBar(
-                backgroundColor: Colors.transparent,
+                backgroundColor: roles.ground,
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
+                shape: Border(
+                  bottom: BorderSide(
+                    color: roles.rule,
+                    width: KubusSizes.hairline,
+                  ),
+                ),
                 title: Text(
                   l10n.profileMenuSavedItemsTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: roles.foreground,
+                      ),
                 ),
-                flexibleSpace:
-                    const KubusGlassAppBarBackdrop(showBottomDivider: true),
                 actions: [
                   if (totalCount > 0)
                     IconButton(
@@ -234,184 +245,212 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               KubusSpacing.xl,
             ),
             children: [
-              _SummaryCard(
-                title: l10n.profileMenuSavedItemsTitle,
-                subtitle: totalCount == 0
-                    ? l10n.savedItemsSummarySubtitleEmpty
-                    : lastSaved != null
-                        ? l10n.savedItemsSummarySubtitleLastSaved(
-                            _formatTimestamp(l10n, lastSaved),
-                          )
-                        : l10n.savedItemsSummarySubtitleEmpty,
-                countLabel: l10n.savedItemsSummaryCount(totalCount),
-                accent: AppColorUtils.tealAccent,
-                icon: Icons.bookmarks_outlined,
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.artwork),
+              if (totalCount == 0) ...[
+                _SavedLibraryHeader(
+                  notion: l10n.savedItemsLibraryNotion,
+                  subtitle: null,
+                  countLabel: null,
                 ),
-                icon: Icons.photo_library_outlined,
-                accent: _accentForType(SavedItemType.artwork),
-                expanded: _isExpanded(SavedItemType.artwork),
-                onToggle: () => _toggleSection(SavedItemType.artwork),
-                count: savedProvider.savedArtworksCount,
-                child: _buildArtworkSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  artworkProvider: artworkProvider,
+                const SizedBox(height: KubusSpacing.md),
+                // One useful empty state instead of nine empty sections.
+                EmptyStateCard(
+                  icon: Icons.bookmark_border,
+                  title: l10n.savedItemsEmptyLibraryTitle,
+                  description: l10n.savedItemsSummarySubtitleEmpty,
+                  showAction: true,
+                  actionLabel: l10n.homeIntroExploreMapAction,
+                  onAction: _openDiscovery,
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.event),
+              ] else
+                _SavedLibraryHeader(
+                  notion: l10n.savedItemsLibraryNotion,
+                  subtitle: lastSaved != null
+                      ? l10n.savedItemsSummarySubtitleLastSaved(
+                          _formatTimestamp(l10n, lastSaved),
+                        )
+                      : null,
+                  countLabel: l10n.savedItemsSummaryCount(totalCount),
                 ),
-                icon: Icons.event_outlined,
-                accent: _accentForType(SavedItemType.event),
-                expanded: _isExpanded(SavedItemType.event),
-                onToggle: () => _toggleSection(SavedItemType.event),
-                count: savedProvider.savedEventsCount,
-                child: _buildEventSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  eventsProvider: eventsProvider,
+              if (totalCount > 0) const SizedBox(height: KubusSpacing.md),
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.artwork),
+                  ),
+                  icon: Icons.photo_library_outlined,
+                  accent: _accentForType(SavedItemType.artwork),
+                  expanded: _isExpanded(SavedItemType.artwork),
+                  onToggle: () => _toggleSection(SavedItemType.artwork),
+                  count: savedProvider.savedArtworksCount,
+                  child: _buildArtworkSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    artworkProvider: artworkProvider,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.collection),
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.event),
+                  ),
+                  icon: Icons.event_outlined,
+                  accent: _accentForType(SavedItemType.event),
+                  expanded: _isExpanded(SavedItemType.event),
+                  onToggle: () => _toggleSection(SavedItemType.event),
+                  count: savedProvider.savedEventsCount,
+                  child: _buildEventSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    eventsProvider: eventsProvider,
+                  ),
                 ),
-                icon: Icons.folder_outlined,
-                accent: _accentForType(SavedItemType.collection),
-                expanded: _isExpanded(SavedItemType.collection),
-                onToggle: () => _toggleSection(SavedItemType.collection),
-                count: savedProvider.savedCollectionsCount,
-                child: _buildCollectionSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  collectionsProvider: collectionsProvider,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.collection),
+                  ),
+                  icon: Icons.folder_outlined,
+                  accent: _accentForType(SavedItemType.collection),
+                  expanded: _isExpanded(SavedItemType.collection),
+                  onToggle: () => _toggleSection(SavedItemType.collection),
+                  count: savedProvider.savedCollectionsCount,
+                  child: _buildCollectionSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    collectionsProvider: collectionsProvider,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.exhibition),
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.exhibition),
+                  ),
+                  icon: AppColorUtils.exhibitionIcon,
+                  accent: _accentForType(SavedItemType.exhibition),
+                  expanded: _isExpanded(SavedItemType.exhibition),
+                  onToggle: () => _toggleSection(SavedItemType.exhibition),
+                  count: savedProvider.savedExhibitionsCount,
+                  child: _buildExhibitionSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    exhibitionsProvider: exhibitionsProvider,
+                  ),
                 ),
-                icon: AppColorUtils.exhibitionIcon,
-                accent: _accentForType(SavedItemType.exhibition),
-                expanded: _isExpanded(SavedItemType.exhibition),
-                onToggle: () => _toggleSection(SavedItemType.exhibition),
-                count: savedProvider.savedExhibitionsCount,
-                child: _buildExhibitionSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  exhibitionsProvider: exhibitionsProvider,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.communityPost),
+                  ),
+                  icon: Icons.forum_outlined,
+                  accent: _accentForType(SavedItemType.communityPost),
+                  expanded: _isExpanded(SavedItemType.communityPost),
+                  onToggle: () => _toggleSection(SavedItemType.communityPost),
+                  count: savedProvider.savedPostsCount,
+                  child: _buildPostSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.communityPost),
-                ),
-                icon: Icons.forum_outlined,
-                accent: _accentForType(SavedItemType.communityPost),
-                expanded: _isExpanded(SavedItemType.communityPost),
-                onToggle: () => _toggleSection(SavedItemType.communityPost),
-                count: savedProvider.savedPostsCount,
-                child: _buildPostSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.artist),
-                ),
-                icon: Icons.palette_outlined,
-                accent: _accentForType(SavedItemType.artist),
-                expanded: _isExpanded(SavedItemType.artist),
-                onToggle: () => _toggleSection(SavedItemType.artist),
-                count: savedProvider.savedArtistsCount,
-                child: _buildSnapshotSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  type: SavedItemType.artist,
-                  records: savedProvider.savedArtistItems,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.artist),
+                  ),
                   icon: Icons.palette_outlined,
+                  accent: _accentForType(SavedItemType.artist),
+                  expanded: _isExpanded(SavedItemType.artist),
+                  onToggle: () => _toggleSection(SavedItemType.artist),
+                  count: savedProvider.savedArtistsCount,
+                  child: _buildSnapshotSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    type: SavedItemType.artist,
+                    records: savedProvider.savedArtistItems,
+                    icon: Icons.palette_outlined,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.institution),
-                ),
-                icon: Icons.apartment_outlined,
-                accent: _accentForType(SavedItemType.institution),
-                expanded: _isExpanded(SavedItemType.institution),
-                onToggle: () => _toggleSection(SavedItemType.institution),
-                count: savedProvider.savedInstitutionsCount,
-                child: _buildSnapshotSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  type: SavedItemType.institution,
-                  records: savedProvider.savedInstitutionItems,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.institution),
+                  ),
                   icon: Icons.apartment_outlined,
+                  accent: _accentForType(SavedItemType.institution),
+                  expanded: _isExpanded(SavedItemType.institution),
+                  onToggle: () => _toggleSection(SavedItemType.institution),
+                  count: savedProvider.savedInstitutionsCount,
+                  child: _buildSnapshotSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    type: SavedItemType.institution,
+                    records: savedProvider.savedInstitutionItems,
+                    icon: Icons.apartment_outlined,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.group),
-                ),
-                icon: Icons.groups_2_outlined,
-                accent: _accentForType(SavedItemType.group),
-                expanded: _isExpanded(SavedItemType.group),
-                onToggle: () => _toggleSection(SavedItemType.group),
-                count: savedProvider.savedGroupsCount,
-                child: _buildSnapshotSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  type: SavedItemType.group,
-                  records: savedProvider.savedGroupItems,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.group),
+                  ),
                   icon: Icons.groups_2_outlined,
+                  accent: _accentForType(SavedItemType.group),
+                  expanded: _isExpanded(SavedItemType.group),
+                  onToggle: () => _toggleSection(SavedItemType.group),
+                  count: savedProvider.savedGroupsCount,
+                  child: _buildSnapshotSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    type: SavedItemType.group,
+                    records: savedProvider.savedGroupItems,
+                    icon: Icons.groups_2_outlined,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              _SavedItemsSection(
-                title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.marker),
-                ),
-                icon: Icons.place_outlined,
-                accent: _accentForType(SavedItemType.marker),
-                expanded: _isExpanded(SavedItemType.marker),
-                onToggle: () => _toggleSection(SavedItemType.marker),
-                count: savedProvider.savedMarkersCount,
-                child: _buildSnapshotSection(
-                  context: context,
-                  l10n: l10n,
-                  savedProvider: savedProvider,
-                  type: SavedItemType.marker,
-                  records: savedProvider.savedMarkerItems,
+              if (totalCount > 0)
+                _SavedItemsSection(
+                  title: l10n.savedItemsSectionTitle(
+                    _localizedTypeLabel(l10n, SavedItemType.marker),
+                  ),
                   icon: Icons.place_outlined,
+                  accent: _accentForType(SavedItemType.marker),
+                  expanded: _isExpanded(SavedItemType.marker),
+                  onToggle: () => _toggleSection(SavedItemType.marker),
+                  count: savedProvider.savedMarkersCount,
+                  child: _buildSnapshotSection(
+                    context: context,
+                    l10n: l10n,
+                    savedProvider: savedProvider,
+                    type: SavedItemType.marker,
+                    records: savedProvider.savedMarkerItems,
+                    icon: Icons.place_outlined,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Sends the viewer to the map, the most direct way to find something to
+  /// save. Desktop uses the shell route; mobile switches the main tab.
+  void _openDiscovery() {
+    final shell = DesktopShellScope.of(context);
+    if (shell != null) {
+      shell.navigateToRoute('/explore');
+      return;
+    }
+    try {
+      context.read<MainTabProvider>().setIndex(0);
+    } catch (_) {}
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   Widget _buildArtworkSection({
@@ -769,11 +808,12 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     if (totalVisible >= totalKnown && !savedProvider.hasMore(type)) {
       return null;
     }
-    return OutlinedButton.icon(
+    return KubusButton(
       onPressed:
           savedProvider.isSyncing ? null : () => _loadMore(savedProvider, type),
-      icon: const Icon(Icons.expand_more),
-      label: Text(l10n.savedItemsLoadMoreButton),
+      icon: Icons.expand_more,
+      label: l10n.savedItemsLoadMoreButton,
+      variant: KubusButtonVariant.secondary,
     );
   }
 
@@ -915,183 +955,61 @@ Future<void> showSavedItemsClearAllDialog(BuildContext context) async {
   );
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.title,
+/// Flat page header for the personal library: structural notion, a
+/// machine-register count and the last-saved line. The app bar carries the
+/// page title, so it is not repeated here. No card, tint or icon tile.
+class _SavedLibraryHeader extends StatelessWidget {
+  const _SavedLibraryHeader({
+    required this.notion,
     required this.subtitle,
     required this.countLabel,
-    required this.accent,
-    required this.icon,
   });
 
-  final String title;
-  final String subtitle;
-  final String countLabel;
-  final Color accent;
-  final IconData icon;
+  final String notion;
+  final String? subtitle;
+  final String? countLabel;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: accent,
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.22),
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                notion.toUpperCase(),
+                style: KubusTextStyles.structuralLabel.copyWith(
+                  color: roles.foregroundMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            if (countLabel != null)
+              Text(
+                countLabel!,
+                style: KubusTextStyles.machineValue.copyWith(
+                  color: roles.foregroundMuted,
+                ),
+              ),
+          ],
         ),
-      ),
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        blurSigma: style.blurSigma,
-        backgroundColor: style.tintColor,
-        showBorder: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < _kSavedSummaryCompactWidth;
-
-            Widget buildCountPill({required bool compact}) {
-              return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? KubusSpacing.sm : KubusSpacing.md,
-                  vertical: compact ? KubusSpacing.xs : KubusSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
-                  border: Border.all(color: accent.withValues(alpha: 0.26)),
-                ),
-                child: Text(
-                  countLabel,
-                  style: KubusTypography.inter(
-                    fontWeight: FontWeight.w700,
-                    color: accent,
-                  ),
-                ),
-              );
-            }
-
-            final content = isCompact
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: 0.14),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.lg),
-                            ),
-                            child: Icon(icon, color: accent, size: 26),
-                          ),
-                          const SizedBox(width: KubusSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  maxLines: 2,
-                                  softWrap: true,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: KubusTypography.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: KubusSpacing.xs),
-                                Text(
-                                  subtitle,
-                                  maxLines: 3,
-                                  softWrap: true,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: KubusTypography.inter(
-                                    fontSize: 13,
-                                    color: scheme.onSurface
-                                        .withValues(alpha: 0.68),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      buildCountPill(compact: true),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(KubusRadius.lg),
-                        ),
-                        child: Icon(
-                          icon,
-                          color: accent,
-                          size: 26,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: KubusTypography.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: KubusSpacing.xs),
-                            Text(
-                              subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: KubusTypography.inter(
-                                fontSize: 13,
-                                color: scheme.onSurface.withValues(alpha: 0.68),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      buildCountPill(compact: false),
-                    ],
-                  );
-
-            return Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: content,
-            );
-          },
-        ),
-      ),
+        if (subtitle != null) ...[
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            subtitle!,
+            style: textTheme.bodySmall?.copyWith(color: roles.foregroundMuted),
+          ),
+        ],
+      ],
     );
   }
 }
 
+/// One entity group in the library: a flat disclosure row over a rule, then
+/// its items. Empty groups are not rendered by the screen.
 class _SavedItemsSection extends StatelessWidget {
   const _SavedItemsSection({
     required this.title,
@@ -1105,6 +1023,8 @@ class _SavedItemsSection extends StatelessWidget {
 
   final String title;
   final IconData icon;
+
+  /// Kept for call-site compatibility; groups no longer carry a colour.
   final Color accent;
   final bool expanded;
   final VoidCallback onToggle;
@@ -1113,177 +1033,76 @@ class _SavedItemsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: accent,
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
-      ),
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        blurSigma: style.blurSigma,
-        backgroundColor: style.tintColor,
-        showBorder: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < _kSavedSectionCompactWidth;
-
-            Widget buildCountPill({required bool compact}) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
-                  border: Border.all(
-                    color: accent.withValues(alpha: 0.24),
-                  ),
-                ),
-                child: Text(
-                  '$count',
-                  style: KubusTypography.inter(
-                    fontSize: compact ? 11 : 12,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
-                  ),
-                ),
-              );
-            }
-
-            final header = InkWell(
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              button: true,
+              expanded: expanded,
+              label: '$title, $count',
               onTap: onToggle,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? KubusSpacing.xs : KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-                child: isCompact
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: accent.withValues(alpha: 0.14),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                child: Icon(icon, color: accent, size: 20),
-                              ),
-                              const SizedBox(width: KubusSpacing.md),
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  maxLines: 2,
-                                  softWrap: true,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: KubusTypography.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: KubusSpacing.sm),
-                          Row(
-                            children: [
-                              buildCountPill(compact: true),
-                              const Spacer(),
-                              AnimatedRotation(
-                                turns: expanded ? 0.5 : 0.0,
-                                duration: const Duration(milliseconds: 180),
-                                curve: Curves.easeOut,
-                                child: Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.68),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: 0.14),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                            ),
-                            child: Icon(icon, color: accent, size: 20),
-                          ),
-                          const SizedBox(width: KubusSpacing.md),
-                          Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 2,
-                              softWrap: true,
-                              overflow: TextOverflow.ellipsis,
-                              style: KubusTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface,
-                              ),
+              child: ExcludeSemantics(
+                child: InkWell(
+                  onTap: onToggle,
+                  focusColor: roles.focus.withValues(alpha: 0.16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 20, color: roles.foregroundMuted),
+                        const SizedBox(width: KubusSpacing.sm + 4),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: roles.foreground,
                             ),
                           ),
-                          const SizedBox(width: KubusSpacing.md),
-                          buildCountPill(compact: false),
-                          const SizedBox(width: KubusSpacing.sm),
-                          AnimatedRotation(
-                            turns: expanded ? 0.5 : 0.0,
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: scheme.onSurface.withValues(alpha: 0.68),
-                            ),
+                        ),
+                        Text(
+                          '$count',
+                          style: KubusTextStyles.machineValue.copyWith(
+                            color: roles.foregroundMuted,
                           ),
-                        ],
-                      ),
-              ),
-            );
-
-            return Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  header,
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    child: expanded
-                        ? Padding(
-                            padding:
-                                const EdgeInsets.only(top: KubusSpacing.md),
-                            child: child,
-                          )
-                        : const SizedBox.shrink(),
+                        ),
+                        const SizedBox(width: KubusSpacing.xs),
+                        AnimatedRotation(
+                          turns: expanded ? 0.5 : 0.0,
+                          duration: reduceMotion
+                              ? Duration.zero
+                              : const Duration(milliseconds: 180),
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: roles.foregroundMuted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
-            );
-          },
+            ),
+            if (expanded)
+              Padding(
+                padding: const EdgeInsets.only(top: KubusSpacing.xs),
+                child: child,
+              ),
+          ],
         ),
       ),
     );
@@ -1313,154 +1132,134 @@ class _SavedItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: accent,
-    );
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: accent.withValues(alpha: 0.16)),
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        blurSigma: style.blurSigma,
-        backgroundColor: style.tintColor,
-        showBorder: false,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            onTap: onTap,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact =
-                    constraints.maxWidth < _kSavedTileCompactWidth;
-                final thumbnailSize = isCompact
-                    ? _kSavedTileCompactThumbnailSize
-                    : _kSavedTileRegularThumbnailSize;
-                final removeButtonSize = isCompact ? 36.0 : 40.0;
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          onTap: onTap,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < _kSavedTileCompactWidth;
+              final thumbnailSize = isCompact
+                  ? _kSavedTileCompactThumbnailSize
+                  : _kSavedTileRegularThumbnailSize;
 
-                Widget buildTextBlock({required bool compact}) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 2,
-                        softWrap: true,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontSize: compact ? 14 : 15,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+              Widget buildTextBlock({required bool compact}) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: roles.foreground,
                       ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        subtitle,
-                        maxLines: compact ? 3 : 2,
-                        softWrap: true,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontSize: compact ? 12 : 13,
-                          color: scheme.onSurface.withValues(alpha: 0.68),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                Widget buildSavedAtLabel() {
-                  if (savedAt == null) return const SizedBox.shrink();
-                  return Text(
-                    l10n.savedItemsSavedAtLabel(savedAt!),
-                    maxLines: 2,
-                    softWrap: true,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurface.withValues(alpha: 0.52),
                     ),
-                  );
-                }
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      subtitle,
+                      maxLines: compact ? 3 : 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: roles.foregroundMuted,
+                      ),
+                    ),
+                  ],
+                );
+              }
 
-                Widget buildRemoveButton() {
-                  return KubusGlassIconButton(
-                    icon: Icons.bookmark_remove_outlined,
-                    onPressed: onRemove,
-                    tooltip: l10n.commonRemove,
-                    active: true,
-                    accentColor: accent,
-                    iconColor: accent,
-                    activeIconColor: accent,
-                    activeTint: accent,
-                    size: removeButtonSize,
-                  );
-                }
+              Widget buildSavedAtLabel() {
+                if (savedAt == null) return const SizedBox.shrink();
+                return Text(
+                  l10n.savedItemsSavedAtLabel(savedAt!),
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: roles.foregroundSubtle,
+                  ),
+                );
+              }
 
-                final content = isCompact
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+              Widget buildRemoveButton() {
+                return IconButton(
+                  icon: const Icon(Icons.bookmark_remove_outlined),
+                  color: roles.foregroundMuted,
+                  onPressed: onRemove,
+                  tooltip: l10n.commonRemove,
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                );
+              }
+
+              final content = isCompact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            leadingBuilder(thumbnailSize),
+                            const SizedBox(width: KubusSpacing.sm),
+                            Expanded(child: buildTextBlock(compact: true)),
+                          ],
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(child: buildSavedAtLabel()),
+                            const SizedBox(width: KubusSpacing.sm),
+                            buildRemoveButton(),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        leadingBuilder(thumbnailSize),
+                        const SizedBox(width: KubusSpacing.md),
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              leadingBuilder(thumbnailSize),
-                              const SizedBox(width: KubusSpacing.sm),
-                              Expanded(child: buildTextBlock(compact: true)),
-                            ],
-                          ),
-                          const SizedBox(height: KubusSpacing.sm),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(child: buildSavedAtLabel()),
-                              const SizedBox(width: KubusSpacing.sm),
-                              buildRemoveButton(),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          leadingBuilder(thumbnailSize),
-                          const SizedBox(width: KubusSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                buildTextBlock(compact: false),
-                                if (savedAt != null) ...[
-                                  const SizedBox(height: KubusSpacing.sm),
-                                  buildSavedAtLabel(),
-                                ],
+                              buildTextBlock(compact: false),
+                              if (savedAt != null) ...[
+                                const SizedBox(height: KubusSpacing.sm),
+                                buildSavedAtLabel(),
                               ],
-                            ),
+                            ],
                           ),
-                          const SizedBox(width: KubusSpacing.sm),
-                          buildRemoveButton(),
-                        ],
-                      );
+                        ),
+                        const SizedBox(width: KubusSpacing.sm),
+                        buildRemoveButton(),
+                      ],
+                    );
 
-                return Padding(
-                  padding: EdgeInsets.all(
-                    isCompact
-                        ? KubusSpacing.sm + KubusSpacing.xs
-                        : KubusSpacing.md,
-                  ),
-                  child: content,
-                );
-              },
-            ),
+              return Padding(
+                padding: EdgeInsets.all(
+                  isCompact
+                      ? KubusSpacing.sm + KubusSpacing.xs
+                      : KubusSpacing.md,
+                ),
+                child: content,
+              );
+            },
           ),
         ),
       ),
@@ -1868,34 +1667,33 @@ class _MediaThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final resolved = imageUrl?.trim();
     final hasImage = resolved != null && resolved.isNotEmpty;
     final image = resolved ?? '';
+    final roles = KubusColorRoles.of(context);
     final boxDecoration = BoxDecoration(
-      color: accent.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      border: Border.all(color: accent.withValues(alpha: 0.18)),
+      color: roles.ground,
+      borderRadius: BorderRadius.circular(KubusRadius.surface),
+      border: Border.all(color: roles.rule, width: KubusSizes.hairline),
     );
 
     if (hasImage) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
         child: Image.network(
           image,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _fallback(boxDecoration, scheme),
+          errorBuilder: (_, __, ___) => _fallback(boxDecoration, roles),
         ),
       );
     }
 
-    return _fallback(boxDecoration, scheme);
+    return _fallback(boxDecoration, roles);
   }
 
-  Widget _fallback(BoxDecoration decoration, ColorScheme scheme) {
+  Widget _fallback(BoxDecoration decoration, KubusColorRoles roles) {
     return Container(
       width: size,
       height: size,
@@ -1904,18 +1702,19 @@ class _MediaThumbnail extends StatelessWidget {
           ? Center(
               child: Text(
                 avatarLabel!.trim()[0].toUpperCase(),
-                style: KubusTypography.inter(
+                style: KubusTypography.content(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: accent,
+                  color: roles.foregroundMuted,
                 ),
               ),
             )
-          : Icon(icon, size: 28, color: accent),
+          : Icon(icon, size: 28, color: roles.foregroundMuted),
     );
   }
 }
 
+/// Compact truthful line for a group whose items are not available yet.
 class _GlassEmptyState extends StatelessWidget {
   const _GlassEmptyState({
     required this.icon,
@@ -1931,52 +1730,35 @@ class _GlassEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: accent,
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: accent.withValues(alpha: 0.14)),
-      ),
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        blurSigma: style.blurSigma,
-        backgroundColor: style.tintColor,
-        showBorder: false,
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          child: Column(
-            children: [
-              Icon(icon, size: 40, color: accent),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: KubusTypography.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: roles.foregroundSubtle),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: roles.foreground,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: KubusTypography.inter(
-                  fontSize: 13,
-                  color: scheme.onSurface.withValues(alpha: 0.68),
+                Text(
+                  description,
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: roles.foregroundMuted),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

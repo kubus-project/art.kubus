@@ -35,4 +35,30 @@ void main() {
 
     semantics.dispose();
   });
+
+  Widget host(Widget body) => ChangeNotifierProvider<ThemeProvider>(
+        create: (_) => ThemeProvider(),
+        child: MaterialApp(home: Scaffold(body: body)),
+      );
+
+  testWidgets('hugs its content under a Center instead of filling the screen',
+      (tester) async {
+    await tester.pumpWidget(host(const Center(
+      child: EmptyStateCard(title: 'No records', description: 'None yet.'),
+    )));
+    final height = tester.getSize(find.byType(EmptyStateCard)).height;
+    expect(height, lessThan(300));
+  });
+
+  testWidgets('fills a fixed-height slot', (tester) async {
+    await tester.pumpWidget(host(const Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        height: 400,
+        child: EmptyStateCard(title: 'No records', description: 'None yet.'),
+      ),
+    )));
+    expect(tester.getSize(find.byType(EmptyStateCard)).height, 400);
+    expect(tester.takeException(), isNull);
+  });
 }

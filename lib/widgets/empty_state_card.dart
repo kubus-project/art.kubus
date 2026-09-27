@@ -36,9 +36,15 @@ class EmptyStateCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final hasBoundedWidth = constraints.maxWidth.isFinite;
-        final hasBoundedHeight = constraints.maxHeight.isFinite;
+        // Fill height only for a fixed-height slot (tight constraints). Under
+        // a Center or other loose parent the card sizes to its content
+        // instead of stretching into a screen-tall empty box.
+        final hasBoundedHeight = constraints.hasTightHeight;
 
-        Widget content = Center(
+        Widget content = Align(
+          // A plain Center would expand to any bounded height; in a loose
+          // slot the card hugs its content vertically.
+          heightFactor: hasBoundedHeight ? null : 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: Column(
