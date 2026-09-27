@@ -13,7 +13,6 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../inline_loading.dart';
-import '../glass_components.dart';
 import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 
@@ -80,10 +79,8 @@ class CommunityPostCard extends StatelessWidget {
         final isSmallScreen = constraints.maxWidth < 375;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
-        final radius = BorderRadius.circular(KubusRadius.lg);
-        final glassTint =
-            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+        final roles = KubusColorRoles.of(context);
+        final radius = BorderRadius.circular(KubusRadius.surface);
         final openAuthorProfile = onOpenProfileIdentity == null
             ? (onOpenAuthorProfile ??
                 () => openProfileIdentity(context, post.authorIdentityData))
@@ -92,325 +89,322 @@ class CommunityPostCard extends StatelessWidget {
         return Container(
           margin: const EdgeInsets.only(bottom: KubusChromeMetrics.cardPadding),
           child: Container(
+            // Flat reading surface: posts are content, not glass overlays.
+            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
             decoration: BoxDecoration(
+              color: roles.surface,
               borderRadius: radius,
-              border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.18),
-              ),
+              border: Border.all(color: roles.rule, width: KubusSizes.hairline),
             ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-              margin: EdgeInsets.zero,
-              borderRadius: radius,
-              showBorder: false,
-              backgroundColor: glassTint,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ProfileIdentitySummary(
-                          identity: post.authorIdentityData,
-                          layout: ProfileIdentityLayout.row,
-                          avatarRadius: 20,
-                          allowFabricatedFallback: true,
-                          fetchMissingAvatar: false,
-                          onTap: openAuthorProfile,
-                          titleStyle: KubusTextStyles.sectionTitle.copyWith(
-                            fontSize: isSmallScreen
-                                ? KubusChromeMetrics.navLabel
-                                : KubusHeaderMetrics.sectionTitle,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
-                          subtitleStyle:
-                              KubusTextStyles.sectionSubtitle.copyWith(
-                            fontSize: isSmallScreen
-                                ? KubusChromeMetrics.navMetaLabel
-                                : KubusHeaderMetrics.screenSubtitle,
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                          titleSuffix: CommunityAuthorRoleBadges(
-                            post: post,
-                            fontSize: isSmallScreen ? 8.5 : 9.5,
-                            iconOnly: true,
-                            // ProfileIdentitySummary already inserts a
-                            // small gap between the title and suffix.
-                            spacing: 0,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _timeAgo(context, post.timestamp, l10n),
-                        style: KubusTextStyles.navMetaLabel.copyWith(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: ProfileIdentitySummary(
+                        identity: post.authorIdentityData,
+                        layout: ProfileIdentityLayout.row,
+                        avatarRadius: 20,
+                        allowFabricatedFallback: true,
+                        fetchMissingAvatar: false,
+                        onTap: openAuthorProfile,
+                        titleStyle: KubusTextStyles.sectionTitle.copyWith(
                           fontSize: isSmallScreen
-                              ? KubusChromeMetrics.navBadgeLabel
-                              : KubusChromeMetrics.navMetaLabel,
-                          color: scheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (onMoreOptions != null) ...[
-                        const SizedBox(width: 6),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: onMoreOptions,
-                          icon: Icon(
-                            Icons.more_vert,
-                            size: 18,
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (post.feedPin.isPinned || post.promotion.isPromoted) ...[
-                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
-                    Wrap(
-                      spacing: KubusSpacing.sm,
-                      runSpacing: KubusSpacing.sm,
-                      children: [
-                        if (post.feedPin.isPinned)
-                          _buildMetaBadge(
-                            context,
-                            icon: Icons.push_pin_outlined,
-                            label: post.feedPin.surface == null
-                                ? 'Pinned'
-                                : 'Pinned ${post.feedPin.surface}',
-                            color: scheme.tertiary,
-                          ),
-                        if (post.promotion.isPromoted)
-                          _buildMetaBadge(
-                            context,
-                            icon: Icons.auto_awesome,
-                            label: 'Promoted',
-                            color: accentColor,
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: KubusSpacing.md),
-                  if (post.postType == 'repost' && post.content.isNotEmpty) ...[
-                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-                    _OpenPostSurface(
-                      onTap: () => onOpenPostDetail(post),
-                      child: Text(
-                        post.content,
-                        style: KubusTextStyles.detailBody.copyWith(
-                          fontSize: isSmallScreen ? 13 : 15,
-                          height: 1.5,
+                              ? KubusChromeMetrics.navLabel
+                              : KubusHeaderMetrics.sectionTitle,
+                          fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    Divider(color: scheme.outline.withValues(alpha: 0.5)),
-                    const SizedBox(height: KubusSpacing.sm),
-                  ],
-                  if (post.category.isNotEmpty && post.category != 'post') ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-                        vertical: KubusSpacing.xs,
-                      ),
-                      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getCategoryIcon(post.category),
-                            size: 14,
-                            color: accentColor,
-                          ),
-                          const SizedBox(
-                              width: KubusSpacing.xs + KubusSpacing.xxs),
-                          Text(
-                            _formatCategoryLabel(post.category),
-                            style: KubusTextStyles.navMetaLabel.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: accentColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (post.postType == 'repost' &&
-                      post.originalPost != null) ...[
-                    _RepostInnerCard(
-                      post: post.originalPost!,
-                      accentColor: accentColor,
-                      onOpenPostDetail: onOpenPostDetail,
-                      onOpenProfileIdentity: onOpenProfileIdentity,
-                    ),
-                  ] else ...[
-                    _OpenPostSurface(
-                      onTap: () => onOpenPostDetail(post),
-                      child: Text(
-                        post.content,
-                        style: KubusTextStyles.detailBody.copyWith(
-                          fontSize: isSmallScreen ? 13 : 15,
-                          height: 1.5,
-                          color: scheme.onSurface,
+                        subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                          fontSize: isSmallScreen
+                              ? KubusChromeMetrics.navMetaLabel
+                              : KubusHeaderMetrics.screenSubtitle,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        titleSuffix: CommunityAuthorRoleBadges(
+                          post: post,
+                          fontSize: isSmallScreen ? 8.5 : 9.5,
+                          iconOnly: true,
+                          // ProfileIdentitySummary already inserts a
+                          // small gap between the title and suffix.
+                          spacing: 0,
                         ),
                       ),
                     ),
-                  ],
-                  if (_hasPrimaryImage(post)) ...[
-                    const SizedBox(height: KubusSpacing.md),
-                    _OpenPostSurface(
-                      onTap: () => onOpenPostDetail(_primaryImagePost(post)),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
-                        child: Image.network(
-                          _primaryImageUrl(post),
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    accentColor.withValues(alpha: 0.3),
-                                    accentColor.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
-                              ),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 36,
-                                  height: 36,
-                                  child: InlineLoading(
-                                    expand: true,
-                                    shape: BoxShape.circle,
-                                    tileSize: 4.0,
-                                    progress: loadingProgress
-                                                .expectedTotalBytes !=
-                                            null
-                                        ? (loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!)
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    accentColor.withValues(alpha: 0.3),
-                                    accentColor.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.image_not_supported,
-                                  color: scheme.onPrimary,
-                                  size: 60,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                    Text(
+                      _timeAgo(context, post.timestamp, l10n),
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        fontSize: isSmallScreen
+                            ? KubusChromeMetrics.navBadgeLabel
+                            : KubusChromeMetrics.navMetaLabel,
+                        color: scheme.onSurface.withValues(alpha: 0.5),
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                  if (post.postType != 'repost') ...[
-                    _PostMetadataSection(
-                      post: post,
-                      accentColor: accentColor,
-                      onTagTap: onTagTap,
-                      onMentionTap: onMentionTap,
-                      onOpenLocation: onOpenLocation,
-                      onOpenGroup: onOpenGroup,
-                      onOpenSubject: onOpenSubject,
-                    ),
-                  ],
-                  const SizedBox(height: KubusSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _InteractionButton(
-                          icon: post.isLiked
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          label: '${post.likeCount}',
-                          onTap: onToggleLike,
-                          onCountTap: onShowLikes,
-                          isActive: post.isLiked,
-                          color: post.isLiked
-                              ? KubusColorRoles.of(context).likeAction
-                              : scheme.onSurface.withValues(alpha: 0.6),
-                          accentColor: accentColor,
-                        ),
-                      ),
-                      Expanded(
-                        child: _InteractionButton(
-                          icon: Icons.comment_outlined,
-                          label: '${post.commentCount}',
-                          onTap: onOpenComments,
-                          isActive: commentsExpanded,
-                          accentColor: accentColor,
-                        ),
-                      ),
-                      Expanded(
-                        child: _InteractionButton(
-                          icon: Icons.repeat,
-                          label: '${post.shareCount}',
-                          onTap: onRepost,
-                          onCountTap:
-                              post.shareCount > 0 ? onShowReposts : null,
-                          accentColor: accentColor,
-                        ),
-                      ),
-                      Expanded(
-                        child: _InteractionButton(
-                          icon: Icons.share_outlined,
-                          label: '',
-                          onTap: onShare,
-                          accentColor: accentColor,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.sm),
+                    if (onMoreOptions != null) ...[
+                      const SizedBox(width: 6),
                       IconButton(
-                        onPressed: onToggleBookmark,
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: onMoreOptions,
                         icon: Icon(
-                          post.isBookmarked
-                              ? Icons.bookmark
-                              : Icons.bookmark_border,
-                          color: post.isBookmarked
-                              ? scheme.primary
-                              : scheme.onSurface.withValues(alpha: 0.6),
-                          size: 20,
+                          Icons.more_vert,
+                          size: 18,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
-                  ),
-                  if (inlineComments != null) ...[
-                    const SizedBox(height: KubusSpacing.sm),
-                    inlineComments!,
                   ],
+                ),
+                if (post.feedPin.isPinned || post.promotion.isPromoted) ...[
+                  const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
+                  Wrap(
+                    spacing: KubusSpacing.sm,
+                    runSpacing: KubusSpacing.sm,
+                    children: [
+                      if (post.feedPin.isPinned)
+                        _buildMetaBadge(
+                          context,
+                          icon: Icons.push_pin_outlined,
+                          label: post.feedPin.surface == null
+                              ? 'Pinned'
+                              : 'Pinned ${post.feedPin.surface}',
+                          color: scheme.tertiary,
+                        ),
+                      if (post.promotion.isPromoted)
+                        _buildMetaBadge(
+                          context,
+                          icon: Icons.auto_awesome,
+                          label: 'Promoted',
+                          color: accentColor,
+                        ),
+                    ],
+                  ),
                 ],
-              ),
+                const SizedBox(height: KubusSpacing.md),
+                if (post.postType == 'repost' && post.content.isNotEmpty) ...[
+                  const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
+                  _OpenPostSurface(
+                    onTap: () => onOpenPostDetail(post),
+                    child: Text(
+                      post.content,
+                      style: KubusTextStyles.detailBody.copyWith(
+                        fontSize: isSmallScreen ? 13 : 15,
+                        height: 1.5,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  Divider(color: scheme.outline.withValues(alpha: 0.5)),
+                  const SizedBox(height: KubusSpacing.sm),
+                ],
+                if (post.category.isNotEmpty && post.category != 'post') ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+                      vertical: KubusSpacing.xs,
+                    ),
+                    margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getCategoryIcon(post.category),
+                          size: 14,
+                          color: accentColor,
+                        ),
+                        const SizedBox(
+                            width: KubusSpacing.xs + KubusSpacing.xxs),
+                        Text(
+                          _formatCategoryLabel(post.category),
+                          style: KubusTextStyles.navMetaLabel.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: accentColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (post.postType == 'repost' && post.originalPost != null) ...[
+                  _RepostInnerCard(
+                    post: post.originalPost!,
+                    accentColor: accentColor,
+                    onOpenPostDetail: onOpenPostDetail,
+                    onOpenProfileIdentity: onOpenProfileIdentity,
+                  ),
+                ] else ...[
+                  _OpenPostSurface(
+                    onTap: () => onOpenPostDetail(post),
+                    child: Text(
+                      post.content,
+                      style: KubusTextStyles.detailBody.copyWith(
+                        fontSize: isSmallScreen ? 13 : 15,
+                        height: 1.5,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+                if (_hasPrimaryImage(post)) ...[
+                  const SizedBox(height: KubusSpacing.md),
+                  _OpenPostSurface(
+                    onTap: () => onOpenPostDetail(_primaryImagePost(post)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                      child: Image.network(
+                        _primaryImageUrl(post),
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  accentColor.withValues(alpha: 0.3),
+                                  accentColor.withValues(alpha: 0.1),
+                                ],
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
+                            ),
+                            child: Center(
+                              child: SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: InlineLoading(
+                                  expand: true,
+                                  shape: BoxShape.circle,
+                                  tileSize: 4.0,
+                                  progress: loadingProgress
+                                              .expectedTotalBytes !=
+                                          null
+                                      ? (loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!)
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  accentColor.withValues(alpha: 0.3),
+                                  accentColor.withValues(alpha: 0.1),
+                                ],
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: scheme.onPrimary,
+                                size: 60,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+                if (post.postType != 'repost') ...[
+                  _PostMetadataSection(
+                    post: post,
+                    accentColor: accentColor,
+                    onTagTap: onTagTap,
+                    onMentionTap: onMentionTap,
+                    onOpenLocation: onOpenLocation,
+                    onOpenGroup: onOpenGroup,
+                    onOpenSubject: onOpenSubject,
+                  ),
+                ],
+                const SizedBox(height: KubusSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InteractionButton(
+                        icon: post.isLiked
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        label: '${post.likeCount}',
+                        semanticLabel: l10n?.communityPostActionLike ?? '',
+                        toggled: post.isLiked,
+                        onTap: onToggleLike,
+                        onCountTap: onShowLikes,
+                        isActive: post.isLiked,
+                        color: post.isLiked
+                            ? roles.likeAction
+                            : roles.foregroundMuted,
+                        accentColor: accentColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _InteractionButton(
+                        icon: Icons.comment_outlined,
+                        label: '${post.commentCount}',
+                        semanticLabel: l10n?.communityPostActionComment ?? '',
+                        onTap: onOpenComments,
+                        isActive: commentsExpanded,
+                        accentColor: accentColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _InteractionButton(
+                        icon: Icons.repeat,
+                        label: '${post.shareCount}',
+                        semanticLabel: l10n?.communityRepostButtonLabel ?? '',
+                        onTap: onRepost,
+                        onCountTap: post.shareCount > 0 ? onShowReposts : null,
+                        accentColor: accentColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _InteractionButton(
+                        icon: Icons.share_outlined,
+                        label: '',
+                        semanticLabel: l10n?.commonShare ?? '',
+                        onTap: onShare,
+                        accentColor: accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                    _InteractionButton(
+                      icon: post.isBookmarked
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      label: '',
+                      semanticLabel: l10n?.commonSave ?? '',
+                      toggled: post.isBookmarked,
+                      onTap: onToggleBookmark,
+                      isActive: post.isBookmarked,
+                      color: post.isBookmarked
+                          ? roles.active
+                          : roles.foregroundMuted,
+                      accentColor: accentColor,
+                    ),
+                  ],
+                ),
+                if (inlineComments != null) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  inlineComments!,
+                ],
+              ],
             ),
           ),
         );

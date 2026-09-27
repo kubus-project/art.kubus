@@ -88,6 +88,7 @@ part 'desktop_community_screen_parts/desktop_community_screen_p3.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p4.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p5.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p6.dart';
+
 class _ComposerImagePayload {
   final Uint8List bytes;
   final String fileName;
@@ -147,7 +148,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   String _discoverSortMode = 'hybrid';
   String _followingSortMode = 'hybrid';
   String _artSortMode = 'hybrid';
-
 
   AppRefreshProvider? _appRefreshProvider;
   int _lastCommunityRefreshVersion = 0;
@@ -217,23 +217,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   @override
   void dispose() {
     _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
@@ -258,9 +241,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _maybeHandleComposerOpenRequest(hub);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
@@ -294,24 +274,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       width: isLarge ? 360 : 300,
                       child: Container(
                         decoration: BoxDecoration(
+                          color: KubusColorRoles.of(context).surface,
                           border: Border(
                             left: BorderSide(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : scheme.outline.withValues(alpha: 0.10),
-                              width: 1,
+                              color: KubusColorRoles.of(context).rule,
+                              width: KubusSizes.hairline,
                             ),
                           ),
                         ),
-                        child: LiquidGlassPanel(
-                          padding: EdgeInsets.zero,
-                          margin: EdgeInsets.zero,
-                          borderRadius: BorderRadius.zero,
-                          showBorder: false,
-                          backgroundColor: scheme.surface
-                              .withValues(alpha: isDark ? 0.16 : 0.10),
-                          child: _buildRightSidebar(themeProvider),
-                        ),
+                        child: _buildRightSidebar(themeProvider),
                       ),
                     ),
                 ],
@@ -338,130 +309,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       ),
     );
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 enum _PaneViewType { tagFeed, postDetail, conversation }

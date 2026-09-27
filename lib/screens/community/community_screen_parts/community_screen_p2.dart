@@ -965,14 +965,12 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
           CommunityFabOption(
             icon: Icons.group_add_outlined,
             label: l10n.communityFabCreateGroup,
-            onTap: () => _showCreateGroupSheet(),
+            onTap: () => unawaited(_handleCreateGroupPressed()),
           ),
           CommunityFabOption(
             icon: Icons.post_add_outlined,
             label: l10n.communityFabGroupPost,
-            onTap: () {
-              _handleGroupFabPressed();
-            },
+            onTap: () => unawaited(_handleGroupFabPressed()),
           ),
         ],
       );
@@ -987,13 +985,12 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
           CommunityFabOption(
             icon: Icons.place_outlined,
             label: l10n.communityFabArtDrop,
-            onTap: () => _handleArtFabPressed(),
+            onTap: () => unawaited(_handleArtFabPressed()),
           ),
           CommunityFabOption(
             icon: Icons.rate_review_outlined,
             label: l10n.communityFabPostReview,
-            onTap: () =>
-                _createNewPost(presetCategory: 'review', artContext: true),
+            onTap: () => unawaited(_handleReviewFabPressed()),
           ),
         ],
       );
@@ -1003,7 +1000,7 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     final fab = FloatingActionButton.extended(
       key: ValueKey('fab_$tabIndex'),
       heroTag: 'community_fab_$tabIndex',
-      onPressed: _handleFeedFabPressed,
+      onPressed: () => unawaited(_handleFeedFabPressed()),
       backgroundColor: themeProvider.accentColor,
       icon: Icon(Icons.edit_outlined, color: scheme.onPrimary),
       label: Text(

@@ -57,6 +57,7 @@ import '../../providers/recent_activity_provider.dart';
 import '../../providers/chat_provider.dart';
 import 'messages_screen.dart';
 import '../../providers/navigation_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
@@ -91,6 +92,7 @@ part 'community_screen_parts/community_screen_p2.dart';
 part 'community_screen_parts/community_screen_p3.dart';
 part 'community_screen_parts/community_screen_p4.dart';
 part 'community_screen_parts/community_screen_p5.dart';
+
 enum CommunityFeedType {
   following,
   discover,
@@ -182,28 +184,21 @@ class _CommunityScreenState extends State<CommunityScreen>
   // Expandable FAB state
   bool _isFabExpanded = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabCount, vsync: this);
+    // Guests have no follow graph yet: an empty "Following" tab would be the
+    // first thing they see, so they land on Discover instead.
+    var isSignedIn = true;
+    try {
+      isSignedIn =
+          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+    } catch (_) {}
+    _tabController = TabController(
+      length: _tabCount,
+      vsync: this,
+      initialIndex: isSignedIn ? 0 : 1,
+    );
     _groupSearchController = TextEditingController();
     _communitySearchController = KubusSearchController(
       config: const KubusSearchConfig(
@@ -213,9 +208,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
     _communitySearchController
         .addListener(_handleCommunitySearchControllerChanged);
-    // Load following feed by default
-    _communityPosts = _followingFeedPosts;
-    _activeFeed = CommunityFeedType.following;
+    _communityPosts = isSignedIn ? _followingFeedPosts : _discoverFeedPosts;
+    _activeFeed =
+        isSignedIn ? CommunityFeedType.following : CommunityFeedType.discover;
     try {
       _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
           .currentWalletAddress;
@@ -282,7 +277,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     });
   }
 
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -335,7 +329,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   DateTime? _lastConfigChange;
-
 
   // Helper to get user avatar from backend
   // _getUserAvatar removed (unused) — avatars are now resolved via UserService and ChatProvider caching
@@ -392,11 +385,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     _tabController.dispose();
     super.dispose();
   }
-
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -470,24 +458,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-
-
-
-
-
-
   // Unread notification count is now managed via NotificationProvider.
-
-
-
-
-
-
-
-
-
-
-
 
   String get _communitySearchQuery {
     return _communitySearchController.state.query.trim();
@@ -498,71 +469,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     return query.startsWith('#') ? query.substring(1) : query;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   bool get _hasSelectedMedia =>
       _selectedPostImageBytes != null || _selectedPostVideo != null;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
-

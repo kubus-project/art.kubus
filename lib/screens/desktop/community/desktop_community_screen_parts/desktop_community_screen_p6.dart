@@ -660,6 +660,15 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
   Future<void> _submitPost() async {
     final rawContent = _composeController.text.trim();
     if (rawContent.isEmpty && _selectedImages.isEmpty) return;
+    // Guests see the contextual account surface; their draft stays in the
+    // composer so posting can continue after sign-in.
+    final canPost = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      returnRoute: '/community',
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!canPost || !mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
     final appModeProvider =

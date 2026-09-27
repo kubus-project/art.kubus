@@ -4,17 +4,47 @@ part of '../community_screen.dart';
 // private state access is intact. setState is routed through
 // the State's _applyState shim.
 extension _CommunityScreenStatePart3 on _CommunityScreenState {
-  void _handleFeedFabPressed() {
+  /// Guests meet the contextual account surface *before* the composer opens,
+  /// instead of drafting a post that can only fail on submit.
+  Future<bool> _ensureCanCompose({String? actionLabel}) {
+    final l10n = AppLocalizations.of(context)!;
+    return const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
+      returnRoute: '/community',
+      sourceScreen: 'community_screen',
+    );
+  }
+
+  Future<void> _handleFeedFabPressed() async {
+    if (!await _ensureCanCompose() || !mounted) return;
     _createNewPost();
   }
 
-  void _handleGroupFabPressed() {
+  Future<void> _handleGroupFabPressed() async {
+    if (!await _ensureCanCompose() || !mounted) return;
     unawaited(_ensureGroupsLoaded());
     _createNewPost(presetCategory: 'group');
   }
 
-  void _handleArtFabPressed() {
+  Future<void> _handleArtFabPressed() async {
+    if (!await _ensureCanCompose() || !mounted) return;
     _createNewPost(presetCategory: 'art_drop', artContext: true);
+  }
+
+  Future<void> _handleCreateGroupPressed() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _ensureCanCompose(
+            actionLabel: l10n.communityCreateGroupAuthAction) ||
+        !mounted) {
+      return;
+    }
+    _showCreateGroupSheet();
+  }
+
+  Future<void> _handleReviewFabPressed() async {
+    if (!await _ensureCanCompose() || !mounted) return;
+    _createNewPost(presetCategory: 'review', artContext: true);
   }
 
   // Navigation and interaction methods
