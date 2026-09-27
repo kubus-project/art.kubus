@@ -4110,11 +4110,17 @@ abstract class AppLocalizations {
   /// **'Events attended'**
   String get desktopSettingsAchievementsStatEventsAttended;
 
-  /// No description provided for @desktopSettingsAchievementsStatKub8PointsEarned.
+  /// No description provided for @achievementsStatKub8Earned.
   ///
   /// In en, this message translates to:
-  /// **'Contribution recognition'**
-  String get desktopSettingsAchievementsStatKub8PointsEarned;
+  /// **'KUB8 earned from achievements'**
+  String get achievementsStatKub8Earned;
+
+  /// No description provided for @achievementUnlockedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked'**
+  String get achievementUnlockedLabel;
 
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryTitle.
   ///
@@ -9391,6 +9397,24 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get messagesTitle;
 
+  /// No description provided for @messagesAttachTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a file'**
+  String get messagesAttachTooltip;
+
+  /// No description provided for @messagesPrivateNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get messagesPrivateNotion;
+
+  /// No description provided for @messagesUnreadSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'unread'**
+  String get messagesUnreadSemantic;
+
   /// No description provided for @messagesEmptyNoConversationsTitle.
   ///
   /// In en, this message translates to:
@@ -9400,7 +9424,7 @@ abstract class AppLocalizations {
   /// No description provided for @messagesEmptyNoConversationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a conversation using the chat button below.'**
+  /// **'Your private conversations with artists, institutions and other members appear here.'**
   String get messagesEmptyNoConversationsDescription;
 
   /// No description provided for @messagesEmptyStartChatAction.
@@ -17628,6 +17652,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 comment} other{{count} comments}}'**
   String commonCommentsCount(num count);
 
+  /// No description provided for @communityPostLikesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 like} other{{count} likes}}'**
+  String communityPostLikesCount(num count);
+
+  /// No description provided for @communityPostRepostsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 repost} other{{count} reposts}}'**
+  String communityPostRepostsCount(num count);
+
   /// No description provided for @commonDistanceKmAway.
   ///
   /// In en, this message translates to:
@@ -18257,6 +18293,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posts'**
   String get communitySearchTypePosts;
+
+  /// No description provided for @communitySearchTypeEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get communitySearchTypeEvents;
+
+  /// No description provided for @communitySearchTypeExhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get communitySearchTypeExhibitions;
+
+  /// No description provided for @communitySearchTypePlaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Places'**
+  String get communitySearchTypePlaces;
+
+  /// No description provided for @searchResultsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get searchResultsSemanticLabel;
 
   /// No description provided for @communitySearchHintProfiles.
   ///
@@ -23646,6 +23706,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.'**
   String get savedItemsSummarySubtitleEmpty;
+
+  /// No description provided for @savedItemsEmptyLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get savedItemsEmptyLibraryTitle;
+
+  /// No description provided for @savedItemsLibraryNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your library'**
+  String get savedItemsLibraryNotion;
 
   /// No description provided for @savedItemsSummarySubtitleLastSaved.
   ///
