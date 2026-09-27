@@ -2435,6 +2435,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsAppearanceSectionTitle => 'Videz';
 
   @override
+  String get settingsReduceEffectsTitle => 'Zmanjšaj učinke';
+
+  @override
+  String get settingsReduceEffectsSubtitle =>
+      'Izklopi zameglitev, animacije in druge učinke';
+
+  @override
+  String get settingsReduceEffectsAutoSubtitle =>
+      'Samodejno vklopljeno za to napravo';
+
+  @override
   String get settingsThemeModeTitle => 'Način teme';
 
   @override
@@ -2812,6 +2823,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsAboutSectionTitle => 'O aplikaciji';
+
+  @override
+  String get settingsGroupAccount => 'Račun';
+
+  @override
+  String get settingsGroupExperience => 'Izkušnja';
+
+  @override
+  String get settingsGroupInfrastructure => 'Infrastruktura';
 
   @override
   String get settingsAboutVersionTileTitle => 'Različica';
@@ -10955,6 +10975,28 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeDefaultDisplayName => 'prijatelj';
 
   @override
+  String get activityUnreadSemanticLabel => 'Neprebrano';
+
+  @override
+  String get homeIntroNotion => 'Odkrivaj';
+
+  @override
+  String get homeIntroTitle => 'Javna umetnost, kraji in kultura okoli vas';
+
+  @override
+  String get homeIntroLede =>
+      'Poiščite umetnine na zemljevidu, spremljajte umetnike in institucije ter poglejte, kaj skupnost dodaja v arhiv.';
+
+  @override
+  String get homeIntroExploreMapAction => 'Raziskuj zemljevid';
+
+  @override
+  String get homeIntroCommunityAction => 'Poglej skupnost';
+
+  @override
+  String get homeGuestHeaderTitle => 'Dobrodošli';
+
+  @override
   String get homeWelcomeSubtitle =>
       'Odprta umetniška platforma za odkrivanje, ustvarjalce, institucije in skupnost.';
 
@@ -12505,6 +12547,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institucijsko središče';
 
   @override
+  String get mobileNavMap => 'Zemljevid';
+
+  @override
+  String get mobileNavAr => 'AR';
+
+  @override
+  String get mobileNavCommunity => 'Skupnost';
+
+  @override
+  String get mobileNavHome => 'Domov';
+
+  @override
+  String get mobileNavProfile => 'Profil';
+
+  @override
+  String get mobileNavAccount => 'Račun';
+
+  @override
+  String get mobileNavSemanticLabel => 'Glavna navigacija';
+
+  @override
+  String get desktopNavWalletEntry => 'Denarnica';
+
+  @override
   String get daoHubAppBarTitle => 'Skupnostno upravljanje';
 
   @override
@@ -13188,6 +13254,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityRepostButtonLabel => 'Ponovno objavi';
+
+  @override
+  String get communityComposeAuthAction => 'objavi prispevek';
+
+  @override
+  String get communityCreateGroupAuthAction => 'ustvari skupino';
+
+  @override
+  String get communityPostActionLike => 'Všečkaj';
+
+  @override
+  String get communityPostActionComment => 'Komentiraj';
 
   @override
   String get communityRepostedToast => 'Ponovno objavljeno';

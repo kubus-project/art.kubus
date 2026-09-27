@@ -4314,6 +4314,24 @@ abstract class AppLocalizations {
   /// **'Appearance'**
   String get settingsAppearanceSectionTitle;
 
+  /// No description provided for @settingsReduceEffectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce effects'**
+  String get settingsReduceEffectsTitle;
+
+  /// No description provided for @settingsReduceEffectsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable blur, animations and other effects'**
+  String get settingsReduceEffectsSubtitle;
+
+  /// No description provided for @settingsReduceEffectsAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically enabled for this device'**
+  String get settingsReduceEffectsAutoSubtitle;
+
   /// No description provided for @settingsThemeModeTitle.
   ///
   /// In en, this message translates to:
@@ -4962,6 +4980,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'About'**
   String get settingsAboutSectionTitle;
+
+  /// No description provided for @settingsGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsGroupAccount;
+
+  /// No description provided for @settingsGroupExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience'**
+  String get settingsGroupExperience;
+
+  /// No description provided for @settingsGroupInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get settingsGroupInfrastructure;
 
   /// No description provided for @settingsAboutVersionTileTitle.
   ///
@@ -18942,6 +18978,48 @@ abstract class AppLocalizations {
   /// **'there'**
   String get homeDefaultDisplayName;
 
+  /// No description provided for @activityUnreadSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get activityUnreadSemanticLabel;
+
+  /// No description provided for @homeIntroNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get homeIntroNotion;
+
+  /// No description provided for @homeIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art, places and culture around you'**
+  String get homeIntroTitle;
+
+  /// No description provided for @homeIntroLede.
+  ///
+  /// In en, this message translates to:
+  /// **'Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.'**
+  String get homeIntroLede;
+
+  /// No description provided for @homeIntroExploreMapAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the map'**
+  String get homeIntroExploreMapAction;
+
+  /// No description provided for @homeIntroCommunityAction.
+  ///
+  /// In en, this message translates to:
+  /// **'See community'**
+  String get homeIntroCommunityAction;
+
+  /// No description provided for @homeGuestHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get homeGuestHeaderTitle;
+
   /// No description provided for @homeWelcomeSubtitle.
   ///
   /// In en, this message translates to:
@@ -21643,6 +21721,54 @@ abstract class AppLocalizations {
   /// **'Institution Hub'**
   String get navigationScreenInstitutionHub;
 
+  /// No description provided for @mobileNavMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get mobileNavMap;
+
+  /// No description provided for @mobileNavAr.
+  ///
+  /// In en, this message translates to:
+  /// **'AR'**
+  String get mobileNavAr;
+
+  /// No description provided for @mobileNavCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get mobileNavCommunity;
+
+  /// No description provided for @mobileNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get mobileNavHome;
+
+  /// No description provided for @mobileNavProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get mobileNavProfile;
+
+  /// No description provided for @mobileNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get mobileNavAccount;
+
+  /// No description provided for @mobileNavSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Main navigation'**
+  String get mobileNavSemanticLabel;
+
+  /// No description provided for @desktopNavWalletEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get desktopNavWalletEntry;
+
   /// No description provided for @daoHubAppBarTitle.
   ///
   /// In en, this message translates to:
@@ -22842,6 +22968,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repost'**
   String get communityRepostButtonLabel;
+
+  /// No description provided for @communityComposeAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'write a post'**
+  String get communityComposeAuthAction;
+
+  /// No description provided for @communityCreateGroupAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'create a group'**
+  String get communityCreateGroupAuthAction;
+
+  /// No description provided for @communityPostActionLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get communityPostActionLike;
+
+  /// No description provided for @communityPostActionComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get communityPostActionComment;
 
   /// No description provided for @communityRepostedToast.
   ///

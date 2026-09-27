@@ -2421,6 +2421,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAppearanceSectionTitle => 'Appearance';
 
   @override
+  String get settingsReduceEffectsTitle => 'Reduce effects';
+
+  @override
+  String get settingsReduceEffectsSubtitle =>
+      'Disable blur, animations and other effects';
+
+  @override
+  String get settingsReduceEffectsAutoSubtitle =>
+      'Automatically enabled for this device';
+
+  @override
   String get settingsThemeModeTitle => 'Theme mode';
 
   @override
@@ -2790,6 +2801,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAboutSectionTitle => 'About';
+
+  @override
+  String get settingsGroupAccount => 'Account';
+
+  @override
+  String get settingsGroupExperience => 'Experience';
+
+  @override
+  String get settingsGroupInfrastructure => 'Infrastructure';
 
   @override
   String get settingsAboutVersionTileTitle => 'Version';
@@ -10854,6 +10874,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultDisplayName => 'there';
 
   @override
+  String get activityUnreadSemanticLabel => 'Unread';
+
+  @override
+  String get homeIntroNotion => 'Discover';
+
+  @override
+  String get homeIntroTitle => 'Public art, places and culture around you';
+
+  @override
+  String get homeIntroLede =>
+      'Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.';
+
+  @override
+  String get homeIntroExploreMapAction => 'Explore the map';
+
+  @override
+  String get homeIntroCommunityAction => 'See community';
+
+  @override
+  String get homeGuestHeaderTitle => 'Welcome';
+
+  @override
   String get homeWelcomeSubtitle =>
       'Open art platform for discovery, artists, institutions, and community.';
 
@@ -12383,6 +12425,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institution Hub';
 
   @override
+  String get mobileNavMap => 'Map';
+
+  @override
+  String get mobileNavAr => 'AR';
+
+  @override
+  String get mobileNavCommunity => 'Community';
+
+  @override
+  String get mobileNavHome => 'Home';
+
+  @override
+  String get mobileNavProfile => 'Profile';
+
+  @override
+  String get mobileNavAccount => 'Account';
+
+  @override
+  String get mobileNavSemanticLabel => 'Main navigation';
+
+  @override
+  String get desktopNavWalletEntry => 'Wallet';
+
+  @override
   String get daoHubAppBarTitle => 'Community governance';
 
   @override
@@ -13059,6 +13125,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityRepostButtonLabel => 'Repost';
+
+  @override
+  String get communityComposeAuthAction => 'write a post';
+
+  @override
+  String get communityCreateGroupAuthAction => 'create a group';
+
+  @override
+  String get communityPostActionLike => 'Like';
+
+  @override
+  String get communityPostActionComment => 'Comment';
 
   @override
   String get communityRepostedToast => 'Reposted';
