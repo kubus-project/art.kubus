@@ -71,29 +71,14 @@ class _PostMetadataSection extends StatelessWidget {
           Wrap(
             spacing: KubusSpacing.sm,
             runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
-            children: post.tags.map((tag) {
-              final roles = KubusColorRoles.of(context);
-              return GestureDetector(
-                onTap: onTagTap == null ? null : () => onTagTap!(tag),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
+            children: post.tags
+                .map(
+                  (tag) => _PostTokenChip(
+                    label: '#$tag',
+                    onTap: onTagTap == null ? null : () => onTagTap!(tag),
                   ),
-                  decoration: BoxDecoration(
-                    color: roles.tagChipBackground.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  ),
-                  child: Text(
-                    '#$tag',
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: roles.tagChipBackground,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+                )
+                .toList(),
           ),
         ],
         if (post.mentions.isNotEmpty) ...[
@@ -101,29 +86,16 @@ class _PostMetadataSection extends StatelessWidget {
           Wrap(
             spacing: KubusSpacing.sm,
             runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
-            children: post.mentions.map((mention) {
-              return GestureDetector(
-                onTap:
-                    onMentionTap == null ? null : () => onMentionTap!(mention),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
+            children: post.mentions
+                .map(
+                  (mention) => _PostTokenChip(
+                    label: '@$mention',
+                    onTap: onMentionTap == null
+                        ? null
+                        : () => onMentionTap!(mention),
                   ),
-                  decoration: BoxDecoration(
-                    color: scheme.secondaryContainer.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  ),
-                  child: Text(
-                    '@$mention',
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSecondaryContainer,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+                )
+                .toList(),
           ),
         ],
         if (post.location != null &&
@@ -334,6 +306,53 @@ class _SubjectPreviewChip extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Neutral tag/mention token: flat surface, hairline rule, readable muted
+/// text in both themes. Interactive only when a handler exists.
+class _PostTokenChip extends StatelessWidget {
+  const _PostTokenChip({required this.label, this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final radius = BorderRadius.circular(KubusRadius.control);
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+        vertical: KubusSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: roles.surfaceRaised,
+        borderRadius: radius,
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+      ),
+      child: Text(
+        label,
+        style: KubusTextStyles.navMetaLabel.copyWith(
+          fontWeight: FontWeight.w500,
+          color: roles.foregroundMuted,
+        ),
+      ),
+    );
+    if (onTap == null) return chip;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: chip,
         ),
       ),
     );
