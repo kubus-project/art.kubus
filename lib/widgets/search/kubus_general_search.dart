@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
 import '../glass_components.dart';
@@ -116,19 +117,57 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
     if (widget.style != null) return widget.style!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: scheme.surface,
-    );
+    final roles = KubusColorRoles.of(context);
+    if (widget.useMapGlassSurface) {
+      // Map chrome keeps its overlay language over the live map.
+      final surfaceStyle = KubusGlassStyle.resolve(
+        context,
+        surfaceType: KubusGlassSurfaceType.button,
+        tintBase: scheme.surface,
+      );
+      return KubusSearchBarStyle(
+        borderRadius:
+            BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
+        backgroundColor: surfaceStyle.tintColor,
+        borderColor: scheme.outline.withValues(alpha: 0.18),
+        focusedBorderColor: roles.focus,
+        borderWidth: 1,
+        focusedBorderWidth: 2,
+        blurSigma: null,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.md - KubusSpacing.xxs,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        focusedBoxShadow: [
+          BoxShadow(
+            color: roles.focus.withValues(alpha: 0.14),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        prefixIconConstraints: _iconConstraints,
+        suffixIconConstraints: _iconConstraints,
+        textStyle: KubusTypography.textTheme.bodyMedium
+            ?.copyWith(color: roles.foreground),
+        hintStyle: KubusTypography.textTheme.bodyMedium
+            ?.copyWith(color: roles.foregroundMuted),
+      );
+    }
+    // Ordinary PRODUCT field: flat raised surface, hairline rule and a
+    // focus ring in the family focus role. No shadow, no user accent.
     return KubusSearchBarStyle(
       borderRadius:
-          BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
-      backgroundColor: surfaceStyle.tintColor,
-      borderColor: scheme.outline.withValues(alpha: 0.18),
-      focusedBorderColor: accent,
+          BorderRadius.circular(widget.borderRadius ?? KubusRadius.control + 2),
+      backgroundColor: roles.surfaceRaised,
+      borderColor: roles.rule,
+      focusedBorderColor: roles.focus,
       borderWidth: 1,
       focusedBorderWidth: 2,
       blurSigma: null,
@@ -136,42 +175,38 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.md - KubusSpacing.xxs,
       ),
-      boxShadow: [
-        BoxShadow(
-          color: scheme.shadow.withValues(alpha: 0.08),
-          blurRadius: 12,
-          offset: const Offset(0, 6),
-        ),
-      ],
-      focusedBoxShadow: [
-        BoxShadow(
-          color: accent.withValues(alpha: 0.14),
-          blurRadius: 14,
-          offset: const Offset(0, 8),
-        ),
-      ],
-      prefixIconConstraints: const BoxConstraints(
-        minWidth: KubusHeaderMetrics.actionHitArea,
-        minHeight: KubusHeaderMetrics.actionHitArea,
-      ),
-      suffixIconConstraints: const BoxConstraints(
-        minWidth: KubusHeaderMetrics.actionHitArea,
-        minHeight: KubusHeaderMetrics.actionHitArea,
-      ),
-      textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-        color: scheme.onSurface,
-      ),
-      hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-        color: scheme.onSurfaceVariant,
-      ),
+      boxShadow: null,
+      focusedBoxShadow: null,
+      prefixIconConstraints: _iconConstraints,
+      suffixIconConstraints: _iconConstraints,
+      textStyle: KubusTypography.textTheme.bodyMedium
+          ?.copyWith(color: roles.foreground),
+      hintStyle: KubusTypography.textTheme.bodyMedium
+          ?.copyWith(color: roles.foregroundMuted),
     );
   }
+
+  static const BoxConstraints _iconConstraints = BoxConstraints(
+    minWidth: KubusHeaderMetrics.actionHitArea,
+    minHeight: KubusHeaderMetrics.actionHitArea,
+  );
 
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _fieldLink,
-      child: ListenableBuilder(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          widget.controller.reportFieldWidth(_fieldLink, constraints.maxWidth);
+          return _buildField(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildField(BuildContext context) {
+    return Builder(
+      builder: (context) => ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
           final query = widget.controller.state.query;
@@ -184,7 +219,8 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
               focusNode: _focusNode,
               autofocus: widget.autofocus,
               enabled: widget.enabled,
-              enableBlur: widget.enableBlur,
+              // Blur only belongs to the map overlay variant.
+              enableBlur: widget.useMapGlassSurface && widget.enableBlur,
               useMapGlassSurface: widget.useMapGlassSurface,
               mouseCursor: widget.mouseCursor,
               onChanged: (value) {
@@ -267,21 +303,16 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     KubusSearchResult result,
     Color resolvedAccent,
   ) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     return Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: resolvedAccent.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.12),
-        ),
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
-      child: Icon(
-        result.icon,
-        color: resolvedAccent,
-      ),
+      child: Icon(result.icon, color: roles.foregroundMuted, size: 20),
     );
   }
 
@@ -333,16 +364,14 @@ class KubusSearchResultsOverlay extends StatelessWidget {
       return _buildIconBadge(context, result, resolvedAccent);
     }
 
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     return Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.64),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.12),
-        ),
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.network(
@@ -400,8 +429,9 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                       // Lock to the measured field width when provided so the
                       // dropdown stays aligned with the search field; otherwise
                       // fall back to the historical free maxWidth behaviour.
-                      minWidth: width ?? 0.0,
-                      maxWidth: width ?? maxWidth,
+                      minWidth: width ?? controller.activeFieldWidth ?? 0.0,
+                      maxWidth:
+                          width ?? controller.activeFieldWidth ?? maxWidth,
                       maxHeight: maxHeight,
                     ),
                     child: _KubusDropdownSurface(
@@ -476,59 +506,72 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                             );
                           }
 
-                          return Material(
-                            type: MaterialType.transparency,
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: state.results.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                color: scheme.outlineVariant,
-                              ),
-                              itemBuilder: (context, index) {
-                                final result = state.results[index];
-                                return MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: ListTile(
-                                    minLeadingWidth: 44,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: KubusSpacing.md,
-                                      vertical: KubusSpacing.xxs,
-                                    ),
-                                    leading: _buildResultLeading(
-                                      context,
-                                      result,
-                                      resolvedAccent,
-                                    ),
-                                    title: Text(
-                                      result.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      result.subtitleText(l10n),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      (onDismiss ??
-                                          controller.dismissOverlay)();
-                                      FocusManager.instance.primaryFocus
-                                          ?.unfocus();
-                                      onResultTap(result);
-                                    },
+                          final groups = groupSearchResults(state.results);
+                          final roles = KubusColorRoles.of(context);
+                          final rows = <Widget>[];
+                          for (final group in groups) {
+                            rows.add(_SearchGroupHeading(
+                              label: searchGroupLabel(l10n, group.kind),
+                              count: group.results.length,
+                              isFirst: rows.isEmpty,
+                            ));
+                            for (final result in group.results) {
+                              final detail = (result.detail ?? '').trim();
+                              rows.add(MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: ListTile(
+                                  minLeadingWidth: 44,
+                                  minTileHeight: 56,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: KubusSpacing.md,
+                                    vertical: KubusSpacing.xxs,
                                   ),
-                                );
-                              },
+                                  leading: _buildResultLeading(
+                                    context,
+                                    result,
+                                    resolvedAccent,
+                                  ),
+                                  title: Text(
+                                    result.label,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: roles.foreground,
+                                    ),
+                                  ),
+                                  subtitle: detail.isEmpty
+                                      ? null
+                                      : Text(
+                                          detail,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: roles.foregroundMuted,
+                                          ),
+                                        ),
+                                  onTap: () {
+                                    (onDismiss ?? controller.dismissOverlay)();
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
+                                    onResultTap(result);
+                                  },
+                                ),
+                              ));
+                            }
+                          }
+                          return Semantics(
+                            container: true,
+                            label: l10n.searchResultsSemanticLabel,
+                            explicitChildNodes: true,
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: ListView(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                children: rows,
+                              ),
                             ),
                           );
                         },
@@ -593,15 +636,129 @@ class _KubusDropdownSurface extends StatelessWidget {
         child: child,
       );
     }
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-      margin: EdgeInsets.zero,
-      borderRadius: panelRadius,
-      blurSigma: blurSigma,
-      backgroundColor: tintColor,
-      fallbackMinOpacity: fallbackMinOpacity,
-      enableBlur: enableBlur,
-      child: child,
+    // Outside the map the results panel is an ordinary raised surface: a
+    // temporary list over flat UI, not a spatial overlay.
+    final roles = KubusColorRoles.of(context);
+    return Material(
+      color: roles.surfaceRaised,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: panelRadius,
+        side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// One entity-type group in the search results panel.
+@immutable
+class KubusSearchResultGroup {
+  const KubusSearchResultGroup(this.kind, this.results);
+  final KubusSearchResultKind kind;
+  final List<KubusSearchResult> results;
+}
+
+/// Cultural entities first, then people and places, then community posts
+/// and app shortcuts. Order inside a group keeps the service relevance order.
+const List<KubusSearchResultKind> kubusSearchGroupOrder =
+    <KubusSearchResultKind>[
+  KubusSearchResultKind.artwork,
+  KubusSearchResultKind.profile,
+  KubusSearchResultKind.institution,
+  KubusSearchResultKind.event,
+  KubusSearchResultKind.exhibition,
+  KubusSearchResultKind.marker,
+  KubusSearchResultKind.post,
+  KubusSearchResultKind.screen,
+];
+
+/// Groups results by entity type in [kubusSearchGroupOrder], preserving the
+/// relevance order returned by the search service within each group.
+List<KubusSearchResultGroup> groupSearchResults(
+  List<KubusSearchResult> results,
+) {
+  final byKind = <KubusSearchResultKind, List<KubusSearchResult>>{};
+  for (final result in results) {
+    byKind.putIfAbsent(result.kind, () => <KubusSearchResult>[]).add(result);
+  }
+  return <KubusSearchResultGroup>[
+    for (final kind in kubusSearchGroupOrder)
+      if (byKind[kind]?.isNotEmpty ?? false)
+        KubusSearchResultGroup(kind, byKind[kind]!),
+  ];
+}
+
+/// Localized plural heading for a result group.
+String searchGroupLabel(AppLocalizations l10n, KubusSearchResultKind kind) {
+  return switch (kind) {
+    KubusSearchResultKind.artwork => l10n.communitySearchTypeArtworks,
+    KubusSearchResultKind.profile => l10n.communitySearchTypeProfiles,
+    KubusSearchResultKind.institution => l10n.communitySearchTypeInstitutions,
+    KubusSearchResultKind.event => l10n.communitySearchTypeEvents,
+    KubusSearchResultKind.exhibition => l10n.communitySearchTypeExhibitions,
+    KubusSearchResultKind.marker => l10n.communitySearchTypePlaces,
+    KubusSearchResultKind.post => l10n.communitySearchTypePosts,
+    KubusSearchResultKind.screen => l10n.communitySearchTypeScreens,
+  };
+}
+
+/// Structural group heading (Space Mono register) with its result count.
+class _SearchGroupHeading extends StatelessWidget {
+  const _SearchGroupHeading({
+    required this.label,
+    required this.count,
+    required this.isFirst,
+  });
+
+  final String label;
+  final int count;
+  final bool isFirst;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Semantics(
+      header: true,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          KubusSpacing.md,
+          isFirst ? KubusSpacing.sm : KubusSpacing.md,
+          KubusSpacing.md,
+          KubusSpacing.xs,
+        ),
+        decoration: isFirst
+            ? null
+            : BoxDecoration(
+                border: Border(
+                  top:
+                      BorderSide(color: roles.rule, width: KubusSizes.hairline),
+                ),
+              ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label.toUpperCase(),
+                style: KubusTextStyles.structuralLabel.copyWith(
+                  color: roles.foregroundMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            Text(
+              '$count',
+              style: KubusTextStyles.machineValue.copyWith(
+                color: roles.foregroundSubtle,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
