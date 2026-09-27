@@ -544,7 +544,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
-      savedItemsProvider: Provider.of<SavedItemsProvider>(context, listen: false),
+      savedItemsProvider:
+          Provider.of<SavedItemsProvider>(context, listen: false),
     );
 
     if (!mounted) return;
@@ -802,7 +803,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Reduce effects',
+                            AppLocalizations.of(context)!
+                                .settingsReduceEffectsTitle,
                             style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -810,8 +812,10 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           const SizedBox(height: KubusSpacing.xs),
                           Text(
                             autoDetected
-                                ? 'Automatically enabled for this device'
-                                : 'Disable blur, animations and other effects',
+                                ? AppLocalizations.of(context)!
+                                    .settingsReduceEffectsAutoSubtitle
+                                : AppLocalizations.of(context)!
+                                    .settingsReduceEffectsSubtitle,
                             style: KubusTextStyles.detailCaption.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -973,14 +977,19 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                   ),
                   if (emailPreferencesProvider.isLoading) ...[
                     const SizedBox(height: 12),
-                    InlineLoading(height: 2, borderRadius: BorderRadius.circular(2), color: Provider.of<ThemeProvider>(context, listen: false)
-                            .accentColor,),
+                    InlineLoading(
+                      height: 2,
+                      borderRadius: BorderRadius.circular(2),
+                      color: Provider.of<ThemeProvider>(context, listen: false)
+                          .accentColor,
+                    ),
                   ],
                   const Divider(height: 32),
                   _buildToggleSetting(
                     l10n.settingsEmailPreferencesProductUpdatesTitle,
                     l10n.settingsEmailPreferencesProductUpdatesSubtitle,
-                    emailPreferencesProvider.preferences.marketingProductUpdates,
+                    emailPreferencesProvider
+                        .preferences.marketingProductUpdates,
                     saveAfterToggle: false,
                     enabled: emailPreferencesProvider.canManage &&
                         !emailPreferencesProvider.isUpdating,
@@ -1113,16 +1122,14 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalAccountSecurityTitle,
+                              l10n.settingsEmailPreferencesCriticalAccountSecurityTitle,
                               style: KubusTextStyles.sectionTitle.copyWith(
                                 fontSize: KubusChromeMetrics.profileName + 1,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalAccountSecuritySubtitle,
+                              l10n.settingsEmailPreferencesCriticalAccountSecuritySubtitle,
                               style: KubusTextStyles.detailCaption.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -1158,16 +1165,14 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalWalletSecurityTitle,
+                              l10n.settingsEmailPreferencesCriticalWalletSecurityTitle,
                               style: KubusTextStyles.sectionTitle.copyWith(
                                 fontSize: KubusChromeMetrics.profileName + 1,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalWalletSecuritySubtitle,
+                              l10n.settingsEmailPreferencesCriticalWalletSecuritySubtitle,
                               style: KubusTextStyles.detailCaption.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
