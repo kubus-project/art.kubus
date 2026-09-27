@@ -347,6 +347,7 @@ class CommunityPostCard extends StatelessWidget {
                         toggled: post.isLiked,
                         onTap: onToggleLike,
                         onCountTap: onShowLikes,
+                        countSemanticLabel: l10n?.commonLikes,
                         isActive: post.isLiked,
                         color: post.isLiked
                             ? roles.likeAction
@@ -371,6 +372,7 @@ class CommunityPostCard extends StatelessWidget {
                         semanticLabel: l10n?.communityRepostButtonLabel ?? '',
                         onTap: onRepost,
                         onCountTap: post.shareCount > 0 ? onShowReposts : null,
+                        countSemanticLabel: l10n?.communityRepostedByTitle,
                         accentColor: accentColor,
                       ),
                     ),

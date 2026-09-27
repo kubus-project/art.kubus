@@ -667,6 +667,9 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
       returnRoute: '/community',
       sourceScreen: 'desktop_community_screen',
+      onAuthJourneyStarted: () => context
+          .read<CommunityHubProvider>()
+          .rememberComposeIntentForAuth(CommunityComposeIntent.post),
     );
     if (!canPost || !mounted) return;
 

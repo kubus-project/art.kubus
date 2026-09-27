@@ -778,8 +778,8 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             label: l10n.desktopCommunityCreateOptionCreateGroup,
             onTap: () {
               _applyState(() => _isFabExpanded = false);
-              _showCreateGroupDialog(
-                  Provider.of<ThemeProvider>(context, listen: false));
+              unawaited(_requestCreateGroup(
+                  Provider.of<ThemeProvider>(context, listen: false)));
             },
           ),
           CommunityFabOption(
@@ -935,7 +935,8 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
-                        onPressed: () => _showCreateGroupDialog(themeProvider),
+                        onPressed: () =>
+                            unawaited(_requestCreateGroup(themeProvider)),
                         icon: const Icon(Icons.add),
                         label: Text(l10n.commonCreate),
                         style: ElevatedButton.styleFrom(
@@ -959,6 +960,41 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
         );
       },
     );
+  }
+
+  /// Guests meet the contextual account surface before the group form; when
+  /// they continue into sign-in the request is remembered and reopened by
+  /// [_maybeResumeComposeIntent].
+  Future<void> _requestCreateGroup(ThemeProvider themeProvider) async {
+    final hub = context.read<CommunityHubProvider>();
+    final allowed = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.communityCreateGroupAuthAction,
+      returnRoute: '/community',
+      sourceScreen: 'desktop_community_screen',
+      onAuthJourneyStarted: () =>
+          hub.rememberComposeIntentForAuth(CommunityComposeIntent.createGroup),
+    );
+    if (!allowed || !mounted) return;
+    await _showCreateGroupDialog(themeProvider);
+  }
+
+  /// Reopens the creation surface a guest requested before signing in.
+  void _maybeResumeComposeIntent(CommunityHubProvider hub, bool isSignedIn) {
+    if (!isSignedIn || !hub.hasPendingComposeIntent) return;
+    final intent = hub.takeComposeIntent();
+    if (intent == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (intent == CommunityComposeIntent.createGroup) {
+        unawaited(_requestCreateGroup(
+          Provider.of<ThemeProvider>(context, listen: false),
+        ));
+      } else {
+        // The inline composer keeps any draft still held by this screen.
+        _applyState(() => _isComposerExpanded = true);
+      }
+    });
   }
 
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {

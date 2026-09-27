@@ -391,6 +391,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final composerOpenNonce = context
         .select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
     _maybeHandleComposerOpenRequest(composerOpenNonce);
+    _maybeResumeComposeIntent(
+      context.select<ProfileProvider, bool>((p) => p.isSignedIn),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,

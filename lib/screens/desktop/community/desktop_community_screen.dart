@@ -239,6 +239,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget build(BuildContext context) {
     final hub = context.watch<CommunityHubProvider>();
     _maybeHandleComposerOpenRequest(hub);
+    _maybeResumeComposeIntent(
+      hub,
+      context.select<ProfileProvider, bool>((p) => p.isSignedIn),
+    );
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;

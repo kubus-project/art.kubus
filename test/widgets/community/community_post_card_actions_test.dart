@@ -29,6 +29,7 @@ Future<void> _pump(
   VoidCallback? onLike,
   VoidCallback? onSave,
   VoidCallback? onShare,
+  VoidCallback? onShowLikes,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<CommunitySubjectProvider>(
@@ -49,6 +50,7 @@ Future<void> _pump(
               onRepost: () {},
               onShare: onShare ?? () {},
               onToggleBookmark: onSave ?? () {},
+              onShowLikes: onShowLikes,
             ),
           ),
         ),
@@ -122,5 +124,29 @@ void main() {
   testWidgets('the post surface is flat (no glass panel)', (tester) async {
     await _pump(tester, _post());
     expect(find.byType(BackdropFilter), findsNothing);
+  });
+
+  testWidgets('a count that opens its own list is a separate labeled button',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    var liked = 0;
+    var listed = 0;
+    await _pump(
+      tester,
+      _post(liked: true),
+      onLike: () => liked++,
+      onShowLikes: () => listed++,
+    );
+
+    final toggle = tester.getSemantics(find.bySemanticsLabel('Like'));
+    expect(toggle.flagsCollection.isToggled, ui.Tristate.isTrue);
+    final count = tester.getSemantics(find.bySemanticsLabel('Likes, 12'));
+    expect(count.flagsCollection.isButton, isTrue);
+    expect(count.flagsCollection.isToggled, ui.Tristate.none);
+
+    tester.semantics.tap(find.semantics.byLabel('Likes, 12'));
+    tester.semantics.tap(find.semantics.byLabel('Like'));
+    expect([liked, listed], [1, 1]);
+    handle.dispose();
   });
 }

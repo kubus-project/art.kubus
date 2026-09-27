@@ -5,37 +5,81 @@ part of '../community_screen.dart';
 // the State's _applyState shim.
 extension _CommunityScreenStatePart3 on _CommunityScreenState {
   /// Guests meet the contextual account surface *before* the composer opens,
-  /// instead of drafting a post that can only fail on submit.
-  Future<bool> _ensureCanCompose({String? actionLabel}) {
+  /// instead of drafting a post that can only fail on submit. When they go on
+  /// to sign in, the requested surface is remembered and reopened by
+  /// [_maybeResumeComposeIntent] once the account exists.
+  Future<bool> _ensureCanCompose(
+    CommunityComposeIntent intent, {
+    String? actionLabel,
+  }) {
     final l10n = AppLocalizations.of(context)!;
+    final hub = context.read<CommunityHubProvider>();
     return const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
       returnRoute: '/community',
       sourceScreen: 'community_screen',
+      onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
     );
   }
 
+  /// Reopens a creation surface a guest requested before signing in.
+  void _maybeResumeComposeIntent(bool isSignedIn) {
+    if (!isSignedIn) return;
+    final hub = context.read<CommunityHubProvider>();
+    if (!hub.hasPendingComposeIntent) return;
+    final intent = hub.takeComposeIntent();
+    if (intent == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_openComposeIntent(intent));
+    });
+  }
+
+  Future<void> _openComposeIntent(CommunityComposeIntent intent) {
+    switch (intent) {
+      case CommunityComposeIntent.post:
+        return _handleFeedFabPressed();
+      case CommunityComposeIntent.groupPost:
+        return _handleGroupFabPressed();
+      case CommunityComposeIntent.artDrop:
+        return _handleArtFabPressed();
+      case CommunityComposeIntent.review:
+        return _handleReviewFabPressed();
+      case CommunityComposeIntent.createGroup:
+        return _handleCreateGroupPressed();
+    }
+  }
+
   Future<void> _handleFeedFabPressed() async {
-    if (!await _ensureCanCompose() || !mounted) return;
+    if (!await _ensureCanCompose(CommunityComposeIntent.post) || !mounted) {
+      return;
+    }
     _createNewPost();
   }
 
   Future<void> _handleGroupFabPressed() async {
-    if (!await _ensureCanCompose() || !mounted) return;
+    if (!await _ensureCanCompose(CommunityComposeIntent.groupPost) ||
+        !mounted) {
+      return;
+    }
     unawaited(_ensureGroupsLoaded());
     _createNewPost(presetCategory: 'group');
   }
 
   Future<void> _handleArtFabPressed() async {
-    if (!await _ensureCanCompose() || !mounted) return;
+    if (!await _ensureCanCompose(CommunityComposeIntent.artDrop) || !mounted) {
+      return;
+    }
     _createNewPost(presetCategory: 'art_drop', artContext: true);
   }
 
   Future<void> _handleCreateGroupPressed() async {
     final l10n = AppLocalizations.of(context)!;
     if (!await _ensureCanCompose(
-            actionLabel: l10n.communityCreateGroupAuthAction) ||
+          CommunityComposeIntent.createGroup,
+          actionLabel: l10n.communityCreateGroupAuthAction,
+        ) ||
         !mounted) {
       return;
     }
@@ -43,7 +87,9 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
   }
 
   Future<void> _handleReviewFabPressed() async {
-    if (!await _ensureCanCompose() || !mounted) return;
+    if (!await _ensureCanCompose(CommunityComposeIntent.review) || !mounted) {
+      return;
+    }
     _createNewPost(presetCategory: 'review', artContext: true);
   }
 
