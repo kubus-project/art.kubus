@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/images/logo.png" />
-    <img src="assets/images/logo_black.png" width="120" alt="art.kubus logo" />
+    <img src="assets/images/logo_black.png" width="88" alt="art.kubus logo" />
   </picture>
 </p>
 
