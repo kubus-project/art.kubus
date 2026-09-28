@@ -34,6 +34,16 @@ Widget _app(
   );
 }
 
+class _RecordingSwitchAdaptation extends Adaptation<SwitchThemeData> {
+  int calls = 0;
+
+  @override
+  SwitchThemeData adapt(ThemeData theme, SwitchThemeData defaultValue) {
+    calls++;
+    return defaultValue;
+  }
+}
+
 void main() {
   group('KubusFormTextField', () {
     testWidgets('keeps a persistent label that is the spoken field name',
@@ -188,6 +198,32 @@ void main() {
       );
       handle.dispose();
     });
+
+    testWidgets('switch row is adaptive (platform-native on iOS)',
+        (tester) async {
+      // Flutter consults Switch theme adaptations only for Switch.adaptive,
+      // which renders the Cupertino toggle on iOS/macOS.
+      final adaptation = _RecordingSwitchAdaptation();
+      var value = false;
+      await tester.pumpWidget(_app(Builder(
+        builder: (context) => Theme(
+          data: Theme.of(context).copyWith(
+            adaptations: <Adaptation<Object>>[adaptation],
+          ),
+          child: StatefulBuilder(
+            builder: (context, set) => KubusFormSwitchRow(
+              title: 'Allow comments',
+              value: value,
+              onChanged: (v) => set(() => value = v),
+            ),
+          ),
+        ),
+      )));
+      expect(adaptation.calls, greaterThan(0));
+      await tester.tap(find.text('Allow comments'));
+      await tester.pump();
+      expect(value, isTrue);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
     testWidgets('disabled switch row ignores taps', (tester) async {
       await tester.pumpWidget(_app(const KubusFormSwitchRow(

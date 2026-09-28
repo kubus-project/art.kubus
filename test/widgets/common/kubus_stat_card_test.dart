@@ -14,6 +14,41 @@ Widget _wrap(Widget child, {Brightness brightness = Brightness.light}) =>
     );
 
 void main() {
+  testWidgets('tappable tile keeps the requested height, never below 44',
+      (tester) async {
+    double heightOf(String title) => tester
+        .getSize(find.ancestor(
+          of: find.text(title),
+          matching: find.byType(KubusStatCard),
+        ))
+        .height;
+
+    await tester.pumpWidget(_wrap(Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const KubusStatCard(title: 'Static', value: '3', minHeight: 96),
+        KubusStatCard(
+          title: 'Tappable',
+          value: '3',
+          minHeight: 96,
+          onTap: () {},
+        ),
+        KubusStatCard(
+          title: 'Small',
+          value: '3',
+          minHeight: 0,
+          padding: EdgeInsets.zero,
+          onTap: () {},
+        ),
+      ],
+    )));
+
+    // Adding an action must not change the tile geometry.
+    expect(heightOf('Tappable'), heightOf('Static'));
+    expect(heightOf('Tappable'), greaterThanOrEqualTo(96));
+    expect(heightOf('Small'), greaterThanOrEqualTo(44));
+  });
+
   testWidgets('stat tiles are flat: surface fill, rule, no glass/watermark',
       (tester) async {
     for (final brightness in Brightness.values) {

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
@@ -154,7 +156,11 @@ class KubusStatCard extends StatelessWidget {
     }
 
     final tile = Container(
-      constraints: BoxConstraints(minHeight: onTap == null ? minHeight : 44),
+      // A tap target never shrinks the caller's tile: keep the requested
+      // height and guarantee the 44 px minimum on top of it.
+      constraints: BoxConstraints(
+        minHeight: onTap == null ? minHeight : math.max(minHeight, 44),
+      ),
       padding: padding,
       alignment: centered ? Alignment.center : Alignment.centerLeft,
       child: body,

@@ -494,7 +494,8 @@ class KubusFormSwitchRow extends StatelessWidget {
       description: description,
       enabled: enabled,
       onTap: enabled ? () => onChanged!(!value) : null,
-      control: Switch(
+      // Adaptive: platform-native toggle on iOS/macOS, Material elsewhere.
+      control: Switch.adaptive(
         key: switchKey,
         value: value,
         onChanged: onChanged,
