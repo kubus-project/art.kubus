@@ -54,6 +54,10 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     }
   }
 
+  void _signIn() {
+    Navigator.of(context).pushNamed('/sign-in');
+  }
+
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
@@ -62,15 +66,19 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
 
     final invites =
         provider.invitesInbox.where((i) => i.isPending).toList(growable: false);
-    final hasError = (provider.error ?? '').isNotEmpty;
+    // Classified from the caught failure (HTTP status or transport error),
+    // never from the provider's display string, and never shown raw.
+    final loadError = provider.invitesError;
+    final hasError = loadError != null;
 
     Widget body;
     if (provider.isLoading && invites.isEmpty) {
       body = const KubusSectionLoading(rows: 3, rowHeight: 132);
     } else if (hasError && invites.isEmpty) {
-      body = KubusStateView(
-        kind: KubusFailureKind.network,
+      body = KubusStateView.fromError(
+        loadError,
         onRetry: _refresh,
+        onSignIn: _signIn,
       );
     } else if (invites.isEmpty) {
       body = EmptyStateCard(
@@ -127,10 +135,11 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
                   ),
                 ),
               if (hasError && invites.isNotEmpty) ...[
-                KubusStateView(
-                  kind: KubusFailureKind.network,
+                KubusStateView.fromError(
+                  loadError,
                   compact: true,
                   onRetry: _refresh,
+                  onSignIn: _signIn,
                 ),
                 const SizedBox(height: KubusSpacing.sm),
               ],
