@@ -41,14 +41,42 @@ String marketplaceValueSourceLabel(
   }
 }
 
+/// Whether something is actually for sale right now: a minted edition
+/// listed for resale ([MarketplaceArtworkEntry.isListed]), or the artwork's
+/// own listing when that is the value shown.
+///
+/// This is SECONDARY availability. It is independent of PRIMARY supply
+/// ([MarketplaceArtworkEntry.isSoldOut] = every edition has been issued):
+/// a fully issued series can still have an edition listed for resale.
+bool marketplaceHasActiveListing(MarketplaceArtworkEntry entry) {
+  return entry.isListed ||
+      entry.displayValue?.source == MarketplaceValueSource.artworkListing;
+}
+
 /// The listing state as text (never colour alone).
+///
+/// An active listing leads: the card never says SOLD OUT beside a real
+/// "Listed for" price. Primary supply exhaustion is then stated separately
+/// by [marketplacePrimarySupplyLabel].
 String marketplaceListingStateLabel(
   AppLocalizations l10n,
   MarketplaceArtworkEntry entry,
 ) {
+  if (marketplaceHasActiveListing(entry)) return l10n.commonForSale;
   if (entry.isSoldOut) return l10n.marketplaceSoldOutBadgeLabel;
-  if (entry.isListed) return l10n.commonForSale;
   return l10n.marketplaceValueNotListedLabel;
+}
+
+/// Primary supply state shown beside an active listing ("Primary sold out"),
+/// or null when the listing state already says everything.
+String? marketplacePrimarySupplyLabel(
+  AppLocalizations l10n,
+  MarketplaceArtworkEntry entry,
+) {
+  if (entry.isSoldOut && marketplaceHasActiveListing(entry)) {
+    return l10n.marketplacePrimarySoldOutLabel;
+  }
+  return null;
 }
 
 /// The economic block: value source, amount + currency, state, supply.
@@ -69,7 +97,11 @@ class MarketplaceListingSummary extends StatelessWidget {
     final value = entry.displayValue;
     final hasAmount = value?.hasAmount ?? false;
     final sourceLabel = marketplaceValueSourceLabel(l10n, value);
+    final hasActiveListing = marketplaceHasActiveListing(entry);
     final stateLabel = marketplaceListingStateLabel(l10n, entry);
+    final primaryLabel = marketplacePrimarySupplyLabel(l10n, entry);
+    final stateText =
+        primaryLabel == null ? stateLabel : '$stateLabel. $primaryLabel';
     final supply = (entry.mintedCount != null && entry.totalSupply != null)
         ? '${entry.mintedCount}/${entry.totalSupply}'
         : null;
@@ -85,9 +117,9 @@ class MarketplaceListingSummary extends StatelessWidget {
               sourceLabel,
               MarketplaceValueFormatter.formatAmount(value!.amount!),
               value.currency,
-              stateLabel,
+              stateText,
             )
-          : stateLabel,
+          : stateText,
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,12 +162,15 @@ class MarketplaceListingSummary extends StatelessWidget {
             children: [
               KubusStatusText(
                 label: stateLabel,
-                tone: entry.isSoldOut
-                    ? KubusStatusTone.neutral
-                    : (entry.isListed
-                        ? KubusStatusTone.positive
-                        : KubusStatusTone.neutral),
+                tone: hasActiveListing
+                    ? KubusStatusTone.positive
+                    : KubusStatusTone.neutral,
               ),
+              if (primaryLabel != null)
+                KubusStatusText(
+                  label: primaryLabel,
+                  tone: KubusStatusTone.neutral,
+                ),
               if (supply != null)
                 Text(
                   supply,

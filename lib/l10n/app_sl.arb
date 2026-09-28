@@ -3531,6 +3531,7 @@
   "marketplaceNftArtworkStatusArEnabled": "Umetnina digitalne izdaje - AR omogočen",
   "marketplaceMintUnavailableLabel": "Izdaja ni na voljo",
   "marketplaceSoldOutLabel": "Razprodano",
+  "marketplacePrimarySoldOutLabel": "Primarna prodaja razprodana",
   "marketplaceMintNftButtonLabel": "Ustvari digitalno izdajo",
   "marketplaceArRequiredTitle": "AR je obvezen",
   "marketplaceArRequiredDescription": "Ta digitalna izdaja zahteva interakcijo z lokacijo umetnine. Obišči umetnino in uporabi AR-skener, če ga je ustvarjalec omogočil.",

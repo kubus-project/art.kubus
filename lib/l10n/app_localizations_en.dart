@@ -9487,6 +9487,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Sold out';
 
   @override
+  String get marketplacePrimarySoldOutLabel => 'Primary sold out';
+
+  @override
   String get marketplaceMintNftButtonLabel => 'Create digital edition';
 
   @override

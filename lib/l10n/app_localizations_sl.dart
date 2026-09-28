@@ -9563,6 +9563,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Razprodano';
 
   @override
+  String get marketplacePrimarySoldOutLabel => 'Primarna prodaja razprodana';
+
+  @override
   String get marketplaceMintNftButtonLabel => 'Ustvari digitalno izdajo';
 
   @override

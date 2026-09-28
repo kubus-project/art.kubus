@@ -3800,6 +3800,10 @@
   "marketplaceNftArtworkStatusArEnabled": "Digital edition artwork - AR enabled",
   "marketplaceMintUnavailableLabel": "Edition creation unavailable",
   "marketplaceSoldOutLabel": "Sold out",
+  "marketplacePrimarySoldOutLabel": "Primary sold out",
+  "@marketplacePrimarySoldOutLabel": {
+    "description": "Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out."
+  },
   "marketplaceMintNftButtonLabel": "Create digital edition",
   "marketplaceArRequiredTitle": "Location visit required",
   "marketplaceArRequiredDescription": "This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.",

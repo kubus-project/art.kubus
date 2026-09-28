@@ -16570,6 +16570,12 @@ abstract class AppLocalizations {
   /// **'Sold out'**
   String get marketplaceSoldOutLabel;
 
+  /// Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary sold out'**
+  String get marketplacePrimarySoldOutLabel;
+
   /// No description provided for @marketplaceMintNftButtonLabel.
   ///
   /// In en, this message translates to:
