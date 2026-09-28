@@ -166,8 +166,8 @@
   "pushRecognitionChannelDescription": "Obvestila o priznanjih za prispevke",
   "analyticsMetricArchiveObjectsCreatedLabel": "Ustvarjene digitalne izdaje",
   "analyticsMetricArchiveObjectsCreatedDescription": "Digitalne izdaje, povezane z umetninami.",
-  "analyticsMetricKub8RecognitionLabel": "KUB8 priznanja",
-  "analyticsMetricKub8RecognitionDescription": "KUB8, zabeležen kot priznanje za prispevke.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 iz dosežkov",
+  "analyticsMetricKub8RecognitionDescription": "Vsota nagrad KUB8, določenih pri dosežkih, ki jih je ta profil odklenil. Ni prihodek ali prodaja.",
   "analyticsPresetArtistSubtitle": "Doseg umetnin, odziv skupnosti, AR aktivnost in priznanja.",
   "analyticsPresetInstitutionSubtitle": "Doseg obiskovalcev, programi, razstave in priznanja.",
   "analyticsExportNoDataToast": "Za izvoz ni na voljo analitičnih podatkov.",
@@ -6958,5 +6958,74 @@
         "type": "String"
       }
     }
-  }
+  },
+  "collabInboxIntro": "Sprejmite povabilo in pomagajte upravljati dogodek, razstavo, umetnino ali zbirko.",
+  "collabInviteNotion": "Povabilo",
+  "collabEntityEvent": "Dogodek",
+  "collabEntityExhibition": "Razstava",
+  "collabEntityArtwork": "Umetnina",
+  "collabEntityCollection": "Zbirka",
+  "collabEntityItem": "Vsebina",
+  "collabInviteFrom": "Pošiljatelj: {name}",
+  "@collabInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteRole": "Vaša vloga: {role}",
+  "@collabInviteRole": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteReceived": "Prejeto {date}",
+  "@collabInviteReceived": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteExpires": "Poteče {date}",
+  "@collabInviteExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabUnknownSender": "Nekdo",
+  "collabAccept": "Sprejmi",
+  "collabDecline": "Zavrni",
+  "collabAcceptedToast": "Povabilo je sprejeto. Zdaj lahko pomagate pri upravljanju.",
+  "collabDeclinedToast": "Povabilo je zavrnjeno.",
+  "collabAcceptFailedToast": "Povabila ni bilo mogoče sprejeti. Poskusite znova.",
+  "collabDeclineFailedToast": "Povabila ni bilo mogoče zavrniti. Poskusite znova.",
+  "collabCannotOpenItemToast": "To povabilo ne kaže na vsebino, ki jo je mogoče odpreti tukaj.",
+  "collabEmptyTitle": "Trenutno ni povabil",
+  "collabEmptyDescription": "Ko vas kdo povabi k sodelovanju, se povabilo prikaže tukaj.",
+  "collabInviteSemantic": "Povabilo: {entity}, vloga {role}, pošiljatelj {name}",
+  "@collabInviteSemantic": {
+    "placeholders": {
+      "entity": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "studioNotionPractice": "Ustvarjanje",
+  "institutionNotionProgramme": "Program",
+  "dashboardNotionNumbers": "Številke",
+  "dashboardNotionInfrastructure": "Infrastruktura",
+  "dashboardNumbersCaption": "Števila iz dejavnosti na vašem javnem profilu art.kubus.",
+  "institutionStatProgrammeViews": "Ogledi strani programa"
 }

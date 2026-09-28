@@ -316,11 +316,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Digitalne izdaje, povezane z umetninami.';
 
   @override
-  String get analyticsMetricKub8RecognitionLabel => 'KUB8 priznanja';
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 iz dosežkov';
 
   @override
   String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8, zabeležen kot priznanje za prispevke.';
+      'Vsota nagrad KUB8, določenih pri dosežkih, ki jih je ta profil odklenil. Ni prihodek ali prodaja.';
 
   @override
   String get analyticsPresetArtistSubtitle =>
@@ -17363,4 +17363,105 @@ class AppLocalizationsSl extends AppLocalizations {
   String peopleFollowToggleSemantic(String name) {
     return 'Sledi: $name';
   }
+
+  @override
+  String get collabInboxIntro =>
+      'Sprejmite povabilo in pomagajte upravljati dogodek, razstavo, umetnino ali zbirko.';
+
+  @override
+  String get collabInviteNotion => 'Povabilo';
+
+  @override
+  String get collabEntityEvent => 'Dogodek';
+
+  @override
+  String get collabEntityExhibition => 'Razstava';
+
+  @override
+  String get collabEntityArtwork => 'Umetnina';
+
+  @override
+  String get collabEntityCollection => 'Zbirka';
+
+  @override
+  String get collabEntityItem => 'Vsebina';
+
+  @override
+  String collabInviteFrom(String name) {
+    return 'Pošiljatelj: $name';
+  }
+
+  @override
+  String collabInviteRole(String role) {
+    return 'Vaša vloga: $role';
+  }
+
+  @override
+  String collabInviteReceived(String date) {
+    return 'Prejeto $date';
+  }
+
+  @override
+  String collabInviteExpires(String date) {
+    return 'Poteče $date';
+  }
+
+  @override
+  String get collabUnknownSender => 'Nekdo';
+
+  @override
+  String get collabAccept => 'Sprejmi';
+
+  @override
+  String get collabDecline => 'Zavrni';
+
+  @override
+  String get collabAcceptedToast =>
+      'Povabilo je sprejeto. Zdaj lahko pomagate pri upravljanju.';
+
+  @override
+  String get collabDeclinedToast => 'Povabilo je zavrnjeno.';
+
+  @override
+  String get collabAcceptFailedToast =>
+      'Povabila ni bilo mogoče sprejeti. Poskusite znova.';
+
+  @override
+  String get collabDeclineFailedToast =>
+      'Povabila ni bilo mogoče zavrniti. Poskusite znova.';
+
+  @override
+  String get collabCannotOpenItemToast =>
+      'To povabilo ne kaže na vsebino, ki jo je mogoče odpreti tukaj.';
+
+  @override
+  String get collabEmptyTitle => 'Trenutno ni povabil';
+
+  @override
+  String get collabEmptyDescription =>
+      'Ko vas kdo povabi k sodelovanju, se povabilo prikaže tukaj.';
+
+  @override
+  String collabInviteSemantic(String entity, String role, String name) {
+    return 'Povabilo: $entity, vloga $role, pošiljatelj $name';
+  }
+
+  @override
+  String get studioNotionPractice => 'Ustvarjanje';
+
+  @override
+  String get institutionNotionProgramme => 'Program';
+
+  @override
+  String get dashboardNotionNumbers => 'Številke';
+
+  @override
+  String get dashboardNotionInfrastructure => 'Infrastruktura';
+
+  @override
+  String get dashboardNumbersCaption =>
+      'Števila iz dejavnosti na vašem javnem profilu art.kubus.';
+
+  @override
+  String get institutionStatProgrammeViews => 'Ogledi strani programa';
 }

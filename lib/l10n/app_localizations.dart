@@ -597,13 +597,13 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsMetricKub8RecognitionLabel.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recognition'**
+  /// **'KUB8 from achievements'**
   String get analyticsMetricKub8RecognitionLabel;
 
   /// No description provided for @analyticsMetricKub8RecognitionDescription.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recorded through contribution recognition.'**
+  /// **'Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.'**
   String get analyticsMetricKub8RecognitionDescription;
 
   /// No description provided for @analyticsPresetArtistSubtitle.
@@ -29871,6 +29871,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow {name}'**
   String peopleFollowToggleSemantic(String name);
+
+  /// No description provided for @collabInboxIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept an invitation to help manage an event, exhibition, artwork or collection.'**
+  String get collabInboxIntro;
+
+  /// No description provided for @collabInviteNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation'**
+  String get collabInviteNotion;
+
+  /// No description provided for @collabEntityEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get collabEntityEvent;
+
+  /// No description provided for @collabEntityExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get collabEntityExhibition;
+
+  /// No description provided for @collabEntityArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get collabEntityArtwork;
+
+  /// No description provided for @collabEntityCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get collabEntityCollection;
+
+  /// No description provided for @collabEntityItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get collabEntityItem;
+
+  /// No description provided for @collabInviteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String collabInviteFrom(String name);
+
+  /// No description provided for @collabInviteRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role: {role}'**
+  String collabInviteRole(String role);
+
+  /// No description provided for @collabInviteReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {date}'**
+  String collabInviteReceived(String date);
+
+  /// No description provided for @collabInviteExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String collabInviteExpires(String date);
+
+  /// No description provided for @collabUnknownSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get collabUnknownSender;
+
+  /// No description provided for @collabAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get collabAccept;
+
+  /// No description provided for @collabDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get collabDecline;
+
+  /// No description provided for @collabAcceptedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation accepted. You can now help manage it.'**
+  String get collabAcceptedToast;
+
+  /// No description provided for @collabDeclinedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation declined.'**
+  String get collabDeclinedToast;
+
+  /// No description provided for @collabAcceptFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t accept the invitation. Try again.'**
+  String get collabAcceptFailedToast;
+
+  /// No description provided for @collabDeclineFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t decline the invitation. Try again.'**
+  String get collabDeclineFailedToast;
+
+  /// No description provided for @collabCannotOpenItemToast.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation doesn\'t point to an item that can be opened here.'**
+  String get collabCannotOpenItemToast;
+
+  /// No description provided for @collabEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No invitations right now'**
+  String get collabEmptyTitle;
+
+  /// No description provided for @collabEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone invites you to collaborate, it appears here.'**
+  String get collabEmptyDescription;
+
+  /// No description provided for @collabInviteSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation to {entity} as {role}, from {name}'**
+  String collabInviteSemantic(String entity, String role, String name);
+
+  /// No description provided for @studioNotionPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get studioNotionPractice;
+
+  /// No description provided for @institutionNotionProgramme.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get institutionNotionProgramme;
+
+  /// No description provided for @dashboardNotionNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers'**
+  String get dashboardNotionNumbers;
+
+  /// No description provided for @dashboardNotionInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get dashboardNotionInfrastructure;
+
+  /// No description provided for @dashboardNumbersCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts from art.kubus activity on your public profile.'**
+  String get dashboardNumbersCaption;
+
+  /// No description provided for @institutionStatProgrammeViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme page views'**
+  String get institutionStatProgrammeViews;
 }
 
 class _AppLocalizationsDelegate

@@ -20,15 +20,16 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/wallet_utils.dart';
-import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../web3/artist/artist_studio.dart';
 import '../../web3/artist/artist_portfolio_screen.dart';
 import '../../web3/artist/artist_analytics.dart';
 import '../../events/exhibition_list_screen.dart';
-import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/forms/kubus_form.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
@@ -103,12 +104,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         unawaited(statsProvider.ensureSnapshot(
           entityType: 'user',
           entityId: wallet,
-          metrics: const <String>[
-            'artworks',
-            'viewsReceived',
-            'likesReceived',
-            'achievementTokensTotal',
-          ],
+          metrics: _studioMetrics,
           scope: 'public',
         ));
       });
@@ -235,18 +231,17 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     );
   }
 
+  /// Side panel hierarchy: status, PRACTICE actions (works, publishing,
+  /// exhibitions, collaborations, insights), NUMBERS (real backend counters
+  /// only), then INFRASTRUCTURE (paid promotion). No token balance, no
+  /// watermark stat grid, no placeholder activity.
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const sectionGap = KubusSpacing.lg;
-    const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
-    const blockGap = KubusSpacing.md + KubusSpacing.xs;
+    final roles = KubusColorRoles.of(context);
+    const sectionGap = KubusSpacing.xl;
     final dashboardState = context.watch<DesktopDashboardStateProvider>();
     final section = dashboardState.artistStudioSection;
-    final roles = KubusColorRoles.of(context);
 
-    // Compute approval status for gating quick actions
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
     final review = _artistReview ??
@@ -271,293 +266,196 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     }
 
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
-    final sidebarStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-      tintBase: scheme.surface,
-    );
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: scheme.outline.withValues(alpha: 0.08),
+    final practice = <Widget>[
+      if (isApprovedArtist && section == DesktopArtistStudioSection.create) ...[
+        KubusButton(
+          onPressed: _openArtworkWorkspace,
+          icon: Icons.add_photo_alternate_outlined,
+          label: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+          isFullWidth: true,
+        ),
+        KubusButton(
+          onPressed: _openCollectionWorkspace,
+          icon: Icons.collections_bookmark_outlined,
+          label: l10n.collectionCreatorTitle,
+          isFullWidth: true,
+          variant: KubusButtonVariant.secondary,
+        ),
+        if (showExhibitions)
+          KubusButton(
+            onPressed: _openExhibitionWorkspace,
+            icon: AppColorUtils.exhibitionIcon,
+            label: l10n.exhibitionCreatorAppBarTitle,
+            isFullWidth: true,
+            variant: KubusButtonVariant.secondary,
           ),
+        KubusActionSidebarTile(
+          title: l10n.manageMarkersTitle,
+          subtitle: l10n.manageMarkersQuickActionSubtitle,
+          icon: Icons.place_outlined,
+          semantic: KubusActionSemantic.manage,
+          onTap: () {
+            unawaited(
+              CreatorShellNavigation.openManageMarkersWorkspace(context),
+            );
+          },
         ),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        borderRadius: BorderRadius.zero,
-        blurSigma: sidebarStyle.blurSigma,
-        fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: sidebarStyle.tintColor,
-        child: ListView(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          children: [
-            // Header
-            Text(
-              l10n.desktopArtistStudioOverviewTitle,
-              style:
-                  KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              sectionTitle(),
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.66),
-              ),
-            ),
-            const SizedBox(height: sectionGap),
-
-            // Verification status
-            _buildVerificationStatusCard(themeProvider),
-            const SizedBox(height: blockGap),
-
-            // Contextual sidebar actions
-            Text(
-              l10n.desktopArtistStudioQuickActionsTitle,
-              style: KubusTextStyles.sectionTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: sectionHeaderGap),
-            if (AppConfig.isFeatureEnabled('collabInvites'))
-              Consumer<CollabProvider>(
-                builder: (context, collabProvider, _) {
-                  final pending = collabProvider.pendingInviteCount;
-                  final badge = pending > 0
-                      ? FrostedContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.sm,
-                            vertical: KubusSpacing.xs,
-                          ),
-                          borderRadius: BorderRadius.circular(KubusRadius.xl),
-                          showBorder: false,
-                          backgroundColor: scheme.error
-                              .withValues(alpha: isDark ? 0.30 : 0.22),
-                          child: Text(
-                            pending > 99 ? '99+' : pending.toString(),
-                            style: KubusTextStyles.badgeCount
-                                .copyWith(color: scheme.onError),
-                          ),
-                        )
-                      : null;
-
-                  return KubusActionSidebarTile(
-                    title: l10n.desktopArtistStudioQuickActionInvitesTitle,
-                    subtitle: pending > 0
-                        ? l10n
-                            .desktopArtistStudioQuickActionInvitesPendingSubtitle
-                        : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
-                    icon: Icons.inbox_outlined,
-                    semantic: KubusActionSemantic.invite,
-                    onTap: () {
-                      DesktopShellScope.of(context)?.pushScreen(
-                        DesktopSubScreen(
-                          title: l10n
-                              .desktopArtistStudioQuickActionCollaborationInvitesTitle,
-                          child: const InvitesInboxScreen(embedded: true),
-                        ),
-                      );
-                    },
-                    trailing: badge,
-                  );
-                },
-              ),
-            if (isApprovedArtist)
-              KubusActionSidebarTile(
-                title: l10n.desktopArtistStudioPromoteProfileTitle,
-                subtitle: l10n.desktopArtistStudioPromoteProfileSubtitle,
-                icon: Icons.campaign_outlined,
-                semantic: KubusActionSemantic.publish,
-                onTap: _openProfilePromotionFlow,
-              ),
-
-            if (isApprovedArtist &&
-                section == DesktopArtistStudioSection.create)
-              _buildCreatorWorkspaceLaunchCard(
-                title: l10n.desktopArtistStudioQuickActionsTitle,
-                subtitle: l10n.desktopArtistStudioCreatorWorkspaceSubtitle,
-                accent: roles.web3ArtistStudioAccent,
-                children: [
-                  FilledButton.tonalIcon(
-                    onPressed: _openArtworkWorkspace,
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: Text(
-                      l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-                    ),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: _openCollectionWorkspace,
-                    icon: const Icon(Icons.collections_bookmark_outlined),
-                    label: Text(l10n.collectionCreatorTitle),
-                  ),
-                  if (showExhibitions)
-                    FilledButton.tonalIcon(
-                      onPressed: _openExhibitionWorkspace,
-                      icon: const Icon(AppColorUtils.exhibitionIcon),
-                      label: Text(l10n.exhibitionCreatorAppBarTitle),
-                    ),
-                ],
-              ),
-
-            if (isApprovedArtist &&
-                section == DesktopArtistStudioSection.create)
-              KubusActionSidebarTile(
-                title: l10n.manageMarkersTitle,
-                subtitle: l10n.manageMarkersQuickActionSubtitle,
-                icon: Icons.place_outlined,
-                semantic: KubusActionSemantic.manage,
-                onTap: () {
-                  unawaited(
-                    CreatorShellNavigation.openManageMarkersWorkspace(context),
-                  );
-                },
-              ),
-            if (isApprovedArtist &&
-                section == DesktopArtistStudioSection.gallery)
-              KubusActionSidebarTile(
+      ],
+      if (isApprovedArtist && section == DesktopArtistStudioSection.gallery)
+        KubusActionSidebarTile(
+          title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+          subtitle: l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
+          icon: Icons.collections_outlined,
+          semantic: KubusActionSemantic.view,
+          onTap: () {
+            final wallet = _resolveWalletAddress(listen: false);
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-                subtitle: l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
-                icon: Icons.collections_outlined,
-                semantic: KubusActionSemantic.view,
-                onTap: () {
-                  final wallet = _resolveWalletAddress(listen: false);
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-                      child: ArtistPortfolioScreen(walletAddress: wallet),
-                    ),
-                  );
-                },
+                child: ArtistPortfolioScreen(walletAddress: wallet),
               ),
-            if (isApprovedArtist &&
-                showExhibitions &&
-                section == DesktopArtistStudioSection.exhibitions)
-              KubusActionSidebarTile(
+            );
+          },
+        ),
+      if (isApprovedArtist &&
+          showExhibitions &&
+          section == DesktopArtistStudioSection.exhibitions)
+        KubusActionSidebarTile(
+          title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
+          subtitle: l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
+          icon: AppColorUtils.exhibitionIcon,
+          semantic: KubusActionSemantic.view,
+          onTap: () {
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-                subtitle:
-                    l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
-                icon: AppColorUtils.exhibitionIcon,
-                semantic: KubusActionSemantic.view,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title:
-                          l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-                      child: ExhibitionListScreen(
-                        embedded: true,
-                        canCreate: true,
-                        onCreateExhibition: () {
-                          _openExhibitionWorkspace();
-                        },
-                        onOpenExhibition: (exhibition) {
-                          unawaited(
-                            CreatorShellNavigation
-                                .openExhibitionDetailWorkspace(
-                              context,
-                              exhibitionId: exhibition.id,
-                              initialExhibition: exhibition,
-                              titleOverride: exhibition.title,
-                            ),
-                          );
-                        },
+                child: ExhibitionListScreen(
+                  embedded: true,
+                  canCreate: true,
+                  onCreateExhibition: () {
+                    _openExhibitionWorkspace();
+                  },
+                  onOpenExhibition: (exhibition) {
+                    unawaited(
+                      CreatorShellNavigation.openExhibitionDetailWorkspace(
+                        context,
+                        exhibitionId: exhibition.id,
+                        initialExhibition: exhibition,
+                        titleOverride: exhibition.title,
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            if (isApprovedArtist &&
-                section == DesktopArtistStudioSection.analytics)
-              KubusActionSidebarTile(
+            );
+          },
+        ),
+      if (AppConfig.isFeatureEnabled('collabInvites'))
+        Consumer<CollabProvider>(
+          builder: (context, collabProvider, _) {
+            final pending = collabProvider.pendingInviteCount;
+            return KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionInvitesTitle,
+              subtitle: pending > 0
+                  ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle
+                  : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
+              icon: Icons.inbox_outlined,
+              semantic: KubusActionSemantic.invite,
+              onTap: () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n
+                        .desktopArtistStudioQuickActionCollaborationInvitesTitle,
+                    child: const InvitesInboxScreen(embedded: true),
+                  ),
+                );
+              },
+              trailing: pending > 0 ? KubusCountBadge(count: pending) : null,
+            );
+          },
+        ),
+      if (isApprovedArtist && section == DesktopArtistStudioSection.analytics)
+        KubusActionSidebarTile(
+          title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+          subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
+          icon: Icons.analytics_outlined,
+          semantic: KubusActionSemantic.analytics,
+          onTap: () {
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-                subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
-                icon: Icons.analytics_outlined,
-                semantic: KubusActionSemantic.analytics,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-                      child: const ArtistAnalytics(),
-                    ),
-                  );
-                },
+                child: const ArtistAnalytics(),
               ),
-            if (section == DesktopArtistStudioSection.analytics) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              _buildAnalyticsTimeframeSelector(
-                title: l10n.analyticsTimeframeLabel,
-                value:
-                    context.watch<AnalyticsFiltersProvider>().artistTimeframe,
-                onChanged: (v) => context
-                    .read<AnalyticsFiltersProvider>()
-                    .setArtistTimeframe(v),
-              ),
-            ],
-            const SizedBox(height: sectionGap),
-
-            // Stats
-            Text(
-              l10n.desktopArtistStudioStatisticsTitle,
-              style: KubusTextStyles.sectionTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: sectionHeaderGap),
-            _buildStatsGrid(),
-            const SizedBox(height: sectionGap),
-
-            if (section == DesktopArtistStudioSection.gallery) ...[
-              Text(
-                l10n.desktopArtistStudioRecentActivityTitle,
-                style: KubusTextStyles.sectionTitle
-                    .copyWith(color: scheme.onSurface),
-              ),
-              const SizedBox(height: sectionHeaderGap),
-              _buildRecentActivity(themeProvider),
-            ],
-          ],
+            );
+          },
         ),
+      if (section == DesktopArtistStudioSection.analytics)
+        _buildAnalyticsTimeframeSelector(
+          title: l10n.analyticsTimeframeLabel,
+          value: context.watch<AnalyticsFiltersProvider>().artistTimeframe,
+          onChanged: (v) =>
+              context.read<AnalyticsFiltersProvider>().setArtistTimeframe(v),
+        ),
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: roles.ground,
+        border: Border(left: BorderSide(color: roles.rule)),
       ),
-    );
-  }
-
-  Widget _buildCreatorWorkspaceLaunchCard({
-    required String title,
-    required String subtitle,
-    required Color accent,
-    required List<Widget> children,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        backgroundColor: accent.withValues(alpha: 0.06),
-        showBorder: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
+      child: ListView(
+        padding: const EdgeInsets.all(KubusSpacing.lg),
+        children: [
+          KubusNotionLabel(l10n.studioNotionPractice),
+          const SizedBox(height: KubusSpacing.xs),
+          Semantics(
+            header: true,
+            child: Text(
+              l10n.desktopArtistStudioOverviewTitle,
               style: KubusTextStyles.sectionTitle.copyWith(
-                color: scheme.onSurface,
+                color: roles.foreground,
               ),
             ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              subtitle,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
+          ),
+          const SizedBox(height: KubusSpacing.xxs),
+          Text(
+            sectionTitle(),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: roles.foregroundMuted,
             ),
-            const SizedBox(height: KubusSpacing.md),
-            ...children.map((child) => Padding(
-                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                  child: SizedBox(width: double.infinity, child: child),
-                )),
+          ),
+          const SizedBox(height: KubusSpacing.lg),
+          _buildVerificationStatusCard(themeProvider),
+          const SizedBox(height: sectionGap),
+          if (practice.isNotEmpty) ...[
+            KubusPanelSection(
+              notion: l10n.desktopArtistStudioQuickActionsTitle,
+              children: practice,
+            ),
+            const SizedBox(height: sectionGap),
           ],
-        ),
+          KubusPanelSection(
+            notion: l10n.dashboardNotionNumbers,
+            caption: l10n.dashboardNumbersCaption,
+            children: [_buildStatsGrid()],
+          ),
+          if (isApprovedArtist) ...[
+            const SizedBox(height: sectionGap),
+            KubusPanelSection(
+              notion: l10n.dashboardNotionInfrastructure,
+              children: [
+                KubusActionSidebarTile(
+                  title: l10n.desktopArtistStudioPromoteProfileTitle,
+                  subtitle: l10n.desktopArtistStudioPromoteProfileSubtitle,
+                  icon: Icons.campaign_outlined,
+                  semantic: KubusActionSemantic.publish,
+                  onTap: _openProfilePromotionFlow,
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -567,69 +465,21 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     required String value,
     required ValueChanged<String> onChanged,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surfaceContainerHighest,
-    );
     final normalized = value.trim().toLowerCase();
     final effective =
         AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
             ? normalized
             : '30d';
-    String labelFor(String timeframe) {
-      switch (timeframe) {
-        case '7d':
-          return '7d';
-        case '30d':
-          return '30d';
-        case '90d':
-          return '90d';
-        case '1y':
-          return '1y';
-        default:
-          return timeframe;
-      }
-    }
-
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      backgroundColor: cardStyle.tintColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: KubusTextStyles.actionTileTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-          ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: effective,
-              dropdownColor: scheme.surfaceContainerHighest,
-              style: KubusTextStyles.actionTileSubtitle
-                  .copyWith(color: scheme.onSurface),
-              items: AnalyticsFiltersProvider.allowedTimeframes
-                  .map(
-                    (tf) => DropdownMenuItem<String>(
-                      value: tf,
-                      child: Text(labelFor(tf)),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (next) {
-                if (next == null) return;
-                onChanged(next);
-              },
-            ),
-          ),
-        ],
-      ),
+    return KubusFormSelect<String>(
+      label: title,
+      value: effective,
+      onChanged: (next) {
+        if (next == null) return;
+        onChanged(next);
+      },
+      items: AnalyticsFiltersProvider.allowedTimeframes
+          .map((tf) => DropdownMenuItem<String>(value: tf, child: Text(tf)))
+          .toList(growable: false),
     );
   }
 
@@ -653,8 +503,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
     final wallet = _resolveWalletAddress();
     final daoProvider = context.watch<DAOProvider>();
     final review = _artistReview ??
@@ -667,10 +515,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final isPending = verification.isPendingFor(DaoRoleType.artist);
     final isRejected = verification.isRejectedFor(DaoRoleType.artist);
 
-    Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
-    IconData statusIcon = Icons.help_outline;
-    String statusText = l10n.desktopArtistStudioVerificationNotAppliedTitle;
-    String statusDescription =
+    var tone = KubusStatusTone.neutral;
+    var statusText = l10n.desktopArtistStudioVerificationNotAppliedTitle;
+    var statusDescription =
         l10n.desktopArtistStudioVerificationNotAppliedDescription;
 
     if (_reviewLoading) {
@@ -678,211 +525,104 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       statusDescription =
           l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
-      statusColor = roles.positiveAction;
-      statusIcon = Icons.verified;
+      tone = KubusStatusTone.positive;
       statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationApprovedDescription;
     } else if (isPending) {
-      statusColor = roles.warningAction;
-      statusIcon = Icons.pending;
+      tone = KubusStatusTone.warning;
       statusText = l10n.desktopArtistStudioVerificationPendingTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationPendingDescription;
     } else if (isRejected) {
-      statusColor = roles.negativeAction;
-      statusIcon = Icons.cancel;
+      tone = KubusStatusTone.negative;
       statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: KubusSpacing.xxl,
-                height: KubusSpacing.xxl,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  statusIcon,
-                  color: statusColor,
-                  size: KubusSpacing.lg,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusText,
-                      style: KubusTextStyles.sectionTitle
-                          .copyWith(color: scheme.onSurface),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      statusDescription,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (!isApproved && !isPending && wallet.isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.md),
-            Text(
-              l10n.desktopArtistStudioApplyForVerificationButton,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ],
-      ),
+    return KubusStatusPanel(
+      margin: EdgeInsets.zero,
+      title: statusText,
+      description: statusDescription,
+      tone: tone,
+      isLoading: _reviewLoading,
+      detail: (!isApproved && !isPending && wallet.isNotEmpty)
+          ? l10n.desktopArtistStudioApplyForVerificationButton
+          : null,
     );
   }
 
+  /// Real backend counters only (`/api/stats` user snapshot): artworks
+  /// created, views and likes received on those artworks. The former
+  /// fourth tile ("Sales", KUB8) read `achievementTokensTotal`, which is the
+  /// sum of achievement reward definitions, not sales; it is removed.
   Widget _buildStatsGrid() {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final statsProvider = context.watch<StatsProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-
-    const metrics = <String>[
-      'artworks',
-      'viewsReceived',
-      'likesReceived',
-      'achievementTokensTotal',
-    ];
 
     final snapshot = wallet.isEmpty
         ? null
         : statsProvider.getSnapshot(
             entityType: 'user',
             entityId: wallet,
-            metrics: metrics,
+            metrics: _studioMetrics,
             scope: 'public',
           );
     final isLoading = wallet.isNotEmpty &&
         statsProvider.isSnapshotLoading(
           entityType: 'user',
           entityId: wallet,
-          metrics: metrics,
+          metrics: _studioMetrics,
           scope: 'public',
         ) &&
         snapshot == null;
 
     final counters = snapshot?.counters ?? const <String, int>{};
-    final artworks = wallet.isEmpty ? null : (counters['artworks'] ?? 0);
-    final views = wallet.isEmpty ? null : (counters['viewsReceived'] ?? 0);
-    final likes = wallet.isEmpty ? null : (counters['likesReceived'] ?? 0);
-    final earnedKub8 =
-        wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+    String display(String key) {
+      if (isLoading) return '…';
+      if (wallet.isEmpty) return '—';
+      return (counters[key] ?? 0).toString();
+    }
 
-    String displayCount(int? value) =>
-        isLoading ? '…' : (value?.toString() ?? '—');
-    String displayKub8(int? value) =>
-        isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
-
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopArtistStudioStatArtworks,
-                displayCount(artworks),
-                Icons.collections_outlined,
-                roles.web3ArtistStudioAccent,
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopArtistStudioStatViews,
-                displayCount(views),
-                Icons.visibility_outlined,
-                roles.statTeal,
-              ),
-            ),
-          ],
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.desktopArtistStudioStatArtworks,
+            value: display('artworks'),
+            icon: Icons.collections_outlined,
+            accent: KubusColorRoles.of(context).foregroundMuted,
+          ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopArtistStudioStatLikes,
-                displayCount(likes),
-                Icons.favorite_outline,
-                roles.statCoral,
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopArtistStudioStatSales,
-                displayKub8(earnedKub8),
-                Icons.attach_money,
-                roles.positiveAction,
-              ),
-            ),
-          ],
+        const SizedBox(width: KubusSpacing.sm),
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.desktopArtistStudioStatViews,
+            value: display('viewsReceived'),
+            icon: Icons.visibility_outlined,
+            accent: KubusColorRoles.of(context).foregroundMuted,
+          ),
+        ),
+        const SizedBox(width: KubusSpacing.sm),
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.desktopArtistStudioStatLikes,
+            value: display('likesReceived'),
+            icon: Icons.favorite_outline,
+            accent: KubusColorRoles.of(context).foregroundMuted,
+          ),
         ),
       ],
     );
   }
-
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
-    return KubusSidebarStatCard(
-      title: label,
-      value: value,
-      icon: icon,
-      accent: color,
-    );
-  }
-
-  Widget _buildRecentActivity(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.primaryContainer,
-    );
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      backgroundColor: cardStyle.tintColor,
-      child: Column(
-        children: [
-          Icon(
-            Icons.history,
-            size: KubusSizes.sidebarActionIconBox,
-            color: scheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Text(
-            l10n.desktopArtistStudioNoRecentActivityLabel,
-            style: KubusTextStyles.actionTileTitle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+/// Metrics the Studio side panel reads. Only real backend counters.
+const List<String> _studioMetrics = <String>[
+  'artworks',
+  'viewsReceived',
+  'likesReceived',
+];

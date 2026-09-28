@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_failure.dart';
+
+export '../../utils/kubus_failure.dart'
+    show KubusFailureKind, classifyKubusFailure;
 import '../inline_loading.dart';
 import '../kubus_button.dart';
 

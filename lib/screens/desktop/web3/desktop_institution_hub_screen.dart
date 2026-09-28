@@ -21,15 +21,16 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/wallet_utils.dart';
-import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../web3/institution/institution_hub.dart';
 import '../../web3/institution/event_manager.dart';
 import '../../web3/institution/institution_analytics.dart';
 import '../../events/exhibition_list_screen.dart';
-import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/forms/kubus_form.dart';
 import '../../../widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
@@ -97,12 +98,7 @@ class _DesktopInstitutionHubScreenState
         unawaited(statsProvider.ensureSnapshot(
           entityType: 'user',
           entityId: wallet,
-          metrics: const <String>[
-            'eventsHosted',
-            'visitorsReceived',
-            'exhibitionArtworks',
-            'achievementTokensTotal',
-          ],
+          metrics: institutionDashboardMetrics,
           scope: 'public',
         ));
       });
@@ -251,14 +247,20 @@ class _DesktopInstitutionHubScreenState
     );
   }
 
+  /// Side panel hierarchy: status, PROGRAMME actions (events, exhibitions,
+  /// create, collaborations, analytics), NUMBERS (real backend counters,
+  /// truthfully labelled), then INFRASTRUCTURE (paid promotion).
+  ///
+  /// There is deliberately no revenue tile. The former "Revenue" tile showed
+  /// `achievementTokensTotal` as "N KUB8": that counter is the sum of the
+  /// KUB8 reward definitions on achievements the wallet has unlocked
+  /// (statsService `SUM(achievements.reward_kub8)`), not income. No backend
+  /// field represents institution revenue, so nothing is shown. See
+  /// docs/design/PRODUCT_V5_APP_AUDIT.md (Wave 4C, "0 KUB8 Revenue").
   Widget _buildRightPanel(ThemeProvider themeProvider) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    const sectionGap = KubusSpacing.lg;
-    const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
-    const blockGap = KubusSpacing.md + KubusSpacing.xs;
+    final roles = KubusColorRoles.of(context);
+    const sectionGap = KubusSpacing.xl;
     final persona = context.watch<ProfileProvider>().userPersona;
     final showCreateActions =
         persona == null || persona == UserPersona.institution;
@@ -266,7 +268,6 @@ class _DesktopInstitutionHubScreenState
     final section = dashboardState.institutionSection;
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
-    // Compute approval status for gating quick actions
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
     final review = _institutionReview ??
@@ -282,12 +283,6 @@ class _DesktopInstitutionHubScreenState
         verification.isPendingFor(DaoRoleType.artist);
     final canSelfServeInstitutionPromotion =
         isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
-    final roles = KubusColorRoles.of(context);
-    final sidebarStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-      tintBase: scheme.surface,
-    );
 
     String sectionTitle() {
       switch (section) {
@@ -302,288 +297,192 @@ class _DesktopInstitutionHubScreenState
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : scheme.outline.withValues(alpha: 0.08),
-            width: 1,
+    final programme = <Widget>[
+      if (section == DesktopInstitutionSection.create &&
+          isApprovedInstitution &&
+          showCreateActions) ...[
+        if (AppConfig.isFeatureEnabled('events'))
+          KubusButton(
+            onPressed: _openEventWorkspace,
+            icon: Icons.event_outlined,
+            label: l10n.desktopInstitutionCreateEventTitle,
+            isFullWidth: true,
           ),
+        if (showExhibitions)
+          KubusButton(
+            onPressed: _openExhibitionWorkspace,
+            icon: AppColorUtils.exhibitionIcon,
+            label: l10n.exhibitionCreatorAppBarTitle,
+            isFullWidth: true,
+            variant: KubusButtonVariant.secondary,
+          ),
+        KubusActionSidebarTile(
+          title: l10n.manageMarkersTitle,
+          subtitle: l10n.manageMarkersQuickActionSubtitle,
+          icon: Icons.place_outlined,
+          semantic: KubusActionSemantic.manage,
+          onTap: () {
+            unawaited(
+              CreatorShellNavigation.openManageMarkersWorkspace(context),
+            );
+          },
         ),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.zero,
-        blurSigma: sidebarStyle.blurSigma,
-        fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: sidebarStyle.tintColor,
-        child: ListView(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          children: [
-            // Header
-            Text(
-              l10n.navigationScreenInstitutionHub,
-              style:
-                  KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              sectionTitle(),
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.66),
-              ),
-            ),
-            const SizedBox(height: sectionGap),
-
-            // Verification status
-            _buildVerificationStatusCard(themeProvider),
-            const SizedBox(height: blockGap),
-
-            // Quick actions
-            Text(
-              l10n.desktopArtistStudioQuickActionsTitle,
-              style: KubusTextStyles.sectionTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: sectionHeaderGap),
-            if (AppConfig.isFeatureEnabled('collabInvites'))
-              Consumer<CollabProvider>(
-                builder: (context, collabProvider, _) {
-                  final pending = collabProvider.pendingInviteCount;
-                  final badge = pending > 0
-                      ? FrostedContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.sm,
-                            vertical: KubusSpacing.xs,
-                          ),
-                          borderRadius: BorderRadius.circular(KubusRadius.xl),
-                          showBorder: false,
-                          backgroundColor: scheme.error
-                              .withValues(alpha: isDark ? 0.30 : 0.22),
-                          child: Text(
-                            pending > 99 ? '99+' : pending.toString(),
-                            style: KubusTextStyles.badgeCount
-                                .copyWith(color: scheme.onError),
-                          ),
-                        )
-                      : null;
-
-                  return KubusActionSidebarTile(
-                    title: l10n.desktopArtistStudioQuickActionInvitesTitle,
-                    subtitle: pending > 0
-                        ? l10n
-                            .desktopArtistStudioQuickActionInvitesPendingSubtitle
-                        : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
-                    icon: Icons.inbox_outlined,
-                    semantic: KubusActionSemantic.invite,
-                    onTap: () {
-                      DesktopShellScope.of(context)?.pushScreen(
-                        DesktopSubScreen(
-                          title: l10n
-                              .desktopArtistStudioQuickActionCollaborationInvitesTitle,
-                          child: const InvitesInboxScreen(embedded: true),
-                        ),
-                      );
-                    },
-                    trailing: badge,
-                  );
-                },
-              ),
-            if (canSelfServeInstitutionPromotion)
-              KubusActionSidebarTile(
-                title: l10n.desktopInstitutionPromoteProfileTitle,
-                subtitle: l10n.desktopInstitutionPromoteProfileSubtitle,
-                icon: Icons.campaign_outlined,
-                semantic: KubusActionSemantic.publish,
-                onTap: _openInstitutionPromotionFlow,
-              ),
-            if (section == DesktopInstitutionSection.create &&
-                isApprovedInstitution &&
-                showCreateActions)
-              _buildCreatorWorkspaceLaunchCard(
-                title: l10n.desktopArtistStudioQuickActionsTitle,
-                subtitle: l10n.desktopInstitutionCreatorWorkspaceSubtitle,
-                accent: roles.web3InstitutionAccent,
-                children: [
-                  if (AppConfig.isFeatureEnabled('events'))
-                    FilledButton.tonalIcon(
-                      onPressed: _openEventWorkspace,
-                      icon: const Icon(Icons.event_outlined),
-                      label: Text(l10n.desktopInstitutionCreateEventTitle),
-                    ),
-                  if (showExhibitions)
-                    FilledButton.tonalIcon(
-                      onPressed: _openExhibitionWorkspace,
-                      icon: const Icon(AppColorUtils.exhibitionIcon),
-                      label: Text(l10n.exhibitionCreatorAppBarTitle),
-                    ),
-                ],
-              ),
-            if (section == DesktopInstitutionSection.create &&
-                isApprovedInstitution &&
-                showCreateActions)
-              KubusActionSidebarTile(
-                title: l10n.manageMarkersTitle,
-                subtitle: l10n.manageMarkersQuickActionSubtitle,
-                icon: Icons.place_outlined,
-                semantic: KubusActionSemantic.manage,
-                onTap: () {
-                  unawaited(
-                    CreatorShellNavigation.openManageMarkersWorkspace(context),
-                  );
-                },
-              ),
-            if (section == DesktopInstitutionSection.events &&
-                isApprovedInstitution)
-              KubusActionSidebarTile(
+      ],
+      if (section == DesktopInstitutionSection.events && isApprovedInstitution)
+        KubusActionSidebarTile(
+          title: l10n.desktopInstitutionManageEventsTitle,
+          subtitle: l10n.desktopInstitutionManageEventsSubtitle,
+          icon: Icons.event_note_outlined,
+          semantic: KubusActionSemantic.manage,
+          onTap: () {
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopInstitutionManageEventsTitle,
-                subtitle: l10n.desktopInstitutionManageEventsSubtitle,
-                icon: Icons.event_note_outlined,
-                semantic: KubusActionSemantic.manage,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopInstitutionManageEventsTitle,
-                      child: const EventManager(embedded: true),
-                    ),
-                  );
-                },
+                child: const EventManager(embedded: true),
               ),
-            if (section == DesktopInstitutionSection.exhibitions &&
-                isApprovedInstitution &&
-                showExhibitions)
-              KubusActionSidebarTile(
+            );
+          },
+        ),
+      if (section == DesktopInstitutionSection.exhibitions &&
+          isApprovedInstitution &&
+          showExhibitions)
+        KubusActionSidebarTile(
+          title: l10n.desktopInstitutionMyExhibitionsTitle,
+          subtitle: l10n.desktopInstitutionMyExhibitionsSubtitle,
+          icon: AppColorUtils.exhibitionIcon,
+          semantic: KubusActionSemantic.view,
+          onTap: () {
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopInstitutionMyExhibitionsTitle,
-                subtitle: l10n.desktopInstitutionMyExhibitionsSubtitle,
-                icon: AppColorUtils.exhibitionIcon,
-                semantic: KubusActionSemantic.view,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopInstitutionMyExhibitionsTitle,
-                      child: ExhibitionListScreen(
-                        embedded: true,
-                        canCreate: true,
-                        onCreateExhibition: () {
-                          _openExhibitionWorkspace();
-                        },
-                        onOpenExhibition: (exhibition) {
-                          unawaited(
-                            CreatorShellNavigation
-                                .openExhibitionDetailWorkspace(
-                              context,
-                              exhibitionId: exhibition.id,
-                              initialExhibition: exhibition,
-                              titleOverride: exhibition.title,
-                            ),
-                          );
-                        },
+                child: ExhibitionListScreen(
+                  embedded: true,
+                  canCreate: true,
+                  onCreateExhibition: () {
+                    _openExhibitionWorkspace();
+                  },
+                  onOpenExhibition: (exhibition) {
+                    unawaited(
+                      CreatorShellNavigation.openExhibitionDetailWorkspace(
+                        context,
+                        exhibitionId: exhibition.id,
+                        initialExhibition: exhibition,
+                        titleOverride: exhibition.title,
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            if (section == DesktopInstitutionSection.analytics &&
-                isApprovedInstitution)
-              KubusActionSidebarTile(
+            );
+          },
+        ),
+      if (AppConfig.isFeatureEnabled('collabInvites'))
+        Consumer<CollabProvider>(
+          builder: (context, collabProvider, _) {
+            final pending = collabProvider.pendingInviteCount;
+            return KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionInvitesTitle,
+              subtitle: pending > 0
+                  ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle
+                  : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
+              icon: Icons.inbox_outlined,
+              semantic: KubusActionSemantic.invite,
+              onTap: () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n
+                        .desktopArtistStudioQuickActionCollaborationInvitesTitle,
+                    child: const InvitesInboxScreen(embedded: true),
+                  ),
+                );
+              },
+              trailing: pending > 0 ? KubusCountBadge(count: pending) : null,
+            );
+          },
+        ),
+      if (section == DesktopInstitutionSection.analytics &&
+          isApprovedInstitution)
+        KubusActionSidebarTile(
+          title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+          subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
+          icon: Icons.analytics_outlined,
+          semantic: KubusActionSemantic.analytics,
+          onTap: () {
+            DesktopShellScope.of(context)?.pushScreen(
+              DesktopSubScreen(
                 title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-                subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
-                icon: Icons.analytics_outlined,
-                semantic: KubusActionSemantic.analytics,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-                      child: const InstitutionAnalytics(),
-                    ),
-                  );
-                },
+                child: const InstitutionAnalytics(),
               ),
-            if (section == DesktopInstitutionSection.analytics) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              _buildAnalyticsTimeframeSelector(
-                title: l10n.analyticsTimeframeLabel,
-                value: context
-                    .watch<AnalyticsFiltersProvider>()
-                    .institutionTimeframe,
-                onChanged: (v) => context
-                    .read<AnalyticsFiltersProvider>()
-                    .setInstitutionTimeframe(v),
-              ),
-            ],
-            const SizedBox(height: sectionGap),
-
-            // Stats
-            Text(
-              l10n.desktopInstitutionStatsTitle,
-              style: KubusTextStyles.sectionTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: sectionHeaderGap),
-            _buildStatsGrid(),
-            const SizedBox(height: sectionGap),
-
-            // Upcoming events
-            if (section == DesktopInstitutionSection.events) ...[
-              Text(
-                l10n.profileUpcomingEventsTitle,
-                style: KubusTextStyles.sectionTitle
-                    .copyWith(color: scheme.onSurface),
-              ),
-              const SizedBox(height: sectionHeaderGap),
-              _buildUpcomingEvents(themeProvider),
-            ],
-          ],
+            );
+          },
         ),
+      if (section == DesktopInstitutionSection.analytics)
+        _buildAnalyticsTimeframeSelector(
+          title: l10n.analyticsTimeframeLabel,
+          value: context.watch<AnalyticsFiltersProvider>().institutionTimeframe,
+          onChanged: (v) => context
+              .read<AnalyticsFiltersProvider>()
+              .setInstitutionTimeframe(v),
+        ),
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: roles.ground,
+        border: Border(left: BorderSide(color: roles.rule)),
       ),
-    );
-  }
-
-  Widget _buildCreatorWorkspaceLaunchCard({
-    required String title,
-    required String subtitle,
-    required Color accent,
-    required List<Widget> children,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        backgroundColor: accent.withValues(alpha: 0.06),
-        showBorder: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
+      child: ListView(
+        padding: const EdgeInsets.all(KubusSpacing.lg),
+        children: [
+          KubusNotionLabel(l10n.institutionNotionProgramme),
+          const SizedBox(height: KubusSpacing.xs),
+          Semantics(
+            header: true,
+            child: Text(
+              l10n.navigationScreenInstitutionHub,
               style: KubusTextStyles.sectionTitle.copyWith(
-                color: scheme.onSurface,
+                color: roles.foreground,
               ),
             ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              subtitle,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
+          ),
+          const SizedBox(height: KubusSpacing.xxs),
+          Text(
+            sectionTitle(),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: roles.foregroundMuted,
             ),
-            const SizedBox(height: KubusSpacing.md),
-            ...children.map((child) => Padding(
-                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                  child: SizedBox(width: double.infinity, child: child),
-                )),
+          ),
+          const SizedBox(height: KubusSpacing.lg),
+          _buildVerificationStatusCard(themeProvider),
+          const SizedBox(height: sectionGap),
+          if (programme.isNotEmpty) ...[
+            KubusPanelSection(
+              notion: l10n.desktopArtistStudioQuickActionsTitle,
+              children: programme,
+            ),
+            const SizedBox(height: sectionGap),
           ],
-        ),
+          KubusPanelSection(
+            notion: l10n.dashboardNotionNumbers,
+            caption: l10n.dashboardNumbersCaption,
+            children: [_buildStatsGrid()],
+          ),
+          if (canSelfServeInstitutionPromotion) ...[
+            const SizedBox(height: sectionGap),
+            KubusPanelSection(
+              notion: l10n.dashboardNotionInfrastructure,
+              children: [
+                KubusActionSidebarTile(
+                  title: l10n.desktopInstitutionPromoteProfileTitle,
+                  subtitle: l10n.desktopInstitutionPromoteProfileSubtitle,
+                  icon: Icons.campaign_outlined,
+                  semantic: KubusActionSemantic.publish,
+                  onTap: _openInstitutionPromotionFlow,
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -593,55 +492,21 @@ class _DesktopInstitutionHubScreenState
     required String value,
     required ValueChanged<String> onChanged,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surfaceContainerHighest,
-    );
     final normalized = value.trim().toLowerCase();
     final effective =
         AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
             ? normalized
             : '30d';
-
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      backgroundColor: cardStyle.tintColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: KubusTextStyles.actionTileTitle
-                  .copyWith(color: scheme.onSurface),
-            ),
-          ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: effective,
-              dropdownColor: scheme.surfaceContainerHighest,
-              style: KubusTextStyles.actionTileSubtitle
-                  .copyWith(color: scheme.onSurface),
-              items: AnalyticsFiltersProvider.allowedTimeframes
-                  .map(
-                    (tf) => DropdownMenuItem<String>(
-                      value: tf,
-                      child: Text(tf),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (next) {
-                if (next == null) return;
-                onChanged(next);
-              },
-            ),
-          ),
-        ],
-      ),
+    return KubusFormSelect<String>(
+      label: title,
+      value: effective,
+      onChanged: (next) {
+        if (next == null) return;
+        onChanged(next);
+      },
+      items: AnalyticsFiltersProvider.allowedTimeframes
+          .map((tf) => DropdownMenuItem<String>(value: tf, child: Text(tf)))
+          .toList(growable: false),
     );
   }
 
@@ -684,13 +549,10 @@ class _DesktopInstitutionHubScreenState
     final isApproved = verification.isApprovedFor(DaoRoleType.institution);
     final isPending = verification.isPendingFor(DaoRoleType.institution);
     final isRejected = verification.isRejectedFor(DaoRoleType.institution);
-    final roles = KubusColorRoles.of(context);
-    final scheme = Theme.of(context).colorScheme;
 
-    Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
-    IconData statusIcon = Icons.help_outline;
-    String statusText = l10n.desktopInstitutionVerificationNotAppliedTitle;
-    String statusDescription =
+    var tone = KubusStatusTone.neutral;
+    var statusText = l10n.desktopInstitutionVerificationNotAppliedTitle;
+    var statusDescription =
         l10n.desktopInstitutionVerificationNotAppliedDescription;
 
     if (_reviewLoading) {
@@ -698,212 +560,106 @@ class _DesktopInstitutionHubScreenState
       statusDescription =
           l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
-      statusColor = roles.positiveAction;
-      statusIcon = Icons.verified;
+      tone = KubusStatusTone.positive;
       statusText = l10n.profileEditVerifiedInstitutionTitle;
       statusDescription =
           l10n.desktopInstitutionVerificationApprovedDescription;
     } else if (isPending) {
-      statusColor = roles.warningAction;
-      statusIcon = Icons.pending;
+      tone = KubusStatusTone.warning;
       statusText = l10n.desktopArtistStudioVerificationPendingTitle;
       statusDescription = l10n.desktopInstitutionVerificationPendingDescription;
     } else if (isRejected) {
-      statusColor = roles.negativeAction;
-      statusIcon = Icons.cancel;
+      tone = KubusStatusTone.negative;
       statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: KubusSpacing.xxl,
-                height: KubusSpacing.xxl,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  statusIcon,
-                  color: statusColor,
-                  size: KubusSpacing.lg,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusText,
-                      style: KubusTextStyles.sectionTitle
-                          .copyWith(color: scheme.onSurface),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      statusDescription,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (!isApproved && !isPending && wallet.isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.md),
-            Text(
-              l10n.desktopInstitutionVerificationApplyHint,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ],
-      ),
+    return KubusStatusPanel(
+      margin: EdgeInsets.zero,
+      title: statusText,
+      description: statusDescription,
+      tone: tone,
+      isLoading: _reviewLoading,
+      detail: (!isApproved && !isPending && wallet.isNotEmpty)
+          ? l10n.desktopInstitutionVerificationApplyHint
+          : null,
     );
   }
 
+  /// Real programme counters from the `/api/stats` user snapshot:
+  /// published events owned, views of the institution's event and
+  /// exhibition pages (`analytics_events` 'view' rows, not physical
+  /// visitors), and distinct artworks in its exhibitions.
   Widget _buildStatsGrid() {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final statsProvider = context.watch<StatsProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-
-    const metrics = <String>[
-      'eventsHosted',
-      'visitorsReceived',
-      'exhibitionArtworks',
-      'achievementTokensTotal',
-    ];
 
     final snapshot = wallet.isEmpty
         ? null
         : statsProvider.getSnapshot(
             entityType: 'user',
             entityId: wallet,
-            metrics: metrics,
+            metrics: institutionDashboardMetrics,
             scope: 'public',
           );
     final isLoading = wallet.isNotEmpty &&
         statsProvider.isSnapshotLoading(
           entityType: 'user',
           entityId: wallet,
-          metrics: metrics,
+          metrics: institutionDashboardMetrics,
           scope: 'public',
         ) &&
         snapshot == null;
 
     final counters = snapshot?.counters ?? const <String, int>{};
-    final events = wallet.isEmpty ? null : (counters['eventsHosted'] ?? 0);
-    final visitors =
-        wallet.isEmpty ? null : (counters['visitorsReceived'] ?? 0);
-    final artworks =
-        wallet.isEmpty ? null : (counters['exhibitionArtworks'] ?? 0);
-    final revenue =
-        wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+    String display(String key) {
+      if (isLoading) return '…';
+      if (wallet.isEmpty) return '—';
+      return (counters[key] ?? 0).toString();
+    }
 
-    String displayCount(int? value) =>
-        isLoading ? '…' : (value?.toString() ?? '—');
-    String displayKub8(int? value) =>
-        isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
-
-    return Column(
+    final muted = KubusColorRoles.of(context).foregroundMuted;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                l10n.userProfileAchievementCategoryEvents,
-                displayCount(events),
-                Icons.event_outlined,
-                roles.web3InstitutionAccent,
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopInstitutionStatVisitors,
-                displayCount(visitors),
-                Icons.people_outline,
-                roles.web3InstitutionAccent,
-              ),
-            ),
-          ],
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.userProfileAchievementCategoryEvents,
+            value: display('eventsHosted'),
+            icon: Icons.event_outlined,
+            accent: muted,
+          ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopArtistStudioStatArtworks,
-                displayCount(artworks),
-                Icons.collections_outlined,
-                roles.statCoral,
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                l10n.desktopInstitutionStatRevenue,
-                displayKub8(revenue),
-                Icons.attach_money,
-                roles.positiveAction,
-              ),
-            ),
-          ],
+        const SizedBox(width: KubusSpacing.sm),
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.institutionStatProgrammeViews,
+            value: display('visitorsReceived'),
+            icon: Icons.visibility_outlined,
+            accent: muted,
+          ),
+        ),
+        const SizedBox(width: KubusSpacing.sm),
+        Expanded(
+          child: KubusSidebarStatCard(
+            title: l10n.desktopArtistStudioStatArtworks,
+            value: display('exhibitionArtworks'),
+            icon: Icons.collections_outlined,
+            accent: muted,
+          ),
         ),
       ],
     );
   }
-
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
-    return KubusSidebarStatCard(
-      title: label,
-      value: value,
-      icon: icon,
-      accent: color,
-    );
-  }
-
-  Widget _buildUpcomingEvents(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.primaryContainer,
-    );
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      backgroundColor: cardStyle.tintColor,
-      child: Column(
-        children: [
-          Icon(
-            Icons.event_available,
-            size: KubusSizes.sidebarActionIconBox,
-            color: scheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Text(
-            l10n.desktopInstitutionNoUpcomingEventsLabel,
-            style: KubusTextStyles.actionTileTitle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+/// Metrics the Institution side panel reads. There is no revenue metric:
+/// `achievementTokensTotal` is an achievement reward sum, not income.
+@visibleForTesting
+const List<String> institutionDashboardMetrics = <String>[
+  'eventsHosted',
+  'visitorsReceived',
+  'exhibitionArtworks',
+];

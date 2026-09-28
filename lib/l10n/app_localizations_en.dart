@@ -312,11 +312,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digital editions connected to artworks.';
 
   @override
-  String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 from achievements';
 
   @override
   String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8 recorded through contribution recognition.';
+      'Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.';
 
   @override
   String get analyticsPresetArtistSubtitle =>
@@ -17182,4 +17182,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String peopleFollowToggleSemantic(String name) {
     return 'Follow $name';
   }
+
+  @override
+  String get collabInboxIntro =>
+      'Accept an invitation to help manage an event, exhibition, artwork or collection.';
+
+  @override
+  String get collabInviteNotion => 'Invitation';
+
+  @override
+  String get collabEntityEvent => 'Event';
+
+  @override
+  String get collabEntityExhibition => 'Exhibition';
+
+  @override
+  String get collabEntityArtwork => 'Artwork';
+
+  @override
+  String get collabEntityCollection => 'Collection';
+
+  @override
+  String get collabEntityItem => 'Item';
+
+  @override
+  String collabInviteFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String collabInviteRole(String role) {
+    return 'Your role: $role';
+  }
+
+  @override
+  String collabInviteReceived(String date) {
+    return 'Received $date';
+  }
+
+  @override
+  String collabInviteExpires(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String get collabUnknownSender => 'Someone';
+
+  @override
+  String get collabAccept => 'Accept';
+
+  @override
+  String get collabDecline => 'Decline';
+
+  @override
+  String get collabAcceptedToast =>
+      'Invitation accepted. You can now help manage it.';
+
+  @override
+  String get collabDeclinedToast => 'Invitation declined.';
+
+  @override
+  String get collabAcceptFailedToast =>
+      'Couldn\'t accept the invitation. Try again.';
+
+  @override
+  String get collabDeclineFailedToast =>
+      'Couldn\'t decline the invitation. Try again.';
+
+  @override
+  String get collabCannotOpenItemToast =>
+      'This invitation doesn\'t point to an item that can be opened here.';
+
+  @override
+  String get collabEmptyTitle => 'No invitations right now';
+
+  @override
+  String get collabEmptyDescription =>
+      'When someone invites you to collaborate, it appears here.';
+
+  @override
+  String collabInviteSemantic(String entity, String role, String name) {
+    return 'Invitation to $entity as $role, from $name';
+  }
+
+  @override
+  String get studioNotionPractice => 'Practice';
+
+  @override
+  String get institutionNotionProgramme => 'Programme';
+
+  @override
+  String get dashboardNotionNumbers => 'Numbers';
+
+  @override
+  String get dashboardNotionInfrastructure => 'Infrastructure';
+
+  @override
+  String get dashboardNumbersCaption =>
+      'Counts from art.kubus activity on your public profile.';
+
+  @override
+  String get institutionStatProgrammeViews => 'Programme page views';
 }
