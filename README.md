@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/images/logo.png" width="120" alt="art.kubus logo" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/images/logo.png" />
+    <img src="assets/images/logo_black.png" width="120" alt="art.kubus logo" />
+  </picture>
 </p>
 
 <h1 align="center">art.kubus</h1>
