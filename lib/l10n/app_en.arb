@@ -166,8 +166,8 @@
   "pushRecognitionChannelDescription": "Notifications for contribution recognition",
   "analyticsMetricArchiveObjectsCreatedLabel": "Digital editions created",
   "analyticsMetricArchiveObjectsCreatedDescription": "Digital editions connected to artworks.",
-  "analyticsMetricKub8RecognitionLabel": "KUB8 recognition",
-  "analyticsMetricKub8RecognitionDescription": "KUB8 recorded through contribution recognition.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 from achievements",
+  "analyticsMetricKub8RecognitionDescription": "Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.",
   "analyticsPresetArtistSubtitle": "Artwork reach, community response, AR activity, and recognition.",
   "analyticsPresetInstitutionSubtitle": "Visitor reach, hosted programs, exhibitions, and recognition.",
   "analyticsExportNoDataToast": "No analytics data available to export.",
@@ -3800,6 +3800,10 @@
   "marketplaceNftArtworkStatusArEnabled": "Digital edition artwork - AR enabled",
   "marketplaceMintUnavailableLabel": "Edition creation unavailable",
   "marketplaceSoldOutLabel": "Sold out",
+  "marketplacePrimarySoldOutLabel": "Primary sold out",
+  "@marketplacePrimarySoldOutLabel": {
+    "description": "Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out."
+  },
   "marketplaceMintNftButtonLabel": "Create digital edition",
   "marketplaceArRequiredTitle": "Location visit required",
   "marketplaceArRequiredDescription": "This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.",
@@ -6944,5 +6948,208 @@
       }
     }
   },
-  "spatialUploadResume": "Resume upload"
+  "spatialUploadResume": "Resume upload",
+  "formShowPassword": "Show password",
+  "formHidePassword": "Hide password",
+  "formSelectDate": "Select a date",
+  "formSelectTime": "Select a time",
+  "formNoValueSelected": "Not set",
+  "formAddImage": "Add image",
+  "formFixHighlightedFields": "Some fields need attention. Check the messages below them.",
+  "stateNetworkTitle": "Couldn't reach art.kubus",
+  "stateNetworkDescription": "The request didn't finish. Check your connection and try again.",
+  "stateOfflineTitle": "You're offline",
+  "stateOfflineDescription": "This needs an internet connection. Reconnect, then try again.",
+  "stateServerTitle": "art.kubus is having trouble",
+  "stateServerDescription": "The service didn't respond properly. Nothing is wrong on your side; try again in a moment.",
+  "stateAuthTitle": "Sign in to continue",
+  "stateAuthDescription": "Your session has ended or you haven't signed in yet.",
+  "statePermissionTitle": "You don't have access",
+  "statePermissionDescription": "This is limited to its owner or to approved roles. Ask the owner if you need access.",
+  "stateNotFoundTitle": "Not found",
+  "stateNotFoundDescription": "It may have been removed or made private.",
+  "stateValidationTitle": "Some details need changes",
+  "stateValidationDescription": "The request wasn't accepted as sent. Review the details and try again.",
+  "stateRateLimitTitle": "Too many attempts",
+  "stateRateLimitDescription": "Wait a minute before trying again.",
+  "stateWalletTitle": "Wallet not ready",
+  "stateWalletDescription": "Reconnect your wallet or unlock it, then try again.",
+  "stateUnsupportedTitle": "Not available here",
+  "stateUnsupportedDescription": "This feature isn't supported on this device or in this version.",
+  "stateUnknownTitle": "Something went wrong",
+  "stateUnknownDescription": "We couldn't complete this. Try again.",
+  "stateLoadingMore": "Loading more",
+  "peopleRoleArtist": "Artist",
+  "peopleRoleInstitution": "Institution",
+  "peopleVerifiedLabel": "Verified",
+  "peopleFollowToggleSemantic": "Follow {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInboxIntro": "Accept an invitation to help manage an event, exhibition, artwork or collection.",
+  "collabInviteNotion": "Invitation",
+  "collabEntityEvent": "Event",
+  "collabEntityExhibition": "Exhibition",
+  "collabEntityArtwork": "Artwork",
+  "collabEntityCollection": "Collection",
+  "collabEntityItem": "Item",
+  "collabInviteFrom": "From {name}",
+  "@collabInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteRole": "Your role: {role}",
+  "@collabInviteRole": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteReceived": "Received {date}",
+  "@collabInviteReceived": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteExpires": "Expires {date}",
+  "@collabInviteExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabUnknownSender": "Someone",
+  "collabAccept": "Accept",
+  "collabDecline": "Decline",
+  "collabAcceptedToast": "Invitation accepted. You can now help manage it.",
+  "collabDeclinedToast": "Invitation declined.",
+  "collabAcceptFailedToast": "Couldn't accept the invitation. Try again.",
+  "collabDeclineFailedToast": "Couldn't decline the invitation. Try again.",
+  "collabCannotOpenItemToast": "This invitation doesn't point to an item that can be opened here.",
+  "collabEmptyTitle": "No invitations right now",
+  "collabEmptyDescription": "When someone invites you to collaborate, it appears here.",
+  "collabInviteSemantic": "Invitation to {entity} as {role}, from {name}",
+  "@collabInviteSemantic": {
+    "placeholders": {
+      "entity": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "studioNotionPractice": "Practice",
+  "institutionNotionProgramme": "Programme",
+  "dashboardNotionNumbers": "Numbers",
+  "dashboardNotionInfrastructure": "Infrastructure",
+  "dashboardNumbersCaption": "Counts from art.kubus activity on your public profile.",
+  "institutionStatProgrammeViews": "Programme page views",
+  "walletNetworkLabel": "Network",
+  "walletAddressHeading": "Address",
+  "walletAddressSemantic": "Wallet address {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Copy address",
+  "walletReadOnlyStatus": "Read-only session",
+  "walletKub8BalanceLabel": "KUB8 balance",
+  "walletSolBalanceLabel": "SOL balance",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Actions",
+  "walletTechnicalTitle": "Technical",
+  "marketplaceListingValueSemantic": "{source}: {amount} {currency}. {state}",
+  "@marketplaceListingValueSemantic": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionBuilderSwitchNetwork": "Switch your wallet to the {cluster} network required by this quote, then try again.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Pending review",
+  "promotionStatusApproved": "Approved",
+  "promotionStatusActive": "Active",
+  "daoProposalStatusDraft": "Draft",
+  "daoProposalStatusActive": "Active",
+  "daoProposalStatusVoting": "Voting open",
+  "daoProposalStatusPassed": "Passed",
+  "daoProposalStatusFailed": "Not passed",
+  "daoProposalStatusExecuted": "Executed",
+  "daoVotingEndsLabel": "Voting ends {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Voting ended {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Quorum required: {percent}% of voting power",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Results",
+  "daoNotEligibleTitle": "No voting power in this wallet",
+  "daoNotEligibleBody": "Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.",
+  "daoTreasuryOnChainLabel": "On-chain treasury balance",
+  "daoTreasuryLedgerLabel": "Recorded treasury movements"
 }

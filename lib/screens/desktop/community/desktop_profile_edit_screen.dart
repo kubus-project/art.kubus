@@ -25,11 +25,14 @@ import '../../../utils/profile_edit_form_utils.dart';
 import '../../../utils/profile_media_ref_utils.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/avatar_widget.dart';
-import '../components/desktop_widgets.dart';
 import '../desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/forms/kubus_form.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/profile/profile_edit_form_body.dart';
+import '../../../utils/kubus_color_roles.dart';
 
 /// Desktop profile edit screen - form layout with card sections
 /// Clean organized layout for editing profile information
@@ -50,6 +53,11 @@ class ProfileEditScreen extends StatefulWidget {
 class _ProfileEditScreenState extends State<ProfileEditScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final KubusFormSubmitState _submit = KubusFormSubmitState();
+  final ScrollController _scrollController = ScrollController();
+
+  /// Form-level message: validation summary or save failure.
+  String? _formNotice;
   late AnimationController _animationController;
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
@@ -243,6 +251,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _animationController.dispose();
     _usernameController.dispose();
     _displayNameController.dispose();
@@ -260,25 +269,59 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     super.dispose();
   }
 
+  void _onPrivacyChanged(ProfilePrivacyField field, bool value) {
+    setState(() {
+      switch (field) {
+        case ProfilePrivacyField.privateProfile:
+          _privateProfile = value;
+        case ProfilePrivacyField.showActivityStatus:
+          _showActivityStatus = value;
+          if (!value) _shareLastVisitedLocation = false;
+        case ProfilePrivacyField.shareLastVisitedLocation:
+          _shareLastVisitedLocation = value;
+        case ProfilePrivacyField.showCollection:
+          _showCollection = value;
+        case ProfilePrivacyField.allowMessages:
+          _allowMessages = value;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final appModeProvider = context.watch<AppModeProvider?>();
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isLarge = screenWidth >= 1200;
+    // Two-column sections need room for a 240 px title column plus a
+    // readable field measure; narrower desktop panes stack like mobile.
+    final wide = screenWidth >= 1100;
+    const avatarDiameter = 112.0;
+    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarDiameter / 2,
+      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+    );
+    final hasCover = _localCoverBytes != null ||
+        (_coverImageUrl != null && _coverImageUrl!.isNotEmpty);
+    final hasAvatar = _localAvatarBytes != null ||
+        (_avatarUrl != null && _avatarUrl!.isNotEmpty);
+    final ImageProvider? coverImage = _localCoverBytes != null
+        ? MemoryImage(_localCoverBytes!)
+        : (hasCover ? NetworkImage(_coverImageUrl!) : null);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: isIpfsFallbackMode
           ? Column(
               children: [
-                _buildHeader(themeProvider),
-                const Expanded(
+                _buildHeader(),
+                Expanded(
                   child: AppModeUnavailableState(
-                    featureLabel: 'Profile editing',
-                    title: 'Profile editing unavailable',
+                    featureLabel: l10n.profileEditTitle,
+                    title: l10n.stateUnsupportedTitle,
                     icon: Icons.person_outline,
                   ),
                 ),
@@ -294,38 +337,97 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                   ),
                   child: Column(
                     children: [
-                      _buildHeader(themeProvider),
+                      _buildHeader(),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isLarge ? 32 : 24,
-                            vertical: 24,
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.lg,
+                            vertical: KubusSpacing.lg,
                           ),
-                          child: Form(
-                            key: _formKey,
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 900),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildCoverImageSection(themeProvider),
-                                    const SizedBox(height: 24),
-                                    _buildAvatarSection(themeProvider),
-                                    const SizedBox(height: 32),
-                                    _buildBasicInfoSection(themeProvider),
-                                    const SizedBox(height: 24),
-                                    _buildSocialLinksSection(themeProvider),
-                                    const SizedBox(height: 24),
-                                    if (_isArtist || _isInstitution) ...[
-                                      _buildArtistInfoSection(themeProvider),
-                                      const SizedBox(height: 24),
-                                    ],
-                                    _buildPrivacySection(themeProvider),
-                                    const SizedBox(height: 32),
-                                  ],
+                          child: KubusFormMeasure(
+                            maxWidth: wide ? 960 : 640,
+                            child: Form(
+                              key: _formKey,
+                              autovalidateMode: _submit.autovalidateMode,
+                              child: ProfileEditFormBody(
+                                wide: wide,
+                                switchKeyPrefix:
+                                    'desktop_profile_edit_privacy_',
+                                formNotice: _formNotice,
+                                controllers: ProfileEditControllers(
+                                  username: _usernameController,
+                                  displayName: _displayNameController,
+                                  bio: _bioController,
+                                  twitter: _twitterController,
+                                  instagram: _instagramController,
+                                  website: _websiteController,
+                                  specialty: _specialtyController,
+                                  yearsActive: _yearsActiveController,
                                 ),
+                                isArtist: _isArtist,
+                                isInstitution: _isInstitution,
+                                privacy: ProfilePrivacyDraft(
+                                  privateProfile: _privateProfile,
+                                  showActivityStatus: _showActivityStatus,
+                                  shareLastVisitedLocation:
+                                      _shareLastVisitedLocation,
+                                  showCollection: _showCollection,
+                                  allowMessages: _allowMessages,
+                                ),
+                                onPrivacyChanged: _onPrivacyChanged,
+                                coverPreview: ProfileEditCoverPreview(
+                                  height: 180,
+                                  isBusy: _isUploadingCover,
+                                  image: coverImage,
+                                ),
+                                hasCover: hasCover,
+                                onPickCover: _pickCoverImage,
+                                isUploadingCover: _isUploadingCover,
+                                avatarPreview: ExcludeSemantics(
+                                  child: Container(
+                                    width: avatarDiameter,
+                                    height: avatarDiameter,
+                                    clipBehavior: Clip.antiAlias,
+                                    decoration: BoxDecoration(
+                                      color: roles.surfaceRaised,
+                                      borderRadius: BorderRadius.circular(
+                                          avatarFrameRadius),
+                                      border: Border.all(color: roles.rule),
+                                    ),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        hasAvatar
+                                            ? _buildAvatarWidget(
+                                                _avatarUrl ?? '',
+                                                themeProvider,
+                                              )
+                                            : Icon(
+                                                Icons.person_outline,
+                                                size: 44,
+                                                color: roles.foregroundSubtle,
+                                              ),
+                                        if (_isUploadingAvatar)
+                                          ColoredBox(
+                                            color: roles.ground
+                                                .withValues(alpha: 0.6),
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 28,
+                                                height: 28,
+                                                child:
+                                                    InlineLoading(tileSize: 4),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                hasAvatar: hasAvatar,
+                                onPickAvatar: _pickAvatar,
+                                isUploadingAvatar: _isUploadingAvatar,
                               ),
                             ),
                           ),
@@ -339,65 +441,40 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider) {
+  Widget _buildHeader() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final headerStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.header,
-      tintBase: scheme.surface,
-    );
-    return Container(
+    final roles = KubusColorRoles.of(context);
+    return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: scheme.outline.withValues(alpha: 0.1),
-          ),
-        ),
+        color: roles.ground,
+        border: Border(bottom: BorderSide(color: roles.rule)),
       ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.zero,
-        blurSigma: headerStyle.blurSigma,
-        fallbackMinOpacity: headerStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: headerStyle.tintColor,
-        child: KubusScreenHeaderBar(
-          title: l10n.profileEditTitle,
-          leading: IconButton(
-            onPressed: () => popDesktopShellAware(context),
-            icon: Icon(
-              Icons.arrow_back,
-              size: KubusHeaderMetrics.actionIcon,
-              color: scheme.onSurface,
-            ),
-            tooltip: l10n.commonBack,
+      child: KubusScreenHeaderBar(
+        title: l10n.profileEditTitle,
+        leading: IconButton(
+          onPressed: () => popDesktopShellAware(context),
+          icon: Icon(
+            Icons.arrow_back,
+            size: KubusHeaderMetrics.actionIcon,
+            color: roles.foreground,
           ),
-          actions: _isSavingProfile
-              ? <Widget>[
-                  const SizedBox(
-                    width: KubusHeaderMetrics.actionIcon,
-                    height: KubusHeaderMetrics.actionIcon,
-                    child: InlineLoading(tileSize: 4),
-                  ),
-                ]
-              : <Widget>[
-                  DesktopActionButton(
-                    label: l10n.commonCancel,
-                    icon: Icons.close,
-                    onPressed: () => popDesktopShellAware(context),
-                    isPrimary: false,
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  DesktopActionButton(
-                    label: l10n.profileEditSaveChanges,
-                    icon: Icons.check,
-                    onPressed: _saveProfile,
-                    isPrimary: true,
-                  ),
-                ],
+          tooltip: l10n.commonBack,
         ),
+        actions: <Widget>[
+          KubusButton(
+            onPressed:
+                _isSavingProfile ? null : () => popDesktopShellAware(context),
+            label: l10n.commonCancel,
+            variant: KubusButtonVariant.quiet,
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          KubusButton(
+            onPressed: _saveProfile,
+            isLoading: _isSavingProfile,
+            label: l10n.profileEditSaveChanges,
+            icon: Icons.check,
+          ),
+        ],
       ),
     );
   }
@@ -422,554 +499,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     }
 
     Navigator.pop(context, true);
-  }
-
-  Widget _buildCoverImageSection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            child: DesktopSectionHeader(
-              title: l10n.commonCoverImage,
-              subtitle:
-                  l10n.profileEditCoverImageRecommendedSize('1920x1080px'),
-              icon: Icons.panorama,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              KubusSpacing.xl,
-              0,
-              KubusSpacing.xl,
-              KubusSpacing.xl,
-            ),
-            child: GestureDetector(
-              onTap: _isUploadingCover ? null : _pickCoverImage,
-              child: MouseRegion(
-                cursor: _isUploadingCover
-                    ? SystemMouseCursors.basic
-                    : SystemMouseCursors.click,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
-                        border: Border.all(
-                          color:
-                              themeProvider.accentColor.withValues(alpha: 0.3),
-                          width: 2,
-                        ),
-                        image: _localCoverBytes != null
-                            ? DecorationImage(
-                                image: MemoryImage(_localCoverBytes!),
-                                fit: BoxFit.cover,
-                              )
-                            : _coverImageUrl != null &&
-                                    _coverImageUrl!.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage(_coverImageUrl!),
-                                    fit: BoxFit.cover,
-                                    onError: (error, stackTrace) {
-                                      // Ignore cover image load errors (e.g., 404) to avoid
-                                      // bubbling into unhandled zone exceptions on web.
-                                    },
-                                  )
-                                : null,
-                      ),
-                      child: (_localCoverBytes == null &&
-                              (_coverImageUrl == null ||
-                                  _coverImageUrl!.isEmpty))
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add_photo_alternate_outlined,
-                                  size: 48,
-                                  color: themeProvider.accentColor
-                                      .withValues(alpha: 0.6),
-                                ),
-                                const SizedBox(height: KubusSpacing.md),
-                                Text(
-                                  l10n.profileEditCoverImageClickToUpload,
-                                  style: KubusTextStyles.detailBody.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Container(
-                              alignment: Alignment.bottomRight,
-                              padding: const EdgeInsets.all(KubusSpacing.md),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: KubusSpacing.md,
-                                  vertical: KubusSpacing.sm +
-                                      KubusSpacing.xs +
-                                      KubusSpacing.xxs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.sm),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: KubusHeaderMetrics.actionIcon,
-                                    ),
-                                    const SizedBox(width: KubusSpacing.sm),
-                                    Text(
-                                      l10n.commonChangeCover,
-                                      style:
-                                          KubusTextStyles.detailLabel.copyWith(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                    ),
-                    if (_isUploadingCover)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(KubusRadius.lg),
-                          ),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: InlineLoading(tileSize: 4),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarSection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    const avatarDiameter = 140.0;
-    const avatarRadius = avatarDiameter / 2;
-    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius,
-      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
-    );
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DesktopSectionHeader(
-            title: l10n.profileEditProfilePictureTitle,
-            subtitle: l10n.profileEditCoverImageRecommendedSize('512x512px'),
-            icon: Icons.account_circle,
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          Center(
-            child: GestureDetector(
-              onTap: _isUploadingAvatar ? null : _pickAvatar,
-              child: MouseRegion(
-                cursor: _isUploadingAvatar
-                    ? SystemMouseCursors.basic
-                    : SystemMouseCursors.click,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: avatarDiameter,
-                      height: avatarDiameter,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(avatarFrameRadius),
-                        border: Border.all(
-                          color: themeProvider.accentColor,
-                          width: 3,
-                        ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(avatarFrameRadius),
-                        child: _avatarUrl != null && _avatarUrl!.isNotEmpty
-                            ? _buildAvatarWidget(_avatarUrl!, themeProvider)
-                            : Icon(
-                                Icons.person,
-                                size: 70,
-                                color: themeProvider.accentColor,
-                              ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(KubusSpacing.md),
-                        decoration: BoxDecoration(
-                          color: themeProvider.accentColor,
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: KubusHeaderMetrics.actionIcon,
-                        ),
-                      ),
-                    ),
-                    if (_isUploadingAvatar)
-                      Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(avatarFrameRadius),
-                          child: Container(
-                            color: Colors.black26,
-                            child: const Center(
-                              child: SizedBox(
-                                width: 45,
-                                height: 45,
-                                child:
-                                    InlineLoading(tileSize: 4),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Center(
-            child: Text(
-              l10n.profileEditAvatarClickToChange,
-              style: KubusTextStyles.detailCaption.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoSection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DesktopSectionHeader(
-            title: l10n.profileEditBasicInformationTitle,
-            subtitle: l10n.profileEditPublicProfileDetailsSubtitle,
-            icon: Icons.person_outline,
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          _buildTextField(
-            label: l10n.profileEditUsernameLabel,
-            controller: _usernameController,
-            hint: l10n.profileEditUsernameHint,
-            icon: Icons.alternate_email,
-            validator: (value) {
-              return ProfileEditFormUtils.validateUsername(l10n, value);
-            },
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildTextField(
-            label: l10n.profileEditDisplayNameLabel,
-            controller: _displayNameController,
-            hint: l10n.profileEditDisplayNameHint,
-            icon: Icons.person_outline,
-            validator: (value) {
-              return ProfileEditFormUtils.validateDisplayName(l10n, value);
-            },
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildTextField(
-            label: l10n.profileEditBioLabel,
-            controller: _bioController,
-            hint: l10n.profileEditBioHint,
-            icon: Icons.info_outline,
-            maxLines: 4,
-            maxLength: ProfileEditFormUtils.bioMaxLength,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialLinksSection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DesktopSectionHeader(
-            title: l10n.profileEditSocialLinksTitle,
-            subtitle: l10n.profileEditSocialLinksSubtitle,
-            icon: Icons.link,
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          _buildTextField(
-            label: l10n.profileEditSocialTwitterLabel,
-            controller: _twitterController,
-            hint: l10n.profileEditSocialHandleHint,
-            icon: Icons.alternate_email,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildTextField(
-            label: l10n.profileEditSocialInstagramLabel,
-            controller: _instagramController,
-            hint: l10n.profileEditSocialHandleHint,
-            icon: Icons.camera_alt_outlined,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildTextField(
-            label: l10n.profileEditSocialWebsiteLabel,
-            controller: _websiteController,
-            hint: l10n.profileEditSocialWebsiteHint,
-            icon: Icons.language,
-            validator: (value) =>
-                ProfileEditFormUtils.validateWebsite(l10n, value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArtistInfoSection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DesktopSectionHeader(
-            title: _isInstitution
-                ? l10n.profileEditInstitutionInformationTitle
-                : l10n.profileEditArtistInformationTitle,
-            subtitle: _isInstitution
-                ? l10n.profileEditInstitutionDetailsSubtitle
-                : l10n.profileEditArtistDetailsSubtitle,
-            icon: _isInstitution ? Icons.business : Icons.palette,
-          ),
-          const SizedBox(height: 24),
-          _buildTextField(
-            label: _isInstitution
-                ? l10n.profileEditInstitutionFocusAreasLabel
-                : l10n.profileEditArtistSpecialtiesLabel,
-            controller: _specialtyController,
-            hint: _isInstitution
-                ? 'Contemporary Art, Digital Media'
-                : 'Painting, Sculpture, Digital Art',
-            icon: Icons.interests_outlined,
-          ),
-          const SizedBox(height: 20),
-          _buildTextField(
-            label: _isInstitution
-                ? l10n.profileEditInstitutionEstablishedYearLabel
-                : l10n.profileEditArtistYearsActiveLabel,
-            controller: _yearsActiveController,
-            hint: '2020',
-            icon: Icons.calendar_today_outlined,
-            keyboardType: TextInputType.number,
-            validator: (value) =>
-                ProfileEditFormUtils.validateYearsActive(l10n, value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrivacySection(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DesktopSectionHeader(
-            title: l10n.profileEditPrivacyVisibilityTitle,
-            subtitle: l10n.profileEditPrivacyVisibilitySubtitle,
-            icon: Icons.privacy_tip_outlined,
-          ),
-          const SizedBox(height: 24),
-          _buildSwitchTile(
-            title: l10n.settingsPrivateProfileTitle,
-            subtitle: l10n.settingsPrivateProfileSubtitle,
-            value: _privateProfile,
-            onChanged: (value) => setState(() => _privateProfile = value),
-            switchKey:
-                const Key('desktop_profile_edit_privacy_private_profile'),
-          ),
-          const Divider(height: 32),
-          _buildSwitchTile(
-            title: l10n.settingsShowActivityStatusTitle,
-            subtitle: l10n.settingsShowActivityStatusSubtitle,
-            value: _showActivityStatus,
-            onChanged: (value) => setState(() {
-              _showActivityStatus = value;
-              if (!value) _shareLastVisitedLocation = false;
-            }),
-            switchKey:
-                const Key('desktop_profile_edit_privacy_show_activity_status'),
-          ),
-          const Divider(height: 32),
-          _buildSwitchTile(
-            title: l10n.settingsShareLastVisitedLocationTitle,
-            subtitle: l10n.settingsShareLastVisitedLocationSubtitle,
-            value: _shareLastVisitedLocation,
-            enabled: _showActivityStatus,
-            onChanged: (value) =>
-                setState(() => _shareLastVisitedLocation = value),
-            switchKey: const Key(
-                'desktop_profile_edit_privacy_share_last_visited_location'),
-          ),
-          const Divider(height: 32),
-          _buildSwitchTile(
-            title: l10n.settingsShowCollectionTitle,
-            subtitle: l10n.settingsShowCollectionSubtitle,
-            value: _showCollection,
-            onChanged: (value) => setState(() => _showCollection = value),
-            switchKey:
-                const Key('desktop_profile_edit_privacy_show_collection'),
-          ),
-          const Divider(height: 32),
-          _buildSwitchTile(
-            title: l10n.settingsAllowMessagesTitle,
-            subtitle: l10n.settingsAllowMessagesSubtitle,
-            value: _allowMessages,
-            onChanged: (value) => setState(() => _allowMessages = value),
-            switchKey: const Key('desktop_profile_edit_privacy_allow_messages'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    int maxLines = 1,
-    int? maxLength,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailCardTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          keyboardType: keyboardType,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, size: KubusHeaderMetrics.actionIcon),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
-            filled: true,
-            fillColor: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.5),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md,
-              vertical: KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-            ),
-          ),
-          style: KubusTextStyles.detailBody.copyWith(
-            fontSize: KubusHeaderMetrics.screenSubtitle,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool enabled = true,
-    Key? switchKey,
-  }) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: KubusTextStyles.detailCardTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                subtitle,
-                style: KubusTextStyles.detailCaption.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Switch(
-          key: switchKey,
-          value: value,
-          onChanged: enabled ? onChanged : null,
-          activeTrackColor: themeProvider.accentColor,
-        ),
-      ],
-    );
   }
 
   // Helper methods for avatar and cover image
@@ -1411,12 +940,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     return MediaUrlResolver.resolve(url);
   }
 
-  Future<void> _saveProfile() async {
-    final formState = _formKey.currentState;
-    if (!(formState?.validate() ?? false)) return;
+  void _showFormNotice(String? message) {
+    setState(() => _formNotice = message);
+    if (message != null && _scrollController.hasClients) {
+      unawaited(_scrollController.animateTo(
+        0,
+        duration: MediaQuery.of(context).disableAnimations
+            ? Duration.zero
+            : const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      ));
+    }
+  }
 
+  Future<void> _saveProfile() async {
     final l10n = AppLocalizations.of(context)!;
-    setState(() => _isSavingProfile = true);
+    if (!_submit.validate(_formKey)) {
+      _showFormNotice(l10n.formFixHighlightedFields);
+      return;
+    }
+
+    setState(() {
+      _isSavingProfile = true;
+      _formNotice = null;
+    });
 
     try {
       final profileProvider =
@@ -1504,12 +1051,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (kDebugMode) {
         debugPrint('DesktopProfileEditScreen: profile save failed: $e');
       }
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-          content: Text(errorText),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      // Save failures stay on the form (inline, announced).
+      _showFormNotice(errorText);
     } finally {
       if (mounted) {
         setState(() => _isSavingProfile = false);

@@ -312,11 +312,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digital editions connected to artworks.';
 
   @override
-  String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 from achievements';
 
   @override
   String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8 recorded through contribution recognition.';
+      'Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.';
 
   @override
   String get analyticsPresetArtistSubtitle =>
@@ -9487,6 +9487,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Sold out';
 
   @override
+  String get marketplacePrimarySoldOutLabel => 'Primary sold out';
+
+  @override
   String get marketplaceMintNftButtonLabel => 'Create digital edition';
 
   @override
@@ -17067,4 +17070,323 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialUploadResume => 'Resume upload';
+
+  @override
+  String get formShowPassword => 'Show password';
+
+  @override
+  String get formHidePassword => 'Hide password';
+
+  @override
+  String get formSelectDate => 'Select a date';
+
+  @override
+  String get formSelectTime => 'Select a time';
+
+  @override
+  String get formNoValueSelected => 'Not set';
+
+  @override
+  String get formAddImage => 'Add image';
+
+  @override
+  String get formFixHighlightedFields =>
+      'Some fields need attention. Check the messages below them.';
+
+  @override
+  String get stateNetworkTitle => 'Couldn\'t reach art.kubus';
+
+  @override
+  String get stateNetworkDescription =>
+      'The request didn\'t finish. Check your connection and try again.';
+
+  @override
+  String get stateOfflineTitle => 'You\'re offline';
+
+  @override
+  String get stateOfflineDescription =>
+      'This needs an internet connection. Reconnect, then try again.';
+
+  @override
+  String get stateServerTitle => 'art.kubus is having trouble';
+
+  @override
+  String get stateServerDescription =>
+      'The service didn\'t respond properly. Nothing is wrong on your side; try again in a moment.';
+
+  @override
+  String get stateAuthTitle => 'Sign in to continue';
+
+  @override
+  String get stateAuthDescription =>
+      'Your session has ended or you haven\'t signed in yet.';
+
+  @override
+  String get statePermissionTitle => 'You don\'t have access';
+
+  @override
+  String get statePermissionDescription =>
+      'This is limited to its owner or to approved roles. Ask the owner if you need access.';
+
+  @override
+  String get stateNotFoundTitle => 'Not found';
+
+  @override
+  String get stateNotFoundDescription =>
+      'It may have been removed or made private.';
+
+  @override
+  String get stateValidationTitle => 'Some details need changes';
+
+  @override
+  String get stateValidationDescription =>
+      'The request wasn\'t accepted as sent. Review the details and try again.';
+
+  @override
+  String get stateRateLimitTitle => 'Too many attempts';
+
+  @override
+  String get stateRateLimitDescription => 'Wait a minute before trying again.';
+
+  @override
+  String get stateWalletTitle => 'Wallet not ready';
+
+  @override
+  String get stateWalletDescription =>
+      'Reconnect your wallet or unlock it, then try again.';
+
+  @override
+  String get stateUnsupportedTitle => 'Not available here';
+
+  @override
+  String get stateUnsupportedDescription =>
+      'This feature isn\'t supported on this device or in this version.';
+
+  @override
+  String get stateUnknownTitle => 'Something went wrong';
+
+  @override
+  String get stateUnknownDescription =>
+      'We couldn\'t complete this. Try again.';
+
+  @override
+  String get stateLoadingMore => 'Loading more';
+
+  @override
+  String get peopleRoleArtist => 'Artist';
+
+  @override
+  String get peopleRoleInstitution => 'Institution';
+
+  @override
+  String get peopleVerifiedLabel => 'Verified';
+
+  @override
+  String peopleFollowToggleSemantic(String name) {
+    return 'Follow $name';
+  }
+
+  @override
+  String get collabInboxIntro =>
+      'Accept an invitation to help manage an event, exhibition, artwork or collection.';
+
+  @override
+  String get collabInviteNotion => 'Invitation';
+
+  @override
+  String get collabEntityEvent => 'Event';
+
+  @override
+  String get collabEntityExhibition => 'Exhibition';
+
+  @override
+  String get collabEntityArtwork => 'Artwork';
+
+  @override
+  String get collabEntityCollection => 'Collection';
+
+  @override
+  String get collabEntityItem => 'Item';
+
+  @override
+  String collabInviteFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String collabInviteRole(String role) {
+    return 'Your role: $role';
+  }
+
+  @override
+  String collabInviteReceived(String date) {
+    return 'Received $date';
+  }
+
+  @override
+  String collabInviteExpires(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String get collabUnknownSender => 'Someone';
+
+  @override
+  String get collabAccept => 'Accept';
+
+  @override
+  String get collabDecline => 'Decline';
+
+  @override
+  String get collabAcceptedToast =>
+      'Invitation accepted. You can now help manage it.';
+
+  @override
+  String get collabDeclinedToast => 'Invitation declined.';
+
+  @override
+  String get collabAcceptFailedToast =>
+      'Couldn\'t accept the invitation. Try again.';
+
+  @override
+  String get collabDeclineFailedToast =>
+      'Couldn\'t decline the invitation. Try again.';
+
+  @override
+  String get collabCannotOpenItemToast =>
+      'This invitation doesn\'t point to an item that can be opened here.';
+
+  @override
+  String get collabEmptyTitle => 'No invitations right now';
+
+  @override
+  String get collabEmptyDescription =>
+      'When someone invites you to collaborate, it appears here.';
+
+  @override
+  String collabInviteSemantic(String entity, String role, String name) {
+    return 'Invitation to $entity as $role, from $name';
+  }
+
+  @override
+  String get studioNotionPractice => 'Practice';
+
+  @override
+  String get institutionNotionProgramme => 'Programme';
+
+  @override
+  String get dashboardNotionNumbers => 'Numbers';
+
+  @override
+  String get dashboardNotionInfrastructure => 'Infrastructure';
+
+  @override
+  String get dashboardNumbersCaption =>
+      'Counts from art.kubus activity on your public profile.';
+
+  @override
+  String get institutionStatProgrammeViews => 'Programme page views';
+
+  @override
+  String get walletNetworkLabel => 'Network';
+
+  @override
+  String get walletAddressHeading => 'Address';
+
+  @override
+  String walletAddressSemantic(String address) {
+    return 'Wallet address $address';
+  }
+
+  @override
+  String get walletCopyAddressTooltip => 'Copy address';
+
+  @override
+  String get walletReadOnlyStatus => 'Read-only session';
+
+  @override
+  String get walletKub8BalanceLabel => 'KUB8 balance';
+
+  @override
+  String get walletSolBalanceLabel => 'SOL balance';
+
+  @override
+  String walletBalanceAmountSemantic(String label, String amount, String unit) {
+    return '$label: $amount $unit';
+  }
+
+  @override
+  String get walletActionsTitle => 'Actions';
+
+  @override
+  String get walletTechnicalTitle => 'Technical';
+
+  @override
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state) {
+    return '$source: $amount $currency. $state';
+  }
+
+  @override
+  String promotionBuilderSwitchNetwork(String cluster) {
+    return 'Switch your wallet to the $cluster network required by this quote, then try again.';
+  }
+
+  @override
+  String get promotionStatusPendingReview => 'Pending review';
+
+  @override
+  String get promotionStatusApproved => 'Approved';
+
+  @override
+  String get promotionStatusActive => 'Active';
+
+  @override
+  String get daoProposalStatusDraft => 'Draft';
+
+  @override
+  String get daoProposalStatusActive => 'Active';
+
+  @override
+  String get daoProposalStatusVoting => 'Voting open';
+
+  @override
+  String get daoProposalStatusPassed => 'Passed';
+
+  @override
+  String get daoProposalStatusFailed => 'Not passed';
+
+  @override
+  String get daoProposalStatusExecuted => 'Executed';
+
+  @override
+  String daoVotingEndsLabel(String date) {
+    return 'Voting ends $date';
+  }
+
+  @override
+  String daoVotingEndedLabel(String date) {
+    return 'Voting ended $date';
+  }
+
+  @override
+  String daoQuorumRequirementLabel(String percent) {
+    return 'Quorum required: $percent% of voting power';
+  }
+
+  @override
+  String get daoResultsNotion => 'Results';
+
+  @override
+  String get daoNotEligibleTitle => 'No voting power in this wallet';
+
+  @override
+  String get daoNotEligibleBody =>
+      'Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.';
+
+  @override
+  String get daoTreasuryOnChainLabel => 'On-chain treasury balance';
+
+  @override
+  String get daoTreasuryLedgerLabel => 'Recorded treasury movements';
 }

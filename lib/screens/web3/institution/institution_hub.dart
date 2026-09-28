@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
@@ -57,7 +57,6 @@ class InstitutionHub extends StatefulWidget {
 
 class _InstitutionHubState extends State<InstitutionHub> {
   int _selectedIndex = 0;
-  int? _hoveredTabIndex;
   DAOReview? _institutionReview;
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
@@ -244,9 +243,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              flexibleSpace: KubusGlassAppBarBackdrop(
-                tintBase: KubusColorRoles.of(context).web3InstitutionAccent,
-              ),
               title: Text(
                 l10n.navigationScreenInstitutionHub,
                 style: KubusTextStyles.responsiveMobileAppBarTitle(context)
@@ -368,114 +364,27 @@ class _InstitutionHubState extends State<InstitutionHub> {
     required bool canSelfServeInstitutionPromotion,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final roles = KubusColorRoles.of(context);
     final persona = context.watch<ProfileProvider>().userPersona;
-    final subtitle = switch (persona) {
+    final lede = switch (persona) {
       UserPersona.institution => l10n.web3InstitutionHubP1Description,
       UserPersona.creator => l10n.web3InstitutionHubP5Feature3,
       UserPersona.lover => l10n.web3InstitutionHubP5Description,
       null => l10n.web3InstitutionHubP1Description,
     };
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: roles.web3InstitutionAccent,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg);
-
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: radius,
-      blurSigma: panelStyle.blurSigma,
-      fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: panelStyle.tintColor,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: roles.web3InstitutionAccent.withValues(alpha: 0.24),
-            width: KubusSizes.hairline,
+    // Programme leads; paid promotion is a quiet secondary action.
+    return KubusDashboardHeader(
+      notion: l10n.institutionNotionProgramme,
+      title: l10n.navigationScreenInstitutionHub,
+      lede: lede,
+      actions: [
+        if (canSelfServeInstitutionPromotion)
+          KubusButton(
+            onPressed: _openInstitutionPromotionFlow,
+            icon: Icons.campaign_outlined,
+            label: l10n.desktopInstitutionPromoteProfileTitle,
+            variant: KubusButtonVariant.quiet,
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Row(
-            children: [
-              Container(
-                width: KubusSpacing.xxl,
-                height: KubusSpacing.xxl,
-                decoration: BoxDecoration(
-                  color: roles.web3InstitutionAccent.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
-                ),
-                child: Icon(
-                  Icons.location_city,
-                  color: roles.web3InstitutionAccent,
-                  size: KubusSpacing.lg,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    KubusHeaderText(
-                      title: l10n.navigationScreenInstitutionHub,
-                      subtitle: subtitle,
-                      titleStyle: KubusTextStyles.heroTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.80),
-                      ),
-                      maxTitleLines: 1,
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      l10n.web3InstitutionHubP2Description,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.74),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (canSelfServeInstitutionPromotion) ...[
-                      const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: _openInstitutionPromotionFlow,
-                            icon: const Icon(Icons.campaign_outlined),
-                            label: Text(
-                              l10n.desktopInstitutionPromoteProfileTitle,
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.fade,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              alignment: Alignment.centerLeft,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -488,7 +397,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     if (isCrossRoleBlocked) {
-      final scheme = Theme.of(context).colorScheme;
       final title = hasArtistBadge
           ? l10n.institutionHubArtistBadgeActiveTitle
           : hasConflictingArtistReview
@@ -499,18 +407,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
           : hasConflictingArtistReview
               ? l10n.institutionHubArtistReviewPendingResetDescription
               : l10n.institutionHubArtistSubmissionConflictDescription;
-      return _buildRoleBanner(
+      return KubusNoticeBanner(
         icon: Icons.palette_outlined,
         title: title,
         message: message,
-        scheme: scheme,
+        tone: KubusStatusTone.negative,
       );
     }
 
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final accent = roles.web3InstitutionAccent;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
@@ -520,11 +424,13 @@ class _InstitutionHubState extends State<InstitutionHub> {
         : review != null
             ? _institutionReviewStatusLabel(status, l10n)
             : l10n.institutionHubDaoStatusNotApplied;
-    final statusColor = isApprovedInstitution
-        ? roles.positiveAction
+    final tone = isApprovedInstitution
+        ? KubusStatusTone.positive
         : isRejected
-            ? roles.negativeAction
-            : accent;
+            ? KubusStatusTone.negative
+            : isPending
+                ? KubusStatusTone.warning
+                : KubusStatusTone.neutral;
     final canSubmit = wallet.isNotEmpty &&
         !_reviewLoading &&
         (!isPending && !isApprovedInstitution || isRejected);
@@ -541,149 +447,35 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ? Icons.hourglass_bottom
             : Icons.send_rounded;
 
-    final cardRadius = BorderRadius.circular(KubusRadius.lg);
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: accent,
-    );
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: EdgeInsets.zero,
-      borderRadius: cardRadius,
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: cardStyle.tintColor,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: cardRadius,
-          border: Border.all(color: accent.withValues(alpha: 0.3)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: KubusSizes.sidebarActionIconBox,
-                    height: KubusSizes.sidebarActionIconBox,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                    child: Icon(Icons.domain_add_rounded, color: accent),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.institutionHubApplicationTitle,
-                          style: KubusTextStyles.sectionTitle.copyWith(
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          l10n.institutionHubApplicationCardSubtitle,
-                          style: KubusTextStyles.actionTileSubtitle.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (review != null || _reviewLoading) ...[
-                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.sm +
-                            KubusSpacing.xs -
-                            KubusSpacing.xxs,
-                        vertical: KubusSpacing.xs + KubusSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
-                      ),
-                      child: Text(
-                        statusLabel,
-                        style: KubusTextStyles.badgeCount
-                            .copyWith(color: statusColor),
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.sm),
-                    if (_reviewLoading)
-                      SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: InlineLoading(tileSize: 4, color: statusColor),
-                      )
-                    else if (review != null)
-                      Text(
-                        l10n.institutionHubDaoStatusSyncedLabel,
-                        style: KubusTextStyles.badgeCount.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                  ],
-                ),
-                if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    review!.reviewerNotes!,
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ] else if (review != null) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    isPending
-                        ? l10n.institutionHubDaoReviewQueueMessage
-                        : isApprovedInstitution
-                            ? l10n.institutionHubApprovedToolsMessage
-                            : isRejected
-                                ? l10n.institutionHubRejectedResubmitMessage
-                                : '',
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ],
-              const SizedBox(height: KubusSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: KubusButton(
-                  onPressed: canSubmit
-                      ? () => _showInstitutionApplicationModal()
-                      : null,
-                  label: ctaLabel,
-                  icon: ctaIcon,
-                  isFullWidth: true,
-                  backgroundColor: accent,
-                  foregroundColor:
-                      ThemeData.estimateBrightnessForColor(accent) ==
-                              Brightness.dark
-                          ? KubusColors.textPrimaryDark
-                          : KubusColors.textPrimaryLight,
-                ),
-              ),
-            ],
-          ),
-        ),
+    String? detail;
+    if ((review?.reviewerNotes ?? '').isNotEmpty) {
+      detail = review!.reviewerNotes!;
+    } else if (review != null) {
+      detail = isPending
+          ? l10n.institutionHubDaoReviewQueueMessage
+          : isApprovedInstitution
+              ? l10n.institutionHubApprovedToolsMessage
+              : isRejected
+                  ? l10n.institutionHubRejectedResubmitMessage
+                  : null;
+    }
+
+    return KubusStatusPanel(
+      title: l10n.institutionHubApplicationTitle,
+      description: l10n.institutionHubApplicationCardSubtitle,
+      statusLabel: (review != null || _reviewLoading) ? statusLabel : null,
+      tone: tone,
+      isLoading: _reviewLoading,
+      meta: review != null ? l10n.institutionHubDaoStatusSyncedLabel : null,
+      detail: detail,
+      action: KubusButton(
+        onPressed: canSubmit ? () => _showInstitutionApplicationModal() : null,
+        label: ctaLabel,
+        icon: ctaIcon,
+        isFullWidth: true,
+        variant: canSubmit
+            ? KubusButtonVariant.primary
+            : KubusButtonVariant.secondary,
       ),
     );
   }
@@ -703,148 +495,35 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
   Widget _buildNavigationTabs(bool enabled) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final scheme = Theme.of(context).colorScheme;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      padding: const EdgeInsets.all(KubusSpacing.xs),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: panelStyle.blurSigma,
-      fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: panelStyle.tintColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildTabButton(
-              l10n.desktopInstitutionManageEventsTitle,
-              Icons.event,
-              0,
-              enabled,
-              scheme.primary,
-            ),
-          ),
-          if (exhibitionsEnabled)
-            Expanded(
-              child: _buildTabButton(
-                l10n.institutionHubTabExhibitions,
-                AppColorUtils.exhibitionIcon,
-                1,
-                enabled,
-                roles.web3InstitutionAccent,
-              ),
-            ),
-          Expanded(
-            child: _buildTabButton(
-              l10n.institutionHubTabCreate,
-              Icons.add_box,
-              exhibitionsEnabled ? 2 : 1,
-              enabled,
-              roles.positiveAction,
-            ),
-          ),
-          Expanded(
-            child: _buildTabButton(
-              l10n.institutionHubTabAnalytics,
-              Icons.analytics,
-              exhibitionsEnabled ? 3 : 2,
-              enabled,
-              roles.web3InstitutionAccent,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabButton(
-    String label,
-    IconData icon,
-    int index,
-    bool enabled,
-    Color accent,
-  ) {
-    final isSelected = _selectedIndex == index;
-    final isHovered = _hoveredTabIndex == index;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final tintBase =
-        (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
-    final buttonStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: tintBase,
-    );
-    final background = !enabled
-        ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
-        : isSelected
-            ? accent.withValues(alpha: isDark ? 0.28 : 0.20)
-            : isHovered
-                ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
-                : scheme.surface.withValues(alpha: isDark ? 0.06 : 0.04);
-    final foreground = !enabled
-        ? scheme.onSurface.withValues(alpha: 0.35)
-        : isSelected
-            ? scheme.onSurface
-            : isHovered
-                ? accent.withValues(alpha: 0.90)
-                : scheme.onSurface.withValues(alpha: 0.72);
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hoveredTabIndex = index),
-      onExit: (_) {
-        if (_hoveredTabIndex == index) {
-          setState(() => _hoveredTabIndex = null);
-        }
-      },
-      child: LiquidGlassCard(
-        onTap: enabled
-            ? () => _setSelectedIndex(index)
-            : () => ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppLocalizations.of(context)!
-                          .desktopInstitutionVerificationApplyHint,
-                    ),
-                  ),
-                ),
-        padding: const EdgeInsets.symmetric(
-          vertical: KubusSpacing.md,
-          horizontal: KubusSpacing.sm,
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        blurSigma: buttonStyle.blurSigma,
-        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: background,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: foreground,
-              size: KubusSizes.sidebarActionIcon,
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              label,
-              style: KubusTypography.textTheme.labelSmall?.copyWith(
-                color: foreground,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+    return KubusDashboardTabs(
+      selectedIndex: _selectedIndex,
+      enabled: enabled,
+      onSelected: _setSelectedIndex,
+      onLockedTap: () => ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.desktopInstitutionVerificationApplyHint),
         ),
       ),
+      tabs: [
+        KubusDashboardTab(
+          label: l10n.desktopInstitutionManageEventsTitle,
+          icon: Icons.event_outlined,
+        ),
+        if (exhibitionsEnabled)
+          KubusDashboardTab(
+            label: l10n.institutionHubTabExhibitions,
+            icon: AppColorUtils.exhibitionIcon,
+          ),
+        KubusDashboardTab(
+          label: l10n.institutionHubTabCreate,
+          icon: Icons.add_box_outlined,
+        ),
+        KubusDashboardTab(
+          label: l10n.institutionHubTabAnalytics,
+          icon: Icons.analytics_outlined,
+        ),
+      ],
     );
   }
 
@@ -852,68 +531,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
     if (_selectedIndex == index) return;
     setState(() => _selectedIndex = index);
     widget.onTabChanged?.call(index);
-  }
-
-  Widget _buildRoleBanner({
-    required IconData icon,
-    required String title,
-    required String message,
-    required ColorScheme scheme,
-  }) {
-    final radius = BorderRadius.circular(KubusRadius.lg);
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: EdgeInsets.zero,
-      borderRadius: radius,
-      showBorder: false,
-      backgroundColor: scheme.surface.withValues(alpha: 0.18),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: KubusSizes.sidebarActionIconBox,
-                height: KubusSizes.sidebarActionIconBox,
-                decoration: BoxDecoration(
-                  color: scheme.error.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(icon, color: scheme.error),
-              ),
-              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTextStyles.sectionTitle
-                          .copyWith(color: scheme.onSurface),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-                    Text(
-                      message,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildRoleBlockedContent({

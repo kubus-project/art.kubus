@@ -281,19 +281,149 @@ light and dark:
 Android: pinned comment composer above the keyboard, TalkBack on Like
 (toggle) vs likes count (button), messages unread announcement.
 
-## Deferred (Wave 4C and later)
+## Wave 4C record
 
-- 4C (optional, final split of Wave 4): wallet overview internals,
-  marketplace listing grid and detail, promotion builder sheet, DAO hub
-  internals, Artist Studio dashboard and Institution Hub tools after
-  onboarding (desktop right panel: tinted watermark stat tiles incl. a
-  "0 KUB8 Revenue" tile whose data source needs a truthfulness check),
-  desktop public profile visual flattening (section order
-  already matches mobile), profile edit and shared form
-  language, loading skeleton / error taxonomy, Home quick-action and stat
-  tiles, following/followers lists, collaboration inbox, profile section
-  insets (highlight/works sections add a second 24 px inset on the
-  non-canonical mobile profile).
+Baseline: `dev@c07144ad` (Wave 4B merged as #185). Branch
+`feat/product-v5-wave4c`. This is the final split of the PRODUCT v5
+migration. It changes no map/globe engine, backend, SEO, DB or #181 code.
+
+| Surface | BEFORE (c07144ad) | AFTER (4C) | Sev |
+| --- | --- | --- | --- |
+| Profile edit (mobile + desktop) | Two forms that had drifted apart; floating-label glass fields; errors shown only in a snackbar; institutions saw artist fields reused for them | One `ProfileEditFormBody` for both shells; `KubusForm*` fields (visible label, helper, error, required marker, 44 px targets, `MergeSemantics`); save failures shown inline and classified; institutions see a note instead of artist fields | P2 |
+| Loading / error states | Ad-hoc spinners and raw exception text (`SocketException…`) in several web3 surfaces; a network failure looked like "no data" | `KubusStateView` / `KubusPageLoading` / `KubusSectionLoading` / `KubusPaginationLoading`; `classifyKubusFailure` maps errors to offline / timeout / unauthorized / forbidden / not found / server / unknown, each with EN+SL copy and Retry; raw exception text is never shown | P1 (truthfulness) |
+| Desktop public/own profile | Glass cards, 1400 px spread, tinted stat tiles | Flat card, 1200 px measure, flat metrics (same order as mobile) | P2 |
+| Following / followers | Tinted list tiles; follow state only in an icon | `ProfilePeopleList` rows: identity, role line, Follow / Following toggle with toggle semantics | P2 |
+| Collaboration inbox | Glass cards, accent chips | `InviteRow`: entity, role, inviter, time, Accept / Decline; truthful empty and error states | P2 |
+| Artist Studio dashboard | Tinted watermark tiles, including **Sales** | Flat `KubusDashboardHeader` + tabs + status panel; numbers are Artworks / Views / Likes; Sales removed (see below); tiles have equal heights | P1 (truthfulness) |
+| Institution dashboard | Tinted tiles, including **0 KUB8 Revenue** | Numbers are Events / Programme page views / Artworks; Revenue removed (see below) | P1 (truthfulness) |
+| Wallet (mobile + desktop) | Glass shell; KUB8 amount rendered smaller than SOL; tinted action cards | Flat shell (`KubusFlatPanel`); KUB8 leads the balance block and SOL is one size down; balances are announced with their unit; the security status panel keeps its content | P2 |
+| Marketplace | Cards mixed artwork facts with listing facts; prices had no source | `MarketplaceListingCard`: artwork identity first, then the value with its source ("Listed for" vs "Edition price") and a machine listing state (FOR SALE n/m, NOT LISTED); classified error states | P1 (truthfulness) |
+| Promotion builder | Glass sheet at 18% tint, which read as muddy grey over the barrier; eligibility was computed twice (double vs raw units), so a balance of 69.9996 could read as "enough" for 70; the balance was rounded up | Opaque flat sheet; one eligibility source (raw units vs the quote's `amountRaw`) drives both the gate and the summary; balances are truncated (`formatTokenRawFloor`), never rounded up; the charged amount is the quote's `kub8.amount` | P1 (truthfulness) |
+| Achievements residual | Offline fallback definitions carried local KUB8 rewards | Fallbacks use `kub8Reward: 0`; desktop reward text comes only from the backend definition | P1 (truthfulness) |
+| DAO | "Quorum reached/pending" came from `Proposal.hasQuorum`, which assumed an invented 100 000 KUB8 electorate; a network failure showed as "No active proposals"; the results meter was invisible | Shows only "Quorum required: X% of voting power"; `DAOProvider.loadError` separates a classified error from the empty state; proposal hierarchy (type notion, title, status, timeline, quorum requirement, results); a not-eligible note at 0 voting power; `hasQuorum` deprecated | P1 (truthfulness) |
+| Home residual | Quick-action tiles tinted per feature, with a personal visit-count badge; stat tiles with a coloured shadow | Neutral flat tiles, no visit badge, no shadow | P3 |
+| `KubusMeterBar` (shared) | The fill had no `heightFactor`, so under the Stack's loose constraints it rendered 0 px tall for **every** caller (achievements, DAO, creator, spatial upload, map helper) | `heightFactor: 1`, plus a render-size regression test. This only changes behaviour so the intended fill paints; no map code touched | P1 |
+
+### "0 KUB8 Revenue" audit
+
+- **Source:** the Institution "Revenue" tile and the Studio "Sales" tile
+  both read the analytics metric `achievementTokensTotal`.
+- **Meaning:** the backend returns `SUM(achievements.reward_kub8)` for the
+  profile's wallet, which is KUB8 granted when achievements unlock. It is
+  not sales, ticket or programme revenue. The backend has no field for
+  institution revenue.
+- **Decision:** both tiles are removed from the dashboards. Wherever the
+  analytics metric is still offered, it is relabelled "KUB8 from
+  achievements" (EN/SL). No revenue will be shown until the backend
+  provides a real source.
+- **Test:** `test/screens/desktop/advanced_dashboard_truthfulness_test.dart`
+  checks there is no Revenue or Sales tile (`institutionDashboardMetrics` is
+  `@visibleForTesting`).
+
+### Metric audit (4C surfaces)
+
+| Metric | Source | Shown as |
+| --- | --- | --- |
+| Artworks / Events | backend profile counts | plain count |
+| Views (Studio) | public profile/artwork view count | "Views" |
+| Programme page views (Institution) | the same view counter: page views of the institution, not attendance | relabelled from "Visitors" |
+| Likes | backend like count | plain count |
+| Wallet KUB8 / SOL | on-chain balances (canonical KUB8 mint) | truncated amount + unit |
+| Voting power | KUB8 balance, snapshotted by the backend at vote time | "Your voting power"; at 0, a not-eligible note |
+| Quorum | the proposal's `quorumRequired` only | a requirement, never a status (the backend has no electorate total) |
+| Promotion price | backend quote (`kub8.amount`, `amountRaw`) | the charged amount; eligibility uses raw units |
+| Marketplace value | listing price vs edition price | labelled with its source |
+
+No contribution points, artist-support figures or KUB8 revenue were
+added. The rise in `kub8_text` matches (111 → 129) comes entirely from real
+balances, backend quotes and backend achievement rewards.
+
+### Form and state taxonomy
+
+- Fields: `KubusFormTextField` (`KubusFieldKind` text, email, url,
+  password, multiline, number, and currency with `unitLabel`),
+  `KubusFormSelect`, `KubusFormSwitchRow`, `KubusFormCheckboxRow`,
+  `KubusFormRadioGroup`, `KubusFormDateField` and `KubusFormMediaField`,
+  grouped by `KubusFormSection`. `KubusFormSubmitState` covers idle /
+  saving / saved / failed.
+- States: page loading, section loading, pagination loading, empty
+  (`EmptyStateCard`), and error (`KubusStateView.fromError`, classified by
+  `classifyKubusFailure`). Each has EN+SL copy.
+
+### Test-harness trap
+
+`pumpProductSurface` (`test/support/product_surface_harness.dart`)
+replaces `FlutterError.onError` to collect render errors until teardown.
+While that handler is active, a failing `expect` goes into the collector
+instead of failing the test, so the test **hangs** instead of reporting.
+Save the previous handler, restore it right after the pump, then assert
+(see `test/screens/dao/governance_states_test.dart`).
+
+### Backend gaps (documented, not changed)
+
+- No institution revenue or ticketing field, so there is no revenue tile.
+- No DAO total voting power or "quorum reached" field, so only the
+  requirement is shown.
+- The app has no marketplace buy flow, so insufficient-balance handling
+  does not apply there yet.
+
+### Audit counts (textual, lib/ excl. l10n; c07144ad → 4C)
+
+| Pattern | Before (matches/files) | After |
+| --- | --- | --- |
+| Inter helper | 689/54 | 634/51 |
+| `LiquidGlassPanel` | 151/83 | 97/61 |
+| linear gradient | 73/45 | 58/39 |
+| box shadow | 54/40 | 48/36 |
+| accent colour reads | 234/36 | 183/35 |
+| `KubusColorRoles` reads | 324/135 | 394/147 |
+
+These counts are refreshed in [`product_v5_app_audit.json`](product_v5_app_audit.json).
+
+Visual evidence: [`docs/evidence/product-v5-wave4c/`](../evidence/product-v5-wave4c/manifest.json)
+holds 17 before/after pairs, and every image was reviewed. The captures
+come from the opt-in `test/qa/product_v5_wave4c_visual_matrix_test.dart`
+(`KUBUS_RUN_VISUAL_QA=1 QA_LABEL=<label>`). Captures are transparent PNGs,
+so the matrix paints the theme ground behind each scene.
+
+### Human 200% zoom checklist (4C)
+
+Chromium and Firefox, 200% browser zoom, 1280–1440 px, EN and SL, light
+and dark:
+
+- Home: quick-action tiles wrap, titles use at most two lines, focus ring
+  shows under the keyboard.
+- Search: the grouped results panel stays within the field.
+- Artwork detail and Artist / Institution public profile: section order and
+  flat metrics.
+- Messages: the list and the conversation composer are reachable by
+  keyboard.
+- Profile edit: every field label is visible, errors read inline, the Save
+  state is announced, and the institution note appears.
+- Artist Studio and Institution Hub: header, tabs, numbers (no revenue),
+  locked state.
+- Wallet: KUB8-led balances, security panel, Receive/Refresh.
+- Marketplace: each card's value source and listing state are legible; the
+  filter row wraps.
+
+Android: TalkBack on the Follow toggle, form errors, the wallet balance
+announcement, and scrolling the promotion sheet with the keyboard open.
+
+### Remaining P3 debt
+
+- On mobile, the locked Studio and Institution screens show the
+  application CTA twice (application panel and locked card). This predates
+  4C.
+- Mobile marketplace and DAO show the "Lab" chip in both the app bar and
+  the header.
+- The collaboration inbox falls back to a bare initial when an entity has
+  no image.
+- Metric tiles centre the value, so a two-line label pushes it up slightly.
+- Remaining glass/gradient usage is concentrated in map-surrounding UI,
+  subject detail and creator flows (Wave 6 and later).
+
+## Deferred (after Wave 4)
+
 - Map/globe engine, marker LOD and result-constraint chips (Wave 6).
 - Institution v2 schema (Wave 9), DAO/moderation lifecycle (Wave 10).
 - Android App Links (#181, untouched).

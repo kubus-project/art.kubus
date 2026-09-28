@@ -2,8 +2,8 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
+import 'common/kubus_flat_panel.dart';
 
 class WalletCustodyStatusPanel extends StatelessWidget {
   const WalletCustodyStatusPanel({
@@ -25,7 +25,7 @@ class WalletCustodyStatusPanel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final stateColor = _stateColor(scheme);
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

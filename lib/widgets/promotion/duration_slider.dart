@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
+import '../common/kubus_flat_panel.dart';
 
 /// A slider for selecting promotion duration with quick pick chips
 class DurationSlider extends StatelessWidget {
@@ -30,7 +30,7 @@ class DurationSlider extends StatelessWidget {
     final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,31 +215,19 @@ class _QuickPickChip extends StatelessWidget {
                     ? l10n.promotionBuilderQuickPick3Days
                     : l10n.promotionBuilderDurationDays(days);
 
-    return FrostedContainer(
+    return KubusFlatSelectable(
       onTap: onTap,
+      selected: isSelected,
+      borderRadius: BorderRadius.circular(KubusRadius.xl),
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md - KubusSpacing.xxs,
         vertical: KubusSpacing.sm,
       ),
-      backgroundColor:
-          isSelected ? roles.statTeal : colors.surfaceContainerHighest,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(KubusRadius.xl),
-          border: Border.all(
-            color: isSelected
-                ? roles.statTeal
-                : colors.outline.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: isSelected ? roles.foreground : colors.onSurfaceVariant,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
     );

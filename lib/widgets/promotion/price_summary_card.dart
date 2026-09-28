@@ -4,7 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../models/promotion.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../glass_components.dart';
+import '../common/kubus_flat_panel.dart';
 
 /// A card showing the price breakdown for a promotion quote
 class PriceSummaryCard extends StatelessWidget {
@@ -14,12 +14,21 @@ class PriceSummaryCard extends StatelessWidget {
     required this.selectedPaymentMethod,
     required this.onPaymentMethodChanged,
     this.kub8Balance = 0,
+    this.hasEnoughKub8,
+    this.kub8AvailableText,
   });
 
   final PriceQuote quote;
   final PromotionPaymentMethod selectedPaymentMethod;
   final ValueChanged<PromotionPaymentMethod> onPaymentMethodChanged;
   final double kub8Balance;
+
+  /// Eligibility decided on raw units against the quote (the same check
+  /// that gates submission). When null, falls back to [kub8Balance].
+  final bool? hasEnoughKub8;
+
+  /// Available balance derived from the same raw units, truncated.
+  final String? kub8AvailableText;
 
   @override
   Widget build(BuildContext context) {
@@ -33,18 +42,23 @@ class PriceSummaryCard extends StatelessWidget {
 
     final basePrice = isFiat ? pricing.baseFiatPrice : pricing.baseKub8Price;
     final finalPrice = isFiat ? pricing.finalFiatPrice : pricing.finalKub8Price;
+    // For KUB8 the charged amount is the quote's exact amount.
+    final kub8Charged = quote.kub8?.amount;
     final pricePerDay =
         isFiat ? pricing.fiatPricePerDay : pricing.kub8PricePerDay;
     final currencySymbol = isFiat ? '€' : '';
     final currencySuffix = isFiat ? '' : ' KUB8';
 
     final hasDiscount = pricing.discountPercent > 0;
-    final insufficientKub8 = !isFiat && kub8Balance < pricing.finalKub8Price;
+    final insufficientKub8 = !isFiat &&
+        (hasEnoughKub8 != null
+            ? !hasEnoughKub8!
+            : kub8Balance < pricing.finalKub8Price);
     final perDayLabel = l10n.promotionBuilderPerDay(
       '$currencySymbol${pricePerDay.toStringAsFixed(2)}$currencySuffix',
     );
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,10 +108,12 @@ class PriceSummaryCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '$currencySymbol${finalPrice.toStringAsFixed(2)}$currencySuffix',
+                !isFiat && kub8Charged != null
+                    ? '$kub8Charged$currencySuffix'
+                    : '$currencySymbol${finalPrice.toStringAsFixed(2)}$currencySuffix',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isFiat ? roles.lockedFeature : roles.positiveAction,
+                  color: roles.foreground,
                 ),
               ),
             ],
@@ -106,8 +122,7 @@ class PriceSummaryCard extends StatelessWidget {
           // KUB8 balance warning
           if (insufficientKub8) ...[
             const SizedBox(height: KubusSpacing.md),
-            FrostedContainer(
-              backgroundColor: colors.errorContainer.withValues(alpha: 0.3),
+            KubusFlatPanel(
               child: Row(
                 children: [
                   Icon(Icons.warning_amber,
@@ -117,7 +132,7 @@ class PriceSummaryCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.promotionBuilderInsufficientKub8Balance(
-                        kub8Balance.toStringAsFixed(2),
+                        kub8AvailableText ?? kub8Balance.toStringAsFixed(2),
                       ),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: roles.negativeAction,

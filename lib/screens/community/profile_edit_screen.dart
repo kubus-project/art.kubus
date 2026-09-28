@@ -25,6 +25,10 @@ import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/forms/kubus_form.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/profile/profile_edit_form_body.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/avatar_widget.dart';
 
@@ -39,6 +43,11 @@ class ProfileEditScreen extends StatefulWidget {
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final KubusFormSubmitState _submit = KubusFormSubmitState();
+  final ScrollController _scrollController = ScrollController();
+
+  /// Form-level message: validation summary or save failure.
+  String? _formNotice;
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
   late TextEditingController _bioController;
@@ -236,6 +245,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _usernameController.dispose();
     _displayNameController.dispose();
     _bioController.dispose();
@@ -617,12 +627,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  Future<void> _saveProfile() async {
-    final formState = _formKey.currentState;
-    if (!(formState?.validate() ?? false)) return;
+  void _showFormNotice(String? message) {
+    setState(() => _formNotice = message);
+    if (message != null && _scrollController.hasClients) {
+      unawaited(_scrollController.animateTo(
+        0,
+        duration: MediaQuery.of(context).disableAnimations
+            ? Duration.zero
+            : const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      ));
+    }
+  }
 
+  Future<void> _saveProfile() async {
     final l10n = AppLocalizations.of(context)!;
-    setState(() => _isSavingProfile = true);
+    if (!_submit.validate(_formKey)) {
+      _showFormNotice(l10n.formFixHighlightedFields);
+      return;
+    }
+
+    setState(() {
+      _isSavingProfile = true;
+      _formNotice = null;
+    });
 
     try {
       final profileProvider =
@@ -717,12 +745,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (kDebugMode) {
         debugPrint('ProfileEditScreen: profile save failed: $e');
       }
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-          content: Text(errorText),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      // Save failures stay on the form (inline, announced) so the draft
+      // and the reason are visible together; no transient toast.
+      _showFormNotice(errorText);
     } finally {
       if (mounted) {
         setState(() => _isSavingProfile = false);
@@ -802,18 +827,43 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
+  void _onPrivacyChanged(ProfilePrivacyField field, bool value) {
+    setState(() {
+      switch (field) {
+        case ProfilePrivacyField.privateProfile:
+          _privateProfile = value;
+        case ProfilePrivacyField.showActivityStatus:
+          _showActivityStatus = value;
+          if (!value) _shareLastVisitedLocation = false;
+        case ProfilePrivacyField.shareLastVisitedLocation:
+          _shareLastVisitedLocation = value;
+        case ProfilePrivacyField.showCollection:
+          _showCollection = value;
+        case ProfilePrivacyField.allowMessages:
+          _allowMessages = value;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final appModeProvider = context.watch<AppModeProvider?>();
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
-    const avatarDiameter = 120.0;
-    const avatarRadius = avatarDiameter / 2;
+    const avatarDiameter = 96.0;
     final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius,
+      radius: avatarDiameter / 2,
       cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
     );
+    final hasCover = _localCoverBytes != null ||
+        (_coverImageUrl != null && _coverImageUrl!.isNotEmpty);
+    final hasAvatar = _localAvatarBytes != null ||
+        (_avatarUrl != null && _avatarUrl!.isNotEmpty);
+    final ImageProvider? coverImage = _localCoverBytes != null
+        ? MemoryImage(_localCoverBytes!)
+        : (hasCover ? NetworkImage(_coverImageUrl!) : null);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -824,900 +874,144 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).colorScheme.onSurface),
+          tooltip: l10n.commonBack,
+          icon: Icon(Icons.arrow_back, color: roles.foreground),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           l10n.profileEditTitle,
-          style: KubusTypography.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
+          style: KubusTextStyles.mobileAppBarTitle.copyWith(
+            color: roles.foreground,
           ),
         ),
         actions: [
-          if (_isSavingProfile)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: InlineLoading(
-                      expand: true, shape: BoxShape.circle, tileSize: 4.0),
+          if (!isIpfsFallbackMode)
+            Padding(
+              padding: const EdgeInsets.only(right: KubusSpacing.sm),
+              child: TextButton(
+                onPressed: _isSavingProfile ? null : _saveProfile,
+                style: TextButton.styleFrom(
+                  foregroundColor: roles.foreground,
+                  minimumSize: const Size(48, 48),
+                  textStyle: KubusTextStyles.actionLabel,
                 ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: _saveProfile,
-              child: Text(
-                l10n.commonSave,
-                style: KubusTypography.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: themeProvider.accentColor,
-                ),
+                child: Text(l10n.commonSave),
               ),
             ),
         ],
       ),
       body: isIpfsFallbackMode
-          ? const AppModeUnavailableState(
-              featureLabel: 'Profile editing',
-              title: 'Profile editing unavailable',
+          ? AppModeUnavailableState(
+              featureLabel: l10n.profileEditTitle,
+              title: l10n.stateUnsupportedTitle,
               icon: Icons.person_outline,
             )
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                return KeyboardInsetPadding(
-                  child: SingleChildScrollView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: const EdgeInsets.all(KubusSpacing.lg),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 48,
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Cover Image section
-                            _buildSectionHeader(
-                                l10n.commonCoverImage, Icons.panorama),
-                            const SizedBox(height: 12),
-                            GestureDetector(
-                              onTap: _isUploadingCover ? null : _pickCoverImage,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    height: 150,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer,
-                                      borderRadius:
-                                          BorderRadius.circular(KubusRadius.lg),
-                                      border: Border.all(
-                                        color: themeProvider.accentColor
-                                            .withValues(alpha: 0.3),
-                                        width: 2,
-                                        style: BorderStyle.solid,
-                                      ),
-                                      image: _localCoverBytes != null
-                                          ? DecorationImage(
-                                              image: MemoryImage(
-                                                  _localCoverBytes!),
-                                              fit: BoxFit.cover,
-                                            )
-                                          : _coverImageUrl != null &&
-                                                  _coverImageUrl!.isNotEmpty
-                                              ? DecorationImage(
-                                                  image: NetworkImage(
-                                                      _coverImageUrl!),
-                                                  fit: BoxFit.cover,
-                                                  onError: (error, stackTrace) {
-                                                    // Swallow image load errors (e.g., 404) so Flutter web
-                                                    // doesn't surface them as unhandled zone errors.
-                                                  },
-                                                )
-                                              : null,
-                                    ),
-                                    child: (_localCoverBytes == null &&
-                                            (_coverImageUrl == null ||
-                                                _coverImageUrl!.isEmpty))
-                                        ? Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons
-                                                    .add_photo_alternate_outlined,
-                                                size: 40,
-                                                color: themeProvider.accentColor
-                                                    .withValues(alpha: 0.6),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                l10n.profileEditCoverImageTapToAdd,
-                                                style: KubusTypography.inter(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : Stack(
-                                            children: [
-                                              Positioned(
-                                                bottom: 12,
-                                                right: 12,
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(8),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black54,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            KubusRadius.sm),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.edit,
-                                                          color: Colors.white,
-                                                          size: 16),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        l10n.commonChange,
-                                                        style: KubusTypography
-                                                            .inter(
-                                                          fontSize: 12,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                  if (_isUploadingCover)
-                                    Positioned.fill(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.black26,
-                                          borderRadius: BorderRadius.circular(
-                                              KubusRadius.lg),
-                                        ),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 40,
-                                            height: 40,
-                                            child: InlineLoading(
-                                              expand: true,
-                                              shape: BoxShape.circle,
-                                              tileSize: 4.0,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Avatar section
-                            _buildSectionHeader(
-                              l10n.profileEditProfilePictureTitle,
-                              Icons.account_circle,
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: Column(
-                                children: [
-                                  GestureDetector(
-                                    onTap:
-                                        _isUploadingAvatar ? null : _pickAvatar,
-                                    child: Stack(
-                                      children: [
-                                        Container(
-                                          width: avatarDiameter,
-                                          height: avatarDiameter,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              avatarFrameRadius,
-                                            ),
-                                            border: Border.all(
-                                              color: themeProvider.accentColor,
-                                              width: 3,
-                                            ),
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              avatarFrameRadius,
-                                            ),
-                                            child: _avatarUrl != null &&
-                                                    _avatarUrl!.isNotEmpty
-                                                ? _buildAvatarWidget(
-                                                    _avatarUrl!, themeProvider)
-                                                : Icon(
-                                                    Icons.person,
-                                                    size: 60,
-                                                    color: themeProvider
-                                                        .accentColor,
-                                                  ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: themeProvider.accentColor,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .surface,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: const Icon(
-                                              Icons.camera_alt,
-                                              color: Colors.white,
-                                              size: 20,
-                                            ),
-                                          ),
-                                        ),
-                                        if (_isUploadingAvatar)
-                                          Positioned.fill(
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                avatarFrameRadius,
-                                              ),
-                                              child: Container(
-                                                color: Colors.black26,
-                                                child: Center(
-                                                  child: SizedBox(
-                                                    width: 36,
-                                                    height: 36,
-                                                    child: InlineLoading(
-                                                      expand: true,
-                                                      shape: BoxShape.circle,
-                                                      tileSize: 3.0,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    l10n.profileEditAvatarTapToChange,
-                                    style: KubusTypography.inter(
-                                      fontSize: 14,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Basic Info Section
-                            _buildSectionHeader(
-                              l10n.profileEditBasicInformationTitle,
-                              Icons.person_outline,
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Username
-                            Text(
-                              l10n.profileEditUsernameLabel,
-                              style: KubusTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _usernameController,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditUsernameHint,
-                                prefixIcon: const Icon(Icons.alternate_email),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                              validator: (value) {
-                                return ProfileEditFormUtils.validateUsername(
-                                  l10n,
-                                  value,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Display Name
-                            Text(
-                              l10n.profileEditDisplayNameLabel,
-                              style: KubusTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _displayNameController,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditDisplayNameHint,
-                                prefixIcon: const Icon(Icons.person_outline),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                              validator: (value) {
-                                return ProfileEditFormUtils.validateDisplayName(
-                                  l10n,
-                                  value,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Bio
-                            Text(
-                              l10n.profileEditBioLabel,
-                              style: KubusTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _bioController,
-                              maxLines: 4,
-                              maxLength: ProfileEditFormUtils.bioMaxLength,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditBioHint,
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                                alignLabelWithHint: true,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Social Links Section
-                            Text(
-                              l10n.profileEditSocialLinksTitle,
-                              style: KubusTypography.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Twitter
-                            TextFormField(
-                              controller: _twitterController,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditSocialHandleHint,
-                                labelText: l10n.profileEditSocialTwitterLabel,
-                                prefixIcon: const Icon(Icons.alternate_email),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Instagram
-                            TextFormField(
-                              controller: _instagramController,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditSocialHandleHint,
-                                labelText: l10n.profileEditSocialInstagramLabel,
-                                prefixIcon: const Icon(Icons.camera_alt),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Website
-                            TextFormField(
-                              controller: _websiteController,
-                              decoration: InputDecoration(
-                                hintText: l10n.profileEditSocialWebsiteHint,
-                                labelText: l10n.profileEditSocialWebsiteLabel,
-                                prefixIcon: const Icon(Icons.language),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                              validator: (value) {
-                                return ProfileEditFormUtils.validateWebsite(
-                                  l10n,
-                                  value,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Artist-specific section (only shown for verified artists)
-                            if (_isArtist) ...[
-                              _buildSectionHeader(
-                                l10n.profileEditArtistInformationTitle,
-                                Icons.palette,
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Specialty
-                              Text(
-                                l10n.profileEditArtistSpecialtiesLabel,
-                                style: KubusTypography.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _specialtyController,
-                                decoration: InputDecoration(
-                                  hintText:
-                                      l10n.profileEditArtistSpecialtiesHint,
-                                  helperText:
-                                      l10n.profileEditArtistSpecialtiesHelper,
-                                  prefixIcon: const Icon(Icons.brush),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                  ),
-                                  filled: true,
-                                  fillColor: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Years Active
-                              Text(
-                                l10n.profileEditArtistYearsActiveLabel,
-                                style: KubusTypography.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _yearsActiveController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  hintText:
-                                      l10n.profileEditArtistYearsActiveHint,
-                                  prefixIcon: const Icon(Icons.calendar_today),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                  ),
-                                  filled: true,
-                                  fillColor: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                                ),
-                                validator: (value) {
-                                  return ProfileEditFormUtils
-                                      .validateYearsActive(l10n, value);
-                                },
-                              ),
-                              const SizedBox(height: 32),
-                            ],
-
-                            // Institution-specific section (only shown for verified institutions)
-                            if (_isInstitution) ...[
-                              _buildSectionHeader(
-                                l10n.profileEditInstitutionInformationTitle,
-                                Icons.business,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                l10n.profileEditInstitutionAboutTitle,
-                                style: KubusTypography.inter(
-                                  fontSize: 14,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(KubusSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outline
-                                        .withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: themeProvider.accentColor,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        l10n.profileEditInstitutionAboutBody,
-                                        style: KubusTypography.inter(
-                                          fontSize: 13,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.8),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                            ],
-
-                            // Privacy Settings Section
-                            _buildSectionHeader(
-                                l10n.settingsPrivacySettingsTileTitle,
-                                Icons.security),
-                            const SizedBox(height: 16),
-
-                            Container(
+          : KeyboardInsetPadding(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(
+                  KubusSpacing.md,
+                  KubusSpacing.sm,
+                  KubusSpacing.md,
+                  KubusSpacing.xl,
+                ),
+                child: KubusFormMeasure(
+                  child: Form(
+                    key: _formKey,
+                    autovalidateMode: _submit.autovalidateMode,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ProfileEditFormBody(
+                          formNotice: _formNotice,
+                          controllers: ProfileEditControllers(
+                            username: _usernameController,
+                            displayName: _displayNameController,
+                            bio: _bioController,
+                            twitter: _twitterController,
+                            instagram: _instagramController,
+                            website: _websiteController,
+                            specialty: _specialtyController,
+                            yearsActive: _yearsActiveController,
+                          ),
+                          isArtist: _isArtist,
+                          isInstitution: _isInstitution,
+                          privacy: ProfilePrivacyDraft(
+                            privateProfile: _privateProfile,
+                            showActivityStatus: _showActivityStatus,
+                            shareLastVisitedLocation: _shareLastVisitedLocation,
+                            showCollection: _showCollection,
+                            allowMessages: _allowMessages,
+                          ),
+                          onPrivacyChanged: _onPrivacyChanged,
+                          coverPreview: ProfileEditCoverPreview(
+                            isBusy: _isUploadingCover,
+                            image: coverImage,
+                          ),
+                          hasCover: hasCover,
+                          onPickCover: _pickCoverImage,
+                          isUploadingCover: _isUploadingCover,
+                          avatarPreview: ExcludeSemantics(
+                            child: Container(
+                              width: avatarDiameter,
+                              height: avatarDiameter,
+                              clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
+                                color: roles.surfaceRaised,
                                 borderRadius:
-                                    BorderRadius.circular(KubusRadius.lg),
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outline
-                                      .withValues(alpha: 0.5),
-                                ),
+                                    BorderRadius.circular(avatarFrameRadius),
+                                border: Border.all(color: roles.rule),
                               ),
-                              child: Column(
+                              child: Stack(
+                                fit: StackFit.expand,
                                 children: [
-                                  _buildPrivacySwitch(
-                                    l10n.settingsPrivateProfileTitle,
-                                    l10n.settingsPrivateProfileSubtitle,
-                                    Icons.lock_outline,
-                                    _privateProfile,
-                                    (value) =>
-                                        setState(() => _privateProfile = value),
-                                    switchKey: const Key(
-                                        'profile_edit_privacy_private_profile'),
-                                  ),
-                                  _buildDivider(),
-                                  _buildPrivacySwitch(
-                                    l10n.settingsShowActivityStatusTitle,
-                                    l10n.settingsShowActivityStatusSubtitle,
-                                    Icons.circle,
-                                    _showActivityStatus,
-                                    (value) => setState(() {
-                                      _showActivityStatus = value;
-                                      if (!value) {
-                                        _shareLastVisitedLocation = false;
-                                      }
-                                    }),
-                                    switchKey: const Key(
-                                        'profile_edit_privacy_show_activity_status'),
-                                  ),
-                                  _buildDivider(),
-                                  _buildPrivacySwitch(
-                                    l10n.settingsShareLastVisitedLocationTitle,
-                                    l10n.settingsShareLastVisitedLocationSubtitle,
-                                    Icons.place_outlined,
-                                    _shareLastVisitedLocation,
-                                    (value) => setState(() =>
-                                        _shareLastVisitedLocation = value),
-                                    enabled: _showActivityStatus,
-                                    switchKey: const Key(
-                                        'profile_edit_privacy_share_last_visited_location'),
-                                  ),
-                                  _buildDivider(),
-                                  _buildPrivacySwitch(
-                                    l10n.settingsShowCollectionTitle,
-                                    l10n.settingsShowCollectionSubtitle,
-                                    Icons.collections,
-                                    _showCollection,
-                                    (value) =>
-                                        setState(() => _showCollection = value),
-                                    switchKey: const Key(
-                                        'profile_edit_privacy_show_collection'),
-                                  ),
-                                  _buildDivider(),
-                                  _buildPrivacySwitch(
-                                    l10n.settingsAllowMessagesTitle,
-                                    l10n.settingsAllowMessagesSubtitle,
-                                    Icons.message_outlined,
-                                    _allowMessages,
-                                    (value) =>
-                                        setState(() => _allowMessages = value),
-                                    switchKey: const Key(
-                                        'profile_edit_privacy_allow_messages'),
-                                  ),
+                                  hasAvatar
+                                      ? _buildAvatarWidget(
+                                          _avatarUrl ?? '', themeProvider)
+                                      : Icon(
+                                          Icons.person_outline,
+                                          size: 40,
+                                          color: roles.foregroundSubtle,
+                                        ),
+                                  if (_isUploadingAvatar)
+                                    ColoredBox(
+                                      color:
+                                          roles.ground.withValues(alpha: 0.6),
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: InlineLoading(
+                                            expand: true,
+                                            shape: BoxShape.circle,
+                                            tileSize: 3.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 32),
-
-                            // Role Status (read-only display)
-                            if (_isArtist || _isInstitution) ...[
-                              _buildSectionHeader(
-                                l10n.profileEditVerifiedStatusTitle,
-                                Icons.verified,
-                              ),
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.all(KubusSpacing.md),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.1),
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.05),
-                                    ],
-                                  ),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.lg),
-                                  border: Border.all(
-                                    color: themeProvider.accentColor
-                                        .withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding:
-                                          const EdgeInsets.all(KubusSpacing.sm),
-                                      decoration: BoxDecoration(
-                                        color: themeProvider.accentColor
-                                            .withValues(alpha: 0.2),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        _isInstitution
-                                            ? Icons.business
-                                            : Icons.palette,
-                                        color: themeProvider.accentColor,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _isInstitution
-                                                ? l10n
-                                                    .profileEditVerifiedInstitutionTitle
-                                                : l10n
-                                                    .profileEditVerifiedArtistTitle,
-                                            style: KubusTypography.inter(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            _isInstitution
-                                                ? l10n
-                                                    .profileEditVerifiedInstitutionSubtitle
-                                                : l10n
-                                                    .profileEditVerifiedArtistSubtitle,
-                                            style: KubusTypography.inter(
-                                              fontSize: 13,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.check_circle,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      size: 28,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                            ],
-                          ],
+                          ),
+                          hasAvatar: hasAvatar,
+                          onPickAvatar: _pickAvatar,
+                          isUploadingAvatar: _isUploadingAvatar,
                         ),
-                      ),
+                        const SizedBox(height: KubusSpacing.xl),
+                        KubusButton(
+                          onPressed: _saveProfile,
+                          isLoading: _isSavingProfile,
+                          isFullWidth: true,
+                          label: l10n.profileEditSaveChanges,
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: themeProvider.accentColor,
-          size: 20,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: KubusTypography.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrivacySwitch(
-    String title,
-    String subtitle,
-    IconData icon,
-    bool value,
-    ValueChanged<bool> onChanged, {
-    bool enabled = true,
-    Key? switchKey,
-  }) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: enabled
-                ? (value
-                    ? themeProvider.accentColor
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5))
-                : Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.38),
-            size: 22,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTypography.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: KubusTypography.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          Switch(
-            key: switchKey,
-            value: value,
-            onChanged: enabled ? onChanged : null,
-            activeTrackColor: themeProvider.accentColor.withValues(alpha: 0.5),
-            thumbColor: WidgetStateProperty.resolveWith((states) =>
-                states.contains(WidgetState.selected)
-                    ? themeProvider.accentColor
-                    : null),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Divider(
-      height: 1,
-      indent: 54,
-      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
     );
   }
 

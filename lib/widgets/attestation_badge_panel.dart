@@ -7,7 +7,7 @@ import '../models/attestation.dart';
 import '../providers/attestation_provider.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
-import 'glass_components.dart';
+import 'common/kubus_flat_panel.dart';
 
 class AttestationBadgePanel extends StatelessWidget {
   const AttestationBadgePanel({
@@ -62,8 +62,8 @@ class AttestationBadgePanel extends StatelessWidget {
           );
         }
 
-        return LiquidGlassCard(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
+        return KubusFlatPanel(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
           padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -166,8 +166,8 @@
   "pushRecognitionChannelDescription": "Obvestila o priznanjih za prispevke",
   "analyticsMetricArchiveObjectsCreatedLabel": "Ustvarjene digitalne izdaje",
   "analyticsMetricArchiveObjectsCreatedDescription": "Digitalne izdaje, povezane z umetninami.",
-  "analyticsMetricKub8RecognitionLabel": "KUB8 priznanja",
-  "analyticsMetricKub8RecognitionDescription": "KUB8, zabeležen kot priznanje za prispevke.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 iz dosežkov",
+  "analyticsMetricKub8RecognitionDescription": "Vsota nagrad KUB8, določenih pri dosežkih, ki jih je ta profil odklenil. Ni prihodek ali prodaja.",
   "analyticsPresetArtistSubtitle": "Doseg umetnin, odziv skupnosti, AR aktivnost in priznanja.",
   "analyticsPresetInstitutionSubtitle": "Doseg obiskovalcev, programi, razstave in priznanja.",
   "analyticsExportNoDataToast": "Za izvoz ni na voljo analitičnih podatkov.",
@@ -3531,6 +3531,7 @@
   "marketplaceNftArtworkStatusArEnabled": "Umetnina digitalne izdaje - AR omogočen",
   "marketplaceMintUnavailableLabel": "Izdaja ni na voljo",
   "marketplaceSoldOutLabel": "Razprodano",
+  "marketplacePrimarySoldOutLabel": "Primarna prodaja razprodana",
   "marketplaceMintNftButtonLabel": "Ustvari digitalno izdajo",
   "marketplaceArRequiredTitle": "AR je obvezen",
   "marketplaceArRequiredDescription": "Ta digitalna izdaja zahteva interakcijo z lokacijo umetnine. Obišči umetnino in uporabi AR-skener, če ga je ustvarjalec omogočil.",
@@ -6917,5 +6918,208 @@
       }
     }
   },
-  "spatialUploadResume": "Nadaljuj nalaganje"
+  "spatialUploadResume": "Nadaljuj nalaganje",
+  "formShowPassword": "Pokaži geslo",
+  "formHidePassword": "Skrij geslo",
+  "formSelectDate": "Izberite datum",
+  "formSelectTime": "Izberite čas",
+  "formNoValueSelected": "Ni nastavljeno",
+  "formAddImage": "Dodaj sliko",
+  "formFixHighlightedFields": "Nekatera polja je treba popraviti. Preberite sporočila pod njimi.",
+  "stateNetworkTitle": "Povezave z art.kubus ni bilo mogoče vzpostaviti",
+  "stateNetworkDescription": "Zahteva se ni zaključila. Preverite povezavo in poskusite znova.",
+  "stateOfflineTitle": "Niste povezani",
+  "stateOfflineDescription": "Za to potrebujete internetno povezavo. Znova se povežite in poskusite še enkrat.",
+  "stateServerTitle": "art.kubus ima težave",
+  "stateServerDescription": "Storitev se ni pravilno odzvala. Na vaši strani je vse v redu; poskusite znova čez trenutek.",
+  "stateAuthTitle": "Za nadaljevanje se prijavite",
+  "stateAuthDescription": "Vaša seja je potekla ali pa se še niste prijavili.",
+  "statePermissionTitle": "Do tega nimate dostopa",
+  "statePermissionDescription": "To je na voljo samo lastniku ali potrjenim vlogam. Če potrebujete dostop, se obrnite na lastnika.",
+  "stateNotFoundTitle": "Ni najdeno",
+  "stateNotFoundDescription": "Morda je bilo odstranjeno ali nastavljeno kot zasebno.",
+  "stateValidationTitle": "Nekatere podatke je treba popraviti",
+  "stateValidationDescription": "Zahteva v tej obliki ni bila sprejeta. Preverite podatke in poskusite znova.",
+  "stateRateLimitTitle": "Preveč poskusov",
+  "stateRateLimitDescription": "Pred naslednjim poskusom počakajte minuto.",
+  "stateWalletTitle": "Denarnica ni pripravljena",
+  "stateWalletDescription": "Znova povežite ali odklenite denarnico in poskusite znova.",
+  "stateUnsupportedTitle": "Tu ni na voljo",
+  "stateUnsupportedDescription": "Ta funkcija na tej napravi ali v tej različici ni podprta.",
+  "stateUnknownTitle": "Nekaj je šlo narobe",
+  "stateUnknownDescription": "Tega ni bilo mogoče dokončati. Poskusite znova.",
+  "stateLoadingMore": "Nalaganje dodatnih vsebin",
+  "peopleRoleArtist": "Umetnik",
+  "peopleRoleInstitution": "Institucija",
+  "peopleVerifiedLabel": "Preverjeno",
+  "peopleFollowToggleSemantic": "Sledi: {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInboxIntro": "Sprejmite povabilo in pomagajte upravljati dogodek, razstavo, umetnino ali zbirko.",
+  "collabInviteNotion": "Povabilo",
+  "collabEntityEvent": "Dogodek",
+  "collabEntityExhibition": "Razstava",
+  "collabEntityArtwork": "Umetnina",
+  "collabEntityCollection": "Zbirka",
+  "collabEntityItem": "Vsebina",
+  "collabInviteFrom": "Pošiljatelj: {name}",
+  "@collabInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteRole": "Vaša vloga: {role}",
+  "@collabInviteRole": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteReceived": "Prejeto {date}",
+  "@collabInviteReceived": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteExpires": "Poteče {date}",
+  "@collabInviteExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabUnknownSender": "Nekdo",
+  "collabAccept": "Sprejmi",
+  "collabDecline": "Zavrni",
+  "collabAcceptedToast": "Povabilo je sprejeto. Zdaj lahko pomagate pri upravljanju.",
+  "collabDeclinedToast": "Povabilo je zavrnjeno.",
+  "collabAcceptFailedToast": "Povabila ni bilo mogoče sprejeti. Poskusite znova.",
+  "collabDeclineFailedToast": "Povabila ni bilo mogoče zavrniti. Poskusite znova.",
+  "collabCannotOpenItemToast": "To povabilo ne kaže na vsebino, ki jo je mogoče odpreti tukaj.",
+  "collabEmptyTitle": "Trenutno ni povabil",
+  "collabEmptyDescription": "Ko vas kdo povabi k sodelovanju, se povabilo prikaže tukaj.",
+  "collabInviteSemantic": "Povabilo: {entity}, vloga {role}, pošiljatelj {name}",
+  "@collabInviteSemantic": {
+    "placeholders": {
+      "entity": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "studioNotionPractice": "Ustvarjanje",
+  "institutionNotionProgramme": "Program",
+  "dashboardNotionNumbers": "Številke",
+  "dashboardNotionInfrastructure": "Infrastruktura",
+  "dashboardNumbersCaption": "Števila iz dejavnosti na vašem javnem profilu art.kubus.",
+  "institutionStatProgrammeViews": "Ogledi strani programa",
+  "walletNetworkLabel": "Omrežje",
+  "walletAddressHeading": "Naslov",
+  "walletAddressSemantic": "Naslov denarnice {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Kopiraj naslov",
+  "walletReadOnlyStatus": "Seja samo za branje",
+  "walletKub8BalanceLabel": "Stanje KUB8",
+  "walletSolBalanceLabel": "Stanje SOL",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Dejanja",
+  "walletTechnicalTitle": "Tehnično",
+  "marketplaceListingValueSemantic": "{source}: {amount} {currency}. {state}",
+  "@marketplaceListingValueSemantic": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionBuilderSwitchNetwork": "Denarnico preklopite na omrežje {cluster}, ki ga zahteva ta ponudba, in poskusite znova.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Čaka na pregled",
+  "promotionStatusApproved": "Odobreno",
+  "promotionStatusActive": "Aktivno",
+  "daoProposalStatusDraft": "Osnutek",
+  "daoProposalStatusActive": "Aktivno",
+  "daoProposalStatusVoting": "Glasovanje odprto",
+  "daoProposalStatusPassed": "Sprejeto",
+  "daoProposalStatusFailed": "Ni sprejeto",
+  "daoProposalStatusExecuted": "Izvedeno",
+  "daoVotingEndsLabel": "Glasovanje se konča {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Glasovanje se je končalo {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Potrebna sklepčnost: {percent} % glasovalne moči",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Rezultati",
+  "daoNotEligibleTitle": "Ta denarnica nima glasovalne moči",
+  "daoNotEligibleBody": "Glasovi so uteženi s KUB8 v vaši denarnici v trenutku glasovanja. Denarnica brez KUB8 ne more glasovati.",
+  "daoTreasuryOnChainLabel": "Stanje zakladnice na verigi",
+  "daoTreasuryLedgerLabel": "Zabeleženi premiki zakladnice"
 }

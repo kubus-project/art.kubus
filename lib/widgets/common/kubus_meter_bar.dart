@@ -46,6 +46,9 @@ class KubusMeterBar extends StatelessWidget {
             FractionallySizedBox(
               alignment: Alignment.centerLeft,
               widthFactor: clamped,
+              // Without it the fill sizes to its (empty) child under the
+              // Stack's loose constraints and paints 0 px tall.
+              heightFactor: 1,
               child: DecoratedBox(
                 decoration: BoxDecoration(color: fill, borderRadius: radius),
               ),

@@ -316,11 +316,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Digitalne izdaje, povezane z umetninami.';
 
   @override
-  String get analyticsMetricKub8RecognitionLabel => 'KUB8 priznanja';
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 iz dosežkov';
 
   @override
   String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8, zabeležen kot priznanje za prispevke.';
+      'Vsota nagrad KUB8, določenih pri dosežkih, ki jih je ta profil odklenil. Ni prihodek ali prodaja.';
 
   @override
   String get analyticsPresetArtistSubtitle =>
@@ -9563,6 +9563,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Razprodano';
 
   @override
+  String get marketplacePrimarySoldOutLabel => 'Primarna prodaja razprodana';
+
+  @override
   String get marketplaceMintNftButtonLabel => 'Ustvari digitalno izdajo';
 
   @override
@@ -17246,4 +17249,325 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialUploadResume => 'Nadaljuj nalaganje';
+
+  @override
+  String get formShowPassword => 'Pokaži geslo';
+
+  @override
+  String get formHidePassword => 'Skrij geslo';
+
+  @override
+  String get formSelectDate => 'Izberite datum';
+
+  @override
+  String get formSelectTime => 'Izberite čas';
+
+  @override
+  String get formNoValueSelected => 'Ni nastavljeno';
+
+  @override
+  String get formAddImage => 'Dodaj sliko';
+
+  @override
+  String get formFixHighlightedFields =>
+      'Nekatera polja je treba popraviti. Preberite sporočila pod njimi.';
+
+  @override
+  String get stateNetworkTitle =>
+      'Povezave z art.kubus ni bilo mogoče vzpostaviti';
+
+  @override
+  String get stateNetworkDescription =>
+      'Zahteva se ni zaključila. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get stateOfflineTitle => 'Niste povezani';
+
+  @override
+  String get stateOfflineDescription =>
+      'Za to potrebujete internetno povezavo. Znova se povežite in poskusite še enkrat.';
+
+  @override
+  String get stateServerTitle => 'art.kubus ima težave';
+
+  @override
+  String get stateServerDescription =>
+      'Storitev se ni pravilno odzvala. Na vaši strani je vse v redu; poskusite znova čez trenutek.';
+
+  @override
+  String get stateAuthTitle => 'Za nadaljevanje se prijavite';
+
+  @override
+  String get stateAuthDescription =>
+      'Vaša seja je potekla ali pa se še niste prijavili.';
+
+  @override
+  String get statePermissionTitle => 'Do tega nimate dostopa';
+
+  @override
+  String get statePermissionDescription =>
+      'To je na voljo samo lastniku ali potrjenim vlogam. Če potrebujete dostop, se obrnite na lastnika.';
+
+  @override
+  String get stateNotFoundTitle => 'Ni najdeno';
+
+  @override
+  String get stateNotFoundDescription =>
+      'Morda je bilo odstranjeno ali nastavljeno kot zasebno.';
+
+  @override
+  String get stateValidationTitle => 'Nekatere podatke je treba popraviti';
+
+  @override
+  String get stateValidationDescription =>
+      'Zahteva v tej obliki ni bila sprejeta. Preverite podatke in poskusite znova.';
+
+  @override
+  String get stateRateLimitTitle => 'Preveč poskusov';
+
+  @override
+  String get stateRateLimitDescription =>
+      'Pred naslednjim poskusom počakajte minuto.';
+
+  @override
+  String get stateWalletTitle => 'Denarnica ni pripravljena';
+
+  @override
+  String get stateWalletDescription =>
+      'Znova povežite ali odklenite denarnico in poskusite znova.';
+
+  @override
+  String get stateUnsupportedTitle => 'Tu ni na voljo';
+
+  @override
+  String get stateUnsupportedDescription =>
+      'Ta funkcija na tej napravi ali v tej različici ni podprta.';
+
+  @override
+  String get stateUnknownTitle => 'Nekaj je šlo narobe';
+
+  @override
+  String get stateUnknownDescription =>
+      'Tega ni bilo mogoče dokončati. Poskusite znova.';
+
+  @override
+  String get stateLoadingMore => 'Nalaganje dodatnih vsebin';
+
+  @override
+  String get peopleRoleArtist => 'Umetnik';
+
+  @override
+  String get peopleRoleInstitution => 'Institucija';
+
+  @override
+  String get peopleVerifiedLabel => 'Preverjeno';
+
+  @override
+  String peopleFollowToggleSemantic(String name) {
+    return 'Sledi: $name';
+  }
+
+  @override
+  String get collabInboxIntro =>
+      'Sprejmite povabilo in pomagajte upravljati dogodek, razstavo, umetnino ali zbirko.';
+
+  @override
+  String get collabInviteNotion => 'Povabilo';
+
+  @override
+  String get collabEntityEvent => 'Dogodek';
+
+  @override
+  String get collabEntityExhibition => 'Razstava';
+
+  @override
+  String get collabEntityArtwork => 'Umetnina';
+
+  @override
+  String get collabEntityCollection => 'Zbirka';
+
+  @override
+  String get collabEntityItem => 'Vsebina';
+
+  @override
+  String collabInviteFrom(String name) {
+    return 'Pošiljatelj: $name';
+  }
+
+  @override
+  String collabInviteRole(String role) {
+    return 'Vaša vloga: $role';
+  }
+
+  @override
+  String collabInviteReceived(String date) {
+    return 'Prejeto $date';
+  }
+
+  @override
+  String collabInviteExpires(String date) {
+    return 'Poteče $date';
+  }
+
+  @override
+  String get collabUnknownSender => 'Nekdo';
+
+  @override
+  String get collabAccept => 'Sprejmi';
+
+  @override
+  String get collabDecline => 'Zavrni';
+
+  @override
+  String get collabAcceptedToast =>
+      'Povabilo je sprejeto. Zdaj lahko pomagate pri upravljanju.';
+
+  @override
+  String get collabDeclinedToast => 'Povabilo je zavrnjeno.';
+
+  @override
+  String get collabAcceptFailedToast =>
+      'Povabila ni bilo mogoče sprejeti. Poskusite znova.';
+
+  @override
+  String get collabDeclineFailedToast =>
+      'Povabila ni bilo mogoče zavrniti. Poskusite znova.';
+
+  @override
+  String get collabCannotOpenItemToast =>
+      'To povabilo ne kaže na vsebino, ki jo je mogoče odpreti tukaj.';
+
+  @override
+  String get collabEmptyTitle => 'Trenutno ni povabil';
+
+  @override
+  String get collabEmptyDescription =>
+      'Ko vas kdo povabi k sodelovanju, se povabilo prikaže tukaj.';
+
+  @override
+  String collabInviteSemantic(String entity, String role, String name) {
+    return 'Povabilo: $entity, vloga $role, pošiljatelj $name';
+  }
+
+  @override
+  String get studioNotionPractice => 'Ustvarjanje';
+
+  @override
+  String get institutionNotionProgramme => 'Program';
+
+  @override
+  String get dashboardNotionNumbers => 'Številke';
+
+  @override
+  String get dashboardNotionInfrastructure => 'Infrastruktura';
+
+  @override
+  String get dashboardNumbersCaption =>
+      'Števila iz dejavnosti na vašem javnem profilu art.kubus.';
+
+  @override
+  String get institutionStatProgrammeViews => 'Ogledi strani programa';
+
+  @override
+  String get walletNetworkLabel => 'Omrežje';
+
+  @override
+  String get walletAddressHeading => 'Naslov';
+
+  @override
+  String walletAddressSemantic(String address) {
+    return 'Naslov denarnice $address';
+  }
+
+  @override
+  String get walletCopyAddressTooltip => 'Kopiraj naslov';
+
+  @override
+  String get walletReadOnlyStatus => 'Seja samo za branje';
+
+  @override
+  String get walletKub8BalanceLabel => 'Stanje KUB8';
+
+  @override
+  String get walletSolBalanceLabel => 'Stanje SOL';
+
+  @override
+  String walletBalanceAmountSemantic(String label, String amount, String unit) {
+    return '$label: $amount $unit';
+  }
+
+  @override
+  String get walletActionsTitle => 'Dejanja';
+
+  @override
+  String get walletTechnicalTitle => 'Tehnično';
+
+  @override
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state) {
+    return '$source: $amount $currency. $state';
+  }
+
+  @override
+  String promotionBuilderSwitchNetwork(String cluster) {
+    return 'Denarnico preklopite na omrežje $cluster, ki ga zahteva ta ponudba, in poskusite znova.';
+  }
+
+  @override
+  String get promotionStatusPendingReview => 'Čaka na pregled';
+
+  @override
+  String get promotionStatusApproved => 'Odobreno';
+
+  @override
+  String get promotionStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusDraft => 'Osnutek';
+
+  @override
+  String get daoProposalStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusVoting => 'Glasovanje odprto';
+
+  @override
+  String get daoProposalStatusPassed => 'Sprejeto';
+
+  @override
+  String get daoProposalStatusFailed => 'Ni sprejeto';
+
+  @override
+  String get daoProposalStatusExecuted => 'Izvedeno';
+
+  @override
+  String daoVotingEndsLabel(String date) {
+    return 'Glasovanje se konča $date';
+  }
+
+  @override
+  String daoVotingEndedLabel(String date) {
+    return 'Glasovanje se je končalo $date';
+  }
+
+  @override
+  String daoQuorumRequirementLabel(String percent) {
+    return 'Potrebna sklepčnost: $percent % glasovalne moči';
+  }
+
+  @override
+  String get daoResultsNotion => 'Rezultati';
+
+  @override
+  String get daoNotEligibleTitle => 'Ta denarnica nima glasovalne moči';
+
+  @override
+  String get daoNotEligibleBody =>
+      'Glasovi so uteženi s KUB8 v vaši denarnici v trenutku glasovanja. Denarnica brez KUB8 ne more glasovati.';
+
+  @override
+  String get daoTreasuryOnChainLabel => 'Stanje zakladnice na verigi';
+
+  @override
+  String get daoTreasuryLedgerLabel => 'Zabeleženi premiki zakladnice';
 }

@@ -1311,46 +1311,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(DetailRadius.md),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              if (visitCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    child: Text(
-                      visitCount.toString(),
-                      style: KubusTextStyles.badgeCount.copyWith(
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+          // Neutral icon; no per-feature tint or visit-count badge.
+          ExcludeSemantics(
+            child: Icon(
+              icon,
+              color: KubusColorRoles.of(context).foregroundMuted,
+              size: 22,
+            ),
           ),
           const SizedBox(width: DetailSpacing.md),
           Text(

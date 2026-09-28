@@ -9,16 +9,18 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_labs_feature.dart';
-import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/common/kubus_cached_image.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
 import '../../../widgets/empty_state_card.dart';
-import '../../../widgets/glass_components.dart';
-import '../../../widgets/inline_loading.dart';
 import '../desktop_shell.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/marketplace/marketplace_listing_card.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/states/kubus_product_states.dart';
 
 enum _EditionSort { newest, title, listedFirst, supply }
 
@@ -241,15 +243,16 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
             child: Consumer<CollectiblesProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(child: InlineLoading());
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
+                    child: KubusSectionLoading(rows: 4, rowHeight: 120),
+                  );
                 }
                 if (provider.error != null) {
-                  return Center(
-                    child: EmptyStateCard(
-                      icon: Icons.error_outline,
-                      title: l10n.commonActionFailedToast,
-                      description: provider.error!,
-                    ),
+                  // Classified state, never the raw backend string.
+                  return KubusStateView.fromError(
+                    provider.error,
+                    onRetry: () => provider.initialize(),
                   );
                 }
 
@@ -437,7 +440,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
       builder: (dialogContext) => Dialog(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760, maxHeight: 760),
-          child: LiquidGlassPanel(
+          child: Padding(
             padding: const EdgeInsets.all(KubusSpacing.lg),
             child: SingleChildScrollView(
               child: Column(
@@ -481,12 +484,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
                               entry.mintedCount?.toString() ??
                                   l10n.commonNotAvailableShort,
                             ),
-                            _detailLine(
-                              l10n.commonStatus,
-                              entry.isListed
-                                  ? l10n.commonForSale
-                                  : l10n.marketplaceValueNotListedLabel,
-                            ),
+                            const SizedBox(height: KubusSpacing.sm),
+                            MarketplaceListingSummary(entry: entry),
+                            const SizedBox(height: KubusSpacing.sm),
                             if (entry.requiresArInteraction)
                               _detailLine(
                                 l10n.marketplaceArBadgeLabel,
@@ -524,9 +524,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
+                      KubusButton(
                         onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: Text(l10n.commonClose),
+                        label: l10n.commonClose,
+                        variant: KubusButtonVariant.quiet,
                       ),
                     ],
                   ),
@@ -562,34 +563,36 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
             constraints: const BoxConstraints(minWidth: 120),
             child: Text(
               l10n.marketplaceTokenNumberLabel(collectible.tokenId),
-              style: KubusTextStyles.detailLabel.copyWith(
+              style: KubusTextStyles.machineValue.copyWith(
                 color: scheme.onSurface,
               ),
             ),
           ),
-          Chip(
-            visualDensity: VisualDensity.compact,
-            label: Text(
-              collectible.isForSale
-                  ? l10n.commonForSale
-                  : l10n.marketplaceValueNotListedLabel,
-            ),
+          KubusStatusText(
+            label: collectible.isForSale
+                ? l10n.commonForSale
+                : l10n.marketplaceValueNotListedLabel,
+            tone: collectible.isForSale
+                ? KubusStatusTone.positive
+                : KubusStatusTone.neutral,
           ),
           if (capabilities.canListEdition)
-            FilledButton(
+            KubusButton(
               onPressed: () {
                 Navigator.of(context, rootNavigator: true).pop();
                 _listEdition(entry, collectible);
               },
-              child: Text(l10n.marketplaceListNftForSaleTitle),
+              label: l10n.marketplaceListNftForSaleTitle,
+              variant: KubusButtonVariant.secondary,
             ),
           if (capabilities.canUnlistEdition)
-            FilledButton.tonal(
+            KubusButton(
               onPressed: () {
                 Navigator.of(context, rootNavigator: true).pop();
                 _unlistEdition(collectible);
               },
-              child: Text(l10n.marketplaceRemoveFromSaleTitle),
+              label: l10n.marketplaceRemoveFromSaleTitle,
+              variant: KubusButtonVariant.quiet,
             ),
         ],
       ),
@@ -721,62 +724,20 @@ class _EditionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: l10n.marketplaceOpenSeriesDetailsSemantic(entry.title),
-      child: LiquidGlassCard(
-        onTap: onOpen,
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(KubusRadius.md),
-              ),
-              child: SizedBox(
-                height: 230,
-                width: double.infinity,
-                child: KubusCachedImage(
-                  imageUrl: entry.coverUrl,
-                  semanticLabel: entry.title,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.detailCardTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    ArtworkCreatorByline(
-                      artwork: entry.artwork,
-                      linkToProfile: false,
-                    ),
-                    const Spacer(),
-                    _EditionMetadata(entry: entry),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    return MarketplaceListingCard(
+      entry: entry,
+      onOpen: onOpen,
+      imageHeight: 210,
+      creatorLine: ArtworkCreatorByline(
+        artwork: entry.artwork,
+        linkToProfile: false,
       ),
     );
   }
 }
 
+/// Dense row: artwork identity on the left, the economic summary (value
+/// source, amount, currency, state) on the right.
 class _EditionListRow extends StatelessWidget {
   const _EditionListRow({required this.entry, required this.onOpen});
 
@@ -786,88 +747,69 @@ class _EditionListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     return Semantics(
       button: true,
       label: l10n.marketplaceOpenSeriesDetailsSemantic(entry.title),
-      child: LiquidGlassCard(
-        onTap: onOpen,
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-              child: SizedBox(
-                width: 104,
-                height: 104,
-                child: KubusCachedImage(
-                  imageUrl: entry.coverUrl,
-                  semanticLabel: entry.title,
-                ),
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.title,
-                    style: KubusTextStyles.sectionTitle.copyWith(
-                      color: scheme.onSurface,
+      child: Material(
+        color: roles.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          side: BorderSide(color: roles.rule),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onOpen,
+          focusColor: roles.focus.withValues(alpha: 0.12),
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(KubusRadius.control),
+                  child: SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: KubusCachedImage(
+                      imageUrl: entry.coverUrl,
+                      semanticLabel: entry.title,
                     ),
                   ),
-                  const SizedBox(height: KubusSpacing.xs),
-                  ArtworkCreatorByline(
-                    artwork: entry.artwork,
-                    linkToProfile: false,
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.title,
+                        style: KubusTextStyles.sectionTitle.copyWith(
+                          color: roles.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.xs),
+                      ArtworkCreatorByline(
+                        artwork: entry.artwork,
+                        linkToProfile: false,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                SizedBox(
+                  width: 220,
+                  child: MarketplaceListingSummary(entry: entry, dense: true),
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                ExcludeSemantics(
+                  child:
+                      Icon(Icons.chevron_right, color: roles.foregroundMuted),
+                ),
+              ],
             ),
-            _EditionMetadata(entry: entry),
-            const SizedBox(width: KubusSpacing.md),
-            Icon(Icons.chevron_right, color: scheme.onSurface),
-          ],
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _EditionMetadata extends StatelessWidget {
-  const _EditionMetadata({required this.entry});
-
-  final MarketplaceArtworkEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final value = MarketplaceValueFormatter.formatDisplayValue(
-      entry.displayValue,
-      fallback: l10n.marketplaceValueNotListedLabel,
-    );
-    return Wrap(
-      spacing: KubusSpacing.sm,
-      runSpacing: KubusSpacing.xs,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        if (entry.isListed)
-          Chip(
-            visualDensity: VisualDensity.compact,
-            label: Text(l10n.commonForSale),
-          ),
-        if (entry.requiresArInteraction)
-          Chip(
-            visualDensity: VisualDensity.compact,
-            label: Text(l10n.marketplaceArBadgeLabel),
-          ),
-        Text(
-          value,
-          style: KubusTextStyles.detailLabel.copyWith(color: scheme.onSurface),
-        ),
-      ],
     );
   }
 }

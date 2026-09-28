@@ -196,13 +196,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: RefreshIndicator(
               onRefresh: _handleRefresh,
-              color: themeProvider.accentColor,
+              color: KubusColorRoles.of(context).active,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: isLarge ? 32 : 24),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1600),
+                    constraints: const BoxConstraints(maxWidth: 1200),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -508,7 +508,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               title: l10n.profileMenuSavedItemsTitle,
               subtitle: subtitle,
               icon: Icons.bookmarks_outlined,
-              iconColor: themeProvider.accentColor,
+              iconColor: KubusColorRoles.of(context).foregroundMuted,
               action: TextButton.icon(
                 onPressed: () => _navigateToSavedItems(
                   showClearAll: savedProvider.totalSavedCount > 0,
@@ -720,66 +720,48 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg),
+                  top: Radius.circular(KubusRadius.surface),
                 ),
                 child: Stack(
                   children: [
                     Container(
                       height: hasCoverImage ? 228 : 156,
                       width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: !hasCoverImage
-                            ? LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.25),
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.08),
-                                ],
-                              )
-                            : null,
-                      ),
+                      // Flat cover band without an image (no accent gradient).
+                      color: hasCoverImage
+                          ? null
+                          : KubusColorRoles.of(context).surfaceRaised,
                       child: hasCoverImage
                           ? Image.network(
                               coverImageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.25),
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.08),
-                                      ],
-                                    ),
-                                  ),
+                                return ColoredBox(
+                                  color:
+                                      KubusColorRoles.of(context).surfaceRaised,
                                 );
                               },
                             )
                           : null,
                     ),
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black
-                                  .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.26),
-                            ],
+                    // Media scrim only over a real image (keeps the edit
+                    // control legible).
+                    if (hasCoverImage)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.18),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
                     Positioned(
                       top: KubusSpacing.md,
                       right: KubusSpacing.md,
@@ -804,23 +786,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 bottom: -avatarOverlap,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: scheme.surface.withValues(alpha: 0.94),
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(
                       avatarRingShapeRadius,
                     ),
                     border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.24),
-                      width: KubusSizes.hairline + 0.2,
+                      color: KubusColorRoles.of(context).rule,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(avatarRingPadding),
