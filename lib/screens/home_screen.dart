@@ -77,6 +77,7 @@ import '../widgets/support/support_section.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../widgets/common/kubus_flat_panel.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -1097,9 +1098,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final l10n = AppLocalizations.of(context)!;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
-        final glassTint =
-            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
         const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
@@ -1156,13 +1154,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LiquidGlassPanel(
+                  KubusFlatPanel(
                     padding:
                         const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-                    margin: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    blurSigma: KubusGlassEffects.blurSigmaLight,
-                    backgroundColor: glassTint,
                     child: Row(
                       children: [
                         Icon(
@@ -1255,6 +1249,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  /// Flat quick-action tile: neutral icon, title, 44 px+ target. The
+  /// per-feature colour and the personal visit-count badge are no longer
+  /// painted; [color] and [visitCount] are kept for the call sites.
   Widget _buildActionCard(
     String title,
     IconData icon,
@@ -1263,188 +1260,66 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required VoidCallback onTap,
     int visitCount = 0,
   }) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg);
+    final roles = KubusColorRoles.of(context);
     final cardWidth = isSmallScreen ? 176.0 : 192.0;
-    final cardHeight = isSmallScreen ? 116.0 : 96.0;
-    final iconSize = isSmallScreen ? 18.0 : 20.0;
-    final iconBoxSize = isSmallScreen ? 44.0 : 40.0;
+    final cardHeight = isSmallScreen ? 104.0 : 72.0;
+    final iconWidget = ExcludeSemantics(
+      child: Icon(icon, color: roles.foregroundMuted, size: 22),
+    );
+    final titleWidget = Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: isSmallScreen ? TextAlign.center : TextAlign.start,
+      style: KubusTextStyles.detailCardTitle.copyWith(
+        color: roles.foreground,
+        fontWeight: FontWeight.w600,
+      ),
+    );
 
     return SizedBox(
       width: cardWidth,
       height: cardHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: color.withValues(alpha: 0.22),
-            width: 1,
+      child: Semantics(
+        button: true,
+        child: Material(
+          color: roles.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
+            side: BorderSide(color: roles.rule),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            focusColor: roles.focus.withValues(alpha: 0.12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
               ),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: LiquidGlassCard(
-          onTap: onTap,
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: style.blurSigma,
-          showBorder: false,
-          backgroundColor: style.tintColor,
-          fallbackMinOpacity: style.fallbackMinOpacity,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          color.withValues(alpha: 0.12),
-                          Colors.transparent,
+              child: Center(
+                child: isSmallScreen
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          iconWidget,
+                          const SizedBox(height: KubusSpacing.sm),
+                          titleWidget,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          iconWidget,
+                          const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
+                          Flexible(child: titleWidget),
                         ],
                       ),
-                    ),
-                  ),
-                ),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
-                  vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
-                ),
-                child: Center(
-                  child: isSmallScreen
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildQuickActionIconBadge(
-                              color: color,
-                              icon: icon,
-                              iconBoxSize: iconBoxSize,
-                              iconSize: iconSize,
-                              visitCount: visitCount,
-                            ),
-                            const SizedBox(height: KubusSpacing.sm),
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildQuickActionIconBadge(
-                              color: color,
-                              icon: icon,
-                              iconBoxSize: iconBoxSize,
-                              iconSize: iconSize,
-                              visitCount: visitCount,
-                            ),
-                            const SizedBox(width: KubusSpacing.md),
-                            Flexible(
-                              child: Text(
-                                title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: KubusTextStyles.sectionTitle.copyWith(
-                                  fontSize: KubusHeaderMetrics.sectionTitle,
-                                  color: scheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickActionIconBadge({
-    required Color color,
-    required IconData icon,
-    required double iconBoxSize,
-    required double iconSize,
-    required int visitCount,
-  }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: iconBoxSize,
-          height: iconBoxSize,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.26),
-                color.withValues(alpha: 0.10),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: color.withValues(alpha: 0.25),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: iconSize,
-          ),
-        ),
-        if (visitCount > 0)
-          Positioned(
-            top: -4,
-            right: -4,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                visitCount.toString(),
-                style: KubusTextStyles.badgeCount.copyWith(
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -1702,61 +1577,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             showIconOnly: showIconOnly,
             isVerticalLayout: isVerticalLayout,
           ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: statColor.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
-                  ),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+          child: KubusStatCard(
+            title: title,
+            value: value,
+            icon: icon,
+            layout: KubusStatCardLayout.centered,
+            showIcon: shouldShowIcon,
+            centeredWatermarkAlignment: Alignment.center,
+            centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
+            centeredWatermarkVerticalBias: 0,
+            centeredWatermarkHovered: false,
+            accent: statColor,
+            tintBase: scheme.surface,
+            onTap: action == null
+                ? null
+                : () => _handleHomeActivityCardTap(action, icon),
+            minHeight: _statCardHeight(
+              showIconOnly: showIconOnly,
+              isVerticalLayout: isVerticalLayout,
             ),
-            child: KubusStatCard(
-              title: title,
-              value: value,
-              icon: icon,
-              layout: KubusStatCardLayout.centered,
-              showIcon: shouldShowIcon,
-              centeredWatermarkAlignment: Alignment.center,
-              centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
-              centeredWatermarkVerticalBias: 0,
-              centeredWatermarkHovered: false,
-              accent: statColor,
-              tintBase: scheme.surface,
-              onTap: action == null
-                  ? null
-                  : () => _handleHomeActivityCardTap(action, icon),
-              minHeight: _statCardHeight(
-                showIconOnly: showIconOnly,
-                isVerticalLayout: isVerticalLayout,
-              ),
-              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
-              titleMaxLines: 2,
-              iconBoxSize: showIconOnly
-                  ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
-                  : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-              iconSize: showIconOnly
-                  ? KubusSizes.sidebarActionIcon - KubusSpacing.xxs
-                  : KubusSizes.sidebarActionIcon,
-              titleStyle: KubusTextStyles.compactBadge.copyWith(
-                fontSize: isSmallScreen
-                    ? KubusChromeMetrics.navBadgeLabel - 1
-                    : KubusChromeMetrics.navBadgeLabel,
-                color: scheme.onSurface.withValues(alpha: 0.68),
-              ),
-              valueStyle: KubusTextStyles.badgeCount.copyWith(
-                fontSize: isVerticalLayout
-                    ? (isSmallScreen
-                        ? KubusChromeMetrics.navBadgeLabel
-                        : KubusChromeMetrics.navMetaLabel)
-                    : (isSmallScreen
-                        ? KubusChromeMetrics.navMetaLabel
-                        : KubusChromeMetrics.navLabel),
-                color: scheme.onSurface,
-              ),
+            padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+            titleMaxLines: 2,
+            iconBoxSize: showIconOnly
+                ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
+                : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
+            iconSize: showIconOnly
+                ? KubusSizes.sidebarActionIcon - KubusSpacing.xxs
+                : KubusSizes.sidebarActionIcon,
+            titleStyle: KubusTextStyles.compactBadge.copyWith(
+              fontSize: isSmallScreen
+                  ? KubusChromeMetrics.navBadgeLabel - 1
+                  : KubusChromeMetrics.navBadgeLabel,
+              color: scheme.onSurface.withValues(alpha: 0.68),
+            ),
+            valueStyle: KubusTextStyles.badgeCount.copyWith(
+              fontSize: isVerticalLayout
+                  ? (isSmallScreen
+                      ? KubusChromeMetrics.navBadgeLabel
+                      : KubusChromeMetrics.navMetaLabel)
+                  : (isSmallScreen
+                      ? KubusChromeMetrics.navMetaLabel
+                      : KubusChromeMetrics.navLabel),
+              color: scheme.onSurface,
             ),
           ),
         );
