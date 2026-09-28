@@ -430,10 +430,17 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                           : 1;
                       final progress = currentProgressFor(achievement);
                       final unlocked = isCompleted(achievement);
+                      // KUB8 is named only when the BACKEND definition
+                      // carries a reward; the local catalogue's configured
+                      // numbers are never shown as earned KUB8.
+                      final backendReward = taskProvider
+                              .backendDefinitionFor(achievement.id)
+                              ?.kub8Reward ??
+                          0;
                       final progressLabel = !unlocked
                           ? '$progress/$required'
-                          : achievement.tokenReward > 0
-                              ? '+${achievement.tokenReward} KUB8'
+                          : backendReward > 0
+                              ? '+${backendReward.round()} KUB8'
                               : l10n.achievementUnlockedLabel;
                       final roomyCard = cardWidth >= 280;
                       final compactCard = cardWidth < 220;
