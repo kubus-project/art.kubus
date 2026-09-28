@@ -30106,6 +30106,30 @@ abstract class AppLocalizations {
   /// **'{source}: {amount} {currency}. {state}'**
   String marketplaceListingValueSemantic(
       String source, String amount, String currency, String state);
+
+  /// No description provided for @promotionBuilderSwitchNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch your wallet to the {cluster} network required by this quote, then try again.'**
+  String promotionBuilderSwitchNetwork(String cluster);
+
+  /// No description provided for @promotionStatusPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get promotionStatusPendingReview;
+
+  /// No description provided for @promotionStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get promotionStatusApproved;
+
+  /// No description provided for @promotionStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get promotionStatusActive;
 }
 
 class _AppLocalizationsDelegate

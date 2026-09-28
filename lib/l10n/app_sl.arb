@@ -7074,5 +7074,16 @@
         "type": "String"
       }
     }
-  }
+  },
+  "promotionBuilderSwitchNetwork": "Denarnico preklopite na omrežje {cluster}, ki ga zahteva ta ponudba, in poskusite znova.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Čaka na pregled",
+  "promotionStatusApproved": "Odobreno",
+  "promotionStatusActive": "Aktivno"
 }

@@ -18,6 +18,10 @@ import 'duration_slider.dart';
 import 'price_summary_card.dart';
 import 'slot_availability_grid.dart';
 import 'tier_selection_card.dart';
+import '../../utils/token_amount_display.dart';
+import '../common/kubus_flat_panel.dart';
+import '../dashboard/kubus_dashboard_chrome.dart';
+import '../states/kubus_product_states.dart';
 
 /// Shows the dynamic promotion builder sheet
 Future<void> showPromotionBuilderSheet({
@@ -184,7 +188,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
       );
     } catch (e) {
       if (mounted && generation == _quoteRequestGeneration) {
-        setState(() => _error = e.toString());
+        setState(() => _error = _describeSubmitError(e));
       }
     } finally {
       if (mounted && generation == _quoteRequestGeneration) {
@@ -316,8 +320,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     if (payment == null ||
         walletProvider.currentSolanaNetwork.trim().toLowerCase() !=
             payment.cluster.trim().toLowerCase()) {
-      setState(() =>
-          _error = 'Switch the wallet to the network required by this quote.');
+      setState(() => _error = AppLocalizations.of(context)!
+          .promotionBuilderSwitchNetwork(payment?.cluster ?? ''));
       return;
     }
 
@@ -432,7 +436,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     if (text.contains('WALLET_SESSION_MISMATCH')) {
       return l10n.promotionBuilderWalletSessionMismatch;
     }
-    return text;
+    // Anything else is classified; raw backend text is never shown.
+    return KubusFailureCopy.of(l10n, classifyKubusFailure(error)).description;
   }
 
   Future<void> _retryPendingCheckout() async {
@@ -515,6 +520,11 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
         // Balance gating is UX only: the backend still verifies the real on-chain transfer.
         final hasEnoughKub8 =
             kub8RequiredRaw == null ? false : kub8BalanceRaw >= kub8RequiredRaw;
+        // What the wallet is shown to hold comes from the same raw units the
+        // eligibility check used, truncated, so a shortfall can never read
+        // as enough (9.996 held against 10 required is shown as 9.996).
+        final kub8AvailableText =
+            formatTokenRawFloor(kub8BalanceRaw, kub8Decimals);
         final canSignKub8 = walletProvider.canTransact;
 
         final hasPendingFiatCheckout =
@@ -544,8 +554,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
           child: ListView(
             key: const Key('promotionBuilderListView'),
             children: [
-              LiquidGlassCard(
-                padding: const EdgeInsets.all(KubusSpacing.md),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -675,6 +685,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   quote: quote,
                   selectedPaymentMethod: _paymentMethod,
                   kub8Balance: kub8Balance,
+                  hasEnoughKub8: kub8RequiredRaw == null ? null : hasEnoughKub8,
+                  kub8AvailableText: kub8AvailableText,
                   onPaymentMethodChanged: (method) {
                     setState(() {
                       _paymentMethod = method;
@@ -698,23 +710,10 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
               // Error message
               if (_error != null) ...[
-                FrostedContainer(
-                  backgroundColor:
-                      colors.errorContainer.withValues(alpha: 0.26),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: colors.error, size: 20),
-                      const SizedBox(width: KubusSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          _error!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.error,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _PromotionNotice(
+                  icon: Icons.error_outline,
+                  tone: KubusStatusTone.negative,
+                  message: _error!,
                 ),
                 const SizedBox(height: KubusSpacing.md),
               ],
@@ -727,7 +726,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                   canSign: canSignKub8,
                   hasEnough: hasEnoughKub8,
                   requiredAmount: quote.kub8?.amount ?? '0',
-                  availableAmount: kub8Balance,
+                  availableAmount: kub8AvailableText,
                   pendingVerification: hasPendingKub8Verification,
                   stage: promotionProvider.kub8Stage,
                 ),
@@ -735,8 +734,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
               ],
 
               // Submit button
-              LiquidGlassCard(
-                padding: const EdgeInsets.all(KubusSpacing.sm),
+              Padding(
+                padding: EdgeInsets.zero,
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -769,7 +768,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                                   : l10n.promotionBuilderSubmitButton)),
                     ),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      minimumSize: const Size.fromHeight(48),
                     ),
                   ),
                 ),
@@ -907,15 +906,13 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final roles = KubusColorRoles.of(context);
     final request = widget.request;
     final status = request.reviewStatus.toLowerCase();
-    final statusColor = _statusColor(status, colors, roles);
     final canCancel = status == 'pending_review' ||
         status == 'pending' ||
         status == 'approved';
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       child: Row(
@@ -926,21 +923,10 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: Text(
-                        status.toUpperCase(),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Flexible(
+                      child: KubusStatusText(
+                        label: _statusLabel(status),
+                        tone: _statusTone(status),
                       ),
                     ),
                   ],
@@ -976,22 +962,31 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
     );
   }
 
-  Color _statusColor(String status, ColorScheme colors, KubusColorRoles roles) {
+  String _statusLabel(String status) {
+    final l10n = AppLocalizations.of(context)!;
     switch (status) {
       case 'pending_review':
       case 'pending':
-        return roles.warningAction;
+        return l10n.promotionStatusPendingReview;
       case 'approved':
-        return roles.statTeal;
+        return l10n.promotionStatusApproved;
       case 'active':
-        return roles.positiveAction;
-      case 'rejected':
-        return colors.error;
-      case 'completed':
-      case 'cancelled':
-        return colors.outline;
+        return l10n.promotionStatusActive;
       default:
-        return colors.outline;
+        return status;
+    }
+  }
+
+  KubusStatusTone _statusTone(String status) {
+    switch (status) {
+      case 'pending_review':
+      case 'pending':
+        return KubusStatusTone.warning;
+      case 'approved':
+      case 'active':
+        return KubusStatusTone.positive;
+      default:
+        return KubusStatusTone.neutral;
     }
   }
 
@@ -1019,61 +1014,95 @@ class _Kub8PaymentStatus extends StatelessWidget {
   final bool canSign;
   final bool hasEnough;
   final String requiredAmount;
-  final double availableAmount;
+  final String availableAmount;
   final bool pendingVerification;
   final Kub8PaymentStage stage;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     String message;
     IconData icon;
-    Color tint;
+    KubusStatusTone tone;
 
     if (!supported) {
       message = l10n.promotionBuilderKub8Unavailable;
       icon = Icons.block_outlined;
-      tint = colors.error;
+      tone = KubusStatusTone.negative;
     } else if (!canSign) {
       message = l10n.promotionBuilderConnectWalletForKub8;
       icon = Icons.account_balance_wallet_outlined;
-      tint = roles.warningAction;
+      tone = KubusStatusTone.warning;
     } else if (pendingVerification || stage == Kub8PaymentStage.submitted) {
       message = l10n.promotionBuilderPaymentConfirming;
       icon = Icons.hourglass_bottom;
-      tint = roles.warningAction;
+      tone = KubusStatusTone.warning;
     } else if (!hasEnough) {
       message = '${l10n.promotionBuilderKub8Required}: $requiredAmount KUB8 · '
-          '${l10n.promotionBuilderKub8Available}: '
-          '${availableAmount.toStringAsFixed(2)} KUB8';
+          '${l10n.promotionBuilderKub8Available}: $availableAmount KUB8';
       icon = Icons.warning_amber;
-      tint = colors.error;
+      tone = KubusStatusTone.negative;
     } else {
       message = '${l10n.promotionBuilderKub8Required}: $requiredAmount KUB8 · '
-          '${l10n.promotionBuilderKub8Available}: '
-          '${availableAmount.toStringAsFixed(2)} KUB8';
+          '${l10n.promotionBuilderKub8Available}: $availableAmount KUB8';
       icon = Icons.check_circle_outline;
-      tint = roles.positiveAction;
+      tone = KubusStatusTone.positive;
     }
 
-    return FrostedContainer(
+    return _PromotionNotice(
       key: const Key('promotionBuilderKub8Status'),
-      backgroundColor: tint.withValues(alpha: 0.16),
-      child: Row(
-        children: [
-          Icon(icon, color: tint, size: 20),
-          const SizedBox(width: KubusSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodySmall?.copyWith(color: tint),
+      icon: icon,
+      tone: tone,
+      message: message,
+    );
+  }
+}
+
+/// Flat notice with a status-toned leading rule (never colour alone).
+class _PromotionNotice extends StatelessWidget {
+  const _PromotionNotice({
+    super.key,
+    required this.icon,
+    required this.tone,
+    required this.message,
+  });
+
+  final IconData icon;
+  final KubusStatusTone tone;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final color = kubusStatusToneColor(roles, tone);
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+        decoration: BoxDecoration(
+          color: roles.surface,
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          border: Border.all(color: roles.rule),
+        ),
+        foregroundDecoration: BoxDecoration(
+          border: Border(left: BorderSide(color: color, width: 3)),
+        ),
+        child: Row(
+          children: [
+            ExcludeSemantics(child: Icon(icon, color: color, size: 20)),
+            const SizedBox(width: KubusSpacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: KubusTextStyles.detailBody.copyWith(
+                  color: roles.foreground,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1101,7 +1130,7 @@ class _StartDatePicker extends StatelessWidget {
         startDate.month == now.month &&
         startDate.day == now.day;
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       padding: const EdgeInsets.all(KubusSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1136,14 +1165,13 @@ class _StartDatePicker extends StatelessWidget {
                       onChanged(picked);
                     }
                   },
-                  child: FrostedContainer(
+                  child: KubusFlatSelectable(
+                    onTap: null,
+                    selected: !isToday,
                     padding: const EdgeInsets.symmetric(
                       horizontal: KubusSpacing.md,
                       vertical: KubusSpacing.sm + KubusSpacing.xs,
                     ),
-                    backgroundColor: !isToday
-                        ? roles.statBlue.withValues(alpha: 0.16)
-                        : colors.surfaceContainerHighest.withValues(alpha: 0.6),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -1151,7 +1179,7 @@ class _StartDatePicker extends StatelessWidget {
                           Icons.calendar_today,
                           size: 18,
                           color: !isToday
-                              ? roles.statBlue
+                              ? roles.foreground
                               : colors.onSurfaceVariant,
                         ),
                         const SizedBox(width: KubusSpacing.sm),
@@ -1159,7 +1187,7 @@ class _StartDatePicker extends StatelessWidget {
                           _formatDate(context, startDate),
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: !isToday
-                                ? roles.statBlue
+                                ? roles.foreground
                                 : colors.onSurfaceVariant,
                             fontWeight:
                                 !isToday ? FontWeight.w600 : FontWeight.normal,
@@ -1199,20 +1227,18 @@ class _QuickDateChip extends StatelessWidget {
     final colors = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
 
-    return FrostedContainer(
+    return KubusFlatSelectable(
       onTap: onTap,
+      selected: isSelected,
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.sm + KubusSpacing.xs,
       ),
-      backgroundColor: isSelected
-          ? roles.statBlue.withValues(alpha: 0.16)
-          : colors.surfaceContainerHighest.withValues(alpha: 0.6),
       child: Text(
         label,
         textAlign: TextAlign.center,
         style: theme.textTheme.labelLarge?.copyWith(
-          color: isSelected ? roles.statBlue : colors.onSurfaceVariant,
+          color: isSelected ? roles.foreground : colors.onSurfaceVariant,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),

@@ -17323,4 +17323,18 @@ class AppLocalizationsEn extends AppLocalizations {
       String source, String amount, String currency, String state) {
     return '$source: $amount $currency. $state';
   }
+
+  @override
+  String promotionBuilderSwitchNetwork(String cluster) {
+    return 'Switch your wallet to the $cluster network required by this quote, then try again.';
+  }
+
+  @override
+  String get promotionStatusPendingReview => 'Pending review';
+
+  @override
+  String get promotionStatusApproved => 'Approved';
+
+  @override
+  String get promotionStatusActive => 'Active';
 }

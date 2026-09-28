@@ -7101,5 +7101,16 @@
         "type": "String"
       }
     }
-  }
+  },
+  "promotionBuilderSwitchNetwork": "Switch your wallet to the {cluster} network required by this quote, then try again.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Pending review",
+  "promotionStatusApproved": "Approved",
+  "promotionStatusActive": "Active"
 }

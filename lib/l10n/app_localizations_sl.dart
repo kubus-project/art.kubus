@@ -17504,4 +17504,18 @@ class AppLocalizationsSl extends AppLocalizations {
       String source, String amount, String currency, String state) {
     return '$source: $amount $currency. $state';
   }
+
+  @override
+  String promotionBuilderSwitchNetwork(String cluster) {
+    return 'Denarnico preklopite na omrežje $cluster, ki ga zahteva ta ponudba, in poskusite znova.';
+  }
+
+  @override
+  String get promotionStatusPendingReview => 'Čaka na pregled';
+
+  @override
+  String get promotionStatusApproved => 'Odobreno';
+
+  @override
+  String get promotionStatusActive => 'Aktivno';
 }
