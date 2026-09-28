@@ -30130,6 +30130,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Active'**
   String get promotionStatusActive;
+
+  /// No description provided for @daoProposalStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get daoProposalStatusDraft;
+
+  /// No description provided for @daoProposalStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get daoProposalStatusActive;
+
+  /// No description provided for @daoProposalStatusVoting.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting open'**
+  String get daoProposalStatusVoting;
+
+  /// No description provided for @daoProposalStatusPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed'**
+  String get daoProposalStatusPassed;
+
+  /// No description provided for @daoProposalStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not passed'**
+  String get daoProposalStatusFailed;
+
+  /// No description provided for @daoProposalStatusExecuted.
+  ///
+  /// In en, this message translates to:
+  /// **'Executed'**
+  String get daoProposalStatusExecuted;
+
+  /// No description provided for @daoVotingEndsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ends {date}'**
+  String daoVotingEndsLabel(String date);
+
+  /// No description provided for @daoVotingEndedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ended {date}'**
+  String daoVotingEndedLabel(String date);
+
+  /// No description provided for @daoQuorumRequirementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quorum required: {percent}% of voting power'**
+  String daoQuorumRequirementLabel(String percent);
+
+  /// No description provided for @daoResultsNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get daoResultsNotion;
+
+  /// No description provided for @daoNotEligibleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No voting power in this wallet'**
+  String get daoNotEligibleTitle;
+
+  /// No description provided for @daoNotEligibleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.'**
+  String get daoNotEligibleBody;
+
+  /// No description provided for @daoTreasuryOnChainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain treasury balance'**
+  String get daoTreasuryOnChainLabel;
+
+  /// No description provided for @daoTreasuryLedgerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded treasury movements'**
+  String get daoTreasuryLedgerLabel;
 }
 
 class _AppLocalizationsDelegate

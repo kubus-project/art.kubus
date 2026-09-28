@@ -7085,5 +7085,40 @@
   },
   "promotionStatusPendingReview": "Čaka na pregled",
   "promotionStatusApproved": "Odobreno",
-  "promotionStatusActive": "Aktivno"
+  "promotionStatusActive": "Aktivno",
+  "daoProposalStatusDraft": "Osnutek",
+  "daoProposalStatusActive": "Aktivno",
+  "daoProposalStatusVoting": "Glasovanje odprto",
+  "daoProposalStatusPassed": "Sprejeto",
+  "daoProposalStatusFailed": "Ni sprejeto",
+  "daoProposalStatusExecuted": "Izvedeno",
+  "daoVotingEndsLabel": "Glasovanje se konča {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Glasovanje se je končalo {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Potrebna sklepčnost: {percent} % glasovalne moči",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Rezultati",
+  "daoNotEligibleTitle": "Ta denarnica nima glasovalne moči",
+  "daoNotEligibleBody": "Glasovi so uteženi s KUB8 v vaši denarnici v trenutku glasovanja. Denarnica brez KUB8 ne more glasovati.",
+  "daoTreasuryOnChainLabel": "Stanje zakladnice na verigi",
+  "daoTreasuryLedgerLabel": "Zabeleženi premiki zakladnice"
 }

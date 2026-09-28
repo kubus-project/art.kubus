@@ -17518,4 +17518,53 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get promotionStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusDraft => 'Osnutek';
+
+  @override
+  String get daoProposalStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusVoting => 'Glasovanje odprto';
+
+  @override
+  String get daoProposalStatusPassed => 'Sprejeto';
+
+  @override
+  String get daoProposalStatusFailed => 'Ni sprejeto';
+
+  @override
+  String get daoProposalStatusExecuted => 'Izvedeno';
+
+  @override
+  String daoVotingEndsLabel(String date) {
+    return 'Glasovanje se konča $date';
+  }
+
+  @override
+  String daoVotingEndedLabel(String date) {
+    return 'Glasovanje se je končalo $date';
+  }
+
+  @override
+  String daoQuorumRequirementLabel(String percent) {
+    return 'Potrebna sklepčnost: $percent % glasovalne moči';
+  }
+
+  @override
+  String get daoResultsNotion => 'Rezultati';
+
+  @override
+  String get daoNotEligibleTitle => 'Ta denarnica nima glasovalne moči';
+
+  @override
+  String get daoNotEligibleBody =>
+      'Glasovi so uteženi s KUB8 v vaši denarnici v trenutku glasovanja. Denarnica brez KUB8 ne more glasovati.';
+
+  @override
+  String get daoTreasuryOnChainLabel => 'Stanje zakladnice na verigi';
+
+  @override
+  String get daoTreasuryLedgerLabel => 'Zabeleženi premiki zakladnice';
 }

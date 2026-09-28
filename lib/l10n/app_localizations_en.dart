@@ -17337,4 +17337,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get promotionStatusActive => 'Active';
+
+  @override
+  String get daoProposalStatusDraft => 'Draft';
+
+  @override
+  String get daoProposalStatusActive => 'Active';
+
+  @override
+  String get daoProposalStatusVoting => 'Voting open';
+
+  @override
+  String get daoProposalStatusPassed => 'Passed';
+
+  @override
+  String get daoProposalStatusFailed => 'Not passed';
+
+  @override
+  String get daoProposalStatusExecuted => 'Executed';
+
+  @override
+  String daoVotingEndsLabel(String date) {
+    return 'Voting ends $date';
+  }
+
+  @override
+  String daoVotingEndedLabel(String date) {
+    return 'Voting ended $date';
+  }
+
+  @override
+  String daoQuorumRequirementLabel(String percent) {
+    return 'Quorum required: $percent% of voting power';
+  }
+
+  @override
+  String get daoResultsNotion => 'Results';
+
+  @override
+  String get daoNotEligibleTitle => 'No voting power in this wallet';
+
+  @override
+  String get daoNotEligibleBody =>
+      'Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.';
+
+  @override
+  String get daoTreasuryOnChainLabel => 'On-chain treasury balance';
+
+  @override
+  String get daoTreasuryLedgerLabel => 'Recorded treasury movements';
 }

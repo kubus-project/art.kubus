@@ -7112,5 +7112,40 @@
   },
   "promotionStatusPendingReview": "Pending review",
   "promotionStatusApproved": "Approved",
-  "promotionStatusActive": "Active"
+  "promotionStatusActive": "Active",
+  "daoProposalStatusDraft": "Draft",
+  "daoProposalStatusActive": "Active",
+  "daoProposalStatusVoting": "Voting open",
+  "daoProposalStatusPassed": "Passed",
+  "daoProposalStatusFailed": "Not passed",
+  "daoProposalStatusExecuted": "Executed",
+  "daoVotingEndsLabel": "Voting ends {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Voting ended {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Quorum required: {percent}% of voting power",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Results",
+  "daoNotEligibleTitle": "No voting power in this wallet",
+  "daoNotEligibleBody": "Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.",
+  "daoTreasuryOnChainLabel": "On-chain treasury balance",
+  "daoTreasuryLedgerLabel": "Recorded treasury movements"
 }
