@@ -30099,6 +30099,13 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Technical'**
   String get walletTechnicalTitle;
+
+  /// No description provided for @marketplaceListingValueSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{source}: {amount} {currency}. {state}'**
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state);
 }
 
 class _AppLocalizationsDelegate

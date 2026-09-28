@@ -17498,4 +17498,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletTechnicalTitle => 'Tehnično';
+
+  @override
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state) {
+    return '$source: $amount $currency. $state';
+  }
 }

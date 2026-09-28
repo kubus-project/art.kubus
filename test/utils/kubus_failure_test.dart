@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
-import 'package:art_kubus/utils/kubus_failure.dart';
 import 'package:art_kubus/widgets/states/kubus_product_states.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -7057,5 +7057,22 @@
     }
   },
   "walletActionsTitle": "Dejanja",
-  "walletTechnicalTitle": "Tehnično"
+  "walletTechnicalTitle": "Tehnično",
+  "marketplaceListingValueSemantic": "{source}: {amount} {currency}. {state}",
+  "@marketplaceListingValueSemantic": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }
