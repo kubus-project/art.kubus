@@ -621,36 +621,39 @@ class _DesktopInstitutionHubScreenState
     }
 
     final muted = KubusColorRoles.of(context).foregroundMuted;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.userProfileAchievementCategoryEvents,
-            value: display('eventsHosted'),
-            icon: Icons.event_outlined,
-            accent: muted,
+    // One height per row, even when a label wraps to two lines.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.userProfileAchievementCategoryEvents,
+              value: display('eventsHosted'),
+              icon: Icons.event_outlined,
+              accent: muted,
+            ),
           ),
-        ),
-        const SizedBox(width: KubusSpacing.sm),
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.institutionStatProgrammeViews,
-            value: display('visitorsReceived'),
-            icon: Icons.visibility_outlined,
-            accent: muted,
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.institutionStatProgrammeViews,
+              value: display('visitorsReceived'),
+              icon: Icons.visibility_outlined,
+              accent: muted,
+            ),
           ),
-        ),
-        const SizedBox(width: KubusSpacing.sm),
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.desktopArtistStudioStatArtworks,
-            value: display('exhibitionArtworks'),
-            icon: Icons.collections_outlined,
-            accent: muted,
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.desktopArtistStudioStatArtworks,
+              value: display('exhibitionArtworks'),
+              icon: Icons.collections_outlined,
+              accent: muted,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

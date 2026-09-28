@@ -547,9 +547,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       description: statusDescription,
       tone: tone,
       isLoading: _reviewLoading,
-      detail: (!isApproved && !isPending && wallet.isNotEmpty)
-          ? l10n.desktopArtistStudioApplyForVerificationButton
-          : null,
+      // No detail line: the real "apply" action lives in the main pane;
+      // repeating its button label here read as a dead button.
     );
   }
 
@@ -586,36 +585,39 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       return (counters[key] ?? 0).toString();
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.desktopArtistStudioStatArtworks,
-            value: display('artworks'),
-            icon: Icons.collections_outlined,
-            accent: KubusColorRoles.of(context).foregroundMuted,
+    // One height per row, even when a label wraps to two lines.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.desktopArtistStudioStatArtworks,
+              value: display('artworks'),
+              icon: Icons.collections_outlined,
+              accent: KubusColorRoles.of(context).foregroundMuted,
+            ),
           ),
-        ),
-        const SizedBox(width: KubusSpacing.sm),
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.desktopArtistStudioStatViews,
-            value: display('viewsReceived'),
-            icon: Icons.visibility_outlined,
-            accent: KubusColorRoles.of(context).foregroundMuted,
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.desktopArtistStudioStatViews,
+              value: display('viewsReceived'),
+              icon: Icons.visibility_outlined,
+              accent: KubusColorRoles.of(context).foregroundMuted,
+            ),
           ),
-        ),
-        const SizedBox(width: KubusSpacing.sm),
-        Expanded(
-          child: KubusSidebarStatCard(
-            title: l10n.desktopArtistStudioStatLikes,
-            value: display('likesReceived'),
-            icon: Icons.favorite_outline,
-            accent: KubusColorRoles.of(context).foregroundMuted,
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: KubusSidebarStatCard(
+              title: l10n.desktopArtistStudioStatLikes,
+              value: display('likesReceived'),
+              icon: Icons.favorite_outline,
+              accent: KubusColorRoles.of(context).foregroundMuted,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

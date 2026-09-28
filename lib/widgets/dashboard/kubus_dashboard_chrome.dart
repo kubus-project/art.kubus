@@ -69,40 +69,45 @@ class KubusDashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    return Padding(
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KubusNotionLabel(notion),
-          const SizedBox(height: KubusSpacing.xs),
-          Semantics(
-            header: true,
-            child: Text(
-              title,
-              style: KubusTextStyles.entityTitle.copyWith(
-                color: roles.foreground,
-              ),
-            ),
-          ),
-          if (lede != null && lede!.trim().isNotEmpty) ...[
+    // Full width so a centring parent column never floats the header away
+    // from the tabs and content below it.
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            KubusNotionLabel(notion),
             const SizedBox(height: KubusSpacing.xs),
-            Text(
-              lede!,
-              style: KubusTextStyles.detailBody.copyWith(
-                color: roles.foregroundMuted,
+            Semantics(
+              header: true,
+              child: Text(
+                title,
+                style: KubusTextStyles.entityTitle.copyWith(
+                  color: roles.foreground,
+                ),
               ),
             ),
+            if (lede != null && lede!.trim().isNotEmpty) ...[
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
+                lede!,
+                style: KubusTextStyles.detailBody.copyWith(
+                  color: roles.foregroundMuted,
+                ),
+              ),
+            ],
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              Wrap(
+                spacing: KubusSpacing.sm,
+                runSpacing: KubusSpacing.xs,
+                children: actions,
+              ),
+            ],
           ],
-          if (actions.isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            Wrap(
-              spacing: KubusSpacing.sm,
-              runSpacing: KubusSpacing.xs,
-              children: actions,
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
