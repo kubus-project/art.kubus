@@ -17283,4 +17283,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get institutionStatProgrammeViews => 'Programme page views';
+
+  @override
+  String get walletNetworkLabel => 'Network';
+
+  @override
+  String get walletAddressHeading => 'Address';
+
+  @override
+  String walletAddressSemantic(String address) {
+    return 'Wallet address $address';
+  }
+
+  @override
+  String get walletCopyAddressTooltip => 'Copy address';
+
+  @override
+  String get walletReadOnlyStatus => 'Read-only session';
+
+  @override
+  String get walletKub8BalanceLabel => 'KUB8 balance';
+
+  @override
+  String get walletSolBalanceLabel => 'SOL balance';
+
+  @override
+  String walletBalanceAmountSemantic(String label, String amount, String unit) {
+    return '$label: $amount $unit';
+  }
+
+  @override
+  String get walletActionsTitle => 'Actions';
+
+  @override
+  String get walletTechnicalTitle => 'Technical';
 }

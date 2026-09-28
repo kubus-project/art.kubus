@@ -73,7 +73,8 @@ Future<void> _pumpDashboard(
   SharedPreferences.setMockInitialValues(<String, Object>{
     '${onboardingKey}_onboarding_completed': true,
   });
-  await pumpProductSurface(
+  final priorOnError = FlutterError.onError;
+  final renderErrors = await pumpProductSurface(
     tester,
     size: const Size(1440, 900),
     signedInProfile: owner,
@@ -85,6 +86,10 @@ Future<void> _pumpDashboard(
     child: child,
   );
   await tester.pump(const Duration(milliseconds: 200));
+  // Restore before expect(): the harness collects errors until teardown,
+  // and a failing expect under its handler hangs the binding.
+  FlutterError.onError = priorOnError;
+  expect(renderErrors, isEmpty);
 }
 
 void main() {

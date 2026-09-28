@@ -17464,4 +17464,38 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionStatProgrammeViews => 'Ogledi strani programa';
+
+  @override
+  String get walletNetworkLabel => 'Omrežje';
+
+  @override
+  String get walletAddressHeading => 'Naslov';
+
+  @override
+  String walletAddressSemantic(String address) {
+    return 'Naslov denarnice $address';
+  }
+
+  @override
+  String get walletCopyAddressTooltip => 'Kopiraj naslov';
+
+  @override
+  String get walletReadOnlyStatus => 'Seja samo za branje';
+
+  @override
+  String get walletKub8BalanceLabel => 'Stanje KUB8';
+
+  @override
+  String get walletSolBalanceLabel => 'Stanje SOL';
+
+  @override
+  String walletBalanceAmountSemantic(String label, String amount, String unit) {
+    return '$label: $amount $unit';
+  }
+
+  @override
+  String get walletActionsTitle => 'Dejanja';
+
+  @override
+  String get walletTechnicalTitle => 'Tehnično';
 }

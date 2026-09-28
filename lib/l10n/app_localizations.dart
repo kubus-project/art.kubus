@@ -30039,6 +30039,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Programme page views'**
   String get institutionStatProgrammeViews;
+
+  /// No description provided for @walletNetworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get walletNetworkLabel;
+
+  /// No description provided for @walletAddressHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get walletAddressHeading;
+
+  /// No description provided for @walletAddressSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet address {address}'**
+  String walletAddressSemantic(String address);
+
+  /// No description provided for @walletCopyAddressTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get walletCopyAddressTooltip;
+
+  /// No description provided for @walletReadOnlyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only session'**
+  String get walletReadOnlyStatus;
+
+  /// No description provided for @walletKub8BalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 balance'**
+  String get walletKub8BalanceLabel;
+
+  /// No description provided for @walletSolBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SOL balance'**
+  String get walletSolBalanceLabel;
+
+  /// No description provided for @walletBalanceAmountSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: {amount} {unit}'**
+  String walletBalanceAmountSemantic(String label, String amount, String unit);
+
+  /// No description provided for @walletActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get walletActionsTitle;
+
+  /// No description provided for @walletTechnicalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical'**
+  String get walletTechnicalTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -7054,5 +7054,35 @@
   "dashboardNotionNumbers": "Numbers",
   "dashboardNotionInfrastructure": "Infrastructure",
   "dashboardNumbersCaption": "Counts from art.kubus activity on your public profile.",
-  "institutionStatProgrammeViews": "Programme page views"
+  "institutionStatProgrammeViews": "Programme page views",
+  "walletNetworkLabel": "Network",
+  "walletAddressHeading": "Address",
+  "walletAddressSemantic": "Wallet address {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Copy address",
+  "walletReadOnlyStatus": "Read-only session",
+  "walletKub8BalanceLabel": "KUB8 balance",
+  "walletSolBalanceLabel": "SOL balance",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Actions",
+  "walletTechnicalTitle": "Technical"
 }

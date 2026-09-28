@@ -7027,5 +7027,35 @@
   "dashboardNotionNumbers": "Številke",
   "dashboardNotionInfrastructure": "Infrastruktura",
   "dashboardNumbersCaption": "Števila iz dejavnosti na vašem javnem profilu art.kubus.",
-  "institutionStatProgrammeViews": "Ogledi strani programa"
+  "institutionStatProgrammeViews": "Ogledi strani programa",
+  "walletNetworkLabel": "Omrežje",
+  "walletAddressHeading": "Naslov",
+  "walletAddressSemantic": "Naslov denarnice {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Kopiraj naslov",
+  "walletReadOnlyStatus": "Seja samo za branje",
+  "walletKub8BalanceLabel": "Stanje KUB8",
+  "walletSolBalanceLabel": "Stanje SOL",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Dejanja",
+  "walletTechnicalTitle": "Tehnično"
 }

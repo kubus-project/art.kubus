@@ -2,12 +2,12 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/wallet/kubus_token_identity.dart';
 import 'package:art_kubus/widgets/wallet/kubus_wallet_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'common/kubus_flat_panel.dart';
 
 class WalletTransactionCard extends StatefulWidget {
   const WalletTransactionCard({
@@ -45,7 +45,7 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     final feeSettlementSignature =
         tx.metadata['feeSettlementSignature']?.toString();
 
-    return LiquidGlassCard(
+    return KubusFlatPanel(
       margin: widget.margin,
       padding: EdgeInsets.all(isCompact ? KubusSpacing.md : KubusSpacing.lg),
       child: Column(
