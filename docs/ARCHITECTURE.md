@@ -14,6 +14,8 @@ art.kubus is a cross-platform Flutter application with:
 
 The app follows a **provider-first** architecture with clear separation between UI, state management, and business logic.
 
+This document covers the inside of the client. For how the client relates to the hosted API, the backend repository, kubus Node and the optional decentralized layers, see the [system overview in the README](../README.md#architecture).
+
 ---
 
 ## Architecture Diagram

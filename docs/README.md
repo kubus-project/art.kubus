@@ -28,6 +28,7 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 | [Features](FEATURES.md) | Feature-level detail and how pieces fit together |
 | [Screens](SCREENS.md) | Screen inventory and navigation map |
 | [Screenshots](SCREENSHOTS.md) | Where UI screenshots live and how to capture them |
+| [Project blurb](outreach/PROJECT_BLURB.md) | Short factual descriptions for directories and showcases |
 | [Architecture](ARCHITECTURE.md) | Provider-first architecture, boot sequence, key modules |
 | [Local Verification](LOCAL_VERIFICATION.md) | Root validation, docs doctor, and Playwright smoke commands |
 | [Open Platform](OPEN_PLATFORM.md) | What’s open-source, what’s hosted, and why |
