@@ -8,7 +8,6 @@ import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/promotion/promotion_builder_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -336,7 +335,7 @@ void main() {
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BackdropGlassSheet), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
 
     final launchError = tester.takeException();
     if (launchError != null) {

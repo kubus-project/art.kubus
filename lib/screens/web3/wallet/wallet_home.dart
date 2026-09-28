@@ -522,10 +522,11 @@ class _WalletHomeState extends State<WalletHome> {
               children: <Widget>[
                 Text(
                   value,
-                  style: (lead
-                          ? KubusTextStyles.entityTitle
-                          : KubusTextStyles.statValue)
-                      .copyWith(color: roles.foreground),
+                  // KUB8 leads: full stat size; SOL steps down a size.
+                  style: KubusTextStyles.statValue.copyWith(
+                    color: roles.foreground,
+                    fontSize: lead ? null : KubusChromeMetrics.statValue * 0.75,
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),

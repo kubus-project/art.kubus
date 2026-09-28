@@ -1199,11 +1199,14 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
           ExcludeSemantics(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.control),
-              child: KubusMeterBar(
-                progress: supportPct / 100,
-                height: 6,
-                color: roles.active,
-                trackColor: roles.surfaceRaised,
+              child: SizedBox(
+                width: double.infinity,
+                child: KubusMeterBar(
+                  progress: supportPct / 100,
+                  height: 6,
+                  color: roles.active,
+                  trackColor: roles.surfaceRaised,
+                ),
               ),
             ),
           ),

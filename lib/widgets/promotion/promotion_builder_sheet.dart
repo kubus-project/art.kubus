@@ -45,12 +45,16 @@ Future<void> showPromotionBuilderSheet({
       final height = MediaQuery.of(sheetContext).size.height * 0.86;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-        child: BackdropGlassSheet(
-          padding: EdgeInsets.zero,
-          backgroundColor: Theme.of(sheetContext)
-              .colorScheme
-              .surfaceContainerHighest
-              .withValues(alpha: 0.18),
+        // Opaque flat sheet: a translucent glass tint over the modal
+        // barrier read as muddy grey and dropped text contrast.
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: KubusColorRoles.of(sheetContext).ground,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
+            border: Border.all(color: KubusColorRoles.of(sheetContext).rule),
+          ),
           child: SizedBox(
             height: height,
             child: _PromotionBuilderSheet(
