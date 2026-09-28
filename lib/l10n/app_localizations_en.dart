@@ -2301,8 +2301,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsAchievementsStatEventsAttended => 'Events attended';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned =>
-      'Contribution recognition';
+  String get achievementsStatKub8Earned => 'KUB8 earned from achievements';
+
+  @override
+  String get achievementUnlockedLabel => 'Unlocked';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'First discovery';
@@ -5302,11 +5304,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesTitle => 'Messages';
 
   @override
+  String get messagesAttachTooltip => 'Attach a file';
+
+  @override
+  String get messagesPrivateNotion => 'Private';
+
+  @override
+  String get messagesUnreadSemantic => 'unread';
+
+  @override
   String get messagesEmptyNoConversationsTitle => 'No conversations';
 
   @override
   String get messagesEmptyNoConversationsDescription =>
-      'Start a conversation using the chat button below.';
+      'Your private conversations with artists, institutions and other members appear here.';
 
   @override
   String get messagesEmptyStartChatAction => 'Start a chat';
@@ -10102,6 +10113,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String communityPostLikesCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count likes',
+      one: '1 like',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityPostRepostsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reposts',
+      one: '1 repost',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String commonDistanceKmAway(Object value) {
     return '$value km away';
   }
@@ -10459,6 +10492,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySearchTypePosts => 'Posts';
+
+  @override
+  String get communitySearchTypeEvents => 'Events';
+
+  @override
+  String get communitySearchTypeExhibitions => 'Exhibitions';
+
+  @override
+  String get communitySearchTypePlaces => 'Places';
+
+  @override
+  String get searchResultsSemanticLabel => 'Search results';
 
   @override
   String get communitySearchHintProfiles => 'Search people…';
@@ -13543,6 +13588,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get savedItemsSummarySubtitleEmpty =>
       'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.';
+
+  @override
+  String get savedItemsEmptyLibraryTitle => 'Nothing saved yet';
+
+  @override
+  String get savedItemsLibraryNotion => 'Your library';
 
   @override
   String savedItemsSummarySubtitleLastSaved(Object timestamp) {

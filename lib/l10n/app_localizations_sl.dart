@@ -2314,8 +2314,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Obiskani dogodki';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned =>
-      'Priznanja za prispevke';
+  String get achievementsStatKub8Earned => 'KUB8 iz dosežkov';
+
+  @override
+  String get achievementUnlockedLabel => 'Odklenjeno';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'Prvo odkritje';
@@ -5348,11 +5350,20 @@ class AppLocalizationsSl extends AppLocalizations {
   String get messagesTitle => 'Sporočila';
 
   @override
+  String get messagesAttachTooltip => 'Priloži datoteko';
+
+  @override
+  String get messagesPrivateNotion => 'Zasebno';
+
+  @override
+  String get messagesUnreadSemantic => 'neprebrano';
+
+  @override
   String get messagesEmptyNoConversationsTitle => 'Ni pogovorov';
 
   @override
   String get messagesEmptyNoConversationsDescription =>
-      'Začni pogovor z gumbom za klepet spodaj.';
+      'Tu se prikažejo vaši zasebni pogovori z umetniki, institucijami in drugimi člani.';
 
   @override
   String get messagesEmptyStartChatAction => 'Začni klepet';
@@ -10188,6 +10199,32 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String communityPostLikesCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count všečkov',
+      few: '$count všečki',
+      two: '$count všečka',
+      one: '$count všeček',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityPostRepostsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ponovnih objav',
+      few: '$count ponovne objave',
+      two: '$count ponovni objavi',
+      one: '$count ponovna objava',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String commonDistanceKmAway(Object value) {
     return '$value km stran';
   }
@@ -10556,6 +10593,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communitySearchTypePosts => 'Objave';
+
+  @override
+  String get communitySearchTypeEvents => 'Dogodki';
+
+  @override
+  String get communitySearchTypeExhibitions => 'Razstave';
+
+  @override
+  String get communitySearchTypePlaces => 'Kraji';
+
+  @override
+  String get searchResultsSemanticLabel => 'Rezultati iskanja';
 
   @override
   String get communitySearchHintProfiles => 'Išči ljudi…';
@@ -13681,6 +13730,12 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get savedItemsSummarySubtitleEmpty =>
       'Dodaj umetnine, dogodke, zbirke, razstave in objave, da ostanejo tukaj.';
+
+  @override
+  String get savedItemsEmptyLibraryTitle => 'Ničesar še niste shranili';
+
+  @override
+  String get savedItemsLibraryNotion => 'Vaša knjižnica';
 
   @override
   String savedItemsSummarySubtitleLastSaved(Object timestamp) {

@@ -82,5 +82,80 @@ void main() {
 
     expect(find.text('First Post'), findsOneWidget);
     expect(find.text('+5 KUB8'), findsOneWidget);
+    expect(find.text('KUB8 earned from achievements'), findsOneWidget);
+  });
+
+  testWidgets(
+      'an unlocked achievement without a KUB8 reward never shows +0 KUB8',
+      (tester) async {
+    BackendApiService().setAuthTokenForTesting('token');
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/api/achievements/me')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'definitions': [
+                {
+                  'code': 'first_walk',
+                  'title': 'First Walk',
+                  'description': 'Visited your first artwork',
+                  'category': 'discovery',
+                  'rarity': 'common',
+                  'requiredCount': 1,
+                  'kub8Reward': 0,
+                },
+                {
+                  'code': 'art_explorer',
+                  'title': 'Art Explorer',
+                  'description': 'Visit ten artworks',
+                  'category': 'discovery',
+                  'rarity': 'common',
+                  'requiredCount': 10,
+                  'kub8Reward': 0,
+                },
+              ],
+              'progress': [
+                {
+                  'achievementCode': 'first_walk',
+                  'currentProgress': 1,
+                  'requiredCount': 1,
+                  'isCompleted': true,
+                },
+                {
+                  'achievementCode': 'art_explorer',
+                  'currentProgress': 3,
+                  'requiredCount': 10,
+                  'isCompleted': false,
+                },
+              ],
+              'unlocked': const <Object>[],
+              'totalKub8Earned': 0,
+            }),
+            200,
+            headers: const {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 404);
+      }),
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => TaskProvider(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const AchievementsPage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Unlocked'), findsOneWidget);
+    expect(find.text('+0 KUB8'), findsNothing);
+    expect(find.text('3/10'), findsOneWidget);
+    expect(find.text('1 of 2 unlocked'), findsOneWidget);
   });
 }

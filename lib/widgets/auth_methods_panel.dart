@@ -729,8 +729,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     // registration is a sibling of sign-in, not a warning/locked surface.
     // (Previously lockedFeature -> likeAction, which rendered a jarring
     // orange/red backdrop amid the teal/emerald auth flow.)
-    final accentStart = colorScheme.primary;
-    final accentEnd = roles.positiveAction;
     final isDark = theme.brightness == Brightness.dark;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
@@ -847,8 +845,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       title: l10n.authRegisterTitle,
       subtitle: l10n.authRegisterSubtitle,
       heroIcon: Icons.person_add_alt_rounded,
-      gradientStart: accentStart,
-      gradientEnd: accentEnd,
       highlights: [
         l10n.authHighlightOnboardingOptions,
         l10n.authHighlightKeysLocal,

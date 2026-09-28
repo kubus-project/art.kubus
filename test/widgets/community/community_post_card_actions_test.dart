@@ -69,8 +69,8 @@ void main() {
     final handle = tester.ensureSemantics();
     await _pump(tester, _post(liked: true));
 
-    final like = _node(tester, 'Like');
-    expect(like.label, 'Like, 12');
+    final like = tester.getSemantics(find.bySemanticsLabel('Like'));
+    expect(like.label, 'Like');
     expect(like.flagsCollection.isButton, isTrue);
     expect(like.flagsCollection.isToggled, ui.Tristate.isTrue);
 
@@ -140,13 +140,36 @@ void main() {
 
     final toggle = tester.getSemantics(find.bySemanticsLabel('Like'));
     expect(toggle.flagsCollection.isToggled, ui.Tristate.isTrue);
-    final count = tester.getSemantics(find.bySemanticsLabel('Likes, 12'));
+    final count = tester.getSemantics(find.bySemanticsLabel('12 likes'));
     expect(count.flagsCollection.isButton, isTrue);
     expect(count.flagsCollection.isToggled, ui.Tristate.none);
+    // A count with no list of its own stays plain text, not a button.
+    expect(find.bySemanticsLabel('3 comments'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('3 comments'))
+          .flagsCollection
+          .isButton,
+      isFalse,
+    );
 
-    tester.semantics.tap(find.semantics.byLabel('Likes, 12'));
+    tester.semantics.tap(find.semantics.byLabel('12 likes'));
     tester.semantics.tap(find.semantics.byLabel('Like'));
     expect([liked, listed], [1, 1]);
     handle.dispose();
   });
+
+  for (final width in <double>[320, 360, 390]) {
+    testWidgets('actions and counts fit a $width px card without overflow',
+        (tester) async {
+      await tester.binding.setSurfaceSize(Size(width, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pump(
+        tester,
+        _post(liked: true, saved: true),
+        onShowLikes: () {},
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

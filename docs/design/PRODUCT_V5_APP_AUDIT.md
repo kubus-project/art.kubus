@@ -1,12 +1,13 @@
 # PRODUCT v5 app-wide audit (Wave 4)
 
 Status: audit of `art.kubus@dev` at `c234877a` (post Wave 3.6) plus the
-Wave 4A implementation record. Machine-readable companion:
+Wave 4A implementation record and the Wave 4B record (baseline
+`8fdcc750`, see [Wave 4B record](#wave-4b-record)). Machine-readable companion:
 [`product_v5_app_audit.json`](product_v5_app_audit.json), regenerated with
 
 ```powershell
 py -3 scripts/audit_product_v5_app.py `
-  --baseline c234877ad94d58747a11c5c53ef839750d883d1c `
+  --baseline 8fdcc75010e777e8c7dfafbcb336afead292a02a `
   --output docs/design/product_v5_app_audit.json
 ```
 
@@ -15,8 +16,9 @@ pattern named in the brief (Inter/Outfit helpers, glass panels, blur,
 gradients, shadows, hex/legacy cyan literals, accent reads, raw Material
 buttons, snackbars, dialogs, sheets, semantics, KUB8 text). Counts are
 textual Dart source matches under `lib/` (generated `lib/l10n/` excluded),
-not runtime widget counts. The baseline block is the pre-Wave-4 state; the
-current block is this branch.
+not runtime widget counts. The baseline block is `dev@8fdcc750` (after
+Wave 4A, before 4B); the current block is the Wave 4B branch. The pre-Wave-4
+baseline (`c234877a`) is recorded in the Wave 4A PR (#184).
 
 Reference contracts: [DESIGN_SYSTEM_V2.md](../DESIGN_SYSTEM_V2.md),
 [PRODUCT_V5_TOKEN_MIGRATION.md](PRODUCT_V5_TOKEN_MIGRATION.md),
@@ -215,12 +217,83 @@ keyboard focus order through the rail and post actions. Android: bottom
 navigation safe area with gesture navigation, keyboard over the community
 composer, TalkBack announcement of the selected tab and unread notifications.
 
-## Deferred (Wave 4B and later)
+## Wave 4B record
 
-- 4B: artist studio, institution hub (without the Institution v2 model),
-  wallet, marketplace, promotion, DAO, achievements, saved, search grouping,
-  profile hierarchy, post detail/comments, messages, onboarding/auth shell
-  visuals, forms, loading skeletons, error taxonomy, quick-action/stat tiles.
+Baseline: `dev@8fdcc750` (Wave 4A merged). Branch `feat/product-v5-wave4b`.
+4A surfaces (shell, nav, Home, Community feed/header/tabs, Settings,
+`EmptyStateCard` visuals, `DesktopCard`, activity rows) were not
+redesigned; the only change to a 4A component is a regression fix
+(post-card action row, below) and an `EmptyStateCard` sizing rule.
+
+| Surface | BEFORE (8fdcc750) | AFTER (4B) | Sev |
+| --- | --- | --- | --- |
+| Search (off-map) | Glass panel with shadow; flat relevance list mixing types; each row repeated its type ("Umetnina · …"); on phones the panel ran past the right screen edge | Flat surface panel (map search keeps glass); results grouped ARTWORKS / PROFILES / INSTITUTIONS / EVENTS / EXHIBITIONS / PLACES / POSTS / SCREENS with machine counts and header semantics; rows show only detail; two-line titles; 56 px rows; panel width locked to the field (`reportFieldWidth`) | P1 (overflow) / P2 |
+| Post card (4A regression) | Split icon+count buttons overflowed by 22 px at 390 px inside post detail | One stats line ("24 likes · 3 comments · 2 reposts"; likes/reposts open lists, comments is plain text) over five icon-only 44 px actions; Like/Save expose toggle state | P1 |
+| Tag / mention chips | Tag text drawn in `tagChipBackground` on a 10% tint of itself — near invisible in light theme | Neutral token chips (surface raised, hairline rule, muted text), button semantics only when tappable | P1 (contrast) |
+| Post detail | Overflow stripes from the 4A action row; replies indented by depth x 56 px (cumulative); a "0" count beside every comment Like; accent-blue Reply links; raw ElevatedButton Send | Structural COMMENTS heading + count; `CommunityCommentRow` (identity, time · edited, text, Like toggle, likes-count button, Reply, owner menu); replies use one fixed offset + 2 px rule, never cumulative indentation; composer pinned with reply banner and 48 px send | P2 |
+| Messages | Animated gradient page, glass app bar and LiquidGlassPanel rows, no unread semantics; empty card stretched to full height; copy pointed at a "chat button below" that does not exist | Flat list rows with bottom rules, PRIVATE notion, unread = weight + active pill + "N unread" semantics; truthful empty copy; flat conversation bubbles and composer with labelled attach | P2 |
+| Saved | A tinted summary card plus one tinted glass section per type, each with its own empty card, when nothing is saved; no path forward | Empty library = one `EmptyStateCard` ("Nothing saved yet" → Explore the map); sections only when something is saved; flat disclosure rows with expanded semantics; page title not repeated under the app bar | P2 |
+| Auth (mobile + desktop shells) | Animated gradient background, gradient icon tile, glass panels | Flat ground, structural eyebrow, check-list highlights, surface + rule form panel; header controls flat 44 px | P2 |
+| Web3 onboarding carousels (Artist Studio, Institution Hub, Marketplace, DAO — mobile and desktop) | Full-bleed cyan/orange gradient pages, slide/overshoot animation | Flat page body (`Web3OnboardingPageBody`), structural label without trailing colon, text step count + neutral dots (reduced motion), secondary Back / primary Next | P2 |
+| Artist Studio / Institution Hub locked + role-blocked states | Tinted circle icon, raw OutlinedButton; 7 px bottom overflow on phones (baseline too) | `EmptyStateCard` in a scrollable centred slot; one secondary action (apply for review) | P1 (overflow) |
+| Achievements | Glass header, four tinted stat tiles with watermark icons, tinted card grid; stat labelled "Contribution recognition" while showing KUB8 on desktop; "+0 KUB8" on unlocked achievements without a reward | Progress line + meter, four plain counts, one readable list (title, description, progress meter, machine progress); KUB8 stat labelled "KUB8 earned from achievements" and sourced from the backend summary; unlocked without reward = "Unlocked" | P1 (truthfulness) |
+| Public profile (non-canonical path, mobile + desktop) | Mobile: accent-gradient cover slab, glass About card, numbers before work. Desktop: stats cards above the work, achievements leading the wide layout | Flat cover band, left-aligned About (practice fields start-aligned too), practice/works → programme → public art → posts → numbers → achievements. Desktop follows the same order (stats after the work; wide layout keeps achievements in a trailing side column); desktop surfaces are not yet flattened (4C) | P2 |
+| `EmptyStateCard` sizing | Stretched to full screen height under `Center` | Fills only tight (fixed-height) slots | P2 |
+
+Economic truthfulness in 4B: no KUB8 was added to artwork, discovery,
+search, profile or social surfaces; wallet/marketplace/promotion/DAO values
+were not relabelled; the one mislabelled KUB8 value (achievements) now says
+KUB8 and comes from the backend total; no points unit was introduced.
+
+Tests added: `test/widgets/search/kubus_search_results_grouping_test.dart`
+(group order, SL headings, 320/390 px panel bounds),
+`test/widgets/community/community_comment_row_test.dart` (toggle vs button
+semantics, 44 px targets, bounded reply offset at 320 px),
+`test/screens/activity/saved_items_empty_state_test.dart`,
+`test/screens/onboarding/web3_onboarding_flat_test.dart` (EN/SL label, 320 px
+at 200% text), extended `achievements_page_backend_refresh_test.dart`
+(no "+0 KUB8") and updated `community_post_card_actions_test.dart`
+(no overflow at 320/360/390).
+
+Visual evidence: [`docs/evidence/product-v5-wave4b/`](../evidence/product-v5-wave4b/manifest.json),
+produced by the opt-in widget matrix
+`test/qa/product_v5_wave4b_visual_matrix_test.dart` (real fonts, local
+fixtures, no network writes; run with `KUBUS_RUN_VISUAL_QA=1 QA_LABEL=<label>`)
+and the repo profile matrix `test/qa/profile_visual_matrix_test.dart`.
+
+### Human 200% zoom checklist (4B)
+
+Chromium and Firefox, 200% browser zoom, 1280–1440 px window, EN and SL,
+light and dark:
+
+- Search: type "mural" in Home and Community search; panel stays inside the
+  field width, group headings read, keyboard arrows/Enter reach results.
+- Artist and institution public profile: order (works before numbers), cover
+  band, About reads left-aligned.
+- Messages: list, unread row announced with count, conversation composer and
+  attach button reachable by keyboard.
+- Auth: sign-in, register, forgot/reset password on mobile width and desktop.
+- A complex form: post composer with subject + location, and the artist
+  application form from the Artist Studio locked state.
+- Wallet: signed-out state and connected overview (balances unchanged).
+- Marketplace: onboarding then listing grid (listing grid is 4C).
+
+Android: pinned comment composer above the keyboard, TalkBack on Like
+(toggle) vs likes count (button), messages unread announcement.
+
+## Deferred (Wave 4C and later)
+
+- 4C (optional, final split of Wave 4): wallet overview internals,
+  marketplace listing grid and detail, promotion builder sheet, DAO hub
+  internals, Artist Studio dashboard and Institution Hub tools after
+  onboarding (desktop right panel: tinted watermark stat tiles incl. a
+  "0 KUB8 Revenue" tile whose data source needs a truthfulness check),
+  desktop public profile visual flattening (section order
+  already matches mobile), profile edit and shared form
+  language, loading skeleton / error taxonomy, Home quick-action and stat
+  tiles, following/followers lists, collaboration inbox, profile section
+  insets (highlight/works sections add a second 24 px inset on the
+  non-canonical mobile profile).
 - Map/globe engine, marker LOD and result-constraint chips (Wave 6).
 - Institution v2 schema (Wave 9), DAO/moderation lifecycle (Wave 10).
 - Android App Links (#181, untouched).

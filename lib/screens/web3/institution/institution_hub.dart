@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
@@ -920,50 +921,25 @@ class _InstitutionHubState extends State<InstitutionHub> {
     required String description,
     required IconData icon,
   }) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    return _buildStateSlot(
+      EmptyStateCard(
+        icon: icon,
+        title: title,
+        description: '$description\n\n${l10n.institutionHubSeparateWalletsTip}',
+      ),
+    );
+  }
+
+  /// Centers a flat state card and lets it scroll when the slot is short,
+  /// so long copy or large text never overflows.
+  Widget _buildStateSlot(Widget card) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: scheme.onSecondaryContainer,
-                size: KubusSpacing.lg + KubusSpacing.xs,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: KubusTypography.textTheme.titleLarge
-                  ?.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              description,
-              style: KubusTextStyles.actionTileTitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
-            Text(
-              l10n.institutionHubSeparateWalletsTip,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: card,
         ),
       ),
     );
@@ -1208,53 +1184,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildLockedContent() {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.lock_outline,
-                color: scheme.onSecondaryContainer,
-                size: KubusSpacing.lg + KubusSpacing.xs,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            Text(
-              l10n.desktopInstitutionVerificationNotAppliedTitle,
-              style: KubusTypography.textTheme.titleLarge
-                  ?.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              l10n.desktopInstitutionVerificationApplyHint,
-              style: KubusTextStyles.actionTileTitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            Center(
-              child: OutlinedButton.icon(
-                onPressed: () => _showInstitutionApplicationModal(),
-                icon: const Icon(Icons.send_rounded),
-                label: Text(l10n.institutionHubApplyForReviewAction),
-                style: OutlinedButton.styleFrom(
-                  alignment: Alignment.center,
-                ),
-              ),
-            ),
-          ],
-        ),
+    return _buildStateSlot(
+      EmptyStateCard(
+        icon: Icons.lock_outline,
+        title: l10n.desktopInstitutionVerificationNotAppliedTitle,
+        description: l10n.desktopInstitutionVerificationApplyHint,
+        showAction: true,
+        actionLabel: l10n.institutionHubApplyForReviewAction,
+        onAction: _showInstitutionApplicationModal,
       ),
     );
   }

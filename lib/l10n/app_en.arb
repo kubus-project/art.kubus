@@ -831,7 +831,8 @@
   "desktopSettingsAchievementsStatArtworksDiscovered": "Artworks discovered",
   "desktopSettingsAchievementsStatArViews": "AR views",
   "desktopSettingsAchievementsStatEventsAttended": "Events attended",
-  "desktopSettingsAchievementsStatKub8PointsEarned": "Contribution recognition",
+  "achievementsStatKub8Earned": "KUB8 earned from achievements",
+  "achievementUnlockedLabel": "Unlocked",
   "desktopSettingsAchievementFirstDiscoveryTitle": "First discovery",
   "desktopSettingsAchievementFirstDiscoveryDescription": "Discover your first public artwork",
   "desktopSettingsAchievementArtCollectorTitle": "Art explorer",
@@ -2060,8 +2061,11 @@
   "savedItemsMarkerLabel": "markers",
   "savedItemsLoadMoreButton": "Load more",
   "messagesTitle": "Messages",
+  "messagesAttachTooltip": "Attach a file",
+  "messagesPrivateNotion": "Private",
+  "messagesUnreadSemantic": "unread",
   "messagesEmptyNoConversationsTitle": "No conversations",
-  "messagesEmptyNoConversationsDescription": "Start a conversation using the chat button below.",
+  "messagesEmptyNoConversationsDescription": "Your private conversations with artists, institutions and other members appear here.",
   "messagesEmptyStartChatAction": "Start a chat",
   "messagesListHeaderTitle": "Conversations",
   "messagesListHeaderDescription": "Pick up direct chats and group threads with artists, collectors, and institutions.",
@@ -4085,6 +4089,18 @@
       "count": {}
     }
   },
+  "communityPostLikesCount": "{count, plural, =1{1 like} other{{count} likes}}",
+  "@communityPostLikesCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityPostRepostsCount": "{count, plural, =1{1 repost} other{{count} reposts}}",
+  "@communityPostRepostsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "commonDistanceKmAway": "{value} km away",
   "@commonDistanceKmAway": {
     "placeholders": {
@@ -4235,6 +4251,10 @@
   "communitySearchTypeInstitutions": "Institutions",
   "communitySearchTypeScreens": "Screens",
   "communitySearchTypePosts": "Posts",
+  "communitySearchTypeEvents": "Events",
+  "communitySearchTypeExhibitions": "Exhibitions",
+  "communitySearchTypePlaces": "Places",
+  "searchResultsSemanticLabel": "Search results",
   "communitySearchHintProfiles": "Search people…",
   "communitySearchHintArtworks": "Search artworks…",
   "communitySearchHintInstitutions": "Search institutions…",
@@ -5436,6 +5456,8 @@
   "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
   "profileMenuSavedItemsTitle": "Saved items",
   "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
+  "savedItemsEmptyLibraryTitle": "Nothing saved yet",
+  "savedItemsLibraryNotion": "Your library",
   "savedItemsSummarySubtitleLastSaved": "Last saved {timestamp}",
   "@savedItemsSummarySubtitleLastSaved": {
     "placeholders": {

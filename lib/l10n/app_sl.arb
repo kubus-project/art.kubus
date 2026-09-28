@@ -831,7 +831,8 @@
   "desktopSettingsAchievementsStatArtworksDiscovered": "Odkrite umetnine",
   "desktopSettingsAchievementsStatArViews": "Ogledi AR",
   "desktopSettingsAchievementsStatEventsAttended": "Obiskani dogodki",
-  "desktopSettingsAchievementsStatKub8PointsEarned": "Priznanja za prispevke",
+  "achievementsStatKub8Earned": "KUB8 iz dosežkov",
+  "achievementUnlockedLabel": "Odklenjeno",
   "desktopSettingsAchievementFirstDiscoveryTitle": "Prvo odkritje",
   "desktopSettingsAchievementFirstDiscoveryDescription": "Odkrij prvo javno umetnino",
   "desktopSettingsAchievementArtCollectorTitle": "Raziskovalec umetnosti",
@@ -2010,8 +2011,11 @@
   "commonArtwork": "Umetnina",
   "commonUndo": "Razveljavi",
   "messagesTitle": "Sporočila",
+  "messagesAttachTooltip": "Priloži datoteko",
+  "messagesPrivateNotion": "Zasebno",
+  "messagesUnreadSemantic": "neprebrano",
   "messagesEmptyNoConversationsTitle": "Ni pogovorov",
-  "messagesEmptyNoConversationsDescription": "Začni pogovor z gumbom za klepet spodaj.",
+  "messagesEmptyNoConversationsDescription": "Tu se prikažejo vaši zasebni pogovori z umetniki, institucijami in drugimi člani.",
   "messagesEmptyStartChatAction": "Začni klepet",
   "messagesListHeaderTitle": "Pogovori",
   "messagesListHeaderDescription": "Nadaljuj neposredne klepete in skupinske niti z ustvarjalci, podporniki in institucijami.",
@@ -3816,6 +3820,18 @@
       "count": {}
     }
   },
+  "communityPostLikesCount": "{count, plural, one{{count} všeček} two{{count} všečka} few{{count} všečki} other{{count} všečkov}}",
+  "@communityPostLikesCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityPostRepostsCount": "{count, plural, one{{count} ponovna objava} two{{count} ponovni objavi} few{{count} ponovne objave} other{{count} ponovnih objav}}",
+  "@communityPostRepostsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "commonDistanceKmAway": "{value} km stran",
   "@commonDistanceKmAway": {
     "placeholders": {
@@ -3953,6 +3969,10 @@
   "communitySearchTypeInstitutions": "Institucije",
   "communitySearchTypeScreens": "Strani",
   "communitySearchTypePosts": "Objave",
+  "communitySearchTypeEvents": "Dogodki",
+  "communitySearchTypeExhibitions": "Razstave",
+  "communitySearchTypePlaces": "Kraji",
+  "searchResultsSemanticLabel": "Rezultati iskanja",
   "communitySearchHintProfiles": "Išči ljudi…",
   "communitySearchHintArtworks": "Išči umetnine…",
   "communitySearchHintInstitutions": "Išči institucije…",
@@ -5592,6 +5612,8 @@
   "savedItemsMarkerLabel": "označevalci",
   "savedItemsLoadMoreButton": "Naloži več",
   "savedItemsSummarySubtitleEmpty": "Dodaj umetnine, dogodke, zbirke, razstave in objave, da ostanejo tukaj.",
+  "savedItemsEmptyLibraryTitle": "Ničesar še niste shranili",
+  "savedItemsLibraryNotion": "Vaša knjižnica",
   "savedItemsSummarySubtitleLastSaved": "Zadnje shranjeno {timestamp}",
   "@savedItemsSummarySubtitleLastSaved": {
     "placeholders": {

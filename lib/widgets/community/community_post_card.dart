@@ -6,7 +6,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../models/community_subject.dart';
 import '../../providers/community_subject_provider.dart';
-import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -334,7 +333,12 @@ class CommunityPostCard extends StatelessWidget {
                     onOpenSubject: onOpenSubject,
                   ),
                 ],
-                const SizedBox(height: KubusSpacing.md),
+                const SizedBox(height: KubusSpacing.sm),
+                _PostStatsLine(
+                  post: post,
+                  onShowLikes: onShowLikes,
+                  onShowReposts: onShowReposts,
+                ),
                 Row(
                   children: [
                     Expanded(
@@ -342,12 +346,9 @@ class CommunityPostCard extends StatelessWidget {
                         icon: post.isLiked
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        label: '${post.likeCount}',
                         semanticLabel: l10n?.communityPostActionLike ?? '',
                         toggled: post.isLiked,
                         onTap: onToggleLike,
-                        onCountTap: onShowLikes,
-                        countSemanticLabel: l10n?.commonLikes,
                         isActive: post.isLiked,
                         color: post.isLiked
                             ? roles.likeAction
@@ -358,7 +359,6 @@ class CommunityPostCard extends StatelessWidget {
                     Expanded(
                       child: _InteractionButton(
                         icon: Icons.comment_outlined,
-                        label: '${post.commentCount}',
                         semanticLabel: l10n?.communityPostActionComment ?? '',
                         onTap: onOpenComments,
                         isActive: commentsExpanded,
@@ -368,37 +368,33 @@ class CommunityPostCard extends StatelessWidget {
                     Expanded(
                       child: _InteractionButton(
                         icon: Icons.repeat,
-                        label: '${post.shareCount}',
                         semanticLabel: l10n?.communityRepostButtonLabel ?? '',
                         onTap: onRepost,
-                        onCountTap: post.shareCount > 0 ? onShowReposts : null,
-                        countSemanticLabel: l10n?.communityRepostedByTitle,
                         accentColor: accentColor,
                       ),
                     ),
                     Expanded(
                       child: _InteractionButton(
                         icon: Icons.share_outlined,
-                        label: '',
                         semanticLabel: l10n?.commonShare ?? '',
                         onTap: onShare,
                         accentColor: accentColor,
                       ),
                     ),
-                    const SizedBox(width: KubusSpacing.sm),
-                    _InteractionButton(
-                      icon: post.isBookmarked
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                      label: '',
-                      semanticLabel: l10n?.commonSave ?? '',
-                      toggled: post.isBookmarked,
-                      onTap: onToggleBookmark,
-                      isActive: post.isBookmarked,
-                      color: post.isBookmarked
-                          ? roles.active
-                          : roles.foregroundMuted,
-                      accentColor: accentColor,
+                    Expanded(
+                      child: _InteractionButton(
+                        icon: post.isBookmarked
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        semanticLabel: l10n?.commonSave ?? '',
+                        toggled: post.isBookmarked,
+                        onTap: onToggleBookmark,
+                        isActive: post.isBookmarked,
+                        color: post.isBookmarked
+                            ? roles.active
+                            : roles.foregroundMuted,
+                        accentColor: accentColor,
+                      ),
                     ),
                   ],
                 ),

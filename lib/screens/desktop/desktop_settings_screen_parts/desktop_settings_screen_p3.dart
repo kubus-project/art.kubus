@@ -319,11 +319,9 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
 
         final completedCount =
             definitions.where((achievement) => isCompleted(achievement)).length;
-        final kub8Earned = definitions.fold<int>(
-          0,
-          (sum, achievement) =>
-              sum + (isCompleted(achievement) ? achievement.tokenReward : 0),
-        );
+        // KUB8 actually recorded by the backend achievement summary (same
+        // source as mobile), not a local sum of configured rewards.
+        final kub8Earned = taskProvider.totalKub8Earned.round();
         final previewAchievements = definitions.take(9).toList(growable: false);
 
         return SingleChildScrollView(
@@ -380,7 +378,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                     minHeight: 0,
                   ),
                   KubusStatCard(
-                    title: l10n.desktopSettingsAchievementsStatKub8PointsEarned,
+                    title: l10n.achievementsStatKub8Earned,
                     value: kub8Earned.toString(),
                     icon: Icons.token,
                     layout: KubusStatCardLayout.centered,
@@ -432,9 +430,11 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                           : 1;
                       final progress = currentProgressFor(achievement);
                       final unlocked = isCompleted(achievement);
-                      final progressLabel = unlocked
-                          ? '+${achievement.tokenReward} KUB8'
-                          : '$progress/$required';
+                      final progressLabel = !unlocked
+                          ? '$progress/$required'
+                          : achievement.tokenReward > 0
+                              ? '+${achievement.tokenReward} KUB8'
+                              : l10n.achievementUnlockedLabel;
                       final roomyCard = cardWidth >= 280;
                       final compactCard = cardWidth < 220;
 

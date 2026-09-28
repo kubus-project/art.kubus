@@ -60,6 +60,7 @@ class KubusSearchController extends ChangeNotifier {
 
   late final bool _ownsTextController;
   final Set<LayerLink> _focusedFieldLinks = <LayerLink>{};
+  final Map<LayerLink, double> _fieldWidths = <LayerLink, double>{};
 
   Timer? _debounce;
   int _requestToken = 0;
@@ -141,6 +142,18 @@ class KubusSearchController extends ChangeNotifier {
       events: events,
       screenRecords: screenRecords,
     );
+  }
+
+  /// Width of the search field currently anchoring the results panel, so the
+  /// panel can match it instead of running past the screen edge.
+  double? get activeFieldWidth =>
+      _activeFieldLink == null ? null : _fieldWidths[_activeFieldLink];
+
+  /// Records a field's laid-out width. Does not notify: the value is read
+  /// when the overlay next builds.
+  void reportFieldWidth(LayerLink link, double width) {
+    if (_disposed || !width.isFinite || width <= 0) return;
+    _fieldWidths[link] = width;
   }
 
   void updateFieldFocus(LayerLink link, bool hasFocus) {
