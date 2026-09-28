@@ -17168,4 +17168,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stateLoadingMore => 'Loading more';
+
+  @override
+  String get peopleRoleArtist => 'Artist';
+
+  @override
+  String get peopleRoleInstitution => 'Institution';
+
+  @override
+  String get peopleVerifiedLabel => 'Verified';
+
+  @override
+  String peopleFollowToggleSemantic(String name) {
+    return 'Follow $name';
+  }
 }

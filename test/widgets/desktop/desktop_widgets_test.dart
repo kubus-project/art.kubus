@@ -25,7 +25,8 @@ void main() {
     );
   }
 
-  testWidgets('DesktopStatCard uses standardized stat sizing', (tester) async {
+  testWidgets('DesktopStatCard uses the shared stat type roles',
+      (tester) async {
     await pumpDesktopStatCard(
       tester,
       child: const SizedBox(
@@ -41,18 +42,12 @@ void main() {
 
     final value = tester.widget<Text>(find.text('128'));
     final label = tester.widget<Text>(find.text('Followers'));
-
-    expect(
-      value.style?.fontSize,
-      closeTo(KubusChromeMetrics.statValue * 0.95, 0.001),
-    );
-    expect(
-      label.style?.fontSize,
-      closeTo(KubusTextStyles.actionTileTitle.fontSize! * 0.93, 0.001),
-    );
+    expect(value.style?.fontSize, KubusTextStyles.statValue.fontSize);
+    expect(label.style?.fontSize, KubusTextStyles.detailCaption.fontSize);
   });
 
-  testWidgets('DesktopStatCard composes through shared watermark icon',
+  testWidgets(
+      'DesktopStatCard is flat: no watermark glyph, no hover lift or shadow',
       (tester) async {
     await pumpDesktopStatCard(
       tester,
@@ -68,10 +63,26 @@ void main() {
       ),
     );
 
-    final iconFinder = find.byWidgetPredicate(
-      (widget) => widget is Icon && widget.icon == Icons.group_outlined,
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.icon == Icons.group_outlined,
+      ),
+      findsNothing,
     );
-
-    expect(iconFinder, findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(DesktopStatCard),
+        matching: find.byType(Transform),
+      ),
+      findsNothing,
+    );
+    final decorated = tester
+        .widgetList<DecoratedBox>(find.descendant(
+          of: find.byType(DesktopStatCard),
+          matching: find.byType(DecoratedBox),
+        ))
+        .map((d) => d.decoration)
+        .whereType<BoxDecoration>();
+    expect(decorated.any((d) => (d.boxShadow ?? const []).isNotEmpty), isFalse);
   });
 }

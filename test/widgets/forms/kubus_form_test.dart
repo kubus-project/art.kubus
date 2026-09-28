@@ -180,7 +180,7 @@ void main() {
       expect(value, isTrue);
       expect(
         tester.getSemantics(find.byType(Switch)),
-        containsSemantics(
+        isSemantics(
           label: 'Private profile\nOnly followers see your activity.',
           hasToggledState: true,
           isToggled: true,

@@ -6947,5 +6947,16 @@
   "stateUnsupportedDescription": "Ta funkcija na tej napravi ali v tej različici ni podprta.",
   "stateUnknownTitle": "Nekaj je šlo narobe",
   "stateUnknownDescription": "Tega ni bilo mogoče dokončati. Poskusite znova.",
-  "stateLoadingMore": "Nalaganje dodatnih vsebin"
+  "stateLoadingMore": "Nalaganje dodatnih vsebin",
+  "peopleRoleArtist": "Umetnik",
+  "peopleRoleInstitution": "Institucija",
+  "peopleVerifiedLabel": "Preverjeno",
+  "peopleFollowToggleSemantic": "Sledi: {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

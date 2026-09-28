@@ -6974,5 +6974,16 @@
   "stateUnsupportedDescription": "This feature isn't supported on this device or in this version.",
   "stateUnknownTitle": "Something went wrong",
   "stateUnknownDescription": "We couldn't complete this. Try again.",
-  "stateLoadingMore": "Loading more"
+  "stateLoadingMore": "Loading more",
+  "peopleRoleArtist": "Artist",
+  "peopleRoleInstitution": "Institution",
+  "peopleVerifiedLabel": "Verified",
+  "peopleFollowToggleSemantic": "Follow {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

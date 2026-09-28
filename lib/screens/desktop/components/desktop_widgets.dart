@@ -230,7 +230,7 @@ class DesktopGrid extends StatelessWidget {
 }
 
 /// Desktop stat card for displaying metrics
-class DesktopStatCard extends StatefulWidget {
+class DesktopStatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -254,75 +254,23 @@ class DesktopStatCard extends StatefulWidget {
     this.centeredWatermarkScale = 1.0,
   });
 
-  @override
-  State<DesktopStatCard> createState() => _DesktopStatCardState();
-}
-
-class _DesktopStatCardState extends State<DesktopStatCard> {
-  bool _isHovered = false;
-
+  /// PRODUCT v5: a flat metric (no hover lift, scale, shadow or watermark).
+  /// [color] and the watermark parameters are kept for call-site
+  /// compatibility only.
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final color = widget.color ?? themeProvider.accentColor;
-    final animationTheme = context.animationTheme;
-
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: _isHovered ? 1.0 : 0.0),
-        duration: animationTheme.medium,
-        curve: animationTheme.emphasisCurve,
-        builder: (context, hoverValue, child) {
-          return Transform.translate(
-            offset: Offset(0, -4 * hoverValue),
-            child: Transform.scale(
-              scale: 1 + (0.012 * hoverValue),
-              alignment: Alignment.center,
-              child: AnimatedContainer(
-                duration: animationTheme.medium,
-                curve: animationTheme.emphasisCurve,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          color.withValues(alpha: 0.05 + (0.14 * hoverValue)),
-                      blurRadius: 10 + (10 * hoverValue),
-                      spreadRadius: 0.5 * hoverValue,
-                      offset: Offset(0, 3 + (3 * hoverValue)),
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: KubusStatCard(
-          title: widget.label,
-          value: widget.value,
-          icon: widget.icon,
-          layout: KubusStatCardLayout.centered,
-          accent: color,
-          centeredWatermarkAlignment: widget.centeredWatermarkAlignment,
-          centeredWatermarkScale: widget.centeredWatermarkScale,
-          centeredWatermarkHovered: _isHovered,
-          change: widget.change,
-          isPositiveChange: widget.isPositive,
-          minHeight: 136,
-          titleMaxLines: 2,
-          valueStyle: KubusTextStyles.statValue,
-          titleStyle: KubusTextStyles.actionTileTitle,
-          borderColor: _isHovered
-              ? color.withValues(alpha: 0.3)
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          onTap: widget.onTap,
-        ),
-      ),
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      layout: KubusStatCardLayout.centered,
+      change: change,
+      isPositiveChange: isPositive,
+      minHeight: 88,
+      titleMaxLines: 2,
+      valueStyle: KubusTextStyles.statValue,
+      titleStyle: KubusTextStyles.detailCaption,
+      onTap: onTap,
     );
   }
 }

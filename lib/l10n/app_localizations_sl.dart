@@ -17349,4 +17349,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get stateLoadingMore => 'Nalaganje dodatnih vsebin';
+
+  @override
+  String get peopleRoleArtist => 'Umetnik';
+
+  @override
+  String get peopleRoleInstitution => 'Institucija';
+
+  @override
+  String get peopleVerifiedLabel => 'Preverjeno';
+
+  @override
+  String peopleFollowToggleSemantic(String name) {
+    return 'Sledi: $name';
+  }
 }

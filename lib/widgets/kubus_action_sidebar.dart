@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 import 'common/kubus_stat_card.dart';
-import 'glass_components.dart';
 
 enum KubusActionSemantic {
   create,
@@ -68,99 +67,95 @@ class KubusActionSidebarTile extends StatefulWidget {
 class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
   bool _isHovered = false;
 
+  // PRODUCT v5: a flat row with a hairline rule. Hover/selection strengthen
+  // the rule; the icon is neutral (the semantic accent is no longer painted
+  // as a tinted tile). The whole row is one button with a 48 px minimum.
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
     final selected = widget.selected;
     final enabled = widget.enabled;
-
-    final accent = widget.semantic.accentColor(context);
-    final stateAccent =
-        enabled ? accent : scheme.onSurface.withValues(alpha: 0.45);
-    final tileTint = !enabled
-        ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
-        : selected
-            ? accent.withValues(alpha: isDark ? 0.22 : 0.14)
-            : _isHovered
-                ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
-                : accent.withValues(alpha: isDark ? 0.14 : 0.08);
-
-    final radius = BorderRadius.circular(KubusRadius.md);
-    final iconRadius = BorderRadius.circular(KubusRadius.sm);
+    final radius = BorderRadius.circular(KubusRadius.surface);
+    final ruleColor = selected
+        ? roles.active
+        : (_isHovered && enabled ? roles.ruleStrong : roles.rule);
 
     final fallbackTrailing = Icon(
-      Icons.arrow_forward_ios,
-      size: KubusSizes.trailingChevron,
-      color: scheme.onSurface.withValues(alpha: enabled ? 0.4 : 0.28),
+      Icons.chevron_right,
+      size: KubusSizes.trailingChevron + 4,
+      color: enabled ? roles.foregroundMuted : roles.foregroundSubtle,
     );
 
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: enabled ? (_) => setState(() => _isHovered = true) : null,
-      onExit: enabled ? (_) => setState(() => _isHovered = false) : null,
-      child: Opacity(
-        opacity: enabled ? 1.0 : 0.72,
-        child: Padding(
-          padding:
-              const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
-          child: LiquidGlassCard(
-            padding: EdgeInsets.zero,
-            borderRadius: radius,
-            showBorder: false,
-            backgroundColor: tileTint,
-            onTap: enabled ? widget.onTap : null,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(
-                  color: stateAccent.withValues(
-                    alpha: selected ? 0.32 : (_isHovered ? 0.24 : 0.18),
-                  ),
-                  width: KubusSizes.hairline,
-                ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        selected: selected,
+        child: MouseRegion(
+          cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          onEnter: enabled ? (_) => setState(() => _isHovered = true) : null,
+          onExit: enabled ? (_) => setState(() => _isHovered = false) : null,
+          child: Material(
+            color: selected ? roles.surfaceRaised : roles.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(
+                color: ruleColor,
+                width: selected ? 1.5 : KubusSizes.hairline,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                child: Row(
-                  children: [
-                    Container(
-                      width: KubusSizes.sidebarActionIconBox,
-                      height: KubusSizes.sidebarActionIconBox,
-                      decoration: BoxDecoration(
-                        color: stateAccent.withValues(alpha: 0.15),
-                        borderRadius: iconRadius,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: enabled ? widget.onTap : null,
+              focusColor: roles.focus.withValues(alpha: 0.12),
+              hoverColor: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.md,
+                    vertical: KubusSpacing.sm + KubusSpacing.xs,
+                  ),
+                  child: Row(
+                    children: [
+                      ExcludeSemantics(
+                        child: Icon(
+                          widget.icon,
+                          color: enabled
+                              ? roles.foreground
+                              : roles.foregroundSubtle,
+                          size: KubusSizes.sidebarActionIcon,
+                        ),
                       ),
-                      child: Icon(
-                        widget.icon,
-                        color: stateAccent,
-                        size: KubusSizes.sidebarActionIcon,
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: KubusTextStyles.actionTileTitle.copyWith(
-                              color: scheme.onSurface,
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: KubusTextStyles.actionTileTitle.copyWith(
+                                color: enabled
+                                    ? roles.foreground
+                                    : roles.foregroundMuted,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: KubusSpacing.xxs),
-                          Text(
-                            widget.subtitle,
-                            style: KubusTextStyles.actionTileSubtitle.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            const SizedBox(height: KubusSpacing.xxs),
+                            Text(
+                              widget.subtitle,
+                              style:
+                                  KubusTextStyles.actionTileSubtitle.copyWith(
+                                color: roles.foregroundMuted,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    widget.trailing ?? fallbackTrailing,
-                  ],
+                      const SizedBox(width: KubusSpacing.sm),
+                      widget.trailing ?? fallbackTrailing,
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -171,10 +166,9 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
   }
 }
 
+/// Compact metric for dashboard side panels: the number, then its label, on
+/// a flat surface. Replaces the square watermark tile.
 class KubusSidebarStatCard extends StatelessWidget {
-  static const Alignment watermarkAlignment = Alignment.center;
-  static const double watermarkScale = 0.84;
-
   const KubusSidebarStatCard({
     super.key,
     required this.title,
@@ -182,39 +176,29 @@ class KubusSidebarStatCard extends StatelessWidget {
     required this.icon,
     required this.accent,
     this.minHeight = 0,
+    this.semanticsLabel,
   });
 
   final String title;
   final String value;
   final IconData icon;
+
+  /// Accepted for compatibility; metrics are not colour-coded.
   final Color accent;
   final double minHeight;
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AspectRatio(
-      aspectRatio: 1,
-      child: KubusStatCard(
-        title: title,
-        value: value,
-        icon: icon,
-        accent: accent,
-        layout: KubusStatCardLayout.centered,
-        showIcon: true,
-        centeredWatermarkAlignment: watermarkAlignment,
-        centeredWatermarkScale: watermarkScale,
-        minHeight: minHeight,
-        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-        titleMaxLines: 2,
-        borderColor: accent.withValues(alpha: 0.26),
-        titleStyle: KubusTextStyles.statLabel.copyWith(
-          color: scheme.onSurface.withValues(alpha: 0.84),
-        ),
-        valueStyle: KubusTextStyles.statValue.copyWith(
-          color: scheme.onSurface,
-        ),
-      ),
+    return KubusStatCard(
+      title: title,
+      value: value,
+      icon: icon,
+      showIcon: false,
+      minHeight: minHeight > 0 ? minHeight : 64,
+      titleMaxLines: 2,
+      semanticsLabel: semanticsLabel,
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
     );
   }
 }

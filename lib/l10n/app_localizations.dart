@@ -29847,6 +29847,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading more'**
   String get stateLoadingMore;
+
+  /// No description provided for @peopleRoleArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get peopleRoleArtist;
+
+  /// No description provided for @peopleRoleInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get peopleRoleInstitution;
+
+  /// No description provided for @peopleVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get peopleVerifiedLabel;
+
+  /// No description provided for @peopleFollowToggleSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow {name}'**
+  String peopleFollowToggleSemantic(String name);
 }
 
 class _AppLocalizationsDelegate

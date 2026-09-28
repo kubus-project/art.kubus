@@ -296,7 +296,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
             child: RefreshIndicator(
               onRefresh: _handleRefresh,
-              color: themeProvider.accentColor,
+              color: KubusColorRoles.of(context).active,
               child: SingleChildScrollView(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -313,8 +313,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
+                      // Reading measure: work grids and prose stay legible
+                      // on 1920 px screens instead of stretching to 1600.
                       maxWidth:
-                          isCommunityOverlay ? _kProfileOverlayMaxWidth : 1600,
+                          isCommunityOverlay ? _kProfileOverlayMaxWidth : 1200,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,9 +960,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     const avatarOverlap = 32.0;
     final avatarDiameter = (avatarRadius + avatarRingPadding) * 2;
 
-    return LiquidGlassCard(
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
+    final roles = KubusColorRoles.of(context);
+    return Container(
+      clipBehavior: Clip.none,
+      decoration: BoxDecoration(
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -975,7 +982,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg),
+                  top: Radius.circular(KubusRadius.surface),
                 ),
                 child: Stack(
                   children: [
@@ -984,59 +991,35 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           ? _kProfileCoverHeightWithImage
                           : _kProfileCoverHeightWithoutImage,
                       width: double.infinity,
-                      decoration: hasCoverImage
-                          ? null
-                          : BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.28),
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.08),
-                                ],
-                              ),
-                            ),
+                      // Flat cover band when there is no image (no accent
+                      // gradient; the user accent is not structure).
+                      color: hasCoverImage ? null : roles.surfaceRaised,
                       child: hasCoverImage
                           ? Image.network(
                               coverImageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.28),
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.08),
-                                      ],
-                                    ),
-                                  ),
-                                );
+                                return ColoredBox(color: roles.surfaceRaised);
                               },
                             )
                           : null,
                     ),
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black
-                                  .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.26),
-                            ],
+                    // Media scrim only over a real image.
+                    if (hasCoverImage)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1045,23 +1028,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 bottom: -avatarOverlap,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: scheme.surface.withValues(alpha: 0.94),
+                    color: roles.surface,
                     borderRadius: BorderRadius.circular(
                       avatarRingShapeRadius,
                     ),
-                    border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.24),
-                      width: KubusSizes.hairline + 0.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border: Border.all(color: roles.rule),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(avatarRingPadding),
@@ -1299,19 +1270,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return DesktopCard(
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
+          ExcludeSemantics(
             child: Icon(
               AppColorUtils.streetArtIcon,
-              color: themeProvider.accentColor,
+              color: KubusColorRoles.of(context).foregroundMuted,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
