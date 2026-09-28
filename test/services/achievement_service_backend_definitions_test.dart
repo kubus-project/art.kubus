@@ -66,10 +66,12 @@ void main() {
     expect(definitions, isNotEmpty);
     expect(definitions.any((definition) => definition.code == 'first_post'),
         isTrue);
+    // Offline fallbacks never invent a KUB8 reward (Wave 4C); the reward
+    // is a backend fact and is unknown here.
     expect(
       definitions.firstWhere((definition) => definition.code == 'first_post')
           .kub8Reward,
-      5,
+      0,
     );
   });
 }
