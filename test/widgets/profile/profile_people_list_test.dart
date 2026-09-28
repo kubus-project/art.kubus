@@ -96,6 +96,22 @@ void main() {
     );
   });
 
+  testWidgets(
+      'unavailable follow set (loader null for a signed-in viewer) shows no '
+      'toggles, never "Follow" on every row', (tester) async {
+    await _pump(
+      tester,
+      entries: const [_ana, _gallery],
+      viewerWallet: _unknown.wallet,
+      // What the default loader returns when the backend fails and no
+      // following set was ever cached (UserService.getKnownFollowingUsers).
+      loader: () async => null,
+    );
+    expect(find.text('Ana Kovač'), findsOneWidget);
+    expect(find.text('Follow'), findsNothing);
+    expect(find.text('Following'), findsNothing);
+  });
+
   testWidgets('toggle exposes button + toggled semantics and 44 px targets',
       (tester) async {
     final handle = tester.ensureSemantics();

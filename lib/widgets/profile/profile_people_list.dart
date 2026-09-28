@@ -71,7 +71,8 @@ class ProfilePeopleList extends StatefulWidget {
   final String? viewerWallet;
 
   /// Test seam: returns the viewer's followed wallets, or null when there is
-  /// no signed-in viewer. Defaults to [UserService.getFollowingUsers].
+  /// no signed-in viewer or the set is unavailable. Defaults to
+  /// [UserService.getKnownFollowingUsers].
   final Future<Set<String>?> Function()? viewerFollowingLoader;
 
   @override
@@ -101,8 +102,10 @@ class _ProfilePeopleListState extends State<ProfilePeopleList> {
 
   static Future<Set<String>?> _defaultViewerFollowing() async {
     if (!BackendApiService().hasAuthSession) return null;
-    final wallets = await UserService.getFollowingUsers();
-    return wallets.map(WalletUtils.canonical).toSet();
+    // Null (no toggles) when the follow set is unavailable, never an empty
+    // set that would render "Follow" on accounts the viewer already follows.
+    final wallets = await UserService.getKnownFollowingUsers();
+    return wallets?.map(WalletUtils.canonical).toSet();
   }
 
   Future<void> _toggle(ProfilePersonEntry entry, bool follow) async {
