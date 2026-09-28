@@ -17246,4 +17246,107 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialUploadResume => 'Nadaljuj nalaganje';
+
+  @override
+  String get formShowPassword => 'Pokaži geslo';
+
+  @override
+  String get formHidePassword => 'Skrij geslo';
+
+  @override
+  String get formSelectDate => 'Izberite datum';
+
+  @override
+  String get formSelectTime => 'Izberite čas';
+
+  @override
+  String get formNoValueSelected => 'Ni nastavljeno';
+
+  @override
+  String get formAddImage => 'Dodaj sliko';
+
+  @override
+  String get formFixHighlightedFields =>
+      'Nekatera polja je treba popraviti. Preberite sporočila pod njimi.';
+
+  @override
+  String get stateNetworkTitle =>
+      'Povezave z art.kubus ni bilo mogoče vzpostaviti';
+
+  @override
+  String get stateNetworkDescription =>
+      'Zahteva se ni zaključila. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get stateOfflineTitle => 'Niste povezani';
+
+  @override
+  String get stateOfflineDescription =>
+      'Za to potrebujete internetno povezavo. Znova se povežite in poskusite še enkrat.';
+
+  @override
+  String get stateServerTitle => 'art.kubus ima težave';
+
+  @override
+  String get stateServerDescription =>
+      'Storitev se ni pravilno odzvala. Na vaši strani je vse v redu; poskusite znova čez trenutek.';
+
+  @override
+  String get stateAuthTitle => 'Za nadaljevanje se prijavite';
+
+  @override
+  String get stateAuthDescription =>
+      'Vaša seja je potekla ali pa se še niste prijavili.';
+
+  @override
+  String get statePermissionTitle => 'Do tega nimate dostopa';
+
+  @override
+  String get statePermissionDescription =>
+      'To je na voljo samo lastniku ali potrjenim vlogam. Če potrebujete dostop, se obrnite na lastnika.';
+
+  @override
+  String get stateNotFoundTitle => 'Ni najdeno';
+
+  @override
+  String get stateNotFoundDescription =>
+      'Morda je bilo odstranjeno ali nastavljeno kot zasebno.';
+
+  @override
+  String get stateValidationTitle => 'Nekatere podatke je treba popraviti';
+
+  @override
+  String get stateValidationDescription =>
+      'Zahteva v tej obliki ni bila sprejeta. Preverite podatke in poskusite znova.';
+
+  @override
+  String get stateRateLimitTitle => 'Preveč poskusov';
+
+  @override
+  String get stateRateLimitDescription =>
+      'Pred naslednjim poskusom počakajte minuto.';
+
+  @override
+  String get stateWalletTitle => 'Denarnica ni pripravljena';
+
+  @override
+  String get stateWalletDescription =>
+      'Znova povežite ali odklenite denarnico in poskusite znova.';
+
+  @override
+  String get stateUnsupportedTitle => 'Tu ni na voljo';
+
+  @override
+  String get stateUnsupportedDescription =>
+      'Ta funkcija na tej napravi ali v tej različici ni podprta.';
+
+  @override
+  String get stateUnknownTitle => 'Nekaj je šlo narobe';
+
+  @override
+  String get stateUnknownDescription =>
+      'Tega ni bilo mogoče dokončati. Poskusite znova.';
+
+  @override
+  String get stateLoadingMore => 'Nalaganje dodatnih vsebin';
 }

@@ -29667,6 +29667,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resume upload'**
   String get spatialUploadResume;
+
+  /// No description provided for @formShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get formShowPassword;
+
+  /// No description provided for @formHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get formHidePassword;
+
+  /// No description provided for @formSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get formSelectDate;
+
+  /// No description provided for @formSelectTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get formSelectTime;
+
+  /// No description provided for @formNoValueSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get formNoValueSelected;
+
+  /// No description provided for @formAddImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add image'**
+  String get formAddImage;
+
+  /// No description provided for @formFixHighlightedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Some fields need attention. Check the messages below them.'**
+  String get formFixHighlightedFields;
+
+  /// No description provided for @stateNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach art.kubus'**
+  String get stateNetworkTitle;
+
+  /// No description provided for @stateNetworkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request didn\'t finish. Check your connection and try again.'**
+  String get stateNetworkDescription;
+
+  /// No description provided for @stateOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get stateOfflineTitle;
+
+  /// No description provided for @stateOfflineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This needs an internet connection. Reconnect, then try again.'**
+  String get stateOfflineDescription;
+
+  /// No description provided for @stateServerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus is having trouble'**
+  String get stateServerTitle;
+
+  /// No description provided for @stateServerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The service didn\'t respond properly. Nothing is wrong on your side; try again in a moment.'**
+  String get stateServerDescription;
+
+  /// No description provided for @stateAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue'**
+  String get stateAuthTitle;
+
+  /// No description provided for @stateAuthDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has ended or you haven\'t signed in yet.'**
+  String get stateAuthDescription;
+
+  /// No description provided for @statePermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have access'**
+  String get statePermissionTitle;
+
+  /// No description provided for @statePermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This is limited to its owner or to approved roles. Ask the owner if you need access.'**
+  String get statePermissionDescription;
+
+  /// No description provided for @stateNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get stateNotFoundTitle;
+
+  /// No description provided for @stateNotFoundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'It may have been removed or made private.'**
+  String get stateNotFoundDescription;
+
+  /// No description provided for @stateValidationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Some details need changes'**
+  String get stateValidationTitle;
+
+  /// No description provided for @stateValidationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request wasn\'t accepted as sent. Review the details and try again.'**
+  String get stateValidationDescription;
+
+  /// No description provided for @stateRateLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts'**
+  String get stateRateLimitTitle;
+
+  /// No description provided for @stateRateLimitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a minute before trying again.'**
+  String get stateRateLimitDescription;
+
+  /// No description provided for @stateWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet not ready'**
+  String get stateWalletTitle;
+
+  /// No description provided for @stateWalletDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect your wallet or unlock it, then try again.'**
+  String get stateWalletDescription;
+
+  /// No description provided for @stateUnsupportedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available here'**
+  String get stateUnsupportedTitle;
+
+  /// No description provided for @stateUnsupportedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature isn\'t supported on this device or in this version.'**
+  String get stateUnsupportedDescription;
+
+  /// No description provided for @stateUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get stateUnknownTitle;
+
+  /// No description provided for @stateUnknownDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete this. Try again.'**
+  String get stateUnknownDescription;
+
+  /// No description provided for @stateLoadingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more'**
+  String get stateLoadingMore;
 }
 
 class _AppLocalizationsDelegate

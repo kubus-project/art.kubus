@@ -9,6 +9,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
 import '../common/subject_options_sheet.dart';
+import '../forms/kubus_form.dart';
 
 /// Shared building blocks for all creator / editor / manager screens.
 ///
@@ -603,86 +604,36 @@ class CreatorTextField extends StatelessWidget {
     this.suffixIcon,
   });
 
+  // [accentColor] is kept for call-site compatibility only: PRODUCT v5
+  // focus is the semantic focus role, never a per-screen accent.
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = accentColor ?? scheme.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        TextFormField(
-          controller: controller,
-          minLines: minLines,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          scrollPadding: scrollPadding,
-          validator: validator,
-          onChanged: onChanged,
+    final roles = KubusColorRoles.of(context);
+    return KubusFieldFrame(
+      label: label,
+      enabled: enabled,
+      child: TextFormField(
+        controller: controller,
+        minLines: minLines,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        scrollPadding: scrollPadding,
+        validator: validator,
+        onChanged: onChanged,
+        enabled: enabled,
+        style: kubusFieldTextStyle(context, enabled: enabled),
+        cursorColor: roles.focus,
+        decoration: kubusFieldDecoration(
+          context,
+          hintText: hint,
+          helperText: helperText,
+          prefixIcon: prefixIcon,
+          suffixIcon: suffixIcon,
           enabled: enabled,
-          style: TextStyle(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: scheme.onSurface.withValues(alpha: 0.4),
-            ),
-            helperText: helperText,
-            helperMaxLines: 2,
-            helperStyle: KubusTextStyles.detailCaption.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: scheme.onSurface.withValues(alpha: 0.04),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: accent, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: scheme.error),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: scheme.error, width: 1.5),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.15),
-              ),
-            ),
-          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -862,64 +813,48 @@ class _CreatorDropdownState<T> extends State<CreatorDropdown<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final animationTheme = context.animationTheme;
     final enabled = widget.enabled;
-    final accent = widget.accentColor ?? scheme.primary;
     final showFocus = _focused && enabled;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
+    return KubusFieldFrame(
+      label: widget.label,
+      enabled: enabled,
+      child: Focus(
+        skipTraversal: true,
+        onFocusChange: (value) {
+          if (_focused != value) setState(() => _focused = value);
+        },
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm + KubusSpacing.xs,
           ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Focus(
-          skipTraversal: true,
-          onFocusChange: (value) {
-            if (_focused != value) setState(() => _focused = value);
-          },
-          child: AnimatedContainer(
-            duration: animationTheme.short,
-            curve: animationTheme.defaultCurve,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: showFocus
-                    ? accent
-                    : scheme.outline
-                        .withValues(alpha: enabled ? 0.25 : 0.15),
-                width: showFocus ? 1.5 : 1,
-              ),
-            ),
-            child: DropdownButton<T>(
-              value: widget.value,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              focusColor: Colors.transparent,
-              dropdownColor: scheme.surfaceContainerHighest,
-              style: TextStyle(
-                color: enabled
-                    ? scheme.onSurface
-                    : scheme.onSurface.withValues(alpha: 0.55),
-              ),
-              items: widget.items,
-              onChanged: enabled ? widget.onChanged : null,
+          decoration: BoxDecoration(
+            color: enabled ? roles.surface : roles.ground,
+            borderRadius: BorderRadius.circular(KubusRadius.control),
+            border: Border.all(
+              color: showFocus
+                  ? roles.focus
+                  : (enabled ? roles.rule : roles.rule.withValues(alpha: 0.5)),
+              width: showFocus ? 2 : 1,
             ),
           ),
+          child: DropdownButton<T>(
+            value: widget.value,
+            isExpanded: true,
+            underline: const SizedBox.shrink(),
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
+            focusColor: Colors.transparent,
+            dropdownColor: roles.surfaceRaised,
+            style: kubusFieldTextStyle(context, enabled: enabled),
+            items: widget.items,
+            onChanged: enabled ? widget.onChanged : null,
+          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -945,76 +880,15 @@ class CreatorSwitchTile extends StatelessWidget {
     this.activeColor,
   });
 
+  // [activeColor] is kept for call-site compatibility; PRODUCT v5 switches
+  // use the family active role. The row is flat (no tinted tile).
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = activeColor ?? scheme.primary;
-    final enabled = onChanged != null;
-    final titleColor = enabled
-        ? scheme.onSurface
-        : scheme.onSurface.withValues(alpha: 0.55);
-    final subtitleColor =
-        scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.4);
-
-    final tile = Ink(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: enabled ? 0.12 : 0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: titleColor,
-                  ),
-                ),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                    child: Text(
-                      subtitle!,
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: subtitleColor,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // The switch stays focusable for keyboard users; the surrounding
-          // InkWell extends the touch target to the whole tile.
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: accent,
-          ),
-        ],
-      ),
-    );
-
-    return Semantics(
-      label: title,
-      toggled: value,
-      enabled: enabled,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          mouseCursor:
-              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          onTap: enabled ? () => onChanged!(!value) : null,
-          child: tile,
-        ),
-      ),
+    return KubusFormSwitchRow(
+      title: title,
+      description: subtitle,
+      value: value,
+      onChanged: onChanged,
     );
   }
 }
@@ -1166,16 +1040,17 @@ class CreatorDateField extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: onPick,
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    borderRadius: BorderRadius.circular(KubusRadius.control),
                     child: Container(
                       padding: const EdgeInsets.all(
                         KubusSpacing.sm + KubusSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: scheme.onSurface.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        color: KubusColorRoles.of(context).surface,
+                        borderRadius:
+                            BorderRadius.circular(KubusRadius.control),
                         border: Border.all(
-                          color: scheme.outline.withValues(alpha: 0.25),
+                          color: KubusColorRoles.of(context).rule,
                         ),
                       ),
                       child: Row(
@@ -1258,15 +1133,15 @@ class CreatorTimeField extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onPick,
-              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderRadius: BorderRadius.circular(KubusRadius.control),
               child: Container(
                 padding:
                     const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                 decoration: BoxDecoration(
-                  color: scheme.onSurface.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  color: KubusColorRoles.of(context).surface,
+                  borderRadius: BorderRadius.circular(KubusRadius.control),
                   border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.25),
+                    color: KubusColorRoles.of(context).rule,
                   ),
                 ),
                 child: Row(

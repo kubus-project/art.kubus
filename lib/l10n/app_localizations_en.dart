@@ -17067,4 +17067,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialUploadResume => 'Resume upload';
+
+  @override
+  String get formShowPassword => 'Show password';
+
+  @override
+  String get formHidePassword => 'Hide password';
+
+  @override
+  String get formSelectDate => 'Select a date';
+
+  @override
+  String get formSelectTime => 'Select a time';
+
+  @override
+  String get formNoValueSelected => 'Not set';
+
+  @override
+  String get formAddImage => 'Add image';
+
+  @override
+  String get formFixHighlightedFields =>
+      'Some fields need attention. Check the messages below them.';
+
+  @override
+  String get stateNetworkTitle => 'Couldn\'t reach art.kubus';
+
+  @override
+  String get stateNetworkDescription =>
+      'The request didn\'t finish. Check your connection and try again.';
+
+  @override
+  String get stateOfflineTitle => 'You\'re offline';
+
+  @override
+  String get stateOfflineDescription =>
+      'This needs an internet connection. Reconnect, then try again.';
+
+  @override
+  String get stateServerTitle => 'art.kubus is having trouble';
+
+  @override
+  String get stateServerDescription =>
+      'The service didn\'t respond properly. Nothing is wrong on your side; try again in a moment.';
+
+  @override
+  String get stateAuthTitle => 'Sign in to continue';
+
+  @override
+  String get stateAuthDescription =>
+      'Your session has ended or you haven\'t signed in yet.';
+
+  @override
+  String get statePermissionTitle => 'You don\'t have access';
+
+  @override
+  String get statePermissionDescription =>
+      'This is limited to its owner or to approved roles. Ask the owner if you need access.';
+
+  @override
+  String get stateNotFoundTitle => 'Not found';
+
+  @override
+  String get stateNotFoundDescription =>
+      'It may have been removed or made private.';
+
+  @override
+  String get stateValidationTitle => 'Some details need changes';
+
+  @override
+  String get stateValidationDescription =>
+      'The request wasn\'t accepted as sent. Review the details and try again.';
+
+  @override
+  String get stateRateLimitTitle => 'Too many attempts';
+
+  @override
+  String get stateRateLimitDescription => 'Wait a minute before trying again.';
+
+  @override
+  String get stateWalletTitle => 'Wallet not ready';
+
+  @override
+  String get stateWalletDescription =>
+      'Reconnect your wallet or unlock it, then try again.';
+
+  @override
+  String get stateUnsupportedTitle => 'Not available here';
+
+  @override
+  String get stateUnsupportedDescription =>
+      'This feature isn\'t supported on this device or in this version.';
+
+  @override
+  String get stateUnknownTitle => 'Something went wrong';
+
+  @override
+  String get stateUnknownDescription =>
+      'We couldn\'t complete this. Try again.';
+
+  @override
+  String get stateLoadingMore => 'Loading more';
 }
