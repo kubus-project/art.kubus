@@ -77,10 +77,9 @@ class ProfileUtilityActions extends StatelessWidget {
       final focused = states.contains(WidgetState.focused);
       return RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        side: BorderSide(
-          color: focused ? roles.focus : roles.rule,
-          width: focused ? KubusBorders.emphasisWidth : KubusSizes.hairline,
-        ),
+        side: focused
+            ? KubusBorders.activeSide(context, accent: roles.focus)
+            : KubusBorders.hairlineSide(context),
       );
     });
     final style = ButtonStyle(

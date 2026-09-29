@@ -1,5 +1,6 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/detail/profile_utility_actions.dart';
@@ -128,7 +129,14 @@ void main() {
         )
         .first;
     final shape = tester.widget<Material>(material).shape! as OutlinedBorder;
-    expect(shape.side.color, roles.focus);
+    // The focused keyline is the governed teal focus border.
+    expect(
+      shape.side,
+      KubusBorders.activeSide(
+        tester.element(find.byWidget(focusedButton.widget)),
+        accent: roles.focus,
+      ),
+    );
   });
 
   testWidgets('standalone owner profile keeps its own title and utilities',

@@ -97,9 +97,7 @@ class AttestationBadgePanel extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: roles.active.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        border: Border.all(
-                          color: roles.active.withValues(alpha: 0.38),
-                        ),
+                        border: KubusBorders.contextTile(roles.active),
                       ),
                       child: Text(
                         '${provider.totalCount}',

@@ -1366,7 +1366,7 @@ class DesktopCreatorShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    final hairline = BorderSide(color: roles.rule, width: KubusSizes.hairline);
+    final hairline = KubusBorders.hairlineSide(context);
 
     // PRODUCT v5 management workspace: one flat header row, one edit column
     // and one rail, separated by hairlines. No glass, no accent bar.
@@ -1639,13 +1639,10 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
           identityColor: accentColor,
         );
 
-    final roles = KubusColorRoles.of(context);
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
-        ),
+        border: Border(bottom: KubusBorders.hairlineSide(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.only(bottom: KubusSpacing.lg),

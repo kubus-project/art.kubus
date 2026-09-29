@@ -70,7 +70,6 @@ class KubusContextIcon extends StatelessWidget {
   /// Accent wash alphas; the contract the character-rebalance doc records.
   static const double fillAlpha = 0.12;
   static const double selectedFillAlpha = 0.20;
-  static const double borderAlpha = 0.38;
 
   @override
   Widget build(BuildContext context) {
@@ -83,10 +82,7 @@ class KubusContextIcon extends StatelessWidget {
           alpha: selected ? selectedFillAlpha : fillAlpha,
         ),
         borderRadius: BorderRadius.circular(size.radius),
-        border: Border.all(
-          color: selected ? accent : accent.withValues(alpha: borderAlpha),
-          width: KubusSizes.hairline,
-        ),
+        border: KubusBorders.contextTile(accent, selected: selected),
       ),
       alignment: Alignment.center,
       child: Icon(icon, size: size.glyph, color: accent),

@@ -314,10 +314,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                     : Colors.transparent,
                 borderRadius: radius,
                 border: Border(
-                  left: BorderSide(
-                    color: isSelected ? accent : Colors.transparent,
-                    width: 3,
-                  ),
+                  left: KubusBorders.indicatorSide(accent, visible: isSelected),
                 ),
               ),
               child: Row(

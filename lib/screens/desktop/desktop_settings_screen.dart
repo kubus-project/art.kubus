@@ -171,10 +171,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     decoration: BoxDecoration(
                       color: roles.surface,
                       border: Border(
-                        right: BorderSide(
-                          color: roles.rule,
-                          width: KubusSizes.hairline,
-                        ),
+                        right: KubusBorders.hairlineSide(context),
                       ),
                     ),
                     child: _buildSettingsSidebar(themeProvider),

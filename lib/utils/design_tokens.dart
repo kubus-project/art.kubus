@@ -1077,6 +1077,28 @@ class KubusBorders {
         width: KubusSizes.hairline,
       );
 
+  /// Keyline of a [KubusContextIcon] tile: a 38 % accent hairline, or the
+  /// solid accent when the tile is selected.
+  static BorderSide contextTileSide(Color accent, {bool selected = false}) =>
+      BorderSide(
+        color: selected ? accent : accent.withValues(alpha: 0.38),
+        width: KubusSizes.hairline,
+      );
+
+  static Border contextTile(Color accent, {bool selected = false}) =>
+      Border.fromBorderSide(contextTileSide(accent, selected: selected));
+
+  /// Width of a selected-item indicator bar (settings sidebar).
+  static const double indicatorWidth = 3;
+
+  /// Leading selection bar: the accent when [visible], transparent space
+  /// otherwise so selection does not shift the layout.
+  static BorderSide indicatorSide(Color accent, {required bool visible}) =>
+      BorderSide(
+        color: visible ? accent : Colors.transparent,
+        width: indicatorWidth,
+      );
+
   static Border accentTint(Color accent) =>
       Border.fromBorderSide(accentTintSide(accent));
 
