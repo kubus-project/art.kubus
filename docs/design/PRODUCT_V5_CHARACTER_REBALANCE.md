@@ -144,7 +144,8 @@ Tests: `test/widgets/creator/management_rail_test.dart`.
   (`_fetchTokenMetadataFields`) but takes only the image from it: the
   configured name, symbol and decimals stay authoritative, so broken remote
   metadata cannot rename KUB8. The image must be a usable http(s) URL
-  (`KubusTokenIdentity.isUsableMetadataImage`) and the lookup has a 5 s
+  (`TokenIdentityRules.isUsableMetadataImage` in `lib/utils`, shared with
+  the wallet UI so the service never imports widgets) and the lookup has a 5 s
   budget, so the hero token never waits on an unreachable gateway. The
   result is cached for the usual 30 minutes. `KubusTokenAvatar(imageUrl:)`
   then shows that image.

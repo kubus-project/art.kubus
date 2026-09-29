@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../config/api_keys.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/token_identity_rules.dart';
 
 /// Which mark is drawn inside a [KubusTokenAvatar].
 enum KubusTokenGlyph {
@@ -98,47 +98,28 @@ class KubusTokenIdentity {
   static const String solSymbol = 'SOL';
 
   /// The official kubus lattice mark bundled with the app (white lines on
-  /// transparency, drawn as an alpha mask in the avatar's glyph colour). It
-  /// is the same asset `SolanaWalletService` records as KUB8's known logo.
-  static const String kub8LogoAsset = 'assets/images/logo.png';
+  /// transparency, drawn as an alpha mask in the avatar's glyph colour).
+  /// See [TokenIdentityRules.kub8LogoAsset].
+  static const String kub8LogoAsset = TokenIdentityRules.kub8LogoAsset;
 
-  /// Whether [url] is a metadata image the avatar may load: a remote
-  /// http(s) URL. The bundled asset path and empty values are not metadata.
-  static bool isUsableMetadataImage(String? url) {
-    final value = (url ?? '').trim();
-    if (value.isEmpty || value == kub8LogoAsset) return false;
-    final uri = Uri.tryParse(value);
-    return uri != null &&
-        (uri.scheme == 'https' || uri.scheme == 'http') &&
-        uri.host.isNotEmpty;
-  }
+  /// See [TokenIdentityRules.isUsableMetadataImage].
+  static bool isUsableMetadataImage(String? url) =>
+      TokenIdentityRules.isUsableMetadataImage(url);
 
-  /// The sentinel `SolanaWalletService` uses for the chain's own asset, which
-  /// has no mint account of its own.
-  static const String nativeSolMint = 'native';
+  /// See [TokenIdentityRules.nativeSolMint].
+  static const String nativeSolMint = TokenIdentityRules.nativeSolMint;
 
-  /// Wrapped SOL. A real mint, and Solana's own, so it earns the mark too.
-  static const String wrappedSolMint =
-      'So11111111111111111111111111111111111111112';
+  /// See [TokenIdentityRules.wrappedSolMint].
+  static const String wrappedSolMint = TokenIdentityRules.wrappedSolMint;
 
-  /// Whether [mint] is the KUB8 mint this build was configured with.
-  ///
-  /// A symbol is metadata: any SPL token can set its own to `KUB8`, and
-  /// `SolanaWalletService._getTokenInfo` will happily read it from on-chain or
-  /// off-chain metadata. The mint account is the identity, and it cannot be
-  /// claimed. Base58 is case-sensitive, so this compares exactly.
-  static bool isCanonicalKub8(String? mint) {
-    final value = (mint ?? '').trim();
-    if (value.isEmpty) return false;
-    final expected = ApiKeys.kub8MintAddress.trim();
-    return expected.isNotEmpty && value == expected;
-  }
+  /// Whether [mint] is the configured KUB8 mint; the mint, never the symbol,
+  /// is the identity. See [TokenIdentityRules.isCanonicalKub8].
+  static bool isCanonicalKub8(String? mint) =>
+      TokenIdentityRules.isCanonicalKub8(mint);
 
-  /// Whether [mint] is SOL itself rather than a token calling itself SOL.
-  static bool isCanonicalSol(String? mint) {
-    final value = (mint ?? '').trim();
-    return value == nativeSolMint || value == wrappedSolMint;
-  }
+  /// See [TokenIdentityRules.isCanonicalSol].
+  static bool isCanonicalSol(String? mint) =>
+      TokenIdentityRules.isCanonicalSol(mint);
 
   /// The visual for an asset.
   ///

@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:art_kubus/config/api_keys.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
-import 'package:art_kubus/widgets/wallet/kubus_token_identity.dart';
+import 'package:art_kubus/utils/token_identity_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Canonical KUB8 is metadata-image-first: the service hands the wallet the
@@ -50,7 +51,7 @@ void main() {
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
       final logo = info['logoUrl'] as String;
-      expect(KubusTokenIdentity.isUsableMetadataImage(logo), isTrue);
+      expect(TokenIdentityRules.isUsableMetadataImage(logo), isTrue);
       expect(logo, contains('bafykub8image'));
     });
 
@@ -62,7 +63,7 @@ void main() {
       );
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
-      expect(info['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info['logoUrl'], TokenIdentityRules.kub8LogoAsset);
     });
 
     test('metadata without an image falls back to the bundled logo', () async {
@@ -72,7 +73,7 @@ void main() {
       );
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
-      expect(info['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info['logoUrl'], TokenIdentityRules.kub8LogoAsset);
     });
 
     test('an unusable metadata image falls back to the bundled logo', () async {
@@ -82,14 +83,14 @@ void main() {
       );
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
-      expect(info['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info['logoUrl'], TokenIdentityRules.kub8LogoAsset);
     });
 
     test('absent on-chain metadata falls back to the bundled logo', () async {
       final service = serviceWith(onChain: (_) async => null);
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
-      expect(info['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info['logoUrl'], TokenIdentityRules.kub8LogoAsset);
     });
 
     test('a metadata exception falls back to the bundled logo', () async {
@@ -98,7 +99,7 @@ void main() {
       );
       final info =
           await service.getTokenInfoForTesting(ApiKeys.kub8MintAddress);
-      expect(info['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info['logoUrl'], TokenIdentityRules.kub8LogoAsset);
       expect(info['symbol'], 'KUB8');
     });
 
@@ -114,7 +115,7 @@ void main() {
       expect(info, isNull);
       await tester.pump(const Duration(seconds: 2));
       expect(info, isNotNull);
-      expect(info!['logoUrl'], KubusTokenIdentity.kub8LogoAsset);
+      expect(info!['logoUrl'], TokenIdentityRules.kub8LogoAsset);
       expect(info!['symbol'], 'KUB8');
     });
 
@@ -161,8 +162,8 @@ void main() {
     final info = await service.getTokenInfoForTesting(wrongMint);
     expect(info['symbol'], 'KUB8');
     expect(info['logoUrl'], imageUrl);
-    expect(info['logoUrl'], isNot(KubusTokenIdentity.kub8LogoAsset));
-    expect(KubusTokenIdentity.isCanonicalKub8(wrongMint), isFalse);
+    expect(info['logoUrl'], isNot(TokenIdentityRules.kub8LogoAsset));
+    expect(TokenIdentityRules.isCanonicalKub8(wrongMint), isFalse);
   });
 
   // Native SOL never reaches the SPL token lookup; wrapped SOL takes the
@@ -175,14 +176,14 @@ void main() {
       offChain: (_) async => {'image': imageUrl},
     );
     final info =
-        await service.getTokenInfoForTesting(KubusTokenIdentity.wrappedSolMint);
+        await service.getTokenInfoForTesting(TokenIdentityRules.wrappedSolMint);
     expect(info['symbol'], 'SOL');
     expect(info['name'], 'Wrapped SOL');
     expect(info['logoUrl'], imageUrl);
-    expect(KubusTokenIdentity.isCanonicalSol(KubusTokenIdentity.wrappedSolMint),
+    expect(TokenIdentityRules.isCanonicalSol(TokenIdentityRules.wrappedSolMint),
         isTrue);
     expect(
-        KubusTokenIdentity.isCanonicalKub8(KubusTokenIdentity.wrappedSolMint),
+        TokenIdentityRules.isCanonicalKub8(TokenIdentityRules.wrappedSolMint),
         isFalse);
   });
 
@@ -217,5 +218,18 @@ void main() {
     final info = await service.getTokenInfoForTesting(genericMint);
     expect(info['name'], startsWith('Token '));
     expect(info.containsKey('logoUrl'), isFalse);
+  });
+
+  // lib/services/AGENTS.md: services must not depend on widgets. The shared
+  // KUB8 rules live in lib/utils/token_identity_rules.dart for that reason.
+  test('the wallet service imports no widget or screen code', () {
+    final imports = File('lib/services/solana_wallet_service.dart')
+        .readAsLinesSync()
+        .where((line) => line.startsWith('import '));
+    expect(
+      imports.where(
+          (line) => line.contains('/widgets/') || line.contains('/screens/')),
+      isEmpty,
+    );
   });
 }

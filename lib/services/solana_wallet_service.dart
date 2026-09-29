@@ -15,7 +15,7 @@ import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/token_amounts.dart';
 import 'ipfs_metadata_resolver.dart';
-import '../widgets/wallet/kubus_token_identity.dart';
+import '../utils/token_identity_rules.dart';
 
 enum DerivationPathType { standard, legacy }
 
@@ -65,7 +65,7 @@ class SolanaWalletService {
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
       'symbol': 'KUB8',
       'name': 'kubus Governance Token',
-      'logoUrl': 'assets/images/logo.png',
+      'logoUrl': TokenIdentityRules.kub8LogoAsset,
       'decimals': ApiKeys.kub8Decimals,
     },
   };
@@ -3101,7 +3101,7 @@ class SolanaWalletService {
         final fields = await _fetchTokenMetadataFields(mint)
             .timeout(_kub8MetadataImageBudget);
         final image = fields['logoUrl'] as String?;
-        if (KubusTokenIdentity.isUsableMetadataImage(image)) {
+        if (TokenIdentityRules.isUsableMetadataImage(image)) {
           base['logoUrl'] = image!.trim();
         }
       } catch (e) {
