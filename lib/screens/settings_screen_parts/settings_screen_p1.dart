@@ -937,7 +937,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                       style: KubusTypography.inter(fontSize: 13),
                     ),
                     value: artist,
-                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    activeThumbColor: KubusColorRoles.of(context).active,
                     onChanged: (val) {
                       _applyState(() => artist = val);
                       profileProvider.setRoleFlags(
@@ -959,7 +959,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                       style: KubusTypography.inter(fontSize: 13),
                     ),
                     value: institution,
-                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    activeThumbColor: KubusColorRoles.of(context).active,
                     onChanged: (val) {
                       _applyState(() => institution = val);
                       profileProvider.setRoleFlags(

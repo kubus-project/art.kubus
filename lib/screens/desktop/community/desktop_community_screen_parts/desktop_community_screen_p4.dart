@@ -52,7 +52,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           searchHighlight!,
           style: KubusTextStyles.navMetaLabel.copyWith(
             fontWeight: FontWeight.w600,
-            color: scheme.secondary,
+            color: scheme.primary,
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -84,14 +84,14 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isActive
-                ? scheme.secondary.withValues(alpha: 0.12)
+                ? scheme.primary.withValues(alpha: 0.12)
                 : hasUnread
-                    ? scheme.secondary.withValues(alpha: 0.05)
+                    ? scheme.primary.withValues(alpha: 0.05)
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(KubusRadius.md),
             border: isActive
                 ? Border.all(
-                    color: scheme.secondary.withValues(alpha: 0.4), width: 1.2)
+                    color: scheme.primary.withValues(alpha: 0.4), width: 1.2)
                 : Border.all(color: baseColor, width: hasUnread ? 1 : 0),
           ),
           child: Row(
@@ -112,7 +112,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: scheme.secondary,
+                          color: scheme.primary,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Theme.of(context).colorScheme.surface,
@@ -796,8 +796,8 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                         top: 2,
                         right: 10,
                         child: GestureDetector(
-                          onTap: () =>
-                              _applyState(() => _selectedImages.removeAt(index)),
+                          onTap: () => _applyState(
+                              () => _selectedImages.removeAt(index)),
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(

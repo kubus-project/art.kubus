@@ -378,8 +378,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
         final l10n = AppLocalizations.of(context)!;
         final user = profileProvider.currentUser;
         final wallet = (user?.walletAddress ?? '').trim();
-        final scheme = Theme.of(context).colorScheme;
-        final headerColor = scheme.secondary;
+        final roles = KubusColorRoles.of(context);
 
         const metrics = <String>['artworks', 'followers', 'following'];
         if (wallet.isNotEmpty && statsProvider != null) {
@@ -427,23 +426,11 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile card
+              // Profile identity: a flat structural card, not a colour banner.
               DesktopCard(
                 padding: EdgeInsets.zero,
-                showBorder: false,
-                child: Container(
-                  padding: const EdgeInsets.all(KubusSpacing.xxl),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        headerColor,
-                        headerColor.withValues(alpha: 0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(DetailRadius.xl),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.xl),
                   child: Row(
                     children: [
                       AvatarWidget(
@@ -461,7 +448,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                             Text(
                               user?.displayName ?? l10n.settingsGuestUserName,
                               style: KubusTextStyles.heroTitle.copyWith(
-                                color: Colors.white,
+                                color: roles.foreground,
                               ),
                             ),
                             if (user?.bio != null) ...[
@@ -469,7 +456,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                               Text(
                                 user!.bio,
                                 style: KubusTextStyles.heroSubtitle.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.8),
+                                  color: roles.foregroundMuted,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -505,20 +492,21 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
   }
 
   Widget _buildProfileStat(String label, String value) {
+    final roles = KubusColorRoles.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           value,
           style: KubusTextStyles.statValue.copyWith(
-            color: Colors.white,
+            color: roles.foreground,
           ),
         ),
         const SizedBox(height: KubusSpacing.xs),
         Text(
           label,
           style: KubusTextStyles.statLabel.copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: roles.foregroundMuted,
           ),
         ),
       ],
@@ -972,9 +960,9 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(dialogContext).colorScheme.secondary,
-                  foregroundColor: Colors.white),
+                  backgroundColor: Theme.of(dialogContext).colorScheme.primary,
+                  foregroundColor:
+                      Theme.of(dialogContext).colorScheme.onPrimary),
               onPressed: () {
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(rootContext).showKubusSnackBar(
@@ -986,9 +974,9 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
             const SizedBox(height: 8),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(dialogContext).colorScheme.secondary,
-                  foregroundColor: Colors.white),
+                  backgroundColor: Theme.of(dialogContext).colorScheme.primary,
+                  foregroundColor:
+                      Theme.of(dialogContext).colorScheme.onPrimary),
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(rootContext);
                 Navigator.pop(dialogContext);
@@ -1064,8 +1052,8 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
               child: Text(l10n.settingsMaybeLaterButton)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Colors.white),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showKubusSnackBar(

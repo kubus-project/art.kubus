@@ -549,6 +549,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     // Keep member identities fresh (e.g. username/displayName changes).
     _queueMemberProfileResolution(members, forceRefresh: false);
 
+    final emptyText = Text(
+      l10n.collabPanelNoCollaborators,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.65),
+          ),
+    );
+    // Embedded, the enclosing section names the panel, so the refresh
+    // control shares a line with the membership status instead of a title.
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -556,7 +564,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
           children: [
             Expanded(
               child: widget.embedded
-                  ? const SizedBox.shrink()
+                  ? (members.isEmpty ? emptyText : const SizedBox.shrink())
                   : Text(
                       l10n.collectionSettingsCollaboration,
                       style: KubusTextStyles.detailSectionTitle.copyWith(
@@ -596,15 +604,13 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
           const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         ],
         if (members.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-            child: Text(
-              l10n.collabPanelNoCollaborators,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                  ),
-            ),
-          )
+          widget.embedded
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+                  child: emptyText,
+                )
         else
           Column(
             children: members
