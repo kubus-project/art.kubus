@@ -83,6 +83,7 @@ class KubusStatCard extends StatelessWidget {
     TextStyle? valueStyle,
     TextStyle? titleStyle,
     EdgeInsets padding = defaultPadding,
+    bool withIcon = true,
   }) {
     final scaler = MediaQuery.textScalerOf(context);
     final lines = _labelLines(scaler, titleLines);
@@ -107,12 +108,9 @@ class KubusStatCard extends StatelessWidget {
 
     final valueLine = lineHeight(valueStyle ?? KubusTextStyles.statValue, 1);
     final label = lineHeight(titleStyle ?? KubusTextStyles.statLabel, lines);
-    return (padding.vertical +
-            KubusContextIconSize.compact.box +
-            KubusSpacing.xs +
-            valueLine +
-            KubusSpacing.xs +
-            label)
+    final iconBlock =
+        withIcon ? KubusContextIconSize.compact.box + KubusSpacing.xs : 0.0;
+    return (padding.vertical + iconBlock + valueLine + KubusSpacing.xs + label)
         .ceilToDouble();
   }
 
@@ -192,7 +190,13 @@ class KubusStatCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                valueText,
+                // A value wider than the tile scales down; a number is
+                // never ellipsised.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: valueText,
+                ),
                 const SizedBox(height: KubusSpacing.xxs),
                 titleText,
               ],

@@ -215,6 +215,30 @@ void main() {
       expect(find.text('Views'), findsOneWidget);
     });
 
+    testWidgets('a narrow standard tile scales its value, never ellipsises',
+        (tester) async {
+      // The mobile governance header puts three standard tiles in a row;
+      // at 320 dp each leaves ~59 px for the number.
+      await pumpThemed(
+        tester,
+        const Center(
+          child: SizedBox(
+            width: 120,
+            child: KubusStatCard(
+              title: 'Voting power',
+              value: '0.00 KUB8',
+              icon: Icons.how_to_vote_outlined,
+            ),
+          ),
+        ),
+        size: const Size(320, 640),
+      );
+      final value =
+          tester.renderObject<RenderParagraph>(find.text('0.00 KUB8'));
+      expect(value.didExceedMaxLines, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('DesktopStatCard passes its colour to the icon tile',
         (tester) async {
       const accent = Color(0xFF70C58B);

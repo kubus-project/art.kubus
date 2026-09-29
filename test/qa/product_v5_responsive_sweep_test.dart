@@ -7,6 +7,7 @@ import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
     as desktop_profile;
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_wallet_screen.dart';
+import 'package:art_kubus/screens/home_screen.dart';
 import 'package:art_kubus/screens/settings_screen.dart';
 import 'package:art_kubus/screens/web3/wallet/wallet_home.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ void main() {
     double textScale = 1,
     List<SingleChildWidget> extraProviders = const <SingleChildWidget>[],
     bool artist = false,
+    String? onlyFrom,
   }) async {
     final prior = FlutterError.onError;
     final errors = await pumpProductSurface(
@@ -57,7 +59,11 @@ void main() {
     // Hand errors back to the framework before asserting: a failing expect
     // under the harness hook would hang instead of failing.
     FlutterError.onError = prior;
-    expect(errors.toSet().toList(), isEmpty);
+    final relevant = errors
+        .where((e) => onlyFrom == null || e.contains(onlyFrom))
+        .toSet()
+        .toList();
+    expect(relevant, isEmpty);
     // Background session restores chain further 800 ms token-read timers;
     // unmount and let them run out so none outlives the test.
     await tester.pumpWidget(const SizedBox.shrink());
@@ -113,6 +119,23 @@ void main() {
             ChangeNotifierProvider<ArtworkProvider>.value(value: artworks),
             ChangeNotifierProvider<CollabProvider>.value(value: collab),
           ],
+        );
+      });
+    }
+  }
+
+  // Home activity stats use the measured centred extent (Codex P2 on #199).
+  // Only the stat tiles are asserted: the Home app bar, quick actions, Web3
+  // row and activity header carry pre-existing overflows outside Wave 5A.
+  for (final scale in const [1.0, 2.0]) {
+    for (final width in const [320.0, 390.0]) {
+      testWidgets('home stats @ ${width.toInt()} ${scale}x', (tester) async {
+        await expectClean(
+          tester,
+          () => const HomeScreen(),
+          size: Size(width, 2400),
+          textScale: scale,
+          onlyFrom: 'kubus_stat_card.dart',
         );
       });
     }
