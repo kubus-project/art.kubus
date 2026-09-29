@@ -86,7 +86,7 @@ Future<List<String>> pumpProductSurface(
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
-        Provider<GlassCapabilitiesProvider>(
+        ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),
         ),
         ChangeNotifierProvider<AppModeProvider>(
