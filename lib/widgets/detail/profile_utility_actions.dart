@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
-import '../common/kubus_glass_icon_button.dart';
+import '../../utils/kubus_color_roles.dart';
 
 /// A single profile utility action (Share, Analytics, More, Close, Back).
 ///
@@ -42,8 +42,9 @@ class ProfileUtilityAction {
 /// Guarantees:
 /// * every target is at least [minTargetSize] (44) logical pixels square;
 /// * geometry uses [KubusRadius.md], never an ad hoc radius;
-/// * hover, focus, pressed and disabled states come from
-///   [KubusGlassIconButton];
+/// * PRODUCT v5 utility chrome: flat, neutral foreground on a hairline, no
+///   glass, no per-action colour; hover and keyboard focus answer in the
+///   family teal ([KubusColorRoles.active] / [KubusColorRoles.focus]);
 /// * each control carries a tooltip and an explicit semantics label;
 /// * the toolbar wraps instead of overflowing on narrow overlays.
 ///
@@ -71,6 +72,46 @@ class ProfileUtilityActions extends StatelessWidget {
   Widget build(BuildContext context) {
     if (actions.isEmpty) return const SizedBox.shrink();
 
+    final roles = KubusColorRoles.of(context);
+    final shape = WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+      final focused = states.contains(WidgetState.focused);
+      return RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        side: BorderSide(
+          color: focused ? roles.focus : roles.rule,
+          width: focused ? KubusBorders.emphasisWidth : KubusSizes.hairline,
+        ),
+      );
+    });
+    final style = ButtonStyle(
+      fixedSize: WidgetStatePropertyAll(Size.square(minTargetSize)),
+      minimumSize: WidgetStatePropertyAll(Size.square(minTargetSize)),
+      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+      iconSize: const WidgetStatePropertyAll(KubusHeaderMetrics.actionIcon),
+      shape: shape,
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return roles.foregroundSubtle;
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return roles.active;
+        }
+        return roles.foreground;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return roles.active.withValues(alpha: 0.14);
+        }
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return roles.active.withValues(alpha: 0.08);
+        }
+        return null;
+      }),
+    );
+
     return Wrap(
       alignment: alignment,
       spacing: KubusSpacing.xs,
@@ -79,14 +120,19 @@ class ProfileUtilityActions extends StatelessWidget {
         for (final action in actions)
           Semantics(
             label: action.semanticsLabel ?? action.tooltip,
-            child: KubusGlassIconButton(
-              icon: action.icon,
-              tooltip: action.tooltip,
-              tooltipPreferBelow: true,
-              tooltipVerticalOffset: tooltipVerticalOffset,
-              size: minTargetSize,
-              borderRadius: KubusRadius.md,
-              onPressed: action.onPressed,
+            button: true,
+            enabled: action.onPressed != null,
+            excludeSemantics: true,
+            onTap: action.onPressed,
+            child: Tooltip(
+              message: action.tooltip,
+              preferBelow: true,
+              verticalOffset: tooltipVerticalOffset,
+              child: IconButton(
+                onPressed: action.onPressed,
+                icon: Icon(action.icon),
+                style: style,
+              ),
             ),
           ),
       ],

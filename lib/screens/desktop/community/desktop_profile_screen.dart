@@ -184,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final isArtist = _hasArtistRole(profileProvider, daoReview);
     final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
 
-    return Scaffold(
+    final body = Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
@@ -207,10 +207,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: DetailSpacing.xl),
-                        _buildHeader(
-                          showNavigationChrome: !isEmbeddedSubScreen,
-                        ),
-                        const SizedBox(height: DetailSpacing.xl),
+                        if (!isEmbeddedSubScreen) ...[
+                          _buildHeader(),
+                          const SizedBox(height: DetailSpacing.xl),
+                        ],
                         // Identity leads; cultural content follows
                         // immediately. Owner utilities (stats, account
                         // health, badges, achievements) live in the side
@@ -244,6 +244,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       ),
     );
+
+    // Pushed inside the desktop shell the profile owns the one header row:
+    // Back + title from the shared sub-screen bar, and its utilities as that
+    // bar's actions. Never a second action-only band under a shell title.
+    if (isEmbeddedSubScreen) {
+      return DesktopSubScreen(
+        title: AppLocalizations.of(context)!.navigationScreenProfile,
+        actions: [_buildUtilityActions()],
+        child: body,
+      );
+    }
+    return body;
   }
 
   /// Two-column layout from 1200 px: the wide main column carries cultural
@@ -355,84 +367,77 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildHeader({required bool showNavigationChrome}) {
+  /// Owner utility actions use the same canonical square controls as the
+  /// public profile and the community overlay, so all five profile surfaces
+  /// share one action vocabulary, hit area and focus treatment.
+  Widget _buildUtilityActions() {
     final l10n = AppLocalizations.of(context)!;
-
-    // Owner utility actions use the same canonical square controls as the
-    // public profile and the community overlay, so all five profile surfaces
-    // share one action vocabulary, hit area and focus treatment.
-    Widget buildActions() {
-      return ProfileUtilityActions(
-        actions: [
-          ProfileUtilityAction(
-            icon: Icons.share_outlined,
-            tooltip: l10n.desktopProfileShareProfileLabel,
-            onPressed: _shareProfile,
-          ),
-          ProfileUtilityAction(
-            icon: Icons.inbox_outlined,
-            tooltip: l10n.profileInvitesTooltip,
-            onPressed: () {
-              final shellScope = DesktopShellScope.of(context);
-              if (shellScope != null) {
-                shellScope.pushSubScreen(
-                  title: l10n.profileInvitesTooltip,
-                  child: const InvitesInboxScreen(embedded: true),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const InvitesInboxScreen(),
-                ),
+    return ProfileUtilityActions(
+      actions: [
+        ProfileUtilityAction(
+          icon: Icons.share_outlined,
+          tooltip: l10n.desktopProfileShareProfileLabel,
+          onPressed: _shareProfile,
+        ),
+        ProfileUtilityAction(
+          icon: Icons.inbox_outlined,
+          tooltip: l10n.profileInvitesTooltip,
+          onPressed: () {
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.pushSubScreen(
+                title: l10n.profileInvitesTooltip,
+                child: const InvitesInboxScreen(embedded: true),
               );
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const InvitesInboxScreen(),
+              ),
+            );
+          },
+        ),
+        if (AppConfig.isFeatureEnabled('analytics'))
+          ProfileUtilityAction(
+            icon: Icons.analytics_outlined,
+            tooltip: l10n.navigationScreenAnalytics,
+            onPressed: () {
+              final wallet =
+                  context.read<ProfileProvider>().currentUser?.walletAddress ??
+                      '';
+              if (wallet.trim().isEmpty) return;
+              _openAnalyticsDialog(wallet);
             },
           ),
-          if (AppConfig.isFeatureEnabled('analytics'))
-            ProfileUtilityAction(
-              icon: Icons.analytics_outlined,
-              tooltip: l10n.navigationScreenAnalytics,
-              onPressed: () {
-                final wallet = context
-                        .read<ProfileProvider>()
-                        .currentUser
-                        ?.walletAddress ??
-                    '';
-                if (wallet.trim().isEmpty) return;
-                _openAnalyticsDialog(wallet);
-              },
-            ),
-          ProfileUtilityAction(
-            icon: Icons.settings_outlined,
-            tooltip: l10n.navigationScreenSettings,
-            onPressed: () {
-              final shellScope = DesktopShellScope.of(context);
-              if (shellScope != null) {
-                shellScope.pushScreen(
-                  const DesktopSettingsScreen(embeddedInShell: true),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DesktopSettingsScreen(),
-                ),
+        ProfileUtilityAction(
+          icon: Icons.settings_outlined,
+          tooltip: l10n.navigationScreenSettings,
+          onPressed: () {
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.pushScreen(
+                const DesktopSettingsScreen(embeddedInShell: true),
               );
-            },
-          ),
-        ],
-      );
-    }
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DesktopSettingsScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
-    if (!showNavigationChrome) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: buildActions(),
-      );
-    }
-
+  /// Standalone (not pushed in the shell): the page title leads its own
+  /// header row with the same utilities.
+  Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -450,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        buildActions(),
+        _buildUtilityActions(),
       ],
     );
   }
