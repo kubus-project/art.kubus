@@ -191,6 +191,17 @@ void main() {
       expect(networkImage(metadataImage), findsOneWidget);
     });
 
+    testWidgets('the bundled logo holds the slot while the image loads',
+        (tester) async {
+      await tester.pumpWidget(_wrap(const KubusTokenAvatar(
+        symbol: 'KUB8',
+        mint: ApiKeys.kub8MintAddress,
+        imageUrl: metadataImage,
+      )));
+      // First frame: the metadata image has not painted yet.
+      expect(bundledLogo(), findsOneWidget);
+    });
+
     for (final brightness in Brightness.values) {
       for (final size in [KubusTokenAvatarSize.sm, KubusTokenAvatarSize.lg]) {
         testWidgets(

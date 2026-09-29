@@ -278,6 +278,10 @@ class KubusTokenAvatar extends StatelessWidget {
           width: box,
           height: box,
           fit: BoxFit.cover,
+          // The bundled canonical logo holds the slot until the metadata
+          // image paints, so a slow gateway never shows an empty tile.
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+              frame == null && !wasSynchronouslyLoaded ? markTile : child,
           // An unavailable metadata image (for example an unreachable IPFS
           // gateway) falls back to the bundled canonical logo, never to a
           // generic mark.

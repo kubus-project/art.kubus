@@ -1639,7 +1639,6 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
           identityColor: accentColor,
         );
 
-
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(bottom: KubusBorders.hairlineSide(context)),

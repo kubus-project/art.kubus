@@ -139,13 +139,21 @@ Tests: `test/widgets/creator/management_rail_test.dart`.
 - **Identity is the mint.** `KubusTokenIdentity.isCanonicalKub8(mint)`
   decides it. A token that calls itself KUB8 with another mint stays
   generic and never loads the house image.
-- **Metadata first.** For canonical KUB8, `KubusTokenAvatar(imageUrl:)`
-  shows the token's usable http(s) metadata image.
-- **Bundled fallback.** If there is no metadata image, or it fails to
-  load, the avatar shows `assets/images/logo.png`. That is the kubus
-  lattice, which `SolanaWalletService` already records as KUB8's known
-  logo; it is drawn as an alpha mask in the avatar colour. The generated
-  cube is gone.
+- **Metadata first.** For canonical KUB8, `SolanaWalletService` runs the
+  same on-chain + off-chain metadata lookup as every other token
+  (`_fetchTokenMetadataFields`) but takes only the image from it: the
+  configured name, symbol and decimals stay authoritative, so broken remote
+  metadata cannot rename KUB8. The image must be a usable http(s) URL
+  (`KubusTokenIdentity.isUsableMetadataImage`) and the lookup has a 5 s
+  budget, so the hero token never waits on an unreachable gateway. The
+  result is cached for the usual 30 minutes. `KubusTokenAvatar(imageUrl:)`
+  then shows that image.
+- **Bundled fallback.** If there is no metadata image (absent, failed,
+  timed out or unusable), or it fails to load, the avatar shows
+  `assets/images/logo.png`. That is the kubus lattice, which
+  `SolanaWalletService` records as KUB8's known logo; it is drawn as an
+  alpha mask in the avatar colour, and it also holds the slot while a
+  remote image is still loading. The generated cube is gone.
 - The configured mint's metadata names the token `kubit` / `KUB8`. Its
   IPFS metadata image is currently unreachable from the providers tried,
   so users see the bundled logo today.
@@ -154,8 +162,17 @@ Tests: `test/widgets/creator/management_rail_test.dart`.
   and DAO show KUB8 as text and gain no new mark.
 
 Tests: `test/widgets/kubus_token_identity_test.dart` covers the
-metadata-first path, the fallback in light and dark at small and large
-sizes, the wrong-mint impostor, SOL and generic tokens.
+metadata-first path, the loading placeholder, the fallback in light and
+dark at small and large sizes, the wrong-mint impostor, SOL and generic
+tokens. `test/services/kub8_token_metadata_image_test.dart` covers the
+service with stubbed lookups: resolvable, ipfs://, missing, unusable and
+failed images, the timeout budget, the cache, configured identity, the
+wrong mint, wrapped SOL and generic tokens.
+
+Known debt (P3, predates 5A): the hard-coded USDC and wrapped-SOL entries
+in `SolanaWalletService._knownTokens` use lowercase keys while
+`WalletUtils.canonical` only trims, so those two entries never match;
+those tokens rely on their on-chain metadata.
 
 **Follow-up (separate PR, deliberately not in 5A):** IPFS gateway repair,
 covering the default gateway order, retry behaviour and the pinning of the
