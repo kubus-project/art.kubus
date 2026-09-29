@@ -6175,6 +6175,42 @@ abstract class AppLocalizations {
   /// **'Transactional emails (verification, reset, and recovery) are always enabled'**
   String get settingsEmailPreferencesTransactionalSubtitle;
 
+  /// No description provided for @settingsEmailGroupMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get settingsEmailGroupMarketing;
+
+  /// No description provided for @settingsEmailGroupActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get settingsEmailGroupActivity;
+
+  /// No description provided for @settingsEmailGroupEssential.
+  ///
+  /// In en, this message translates to:
+  /// **'Essential'**
+  String get settingsEmailGroupEssential;
+
+  /// No description provided for @settingsEmailGroupEssentialNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.'**
+  String get settingsEmailGroupEssentialNote;
+
+  /// No description provided for @settingsAppNotificationsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App notifications'**
+  String get settingsAppNotificationsSectionTitle;
+
+  /// No description provided for @settingsAppNotificationsSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push and in-app alerts on this device'**
+  String get settingsAppNotificationsSectionSubtitle;
+
   /// No description provided for @settingsEmailPreferencesUpdateFailedToast.
   ///
   /// In en, this message translates to:

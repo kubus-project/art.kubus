@@ -3477,6 +3477,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Transactional emails (verification, reset, and recovery) are always enabled';
 
   @override
+  String get settingsEmailGroupMarketing => 'Marketing';
+
+  @override
+  String get settingsEmailGroupActivity => 'Activity';
+
+  @override
+  String get settingsEmailGroupEssential => 'Essential';
+
+  @override
+  String get settingsEmailGroupEssentialNote =>
+      'Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.';
+
+  @override
+  String get settingsAppNotificationsSectionTitle => 'App notifications';
+
+  @override
+  String get settingsAppNotificationsSectionSubtitle =>
+      'Push and in-app alerts on this device';
+
+  @override
   String get settingsEmailPreferencesUpdateFailedToast =>
       'Could not update email preferences. Please try again.';
 

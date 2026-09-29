@@ -277,76 +277,75 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     );
   }
 
-  /// Returns semantic color based on settings section index
-  Color _getSectionColor(int index, ColorScheme scheme) {
-    switch (index) {
-      case 0: // Wallet
-        return AppColorUtils.amberAccent;
-      case 1: // Appearance
-        return scheme.tertiary;
-      case 2: // Notifications
-        return AppColorUtils.amberAccent;
-      case 3: // Privacy
-      case 4: // Security
-        return AppColorUtils.indigoAccent;
-      case 5: // Achievements
-        return Colors.amber;
-      case 6: // Platform
-        return scheme.secondary;
-      case 7: // Help
-      case 8: // About
-        return scheme.secondary;
-      case 9: // Danger Zone
-        return scheme.error;
-      default:
-        return scheme.secondary;
-    }
-  }
-
+  /// One structural selection language for every section: a teal indicator,
+  /// a restrained teal wash and a weight change. Only the Danger Zone keeps
+  /// the destructive red, because that is what it is.
   Widget _buildSettingsSidebarItem(
       _SettingsItem item, ThemeProvider themeProvider) {
     final isSelected = _selectedSettingsIndex == item.index;
-    final scheme = Theme.of(context).colorScheme;
-    final sectionColor = _getSectionColor(item.index, scheme);
+    final roles = KubusColorRoles.of(context);
+    final isDanger = item.index == 9;
+    final accent = isDanger ? roles.destructive : roles.active;
+    final radius = BorderRadius.circular(DetailRadius.md);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          _applyState(() => _selectedSettingsIndex = item.index);
-        },
-        borderRadius: BorderRadius.circular(DetailRadius.md),
-        child: Container(
-          key: ValueKey('desktop_settings_sidebar_item_${item.index}'),
-          padding: EdgeInsets.all(DetailSpacing.lg),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? sectionColor.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(DetailRadius.md),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                item.icon,
-                size: 22,
-                color: isSelected
-                    ? sectionColor
-                    : scheme.onSurface.withValues(alpha: 0.6),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xxs),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _applyState(() => _selectedSettingsIndex = item.index);
+          },
+          borderRadius: radius,
+          hoverColor: roles.active.withValues(alpha: 0.06),
+          focusColor: roles.focus.withValues(alpha: 0.12),
+          child: Semantics(
+            selected: isSelected,
+            button: true,
+            child: Container(
+              key: ValueKey('desktop_settings_sidebar_item_${item.index}'),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm + KubusSpacing.xs,
               ),
-              SizedBox(width: DetailSpacing.lg),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: isSelected
-                      ? DetailTypography.label(context)
-                          .copyWith(color: sectionColor)
-                      : DetailTypography.body(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? accent.withValues(alpha: 0.10)
+                    : Colors.transparent,
+                borderRadius: radius,
+                border: Border(
+                  left: BorderSide(
+                    color: isSelected ? accent : Colors.transparent,
+                    width: 3,
+                  ),
                 ),
               ),
-            ],
+              child: Row(
+                children: [
+                  Icon(
+                    item.icon,
+                    size: KubusHeaderMetrics.actionIcon,
+                    color:
+                        isSelected || isDanger ? accent : roles.foregroundMuted,
+                  ),
+                  const SizedBox(width: KubusSpacing.md),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: DetailTypography.body(context).copyWith(
+                        color: isSelected
+                            ? roles.foreground
+                            : roles.foregroundMuted,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

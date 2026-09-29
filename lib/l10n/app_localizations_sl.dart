@@ -3505,6 +3505,26 @@ class AppLocalizationsSl extends AppLocalizations {
       'Transakcijska e‑pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
 
   @override
+  String get settingsEmailGroupMarketing => 'Trženje';
+
+  @override
+  String get settingsEmailGroupActivity => 'Dejavnost';
+
+  @override
+  String get settingsEmailGroupEssential => 'Bistveno';
+
+  @override
+  String get settingsEmailGroupEssentialNote =>
+      'Vedno vklopljeno. Ta e‑poštna sporočila varujejo vaš račun in denarnico ter potrjujejo vaša dejanja, zato jih ni mogoče izklopiti.';
+
+  @override
+  String get settingsAppNotificationsSectionTitle => 'Obvestila v aplikaciji';
+
+  @override
+  String get settingsAppNotificationsSectionSubtitle =>
+      'Potisna obvestila in obvestila v aplikaciji na tej napravi';
+
+  @override
   String get settingsEmailPreferencesUpdateFailedToast =>
       'Nastavitev e‑pošte ni bilo mogoče posodobiti. Poskusi znova.';
 

@@ -742,16 +742,16 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     bool saveAfterToggle = true,
     ValueChanged<bool>? onChanged,
     bool enabled = true,
+    bool mandatory = false,
     Key? switchKey,
   }) {
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return SharedSettingsToggleRow(
       switchKey: switchKey,
       title: title,
       subtitle: subtitle,
       value: initialValue,
       enabled: enabled,
-      activeColor: accentColor,
+      mandatory: mandatory,
       onChanged: enabled
           ? (value) {
               onChanged?.call(value);

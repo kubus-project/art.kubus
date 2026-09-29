@@ -150,12 +150,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
-    final scheme = Theme.of(context).colorScheme;
-    final sidebarStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-      tintBase: scheme.surface,
-    );
+    final roles = KubusColorRoles.of(context);
     final content = AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -168,29 +163,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (isLarge)
+                // Settings is structure, not a map/media overlay: a flat
+                // surface with a right hairline, no glass.
                 SizedBox(
                   width: 280,
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
+                      color: roles.surface,
                       border: Border(
                         right: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
+                          color: roles.rule,
+                          width: KubusSizes.hairline,
                         ),
                       ),
                     ),
-                    child: LiquidGlassPanel(
-                      padding: EdgeInsets.zero,
-                      margin: EdgeInsets.zero,
-                      borderRadius: BorderRadius.zero,
-                      blurSigma: sidebarStyle.blurSigma,
-                      fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
-                      showBorder: false,
-                      backgroundColor: sidebarStyle.tintColor,
-                      child: _buildSettingsSidebar(themeProvider),
-                    ),
+                    child: _buildSettingsSidebar(themeProvider),
                   ),
                 ),
               Expanded(
