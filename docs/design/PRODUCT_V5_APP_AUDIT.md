@@ -88,7 +88,7 @@ Routes: mobile tabs are `MainApp` indexes (0 map, 1 AR, 2 community, 3 home,
 | Home / discovery – mobile | tab 3 | Accent gradient hero led with wallet ("Wallet and Web3 access"/KUB8+SOL), greeting "there", Web3 block before activity | P1 | **4A** flat discovery intro (notion, title, lede, Explore map + See community), Web3 block moved last |
 | Home / discovery – desktop | `/home` | Gradient hero with "Connect wallet" + decorative AR tile; **P0 at 900 px** (hero text one character per line) | P0 | **4A** same intro, rail collapse at 900–1199 |
 | Home quick actions / stats | home | Dashboard tiles ("Start here", "Your cultural activity"), coloured icon tiles | P2 | 4B (keep content, flatten tiles) |
-| Map surrounding UI – mobile | tab 0 | Search, filters, discovery path, nearby sheet, controls are map overlays (glass valid). Scope model already separates *current viewport* vs *near me radius* (`KubusMapScope`) and the nearby panel labels the active scope ("Map area"). | P2 | KEEP glass; constraint chips + reset → **MAP** (Wave 6 result-constraint work) |
+| Map surrounding UI – mobile | tab 0 | Search, filters, discovery path, nearby sheet, controls are map overlays (glass valid). Scope model already separates *current viewport* vs *near me radius* (`KubusMapScope`) and the nearby panel labels the active scope ("Map area"). | P2 | KEEP glass; constraint chips + reset → **MAP** (Wave 5B result-constraint work) |
 | Map surrounding UI – desktop | `/explore` | Same; desktop nearby list in functions panel. At Europe zoom markers were not visible in either BEFORE or AFTER capture (renderer/LOD timing) | P2 | **MAP** (engine out of scope) |
 | Search | home/map/community bars | Unified `KubusGeneralSearch` with typed results; glass result panel with shadow; no recent searches; suggestions not grouped by type | P2 | 4B (grouping + flat panel off-map) |
 | Artwork detail | `/a/…` | Subject Detail reference | — | KEEP (no regression; shared buttons now ≥44 px) |
@@ -180,7 +180,7 @@ The historical viewport vs travel/radius contradiction is now modelled
 explicitly: `KubusMapFilterState.scope` is either `currentViewport` or
 `nearMe` with `nearMeRadiusKm`; the mobile nearby panel receives
 `viewportScope` and shows the active scope label ("Map area"). Remaining UX
-debt belongs to Wave 6 "result constraints": show viewport, radius, quick
+debt belongs to Wave 5B "result constraints": show viewport, radius, quick
 filters, search and place framing as separate visible constraints with one
 reset. No geospatial backend change is needed for that UI.
 
@@ -420,7 +420,7 @@ announcement, and scrolling the promotion sheet with the keyboard open.
   no image.
 - Metric tiles centre the value, so a two-line label pushes it up slightly.
 - Remaining glass/gradient usage is concentrated in map-surrounding UI,
-  subject detail and creator flows (Wave 6 and later).
+  subject detail and creator flows (Wave 5B and later).
 
 ## Wave 5A record (character rebalance)
 
@@ -459,7 +459,9 @@ the label lines.
 
 ## Deferred (after Wave 4)
 
-- Map/globe engine, marker LOD and result-constraint chips (Wave 6).
+- Map/globe engine, marker LOD and result-constraint chips: Wave 5B,
+  PRODUCT spatial system (called Wave 6 in earlier audit notes).
+- Whole-product acceptance and the deferred human checks: Wave 5C.
 - Institution v2 schema (Wave 9), DAO/moderation lifecycle (Wave 10).
 - Android App Links (#181, untouched).
 - Backend env reconciliation — see
