@@ -422,6 +422,41 @@ announcement, and scrolling the promotion sheet with the keyboard open.
 - Remaining glass/gradient usage is concentrated in map-surrounding UI,
   subject detail and creator flows (Wave 6 and later).
 
+## Wave 5A record (character rebalance)
+
+Contract: [PRODUCT_V5_CHARACTER_REBALANCE.md](PRODUCT_V5_CHARACTER_REBALANCE.md).
+
+- Teal is the family primary again; blue is the secondary role. All 53
+  `ColorScheme.secondary` uses were audited and the structural ones moved
+  to teal.
+- Stat tiles carry `KubusContextIcon` tiles and use measured grid heights.
+  Profile stat overflow went from 17–25 px (desktop) and 71 px (200 %
+  text) to none.
+- The desktop profile has one header row (Back, title, utilities).
+- Settings email preferences are grouped as Marketing, Activity and
+  Essential (locked ON), with app notifications as a separate section; the
+  sidebar is flat.
+- The management rail is one hairline-separated workspace for every
+  creator and the artwork editor.
+- Canonical KUB8 renders its metadata image first, falling back to the
+  bundled lattice logo; identity is decided by the mint.
+
+The 4C P3 note "metric tiles centre the value, so a two-line label pushes
+it up slightly" is resolved: the fixed icon/number/label stack reserves
+the label lines.
+
+### Remaining P3 debt (5A)
+
+- Desktop wallet quick-action tiles truncate their titles ("Connect e…",
+  "Secure wa…"). This predates 5A.
+- The mobile home quick action opens the mobile `ProfileScreen` inside a
+  desktop sub-screen on desktop.
+- About 300 `ThemeProvider.accentColor` uses remain outside the 5A
+  surfaces; they should move to structural roles screen by screen.
+- The IPFS gateway repair is a separate PR (see the rebalance doc).
+- Human browser 200 % zoom pass for profile, settings, the management rail
+  and wallet.
+
 ## Deferred (after Wave 4)
 
 - Map/globe engine, marker LOD and result-constraint chips (Wave 6).
