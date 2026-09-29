@@ -37,7 +37,7 @@ void main() {
       );
 
       expect(kub8.symbol, 'KUB8');
-      expect(kub8.glyph, KubusTokenGlyph.kubusCube);
+      expect(kub8.glyph, KubusTokenGlyph.kubusLattice);
       expect(kub8.accent, KubusColors.primaryVariantDark);
 
       expect(sol.symbol, 'SOL');
@@ -52,7 +52,7 @@ void main() {
     ) async {
       // The attack. A symbol is metadata any SPL token can set, so an
       // airdropped token can name itself KUB8 or SOL. Deciding branding from
-      // the symbol made such a token render with the house cube throughout
+      // the symbol made such a token render with the house mark throughout
       // wallet lists and transaction cards, which is what makes an airdrop look
       // official. Only the mint can settle it.
       await _pumpProbe(tester);
@@ -67,7 +67,7 @@ void main() {
         mint: 'ImPoSToRMint1111111111111111111111111111111',
       );
       expect(impostor.glyph, KubusTokenGlyph.initials);
-      expect(impostor.glyph, isNot(KubusTokenGlyph.kubusCube));
+      expect(impostor.glyph, isNot(KubusTokenGlyph.kubusLattice));
 
       final fakeSol = _resolve(
         tester,
@@ -150,6 +150,137 @@ void main() {
       );
 
       expect(find.bySemanticsLabel('KUB8'), findsOneWidget);
+    });
+  });
+
+  group('canonical KUB8 mark (metadata first, bundled logo fallback)', () {
+    Future<void> pumpAvatar(
+      WidgetTester tester,
+      Widget avatar, {
+      Brightness brightness = Brightness.dark,
+    }) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: brightness),
+        home: Scaffold(body: Center(child: avatar)),
+      ));
+      // flutter_test answers every HTTP request with 400, so a network
+      // image resolves to its error state within a few frames.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    Finder bundledLogo() => find.byWidgetPredicate((w) =>
+        w is Image &&
+        w.image is AssetImage &&
+        (w.image as AssetImage).assetName == KubusTokenIdentity.kub8LogoAsset);
+
+    Finder networkImage(String url) => find.byWidgetPredicate((w) =>
+        w is Image &&
+        w.image is NetworkImage &&
+        (w.image as NetworkImage).url == url);
+
+    const metadataImage = 'https://metadata.example/kub8.png';
+
+    testWidgets('usable metadata image is the first choice', (tester) async {
+      await tester.pumpWidget(_wrap(const KubusTokenAvatar(
+        symbol: 'KUB8',
+        mint: ApiKeys.kub8MintAddress,
+        imageUrl: metadataImage,
+      )));
+      expect(networkImage(metadataImage), findsOneWidget);
+    });
+
+    for (final brightness in Brightness.values) {
+      for (final size in [KubusTokenAvatarSize.sm, KubusTokenAvatarSize.lg]) {
+        testWidgets(
+            'unavailable metadata image falls back to the bundled logo '
+            '(${brightness.name}, ${size.name})', (tester) async {
+          await pumpAvatar(
+            tester,
+            KubusTokenAvatar(
+              symbol: 'KUB8',
+              mint: ApiKeys.kub8MintAddress,
+              imageUrl: metadataImage,
+              size: size,
+            ),
+            brightness: brightness,
+          );
+          expect(bundledLogo(), findsOneWidget);
+          expect(
+              find
+                  .byType(CustomPaint)
+                  .evaluate()
+                  .where((e) => (e.widget as CustomPaint).painter != null),
+              isEmpty,
+              reason: 'no generated cube for canonical KUB8');
+          expect(
+              tester.getSize(find.byType(KubusTokenAvatar)).width,
+              size == KubusTokenAvatarSize.sm
+                  ? KubusSizes.tokenAvatarSm
+                  : KubusSizes.tokenAvatarLg);
+        });
+      }
+    }
+
+    testWidgets('no metadata image (or the bundled path) uses the logo',
+        (tester) async {
+      for (final url in [null, '', KubusTokenIdentity.kub8LogoAsset]) {
+        await pumpAvatar(
+          tester,
+          KubusTokenAvatar(
+            symbol: 'KUB8',
+            mint: ApiKeys.kub8MintAddress,
+            imageUrl: url,
+          ),
+        );
+        expect(bundledLogo(), findsOneWidget, reason: 'imageUrl=$url');
+        expect(
+            find.byWidgetPredicate(
+                (w) => w is Image && w.image is NetworkImage),
+            findsNothing);
+      }
+    });
+
+    testWidgets('wrong mint named KUB8 stays generic, even with an image',
+        (tester) async {
+      await pumpAvatar(
+        tester,
+        const KubusTokenAvatar(
+          symbol: 'KUB8',
+          mint: 'ImPoSToRMint1111111111111111111111111111111',
+          imageUrl: metadataImage,
+        ),
+      );
+      expect(bundledLogo(), findsNothing);
+      expect(networkImage(metadataImage), findsNothing);
+      expect(find.text('KU'), findsOneWidget);
+    });
+
+    testWidgets('SOL keeps the Solana mark; generic tokens keep initials',
+        (tester) async {
+      await pumpAvatar(
+        tester,
+        const Column(mainAxisSize: MainAxisSize.min, children: [
+          KubusTokenAvatar(
+            symbol: 'SOL',
+            mint: KubusTokenIdentity.nativeSolMint,
+            imageUrl: metadataImage,
+          ),
+          KubusTokenAvatar(
+              symbol: 'USDC', mint: 'UsdcMint', imageUrl: metadataImage),
+        ]),
+      );
+      expect(bundledLogo(), findsNothing);
+      expect(networkImage(metadataImage), findsNothing);
+      expect(find.text('US'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) =>
+            w is CustomPaint &&
+            w.painter != null &&
+            w.painter.runtimeType.toString() == '_SolanaMarkPainter'),
+        findsOneWidget,
+      );
     });
   });
 }
