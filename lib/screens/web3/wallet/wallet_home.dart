@@ -649,18 +649,26 @@ class _WalletHomeState extends State<WalletHome> {
               ),
             ),
             const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              flex: 2,
+            // A balance is never ellipsised: the column takes the number's
+            // width (up to 55 % of the row) and a number wider than that
+            // scales down. The token name gives way first.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.55,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
-                  Text(
-                    balance,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.detailCardTitle.copyWith(
-                      color: roles.foreground,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      balance,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
+                        color: roles.foreground,
+                      ),
                     ),
                   ),
                   // A per-token fiat figure only when a real price source

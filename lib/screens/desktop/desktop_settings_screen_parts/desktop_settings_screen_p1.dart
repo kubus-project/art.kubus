@@ -438,6 +438,9 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                         wallet: user?.walletAddress ?? '',
                         radius:
                             KubusChromeMetrics.heroIconBox - KubusSpacing.xxs,
+                        // On the flat card the avatar needs its own edge.
+                        borderWidth: KubusSizes.hairline,
+                        borderColor: roles.ruleStrong,
                         allowFabricatedFallback: true,
                       ),
                       const SizedBox(width: KubusSpacing.xl),
