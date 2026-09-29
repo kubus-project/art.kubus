@@ -252,19 +252,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     );
     final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
 
-    String sectionTitle() {
-      switch (section) {
-        case DesktopArtistStudioSection.gallery:
-          return l10n.artistStudioTabGallery;
-        case DesktopArtistStudioSection.create:
-          return l10n.artistStudioTabCreate;
-        case DesktopArtistStudioSection.exhibitions:
-          return l10n.artistStudioTabExhibitions;
-        case DesktopArtistStudioSection.analytics:
-          return l10n.artistStudioTabAnalytics;
-      }
-    }
-
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
     final practice = <Widget>[
@@ -407,25 +394,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       child: ListView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
         children: [
-          KubusNotionLabel(l10n.studioNotionPractice),
-          const SizedBox(height: KubusSpacing.xs),
-          Semantics(
-            header: true,
-            child: Text(
-              l10n.desktopArtistStudioOverviewTitle,
-              style: KubusTextStyles.sectionTitle.copyWith(
-                color: roles.foreground,
-              ),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.xxs),
-          Text(
-            sectionTitle(),
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: roles.foregroundMuted,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.lg),
+          // The page header owns the hub title, notion and section; the
+          // rail opens with status instead of repeating them.
           _buildVerificationStatusCard(themeProvider),
           const SizedBox(height: sectionGap),
           if (practice.isNotEmpty) ...[
@@ -579,6 +549,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         snapshot == null;
 
     final counters = snapshot?.counters ?? const <String, int>{};
+    final roles = KubusColorRoles.of(context);
     String display(String key) {
       if (isLoading) return '…';
       if (wallet.isEmpty) return '—';
@@ -595,7 +566,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               title: l10n.desktopArtistStudioStatArtworks,
               value: display('artworks'),
               icon: Icons.collections_outlined,
-              accent: KubusColorRoles.of(context).foregroundMuted,
+              accent: roles.web3ArtistStudioAccent,
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),
@@ -604,7 +575,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               title: l10n.desktopArtistStudioStatViews,
               value: display('viewsReceived'),
               icon: Icons.visibility_outlined,
-              accent: KubusColorRoles.of(context).foregroundMuted,
+              accent: roles.active,
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),
@@ -613,7 +584,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               title: l10n.desktopArtistStudioStatLikes,
               value: display('likesReceived'),
               icon: Icons.favorite_outline,
-              accent: KubusColorRoles.of(context).foregroundMuted,
+              accent: roles.statCoral,
             ),
           ),
         ],

@@ -20,7 +20,6 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
@@ -362,7 +361,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   }
 
   Widget _buildDesktopSidebar(AppLocalizations l10n, Artwork art) {
-    final scheme = Theme.of(context).colorScheme;
     final hasTitle = _titleController.text.trim().isNotEmpty;
     final hasDescription = _descriptionController.text.trim().isNotEmpty;
     final hasCover = _nextCoverBytes != null ||
@@ -400,7 +398,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       children: [
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorReadinessTitle,
-          subtitle: l10n.commonEdit,
           icon: Icons.fact_check_outlined,
           contextType: contextType,
           semantic: DesktopCreatorSectionSemantic.readiness,
@@ -412,7 +409,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: l10n.commonActions,
-          subtitle: l10n.commonSave,
           icon: Icons.save_outlined,
           contextType: contextType,
           semantic: DesktopCreatorSectionSemantic.actions,
@@ -432,13 +428,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                       )
                     : const Icon(Icons.save),
                 label: Text(l10n.commonSave),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                l10n.collectionSettingsCollaboration,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.68),
-                    ),
               ),
             ],
           ),
@@ -1008,7 +997,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           ),
         ],
         mainContent: content,
-        sidebarAccentColor: KubusColorRoles.of(context).web3ArtistStudioAccent,
         sidebar: _buildDesktopSidebar(l10n, art),
       );
     }
