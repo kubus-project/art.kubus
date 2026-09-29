@@ -164,13 +164,14 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryDark,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
-        // Structural roles stay fixed. The user's saved accent is provided
+        // Structural roles stay fixed: primary/tertiary are kubus teal,
+        // secondary is the family blue. The user's saved accent is provided
         // separately through KubusColorRoles for explicit personal highlights.
         colorScheme: ColorScheme.dark(
           primary: KubusColorRoles.dark.active,
           onPrimary: KubusColorRoles.dark.onActive,
-          secondary: KubusColorRoles.dark.active,
-          onSecondary: KubusColorRoles.dark.onActive,
+          secondary: KubusColorRoles.dark.secondary,
+          onSecondary: KubusProductPalette.foregroundLight,
           tertiary: KubusColorRoles.dark.active,
           onTertiary: KubusColorRoles.dark.onActive,
           surface: KubusColorRoles.dark.surface,
@@ -285,8 +286,8 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         colorScheme: ColorScheme.light(
           primary: KubusColorRoles.light.active,
           onPrimary: KubusColorRoles.light.onActive,
-          secondary: KubusColorRoles.light.active,
-          onSecondary: KubusColorRoles.light.onActive,
+          secondary: KubusColorRoles.light.secondary,
+          onSecondary: Colors.white,
           tertiary: KubusColorRoles.light.active,
           onTertiary: KubusColorRoles.light.onActive,
           surface: KubusColorRoles.light.surface,

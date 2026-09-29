@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1571,55 +1572,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           isVerticalLayout: isVerticalLayout,
         );
 
-        return SizedBox(
-          width: isVerticalLayout ? double.infinity : null,
-          height: _statCardHeight(
+        final titleStyle = KubusTextStyles.compactBadge.copyWith(
+          fontSize: isSmallScreen
+              ? KubusChromeMetrics.navBadgeLabel - 1
+              : KubusChromeMetrics.navBadgeLabel,
+          color: scheme.onSurface.withValues(alpha: 0.68),
+        );
+        final valueStyle = KubusTextStyles.badgeCount.copyWith(
+          fontSize: isVerticalLayout
+              ? (isSmallScreen
+                  ? KubusChromeMetrics.navBadgeLabel
+                  : KubusChromeMetrics.navMetaLabel)
+              : (isSmallScreen
+                  ? KubusChromeMetrics.navMetaLabel
+                  : KubusChromeMetrics.navLabel),
+          color: scheme.onSurface,
+        );
+        final padding = EdgeInsets.all(isSmallScreen ? 10 : 12);
+        // The design height, grown to what the icon/number/label stack
+        // measures at the ambient text scale (200 % text must not clip).
+        final height = math.max(
+          _statCardHeight(
             showIconOnly: showIconOnly,
             isVerticalLayout: isVerticalLayout,
           ),
+          KubusStatCard.centeredExtent(
+            context,
+            valueStyle: valueStyle,
+            titleStyle: titleStyle,
+            padding: padding,
+            withIcon: shouldShowIcon,
+          ),
+        );
+
+        return SizedBox(
+          width: isVerticalLayout ? double.infinity : null,
+          height: height,
           child: KubusStatCard(
             title: title,
             value: value,
             icon: icon,
             layout: KubusStatCardLayout.centered,
             showIcon: shouldShowIcon,
-            centeredWatermarkAlignment: Alignment.center,
-            centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
-            centeredWatermarkVerticalBias: 0,
-            centeredWatermarkHovered: false,
             accent: statColor,
-            tintBase: scheme.surface,
             onTap: action == null
                 ? null
                 : () => _handleHomeActivityCardTap(action, icon),
-            minHeight: _statCardHeight(
-              showIconOnly: showIconOnly,
-              isVerticalLayout: isVerticalLayout,
-            ),
-            padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+            minHeight: height,
+            padding: padding,
             titleMaxLines: 2,
-            iconBoxSize: showIconOnly
-                ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
-                : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-            iconSize: showIconOnly
-                ? KubusSizes.sidebarActionIcon - KubusSpacing.xxs
-                : KubusSizes.sidebarActionIcon,
-            titleStyle: KubusTextStyles.compactBadge.copyWith(
-              fontSize: isSmallScreen
-                  ? KubusChromeMetrics.navBadgeLabel - 1
-                  : KubusChromeMetrics.navBadgeLabel,
-              color: scheme.onSurface.withValues(alpha: 0.68),
-            ),
-            valueStyle: KubusTextStyles.badgeCount.copyWith(
-              fontSize: isVerticalLayout
-                  ? (isSmallScreen
-                      ? KubusChromeMetrics.navBadgeLabel
-                      : KubusChromeMetrics.navMetaLabel)
-                  : (isSmallScreen
-                      ? KubusChromeMetrics.navMetaLabel
-                      : KubusChromeMetrics.navLabel),
-              color: scheme.onSurface,
-            ),
+            titleStyle: titleStyle,
+            valueStyle: valueStyle,
           ),
         );
       },

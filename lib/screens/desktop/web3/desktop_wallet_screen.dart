@@ -444,14 +444,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ?.balance ??
         0.0;
     // KUB8 is the canonical mint, never the symbol.
-    final kub8Balance =
-        walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
+    final kub8Token = walletProvider.getTokenByMint(ApiKeys.kub8MintAddress);
+    final kub8Balance = kub8Token?.balance ?? 0.0;
     // Real on-chain balances only. KUB8 (canonical mint) leads, SOL follows;
     // the address and network live in the header, not repeated here.
     Widget amount(String label, double value, int decimals, String unit,
         {bool lead = false}) {
       final text = value.toStringAsFixed(decimals);
-      return Semantics(
+      final figure = Semantics(
         label: l10n.walletBalanceAmountSemantic(label, text, unit),
         excludeSemantics: true,
         child: Column(
@@ -492,6 +492,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ),
           ],
         ),
+      );
+      if (!lead) return figure;
+      // The leading KUB8 balance wears the canonical mark (metadata image
+      // first, bundled kubus logo otherwise).
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          KubusTokenAvatar(
+            symbol: KubusTokenIdentity.kub8Symbol,
+            mint: ApiKeys.kub8MintAddress,
+            imageUrl: kub8Token?.logoUrl,
+            size: KubusTokenAvatarSize.lg,
+          ),
+          const SizedBox(width: KubusSpacing.md),
+          Flexible(child: figure),
+        ],
       );
     }
 
@@ -809,6 +825,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           KubusTokenAvatar(
             symbol: token.symbol,
             mint: token.contractAddress,
+            imageUrl: token.logoUrl,
             size: KubusTokenAvatarSize.md,
           ),
           const SizedBox(width: KubusSpacing.md),

@@ -22,6 +22,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     required this.ruleStrong,
     required this.active,
     required this.onActive,
+    required this.secondary,
     required this.userAccent,
     required this.onUserAccent,
     required this.focus,
@@ -66,9 +67,14 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   final Color rule;
   final Color ruleStrong;
 
-  /// Family active/selection color. Independent of the personal accent.
+  /// Family primary (kubus teal): active/selection, focus, primary action.
+  /// Independent of the personal accent.
   final Color active;
   final Color onActive;
+
+  /// Family secondary (blue): information, analytics, institution and
+  /// secondary discovery context. Never selection or the primary action.
+  final Color secondary;
 
   /// Optional personalized accent, exposed only for explicit highlighting.
   final Color userAccent;
@@ -185,11 +191,11 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   }
 
   /// Resolve a semantic screen accent from a shared key.
-  Color screenAccentForKey(
-    String key,
-    ColorScheme scheme, {
-    Color? appAccent,
-  }) {
+  ///
+  /// Kubus teal ([active]) is the family identity for structural screens
+  /// (home, settings, profile, wallet shell, map). Contextual hubs keep their
+  /// orientation colours. The personal accent never drives a screen accent.
+  Color screenAccentForKey(String key) {
     switch (key.toLowerCase()) {
       case 'studio':
       case 'artist':
@@ -212,59 +218,20 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       case 'trade':
       case 'nft':
         return web3MarketplaceAccent;
+      case 'community':
+      case 'connect':
+      case 'analytics':
+        return secondary;
       case 'map':
       case 'explore':
       case 'discovery':
       case 'ar':
-        return statTeal;
-      case 'community':
-      case 'connect':
-        return scheme.secondary;
       case 'wallet':
       case 'profile':
-        return statAmber;
       case 'settings':
       case 'home':
       default:
-        return appAccent ?? scheme.primary;
-    }
-  }
-
-  /// Resolve a screen accent from a route string used by desktop shell chrome.
-  Color screenAccentForRoute(
-    String route,
-    ColorScheme scheme, {
-    Color? appAccent,
-  }) {
-    switch (route.toLowerCase()) {
-      case '/artist-studio':
-        return screenAccentForKey('studio', scheme, appAccent: appAccent);
-      case '/governance':
-        return screenAccentForKey('dao_hub', scheme, appAccent: appAccent);
-      case '/institution':
-        return screenAccentForKey(
-          'institution_hub',
-          scheme,
-          appAccent: appAccent,
-        );
-      case '/marketplace':
-        return screenAccentForKey(
-          'marketplace',
-          scheme,
-          appAccent: appAccent,
-        );
-      case '/community':
-        return screenAccentForKey('community', scheme, appAccent: appAccent);
-      case '/wallet':
-        return screenAccentForKey('wallet', scheme, appAccent: appAccent);
-      case '/explore':
-        return screenAccentForKey('map', scheme, appAccent: appAccent);
-      case '/home':
-        return screenAccentForKey('home', scheme, appAccent: appAccent);
-      case '/settings':
-        return screenAccentForKey('settings', scheme, appAccent: appAccent);
-      default:
-        return screenAccentForKey('home', scheme, appAccent: appAccent);
+        return active;
     }
   }
 
@@ -281,6 +248,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     ruleStrong: KubusProductPalette.ruleStrongDark,
     active: KubusProductPalette.activeDark,
     onActive: KubusProductPalette.foregroundLight,
+    secondary: KubusProductPalette.secondaryDark,
     userAccent: KubusProductPalette.activeDark,
     onUserAccent: Colors.white,
     focus: KubusProductPalette.focusDark,
@@ -320,6 +288,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     ruleStrong: KubusProductPalette.ruleStrongLight,
     active: KubusProductPalette.activeLight,
     onActive: Colors.white,
+    secondary: KubusProductPalette.secondaryLight,
     userAccent: KubusProductPalette.activeLight,
     onUserAccent: Colors.white,
     focus: KubusProductPalette.focusLight,
@@ -366,6 +335,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     Color? ruleStrong,
     Color? active,
     Color? onActive,
+    Color? secondary,
     Color? userAccent,
     Color? onUserAccent,
     Color? focus,
@@ -403,6 +373,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       ruleStrong: ruleStrong ?? this.ruleStrong,
       active: active ?? this.active,
       onActive: onActive ?? this.onActive,
+      secondary: secondary ?? this.secondary,
       userAccent: userAccent ?? this.userAccent,
       onUserAccent: onUserAccent ?? this.onUserAccent,
       focus: focus ?? this.focus,
@@ -446,6 +417,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       ruleStrong: Color.lerp(ruleStrong, other.ruleStrong, t)!,
       active: Color.lerp(active, other.active, t)!,
       onActive: Color.lerp(onActive, other.onActive, t)!,
+      secondary: Color.lerp(secondary, other.secondary, t)!,
       userAccent: Color.lerp(userAccent, other.userAccent, t)!,
       onUserAccent: Color.lerp(onUserAccent, other.onUserAccent, t)!,
       focus: Color.lerp(focus, other.focus, t)!,

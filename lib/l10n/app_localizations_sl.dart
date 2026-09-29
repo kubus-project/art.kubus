@@ -3210,7 +3210,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsViewFaqButton => 'Ogled FAQ';
 
   @override
-  String get settingsOpeningEmailClientToast => 'Odpiram e‑poštni odjemalec…';
+  String get settingsOpeningEmailClientToast => 'Odpiram e-poštni odjemalec…';
 
   @override
   String get settingsContactSupportButton => 'Kontaktiraj podporo';
@@ -3378,11 +3378,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsAccountManagementDialogTitle => 'Upravljanje računa';
 
   @override
-  String get settingsEmailNotificationsTitle => 'E‑poštna obvestila';
+  String get settingsEmailNotificationsTitle => 'E-poštna obvestila';
 
   @override
   String get settingsEmailNotificationsSubtitle =>
-      'Prejemaj posodobitve prek e‑pošte';
+      'Prejemaj posodobitve prek e-pošte';
 
   @override
   String get settingsPushNotificationsTitle => 'Potisna obvestila';
@@ -3391,17 +3391,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsPushNotificationsSubtitle => 'Obvestila na napravi';
 
   @override
-  String get settingsMarketingEmailsTitle => 'Marketinška e‑pošta';
+  String get settingsMarketingEmailsTitle => 'Marketinška e-pošta';
 
   @override
   String get settingsMarketingEmailsSubtitle => 'Prejemaj promocijsko vsebino';
 
   @override
-  String get settingsEmailPreferencesSectionTitle => 'Nastavitve e‑pošte';
+  String get settingsEmailPreferencesSectionTitle => 'Nastavitve e-pošte';
 
   @override
   String get settingsEmailPreferencesTransactionalNote =>
-      'Kritična varnostna e‑pošta za račun in denarnico je vedno omogočena.';
+      'Kritična varnostna e-pošta za račun in denarnico je vedno omogočena.';
 
   @override
   String get settingsEmailPreferencesProductUpdatesTitle =>
@@ -3498,15 +3498,35 @@ class AppLocalizationsSl extends AppLocalizations {
       'Varnostna opozorila za denarnico in skrbništvo (vedno vključeno)';
 
   @override
-  String get settingsEmailPreferencesTransactionalTitle => 'E‑pošta za račun';
+  String get settingsEmailPreferencesTransactionalTitle => 'E-pošta za račun';
 
   @override
   String get settingsEmailPreferencesTransactionalSubtitle =>
-      'Transakcijska e‑pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
+      'Transakcijska e-pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
+
+  @override
+  String get settingsEmailGroupMarketing => 'Trženje';
+
+  @override
+  String get settingsEmailGroupActivity => 'Dejavnost';
+
+  @override
+  String get settingsEmailGroupEssential => 'Bistveno';
+
+  @override
+  String get settingsEmailGroupEssentialNote =>
+      'Vedno vklopljeno. Ta e-poštna sporočila varujejo vaš račun in denarnico ter potrjujejo vaša dejanja, zato jih ni mogoče izklopiti.';
+
+  @override
+  String get settingsAppNotificationsSectionTitle => 'Obvestila v aplikaciji';
+
+  @override
+  String get settingsAppNotificationsSectionSubtitle =>
+      'Potisna obvestila in obvestila v aplikaciji na tej napravi';
 
   @override
   String get settingsEmailPreferencesUpdateFailedToast =>
-      'Nastavitev e‑pošte ni bilo mogoče posodobiti. Poskusi znova.';
+      'Nastavitev e-pošte ni bilo mogoče posodobiti. Poskusi znova.';
 
   @override
   String get settingsInAppNotificationsMasterTitle =>

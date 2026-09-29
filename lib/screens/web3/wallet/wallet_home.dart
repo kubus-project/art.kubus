@@ -270,10 +270,12 @@ class _WalletHomeState extends State<WalletHome> {
     final fallback = KubusTokenAvatar(
       symbol: token.symbol,
       mint: token.contractAddress,
+      imageUrl: token.logoUrl,
     );
 
-    // KUB8 and SOL have canonical marks — never let a remote logo override the
-    // house identity. Everything else may carry its own logo.
+    // KUB8 and SOL have canonical marks; KUB8's metadata image is handled
+    // (with the bundled-logo fallback) by the avatar itself. Everything else
+    // may carry its own logo.
     //
     // The mint decides this, not the symbol. Any SPL token can name itself
     // KUB8, and one that does must show its own logo rather than be handed
@@ -501,9 +503,11 @@ class _WalletHomeState extends State<WalletHome> {
     final kub8 = _getKub8Balance().toStringAsFixed(2);
     final sol = _getSolBalance().toStringAsFixed(3);
 
+    final kub8Token = walletProvider.getTokenByMint(ApiKeys.kub8MintAddress);
+
     Widget amount(String label, String value, String unit,
         {bool lead = false}) {
-      return Semantics(
+      final figure = Semantics(
         label: l10n.walletBalanceAmountSemantic(label, value, unit),
         excludeSemantics: true,
         child: Column(
@@ -541,6 +545,22 @@ class _WalletHomeState extends State<WalletHome> {
             ),
           ],
         ),
+      );
+      if (!lead) return figure;
+      // The leading KUB8 balance wears the canonical mark (metadata image
+      // first, bundled kubus logo otherwise).
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          KubusTokenAvatar(
+            symbol: KubusTokenIdentity.kub8Symbol,
+            mint: ApiKeys.kub8MintAddress,
+            imageUrl: kub8Token?.logoUrl,
+            size: KubusTokenAvatarSize.lg,
+          ),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+          Flexible(child: figure),
+        ],
       );
     }
 
@@ -629,18 +649,26 @@ class _WalletHomeState extends State<WalletHome> {
               ),
             ),
             const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              flex: 2,
+            // A balance is never ellipsised: the column takes the number's
+            // width (up to 55 % of the row) and a number wider than that
+            // scales down. The token name gives way first.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.55,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
-                  Text(
-                    balance,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.detailCardTitle.copyWith(
-                      color: roles.foreground,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      balance,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
+                        color: roles.foreground,
+                      ),
                     ),
                   ),
                   // A per-token fiat figure only when a real price source

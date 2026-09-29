@@ -1040,11 +1040,10 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
+    // The profile owns its single header row (Back, title and utilities),
+    // so the shell pushes it bare rather than inside a titled sub-screen.
     if (shellScope != null) {
-      shellScope.pushSubScreen(
-        title: AppLocalizations.of(context)!.navigationScreenProfile,
-        child: const ProfileScreen(),
-      );
+      shellScope.pushScreen(const ProfileScreen());
       return;
     }
 

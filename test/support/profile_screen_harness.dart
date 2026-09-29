@@ -43,6 +43,10 @@ enum ProfileSurface {
   communityOverlay,
   mobileOwner,
   desktopOwner,
+
+  /// The owner profile as the desktop shell pushes it: inside a poppable
+  /// [DesktopShellScope], where it owns the single sub-screen header.
+  desktopOwnerInShell,
 }
 
 /// Renders the **actual** profile screens against deterministic fixtures.
@@ -51,20 +55,10 @@ enum ProfileSurface {
 /// (`initialCriticalPackage` / `initialExtendedPackageFuture`) and through
 /// `ProfileProvider.setCurrentUser`, both of which are ordinary production
 /// APIs. No authentication check is disabled, stubbed, or bypassed.
-/// Layout errors that already exist on `origin/master` and are outside this
-/// change's scope. They are matched by source location so a *new* overflow in
-/// the same file would still fail the suite.
 ///
-/// * `kubus_stat_card.dart` — the shared stat tile overflows its 48 px host by
-///   8 px on the owner profile. Reproduced on unmodified `origin/master`;
-///   `KubusStatCard` is used far beyond profiles, so it is deliberately left
-///   for a separate change.
-const List<String> _knownPreExistingOverflows = <String>[
-  'kubus_stat_card.dart',
-];
-
-/// Errors raised while rendering the surface, excluding
-/// [_knownPreExistingOverflows].
+/// Every layout/render error fails the test. The former allow-list for the
+/// shared stat tile is gone: Wave 5A sizes stat grids from the measured tile
+/// extent, so a stat-card overflow is a regression again.
 final List<FlutterErrorDetails> unexpectedRenderErrors =
     <FlutterErrorDetails>[];
 
@@ -82,11 +76,7 @@ Future<void> pumpProfileSurface(
 
   unexpectedRenderErrors.clear();
   final previousOnError = FlutterError.onError;
-  FlutterError.onError = (details) {
-    final location = details.toString();
-    final isKnown = _knownPreExistingOverflows.any(location.contains);
-    if (!isKnown) unexpectedRenderErrors.add(details);
-  };
+  FlutterError.onError = unexpectedRenderErrors.add;
   addTearDown(() {
     FlutterError.onError = previousOnError;
     // Re-assert after the widget tree is finalized so dispose-time errors can
@@ -101,7 +91,8 @@ Future<void> pumpProfileSurface(
   final themeProvider = ThemeProvider();
   final profileProvider = ProfileProvider();
   if (surface == ProfileSurface.mobileOwner ||
-      surface == ProfileSurface.desktopOwner) {
+      surface == ProfileSurface.desktopOwner ||
+      surface == ProfileSurface.desktopOwnerInShell) {
     profileProvider.setCurrentUser(_ownerProfileFrom(resolvedUser));
   }
 
@@ -170,10 +161,14 @@ Future<void> pumpProfileSurface(
   // an 800 ms auth-token timer. Drain it here so the fake-async zone does not
   // report a pending timer for unrelated production behaviour.
   await tester.pump(const Duration(seconds: 1));
+
+  // Hand error reporting back to the test framework before the caller's
+  // assertions run: a failing expect under the capture hook hangs the test
+  // instead of failing it. Later render errors then fail the test directly.
+  FlutterError.onError = previousOnError;
 }
 
-/// Fails when the surface produced any layout/render error other than the
-/// documented pre-existing ones.
+/// Fails when the surface produced any layout/render error.
 void expectNoUnexpectedRenderErrors() {
   expect(
     unexpectedRenderErrors.map((e) => e.exceptionAsString()).toList(),
@@ -237,6 +232,21 @@ Widget _surfaceWidget(
       return const mobile_owner.ProfileScreen();
     case ProfileSurface.desktopOwner:
       return const desktop_owner.ProfileScreen();
+    case ProfileSurface.desktopOwnerInShell:
+      return DesktopShellScope(
+        pushScreen: (_) {},
+        popScreen: () {},
+        navigateToRoute: (_) {},
+        openNotifications: () {},
+        openFunctionsPanel: (_, {content}) {},
+        setFunctionsPanelContent: (_) {},
+        closeFunctionsPanel: () {},
+        canPop: true,
+        child: const Material(
+          type: MaterialType.transparency,
+          child: desktop_owner.ProfileScreen(),
+        ),
+      );
   }
 }
 

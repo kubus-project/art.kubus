@@ -336,14 +336,13 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                   definitions.length,
                 ),
                 icon: Icons.emoji_events_outlined,
-                iconColor: Provider.of<ThemeProvider>(context).accentColor,
                 padding: EdgeInsets.zero,
               ),
               const SizedBox(height: KubusSpacing.lg),
               DesktopGrid(
                 minCrossAxisCount: 2,
                 maxCrossAxisCount: 4,
-                childAspectRatio: 1.8,
+                mainAxisExtent: KubusStatCard.centeredExtent(context),
                 spacing: KubusSpacing.md,
                 children: [
                   KubusStatCard(
@@ -353,9 +352,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                     icon: Icons.explore_outlined,
                     layout: KubusStatCardLayout.centered,
                     accent: KubusColorRoles.of(context).statBlue,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                    minHeight: 0,
+                    titleMaxLines: 2,
                   ),
                   KubusStatCard(
                     title: l10n.desktopSettingsAchievementsStatArViews,
@@ -363,9 +360,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                     icon: Icons.view_in_ar,
                     layout: KubusStatCardLayout.centered,
                     accent: KubusColorRoles.of(context).statTeal,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                    minHeight: 0,
+                    titleMaxLines: 2,
                   ),
                   KubusStatCard(
                     title: l10n.desktopSettingsAchievementsStatEventsAttended,
@@ -373,9 +368,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                     icon: Icons.event_available,
                     layout: KubusStatCardLayout.centered,
                     accent: KubusColorRoles.of(context).web3InstitutionAccent,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                    minHeight: 0,
+                    titleMaxLines: 2,
                   ),
                   KubusStatCard(
                     title: l10n.achievementsStatKub8Earned,
@@ -383,9 +376,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                     icon: Icons.token,
                     layout: KubusStatCardLayout.centered,
                     accent: KubusColorRoles.of(context).web3MarketplaceAccent,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                    minHeight: 0,
+                    titleMaxLines: 2,
                   ),
                 ],
               ),
@@ -443,7 +434,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                               ? '+${backendReward.round()} KUB8'
                               : l10n.achievementUnlockedLabel;
                       final roomyCard = cardWidth >= 280;
-                      final compactCard = cardWidth < 220;
 
                       return KubusStatCard(
                         title: achievement.title,
@@ -451,8 +441,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                         icon: AchievementUi.iconFor(achievement),
                         layout: KubusStatCardLayout.centered,
                         accent: AchievementUi.accentFor(context, achievement),
-                        centeredWatermarkAlignment: Alignment.center,
-                        centeredWatermarkScale: compactCard ? 0.80 : 0.84,
                         minHeight: 0,
                         padding: EdgeInsets.all(
                           roomyCard
@@ -754,16 +742,16 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     bool saveAfterToggle = true,
     ValueChanged<bool>? onChanged,
     bool enabled = true,
+    bool mandatory = false,
     Key? switchKey,
   }) {
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return SharedSettingsToggleRow(
       switchKey: switchKey,
       title: title,
       subtitle: subtitle,
       value: initialValue,
       enabled: enabled,
-      activeColor: accentColor,
+      mandatory: mandatory,
       onChanged: enabled
           ? (value) {
               onChanged?.call(value);

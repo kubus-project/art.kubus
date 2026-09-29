@@ -284,19 +284,6 @@ class _DesktopInstitutionHubScreenState
     final canSelfServeInstitutionPromotion =
         isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
 
-    String sectionTitle() {
-      switch (section) {
-        case DesktopInstitutionSection.events:
-          return l10n.userProfileAchievementCategoryEvents;
-        case DesktopInstitutionSection.exhibitions:
-          return l10n.artistStudioTabExhibitions;
-        case DesktopInstitutionSection.create:
-          return l10n.commonCreate;
-        case DesktopInstitutionSection.analytics:
-          return l10n.desktopArtistStudioQuickActionAnalyticsTitle;
-      }
-    }
-
     final programme = <Widget>[
       if (section == DesktopInstitutionSection.create &&
           isApprovedInstitution &&
@@ -434,25 +421,8 @@ class _DesktopInstitutionHubScreenState
       child: ListView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
         children: [
-          KubusNotionLabel(l10n.institutionNotionProgramme),
-          const SizedBox(height: KubusSpacing.xs),
-          Semantics(
-            header: true,
-            child: Text(
-              l10n.navigationScreenInstitutionHub,
-              style: KubusTextStyles.sectionTitle.copyWith(
-                color: roles.foreground,
-              ),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.xxs),
-          Text(
-            sectionTitle(),
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: roles.foregroundMuted,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.lg),
+          // The page header owns the hub title, notion and section; the
+          // rail opens with status instead of repeating them.
           _buildVerificationStatusCard(themeProvider),
           const SizedBox(height: sectionGap),
           if (programme.isNotEmpty) ...[
@@ -620,7 +590,7 @@ class _DesktopInstitutionHubScreenState
       return (counters[key] ?? 0).toString();
     }
 
-    final muted = KubusColorRoles.of(context).foregroundMuted;
+    final roles = KubusColorRoles.of(context);
     // One height per row, even when a label wraps to two lines.
     return IntrinsicHeight(
       child: Row(
@@ -631,7 +601,7 @@ class _DesktopInstitutionHubScreenState
               title: l10n.userProfileAchievementCategoryEvents,
               value: display('eventsHosted'),
               icon: Icons.event_outlined,
-              accent: muted,
+              accent: roles.web3InstitutionAccent,
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),
@@ -640,7 +610,7 @@ class _DesktopInstitutionHubScreenState
               title: l10n.institutionStatProgrammeViews,
               value: display('visitorsReceived'),
               icon: Icons.visibility_outlined,
-              accent: muted,
+              accent: roles.active,
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),
@@ -649,7 +619,7 @@ class _DesktopInstitutionHubScreenState
               title: l10n.desktopArtistStudioStatArtworks,
               value: display('exhibitionArtworks'),
               icon: Icons.collections_outlined,
-              accent: muted,
+              accent: roles.web3ArtistStudioAccent,
             ),
           ),
         ],

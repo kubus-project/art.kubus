@@ -7,6 +7,7 @@ import '../models/attestation.dart';
 import '../providers/attestation_provider.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'common/kubus_context_icon.dart';
 import 'common/kubus_flat_panel.dart';
 
 class AttestationBadgePanel extends StatelessWidget {
@@ -70,12 +71,15 @@ class AttestationBadgePanel extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.verified_outlined,
-                    size: compact ? 18 : 20,
-                    color: roles.statBlue,
+                  // Verification is family identity: the teal context tile.
+                  KubusContextIcon(
+                    icon: Icons.verified_outlined,
+                    accent: roles.active,
+                    size: compact
+                        ? KubusContextIconSize.compact
+                        : KubusContextIconSize.regular,
                   ),
-                  const SizedBox(width: KubusSpacing.sm),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                   Expanded(
                     child: Text(
                       title,
@@ -91,16 +95,14 @@ class AttestationBadgePanel extends StatelessWidget {
                         vertical: KubusSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
-                        color: roles.statTeal.withValues(alpha: 0.12),
+                        color: roles.active.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        border: Border.all(
-                          color: roles.statTeal.withValues(alpha: 0.26),
-                        ),
+                        border: KubusBorders.contextTile(roles.active),
                       ),
                       child: Text(
                         '${provider.totalCount}',
                         style: KubusTextStyles.compactBadge.copyWith(
-                          color: scheme.onSurface,
+                          color: roles.foreground,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

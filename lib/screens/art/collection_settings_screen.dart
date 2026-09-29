@@ -21,7 +21,6 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../desktop/desktop_shell.dart';
@@ -524,9 +523,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           subtitle: l10n.collectionSettingsTitle,
           actions: subjectActions,
         );
-        final identityAccent =
-            KubusColorRoles.of(context).web3ArtistStudioAccent;
-
         final body = _buildMainBody(context, collection, canEdit);
         if (widget.embedded) {
           return DesktopCreatorShell(
@@ -546,7 +542,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
               contextType: DesktopCreatorContextType.collection,
               semantic: DesktopCreatorSectionSemantic.status,
             ),
-            sidebarAccentColor: identityAccent,
             mainContent: body,
             sidebar: _buildSidebar(context, collection, canEdit),
           );
@@ -706,7 +701,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                         ? SizedBox(
                             width: 16,
                             height: 16,
-                            child: InlineLoading(tileSize: 4, color: scheme.onPrimary),
+                            child: InlineLoading(
+                                tileSize: 4, color: scheme.onPrimary),
                           )
                         : const Icon(Icons.add),
                     label: Text(l10n.collectionDetailAddArtwork),
@@ -872,7 +868,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                       ? SizedBox(
                           width: 16,
                           height: 16,
-                          child: InlineLoading(tileSize: 4, color: scheme.onPrimary),
+                          child: InlineLoading(
+                              tileSize: 4, color: scheme.onPrimary),
                         )
                       : const Icon(Icons.save_outlined),
                   label: Text(canEdit

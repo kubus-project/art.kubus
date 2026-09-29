@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../config/api_keys.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/token_identity_rules.dart';
 
 /// Which mark is drawn inside a [KubusTokenAvatar].
 enum KubusTokenGlyph {
-  /// The kubus cube — the house token (KUB8).
-  kubusCube,
+  /// The bundled kubus lattice logo — the canonical KUB8 fallback mark when
+  /// the token metadata offers no usable image.
+  kubusLattice,
 
   /// The Solana three-bar mark.
   solana,
@@ -96,32 +97,29 @@ class KubusTokenIdentity {
   static const String kub8Symbol = 'KUB8';
   static const String solSymbol = 'SOL';
 
-  /// The sentinel `SolanaWalletService` uses for the chain's own asset, which
-  /// has no mint account of its own.
-  static const String nativeSolMint = 'native';
+  /// The official kubus lattice mark bundled with the app (white lines on
+  /// transparency, drawn as an alpha mask in the avatar's glyph colour).
+  /// See [TokenIdentityRules.kub8LogoAsset].
+  static const String kub8LogoAsset = TokenIdentityRules.kub8LogoAsset;
 
-  /// Wrapped SOL. A real mint, and Solana's own, so it earns the mark too.
-  static const String wrappedSolMint =
-      'So11111111111111111111111111111111111111112';
+  /// See [TokenIdentityRules.isUsableMetadataImage].
+  static bool isUsableMetadataImage(String? url) =>
+      TokenIdentityRules.isUsableMetadataImage(url);
 
-  /// Whether [mint] is the KUB8 mint this build was configured with.
-  ///
-  /// A symbol is metadata: any SPL token can set its own to `KUB8`, and
-  /// `SolanaWalletService._getTokenInfo` will happily read it from on-chain or
-  /// off-chain metadata. The mint account is the identity, and it cannot be
-  /// claimed. Base58 is case-sensitive, so this compares exactly.
-  static bool isCanonicalKub8(String? mint) {
-    final value = (mint ?? '').trim();
-    if (value.isEmpty) return false;
-    final expected = ApiKeys.kub8MintAddress.trim();
-    return expected.isNotEmpty && value == expected;
-  }
+  /// See [TokenIdentityRules.nativeSolMint].
+  static const String nativeSolMint = TokenIdentityRules.nativeSolMint;
 
-  /// Whether [mint] is SOL itself rather than a token calling itself SOL.
-  static bool isCanonicalSol(String? mint) {
-    final value = (mint ?? '').trim();
-    return value == nativeSolMint || value == wrappedSolMint;
-  }
+  /// See [TokenIdentityRules.wrappedSolMint].
+  static const String wrappedSolMint = TokenIdentityRules.wrappedSolMint;
+
+  /// Whether [mint] is the configured KUB8 mint; the mint, never the symbol,
+  /// is the identity. See [TokenIdentityRules.isCanonicalKub8].
+  static bool isCanonicalKub8(String? mint) =>
+      TokenIdentityRules.isCanonicalKub8(mint);
+
+  /// See [TokenIdentityRules.isCanonicalSol].
+  static bool isCanonicalSol(String? mint) =>
+      TokenIdentityRules.isCanonicalSol(mint);
 
   /// The visual for an asset.
   ///
@@ -142,7 +140,7 @@ class KubusTokenIdentity {
         symbol: kub8Symbol,
         accent: KubusColors.primaryVariantDark,
         secondaryAccent: KubusColors.accentTealDark,
-        glyph: KubusTokenGlyph.kubusCube,
+        glyph: KubusTokenGlyph.kubusLattice,
       );
     }
     if (isCanonicalSol(mint)) {
@@ -185,11 +183,16 @@ class KubusTokenIdentity {
 ///
 /// [filled] paints the full identity gradient (for heroes and on-accent
 /// surfaces); the default is a tinted tile that sits calmly in list rows.
+///
+/// Canonical KUB8 is metadata-first: when [imageUrl] is the token's usable
+/// metadata image it is shown, and if it is absent or fails to load the
+/// bundled kubus lattice logo stands in. Identity is decided by [mint] only.
 class KubusTokenAvatar extends StatelessWidget {
   const KubusTokenAvatar({
     super.key,
     required this.symbol,
     this.mint,
+    this.imageUrl,
     this.size = KubusTokenAvatarSize.md,
     this.filled = false,
     this.ringColor,
@@ -200,6 +203,10 @@ class KubusTokenAvatar extends StatelessWidget {
   /// The asset's mint. Without it the canonical marks are withheld — see
   /// [KubusTokenIdentity.resolve].
   final String? mint;
+
+  /// The token's metadata image (`Token.logoUrl`). Used for canonical KUB8;
+  /// ignored for every other asset, whose logos their rows own.
+  final String? imageUrl;
   final KubusTokenAvatarSize size;
   final bool filled;
 
@@ -218,25 +225,58 @@ class KubusTokenAvatar extends StatelessWidget {
         ? Border.all(color: ringColor!, width: KubusSizes.hairline)
         : (filled ? null : KubusBorders.accentTint(visual.accent));
 
-    return Semantics(
-      label: visual.symbol,
-      child: Container(
+    final markTile = Container(
+      width: box,
+      height: box,
+      decoration: BoxDecoration(
+        gradient: filled ? visual.gradient : null,
+        color: filled ? null : visual.accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(size.radius),
+        border: border,
+      ),
+      child: Center(
+        child: _TokenGlyph(
+          visual: visual,
+          size: glyphSize,
+          color: glyphColor,
+        ),
+      ),
+    );
+
+    final Widget mark;
+    if (visual.glyph == KubusTokenGlyph.kubusLattice &&
+        KubusTokenIdentity.isUsableMetadataImage(imageUrl)) {
+      mark = Container(
         width: box,
         height: box,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: filled ? visual.gradient : null,
-          color: filled ? null : visual.accent.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(size.radius),
           border: border,
         ),
-        child: Center(
-          child: _TokenGlyph(
-            visual: visual,
-            size: glyphSize,
-            color: glyphColor,
-          ),
+        child: Image.network(
+          imageUrl!.trim(),
+          width: box,
+          height: box,
+          fit: BoxFit.cover,
+          // The bundled canonical logo holds the slot until the metadata
+          // image paints, so a slow gateway never shows an empty tile.
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+              frame == null && !wasSynchronouslyLoaded ? markTile : child,
+          // An unavailable metadata image (for example an unreachable IPFS
+          // gateway) falls back to the bundled canonical logo, never to a
+          // generic mark.
+          errorBuilder: (context, error, stackTrace) => markTile,
         ),
-      ),
+      );
+    } else {
+      mark = markTile;
+    }
+
+    return Semantics(
+      label: visual.symbol,
+      image: true,
+      child: mark,
     );
   }
 }
@@ -255,10 +295,15 @@ class _TokenGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     switch (visual.glyph) {
-      case KubusTokenGlyph.kubusCube:
-        return CustomPaint(
-          size: Size.square(size),
-          painter: _KubusCubePainter(color: color),
+      case KubusTokenGlyph.kubusLattice:
+        return Image.asset(
+          KubusTokenIdentity.kub8LogoAsset,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          color: color,
+          colorBlendMode: BlendMode.srcIn,
+          excludeFromSemantics: true,
         );
       case KubusTokenGlyph.solana:
         return CustomPaint(
@@ -283,58 +328,6 @@ class _TokenGlyph extends StatelessWidget {
         );
     }
   }
-}
-
-/// The kubus mark: an isometric cube drawn as three faces.
-class _KubusCubePainter extends CustomPainter {
-  const _KubusCubePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    // Isometric cube corners on a unit box, inset so the stroke stays inside.
-    final top = Offset(w * 0.5, h * 0.08);
-    final right = Offset(w * 0.94, h * 0.30);
-    final bottomRight = Offset(w * 0.94, h * 0.72);
-    final bottom = Offset(w * 0.5, h * 0.94);
-    final bottomLeft = Offset(w * 0.06, h * 0.72);
-    final left = Offset(w * 0.06, h * 0.30);
-    final center = Offset(w * 0.5, h * 0.51);
-
-    final outline = Path()
-      ..moveTo(top.dx, top.dy)
-      ..lineTo(right.dx, right.dy)
-      ..lineTo(bottomRight.dx, bottomRight.dy)
-      ..lineTo(bottom.dx, bottom.dy)
-      ..lineTo(bottomLeft.dx, bottomLeft.dy)
-      ..lineTo(left.dx, left.dy)
-      ..close();
-
-    // Top face reads as the lit plane; the two side faces stay as edges.
-    final topFace = Path()
-      ..moveTo(top.dx, top.dy)
-      ..lineTo(right.dx, right.dy)
-      ..lineTo(center.dx, center.dy)
-      ..lineTo(left.dx, left.dy)
-      ..close();
-
-    canvas.drawPath(topFace, Paint()..color = color.withValues(alpha: 0.9));
-
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.09
-      ..strokeJoin = StrokeJoin.round
-      ..color = color;
-    canvas.drawPath(outline, stroke);
-    canvas.drawLine(center, bottom, stroke);
-  }
-
-  @override
-  bool shouldRepaint(_KubusCubePainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 /// The Solana mark: three slanted bars.
@@ -389,6 +382,7 @@ class KubusTokenBadge extends StatelessWidget {
     super.key,
     required this.symbol,
     this.mint,
+    this.imageUrl,
     this.value,
     this.label,
     this.onDark = false,
@@ -398,6 +392,9 @@ class KubusTokenBadge extends StatelessWidget {
 
   /// The asset's mint. See [KubusTokenIdentity.resolve].
   final String? mint;
+
+  /// The token's metadata image; see [KubusTokenAvatar.imageUrl].
+  final String? imageUrl;
   final String? value;
   final String? label;
   final bool onDark;
@@ -425,6 +422,7 @@ class KubusTokenBadge extends StatelessWidget {
           KubusTokenAvatar(
             symbol: symbol,
             mint: mint,
+            imageUrl: imageUrl,
             size: KubusTokenAvatarSize.sm,
             filled: true,
           ),

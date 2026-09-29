@@ -166,8 +166,9 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
   }
 }
 
-/// Compact metric for dashboard side panels: the number, then its label, on
-/// a flat surface. Replaces the square watermark tile.
+/// Compact metric for dashboard side panels: a small contextual icon tile,
+/// the number and its label on a flat surface (the shared centred
+/// [KubusStatCard]).
 class KubusSidebarStatCard extends StatelessWidget {
   const KubusSidebarStatCard({
     super.key,
@@ -183,7 +184,7 @@ class KubusSidebarStatCard extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  /// Accepted for compatibility; metrics are not colour-coded.
+  /// Contextual accent for the icon tile, from [KubusColorRoles].
   final Color accent;
   final double minHeight;
   final String? semanticsLabel;
@@ -194,7 +195,8 @@ class KubusSidebarStatCard extends StatelessWidget {
       title: title,
       value: value,
       icon: icon,
-      showIcon: false,
+      accent: accent,
+      layout: KubusStatCardLayout.centered,
       minHeight: minHeight > 0 ? minHeight : 64,
       titleMaxLines: 2,
       semanticsLabel: semanticsLabel,

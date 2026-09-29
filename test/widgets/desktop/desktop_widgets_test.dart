@@ -47,7 +47,7 @@ void main() {
   });
 
   testWidgets(
-      'DesktopStatCard is flat: no watermark glyph, no hover lift or shadow',
+      'DesktopStatCard is flat: one small context icon, no hover lift or shadow',
       (tester) async {
     await pumpDesktopStatCard(
       tester,
@@ -58,17 +58,16 @@ void main() {
           label: 'Followers',
           value: '128',
           icon: Icons.group_outlined,
-          centeredWatermarkAlignment: Alignment.center,
         ),
       ),
     );
 
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is Icon && widget.icon == Icons.group_outlined,
-      ),
-      findsNothing,
+    // The icon is a compact context tile, not a card-sized watermark.
+    final icon = find.byWidgetPredicate(
+      (widget) => widget is Icon && widget.icon == Icons.group_outlined,
     );
+    expect(icon, findsOneWidget);
+    expect(tester.getSize(icon).height, lessThanOrEqualTo(16));
     expect(
       find.descendant(
         of: find.byType(DesktopStatCard),

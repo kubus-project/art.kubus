@@ -88,7 +88,7 @@ Routes: mobile tabs are `MainApp` indexes (0 map, 1 AR, 2 community, 3 home,
 | Home / discovery – mobile | tab 3 | Accent gradient hero led with wallet ("Wallet and Web3 access"/KUB8+SOL), greeting "there", Web3 block before activity | P1 | **4A** flat discovery intro (notion, title, lede, Explore map + See community), Web3 block moved last |
 | Home / discovery – desktop | `/home` | Gradient hero with "Connect wallet" + decorative AR tile; **P0 at 900 px** (hero text one character per line) | P0 | **4A** same intro, rail collapse at 900–1199 |
 | Home quick actions / stats | home | Dashboard tiles ("Start here", "Your cultural activity"), coloured icon tiles | P2 | 4B (keep content, flatten tiles) |
-| Map surrounding UI – mobile | tab 0 | Search, filters, discovery path, nearby sheet, controls are map overlays (glass valid). Scope model already separates *current viewport* vs *near me radius* (`KubusMapScope`) and the nearby panel labels the active scope ("Map area"). | P2 | KEEP glass; constraint chips + reset → **MAP** (Wave 6 result-constraint work) |
+| Map surrounding UI – mobile | tab 0 | Search, filters, discovery path, nearby sheet, controls are map overlays (glass valid). Scope model already separates *current viewport* vs *near me radius* (`KubusMapScope`) and the nearby panel labels the active scope ("Map area"). | P2 | KEEP glass; constraint chips + reset → **MAP** (Wave 5B result-constraint work) |
 | Map surrounding UI – desktop | `/explore` | Same; desktop nearby list in functions panel. At Europe zoom markers were not visible in either BEFORE or AFTER capture (renderer/LOD timing) | P2 | **MAP** (engine out of scope) |
 | Search | home/map/community bars | Unified `KubusGeneralSearch` with typed results; glass result panel with shadow; no recent searches; suggestions not grouped by type | P2 | 4B (grouping + flat panel off-map) |
 | Artwork detail | `/a/…` | Subject Detail reference | — | KEEP (no regression; shared buttons now ≥44 px) |
@@ -180,7 +180,7 @@ The historical viewport vs travel/radius contradiction is now modelled
 explicitly: `KubusMapFilterState.scope` is either `currentViewport` or
 `nearMe` with `nearMeRadiusKm`; the mobile nearby panel receives
 `viewportScope` and shows the active scope label ("Map area"). Remaining UX
-debt belongs to Wave 6 "result constraints": show viewport, radius, quick
+debt belongs to Wave 5B "result constraints": show viewport, radius, quick
 filters, search and place framing as separate visible constraints with one
 reset. No geospatial backend change is needed for that UI.
 
@@ -420,11 +420,48 @@ announcement, and scrolling the promotion sheet with the keyboard open.
   no image.
 - Metric tiles centre the value, so a two-line label pushes it up slightly.
 - Remaining glass/gradient usage is concentrated in map-surrounding UI,
-  subject detail and creator flows (Wave 6 and later).
+  subject detail and creator flows (Wave 5B and later).
+
+## Wave 5A record (character rebalance)
+
+Contract: [PRODUCT_V5_CHARACTER_REBALANCE.md](PRODUCT_V5_CHARACTER_REBALANCE.md).
+
+- Teal is the family primary again; blue is the secondary role. All 53
+  `ColorScheme.secondary` uses were audited and the structural ones moved
+  to teal.
+- Stat tiles carry `KubusContextIcon` tiles and use measured grid heights.
+  Profile stat overflow went from 17–25 px (desktop) and 71 px (200 %
+  text) to none.
+- The desktop profile has one header row (Back, title, utilities).
+- Settings email preferences are grouped as Marketing, Activity and
+  Essential (locked ON), with app notifications as a separate section; the
+  sidebar is flat.
+- The management rail is one hairline-separated workspace for every
+  creator and the artwork editor.
+- Canonical KUB8 renders its metadata image first, falling back to the
+  bundled lattice logo; identity is decided by the mint.
+
+The 4C P3 note "metric tiles centre the value, so a two-line label pushes
+it up slightly" is resolved: the fixed icon/number/label stack reserves
+the label lines.
+
+### Remaining P3 debt (5A)
+
+- Desktop wallet quick-action tiles truncate their titles ("Connect e…",
+  "Secure wa…"). This predates 5A.
+- The mobile home quick action opens the mobile `ProfileScreen` inside a
+  desktop sub-screen on desktop.
+- About 300 `ThemeProvider.accentColor` uses remain outside the 5A
+  surfaces; they should move to structural roles screen by screen.
+- The IPFS gateway repair is a separate PR (see the rebalance doc).
+- Human browser 200 % zoom pass for profile, settings, the management rail
+  and wallet.
 
 ## Deferred (after Wave 4)
 
-- Map/globe engine, marker LOD and result-constraint chips (Wave 6).
+- Map/globe engine, marker LOD and result-constraint chips: Wave 5B,
+  PRODUCT spatial system (called Wave 6 in earlier audit notes).
+- Whole-product acceptance and the deferred human checks: Wave 5C.
 - Institution v2 schema (Wave 9), DAO/moderation lifecycle (Wave 10).
 - Android App Links (#181, untouched).
 - Backend env reconciliation — see

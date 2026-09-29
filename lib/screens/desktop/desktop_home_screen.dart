@@ -1065,15 +1065,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: cards
                   .map((card) => SizedBox(
                         width: cardWidth,
-                        height: 160,
+                        height: DesktopStatCard.extentOf(context),
                         child: DesktopStatCard(
                           label: card.label,
                           value:
                               card.isLoading ? '\u2026' : card.value.toString(),
                           icon: card.icon,
                           color: card.color,
-                          centeredWatermarkAlignment: Alignment.center,
-                          centeredWatermarkScale: 0.84,
                           onTap: card.action == null
                               ? null
                               : () => _handleHomeActivityCardTap(card.action!),
