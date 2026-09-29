@@ -1150,8 +1150,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return DesktopGrid(
       minCrossAxisCount: 2,
       maxCrossAxisCount: maxCols,
-      childAspectRatio:
-          isCommunityOverlay ? 2.3 : (screenWidth >= 1400 ? 2.8 : 2.5),
+      mainAxisExtent: DesktopStatCard.extentOf(context),
       spacing: KubusSpacing.md,
       children: [
         DesktopStatCard(
@@ -1159,16 +1158,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           value: _formatCount(user!.postsCount),
           icon: Icons.article_outlined,
           color: _profileStatAccentForIcon(Icons.article_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
         ),
         DesktopStatCard(
           label: l10n.userProfileFollowersStatLabel,
           value: _formatCount(user!.followersCount),
           icon: Icons.people_outline,
           color: _profileStatAccentForIcon(Icons.people_outline),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () {
             ProfileScreenMethods.showFollowers(
               context,
@@ -1181,8 +1176,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           value: _formatCount(user!.followingCount),
           icon: Icons.person_add_outlined,
           color: _profileStatAccentForIcon(Icons.person_add_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () {
             ProfileScreenMethods.showFollowing(
               context,
@@ -1195,8 +1188,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           value: _formatCount(artworksCount),
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () {
             ProfileScreenMethods.showArtworks(
               context,

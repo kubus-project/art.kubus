@@ -24,8 +24,19 @@ class KubusProductPalette {
   static const Color ruleDark = Color(0xFF344147);
   static const Color ruleStrongLight = Color(0xFF899597);
   static const Color ruleStrongDark = Color(0xFF536168);
-  static const Color activeLight = Color(0xFF1F5FD0);
-  static const Color activeDark = Color(0xFF3F83FF);
+
+  /// Family primary: kubus teal/turquoise. Light is one step deeper than
+  /// [KubusColors.accentTealLight] so it clears 4.5:1 on ground, surface and
+  /// under white text; dark is [KubusColors.accentTealDark] (9.3:1 on
+  /// surface). The exact values are a tested contract, see
+  /// docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md.
+  static const Color activeLight = Color(0xFF00766A);
+  static const Color activeDark = Color(0xFF4ECDC4);
+
+  /// Family secondary: blue, for information, analytics, institution and
+  /// secondary discovery context. Never the global active/selection role.
+  static const Color secondaryLight = Color(0xFF1F5FD0);
+  static const Color secondaryDark = Color(0xFF3F83FF);
   static const Color destructiveLight = Color(0xFFB3261E);
   static const Color destructiveDark = Color(0xFFFF6B6B);
   static const Color successLight = Color(0xFF267344);

@@ -989,14 +989,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 360;
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2,
           mainAxisSpacing: KubusSpacing.md,
           crossAxisSpacing: KubusSpacing.md,
-          childAspectRatio: compact ? 1.12 : 1.28,
+          // Measured tile height so wrapped labels and large text fit.
+          mainAxisExtent: KubusStatCard.centeredExtent(
+            context,
+            valueStyle: _profileStatValueStyle,
+            titleStyle: _profileStatTitleStyle,
+            padding: _profileStatPadding,
+          ),
           children: [
             _buildProfileStatCard(
               title: l10n.userProfilePostsStatLabel,
@@ -1042,33 +1047,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  static const EdgeInsets _profileStatPadding = EdgeInsets.all(KubusSpacing.md);
+
+  TextStyle get _profileStatTitleStyle =>
+      KubusTextStyles.detailCaption.copyWith(fontSize: 11.5);
+
+  TextStyle get _profileStatValueStyle => KubusTextStyles.detailCardTitle
+      .copyWith(fontSize: 16, fontWeight: FontWeight.w700);
+
   Widget _buildProfileStatCard({
     required String title,
     required String value,
     required IconData icon,
     VoidCallback? onTap,
   }) {
-    final accent = _accentForProfileStat(icon);
     return KubusStatCard(
       title: title,
       value: value,
       icon: icon,
-      accent: accent,
+      accent: _accentForProfileStat(icon),
       layout: KubusStatCardLayout.centered,
       minHeight: 86,
-      padding: const EdgeInsets.all(KubusSpacing.md),
+      padding: _profileStatPadding,
       titleMaxLines: 2,
-      centeredWatermarkScale: 0.86,
       onTap: onTap,
-      titleStyle: KubusTextStyles.detailCaption.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        fontSize: 11.5,
-      ),
-      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-      ),
+      titleStyle: _profileStatTitleStyle,
+      valueStyle: _profileStatValueStyle,
     );
   }
 

@@ -1583,12 +1583,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             icon: icon,
             layout: KubusStatCardLayout.centered,
             showIcon: shouldShowIcon,
-            centeredWatermarkAlignment: Alignment.center,
-            centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
-            centeredWatermarkVerticalBias: 0,
-            centeredWatermarkHovered: false,
             accent: statColor,
-            tintBase: scheme.surface,
             onTap: action == null
                 ? null
                 : () => _handleHomeActivityCardTap(action, icon),
@@ -1598,12 +1593,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
             titleMaxLines: 2,
-            iconBoxSize: showIconOnly
-                ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
-                : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-            iconSize: showIconOnly
-                ? KubusSizes.sidebarActionIcon - KubusSpacing.xxs
-                : KubusSizes.sidebarActionIcon,
             titleStyle: KubusTextStyles.compactBadge.copyWith(
               fontSize: isSmallScreen
                   ? KubusChromeMetrics.navBadgeLabel - 1

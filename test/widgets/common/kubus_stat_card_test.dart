@@ -49,8 +49,9 @@ void main() {
     expect(heightOf('Small'), greaterThanOrEqualTo(44));
   });
 
-  testWidgets('stat tiles are flat: surface fill, rule, no glass/watermark',
-      (tester) async {
+  testWidgets(
+      'stat tiles are flat: surface fill, rule, no glass; the icon is a '
+      'compact context tile, not a watermark', (tester) async {
     for (final brightness in Brightness.values) {
       await tester.pumpWidget(_wrap(
         const KubusStatCard(
@@ -65,8 +66,11 @@ void main() {
       final roles =
           KubusColorRoles.of(tester.element(find.byType(KubusStatCard)));
       expect(find.byType(LiquidGlassCard), findsNothing);
-      expect(find.byIcon(Icons.people_outline), findsNothing,
-          reason: 'centered tiles carry no watermark glyph');
+      final glyph = find.byIcon(Icons.people_outline);
+      expect(glyph, findsOneWidget);
+      expect(tester.getSize(glyph), const Size.square(16),
+          reason: 'a compact context glyph, never a card-sized watermark');
+      expect(tester.widget<Icon>(glyph).color, Colors.cyan);
       final material = tester.widget<Material>(find.descendant(
         of: find.byType(KubusStatCard),
         matching: find.byType(Material),

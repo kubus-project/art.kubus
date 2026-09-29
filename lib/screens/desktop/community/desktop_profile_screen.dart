@@ -948,10 +948,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     // More columns on wider screens for compact horizontal layout
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
 
+    // A fixed, text-measured tile height: an aspect ratio shrank these tiles
+    // with the narrow side column and clipped the two-line labels.
     return DesktopGrid(
       minCrossAxisCount: 2,
       maxCrossAxisCount: maxCols,
-      childAspectRatio: screenWidth >= 1400 ? 2.8 : 2.5,
+      mainAxisExtent: DesktopStatCard.extentOf(context),
       spacing: 12,
       children: [
         DesktopStatCard(
@@ -959,16 +961,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedPostsCount,
           icon: Icons.article_outlined,
           color: _profileStatAccentForIcon(Icons.article_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
         ),
         DesktopStatCard(
           label: l10n.userProfileFollowersStatLabel,
           value: profileProvider.formattedFollowersCount,
           icon: Icons.people_outline,
           color: _profileStatAccentForIcon(Icons.people_outline),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowers(context,
               walletAddress: wallet),
         ),
@@ -977,8 +975,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedFollowingCount,
           icon: Icons.person_add_outlined,
           color: _profileStatAccentForIcon(Icons.person_add_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowing(context,
               walletAddress: wallet),
         ),
@@ -987,8 +983,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () =>
               ProfileScreenMethods.showArtworks(context, walletAddress: wallet),
         ),
@@ -1440,7 +1434,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopGrid(
               minCrossAxisCount: 2,
               maxCrossAxisCount: 4,
-              childAspectRatio: 2.0,
+              mainAxisExtent: DesktopStatCard.extentOf(context),
               children: [
                 _buildPerformanceStatCard(
                   l10n.profilePerformanceArtworksViewedTitle,
@@ -1485,41 +1479,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPerformanceStatCard(String label, String value, IconData icon) {
-    final mediaQuery = MediaQuery.of(context);
-    final desktopDense = mediaQuery.size.width < 1480;
-    final highDensity = mediaQuery.devicePixelRatio >= 2.0;
-    final accent = _profileStatAccentForIcon(icon);
-    final iconBox = desktopDense
-        ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
-        : KubusChromeMetrics.heroIconBox;
-    final iconSize = highDensity
-        ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
-        : KubusChromeMetrics.heroIcon;
-    final valueFontSize = desktopDense ? 24.0 : 26.0;
-    final titleFontSize = desktopDense ? 11.5 : 12.0;
-
-    return KubusStatCard(
-      title: label,
+    return DesktopStatCard(
+      label: label,
       value: value,
       icon: icon,
-      layout: KubusStatCardLayout.centered,
-      accent: accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: desktopDense ? 0.82 : 0.86,
-      minHeight: 0,
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      titleMaxLines: 1,
-      iconBoxSize: iconBox,
-      iconSize: iconSize,
-      titleStyle: KubusTextStyles.statLabel.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        fontSize: titleFontSize,
-      ),
-      valueStyle: KubusTextStyles.statValue.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: valueFontSize,
-        fontWeight: FontWeight.w700,
-      ),
+      color: _profileStatAccentForIcon(icon),
     );
   }
 

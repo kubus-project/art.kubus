@@ -42,7 +42,6 @@ class AchievementStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = cardWidth ?? 0;
     final roomyCard = width >= 280;
-    final compactCard = compact || width < 220;
     final accent = AchievementUi.accentForPreview(
       context,
       category: data.category,
@@ -59,8 +58,6 @@ class AchievementStatCard extends StatelessWidget {
       ),
       layout: KubusStatCardLayout.centered,
       accent: data.subdued ? accent.withValues(alpha: 0.72) : accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: compactCard ? 0.80 : 0.84,
       minHeight: minHeight ?? (compact ? 96 : 104),
       padding: EdgeInsets.all(
         roomyCard

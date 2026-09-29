@@ -4,23 +4,27 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import 'kubus_context_icon.dart';
 
 enum KubusStatCardLayout {
   standard,
   centered,
 }
 
-/// PRODUCT v5 metric tile: flat surface, hairline rule, the number first and
-/// its label below. No glass, no tinted fill, no watermark glyph, no hover
-/// motion: numbers are context, not decoration.
+/// PRODUCT v5 metric tile: a flat surface with a hairline rule, a small
+/// contextual icon tile, the number and its label.
 ///
-/// The spoken label is `value title` (for example "1,284 Followers") so
-/// a value is never announced without its meaning. Tappable tiles expose
-/// button semantics and a 44 px minimum target.
+/// [accent] is the metric's contextual colour (from [KubusColorRoles]); it
+/// paints the [KubusContextIcon] and the hover response and nothing else, so
+/// the number stays the datum and the card stays neutral. Without an accent
+/// the icon tile uses the family active colour. No glass, no watermark glyph,
+/// no hover motion.
 ///
-/// Colour parameters ([accent], [tintBase], [borderColor]) and the watermark
-/// parameters are accepted for call-site compatibility; the accent only tints
-/// the small leading icon of the standard layout.
+/// The spoken label is `value title` (for example "1,284 Followers") so a
+/// value is never announced without its meaning. Tappable tiles expose button
+/// semantics and a 44 px minimum target. Labels wrap to [titleMaxLines]; the
+/// caller's layout must give the tile room for them (a grid should use a
+/// fixed `mainAxisExtent`, not an aspect ratio).
 class KubusStatCard extends StatelessWidget {
   const KubusStatCard({
     super.key,
@@ -28,60 +32,108 @@ class KubusStatCard extends StatelessWidget {
     required this.value,
     this.icon,
     this.accent,
-    this.tintBase,
     this.onTap,
-    this.borderColor,
     this.titleStyle,
     this.valueStyle,
-    this.padding = const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
+    this.padding = defaultPadding,
     this.minHeight = 72,
     this.titleMaxLines = 1,
-    this.iconBoxSize = KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
-    this.iconSize = KubusSizes.sidebarActionIcon,
     this.borderRadius,
     this.change,
     this.isPositiveChange = true,
     this.layout = KubusStatCardLayout.standard,
     this.showIcon = true,
-    this.centeredWatermarkAlignment,
-    this.centeredWatermarkScale = 1.0,
-    this.centeredWatermarkVerticalBias = 0.18,
-    this.centeredWatermarkHovered,
     this.semanticsLabel,
   });
 
   final String title;
   final String value;
   final IconData? icon;
+
+  /// Contextual metric colour; defaults to the family active colour.
   final Color? accent;
-  final Color? tintBase;
   final VoidCallback? onTap;
-  final Color? borderColor;
   final TextStyle? titleStyle;
   final TextStyle? valueStyle;
   final EdgeInsetsGeometry padding;
   final double minHeight;
   final int titleMaxLines;
-  final double iconBoxSize;
-  final double iconSize;
   final BorderRadius? borderRadius;
   final String? change;
   final bool isPositiveChange;
   final KubusStatCardLayout layout;
   final bool showIcon;
-  final Alignment? centeredWatermarkAlignment;
-  final double centeredWatermarkScale;
-  final double centeredWatermarkVerticalBias;
-  final bool? centeredWatermarkHovered;
 
   /// Overrides the spoken `value title` (for units such as KUB8).
   final String? semanticsLabel;
+
+  static const EdgeInsets defaultPadding = EdgeInsets.symmetric(
+    horizontal: KubusSpacing.md,
+    vertical: KubusSpacing.sm + KubusSpacing.xs,
+  );
+
+  /// Height a [KubusStatCardLayout.centered] tile needs for its icon tile,
+  /// number and [titleLines] label lines at the ambient text scale, measured
+  /// with the same styles the tile paints. Grids of centred tiles pass it (or
+  /// a larger floor) as `mainAxisExtent`, so 200 % text grows the tile
+  /// instead of clipping the label.
+  static double centeredExtent(
+    BuildContext context, {
+    int titleLines = 2,
+    TextStyle? valueStyle,
+    TextStyle? titleStyle,
+    EdgeInsets padding = defaultPadding,
+  }) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final lines = _labelLines(scaler, titleLines);
+    final direction = Directionality.maybeOf(context) ?? TextDirection.ltr;
+    // Resolve exactly as [Text] does: the ambient default style underneath.
+    final ambient = DefaultTextStyle.of(context);
+    double lineHeight(TextStyle style, int lines) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: List.filled(lines, 'Hg').join('\n'),
+          style: ambient.style.merge(style),
+        ),
+        textDirection: direction,
+        textScaler: scaler,
+        textHeightBehavior: ambient.textHeightBehavior,
+        maxLines: lines,
+      )..layout();
+      final height = painter.height;
+      painter.dispose();
+      return height;
+    }
+
+    final valueLine = lineHeight(valueStyle ?? KubusTextStyles.statValue, 1);
+    final label = lineHeight(titleStyle ?? KubusTextStyles.statLabel, lines);
+    return (padding.vertical +
+            KubusContextIconSize.compact.box +
+            KubusSpacing.xs +
+            valueLine +
+            KubusSpacing.xs +
+            label)
+        .ceilToDouble();
+  }
+
+  /// Large text (1.5x and up) gets one more label line so a two-line label
+  /// wraps instead of being ellipsised; [centeredExtent] reserves it.
+  static int _labelLines(TextScaler scaler, int lines) =>
+      scaler.scale(10) >= 15 ? lines + 1 : lines;
 
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final radius = borderRadius ?? BorderRadius.circular(KubusRadius.surface);
     final centered = layout == KubusStatCardLayout.centered;
+    final resolvedAccent = accent ?? roles.active;
+    final contextIcon = showIcon && icon != null
+        ? KubusContextIcon(
+            icon: icon!,
+            accent: resolvedAccent,
+            size: KubusContextIconSize.compact,
+          )
+        : null;
 
     final valueText = Text(
       value,
@@ -94,7 +146,7 @@ class KubusStatCard extends StatelessWidget {
     );
     final titleText = Text(
       title,
-      maxLines: titleMaxLines,
+      maxLines: _labelLines(MediaQuery.textScalerOf(context), titleMaxLines),
       overflow: TextOverflow.ellipsis,
       textAlign: centered ? TextAlign.center : TextAlign.start,
       style: (titleStyle ?? KubusTextStyles.statLabel).copyWith(
@@ -107,13 +159,20 @@ class KubusStatCard extends StatelessWidget {
 
     final Widget body;
     if (centered) {
+      // A fixed stack (icon tile, number, label) so a grid can reserve the
+      // exact height with [centeredExtent]. A number wider than the tile
+      // scales down rather than being ellipsised; the label wraps.
       body = Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (contextIcon != null) ...[
+            Center(child: contextIcon),
+            const SizedBox(height: KubusSpacing.xs),
+          ],
           FittedBox(fit: BoxFit.scaleDown, child: valueText),
-          const SizedBox(height: KubusSpacing.xxs),
+          const SizedBox(height: KubusSpacing.xs),
           titleText,
           if (changeChip != null) ...[
             const SizedBox(height: KubusSpacing.xs),
@@ -124,12 +183,8 @@ class KubusStatCard extends StatelessWidget {
     } else {
       body = Row(
         children: [
-          if (showIcon && icon != null) ...[
-            Icon(
-              icon,
-              size: iconSize,
-              color: accent == null ? roles.foregroundMuted : accent!,
-            ),
+          if (contextIcon != null) ...[
+            contextIcon,
             const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
           ],
           Expanded(
@@ -137,11 +192,7 @@ class KubusStatCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: valueText,
-                ),
+                valueText,
                 const SizedBox(height: KubusSpacing.xxs),
                 titleText,
               ],
@@ -184,7 +235,7 @@ class KubusStatCard extends StatelessWidget {
             : InkWell(
                 onTap: onTap,
                 focusColor: roles.focus.withValues(alpha: 0.12),
-                hoverColor: roles.foreground.withValues(alpha: 0.04),
+                hoverColor: resolvedAccent.withValues(alpha: 0.06),
                 child: tile,
               ),
       ),

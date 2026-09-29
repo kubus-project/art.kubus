@@ -7,6 +7,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
@@ -122,7 +123,10 @@ class _DesktopCardState extends State<DesktopCard> {
   }
 }
 
-/// Desktop section header with optional actions
+/// Desktop section header: optional contextual icon tile, title, subtitle
+/// and a trailing action. [iconColor] is the section's contextual accent and
+/// stays inside the icon tile; it defaults to the family active colour, never
+/// to the personal accent.
 class DesktopSectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -143,8 +147,7 @@ class DesktopSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final effectiveColor = iconColor ?? themeProvider.accentColor;
+    final accent = iconColor ?? KubusColorRoles.of(context).active;
 
     return Padding(
       padding: padding ??
@@ -154,21 +157,7 @@ class DesktopSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            Container(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              decoration: BoxDecoration(
-                color: effectiveColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: effectiveColor,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-              ),
-            ),
+            KubusContextIcon(icon: icon!, accent: accent),
             const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           ],
           Expanded(
@@ -192,6 +181,10 @@ class DesktopGrid extends StatelessWidget {
   final int maxCrossAxisCount;
   final double spacing;
   final double childAspectRatio;
+
+  /// Fixed tile height. Prefer it for text-bearing tiles: an aspect ratio
+  /// shrinks the height with the column width and clips wrapped labels.
+  final double? mainAxisExtent;
   final double breakpointWidth;
 
   const DesktopGrid({
@@ -201,6 +194,7 @@ class DesktopGrid extends StatelessWidget {
     this.maxCrossAxisCount = 4,
     this.spacing = 16,
     this.childAspectRatio = 1.0,
+    this.mainAxisExtent,
     this.breakpointWidth = 300,
   });
 
@@ -220,6 +214,7 @@ class DesktopGrid extends StatelessWidget {
             crossAxisSpacing: spacing,
             mainAxisSpacing: spacing,
             childAspectRatio: childAspectRatio,
+            mainAxisExtent: mainAxisExtent,
           ),
           itemCount: children.length,
           itemBuilder: (context, index) => children[index],
@@ -229,7 +224,10 @@ class DesktopGrid extends StatelessWidget {
   }
 }
 
-/// Desktop stat card for displaying metrics
+/// Desktop stat card for displaying metrics.
+///
+/// PRODUCT v5: a flat metric (no hover lift, scale, shadow or watermark).
+/// [color] is the metric's contextual accent and paints its icon tile.
 class DesktopStatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -238,8 +236,6 @@ class DesktopStatCard extends StatelessWidget {
   final String? change;
   final bool isPositive;
   final VoidCallback? onTap;
-  final Alignment? centeredWatermarkAlignment;
-  final double centeredWatermarkScale;
 
   const DesktopStatCard({
     super.key,
@@ -250,26 +246,33 @@ class DesktopStatCard extends StatelessWidget {
     this.change,
     this.isPositive = true,
     this.onTap,
-    this.centeredWatermarkAlignment,
-    this.centeredWatermarkScale = 1.0,
   });
 
-  /// PRODUCT v5: a flat metric (no hover lift, scale, shadow or watermark).
-  /// [color] and the watermark parameters are kept for call-site
-  /// compatibility only.
+  /// The `mainAxisExtent` for a grid of these tiles: icon tile, number and a
+  /// two-line label, measured at the ambient text scale.
+  static double extentOf(BuildContext context) => KubusStatCard.centeredExtent(
+        context,
+        valueStyle: _valueStyle,
+        titleStyle: _titleStyle,
+      );
+
+  static TextStyle get _valueStyle => KubusTextStyles.statValue;
+  static TextStyle get _titleStyle => KubusTextStyles.detailCaption;
+
   @override
   Widget build(BuildContext context) {
     return KubusStatCard(
       title: label,
       value: value,
       icon: icon,
+      accent: color,
       layout: KubusStatCardLayout.centered,
       change: change,
       isPositiveChange: isPositive,
       minHeight: 88,
       titleMaxLines: 2,
-      valueStyle: KubusTextStyles.statValue,
-      titleStyle: KubusTextStyles.detailCaption,
+      valueStyle: _valueStyle,
+      titleStyle: _titleStyle,
       onTap: onTap,
     );
   }
