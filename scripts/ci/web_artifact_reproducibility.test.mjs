@@ -70,5 +70,6 @@ test('web artifact workflow derives all volatile inputs from the source commit',
   assert.match(workflow, /--source-sha "\$SOURCE_SHA"/);
   assert.match(workflow, /--build-date "\$build_date"/);
   assert.doesNotMatch(workflow, /GITHUB_RUN_NUMBER/);
-  assert.match(workflow, /gzip -n -kf6 "\$file"/);
+  assert.match(workflow, /find build\/web -type f \\?\( -name '\*\.wasm\.br'/);
+  assert.doesNotMatch(workflow, /gzip -n -kf6 "\$file"|brotli -f/);
 });

@@ -39,7 +39,24 @@ validate_contract() {
     || die "INCOMING_DIR is outside the release contract"
   [ "$RELEASE_DIR" = "$RELEASE_ROOT/releases/$SOURCE_SHA" ] \
     || die "RELEASE_DIR is outside the release contract"
-  [ -L "$LIVE_DIR" ] || die "LIVE_DIR must be a pre-provisioned symlink"
+  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
+    case "$SOURCE_SHA" in
+      0123456789abcdef0123456789abcdef01234567|89abcdef0123456789abcdef0123456789abcdef) ;;
+      *) die "test mode requires a test-only source SHA" ;;
+    esac
+    test_root="${LIVE_DIR%/current}"
+    case "$test_root" in /tmp/kubus-netcup-test-*) ;; *) die "test mode requires an isolated /tmp root" ;; esac
+    [ "$LIVE_DIR" = "$test_root/current" ] \
+      && [ "$RELEASE_ROOT" = "$test_root/releases-root" ] \
+      || die "test mode paths differ from the isolated fixture"
+  else
+    case "$DEPLOYMENT_ENVIRONMENT:$LIVE_DIR:$RELEASE_ROOT" in
+      production:/app.kubus.site/httpdocs:/deploy/app.kubus.site|development:/dev.kubus.site/httpdocs:/deploy/dev.kubus.site) ;;
+      *) die "deployment paths are not the approved Netcup environment pair" ;;
+    esac
+  fi
+  [ -d "$LIVE_DIR" ] && [ ! -L "$LIVE_DIR" ] \
+    || die "LIVE_DIR must be a physical Netcup document root"
   printf '%s' "$RETAIN_RELEASE_COUNT" | grep -Eq '^[0-9]+$' \
     || die "RETAIN_RELEASE_COUNT must be a non-negative integer"
   [ "$RETAIN_RELEASE_COUNT" -le 50 ] \
@@ -51,6 +68,8 @@ verify_artifact_release() {
   [ -f "$candidate/index.html" ] || die "release is missing index.html"
   [ -f "$candidate/.htaccess" ] || die "release is missing .htaccess"
   [ -f "$candidate/SHA256SUMS" ] || die "release is missing SHA256SUMS"
+  [ "$(tr -d '\r\n' < "$candidate/kubus-web-revision.txt")" = "$SOURCE_SHA" ] \
+    || die "release revision does not match SOURCE_SHA"
   (cd "$candidate" && sha256sum -c SHA256SUMS)
 }
 
@@ -70,20 +89,12 @@ reject_auth_policy() {
 extract_auth_user_file() {
   htaccess="$1"
   auth_line_count="$(
-    awk 'tolower($1) == "authuserfile" { count += 1 } END { print count + 0 }' "$htaccess"
+    grep -Eic '^[[:space:]]*AuthUserFile[[:space:]]+' "$htaccess" || true
   )"
   [ "$auth_line_count" -eq 1 ] \
     || die "development authentication source is unavailable or ambiguous"
-  auth_file="$(
-    awk '
-      tolower($1) == "authuserfile" {
-        $1 = ""
-        sub(/^[[:space:]]+/, "")
-        print
-        exit
-      }
-    ' "$htaccess"
-  )"
+  auth_file="$(grep -Ei '^[[:space:]]*AuthUserFile[[:space:]]+' "$htaccess" \
+    | head -n 1 | sed -E 's/^[[:space:]]*AuthUserFile[[:space:]]+//I')"
   case "$auth_file" in
     \"*\")
       auth_file="${auth_file#\"}"
@@ -98,39 +109,24 @@ validate_auth_source() {
   require_absolute_path "development authentication source" "$auth_file"
   printf '%s' "$auth_file" | grep -Eq '^/[A-Za-z0-9._/-]+$' \
     || die "development authentication source has an unsafe path shape"
-  require_absolute_path HOME "${HOME:-}"
-  case "$auth_file" in
-    "$HOME"/.htpasswds/*/passwd) ;;
-    *) die "development authentication source is outside the cPanel-managed account area" ;;
-  esac
+  expected_auth_file='/deploy/dev.kubus.site/auth/passwd'
+  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
+    expected_auth_file="$RELEASE_ROOT/auth/passwd"
+  fi
+  [ "$auth_file" = "$expected_auth_file" ] \
+    || die "development authentication source is not the Netcup host-private password file"
   [ -f "$auth_file" ] && [ -r "$auth_file" ] && [ -s "$auth_file" ] \
     || die "development authentication source is not a readable non-empty file"
-  awk -F: '
-    NF >= 2 && length($1) > 0 && length($2) > 0 { usable = 1 }
-    END { exit usable ? 0 : 1 }
-  ' "$auth_file" \
+  grep -Eq '^[^:[:space:]]+:[^:[:space:]]+' "$auth_file" \
     || die "development authentication source has no usable credential record"
 }
 
 expected_application_htaccess_hash() {
   manifest="$1"
-  entry_count="$(
-    awk '{
-      path = $2
-      sub(/^\*/, "", path)
-      if (path == "./.htaccess") count += 1
-    } END { print count + 0 }' "$manifest"
-  )"
+  entry_count="$(grep -Ec '^[0-9a-f]{64} [ *]\./\.htaccess$' "$manifest" || true)"
   [ "$entry_count" -eq 1 ] \
     || die "artifact checksum manifest must contain exactly one .htaccess entry"
-  awk '{
-    path = $2
-    sub(/^\*/, "", path)
-    if (path == "./.htaccess") {
-      print $1
-      exit
-    }
-  }' "$manifest"
+  grep -E '^[0-9a-f]{64} [ *]\./\.htaccess$' "$manifest" | cut -d ' ' -f 1
 }
 
 write_host_policy_manifest() {
@@ -139,7 +135,7 @@ write_host_policy_manifest() {
   policy_dir="$RELEASE_ROOT/host-policy"
   policy_manifest="$policy_dir/$SOURCE_SHA"
   policy_tmp="$policy_manifest.tmp"
-  final_hash="$(sha256sum "$release/.htaccess" | awk '{ print $1 }')"
+  final_hash="$(sha256sum "$release/.htaccess" | cut -d ' ' -f 1)"
 
   mkdir -p "$policy_dir"
   umask 077
@@ -166,7 +162,7 @@ verify_host_policy_manifest() {
     || die "host-policy source revision does not match the deployment request"
   [ "$(sed -n 's/^application_htaccess_sha256=//p' "$policy_manifest")" = "$application_hash" ] \
     || die "host-policy application rules do not match the original artifact"
-  final_hash="$(sha256sum "$release/.htaccess" | awk '{ print $1 }')"
+  final_hash="$(sha256sum "$release/.htaccess" | cut -d ' ' -f 1)"
   [ "$(sed -n 's/^final_htaccess_sha256=//p' "$policy_manifest")" = "$final_hash" ] \
     || die "host-policy verification record does not match the prepared release"
   if grep -Eq '/|AuthUserFile|htpass|home' "$policy_manifest"; then
@@ -179,10 +175,10 @@ apply_development_policy() {
   application_htaccess="$candidate/.htaccess"
   reject_auth_policy "$application_htaccess"
 
-  live_htaccess="$LIVE_DIR/.htaccess"
-  [ -f "$live_htaccess" ] \
-    || die "current development release has no cPanel authentication policy"
-  auth_file="$(extract_auth_user_file "$live_htaccess")"
+  auth_file='/deploy/dev.kubus.site/auth/passwd'
+  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
+    auth_file="$RELEASE_ROOT/auth/passwd"
+  fi
   validate_auth_source "$auth_file"
 
   prepared_htaccess="$candidate/.htaccess.host-policy"
@@ -210,13 +206,13 @@ verify_development_policy() {
 
   [ "$(sed -n '1p' "$htaccess")" = "$development_policy_begin" ] \
     || die "development authentication policy is not the first .htaccess block"
-  [ "$(awk -v marker="$development_policy_begin" '$0 == marker { count += 1 } END { print count + 0 }' "$htaccess")" -eq 1 ] \
+  [ "$(grep -Fxc "$development_policy_begin" "$htaccess" || true)" -eq 1 ] \
     || die "development authentication policy begin marker is duplicated"
-  [ "$(awk -v marker="$development_policy_end" '$0 == marker { count += 1 } END { print count + 0 }' "$htaccess")" -eq 1 ] \
+  [ "$(grep -Fxc "$development_policy_end" "$htaccess" || true)" -eq 1 ] \
     || die "development authentication policy end marker is missing or duplicated"
-  [ "$(awk 'tolower($1) == "authtype" && tolower($2) == "basic" { count += 1 } END { print count + 0 }' "$htaccess")" -eq 1 ] \
+  [ "$(grep -Eic '^[[:space:]]*AuthType[[:space:]]+Basic[[:space:]]*$' "$htaccess" || true)" -eq 1 ] \
     || die "development authentication policy must contain exactly one AuthType Basic directive"
-  [ "$(awk 'tolower($1) == "require" && tolower($2) == "valid-user" { count += 1 } END { print count + 0 }' "$htaccess")" -eq 1 ] \
+  [ "$(grep -Eic '^[[:space:]]*Require[[:space:]]+valid-user[[:space:]]*$' "$htaccess" || true)" -eq 1 ] \
     || die "development authentication policy must contain exactly one Require valid-user directive"
   auth_file="$(extract_auth_user_file "$htaccess")"
   validate_auth_source "$auth_file"
@@ -224,13 +220,9 @@ verify_development_policy() {
   rm -rf "$verification_dir"
   mkdir -p "$verification_dir"
   sed "1,/^${development_policy_end}$/d" "$htaccess" | sed '1{/^$/d;}' > "$application_copy"
-  [ "$(sha256sum "$application_copy" | awk '{ print $1 }')" = "$application_hash" ] \
+  [ "$(sha256sum "$application_copy" | cut -d ' ' -f 1)" = "$application_hash" ] \
     || die "development policy did not preserve the application .htaccess rules"
-  awk '{
-    path = $2
-    sub(/^\*/, "", path)
-    if (path != "./.htaccess") print
-  }' "$manifest" > "$filtered_manifest"
+  grep -Ev '^[0-9a-f]{64} [ *]\./\.htaccess$' "$manifest" > "$filtered_manifest"
   (cd "$release" && sha256sum -c "$filtered_manifest")
   rm -rf "$verification_dir"
   verify_host_policy_manifest "$release" "$application_hash"
@@ -247,6 +239,8 @@ verify_production_policy() {
 verify_prepared_release() {
   release="$1"
   [ -d "$release" ] || die "prepared release directory is missing"
+  [ "$(tr -d '\r\n' < "$release/kubus-web-revision.txt")" = "$SOURCE_SHA" ] \
+    || die "prepared release revision does not match SOURCE_SHA"
   case "$DEPLOYMENT_ENVIRONMENT" in
     development) verify_development_policy "$release" ;;
     production) verify_production_policy "$release" ;;
@@ -277,9 +271,9 @@ prepare() {
 
   if [ -e "$RELEASE_DIR" ] || [ -L "$RELEASE_DIR" ]; then
     [ -d "$RELEASE_DIR" ] || die "immutable release path is not a directory"
-    cmp -s "$candidate/SHA256SUMS" "$RELEASE_DIR/SHA256SUMS" \
+    [ "$(sha256sum "$candidate/SHA256SUMS" | cut -d ' ' -f 1)" = "$(sha256sum "$RELEASE_DIR/SHA256SUMS" | cut -d ' ' -f 1)" ] \
       || die "existing immutable release does not match the uploaded artifact manifest"
-    cmp -s "$candidate/.htaccess" "$RELEASE_DIR/.htaccess" \
+    [ "$(sha256sum "$candidate/.htaccess" | cut -d ' ' -f 1)" = "$(sha256sum "$RELEASE_DIR/.htaccess" | cut -d ' ' -f 1)" ] \
       || die "existing immutable release does not match the current host policy"
     rm -rf "$candidate"
     verify_prepared_release "$RELEASE_DIR"
@@ -292,45 +286,66 @@ prepare() {
   verify_prepared_release "$RELEASE_DIR"
 }
 
-promote() {
-  rollback_file="$RELEASE_ROOT/rollback-$SOURCE_SHA"
-  verify_prepared_release "$RELEASE_DIR"
+next_failed_path() {
+  failed_base="$RELEASE_ROOT/failed-$SOURCE_SHA"
+  failed_result="$failed_base"
+  failed_attempt=0
+  while [ -e "$failed_result" ] || [ -L "$failed_result" ]; do
+    failed_attempt=$((failed_attempt + 1))
+    failed_result="$failed_base.retry-$failed_attempt"
+  done
+  printf '%s\n' "$failed_result"
+}
 
-  previous_target="$(readlink "$LIVE_DIR")"
-  [ -n "$previous_target" ] || die "LIVE_DIR has an empty symlink target"
-  if [ "$previous_target" = "$RELEASE_DIR" ]; then
-    printf '@already-current\n' > "$rollback_file"
+promote() {
+  rollback_dir="$RELEASE_ROOT/rollback-$SOURCE_SHA"
+  candidate_dir="$LIVE_DIR.next-$SOURCE_SHA"
+  verify_prepared_release "$RELEASE_DIR"
+  if [ -f "$LIVE_DIR/kubus-web-revision.txt" ] \
+    && [ "$(tr -d '\r\n' < "$LIVE_DIR/kubus-web-revision.txt")" = "$SOURCE_SHA" ]; then
+    verify_prepared_release "$LIVE_DIR"
     return
   fi
-  printf '%s\n' "$previous_target" > "$rollback_file"
-
-  next_link="$LIVE_DIR.next-$SOURCE_SHA"
-  rm -f "$next_link"
-  ln -s "$RELEASE_DIR" "$next_link"
-  mv -Tf "$next_link" "$LIVE_DIR"
-  [ "$(readlink "$LIVE_DIR")" = "$RELEASE_DIR" ] \
-    || die "atomic promotion did not select the requested release"
+  [ ! -e "$rollback_dir" ] && [ ! -e "$candidate_dir" ] \
+    || die "rollback or candidate directory already exists; refusing overwrite"
+  cp -a "$RELEASE_DIR" "$candidate_dir"
+  # Preserve host-owned certificate and domain validation files.
+  if [ -e "$LIVE_DIR/.well-known" ]; then
+    [ -d "$LIVE_DIR/.well-known" ] && [ ! -L "$LIVE_DIR/.well-known" ] \
+      || die "host validation directory is unsafe"
+    mkdir -p "$candidate_dir/.well-known"
+    cp -a "$LIVE_DIR/.well-known/." "$candidate_dir/.well-known/"
+  fi
+  find "$candidate_dir" -type d -exec chmod 755 {} +
+  find "$candidate_dir" -type f -exec chmod 644 {} +
+  verify_prepared_release "$candidate_dir"
+  mv "$LIVE_DIR" "$rollback_dir"
+  if ! mv "$candidate_dir" "$LIVE_DIR"; then
+    mv "$rollback_dir" "$LIVE_DIR" \
+      || die "promotion failed and the previous document root could not be restored"
+    die "promotion failed; restored the previous document root"
+  fi
+  if ! (verify_prepared_release "$LIVE_DIR"); then
+    failed_dir="$(next_failed_path)"
+    mv "$LIVE_DIR" "$failed_dir"
+    mv "$rollback_dir" "$LIVE_DIR" \
+      || die "post-promotion verification failed and previous document root could not be restored"
+    die "post-promotion verification failed; restored previous document root"
+  fi
 }
 
 rollback() {
-  rollback_file="$RELEASE_ROOT/rollback-$SOURCE_SHA"
-  [ -f "$rollback_file" ] || die "rollback state is missing"
-  [ "$(readlink "$LIVE_DIR")" = "$RELEASE_DIR" ] \
+  rollback_dir="$RELEASE_ROOT/rollback-$SOURCE_SHA"
+  failed_dir="$(next_failed_path)"
+  [ -d "$rollback_dir" ] && [ ! -L "$rollback_dir" ] || die "rollback state is missing"
+  [ "$(tr -d '\r\n' < "$LIVE_DIR/kubus-web-revision.txt")" = "$SOURCE_SHA" ] \
     || die "current release changed after promotion; refusing stale rollback"
-  previous_target="$(sed -n '1p' "$rollback_file")"
-  [ -n "$previous_target" ] || die "rollback target is empty"
-  if [ "$previous_target" = "@already-current" ]; then
-    rm -f "$rollback_file"
-    return
+  mv "$LIVE_DIR" "$failed_dir"
+  if ! mv "$rollback_dir" "$LIVE_DIR"; then
+    mv "$failed_dir" "$LIVE_DIR" \
+      || die "rollback failed and the current document root could not be restored"
+    die "rollback failed; restored the current document root"
   fi
-
-  rollback_link="$LIVE_DIR.rollback-$SOURCE_SHA"
-  rm -f "$rollback_link"
-  ln -s "$previous_target" "$rollback_link"
-  mv -Tf "$rollback_link" "$LIVE_DIR"
-  [ "$(readlink "$LIVE_DIR")" = "$previous_target" ] \
-    || die "atomic rollback did not restore the previous release"
-  rm -f "$rollback_file"
 }
 
 prune_releases() {
@@ -347,13 +362,28 @@ prune_releases() {
       rm -f "$RELEASE_ROOT/host-policy/$release_name"
     fi
   done
+  # Physical predecessors and failed attempts consume the same hosting quota
+  # as immutable releases. Keep the active rollback and a bounded history.
+  for category in rollback failed; do
+    snapshot_kept=0
+    for snapshot in $(ls -1dt "$RELEASE_ROOT"/"$category"-* 2>/dev/null || true); do
+      [ -d "$snapshot" ] && [ ! -L "$snapshot" ] || continue
+      snapshot_name="$(basename "$snapshot")"
+      printf '%s' "$snapshot_name" | grep -Eq "^$category-[0-9a-f]{40}(\\.retry-[0-9]+)?$" || continue
+      [ "$snapshot" != "$RELEASE_ROOT/rollback-$SOURCE_SHA" ] || continue
+      snapshot_kept=$((snapshot_kept + 1))
+      if [ "$snapshot_kept" -gt "$RETAIN_RELEASE_COUNT" ]; then
+        rm -rf -- "$snapshot"
+      fi
+    done
+  done
 }
 
 finalize() {
-  [ "$(readlink "$LIVE_DIR")" = "$RELEASE_DIR" ] \
+  [ "$(tr -d '\r\n' < "$LIVE_DIR/kubus-web-revision.txt")" = "$SOURCE_SHA" ] \
     || die "requested release is not current; refusing finalization"
   verify_prepared_release "$RELEASE_DIR"
-  rm -f "$RELEASE_ROOT/rollback-$SOURCE_SHA"
+  verify_prepared_release "$LIVE_DIR"
   prune_releases
 }
 

@@ -4,7 +4,8 @@ set -eu
 # Read-only production WAF-exception verifier.
 #
 # Confirms whether the host has been configured to let the CI smoke through the
-# Imunify360/LiteSpeed bot filter for requests carrying the secret
+# Historical Domenca WAF probe; use on Netcup only after measuring an
+# equivalent origin filter for requests carrying the secret
 # `X-Deploy-Smoke: <SMOKE_BYPASS_TOKEN>` header. It performs only GET / probes
 # against the deployment origin and changes nothing on the host. It never prints
 # the token value.
