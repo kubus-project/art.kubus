@@ -422,12 +422,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                           )
                         else
+                          // The resolved roles (approved DAO review
+                          // included), as the rest of the profile uses.
                           ProfileCoverField(
-                            isArtist:
-                                profileProvider.currentUser?.isArtist ?? false,
-                            isInstitution:
-                                profileProvider.currentUser?.isInstitution ??
-                                    false,
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
                           ),
 
                         // Cover image layer (explicit Image widget so we can downscale/catch errors)

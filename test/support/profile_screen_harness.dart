@@ -71,6 +71,10 @@ Future<void> pumpProfileSurface(
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
   bool canonicalPublicEntry = false,
+
+  /// Injected DAO state (for example an approved role review); a fresh
+  /// [DAOProvider] otherwise.
+  DAOProvider? daoProvider,
 }) async {
   final resolvedUser = user ?? ProfileFixtures.user();
 
@@ -107,7 +111,10 @@ Future<void> pumpProfileSurface(
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
-        ChangeNotifierProvider<DAOProvider>(create: (_) => DAOProvider()),
+        if (daoProvider != null)
+          ChangeNotifierProvider<DAOProvider>.value(value: daoProvider)
+        else
+          ChangeNotifierProvider<DAOProvider>(create: (_) => DAOProvider()),
         ChangeNotifierProvider<StatsProvider>(create: (_) => StatsProvider()),
         ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
         ChangeNotifierProvider<WalletProvider>(create: (_) => WalletProvider()),
