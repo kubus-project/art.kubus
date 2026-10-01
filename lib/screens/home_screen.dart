@@ -63,6 +63,7 @@ import '../utils/artwork_navigation.dart';
 import '../utils/home_rail_creator_identity.dart';
 import '../utils/home_activity_cards.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/common/kubus_action_tile.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
@@ -1250,9 +1251,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Flat quick-action tile: neutral icon, title, 44 px+ target. The
-  /// per-feature colour and the personal visit-count badge are no longer
-  /// painted; [color] and [visitCount] are kept for the call sites.
+  /// Destination tile in the destination's contextual colour; the
+  /// personal visit count is not painted ([visitCount] stays for callers).
   Widget _buildActionCard(
     String title,
     IconData icon,
@@ -1261,65 +1261,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required VoidCallback onTap,
     int visitCount = 0,
   }) {
-    final roles = KubusColorRoles.of(context);
-    final cardWidth = isSmallScreen ? 176.0 : 192.0;
-    final cardHeight = isSmallScreen ? 104.0 : 72.0;
-    final iconWidget = ExcludeSemantics(
-      child: Icon(icon, color: roles.foregroundMuted, size: 22),
-    );
-    final titleWidget = Text(
-      title,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      textAlign: isSmallScreen ? TextAlign.center : TextAlign.start,
-      style: KubusTextStyles.detailCardTitle.copyWith(
-        color: roles.foreground,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-
     return SizedBox(
-      width: cardWidth,
-      height: cardHeight,
-      child: Semantics(
-        button: true,
-        child: Material(
-          color: roles.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(KubusRadius.surface),
-            side: BorderSide(color: roles.rule),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            focusColor: roles.focus.withValues(alpha: 0.12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm,
-              ),
-              child: Center(
-                child: isSmallScreen
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          iconWidget,
-                          const SizedBox(height: KubusSpacing.sm),
-                          titleWidget,
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          iconWidget,
-                          const SizedBox(
-                              width: KubusSpacing.sm + KubusSpacing.xs),
-                          Flexible(child: titleWidget),
-                        ],
-                      ),
-              ),
-            ),
-          ),
-        ),
+      width: isSmallScreen ? 176.0 : 208.0,
+      child: KubusActionTile(
+        title: title,
+        icon: icon,
+        accent: color,
+        onTap: onTap,
+        layout: isSmallScreen
+            ? KubusActionTileLayout.stacked
+            : KubusActionTileLayout.inline,
       ),
     );
   }
