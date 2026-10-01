@@ -411,6 +411,8 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
             KubusDashboardHeader(
               notion: l10n.dashboardNotionInfrastructure,
               title: l10n.daoHubAppBarTitle,
+              accent: KubusColorRoles.of(context).web3DaoAccent,
+              glyph: Icons.how_to_vote_outlined,
               lede: l10n.daoHubHeaderSubtitle,
               actions: const [
                 KubusLabsAdornment.inlinePill(

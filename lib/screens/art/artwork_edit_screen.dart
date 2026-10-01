@@ -24,6 +24,9 @@ import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/subject_options_sheet.dart';
+import '../../widgets/common/kubus_atmosphere.dart';
+import '../../widgets/kubus_button.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/glass_components.dart';
@@ -788,10 +791,27 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                                           color: scheme.outline),
                                     ),
                                   )
-                                : Container(
-                                    color: scheme.surfaceContainerHighest,
-                                    child: Icon(Icons.image_outlined,
-                                        color: scheme.outline),
+                                // No cover yet: the work's own slot is
+                                // a studio-coloured media field that
+                                // offers the one action it needs.
+                                : KubusAtmosphere(
+                                    key: const ValueKey<String>(
+                                        'artwork_edit_empty_cover'),
+                                    accent: KubusColorRoles.of(context)
+                                        .web3ArtistStudioAccent,
+                                    glyph: Icons.image_outlined,
+                                    glyphAlignment: Alignment.bottomRight,
+                                    framed: false,
+                                    child: Center(
+                                      child: KubusButton(
+                                        onPressed:
+                                            _isSaving ? null : _pickCover,
+                                        icon:
+                                            Icons.add_photo_alternate_outlined,
+                                        label: l10n.mapMarkerDialogUploadCover,
+                                        variant: KubusButtonVariant.secondary,
+                                      ),
+                                    ),
                                   ),
                       ),
                     ),

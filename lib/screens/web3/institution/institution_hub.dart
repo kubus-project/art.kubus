@@ -374,6 +374,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
     // Programme leads; paid promotion is a quiet secondary action.
     return KubusDashboardHeader(
       notion: l10n.institutionNotionProgramme,
+      accent: KubusColorRoles.of(context).web3InstitutionAccent,
+      glyph: Icons.account_balance_outlined,
       title: l10n.navigationScreenInstitutionHub,
       lede: lede,
       actions: [

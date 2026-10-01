@@ -20,6 +20,7 @@ import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import '../../../widgets/marketplace/marketplace_listing_card.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/common/kubus_atmosphere.dart';
 import '../../../widgets/states/kubus_product_states.dart';
 
 enum _EditionSort { newest, title, listedFirst, supply }
@@ -151,46 +152,54 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
               KubusSpacing.xl,
               KubusSpacing.md,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: KubusSpacing.sm,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            l10n.navigationScreenMarketplace,
-                            style: KubusTextStyles.screenTitle.copyWith(
-                              color: scheme.onSurface,
+            // The marketplace's identity band, matching the phone header.
+            child: KubusAtmosphere(
+              accent: KubusColorRoles.of(context).web3MarketplaceAccent,
+              glyph: Icons.storefront_outlined,
+              glyphAlignment: Alignment.bottomRight,
+              glyphExtent: 136,
+              padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: KubusSpacing.sm,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              l10n.navigationScreenMarketplace,
+                              style: KubusTextStyles.screenTitle.copyWith(
+                                color: scheme.onSurface,
+                              ),
                             ),
-                          ),
-                          const KubusLabsAdornment.inlinePill(
-                            feature: KubusLabsFeature.marketplace,
-                            emphasized: true,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        l10n.marketplaceFeaturedCollectionsSubtitle,
-                        style: KubusTextStyles.screenSubtitle.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.68),
+                            const KubusLabsAdornment.inlinePill(
+                              feature: KubusLabsFeature.marketplace,
+                              emphasized: true,
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          l10n.marketplaceFeaturedCollectionsSubtitle,
+                          style: KubusTextStyles.screenSubtitle.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.68),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (capabilities.canCreateEdition)
-                  FilledButton.icon(
-                    onPressed: () => DesktopShellScope.of(context)
-                        ?.navigateToRoute('/artist-studio'),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.commonCreate),
-                  ),
-              ],
+                  if (capabilities.canCreateEdition)
+                    FilledButton.icon(
+                      onPressed: () => DesktopShellScope.of(context)
+                          ?.navigateToRoute('/artist-studio'),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.commonCreate),
+                    ),
+                ],
+              ),
             ),
           ),
           Padding(
