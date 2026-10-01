@@ -298,6 +298,13 @@ promote() {
   [ ! -e "$rollback_dir" ] && [ ! -e "$candidate_dir" ] \
     || die "rollback or candidate directory already exists; refusing overwrite"
   cp -a "$RELEASE_DIR" "$candidate_dir"
+  # Preserve host-owned certificate and domain validation files.
+  if [ -e "$LIVE_DIR/.well-known" ]; then
+    [ -d "$LIVE_DIR/.well-known" ] && [ ! -L "$LIVE_DIR/.well-known" ] \
+      || die "host validation directory is unsafe"
+    mkdir -p "$candidate_dir/.well-known"
+    cp -a "$LIVE_DIR/.well-known/." "$candidate_dir/.well-known/"
+  fi
   find "$candidate_dir" -type d -exec chmod 755 {} +
   find "$candidate_dir" -type f -exec chmod 644 {} +
   verify_prepared_release "$candidate_dir"
