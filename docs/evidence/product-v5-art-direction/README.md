@@ -34,3 +34,21 @@ leaves the machine):
   `prefers-reduced-motion: reduce`: edge and shadow change, no movement.
 - `browser-home-desktop-dark-light-sl`, `browser-home-mobile`: guest Home
   in a real browser, dark/light, EN/SL, 390 and 320.
+
+## Review fixes (Codex P1/P2)
+
+Single-state captures from the same matrix (`QA_LABEL=review-fix`), 0 render
+errors:
+
+- `review-fix-home-quick-actions`: returning-user desktop Home, recorded
+  quick actions in the horizontal strip, dark EN, light EN, dark SL at 200 %
+  text. The scenes are `home-desktop-quickactions-*`; earlier matrix runs
+  never populated this strip.
+- `review-fix-action-tile-long-title`: inline tiles in a horizontal scroll
+  row with a 60-character title, dark/light at 1x and 2x text. The title
+  wraps inside `KubusActionTile.inlineMaxWidth` (280, scaled with the text);
+  before the fix it ran on one line to a 1021 px tile.
+- `review-fix-owner-cover-resolved-role`: image-less mobile owner cover when
+  the role comes from an approved DAO review while `currentUser` still says
+  neither (artist dark, institution dark, plain account SL, artist light,
+  institution light). The cover matches the role badge.

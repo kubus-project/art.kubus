@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
+import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/screens/art/artwork_edit_screen.dart';
 import 'package:art_kubus/screens/community/profile_screen.dart'
     as mobile_profile;
@@ -132,6 +133,12 @@ void main() {
     }
     final bytes = await _captureRoot(tester);
     File('${outputDir.path}/$name.png').writeAsBytesSync(bytes);
+    // Let in-flight offline loads (e.g. DAOProvider's sequential backend
+    // chain and its secure-storage read timeouts) settle in fake time, so
+    // no timer outlives the tree.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
     captures.add(<String, Object?>{
       'name': name,
       'width': size.width,
@@ -172,6 +179,35 @@ void main() {
         () => qaShellHost(const DesktopHomeScreen()),
         size: const Size(1440, 1300), signedIn: artist);
   });
+  // Returning user: recorded quick actions in the horizontal strip.
+  const visited = <String>[
+    'map',
+    'community',
+    'marketplace',
+    'achievements',
+    'dao_hub',
+    'studio',
+    'institution_hub',
+  ];
+  for (final b in Brightness.values) {
+    scene('home-desktop-quickactions-${b.name}', (tester) async {
+      await surface(tester, 'home-desktop-quickactions-1440-${b.name}-en',
+          () => qaShellHost(const DesktopHomeScreen()),
+          size: const Size(1440, 1300),
+          brightness: b,
+          signedIn: owner,
+          extraProviders: [qaNavigationWithVisits(visited)]);
+    });
+  }
+  scene('home-desktop-quickactions-text200', (tester) async {
+    await surface(tester, 'home-desktop-quickactions-1440-dark-sl-text200',
+        () => qaShellHost(const DesktopHomeScreen()),
+        size: const Size(1440, 3200),
+        locale: const Locale('sl'),
+        textScale: 2,
+        signedIn: owner,
+        extraProviders: [qaNavigationWithVisits(visited)]);
+  });
   scene('home-mobile-320', (tester) async {
     await surface(tester, 'home-mobile-320-dark-sl', () => const HomeScreen(),
         size: const Size(320, 1400),
@@ -191,6 +227,23 @@ void main() {
           () => const mobile_profile.ProfileScreen(),
           size: const Size(390, 1500), brightness: b, signedIn: artist);
     });
+  }
+  // Image-less owner cover with the role resolved from an approved DAO
+  // review while currentUser's role flags are still false.
+  for (final role in const ['artist', 'institution']) {
+    for (final b in Brightness.values) {
+      scene('profile-mobile-resolved-$role-${b.name}', (tester) async {
+        await surface(tester, 'profile-mobile-390-${b.name}-en-resolved-$role',
+            () => const mobile_profile.ProfileScreen(),
+            size: const Size(390, 1100),
+            brightness: b,
+            signedIn: owner,
+            extraProviders: [
+              ChangeNotifierProvider<DAOProvider>(
+                  create: (_) => QaApprovedRoleDAOProvider(role)),
+            ]);
+      });
+    }
   }
   scene('profile-desktop-institution', (tester) async {
     await surface(tester, 'profile-desktop-1440-dark-en-institution',
