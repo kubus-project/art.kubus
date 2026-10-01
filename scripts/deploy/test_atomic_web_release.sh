@@ -12,6 +12,8 @@ export RELEASE_ROOT="$tmp_root/releases-root"
 export RETAIN_RELEASE_COUNT=3
 mkdir -p "$LIVE_DIR" "$RELEASE_ROOT"
 printf 'previous placeholder\n' > "$LIVE_DIR/index.html"
+mkdir -p "$LIVE_DIR/.well-known/acme-challenge"
+printf 'host-owned validation\n' > "$LIVE_DIR/.well-known/acme-challenge/token"
 
 build_archive() {
   payload="$1"
@@ -54,6 +56,12 @@ sh "$release_script" promote >/dev/null
 [ -d "$RELEASE_ROOT/rollback-$SOURCE_SHA" ]
 sh "$release_script" rollback >/dev/null
 [ "$(cat "$LIVE_DIR/index.html")" = 'previous placeholder' ]
+# Repeating a failed smoke on the same immutable SHA must always restore live.
+sh "$release_script" promote >/dev/null
+[ "$(cat "$LIVE_DIR/.well-known/acme-challenge/token")" = 'host-owned validation' ]
+sh "$release_script" rollback >/dev/null
+[ "$(cat "$LIVE_DIR/index.html")" = 'previous placeholder' ]
+[ -d "$RELEASE_ROOT/failed-$SOURCE_SHA.retry-1" ]
 
 # The immutable directory cannot be silently replaced by a changed artifact.
 printf '<html>changed</html>\n' > "$payload/index.html"
@@ -83,12 +91,22 @@ rm -rf "$INCOMING_DIR"
 build_archive "$production"
 sh "$release_script" prepare >/dev/null
 sh "$release_script" promote >/dev/null
+mkdir "$RELEASE_ROOT/rollback-0000000000000000000000000000000000000000"
+mkdir "$RELEASE_ROOT/failed-0000000000000000000000000000000000000000"
+mkdir "$RELEASE_ROOT/rollback-domenca-initial"
+export RETAIN_RELEASE_COUNT=0
 sh "$release_script" finalize >/dev/null
+[ ! -e "$RELEASE_ROOT/rollback-0000000000000000000000000000000000000000" ]
+[ ! -e "$RELEASE_ROOT/failed-0000000000000000000000000000000000000000" ]
+[ -d "$RELEASE_ROOT/rollback-domenca-initial" ]
 if grep -Eiq 'AuthType|AuthUserFile|KUBUS HOST DEVELOPMENT AUTH' "$LIVE_DIR/.htaccess"; then
   echo 'production inherited development authentication' >&2
   exit 1
 fi
 [ -d "$RELEASE_ROOT/rollback-$SOURCE_SHA" ]
+sh "$release_script" rollback >/dev/null
+[ "$(cat "$LIVE_DIR/index.html")" = 'previous placeholder' ]
+sh "$release_script" promote >/dev/null
 sh "$release_script" rollback >/dev/null
 [ "$(cat "$LIVE_DIR/index.html")" = 'previous placeholder' ]
 

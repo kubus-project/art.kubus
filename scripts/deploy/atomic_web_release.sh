@@ -286,6 +286,17 @@ prepare() {
   verify_prepared_release "$RELEASE_DIR"
 }
 
+next_failed_path() {
+  failed_base="$RELEASE_ROOT/failed-$SOURCE_SHA"
+  failed_result="$failed_base"
+  failed_attempt=0
+  while [ -e "$failed_result" ] || [ -L "$failed_result" ]; do
+    failed_attempt=$((failed_attempt + 1))
+    failed_result="$failed_base.retry-$failed_attempt"
+  done
+  printf '%s\n' "$failed_result"
+}
+
 promote() {
   rollback_dir="$RELEASE_ROOT/rollback-$SOURCE_SHA"
   candidate_dir="$LIVE_DIR.next-$SOURCE_SHA"
@@ -315,8 +326,7 @@ promote() {
     die "promotion failed; restored the previous document root"
   fi
   if ! (verify_prepared_release "$LIVE_DIR"); then
-    failed_dir="$RELEASE_ROOT/failed-$SOURCE_SHA"
-    [ ! -e "$failed_dir" ] || die "failed-release path already exists"
+    failed_dir="$(next_failed_path)"
     mv "$LIVE_DIR" "$failed_dir"
     mv "$rollback_dir" "$LIVE_DIR" \
       || die "post-promotion verification failed and previous document root could not be restored"
@@ -326,9 +336,8 @@ promote() {
 
 rollback() {
   rollback_dir="$RELEASE_ROOT/rollback-$SOURCE_SHA"
-  failed_dir="$RELEASE_ROOT/failed-$SOURCE_SHA"
+  failed_dir="$(next_failed_path)"
   [ -d "$rollback_dir" ] && [ ! -L "$rollback_dir" ] || die "rollback state is missing"
-  [ ! -e "$failed_dir" ] || die "failed-release path already exists"
   [ "$(tr -d '\r\n' < "$LIVE_DIR/kubus-web-revision.txt")" = "$SOURCE_SHA" ] \
     || die "current release changed after promotion; refusing stale rollback"
   mv "$LIVE_DIR" "$failed_dir"
@@ -352,6 +361,21 @@ prune_releases() {
       rm -rf -- "$candidate"
       rm -f "$RELEASE_ROOT/host-policy/$release_name"
     fi
+  done
+  # Physical predecessors and failed attempts consume the same hosting quota
+  # as immutable releases. Keep the active rollback and a bounded history.
+  for category in rollback failed; do
+    snapshot_kept=0
+    for snapshot in $(ls -1dt "$RELEASE_ROOT"/"$category"-* 2>/dev/null || true); do
+      [ -d "$snapshot" ] && [ ! -L "$snapshot" ] || continue
+      snapshot_name="$(basename "$snapshot")"
+      printf '%s' "$snapshot_name" | grep -Eq "^$category-[0-9a-f]{40}(\\.retry-[0-9]+)?$" || continue
+      [ "$snapshot" != "$RELEASE_ROOT/rollback-$SOURCE_SHA" ] || continue
+      snapshot_kept=$((snapshot_kept + 1))
+      if [ "$snapshot_kept" -gt "$RETAIN_RELEASE_COUNT" ]; then
+        rm -rf -- "$snapshot"
+      fi
+    done
   done
 }
 
