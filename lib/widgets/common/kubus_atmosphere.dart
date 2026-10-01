@@ -369,20 +369,19 @@ class _CartographicTexture extends StatelessWidget {
   final Brightness brightness;
   final Alignment fadeFrom;
 
-  static const String lightAsset =
-      'assets/images/backgrounds/background_map_light.png';
-  static const String darkAsset =
+  /// The dark tile encodes streets as light on black: luminance is directly
+  /// the line mask, in either theme. (The light tile is inverted, white
+  /// roads on grey paper, so it cannot serve as a mask.)
+  static const String maskAsset =
       'assets/images/backgrounds/background_map_dark.png';
 
-  /// Turns the bundled map tile into line work: its street luminance becomes
-  /// alpha and every street is drawn in [ink], so the texture sits on any
-  /// surface in either theme instead of painting its own paper.
-  static List<double> inkMatrix(Color ink, {required bool dark}) {
+  /// Turns the map tile into line work: street luminance becomes alpha and
+  /// every street is drawn in [ink], so the texture sits on any surface in
+  /// either theme instead of painting its own paper.
+  static List<double> inkMatrix(Color ink) {
     const lr = 0.2126, lg = 0.7152, lb = 0.0722;
-    // Dark tiles: light streets on ~10 ground. Light tiles: dark streets on
-    // ~243 paper. Both map the paper to 0 and the strongest street to ~1.
-    final k = dark ? 4.2 : -3.4;
-    final b = dark ? -42.0 : 243 * 3.4;
+    // ~10 ground maps to 0, the brightest streets (~68) to ~1.
+    const k = 4.2, b = -42.0;
     return <double>[
       0, 0, 0, 0, ink.r * 255, //
       0, 0, 0, 0, ink.g * 255, //
@@ -404,23 +403,45 @@ class _CartographicTexture extends StatelessWidget {
             begin: fromRight ? Alignment.centerRight : Alignment.centerLeft,
             end: fromRight ? Alignment.centerLeft : Alignment.centerRight,
             colors: [
-              roles.foreground.withValues(alpha: dark ? 0.30 : 0.22),
-              roles.foreground.withValues(alpha: dark ? 0.12 : 0.08),
+              roles.foreground.withValues(alpha: dark ? 0.30 : 0.26),
+              roles.foreground.withValues(alpha: dark ? 0.12 : 0.10),
               roles.foreground.withValues(alpha: 0),
             ],
             stops: const [0, 0.5, 0.9],
           ).createShader(bounds),
           child: ColorFiltered(
             colorFilter: ColorFilter.matrix(
-              inkMatrix(roles.foreground, dark: dark),
+              inkMatrix(roles.foreground),
             ),
-            child: Image.asset(
-              dark ? darkAsset : lightAsset,
-              fit: BoxFit.cover,
-              alignment: const Alignment(0.2, 0),
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-              errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+            // Drawn at 1.6x, anchored to the trailing edge: the tile's city
+            // label (left of centre) leaves the frame, so only street line
+            // work ever sits behind the text column.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final side = math.max(
+                  constraints.maxWidth * 1.6,
+                  constraints.maxHeight * 1.6,
+                );
+                return ClipRect(
+                  child: OverflowBox(
+                    alignment: fromRight
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    minWidth: side,
+                    maxWidth: side,
+                    minHeight: side,
+                    maxHeight: side,
+                    child: Image.asset(
+                      maskAsset,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      gaplessPlayback: true,
+                      errorBuilder: (context, error, stack) =>
+                          const SizedBox.shrink(),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
