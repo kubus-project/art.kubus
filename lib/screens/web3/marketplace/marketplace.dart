@@ -286,6 +286,8 @@ class _MarketplaceState extends State<Marketplace>
     return KubusDashboardHeader(
       notion: l10n.dashboardNotionInfrastructure,
       title: l10n.navigationScreenMarketplace,
+      accent: KubusColorRoles.of(context).web3MarketplaceAccent,
+      glyph: Icons.storefront_outlined,
       lede: l10n.homeWeb3MarketplaceSubtitle,
       actions: const [
         KubusLabsAdornment.inlinePill(

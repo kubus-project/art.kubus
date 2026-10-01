@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_atmosphere.dart';
+import '../common/kubus_context_icon.dart';
 import '../inline_loading.dart';
 
 /// PRODUCT v5 chrome for the advanced dashboards (Artist Studio, Institution
@@ -45,6 +47,12 @@ class KubusNotionLabel extends StatelessWidget {
 }
 
 /// Dashboard page header: notion, title, lede and optional quiet actions.
+///
+/// With an [accent] (the hub's semantic colour: studio coral, institution
+/// blue, governance green, marketplace orange) the header becomes the hub's
+/// identity band: a [KubusAtmosphere] with a hero context tile beside the
+/// title and the hub [glyph] cropped in the trailing corner. Without one it
+/// stays the flat notion/title/lede block.
 class KubusDashboardHeader extends StatelessWidget {
   const KubusDashboardHeader({
     super.key,
@@ -58,7 +66,15 @@ class KubusDashboardHeader extends StatelessWidget {
       KubusSpacing.md,
       KubusSpacing.sm,
     ),
+    this.accent,
+    this.glyph,
   });
+
+  /// Hub colour from [KubusColorRoles]; turns on the identity band.
+  final Color? accent;
+
+  /// Hub symbol for the context tile and the cropped ghost glyph.
+  final IconData? glyph;
 
   final String notion;
   final String title;
@@ -69,44 +85,74 @@ class KubusDashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
+    final textColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KubusNotionLabel(notion),
+        const SizedBox(height: KubusSpacing.xs),
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: (accent == null
+                    ? KubusTextStyles.entityTitle
+                    : KubusTextStyles.entityTitle.copyWith(fontSize: 24))
+                .copyWith(color: roles.foreground),
+          ),
+        ),
+        if (lede != null && lede!.trim().isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            lede!,
+            style: KubusTextStyles.detailBody.copyWith(
+              color: roles.foregroundMuted,
+            ),
+          ),
+        ],
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.xs,
+            children: actions,
+          ),
+        ],
+      ],
+    );
+
     // Full width so a centring parent column never floats the header away
     // from the tabs and content below it.
+    if (accent == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: Padding(padding: padding, child: textColumn),
+      );
+    }
     return SizedBox(
       width: double.infinity,
       child: Padding(
         padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            KubusNotionLabel(notion),
-            const SizedBox(height: KubusSpacing.xs),
-            Semantics(
-              header: true,
-              child: Text(
-                title,
-                style: KubusTextStyles.entityTitle.copyWith(
-                  color: roles.foreground,
+        child: KubusAtmosphere(
+          key: const ValueKey<String>('kubus_dashboard_identity'),
+          accent: accent!,
+          glyph: glyph,
+          glyphAlignment: Alignment.bottomRight,
+          glyphExtent: 136,
+          padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (glyph != null) ...[
+                KubusContextIcon(
+                  icon: glyph!,
+                  accent: accent!,
+                  size: KubusContextIconSize.hero,
                 ),
-              ),
-            ),
-            if (lede != null && lede!.trim().isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                lede!,
-                style: KubusTextStyles.detailBody.copyWith(
-                  color: roles.foregroundMuted,
-                ),
-              ),
+                const SizedBox(width: KubusSpacing.md),
+              ],
+              Expanded(child: textColumn),
             ],
-            if (actions.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              Wrap(
-                spacing: KubusSpacing.sm,
-                runSpacing: KubusSpacing.xs,
-                children: actions,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

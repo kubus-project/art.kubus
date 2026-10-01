@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/profile/profile_cover_field.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -729,13 +730,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 child: Stack(
                   children: [
-                    Container(
+                    SizedBox(
                       height: hasCoverImage ? 228 : 156,
                       width: double.infinity,
-                      // Flat cover band without an image (no accent gradient).
-                      color: hasCoverImage
-                          ? null
-                          : KubusColorRoles.of(context).surfaceRaised,
+                      // Without an image the cover is the role field.
                       child: hasCoverImage
                           ? Image.network(
                               coverImageUrl,
@@ -747,7 +745,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 );
                               },
                             )
-                          : null,
+                          : ProfileCoverField(
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                            ),
                     ),
                     // Media scrim only over a real image (keeps the edit
                     // control legible).

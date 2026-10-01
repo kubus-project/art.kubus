@@ -181,9 +181,13 @@ void main() {
           ),
         ),
       );
-      final icon = tester.widget<Icon>(find.byIcon(Icons.people_outline));
+      final icon = tester.widget<Icon>(find.descendant(
+        of: find.byType(KubusContextIcon),
+        matching: find.byIcon(Icons.people_outline),
+      ));
       expect(icon.color, accent);
-      // The accent stays in the icon tile; the card surface is neutral.
+      // Under the text the card surface is neutral; the accent lives in the
+      // icon tile, the ghost glyph, the corner field and the edge light.
       final context = tester.element(find.byType(KubusStatCard));
       final material = tester.widget<Material>(find.descendant(
         of: find.byType(KubusStatCard),
@@ -259,7 +263,13 @@ void main() {
           ),
         ),
       );
-      expect(tester.widget<Icon>(find.byIcon(Icons.create_outlined)).color,
+      expect(
+          tester
+              .widget<Icon>(find.descendant(
+                of: find.byType(KubusContextIcon),
+                matching: find.byIcon(Icons.create_outlined),
+              ))
+              .color,
           accent);
     });
 

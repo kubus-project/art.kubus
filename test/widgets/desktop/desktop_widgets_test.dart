@@ -1,6 +1,8 @@
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_widgets.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
+import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -47,8 +49,8 @@ void main() {
   });
 
   testWidgets(
-      'DesktopStatCard is flat: one small context icon, no hover lift or shadow',
-      (tester) async {
+      'DesktopStatCard: compact context tile, cropped ghost glyph, no lift or '
+      'shadow on the tile itself', (tester) async {
     await pumpDesktopStatCard(
       tester,
       child: const SizedBox(
@@ -62,19 +64,21 @@ void main() {
       ),
     );
 
-    // The icon is a compact context tile, not a card-sized watermark.
-    final icon = find.byWidgetPredicate(
-      (widget) => widget is Icon && widget.icon == Icons.group_outlined,
+    final tileIcon = find.descendant(
+      of: find.byType(KubusContextIcon),
+      matching: find.byIcon(Icons.group_outlined),
     );
-    expect(icon, findsOneWidget);
-    expect(tester.getSize(icon).height, lessThanOrEqualTo(16));
+    expect(tester.getSize(tileIcon).height, lessThanOrEqualTo(16));
+    // The large symbol is the decorative ghost layer, clipped by the tile.
     expect(
       find.descendant(
-        of: find.byType(DesktopStatCard),
-        matching: find.byType(Transform),
+        of: find.byType(KubusGhostGlyph),
+        matching: find.byIcon(Icons.group_outlined),
       ),
-      findsNothing,
+      findsOneWidget,
     );
+    // A metric is data: the tile never lifts and casts no shadow.
+    expect(find.byType(DesktopStatCard), findsOneWidget);
     final decorated = tester
         .widgetList<DecoratedBox>(find.descendant(
           of: find.byType(DesktopStatCard),

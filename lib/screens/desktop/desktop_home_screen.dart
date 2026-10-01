@@ -28,6 +28,7 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
+import '../../widgets/common/kubus_action_tile.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
@@ -167,7 +168,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _schedulePlatformStatsPrefetch();
-    _refreshHomeRails();
+    // Loading notifies PromotionProvider synchronously; never during build.
+    if (Localizations.localeOf(context).languageCode !=
+        _lastHomeRailsLocaleRefresh) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshHomeRails());
+    }
 
     final walletAddress =
         (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
@@ -663,14 +668,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildStatsGrid(),
+                      child: Builder(builder: _buildStatsGrid),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildQuickActions(),
+                      child: Builder(builder: _buildQuickActions),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -692,14 +697,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildQuickActions(),
+                      child: Builder(builder: _buildQuickActions),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
                           DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
-                      child: _buildStatsGrid(),
+                      child: Builder(builder: _buildStatsGrid),
                     ),
                   ),
                 ],
@@ -904,7 +909,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(BuildContext context) {
     final artworkProvider = Provider.of<ArtworkProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final activityProvider = Provider.of<RecentActivityProvider>(context);
@@ -1085,7 +1090,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
     final navigationProvider = Provider.of<NavigationProvider>(context);
     final persona =
         context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
@@ -1304,35 +1309,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     VoidCallback onTap, {
     int visitCount = 0,
   }) {
-    return DesktopCard(
+    return KubusActionTile(
+      title: title,
+      icon: icon,
+      accent: color,
       onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Neutral icon; no per-feature tint or visit-count badge.
-          ExcludeSemantics(
-            child: Icon(
-              icon,
-              color: KubusColorRoles.of(context).foregroundMuted,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: DetailSpacing.md),
-          Text(
-            title,
-            style: KubusTextStyles.detailCardTitle.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: DetailSpacing.sm),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 14,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-        ],
-      ),
+      layout: KubusActionTileLayout.inline,
     );
   }
 

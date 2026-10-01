@@ -1536,64 +1536,133 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
         );
     if (items.isEmpty) return const SizedBox.shrink();
 
+    final done = items.where((item) => item.complete).length;
+
+    // At a glance: the count as a machine value and one segment per item,
+    // in the same green/amber the rows use. Rows below carry the meaning
+    // (and the semantics), so this composition is decorative.
+    final summary = ExcludeSemantics(
+      key: const ValueKey<String>('creator_readiness_summary'),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$done',
+                    style: KubusTextStyles.machineValue.copyWith(
+                      fontSize: 28,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      color: done == items.length
+                          ? colors.completeAccent
+                          : scheme.onSurface,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '/${items.length}',
+                    style: KubusTextStyles.machineValue.copyWith(
+                      fontSize: 14,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(width: KubusSpacing.xxs),
+                      Expanded(
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: items[i].complete
+                                ? colors.completeAccent
+                                : colors.incompleteAccent
+                                    .withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(KubusRadius.xs),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     // Truthful state, stated once per row: a green check when complete, an
     // amber open mark when missing. The label carries the meaning; no tile.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: items.map((item) {
-        final itemAccent =
-            item.complete ? colors.completeAccent : colors.incompleteAccent;
-        final labelColor = item.complete
-            ? scheme.onSurface
-            : scheme.onSurface.withValues(alpha: 0.82);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-          child: Semantics(
-            checked: item.complete,
-            label: item.label,
-            excludeSemantics: true,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                  child: Icon(
-                    item.complete
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 18,
-                    color: itemAccent,
+      children: [
+        summary,
+        ...items.map((item) {
+          final itemAccent =
+              item.complete ? colors.completeAccent : colors.incompleteAccent;
+          final labelColor = item.complete
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: 0.82);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+            child: Semantics(
+              checked: item.complete,
+              label: item.label,
+              excludeSemantics: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: KubusSpacing.xxs),
+                    child: Icon(
+                      item.complete
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: itemAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.label,
-                        style: KubusTextStyles.detailLabel.copyWith(
-                          color: labelColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if ((item.description ?? '').trim().isNotEmpty) ...[
-                        const SizedBox(height: KubusSpacing.xxs),
+                  const SizedBox(width: KubusSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          item.description!,
-                          style: KubusTextStyles.detailCaption.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.66),
+                          item.label,
+                          style: KubusTextStyles.detailLabel.copyWith(
+                            color: labelColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if ((item.description ?? '').trim().isNotEmpty) ...[
+                          const SizedBox(height: KubusSpacing.xxs),
+                          Text(
+                            item.description!,
+                            style: KubusTextStyles.detailCaption.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.66),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      }).toList(growable: false),
+          );
+        })
+      ],
     );
   }
 }

@@ -7,6 +7,9 @@
 /// |---|---|
 /// | Screen background | `KubusProductBackground` |
 /// | Ordinary content surface | `KubusCard` (flat by default) |
+/// | Page identity / hero context (never lists, forms, settings) | `KubusAtmosphere` |
+/// | Decorative oversized contextual symbol | `KubusGhostGlyph` |
+/// | Destination shortcut tile | `KubusActionTile` |
 /// | Spatial/media overlay | `LiquidGlassPanel` / `LiquidGlassCard` (explicit) |
 /// | Long-form reading section (descriptions, bios, curatorial text) | `KubusReadingSurface` (never glass) |
 /// | Small floating media controls | `FrostedContainer` (explicit spatial use) |
@@ -39,6 +42,8 @@ library;
 export '../utils/design_tokens.dart';
 export '../utils/kubus_accent_gradients.dart';
 export '../utils/kubus_color_roles.dart';
+export 'common/kubus_action_tile.dart';
+export 'common/kubus_atmosphere.dart';
 export 'common/kubus_badge.dart';
 export 'common/kubus_glass_chip.dart';
 export 'common/kubus_meter_bar.dart';

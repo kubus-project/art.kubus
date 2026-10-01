@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common/kubus_atmosphere.dart';
 import '../inline_loading.dart';
 
 import '../../utils/design_tokens.dart';
@@ -183,7 +184,14 @@ class KubusWalletSectionCard extends StatelessWidget {
     this.padding,
     this.margin,
     this.borderRadius,
+    this.accent,
+    this.glyph,
   });
+
+  /// Turns the section into an asset hero ([KubusAtmosphere]) in this
+  /// colour. Only the balance section uses it; other sections stay flat.
+  final Color? accent;
+  final IconData? glyph;
 
   final String? title;
   final String? subtitle;
@@ -196,6 +204,35 @@ class KubusWalletSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (title != null && subtitle != null) ...<Widget>[
+          KubusWalletSectionHeader(
+            title: title!,
+            subtitle: subtitle!,
+            trailing: headerTrailing,
+          ),
+          const SizedBox(height: KubusSpacing.md),
+        ],
+        child,
+      ],
+    );
+    if (accent != null) {
+      return Padding(
+        padding: margin ?? EdgeInsets.zero,
+        child: KubusAtmosphere(
+          accent: accent!,
+          glyph: glyph,
+          glyphAlignment: Alignment.topRight,
+          glyphExtent: 150,
+          borderRadius:
+              borderRadius ?? BorderRadius.circular(KubusRadius.surface),
+          padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
+          child: content,
+        ),
+      );
+    }
     return Container(
       margin: margin,
       padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),

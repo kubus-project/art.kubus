@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_atmosphere.dart';
 import '../kubus_button.dart';
 
-/// Flat, discovery-first introduction at the top of Home.
+/// Discovery-first introduction at the top of Home.
 ///
 /// Replaces the former accent-gradient hero that led with wallet balances.
 /// It answers "what can I discover here?" and offers one primary action
 /// (the map) and one secondary action (community). No wallet, token or
 /// status content belongs here; those live in their own infrastructure
-/// surfaces. The structural notion label uses the Space Mono register; the
+/// surfaces. The opening is a [KubusAtmosphere] lit in the map's teal and
+/// textured with the real street map fading in from the trailing edge, so
+/// home opens on a place rather than on a form. The structural notion label uses the Space Mono register; the
 /// title and lede use the Sofia Sans content register.
 class HomeDiscoveryIntro extends StatelessWidget {
   const HomeDiscoveryIntro({
@@ -32,18 +35,31 @@ class HomeDiscoveryIntro extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final textTheme = Theme.of(context).textTheme;
+    // Display scale: the opening is the largest type on Home, so the page
+    // has one clear entry point instead of a row of equal-weight sections.
     final titleStyle =
-        (large ? textTheme.headlineMedium : textTheme.headlineSmall)?.copyWith(
+        (large ? textTheme.displayLarge : textTheme.displaySmall)?.copyWith(
       color: roles.foreground,
       fontWeight: FontWeight.w700,
-      height: 1.15,
+      height: 1.08,
+      letterSpacing: large ? -0.6 : -0.3,
     );
 
-    return Padding(
+    return KubusAtmosphere(
       key: const Key('home_discovery_intro'),
-      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+      accent: roles.active,
+      texture: KubusAtmosphereTexture.cartographic,
+      padding: EdgeInsets.fromLTRB(
+        large ? KubusSpacing.xl : KubusSpacing.lg,
+        large ? KubusSpacing.xl : KubusSpacing.lg,
+        large ? KubusSpacing.xl : KubusSpacing.lg,
+        large ? KubusSpacing.xl : KubusSpacing.lg,
+      ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: large ? 720 : 560),
+        constraints: BoxConstraints(
+          maxWidth: large ? 720 : 560,
+          minHeight: large ? 232 : 0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

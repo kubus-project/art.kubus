@@ -5,6 +5,7 @@ import '../../../config/config.dart';
 import '../../../services/onboarding_state_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../desktop/desktop_shell.dart';
 import '../../desktop/onboarding/desktop_web3_onboarding.dart'
@@ -233,6 +234,10 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                 description: page.description,
                 features: page.features,
                 large: isTablet,
+                accent: Web3OnboardingPageBody.accentFor(
+                  KubusColorRoles.of(context),
+                  widget.featureKey,
+                ),
               ),
             ),
           ),
@@ -299,9 +304,12 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
   }
 }
 
-/// Flat page body shared by the mobile and desktop feature introductions:
-/// a bare icon, title, lede and a plain check list. No gradient tile, glass
-/// panel or tinted chips.
+/// Page body shared by the mobile and desktop feature introductions: the
+/// feature's hero context tile, title, lede and a plain check list. The
+/// colour belongs to
+/// the feature ([accentFor]: governance green, studio coral, institution
+/// blue, marketplace orange), not to the page, so a four-page intro does not
+/// cycle through a rainbow.
 class Web3OnboardingPageBody extends StatelessWidget {
   const Web3OnboardingPageBody({
     super.key,
@@ -310,7 +318,18 @@ class Web3OnboardingPageBody extends StatelessWidget {
     required this.description,
     required this.features,
     this.large = false,
+    this.accent,
   });
+
+  /// Feature colour; see [accentFor]. Defaults to the family active colour.
+  final Color? accent;
+
+  /// The intro colour for a feature key (`DAO`, `Artist Studio`, …).
+  static Color accentFor(KubusColorRoles roles, String featureKey) {
+    final key = featureKey.trim().toLowerCase().replaceAll(' ', '_');
+    const known = {'dao', 'artist_studio', 'institution_hub', 'marketplace'};
+    return known.contains(key) ? roles.web3AccentForKey(key) : roles.active;
+  }
 
   final IconData icon;
   final String title;
@@ -323,12 +342,18 @@ class Web3OnboardingPageBody extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final tone = accent ?? roles.active;
+    // No ghost glyph here: the body is reading text from edge to edge.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 32, color: roles.foregroundMuted),
-        const SizedBox(height: KubusSpacing.md),
+        KubusContextIcon(
+          icon: icon,
+          accent: tone,
+          size: KubusContextIconSize.hero,
+        ),
+        const SizedBox(height: KubusSpacing.lg),
         Semantics(
           header: true,
           child: Text(

@@ -379,6 +379,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
     // Practice leads; paid promotion is a quiet secondary action.
     return KubusDashboardHeader(
       notion: l10n.studioNotionPractice,
+      accent: KubusColorRoles.of(context).web3ArtistStudioAccent,
+      glyph: Icons.palette_outlined,
       title: l10n.artistStudioTitle,
       lede: l10n.artistStudioHeaderSubtitle,
       actions: [

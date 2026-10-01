@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import 'kubus_atmosphere.dart';
 import 'kubus_context_icon.dart';
 
 enum KubusStatCardLayout {
@@ -11,14 +12,21 @@ enum KubusStatCardLayout {
   centered,
 }
 
-/// PRODUCT v5 metric tile: a flat surface with a hairline rule, a small
-/// contextual icon tile, the number and its label.
+/// PRODUCT v5 metric tile: a ruled surface, a small contextual icon tile,
+/// the number and its label.
 ///
-/// [accent] is the metric's contextual colour (from [KubusColorRoles]); it
-/// paints the [KubusContextIcon] and the hover response and nothing else, so
-/// the number stays the datum and the card stays neutral. Without an accent
-/// the icon tile uses the family active colour. No glass, no watermark glyph,
-/// no hover motion.
+/// [accent] is the metric's contextual colour (from [KubusColorRoles]).
+/// Expressive tiles (the default for [KubusStatCardLayout.centered]) also
+/// use it as composition: the metric's glyph returns oversized and cropped
+/// in the trailing corner ([KubusGhostGlyph]), a diffuse field of the accent
+/// rises from that corner and the top edge catches it. Followers therefore
+/// read differently from artworks or governance without the card turning
+/// into a colour block: the fill under the text is the plain surface.
+///
+/// Hover answers inside the clipped tile only: the glyph grows and drifts a
+/// few pixels toward the number and the field and edge brighten. The tile
+/// and its text never move. Reduced motion keeps the brightening and drops
+/// the drift. Touch never hovers.
 ///
 /// The spoken label is `value title` (for example "1,284 Followers") so a
 /// value is never announced without its meaning. Tappable tiles expose button
@@ -44,6 +52,7 @@ class KubusStatCard extends StatelessWidget {
     this.layout = KubusStatCardLayout.standard,
     this.showIcon = true,
     this.semanticsLabel,
+    this.expressive,
   });
 
   final String title;
@@ -66,6 +75,14 @@ class KubusStatCard extends StatelessWidget {
 
   /// Overrides the spoken `value title` (for units such as KUB8).
   final String? semanticsLabel;
+
+  /// Ghost glyph, contextual field and edge light. Defaults to on for the
+  /// centred (grid) layout and off for the dense standard row. Needs [icon].
+  final bool? expressive;
+
+  /// Strength of the contextual field rising from the glyph corner.
+  static double fieldAlpha(Brightness b, {bool hovered = false}) =>
+      (b == Brightness.dark ? 0.11 : 0.075) + (hovered ? 0.05 : 0);
 
   static const EdgeInsets defaultPadding = EdgeInsets.symmetric(
     horizontal: KubusSpacing.md,
@@ -221,28 +238,100 @@ class KubusStatCard extends StatelessWidget {
       child: body,
     );
 
-    return Semantics(
-      container: true,
-      button: onTap != null,
-      label: semanticsLabel ?? '$value $title',
-      excludeSemantics: true,
-      onTap: onTap,
-      child: Material(
+    final isExpressive = (expressive ?? centered) && showIcon && icon != null;
+    final brightness = Theme.of(context).brightness;
+
+    Widget surface(bool hovered) {
+      final motion = KubusHoverResponse.motionAllowed(context);
+      final content = onTap == null
+          ? tile
+          : InkWell(
+              onTap: onTap,
+              focusColor: roles.focus.withValues(alpha: 0.12),
+              hoverColor: isExpressive
+                  ? resolvedAccent.withValues(alpha: 0)
+                  : resolvedAccent.withValues(alpha: 0.06),
+              child: tile,
+            );
+      return Material(
         color: roles.surface,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
           side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
         ),
         clipBehavior: Clip.antiAlias,
-        child: onTap == null
-            ? tile
-            : InkWell(
-                onTap: onTap,
-                focusColor: roles.focus.withValues(alpha: 0.12),
-                hoverColor: resolvedAccent.withValues(alpha: 0.06),
-                child: tile,
+        child: !isExpressive
+            ? content
+            : Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedContainer(
+                        duration: KubusHoverResponse.duration,
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.bottomRight,
+                            radius: 1.1,
+                            colors: [
+                              resolvedAccent.withValues(
+                                alpha: fieldAlpha(brightness, hovered: hovered),
+                              ),
+                              resolvedAccent.withValues(alpha: 0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: hovered ? 1 : 0),
+                      duration:
+                          motion ? KubusHoverResponse.duration : Duration.zero,
+                      curve: Curves.easeOutCubic,
+                      builder: (context, t, _) => KubusGhostGlyph(
+                        key: const ValueKey<String>('kubus_stat_ghost_glyph'),
+                        icon: icon!,
+                        color: resolvedAccent,
+                        alignment: Alignment.bottomRight,
+                        // Mostly cropped: a fragment of the symbol, so the
+                        // label in front of it stays the readable layer.
+                        bleed: 0.36,
+                        opacity: KubusGhostGlyph.defaultOpacity(brightness) +
+                            0.04 * (hovered ? 1 : 0),
+                        scale: motion ? 1 + 0.06 * t : 1,
+                        shift: motion ? Offset(-4 * t, -4 * t) : Offset.zero,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    child: KubusEdgeLight(
+                      color: resolvedAccent,
+                      strength: hovered ? 0.8 : 0.45,
+                    ),
+                  ),
+                  content,
+                ],
               ),
-      ),
+      );
+    }
+
+    return Semantics(
+      container: true,
+      button: onTap != null,
+      label: semanticsLabel ?? '$value $title',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: isExpressive
+          ? KubusHoverResponse(
+              cursor:
+                  onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+              builder: (context, hovered) => surface(hovered),
+            )
+          : surface(false),
     );
   }
 }
