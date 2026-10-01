@@ -125,12 +125,12 @@ const scenarios = [
   { name: 'desktop-home-dark-en', viewport: DESKTOP, theme: 'dark' },
   { name: 'desktop-home-light-en', viewport: DESKTOP, theme: 'light' },
   { name: 'desktop-home-dark-sl', viewport: DESKTOP, theme: 'dark', language: 'sl' },
-  { name: 'zoom200-desktop-home-dark-en', viewport: ZOOM200, scale: 2, theme: 'dark', scroll: [0, 0] },
-  { name: 'zoom200-desktop-home-dark-en-scrolled', viewport: ZOOM200, scale: 2, theme: 'dark', scroll: [360, 300] },
+  { name: 'zoom200-desktop-home-dark-en', viewport: ZOOM200, scale: 2, theme: 'dark', mobileHome: true },
+  { name: 'zoom200-desktop-home-dark-en-scrolled', viewport: ZOOM200, scale: 2, theme: 'dark', mobileHome: true, scroll: [360, 380] },
   { name: 'mobile-home-dark-en', viewport: MOBILE, theme: 'dark', mobileHome: true },
   { name: 'w320-home-light-sl', viewport: { width: 320, height: 760 }, theme: 'light', language: 'sl', mobileHome: true },
-  { name: 'hover-desktop-home-dark-en', viewport: DESKTOP, theme: 'dark', hoverFromEnv: true },
-  { name: 'hover-reduced-desktop-home-dark-en', viewport: DESKTOP, theme: 'dark', reducedMotion: 'reduce', hoverFromEnv: true },
+  { name: 'hover-desktop-home-dark-en', viewport: DESKTOP, theme: 'dark', scroll: [640, 400], hoverFromEnv: true },
+  { name: 'hover-reduced-desktop-home-dark-en', viewport: DESKTOP, theme: 'dark', reducedMotion: 'reduce', scroll: [640, 400], hoverFromEnv: true },
 ];
 
 async function main() {
