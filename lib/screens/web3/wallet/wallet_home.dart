@@ -524,12 +524,21 @@ class _WalletHomeState extends State<WalletHome> {
               crossAxisAlignment: WrapCrossAlignment.end,
               spacing: KubusSpacing.xs,
               children: <Widget>[
-                Text(
-                  value,
-                  // KUB8 leads: full stat size; SOL steps down a size.
-                  style: KubusTextStyles.statValue.copyWith(
-                    color: roles.foreground,
-                    fontSize: lead ? null : KubusChromeMetrics.statValue * 0.75,
+                // KUB8 leads at hero size; SOL steps down. A balance is
+                // never broken or ellipsised: a long one scales down.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: (lead
+                            ? KubusTextStyles.heroMetric
+                            : KubusTextStyles.statValue.copyWith(
+                                fontSize: KubusChromeMetrics.statValue * 0.75,
+                              ))
+                        .copyWith(color: roles.foreground),
                   ),
                 ),
                 Padding(
@@ -565,6 +574,9 @@ class _WalletHomeState extends State<WalletHome> {
     }
 
     return KubusWalletSectionCard(
+      // The asset hero: wallet amber with the wallet symbol.
+      accent: roles.statAmber,
+      glyph: Icons.account_balance_wallet_outlined,
       title: l10n.walletHomeTotalBalanceLabel,
       subtitle: l10n.walletHomeYourTokensSubtitle,
       child: Column(

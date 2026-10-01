@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common/kubus_atmosphere.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -470,15 +471,20 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
+                // A balance is never ellipsised; a long one scales down.
                 Flexible(
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: (lead
-                            ? KubusTextStyles.heroMetric
-                            : KubusTextStyles.statValue)
-                        .copyWith(color: roles.foreground),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: (lead
+                              ? KubusTextStyles.heroMetric
+                              : KubusTextStyles.statValue)
+                          .copyWith(color: roles.foreground),
+                    ),
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.xs),
@@ -511,7 +517,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       );
     }
 
-    return DesktopCard(
+    // The asset hero: the wallet's own field (amber, the wallet screen
+    // accent) with the wallet symbol cropped in the corner. Balances stay
+    // on the plain surface tone, so the figures keep ordinary contrast.
+    return KubusAtmosphere(
+      key: const ValueKey<String>('wallet_balance_hero'),
+      accent: roles.statAmber,
+      glyph: Icons.account_balance_wallet_outlined,
+      glyphAlignment: Alignment.bottomRight,
+      glyphExtent: 180,
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
