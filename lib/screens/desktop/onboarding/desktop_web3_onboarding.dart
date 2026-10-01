@@ -222,6 +222,10 @@ class _DesktopWeb3OnboardingScreenState
                     description: page.description,
                     features: page.features,
                     large: true,
+                    accent: Web3OnboardingPageBody.accentFor(
+                      KubusColorRoles.of(context),
+                      widget.featureKey,
+                    ),
                   ),
                 ),
               ),

@@ -5,7 +5,9 @@ import 'package:art_kubus/models/achievements.dart' as backend_achievements;
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
 import 'package:art_kubus/widgets/common/kubus_meter_bar.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -86,8 +88,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
     final roles = KubusColorRoles.of(context);
     final total = achievements.length;
 
-    // Flat record of participation: a progress line, four plain counts and a
-    // readable list. No glass, no tinted tiles, no watermark icons.
+    // Record of participation: a progress hero, four counts and a
+    // readable list. Identity lives in the progress hero and the counts;
+    // the list itself stays calm.
     return Scaffold(
       backgroundColor: roles.ground,
       appBar: AppBar(
@@ -114,22 +117,47 @@ class _AchievementsPageState extends State<AchievementsPage> {
             child: ListView(
               padding: const EdgeInsets.all(KubusSpacing.lg),
               children: [
-                Text(
-                  l10n.userProfileAchievementsProgressLabel(
-                    completedCount,
-                    total,
-                  ),
-                  style: KubusTextStyles.machineValue.copyWith(
-                    color: roles.foregroundMuted,
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                ExcludeSemantics(
-                  child: KubusMeterBar(
-                    progress: total == 0 ? 0 : completedCount / total,
-                    height: 4,
-                    color: roles.active,
-                    trackColor: roles.rule,
+                // Achievement identity: a gold field with the trophy, the
+                // unlocked count at display scale and the gold meter.
+                KubusAtmosphere(
+                  key: const ValueKey<String>('achievements_progress_hero'),
+                  accent: roles.achievementGold,
+                  glyph: Icons.emoji_events_outlined,
+                  glyphAlignment: Alignment.bottomRight,
+                  glyphExtent: 150,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ExcludeSemantics(
+                        child: Text(
+                          '$completedCount',
+                          style: KubusTextStyles.heroMetric.copyWith(
+                            color: completedCount > 0
+                                ? roles.achievementGold
+                                : roles.foreground,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.xxs),
+                      Text(
+                        l10n.userProfileAchievementsProgressLabel(
+                          completedCount,
+                          total,
+                        ),
+                        style: KubusTextStyles.machineValue.copyWith(
+                          color: roles.foregroundMuted,
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.md),
+                      ExcludeSemantics(
+                        child: KubusMeterBar(
+                          progress: total == 0 ? 0 : completedCount / total,
+                          height: 4,
+                          color: roles.achievementGold,
+                          trackColor: roles.rule,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.lg),
@@ -159,19 +187,33 @@ class _AchievementsPageState extends State<AchievementsPage> {
     required int arViews,
     required int eventCount,
   }) {
-    final stats = <(String, String)>[
+    final roles = KubusColorRoles.of(context);
+    // Each count keeps its meaning's colour and symbol: discovery teal,
+    // AR blue, events coral, KUB8 rewards gold.
+    final stats = <(String, String, IconData, Color)>[
       (
         l10n.desktopSettingsAchievementsStatArtworksDiscovered,
         discoveryCount.toString(),
+        Icons.explore_outlined,
+        roles.statTeal,
       ),
-      (l10n.desktopSettingsAchievementsStatArViews, arViews.toString()),
+      (
+        l10n.desktopSettingsAchievementsStatArViews,
+        arViews.toString(),
+        Icons.view_in_ar_outlined,
+        roles.statBlue,
+      ),
       (
         l10n.desktopSettingsAchievementsStatEventsAttended,
         eventCount.toString(),
+        Icons.event_available_outlined,
+        roles.statCoral,
       ),
       (
         l10n.achievementsStatKub8Earned,
         _isLoadingTokens ? '…' : _totalTokens.toString(),
+        Icons.toll_outlined,
+        roles.achievementGold,
       ),
     ];
     return LayoutBuilder(
@@ -186,7 +228,16 @@ class _AchievementsPageState extends State<AchievementsPage> {
             for (final stat in stats)
               SizedBox(
                 width: cellWidth,
-                child: _AchievementStat(label: stat.$1, value: stat.$2),
+                child: KubusStatCard(
+                  title: stat.$1,
+                  value: stat.$2,
+                  icon: stat.$3,
+                  accent: stat.$4,
+                  expressive: true,
+                  // Long SL/EN labels wrap rather than truncate.
+                  titleMaxLines: 3,
+                  minHeight: 84,
+                ),
               ),
           ],
         );
@@ -313,50 +364,6 @@ class _AchievementsPageState extends State<AchievementsPage> {
               style: KubusTextStyles.machineValue.copyWith(
                 color: isUnlocked ? roles.foreground : roles.foregroundMuted,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One plain count: machine-register value over a muted label.
-class _AchievementStat extends StatelessWidget {
-  const _AchievementStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final roles = KubusColorRoles.of(context);
-    return MergeSemantics(
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-        decoration: BoxDecoration(
-          color: roles.surface,
-          borderRadius: BorderRadius.circular(KubusRadius.surface),
-          border: Border.all(color: roles.rule, width: KubusSizes.hairline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: KubusTextStyles.machineValue.copyWith(
-                fontSize: 20,
-                color: roles.foreground,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: roles.foregroundMuted,
-                  ),
             ),
           ],
         ),
