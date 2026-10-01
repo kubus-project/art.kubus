@@ -31,6 +31,7 @@ enum PendingActionTargetType {
   artwork,
   event,
   exhibition,
+  collection,
   post,
   user,
   marker;

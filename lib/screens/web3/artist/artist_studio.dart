@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
@@ -85,7 +86,6 @@ class ArtistStudio extends StatefulWidget {
 
 class _ArtistStudioState extends State<ArtistStudio> {
   int _selectedIndex = 0;
-  int? _hoveredTabIndex;
   DAOReview? _artistReview;
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
@@ -270,9 +270,6 @@ class _ArtistStudioState extends State<ArtistStudio> {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              flexibleSpace: KubusGlassAppBarBackdrop(
-                tintBase: Theme.of(context).colorScheme.surface,
-              ),
               title: Text(
                 l10n.artistStudioTitle,
                 style: KubusTextStyles.responsiveMobileAppBarTitle(context)
@@ -379,105 +376,20 @@ class _ArtistStudioState extends State<ArtistStudio> {
     required bool canSelfServeArtistPromotion,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: studioAccent,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg + KubusRadius.xs);
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
-      borderRadius: radius,
-      blurSigma: panelStyle.blurSigma,
-      fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: panelStyle.tintColor,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: studioAccent.withValues(alpha: 0.26),
-            width: KubusSizes.hairline,
+    // Practice leads; paid promotion is a quiet secondary action.
+    return KubusDashboardHeader(
+      notion: l10n.studioNotionPractice,
+      title: l10n.artistStudioTitle,
+      lede: l10n.artistStudioHeaderSubtitle,
+      actions: [
+        if (canSelfServeArtistPromotion)
+          KubusButton(
+            onPressed: _openProfilePromotionFlow,
+            icon: Icons.campaign_outlined,
+            label: l10n.artistStudioPromoteProfile,
+            variant: KubusButtonVariant.quiet,
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
-          child: Row(
-            children: [
-              Container(
-                width: KubusSpacing.xxl + KubusSpacing.sm,
-                height: KubusSpacing.xxl + KubusSpacing.sm,
-                decoration: BoxDecoration(
-                  color: studioAccent.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                ),
-                child: Icon(
-                  Icons.palette,
-                  color: studioAccent,
-                  size: KubusSpacing.lg + KubusSpacing.xs + KubusSpacing.xxs,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    KubusHeaderText(
-                      title: l10n.artistStudioTitle,
-                      subtitle: l10n.artistStudioHeaderWelcome,
-                      titleStyle: KubusTextStyles.heroTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.78),
-                      ),
-                      maxTitleLines: 1,
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      l10n.artistStudioHeaderSubtitle,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.84),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (canSelfServeArtistPromotion) ...[
-                      const SizedBox(height: KubusSpacing.sm),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: _openProfilePromotionFlow,
-                            icon: const Icon(Icons.campaign_outlined),
-                            label: Text(
-                              l10n.artistStudioPromoteProfile,
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.fade,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              alignment: Alignment.centerLeft,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -490,7 +402,6 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     if (isCrossRoleBlocked) {
-      final scheme = Theme.of(context).colorScheme;
       final title = hasInstitutionBadge
           ? l10n.artistStudioCrossRoleInstitutionBadgeActiveTitle
           : hasConflictingInstitutionReview
@@ -501,16 +412,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
           : hasConflictingInstitutionReview
               ? l10n.artistStudioCrossRoleInstitutionReviewInProgressDescription
               : l10n.artistStudioCrossRoleConflictDescription;
-      return _buildRoleBanner(
+      return KubusNoticeBanner(
         icon: Icons.domain_disabled,
         title: title,
         message: message,
-        scheme: scheme,
+        tone: KubusStatusTone.negative,
       );
     }
 
-    final scheme = Theme.of(context).colorScheme;
-    final studioColor = KubusColorRoles.of(context).web3ArtistStudioAccent;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
@@ -525,13 +434,13 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     ? l10n.artistStudioDaoStatusRejected
                     : status.toUpperCase())
             : l10n.artistStudioDaoStatusNotApplied;
-    final statusColor = isApproved
-        ? KubusColorRoles.of(context).positiveAction
+    final tone = isApproved
+        ? KubusStatusTone.positive
         : isRejected
-            ? KubusColorRoles.of(context).negativeAction
+            ? KubusStatusTone.negative
             : isPending
-                ? KubusColorRoles.of(context).warningAction
-                : studioColor;
+                ? KubusStatusTone.warning
+                : KubusStatusTone.neutral;
     final hasWallet = wallet.isNotEmpty;
     final canSubmit = hasWallet &&
         !_reviewLoading &&
@@ -551,345 +460,70 @@ class _ArtistStudioState extends State<ArtistStudio> {
             ? Icons.hourglass_bottom
             : Icons.send_rounded;
 
-    final cardRadius = BorderRadius.circular(KubusRadius.lg);
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: studioColor,
-    );
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: EdgeInsets.zero,
-      borderRadius: cardRadius,
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: cardStyle.tintColor,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: cardRadius,
-          border: Border.all(color: studioColor.withValues(alpha: 0.3)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(
-              KubusSpacing.md + KubusSpacing.xs - KubusSpacing.xxs),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: KubusSpacing.xxl,
-                    height: KubusSpacing.xxl,
-                    decoration: BoxDecoration(
-                      color: studioColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                    child: Icon(
-                      Icons.brush_rounded,
-                      color: studioColor,
-                      size: KubusSpacing.lg,
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.artistStudioDaoCardTitle,
-                          style: KubusTextStyles.sectionTitle.copyWith(
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          l10n.artistStudioDaoCardSubtitle,
-                          style: KubusTextStyles.actionTileSubtitle.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (review != null || _reviewLoading) ...[
-                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.sm +
-                            KubusSpacing.xs -
-                            KubusSpacing.xxs,
-                        vertical: KubusSpacing.xs + KubusSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
-                      ),
-                      child: Text(
-                        statusLabel,
-                        style: KubusTextStyles.badgeCount
-                            .copyWith(color: statusColor),
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.sm),
-                    if (_reviewLoading)
-                      SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: InlineLoading(tileSize: 4, color: statusColor),
-                      )
-                    else if (review != null)
-                      Text(
-                        l10n.artistStudioStatusSyncedFromDao,
-                        style: KubusTextStyles.badgeCount.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                  ],
-                ),
-                if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    review!.reviewerNotes!,
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ] else if (review != null) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    isPending
-                        ? l10n.artistStudioReviewPendingInfo
-                        : isApproved
-                            ? l10n.artistStudioReviewApprovedInfo
-                            : isRejected
-                                ? l10n.artistStudioReviewRejectedInfo
-                                : '',
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ] else if (!hasWallet) ...[
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  l10n.artistStudioConnectWalletToSubmitForDaoReview,
-                  style: KubusTextStyles.actionTileSubtitle.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                  ),
-                ),
-              ],
-              const SizedBox(height: KubusSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: KubusButton(
-                  onPressed:
-                      canSubmit ? () => _showArtistApplicationModal() : null,
-                  label: ctaLabel,
-                  icon: ctaIcon,
-                  isFullWidth: true,
-                  backgroundColor: studioColor,
-                  foregroundColor:
-                      ThemeData.estimateBrightnessForColor(studioColor) ==
-                              Brightness.dark
-                          ? KubusColors.textPrimaryDark
-                          : KubusColors.textPrimaryLight,
-                ),
-              ),
-            ],
-          ),
-        ),
+    String? detail;
+    if ((review?.reviewerNotes ?? '').isNotEmpty) {
+      detail = review!.reviewerNotes!;
+    } else if (review != null) {
+      detail = isPending
+          ? l10n.artistStudioReviewPendingInfo
+          : isApproved
+              ? l10n.artistStudioReviewApprovedInfo
+              : isRejected
+                  ? l10n.artistStudioReviewRejectedInfo
+                  : null;
+    } else if (!hasWallet) {
+      detail = l10n.artistStudioConnectWalletToSubmitForDaoReview;
+    }
+
+    return KubusStatusPanel(
+      title: l10n.artistStudioDaoCardTitle,
+      description: l10n.artistStudioDaoCardSubtitle,
+      statusLabel: (review != null || _reviewLoading) ? statusLabel : null,
+      tone: tone,
+      isLoading: _reviewLoading,
+      meta: review != null ? l10n.artistStudioStatusSyncedFromDao : null,
+      detail: detail,
+      action: KubusButton(
+        onPressed: canSubmit ? () => _showArtistApplicationModal() : null,
+        label: ctaLabel,
+        icon: ctaIcon,
+        isFullWidth: true,
+        variant: canSubmit
+            ? KubusButtonVariant.primary
+            : KubusButtonVariant.secondary,
       ),
     );
   }
 
   Widget _buildNavigationTabs(bool isApprovedArtist) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final scheme = Theme.of(context).colorScheme;
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return Container(
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.20),
-            width: KubusSizes.hairline,
-          ),
-        ),
-        child: LiquidGlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(KubusSpacing.xs),
-          borderRadius: radius,
-          blurSigma: panelStyle.blurSigma,
-          fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-          showBorder: false,
-          backgroundColor: panelStyle.tintColor,
-          child: Row(
-            children: [
-              Expanded(
-                  child: _buildTabButton(
-                      l10n.artistStudioTabGallery,
-                      Icons.collections,
-                      0,
-                      isApprovedArtist,
-                      _artistTabAccent(
-                        index: 0,
-                        exhibitionsEnabled: exhibitionsEnabled,
-                        roles: roles,
-                        scheme: scheme,
-                      ))),
-              Expanded(
-                  child: _buildTabButton(
-                      l10n.artistStudioTabCreate,
-                      Icons.add_circle_outline,
-                      1,
-                      isApprovedArtist,
-                      _artistTabAccent(
-                        index: 1,
-                        exhibitionsEnabled: exhibitionsEnabled,
-                        roles: roles,
-                        scheme: scheme,
-                      ))),
-              if (exhibitionsEnabled)
-                Expanded(
-                    child: _buildTabButton(
-                        l10n.artistStudioTabExhibitions,
-                        AppColorUtils.exhibitionIcon,
-                        2,
-                        isApprovedArtist,
-                        _artistTabAccent(
-                          index: 2,
-                          exhibitionsEnabled: exhibitionsEnabled,
-                          roles: roles,
-                          scheme: scheme,
-                        ))),
-              Expanded(
-                  child: _buildTabButton(
-                      l10n.artistStudioTabAnalytics,
-                      Icons.analytics,
-                      exhibitionsEnabled ? 3 : 2,
-                      isApprovedArtist,
-                      _artistTabAccent(
-                        index: exhibitionsEnabled ? 3 : 2,
-                        exhibitionsEnabled: exhibitionsEnabled,
-                        roles: roles,
-                        scheme: scheme,
-                      ))),
-            ],
-          ),
-        ));
-  }
-
-  Color _artistTabAccent({
-    required int index,
-    required bool exhibitionsEnabled,
-    required KubusColorRoles roles,
-    required ColorScheme scheme,
-  }) {
-    switch (index) {
-      case 0:
-        return scheme.secondary;
-      case 1:
-        return roles.positiveAction;
-      case 2:
-        return exhibitionsEnabled
-            ? roles.web3InstitutionAccent
-            : roles.statTeal;
-      default:
-        return roles.statTeal;
-    }
-  }
-
-  Widget _buildTabButton(
-      String label, IconData icon, int index, bool enabled, Color accent) {
-    final isSelected = _selectedIndex == index;
-    final isHovered = _hoveredTabIndex == index;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final tintBase =
-        (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
-    final buttonStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: tintBase,
-    );
-    final background = !enabled
-        ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
-        : isSelected
-            ? accent.withValues(alpha: isDark ? 0.30 : 0.20)
-            : isHovered
-                ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
-                : scheme.surface.withValues(alpha: isDark ? 0.06 : 0.04);
-    final foreground = !enabled
-        ? scheme.onSurface.withValues(alpha: 0.35)
-        : isSelected
-            ? scheme.onSurface
-            : isHovered
-                ? accent.withValues(alpha: 0.90)
-                : scheme.onSurface.withValues(alpha: 0.72);
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hoveredTabIndex = index),
-      onExit: (_) {
-        if (_hoveredTabIndex == index) {
-          setState(() => _hoveredTabIndex = null);
-        }
-      },
-      child: LiquidGlassCard(
-        onTap: enabled
-            ? () => _setSelectedIndex(index)
-            : () => ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(
-                      content: Text(AppLocalizations.of(context)!
-                          .artistStudioUnlocksAfterDaoApprovalToast)),
-                ),
-        padding: const EdgeInsets.symmetric(
-          vertical: KubusSpacing.md,
-          horizontal: KubusSpacing.sm,
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        blurSigma: buttonStyle.blurSigma,
-        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: background,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: foreground,
-              size: KubusSizes.sidebarActionIcon,
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              label,
-              style: KubusTypography.textTheme.labelSmall?.copyWith(
-                color: foreground,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+    return KubusDashboardTabs(
+      selectedIndex: _selectedIndex,
+      enabled: isApprovedArtist,
+      onSelected: _setSelectedIndex,
+      onLockedTap: () => ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.artistStudioUnlocksAfterDaoApprovalToast)),
       ),
+      tabs: [
+        KubusDashboardTab(
+          label: l10n.artistStudioTabGallery,
+          icon: Icons.collections_outlined,
+        ),
+        KubusDashboardTab(
+          label: l10n.artistStudioTabCreate,
+          icon: Icons.add_circle_outline,
+        ),
+        if (exhibitionsEnabled)
+          KubusDashboardTab(
+            label: l10n.artistStudioTabExhibitions,
+            icon: AppColorUtils.exhibitionIcon,
+          ),
+        KubusDashboardTab(
+          label: l10n.artistStudioTabAnalytics,
+          icon: Icons.analytics_outlined,
+        ),
+      ],
     );
   }
 
@@ -899,167 +533,44 @@ class _ArtistStudioState extends State<ArtistStudio> {
     widget.onTabChanged?.call(index);
   }
 
-  Widget _buildRoleBanner({
-    required IconData icon,
-    required String title,
-    required String message,
-    required ColorScheme scheme,
-  }) {
-    final radius = BorderRadius.circular(KubusRadius.lg);
-    return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: EdgeInsets.zero,
-      borderRadius: radius,
-      showBorder: false,
-      backgroundColor: scheme.surface.withValues(alpha: 0.18),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: KubusSizes.sidebarActionIconBox,
-                height: KubusSizes.sidebarActionIconBox,
-                decoration: BoxDecoration(
-                  color: scheme.error.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(icon, color: scheme.error),
-              ),
-              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTextStyles.sectionTitle
-                          .copyWith(color: scheme.onSurface),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-                    Text(
-                      message,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildRoleBlockedContent({
     required String title,
     required String description,
     required IconData icon,
   }) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.tertiaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: scheme.onTertiaryContainer,
-                size: KubusSpacing.lg + KubusSpacing.xs,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: KubusTypography.textTheme.titleLarge
-                  ?.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              description,
-              style: KubusTextStyles.actionTileTitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
-            Text(
-              l10n.artistStudioSeparateWalletsTip,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return _buildStateSlot(
+      EmptyStateCard(
+        icon: icon,
+        title: title,
+        description: '$description\n\n${l10n.artistStudioSeparateWalletsTip}',
       ),
     );
   }
 
   Widget _buildLockedContent() {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    return _buildStateSlot(
+      EmptyStateCard(
+        icon: Icons.lock_outline,
+        title: l10n.artistStudioLockedTitle,
+        description: l10n.artistStudioLockedDescription,
+        showAction: true,
+        actionLabel: l10n.artistStudioCtaApplyForDaoReview,
+        onAction: _showArtistApplicationModal,
+      ),
+    );
+  }
+
+  /// Centers a flat state card and lets it scroll when the slot is short,
+  /// so long copy or large text never overflows.
+  Widget _buildStateSlot(Widget card) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.lock_outline,
-                  color: scheme.onSecondaryContainer,
-                  size: KubusSpacing.lg + KubusSpacing.xs),
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            Text(
-              l10n.artistStudioLockedTitle,
-              style: KubusTypography.textTheme.titleLarge
-                  ?.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              l10n.artistStudioLockedDescription,
-              style: KubusTextStyles.actionTileTitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            Center(
-              child: OutlinedButton.icon(
-                onPressed: () => _showArtistApplicationModal(),
-                icon: const Icon(Icons.send_rounded),
-                label: Text(l10n.artistStudioCtaApplyForDaoReview),
-                style: OutlinedButton.styleFrom(
-                  alignment: Alignment.center,
-                ),
-              ),
-            ),
-          ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: card,
         ),
       ),
     );

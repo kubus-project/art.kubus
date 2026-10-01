@@ -452,8 +452,20 @@ abstract class AppLocalizations {
   /// No description provided for @recentActivityRecognitionAmountDescription.
   ///
   /// In en, this message translates to:
-  /// **'+{amount} KUB8 recognition'**
+  /// **'+{amount} recognition'**
   String recentActivityRecognitionAmountDescription(Object amount);
+
+  /// No description provided for @recentActivityKub8AmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} KUB8'**
+  String recentActivityKub8AmountDescription(Object amount);
+
+  /// No description provided for @recentActivityAchievementKub8Description.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} (+{amount} KUB8)'**
+  String recentActivityAchievementKub8Description(Object title, Object amount);
 
   /// No description provided for @recentActivityNewRecognitionDescription.
   ///
@@ -491,6 +503,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recognition recorded'**
   String get notificationRecognitionRecordedTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork discovered'**
+  String get notificationArtworkDiscoveredTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}” by {artist}'**
+  String notificationArtworkDiscoveredBody(Object title, Object artist);
+
+  /// No description provided for @notificationArtworkDiscoveredTitleOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}”'**
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title);
 
   /// No description provided for @pushArchiveObjectCreatingTitle.
   ///
@@ -567,13 +597,13 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsMetricKub8RecognitionLabel.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recognition'**
+  /// **'KUB8 from achievements'**
   String get analyticsMetricKub8RecognitionLabel;
 
   /// No description provided for @analyticsMetricKub8RecognitionDescription.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recorded through contribution recognition.'**
+  /// **'Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.'**
   String get analyticsMetricKub8RecognitionDescription;
 
   /// No description provided for @analyticsPresetArtistSubtitle.
@@ -714,6 +744,12 @@ abstract class AppLocalizations {
   /// **'Add this place to your collection'**
   String get activationGateSaveExhibitionTitle;
 
+  /// No description provided for @activationGateSaveCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection for later'**
+  String get activationGateSaveCollectionTitle;
+
   /// No description provided for @activationGateSavePostTitle.
   ///
   /// In en, this message translates to:
@@ -809,6 +845,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save this place?'**
   String get activationConfirmSaveExhibition;
+
+  /// No description provided for @activationConfirmSaveCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection?'**
+  String get activationConfirmSaveCollection;
 
   /// No description provided for @activationConfirmSavePost.
   ///
@@ -4068,11 +4110,17 @@ abstract class AppLocalizations {
   /// **'Events attended'**
   String get desktopSettingsAchievementsStatEventsAttended;
 
-  /// No description provided for @desktopSettingsAchievementsStatKub8PointsEarned.
+  /// No description provided for @achievementsStatKub8Earned.
   ///
   /// In en, this message translates to:
-  /// **'Contribution recognition'**
-  String get desktopSettingsAchievementsStatKub8PointsEarned;
+  /// **'KUB8 earned from achievements'**
+  String get achievementsStatKub8Earned;
+
+  /// No description provided for @achievementUnlockedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked'**
+  String get achievementUnlockedLabel;
 
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryTitle.
   ///
@@ -4271,6 +4319,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Appearance'**
   String get settingsAppearanceSectionTitle;
+
+  /// No description provided for @settingsReduceEffectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce effects'**
+  String get settingsReduceEffectsTitle;
+
+  /// No description provided for @settingsReduceEffectsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable blur, animations and other effects'**
+  String get settingsReduceEffectsSubtitle;
+
+  /// No description provided for @settingsReduceEffectsAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically enabled for this device'**
+  String get settingsReduceEffectsAutoSubtitle;
 
   /// No description provided for @settingsThemeModeTitle.
   ///
@@ -4920,6 +4986,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'About'**
   String get settingsAboutSectionTitle;
+
+  /// No description provided for @settingsGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsGroupAccount;
+
+  /// No description provided for @settingsGroupExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience'**
+  String get settingsGroupExperience;
+
+  /// No description provided for @settingsGroupInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get settingsGroupInfrastructure;
 
   /// No description provided for @settingsAboutVersionTileTitle.
   ///
@@ -6090,6 +6174,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transactional emails (verification, reset, and recovery) are always enabled'**
   String get settingsEmailPreferencesTransactionalSubtitle;
+
+  /// No description provided for @settingsEmailGroupMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get settingsEmailGroupMarketing;
+
+  /// No description provided for @settingsEmailGroupActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get settingsEmailGroupActivity;
+
+  /// No description provided for @settingsEmailGroupEssential.
+  ///
+  /// In en, this message translates to:
+  /// **'Essential'**
+  String get settingsEmailGroupEssential;
+
+  /// No description provided for @settingsEmailGroupEssentialNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.'**
+  String get settingsEmailGroupEssentialNote;
+
+  /// No description provided for @settingsAppNotificationsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App notifications'**
+  String get settingsAppNotificationsSectionTitle;
+
+  /// No description provided for @settingsAppNotificationsSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push and in-app alerts on this device'**
+  String get settingsAppNotificationsSectionSubtitle;
 
   /// No description provided for @settingsEmailPreferencesUpdateFailedToast.
   ///
@@ -8791,17 +8911,17 @@ abstract class AppLocalizations {
   /// **'Newest'**
   String get mapSortNewest;
 
-  /// No description provided for @mapSortRarity.
-  ///
-  /// In en, this message translates to:
-  /// **'Rarity'**
-  String get mapSortRarity;
-
   /// No description provided for @mapSortHighestRewards.
   ///
   /// In en, this message translates to:
   /// **'Most recognition'**
   String get mapSortHighestRewards;
+
+  /// No description provided for @mapSortRarity.
+  ///
+  /// In en, this message translates to:
+  /// **'Rarity'**
+  String get mapSortRarity;
 
   /// No description provided for @mapSortMostViewed.
   ///
@@ -9103,6 +9223,60 @@ abstract class AppLocalizations {
   /// **'Actions'**
   String get commonActions;
 
+  /// No description provided for @subjectActionsSocialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get subjectActionsSocialHeading;
+
+  /// No description provided for @subjectActionsSpatialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Place and movement'**
+  String get subjectActionsSpatialHeading;
+
+  /// No description provided for @subjectActionsMoreHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get subjectActionsMoreHeading;
+
+  /// No description provided for @subjectActionsProvenanceHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Provenance'**
+  String get subjectActionsProvenanceHeading;
+
+  /// No description provided for @subjectSpatialArchiveEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No spatial record yet.'**
+  String get subjectSpatialArchiveEmpty;
+
+  /// No description provided for @artworkProvenanceImageCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Image creator'**
+  String get artworkProvenanceImageCreator;
+
+  /// No description provided for @artworkProvenanceLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'Image license'**
+  String get artworkProvenanceLicense;
+
+  /// No description provided for @artworkProvenanceCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Image credit'**
+  String get artworkProvenanceCredit;
+
+  /// No description provided for @artworkProvenanceSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Image source'**
+  String get artworkProvenanceSource;
+
   /// No description provided for @commonCurrentlyOn.
   ///
   /// In en, this message translates to:
@@ -9259,6 +9433,24 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get messagesTitle;
 
+  /// No description provided for @messagesAttachTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a file'**
+  String get messagesAttachTooltip;
+
+  /// No description provided for @messagesPrivateNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get messagesPrivateNotion;
+
+  /// No description provided for @messagesUnreadSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'unread'**
+  String get messagesUnreadSemantic;
+
   /// No description provided for @messagesEmptyNoConversationsTitle.
   ///
   /// In en, this message translates to:
@@ -9268,7 +9460,7 @@ abstract class AppLocalizations {
   /// No description provided for @messagesEmptyNoConversationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a conversation using the chat button below.'**
+  /// **'Your private conversations with artists, institutions and other members appear here.'**
   String get messagesEmptyNoConversationsDescription;
 
   /// No description provided for @messagesEmptyStartChatAction.
@@ -16414,6 +16606,12 @@ abstract class AppLocalizations {
   /// **'Sold out'**
   String get marketplaceSoldOutLabel;
 
+  /// Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary sold out'**
+  String get marketplacePrimarySoldOutLabel;
+
   /// No description provided for @marketplaceMintNftButtonLabel.
   ///
   /// In en, this message translates to:
@@ -17496,6 +17694,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 comment} other{{count} comments}}'**
   String commonCommentsCount(num count);
 
+  /// No description provided for @communityPostLikesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 like} other{{count} likes}}'**
+  String communityPostLikesCount(num count);
+
+  /// No description provided for @communityPostRepostsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 repost} other{{count} reposts}}'**
+  String communityPostRepostsCount(num count);
+
   /// No description provided for @commonDistanceKmAway.
   ///
   /// In en, this message translates to:
@@ -18125,6 +18335,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posts'**
   String get communitySearchTypePosts;
+
+  /// No description provided for @communitySearchTypeEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get communitySearchTypeEvents;
+
+  /// No description provided for @communitySearchTypeExhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get communitySearchTypeExhibitions;
+
+  /// No description provided for @communitySearchTypePlaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Places'**
+  String get communitySearchTypePlaces;
+
+  /// No description provided for @searchResultsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get searchResultsSemanticLabel;
 
   /// No description provided for @communitySearchHintProfiles.
   ///
@@ -18845,6 +19079,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'there'**
   String get homeDefaultDisplayName;
+
+  /// No description provided for @activityUnreadSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get activityUnreadSemanticLabel;
+
+  /// No description provided for @homeIntroNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get homeIntroNotion;
+
+  /// No description provided for @homeIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art, places and culture around you'**
+  String get homeIntroTitle;
+
+  /// No description provided for @homeIntroLede.
+  ///
+  /// In en, this message translates to:
+  /// **'Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.'**
+  String get homeIntroLede;
+
+  /// No description provided for @homeIntroExploreMapAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the map'**
+  String get homeIntroExploreMapAction;
+
+  /// No description provided for @homeIntroCommunityAction.
+  ///
+  /// In en, this message translates to:
+  /// **'See community'**
+  String get homeIntroCommunityAction;
+
+  /// No description provided for @homeGuestHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get homeGuestHeaderTitle;
 
   /// No description provided for @homeWelcomeSubtitle.
   ///
@@ -21547,6 +21823,54 @@ abstract class AppLocalizations {
   /// **'Institution Hub'**
   String get navigationScreenInstitutionHub;
 
+  /// No description provided for @mobileNavMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get mobileNavMap;
+
+  /// No description provided for @mobileNavAr.
+  ///
+  /// In en, this message translates to:
+  /// **'AR'**
+  String get mobileNavAr;
+
+  /// No description provided for @mobileNavCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get mobileNavCommunity;
+
+  /// No description provided for @mobileNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get mobileNavHome;
+
+  /// No description provided for @mobileNavProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get mobileNavProfile;
+
+  /// No description provided for @mobileNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get mobileNavAccount;
+
+  /// No description provided for @mobileNavSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Main navigation'**
+  String get mobileNavSemanticLabel;
+
+  /// No description provided for @desktopNavWalletEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get desktopNavWalletEntry;
+
   /// No description provided for @daoHubAppBarTitle.
   ///
   /// In en, this message translates to:
@@ -22747,6 +23071,30 @@ abstract class AppLocalizations {
   /// **'Repost'**
   String get communityRepostButtonLabel;
 
+  /// No description provided for @communityComposeAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'write a post'**
+  String get communityComposeAuthAction;
+
+  /// No description provided for @communityCreateGroupAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'create a group'**
+  String get communityCreateGroupAuthAction;
+
+  /// No description provided for @communityPostActionLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get communityPostActionLike;
+
+  /// No description provided for @communityPostActionComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get communityPostActionComment;
+
   /// No description provided for @communityRepostedToast.
   ///
   /// In en, this message translates to:
@@ -23400,6 +23748,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.'**
   String get savedItemsSummarySubtitleEmpty;
+
+  /// No description provided for @savedItemsEmptyLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get savedItemsEmptyLibraryTitle;
+
+  /// No description provided for @savedItemsLibraryNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your library'**
+  String get savedItemsLibraryNotion;
 
   /// No description provided for @savedItemsSummarySubtitleLastSaved.
   ///
@@ -29349,6 +29709,553 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resume upload'**
   String get spatialUploadResume;
+
+  /// No description provided for @formShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get formShowPassword;
+
+  /// No description provided for @formHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get formHidePassword;
+
+  /// No description provided for @formSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get formSelectDate;
+
+  /// No description provided for @formSelectTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get formSelectTime;
+
+  /// No description provided for @formNoValueSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get formNoValueSelected;
+
+  /// No description provided for @formAddImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add image'**
+  String get formAddImage;
+
+  /// No description provided for @formFixHighlightedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Some fields need attention. Check the messages below them.'**
+  String get formFixHighlightedFields;
+
+  /// No description provided for @stateNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach art.kubus'**
+  String get stateNetworkTitle;
+
+  /// No description provided for @stateNetworkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request didn\'t finish. Check your connection and try again.'**
+  String get stateNetworkDescription;
+
+  /// No description provided for @stateOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get stateOfflineTitle;
+
+  /// No description provided for @stateOfflineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This needs an internet connection. Reconnect, then try again.'**
+  String get stateOfflineDescription;
+
+  /// No description provided for @stateServerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus is having trouble'**
+  String get stateServerTitle;
+
+  /// No description provided for @stateServerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The service didn\'t respond properly. Nothing is wrong on your side; try again in a moment.'**
+  String get stateServerDescription;
+
+  /// No description provided for @stateAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue'**
+  String get stateAuthTitle;
+
+  /// No description provided for @stateAuthDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has ended or you haven\'t signed in yet.'**
+  String get stateAuthDescription;
+
+  /// No description provided for @statePermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have access'**
+  String get statePermissionTitle;
+
+  /// No description provided for @statePermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This is limited to its owner or to approved roles. Ask the owner if you need access.'**
+  String get statePermissionDescription;
+
+  /// No description provided for @stateNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get stateNotFoundTitle;
+
+  /// No description provided for @stateNotFoundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'It may have been removed or made private.'**
+  String get stateNotFoundDescription;
+
+  /// No description provided for @stateValidationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Some details need changes'**
+  String get stateValidationTitle;
+
+  /// No description provided for @stateValidationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request wasn\'t accepted as sent. Review the details and try again.'**
+  String get stateValidationDescription;
+
+  /// No description provided for @stateRateLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts'**
+  String get stateRateLimitTitle;
+
+  /// No description provided for @stateRateLimitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a minute before trying again.'**
+  String get stateRateLimitDescription;
+
+  /// No description provided for @stateWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet not ready'**
+  String get stateWalletTitle;
+
+  /// No description provided for @stateWalletDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect your wallet or unlock it, then try again.'**
+  String get stateWalletDescription;
+
+  /// No description provided for @stateUnsupportedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available here'**
+  String get stateUnsupportedTitle;
+
+  /// No description provided for @stateUnsupportedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature isn\'t supported on this device or in this version.'**
+  String get stateUnsupportedDescription;
+
+  /// No description provided for @stateUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get stateUnknownTitle;
+
+  /// No description provided for @stateUnknownDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete this. Try again.'**
+  String get stateUnknownDescription;
+
+  /// No description provided for @stateLoadingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more'**
+  String get stateLoadingMore;
+
+  /// No description provided for @peopleRoleArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get peopleRoleArtist;
+
+  /// No description provided for @peopleRoleInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get peopleRoleInstitution;
+
+  /// No description provided for @peopleVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get peopleVerifiedLabel;
+
+  /// No description provided for @peopleFollowToggleSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow {name}'**
+  String peopleFollowToggleSemantic(String name);
+
+  /// No description provided for @collabInboxIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept an invitation to help manage an event, exhibition, artwork or collection.'**
+  String get collabInboxIntro;
+
+  /// No description provided for @collabInviteNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation'**
+  String get collabInviteNotion;
+
+  /// No description provided for @collabEntityEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get collabEntityEvent;
+
+  /// No description provided for @collabEntityExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get collabEntityExhibition;
+
+  /// No description provided for @collabEntityArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get collabEntityArtwork;
+
+  /// No description provided for @collabEntityCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get collabEntityCollection;
+
+  /// No description provided for @collabEntityItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get collabEntityItem;
+
+  /// No description provided for @collabInviteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String collabInviteFrom(String name);
+
+  /// No description provided for @collabInviteRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role: {role}'**
+  String collabInviteRole(String role);
+
+  /// No description provided for @collabInviteReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {date}'**
+  String collabInviteReceived(String date);
+
+  /// No description provided for @collabInviteExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String collabInviteExpires(String date);
+
+  /// No description provided for @collabUnknownSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get collabUnknownSender;
+
+  /// No description provided for @collabAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get collabAccept;
+
+  /// No description provided for @collabDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get collabDecline;
+
+  /// No description provided for @collabAcceptedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation accepted. You can now help manage it.'**
+  String get collabAcceptedToast;
+
+  /// No description provided for @collabDeclinedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation declined.'**
+  String get collabDeclinedToast;
+
+  /// No description provided for @collabAcceptFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t accept the invitation. Try again.'**
+  String get collabAcceptFailedToast;
+
+  /// No description provided for @collabDeclineFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t decline the invitation. Try again.'**
+  String get collabDeclineFailedToast;
+
+  /// No description provided for @collabCannotOpenItemToast.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation doesn\'t point to an item that can be opened here.'**
+  String get collabCannotOpenItemToast;
+
+  /// No description provided for @collabEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No invitations right now'**
+  String get collabEmptyTitle;
+
+  /// No description provided for @collabEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone invites you to collaborate, it appears here.'**
+  String get collabEmptyDescription;
+
+  /// No description provided for @collabInviteSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation to {entity} as {role}, from {name}'**
+  String collabInviteSemantic(String entity, String role, String name);
+
+  /// No description provided for @studioNotionPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get studioNotionPractice;
+
+  /// No description provided for @institutionNotionProgramme.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get institutionNotionProgramme;
+
+  /// No description provided for @dashboardNotionNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers'**
+  String get dashboardNotionNumbers;
+
+  /// No description provided for @dashboardNotionInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get dashboardNotionInfrastructure;
+
+  /// No description provided for @dashboardNumbersCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts from art.kubus activity on your public profile.'**
+  String get dashboardNumbersCaption;
+
+  /// No description provided for @institutionStatProgrammeViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme page views'**
+  String get institutionStatProgrammeViews;
+
+  /// No description provided for @walletNetworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get walletNetworkLabel;
+
+  /// No description provided for @walletAddressHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get walletAddressHeading;
+
+  /// No description provided for @walletAddressSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet address {address}'**
+  String walletAddressSemantic(String address);
+
+  /// No description provided for @walletCopyAddressTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get walletCopyAddressTooltip;
+
+  /// No description provided for @walletReadOnlyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only session'**
+  String get walletReadOnlyStatus;
+
+  /// No description provided for @walletKub8BalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 balance'**
+  String get walletKub8BalanceLabel;
+
+  /// No description provided for @walletSolBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SOL balance'**
+  String get walletSolBalanceLabel;
+
+  /// No description provided for @walletBalanceAmountSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: {amount} {unit}'**
+  String walletBalanceAmountSemantic(String label, String amount, String unit);
+
+  /// No description provided for @walletActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get walletActionsTitle;
+
+  /// No description provided for @walletTechnicalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical'**
+  String get walletTechnicalTitle;
+
+  /// No description provided for @marketplaceListingValueSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{source}: {amount} {currency}. {state}'**
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state);
+
+  /// No description provided for @promotionBuilderSwitchNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch your wallet to the {cluster} network required by this quote, then try again.'**
+  String promotionBuilderSwitchNetwork(String cluster);
+
+  /// No description provided for @promotionStatusPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get promotionStatusPendingReview;
+
+  /// No description provided for @promotionStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get promotionStatusApproved;
+
+  /// No description provided for @promotionStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get promotionStatusActive;
+
+  /// No description provided for @daoProposalStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get daoProposalStatusDraft;
+
+  /// No description provided for @daoProposalStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get daoProposalStatusActive;
+
+  /// No description provided for @daoProposalStatusVoting.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting open'**
+  String get daoProposalStatusVoting;
+
+  /// No description provided for @daoProposalStatusPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed'**
+  String get daoProposalStatusPassed;
+
+  /// No description provided for @daoProposalStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not passed'**
+  String get daoProposalStatusFailed;
+
+  /// No description provided for @daoProposalStatusExecuted.
+  ///
+  /// In en, this message translates to:
+  /// **'Executed'**
+  String get daoProposalStatusExecuted;
+
+  /// No description provided for @daoVotingEndsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ends {date}'**
+  String daoVotingEndsLabel(String date);
+
+  /// No description provided for @daoVotingEndedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ended {date}'**
+  String daoVotingEndedLabel(String date);
+
+  /// No description provided for @daoQuorumRequirementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quorum required: {percent}% of voting power'**
+  String daoQuorumRequirementLabel(String percent);
+
+  /// No description provided for @daoResultsNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get daoResultsNotion;
+
+  /// No description provided for @daoNotEligibleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No voting power in this wallet'**
+  String get daoNotEligibleTitle;
+
+  /// No description provided for @daoNotEligibleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.'**
+  String get daoNotEligibleBody;
+
+  /// No description provided for @daoTreasuryOnChainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain treasury balance'**
+  String get daoTreasuryOnChainLabel;
+
+  /// No description provided for @daoTreasuryLedgerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded treasury movements'**
+  String get daoTreasuryLedgerLabel;
 }
 
 class _AppLocalizationsDelegate

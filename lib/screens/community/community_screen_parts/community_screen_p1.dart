@@ -470,7 +470,6 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     );
   }
 
-
   void _startInitialCommunityLoad() {
     unawaited(() async {
       await _loadInitialFeeds();
@@ -699,157 +698,135 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.header,
-      tintBase: themeProvider.accentColor,
-    );
     return Container(
-      padding:
-          const EdgeInsets.all(KubusHeaderMetrics.appBarHorizontalPaddingLg),
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        blurSigma: surfaceStyle.blurSigma,
-        backgroundColor: surfaceStyle.tintColor,
-        fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
-        showBorder: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: KubusHeaderMetrics.actionHitArea + KubusSpacing.xs,
-                  height: KubusHeaderMetrics.actionHitArea + KubusSpacing.xs,
-                  decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
+      padding: const EdgeInsets.fromLTRB(
+        KubusHeaderMetrics.appBarHorizontalPaddingLg,
+        KubusHeaderMetrics.appBarHorizontalPaddingLg,
+        KubusHeaderMetrics.appBarHorizontalPaddingLg,
+        KubusSpacing.sm,
+      ),
+      // Flat screen header: title, context and actions sit on the page
+      // ground; no tinted glass slab or decorative icon tile.
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: KubusHeaderText(
+                  title: l10n.navigationScreenCommunity,
+                  subtitle: l10n.desktopCommunityHeaderSubtitle,
+                  kind: KubusHeaderKind.screen,
+                  titleColor: scheme.onSurface,
+                  subtitleColor: scheme.onSurface.withValues(alpha: 0.76),
+                  titleStyle: KubusTextStyles.sectionTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
-                  child: Icon(
-                    Icons.groups_2_outlined,
-                    color: themeProvider.accentColor,
-                    size: KubusHeaderMetrics.actionIcon + KubusSpacing.xs,
+                  subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.76),
                   ),
+                  maxTitleLines: 1,
                 ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(
-                  child: KubusHeaderText(
-                    title: l10n.navigationScreenCommunity,
-                    subtitle: l10n.desktopCommunityHeaderSubtitle,
-                    kind: KubusHeaderKind.screen,
-                    titleColor: scheme.onSurface,
-                    subtitleColor: scheme.onSurface.withValues(alpha: 0.76),
-                    titleStyle: KubusTextStyles.sectionTitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                    subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.76),
-                    ),
-                    maxTitleLines: 1,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Wrap(
-                  spacing: KubusSpacing.xs,
-                  runSpacing: KubusSpacing.xs,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    TopBarIcon(
-                      tooltip: l10n.commonNotifications,
-                      icon: AnimatedBuilder(
-                        animation: _bellController,
-                        builder: (ctx, child) {
-                          final scale = _bellScale.value;
-                          return Transform.scale(
-                            scale: scale,
-                            child: Icon(
-                              _bellUnreadCount > 0
-                                  ? Icons.notifications
-                                  : Icons.notifications_outlined,
-                              color: scheme.onSurface,
-                              size: KubusHeaderMetrics.actionIcon,
-                            ),
-                          );
-                        },
-                      ),
-                      onPressed: _showNotifications,
-                      badgeCount: _bellUnreadCount,
-                      badgeColor: themeProvider.accentColor,
-                    ),
-                    Selector<ChatProvider, int>(
-                      selector: (_, cp) => cp.totalUnread,
-                      builder: (context, totalUnread, child) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (totalUnread > 0 && _messageScale.value == 1.0) {
-                            _messagePulseController.forward(from: 0.0);
-                          }
-                        });
-                        return TopBarIcon(
-                          tooltip: l10n.messagesTitle,
-                          icon: ScaleTransition(
-                            scale: _messageScale,
-                            child: Icon(
-                              totalUnread > 0
-                                  ? Icons.chat_bubble
-                                  : Icons.chat_bubble_outline,
-                              color: totalUnread > 0
-                                  ? themeProvider.accentColor
-                                  : scheme.onSurface,
-                              size: isSmallScreen ? 20 : 24,
-                            ),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              Wrap(
+                spacing: KubusSpacing.xs,
+                runSpacing: KubusSpacing.xs,
+                alignment: WrapAlignment.end,
+                children: [
+                  TopBarIcon(
+                    tooltip: l10n.commonNotifications,
+                    icon: AnimatedBuilder(
+                      animation: _bellController,
+                      builder: (ctx, child) {
+                        final scale = _bellScale.value;
+                        return Transform.scale(
+                          scale: scale,
+                          child: Icon(
+                            _bellUnreadCount > 0
+                                ? Icons.notifications
+                                : Icons.notifications_outlined,
+                            color: scheme.onSurface,
+                            size: KubusHeaderMetrics.actionIcon,
                           ),
-                          onPressed: () {
-                            showGeneralDialog(
-                              context: context,
-                              barrierDismissible: true,
-                              barrierLabel: l10n.messagesTitle,
-                              barrierColor: scheme.primaryContainer
-                                  .withValues(alpha: 0.7),
-                              transitionDuration: animationTheme.medium,
-                              pageBuilder: (ctx, a1, a2) =>
-                                  const MessagesScreen(),
-                              transitionBuilder: (ctx, anim1, anim2, child) {
-                                final slideCurve = CurvedAnimation(
-                                  parent: anim1,
-                                  curve: animationTheme.defaultCurve,
-                                );
-                                final fadeCurve = CurvedAnimation(
-                                  parent: anim1,
-                                  curve: animationTheme.fadeCurve,
-                                );
-                                return Transform.translate(
-                                  offset: Offset(
-                                    0,
-                                    (1 - slideCurve.value) *
-                                        MediaQuery.of(context).size.height,
-                                  ),
-                                  child: FadeTransition(
-                                    opacity: fadeCurve,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          badgeCount: totalUnread,
-                          badgeColor: themeProvider.accentColor,
                         );
                       },
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            _buildCommunitySearchBar(),
-            const SizedBox(height: KubusSpacing.sm),
-            _buildTabBar(),
-          ],
-        ),
+                    onPressed: _showNotifications,
+                    badgeCount: _bellUnreadCount,
+                    badgeColor: themeProvider.accentColor,
+                  ),
+                  Selector<ChatProvider, int>(
+                    selector: (_, cp) => cp.totalUnread,
+                    builder: (context, totalUnread, child) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (totalUnread > 0 && _messageScale.value == 1.0) {
+                          _messagePulseController.forward(from: 0.0);
+                        }
+                      });
+                      return TopBarIcon(
+                        tooltip: l10n.messagesTitle,
+                        icon: ScaleTransition(
+                          scale: _messageScale,
+                          child: Icon(
+                            totalUnread > 0
+                                ? Icons.chat_bubble
+                                : Icons.chat_bubble_outline,
+                            color: totalUnread > 0
+                                ? themeProvider.accentColor
+                                : scheme.onSurface,
+                            size: isSmallScreen ? 20 : 24,
+                          ),
+                        ),
+                        onPressed: () {
+                          showGeneralDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            barrierLabel: l10n.messagesTitle,
+                            barrierColor:
+                                scheme.primaryContainer.withValues(alpha: 0.7),
+                            transitionDuration: animationTheme.medium,
+                            pageBuilder: (ctx, a1, a2) =>
+                                const MessagesScreen(),
+                            transitionBuilder: (ctx, anim1, anim2, child) {
+                              final slideCurve = CurvedAnimation(
+                                parent: anim1,
+                                curve: animationTheme.defaultCurve,
+                              );
+                              final fadeCurve = CurvedAnimation(
+                                parent: anim1,
+                                curve: animationTheme.fadeCurve,
+                              );
+                              return Transform.translate(
+                                offset: Offset(
+                                  0,
+                                  (1 - slideCurve.value) *
+                                      MediaQuery.of(context).size.height,
+                                ),
+                                child: FadeTransition(
+                                  opacity: fadeCurve,
+                                  child: child,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        badgeCount: totalUnread,
+                        badgeColor: themeProvider.accentColor,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          _buildCommunitySearchBar(),
+          const SizedBox(height: KubusSpacing.sm),
+          _buildTabBar(),
+        ],
       ),
     );
   }
@@ -944,9 +921,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
   }
 
   Widget _buildTabBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final tabs = <({String label, IconData icon})>[
       (label: l10n.communityFollowingTab, icon: Icons.people_alt_outlined),
       (label: l10n.communityDiscoverTab, icon: Icons.explore_outlined),
@@ -958,85 +933,60 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 360;
 
-        final glassStyle = KubusGlassStyle.resolve(
-          context,
-          surfaceType: KubusGlassSurfaceType.card,
-          tintBase: scheme.surface,
-        );
-        final radius = BorderRadius.circular(KubusRadius.md);
+        final roles = KubusColorRoles.of(context);
+        final radius = BorderRadius.circular(KubusRadius.surface);
 
+        // Flat segmented control: neutral surface and hairline; the selected
+        // tab gets a restrained active tint and bold label (not colour only).
         return Container(
           clipBehavior: Clip.antiAlias,
+          padding: const EdgeInsets.all(KubusSpacing.xxs),
           decoration: BoxDecoration(
+            color: roles.surface,
             borderRadius: radius,
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.18),
-              width: KubusSizes.hairline,
-            ),
+            border: Border.all(color: roles.rule, width: KubusSizes.hairline),
           ),
-          child: LiquidGlassPanel(
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.all(KubusSpacing.xxs),
-            borderRadius: radius,
-            blurSigma: glassStyle.blurSigma,
-            backgroundColor: glassStyle.tintColor,
-            fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-            showBorder: false,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: constraints.maxWidth < 420,
-              tabAlignment: constraints.maxWidth < 420
-                  ? TabAlignment.start
-                  : TabAlignment.fill,
-              indicator: BoxDecoration(
-                color: themeProvider.accentColor.withValues(
-                  alpha: Theme.of(context).brightness == Brightness.dark
-                      ? 0.30
-                      : 0.18,
-                ),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-                border: Border.all(
-                  color: themeProvider.accentColor.withValues(alpha: 0.32),
-                  width: KubusSizes.hairline,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: themeProvider.accentColor.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              indicatorPadding: const EdgeInsets.all(KubusSpacing.xxs),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: scheme.onSurface,
-              unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.68),
-              labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              unselectedLabelStyle:
-                  KubusTypography.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              dividerHeight: 0,
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: [
-                for (final tab in tabs)
-                  Tab(
-                    height: isCompact ? 56 : 60,
-                    iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
-                    icon: Icon(
-                      tab.icon,
-                      size: KubusHeaderMetrics.actionIcon,
-                    ),
-                    child: Text(
-                      tab.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
+          child: TabBar(
+            controller: _tabController,
+            // Four labels fit in one row from 340 px; only narrower widths
+            // scroll, so the segmented control spans the header width.
+            isScrollable: constraints.maxWidth < 340,
+            tabAlignment: constraints.maxWidth < 340
+                ? TabAlignment.start
+                : TabAlignment.fill,
+            indicator: BoxDecoration(
+              color: roles.active.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(KubusRadius.control + 2),
             ),
+            indicatorPadding: const EdgeInsets.all(KubusSpacing.xxs),
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: roles.foreground,
+            unselectedLabelColor: roles.foregroundMuted,
+            labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            unselectedLabelStyle:
+                KubusTypography.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            dividerHeight: 0,
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
+            tabs: [
+              for (final tab in tabs)
+                Tab(
+                  height: isCompact ? 56 : 60,
+                  iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
+                  icon: Icon(
+                    tab.icon,
+                    size: KubusHeaderMetrics.actionIcon,
+                  ),
+                  child: Text(
+                    tab.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
           ),
         );
       },

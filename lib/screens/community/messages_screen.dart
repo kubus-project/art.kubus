@@ -22,6 +22,8 @@ import '../../widgets/topbar_icon.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/event_bus.dart';
 import '../../utils/design_tokens.dart';
+import '../../widgets/kubus_button.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -335,63 +337,52 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  /// Quiet header that marks this space as private communication, visually
+  /// distinct from the public Community feed. No glass or tinted slab.
   Widget _buildConversationListHeader(AppLocalizations l10n) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
       padding: const EdgeInsets.fromLTRB(
         KubusSpacing.md,
         KubusSpacing.md,
         KubusSpacing.md,
-        KubusSpacing.sm,
+        KubusSpacing.md,
       ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.chat_bubble_outline,
-                  color: scheme.primary,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.messagesListHeaderTitle,
-                        style: KubusTextStyles.sectionTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        l10n.messagesListHeaderDescription,
-                        style: KubusTextStyles.sectionSubtitle.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.72),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _startConversation,
-                icon: const Icon(Icons.add_comment_outlined),
-                label: Text(l10n.messagesEmptyStartChatAction),
-              ),
-            ),
-          ],
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_outline, size: 14, color: roles.foregroundMuted),
+              const SizedBox(width: KubusSpacing.xs),
+              Text(
+                l10n.messagesPrivateNotion.toUpperCase(),
+                style: KubusTextStyles.structuralLabel.copyWith(
+                  color: roles.foregroundMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.messagesListHeaderDescription,
+            style: textTheme.bodyMedium?.copyWith(color: roles.foregroundMuted),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          KubusButton(
+            onPressed: _startConversation,
+            icon: Icons.add_comment_outlined,
+            label: l10n.messagesEmptyStartChatAction,
+            variant: KubusButtonVariant.secondary,
+          ),
+        ],
       ),
     );
   }
@@ -636,14 +627,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final l10n = AppLocalizations.of(context)!;
     final appModeProvider = context.watch<AppModeProvider?>();
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
-    return AnimatedGradientBackground(
+    final roles = KubusColorRoles.of(context);
+    return ColoredBox(
+      color: roles.ground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: roles.ground,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
+          shape: Border(
+            bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+          ),
           leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
           leading: Padding(
             padding: const EdgeInsets.only(left: KubusSpacing.sm),
@@ -896,22 +891,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     final scheme = Theme.of(context).colorScheme;
                     final titleTextStyle = KubusTextStyles.profileName.copyWith(
                       color: scheme.onSurface,
+                      fontWeight:
+                          unreadCount > 0 ? FontWeight.w800 : FontWeight.w600,
                     );
                     final subtitleStyle =
                         KubusTextStyles.sectionSubtitle.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.72),
                     );
                     return Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        KubusSpacing.md,
-                        KubusSpacing.sm,
-                        KubusSpacing.md,
-                        KubusSpacing.xs,
-                      ),
-                      child: LiquidGlassPanel(
-                        padding: const EdgeInsets.all(
-                            KubusChromeMetrics.compactCardPadding),
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
+                      padding: EdgeInsets.zero,
+                      child: _ConversationRowSurface(
+                        unreadCount: unreadCount,
+                        unreadLabel: l10n.messagesUnreadSemantic,
                         onTap: () async {
                           // Ensure member avatars/names are preloaded into ChatProvider cache; give a short timeout so navigation flows fast
                           List<String> wallets = [];
@@ -1073,16 +1064,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                   vertical: KubusSpacing.xs + KubusSpacing.xxs,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: scheme.primary,
+                                  color: KubusColorRoles.of(context).active,
                                   borderRadius:
-                                      BorderRadius.circular(KubusRadius.xl),
+                                      BorderRadius.circular(KubusRadius.pill),
                                 ),
-                                constraints: const BoxConstraints(minWidth: 28),
+                                constraints: const BoxConstraints(minWidth: 24),
                                 child: Text(
                                   unreadCount > 99 ? '99+' : '$unreadCount',
                                   textAlign: TextAlign.center,
                                   style: KubusTextStyles.badgeCount.copyWith(
-                                    color: scheme.onPrimary,
+                                    color: KubusColorRoles.of(context).onActive,
                                   ),
                                 ),
                               ),
@@ -1442,6 +1433,52 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
               });
             }),
       ],
+    );
+  }
+}
+
+/// Flat conversation row: a tappable list row separated by a hairline, not a
+/// glass card. Unread conversations say so in words for screen readers.
+class _ConversationRowSurface extends StatelessWidget {
+  const _ConversationRowSurface({
+    required this.onTap,
+    required this.child,
+    required this.unreadCount,
+    required this.unreadLabel,
+  });
+
+  final VoidCallback onTap;
+  final Widget child;
+  final int unreadCount;
+  final String unreadLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Semantics(
+      button: true,
+      value: unreadCount > 0 ? '$unreadCount $unreadLabel' : null,
+      child: Material(
+        color: unreadCount > 0 ? roles.surfaceRaised : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          focusColor: roles.focus.withValues(alpha: 0.16),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 64),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.sm + 4,
+            ),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom:
+                    BorderSide(color: roles.rule, width: KubusSizes.hairline),
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

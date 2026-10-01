@@ -8,4 +8,23 @@ void main() {
     expect(AppLocalizationsSl('sl').localeName, 'sl');
     expect(AppLocalizationsEn('de').localeName, 'sl');
   });
+
+  test('artwork discovery notification copy is localized without reward claims',
+      () {
+    final en = AppLocalizationsEn('en');
+    final sl = AppLocalizationsSl('sl');
+
+    expect(en.notificationArtworkDiscoveredBody('River Memory', 'Ana'),
+        contains('by Ana'));
+    expect(en.notificationArtworkDiscoveredTitleOnlyBody('River Memory'),
+        contains('River Memory'));
+    expect(sl.notificationArtworkDiscoveredBody('Spomin reke', 'Ana'),
+        contains('Ana'));
+    expect(sl.notificationArtworkDiscoveredTitleOnlyBody('Spomin reke'),
+        contains('Spomin reke'));
+    expect(en.notificationArtworkDiscoveredBody('River Memory', 'Ana'),
+        isNot(contains('KUB8')));
+    expect(sl.notificationArtworkDiscoveredBody('Spomin reke', 'Ana'),
+        isNot(contains('KUB8')));
+  });
 }

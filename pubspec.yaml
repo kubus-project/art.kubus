@@ -222,6 +222,32 @@ flutter:
   # The unused Rounded (~14.7 MB) and Sharp (~8.6 MB) variable fonts were
   # removed entirely.
   fonts:
+    - family: Sofia Sans
+      fonts:
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 100
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 200
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 300
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 800
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 900
+    - family: Space Mono
+      fonts:
+        - asset: assets/fonts/product-v5/space-mono/SpaceMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/product-v5/space-mono/SpaceMono-Bold.ttf
+          weight: 700
     - family: Material Symbols Outlined
       fonts:
         - asset: assets/fonts/MaterialSymbolsOutlined-subset.ttf

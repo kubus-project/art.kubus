@@ -58,19 +58,15 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
   }
 
   Widget _buildAppBar(AppLocalizations l10n) {
-    final accent = KubusColorRoles.of(context).screenAccentForKey(
-      'settings',
-      Theme.of(context).colorScheme,
-      appAccent: Provider.of<ThemeProvider>(context, listen: false).accentColor,
-    );
+    final roles = KubusColorRoles.of(context);
     return SliverAppBar(
       floating: true,
       snap: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: roles.ground,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
-      flexibleSpace: KubusGlassAppBarBackdrop(
-        tintBase: accent,
-        showBottomDivider: true,
+      shape: Border(
+        bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
       ),
       title: KubusHeaderText(
         title: l10n.settingsTitle,
@@ -97,196 +93,90 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
       profileProvider: profileProvider,
       walletProvider: walletProvider,
     );
-    final scheme = Theme.of(context).colorScheme;
-    final headerColor = scheme.secondary;
-    const avatarRadius = 30.0;
-    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius,
-      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
-    );
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
+    // Flat identity summary. Balances belong to the wallet screen; the
+    // settings header only states who is signed in and the session state.
     return _buildSettingsPanel(
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(KubusRadius.xl),
-      tintBase: headerColor,
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              headerColor,
-              headerColor.withValues(alpha: 0.8),
-            ],
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Row(
+        children: [
+          AvatarWidget(
+            wallet: profileProvider.currentUser?.walletAddress ?? '',
+            avatarUrl: profileProvider.currentUser?.avatar,
+            radius: 26,
+            cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+            enableProfileNavigation: false,
           ),
-        ),
-        child: Column(
-          children: [
-            Row(
+          const SizedBox(width: KubusSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(avatarFrameRadius),
-                  ),
-                  child: AvatarWidget(
-                    wallet: profileProvider.currentUser?.walletAddress ?? '',
-                    avatarUrl: profileProvider.currentUser?.avatar,
-                    radius: avatarRadius,
-                    cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
-                    enableProfileNavigation: false,
+                Text(
+                  profileProvider.currentUser?.displayName ??
+                      l10n.settingsGuestUserName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: roles.foreground,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profileProvider.currentUser?.displayName ??
-                            l10n.settingsGuestUserName,
-                        style: KubusTypography.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
+                const SizedBox(height: KubusSpacing.xxs),
+                if (walletProvider.hasWalletIdentity) ...[
+                  Text(
+                    web3Provider.formatAddress(
+                      walletProvider.currentWalletAddress ?? '',
+                    ),
+                    style: KubusTextStyles.machineValue.copyWith(
+                      color: roles.foregroundMuted,
+                    ),
+                  ),
+                  Text(
+                    access.settingsStatusSummary(l10n),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: roles.foregroundMuted,
+                    ),
+                  ),
+                  if (walletProvider.isReadOnlySession)
+                    Text(
+                      l10n.walletReconnectManualRequiredToast,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: roles.warning,
                       ),
-                      if (walletProvider.hasWalletIdentity) ...[
-                        Text(
-                          web3Provider.formatAddress(
-                            walletProvider.currentWalletAddress ?? '',
-                          ),
-                          style: KubusTypography.inter(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                        Text(
-                          access.settingsStatusSummary(l10n),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTypography.inter(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.78),
-                          ),
-                        ),
-                        if (walletProvider.isReadOnlySession)
-                          Text(
-                            l10n.walletReconnectManualRequiredToast,
-                            style: KubusTypography.inter(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.75),
-                            ),
-                          ),
-                      ] else ...[
-                        Text(
-                          l10n.settingsNoWalletConnected,
-                          style: KubusTypography.inter(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
+                ] else
+                  Text(
+                    l10n.settingsNoWalletConnected,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: roles.foregroundMuted,
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: Icon(
-                    Icons.edit,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    size: 20,
-                  ),
-                ),
               ],
             ),
-            if (walletProvider.hasWalletIdentity) ...[
-              const SizedBox(height: 20),
-              Consumer<WalletProvider>(
-                builder: (context, walletProvider, child) {
-                  // Get KUB8 balance
-                  // KUB8 is the canonical mint, never the symbol.
-                  final kub8Balance =
-                      walletProvider.getTokenByMint(ApiKeys.kub8MintAddress) !=
-                              null
-                          ? walletProvider
-                              .getTokenByMint(ApiKeys.kub8MintAddress)!
-                              .balance
-                          : 0.0;
-
-                  // Get SOL balance
-                  final solBalance = walletProvider.tokens
-                          .where((token) => token.symbol.toUpperCase() == 'SOL')
-                          .isNotEmpty
-                      ? walletProvider.tokens
-                          .where((token) => token.symbol.toUpperCase() == 'SOL')
-                          .first
-                          .balance
-                      : 0.0;
-
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: _buildBalanceCard(
-                            'KUB8', kub8Balance.toStringAsFixed(2)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildBalanceCard(
-                            'SOL', solBalance.toStringAsFixed(3)),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBalanceCard(String symbol, String amount) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => const web3_wallet.WalletHome()),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-        ),
-        child: Column(
-          children: [
-            Text(
-              amount,
-              style: KubusTypography.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-            Text(
-              symbol,
-              style: KubusTypography.inter(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
+  /// Structural group heading (Space Mono register) above related sections.
+  Widget _buildSettingsGroupHeading(String label) {
+    final roles = KubusColorRoles.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      child: Semantics(
+        header: true,
+        child: Text(
+          label.toUpperCase(),
+          style: KubusTextStyles.structuralLabel.copyWith(
+            color: roles.foregroundMuted,
+            letterSpacing: 0.8,
+          ),
         ),
       ),
     );
@@ -306,7 +196,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
         const SizedBox(height: 12),
         _buildReduceEffectsTile(scheme),
       ],
-      sectionColor: scheme.tertiary,
     );
   }
 
@@ -634,7 +523,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Reduce effects',
+                  AppLocalizations.of(context)!.settingsReduceEffectsTitle,
                   style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -644,8 +533,10 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                 const SizedBox(height: 4),
                 Text(
                   autoDetected
-                      ? 'Automatically enabled for this device'
-                      : 'Disable blur, animations and other effects',
+                      ? AppLocalizations.of(context)!
+                          .settingsReduceEffectsAutoSubtitle
+                      : AppLocalizations.of(context)!
+                          .settingsReduceEffectsSubtitle,
                   style: KubusTypography.inter(
                     fontSize: 13,
                     color: scheme.onSurface.withValues(alpha: 0.6),
@@ -1046,7 +937,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                       style: KubusTypography.inter(fontSize: 13),
                     ),
                     value: artist,
-                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    activeThumbColor: KubusColorRoles.of(context).active,
                     onChanged: (val) {
                       _applyState(() => artist = val);
                       profileProvider.setRoleFlags(
@@ -1068,7 +959,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                       style: KubusTypography.inter(fontSize: 13),
                     ),
                     value: institution,
-                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    activeThumbColor: KubusColorRoles.of(context).active,
                     onChanged: (val) {
                       _applyState(() => institution = val);
                       profileProvider.setRoleFlags(
@@ -1204,7 +1095,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               : null,
         ),
       ],
-      sectionColor: AppColorUtils.amberAccent,
     );
   }
 
@@ -1231,7 +1121,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
             onChanged: (value) {
               unawaited(_toggleRequirePin(value));
             },
-            activeThumbColor: AppColorUtils.indigoAccent,
+            activeThumbColor: KubusColorRoles.of(context).active,
           ),
           onTap: () {
             unawaited(_showSetPinDialog());
@@ -1247,7 +1137,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               onChanged: (value) {
                 unawaited(_toggleBiometric(value));
               },
-              activeThumbColor: AppColorUtils.indigoAccent,
+              activeThumbColor: KubusColorRoles.of(context).active,
             ),
           )
         else if (_hasPin && !_biometricsSupported)
@@ -1269,7 +1159,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                 unawaited(
                     _saveAllSettings().then((_) => gate.reloadSettings()));
               },
-              activeThumbColor: AppColorUtils.indigoAccent,
+              activeThumbColor: KubusColorRoles.of(context).active,
             ),
           ),
         _buildSettingsTile(
@@ -1290,7 +1180,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               });
               _saveAllSettings();
             },
-            activeThumbColor: AppColorUtils.indigoAccent,
+            activeThumbColor: KubusColorRoles.of(context).active,
           ),
         ),
         _buildSettingsTile(
@@ -1300,7 +1190,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
           onTap: () => _showClearCacheDialog(),
         ),
       ],
-      sectionColor: AppColorUtils.indigoAccent,
     );
   }
 }

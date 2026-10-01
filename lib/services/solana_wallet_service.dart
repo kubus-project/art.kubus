@@ -15,6 +15,7 @@ import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/token_amounts.dart';
 import 'ipfs_metadata_resolver.dart';
+import '../utils/token_identity_rules.dart';
 
 enum DerivationPathType { standard, legacy }
 
@@ -35,6 +36,9 @@ class DerivedKeyPairResult {
 
   String get address => keyPair.publicKey;
 }
+
+/// The on-chain Metaplex metadata fields the wallet reads for a mint.
+typedef TokenOnChainMetadata = ({String symbol, String name, String uri});
 
 class SolanaWalletService {
   static const String _devnetUrl = ApiKeys.solanaDevnetRpc;
@@ -61,11 +65,15 @@ class SolanaWalletService {
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
       'symbol': 'KUB8',
       'name': 'kubus Governance Token',
-      'logoUrl': 'assets/images/logo.png',
+      'logoUrl': TokenIdentityRules.kub8LogoAsset,
       'decimals': ApiKeys.kub8Decimals,
     },
   };
   static const Duration _tokenMetadataCacheTtl = Duration(minutes: 30);
+
+  /// How long canonical KUB8 waits for its metadata image before the bundled
+  /// logo stands in. The result is cached like any other token's.
+  static const Duration _kub8MetadataImageBudget = Duration(seconds: 5);
   final Map<String, _TokenMetadataCacheEntry> _tokenMetadataCache = {};
 
   late String _currentRpcUrl;
@@ -3084,55 +3092,29 @@ class SolanaWalletService {
     base['name'] ??= _fallbackName(normalizedMint);
 
     if (WalletUtils.equals(normalizedMint, ApiKeys.kub8MintAddress)) {
-      final sanitized = Map<String, dynamic>.from(base)
-        ..removeWhere((key, value) => value == null);
-      _tokenMetadataCache[normalizedMint] = _TokenMetadataCacheEntry(
-        data: sanitized,
-        timestamp: DateTime.now(),
-      );
-      return sanitized;
-    }
-
-    try {
-      final metadata = await _rpcClient.getMetadata(
-        mint: Ed25519HDPublicKey.fromBase58(mint),
-        commitment: Commitment.confirmed,
-      );
-
-      if (metadata != null) {
-        final onChainSymbol = metadata.symbol.trim();
-        final onChainName = metadata.name.trim();
-        final metadataUri = metadata.uri.trim();
-        if (onChainSymbol.isNotEmpty) base['symbol'] = onChainSymbol;
-        if (onChainName.isNotEmpty) base['name'] = onChainName;
-        if (metadataUri.isNotEmpty) base['uri'] = metadataUri;
-
-        final offChain =
-            await IpfsMetadataResolver.instance.resolveJson(metadataUri);
-        if (offChain != null) {
-          final description = offChain['description']?.toString().trim();
-          if (description != null && description.isNotEmpty) {
-            base['description'] = description;
-          }
-          final offChainName = offChain['name']?.toString().trim();
-          if (offChainName != null && offChainName.isNotEmpty) {
-            base['name'] = offChainName;
-          }
-          final offChainSymbol = offChain['symbol']?.toString().trim();
-          if (offChainSymbol != null && offChainSymbol.isNotEmpty) {
-            base['symbol'] = offChainSymbol;
-          }
-          final resolvedImage = _resolveTokenImage(
-            offChain['image']?.toString(),
-          );
-          if (resolvedImage != null) {
-            base['logoUrl'] = resolvedImage;
-          }
-          base['rawOffChainMetadata'] = offChain;
+      // The mint decides canonical KUB8, so its configured name, symbol and
+      // decimals stay authoritative. Only the image comes from the token
+      // metadata, metadata-first, within a short budget so the hero token
+      // never waits on an unreachable gateway; the bundled logo in
+      // `_knownTokens` remains the fallback.
+      try {
+        final fields = await _fetchTokenMetadataFields(mint)
+            .timeout(_kub8MetadataImageBudget);
+        final image = fields['logoUrl'] as String?;
+        if (TokenIdentityRules.isUsableMetadataImage(image)) {
+          base['logoUrl'] = image!.trim();
         }
+      } catch (e) {
+        debugPrint(
+            'SolanaWalletService: KUB8 metadata image lookup failed -> $e');
       }
-    } catch (e) {
-      debugPrint('SolanaWalletService: Metadata lookup failed for $mint -> $e');
+    } else {
+      try {
+        base.addAll(await _fetchTokenMetadataFields(mint));
+      } catch (e) {
+        debugPrint(
+            'SolanaWalletService: Metadata lookup failed for $mint -> $e');
+      }
     }
 
     base['logoUrl'] ??= _knownTokens[normalizedMint]?['logoUrl'];
@@ -3146,6 +3128,73 @@ class SolanaWalletService {
     );
     return sanitized;
   }
+
+  /// The fields [mint]'s metadata offers: the on-chain symbol, name and uri,
+  /// then the off-chain JSON's description, name, symbol and resolved image,
+  /// which take precedence. Absent fields are left out; a failed on-chain
+  /// lookup throws.
+  Future<Map<String, dynamic>> _fetchTokenMetadataFields(String mint) async {
+    final fields = <String, dynamic>{};
+    final onChain = await (_onChainMetadataLookupForTesting ??
+        _lookupOnChainMetadata)(mint);
+    if (onChain == null) return fields;
+
+    final onChainSymbol = onChain.symbol.trim();
+    final onChainName = onChain.name.trim();
+    final metadataUri = onChain.uri.trim();
+    if (onChainSymbol.isNotEmpty) fields['symbol'] = onChainSymbol;
+    if (onChainName.isNotEmpty) fields['name'] = onChainName;
+    if (metadataUri.isNotEmpty) fields['uri'] = metadataUri;
+
+    final offChain = await (_offChainMetadataResolverForTesting ??
+        IpfsMetadataResolver.instance.resolveJson)(metadataUri);
+    if (offChain != null) {
+      final description = offChain['description']?.toString().trim();
+      if (description != null && description.isNotEmpty) {
+        fields['description'] = description;
+      }
+      final offChainName = offChain['name']?.toString().trim();
+      if (offChainName != null && offChainName.isNotEmpty) {
+        fields['name'] = offChainName;
+      }
+      final offChainSymbol = offChain['symbol']?.toString().trim();
+      if (offChainSymbol != null && offChainSymbol.isNotEmpty) {
+        fields['symbol'] = offChainSymbol;
+      }
+      final resolvedImage = _resolveTokenImage(offChain['image']?.toString());
+      if (resolvedImage != null) fields['logoUrl'] = resolvedImage;
+      fields['rawOffChainMetadata'] = offChain;
+    }
+    return fields;
+  }
+
+  Future<TokenOnChainMetadata?> _lookupOnChainMetadata(String mint) async {
+    final metadata = await _rpcClient.getMetadata(
+      mint: Ed25519HDPublicKey.fromBase58(mint),
+      commitment: Commitment.confirmed,
+    );
+    if (metadata == null) return null;
+    return (symbol: metadata.symbol, name: metadata.name, uri: metadata.uri);
+  }
+
+  Future<TokenOnChainMetadata?> Function(String mint)?
+      _onChainMetadataLookupForTesting;
+  Future<Map<String, dynamic>?> Function(String? uri)?
+      _offChainMetadataResolverForTesting;
+
+  /// Replaces the on-chain metadata RPC lookup in tests.
+  @visibleForTesting
+  set onChainMetadataLookupForTesting(
+    Future<TokenOnChainMetadata?> Function(String mint)? lookup,
+  ) =>
+      _onChainMetadataLookupForTesting = lookup;
+
+  /// Replaces the off-chain (IPFS/http) metadata JSON resolver in tests.
+  @visibleForTesting
+  set offChainMetadataResolverForTesting(
+    Future<Map<String, dynamic>?> Function(String? uri)? resolver,
+  ) =>
+      _offChainMetadataResolverForTesting = resolver;
 
   @visibleForTesting
   Future<Map<String, dynamic>> getTokenInfoForTesting(

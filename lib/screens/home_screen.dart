@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,14 +25,11 @@ import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
 import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
-import 'web3/wallet/wallet_home.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
-import '../widgets/artist_badge.dart';
-import '../widgets/institution_badge.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
@@ -69,6 +67,8 @@ import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
 import '../widgets/detail/shared_section_widgets.dart';
+import '../providers/main_tab_provider.dart';
+import '../widgets/home/home_discovery_intro.dart';
 import '../widgets/home/home_promotion_rail.dart';
 import '../widgets/search/kubus_general_search.dart';
 import '../widgets/search/kubus_search_config.dart';
@@ -78,7 +78,7 @@ import '../widgets/support/support_section.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../config/api_keys.dart';
+import '../widgets/common/kubus_flat_panel.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -534,10 +534,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
     final profileProvider = Provider.of<ProfileProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final headerDisplayName = resolveHomeHeaderDisplayName(
-      user: profileProvider.currentUser,
-      fallbackLabel: l10n.homeDefaultDisplayName,
-    );
+    // Guests are welcomed to the product rather than addressed as "there".
+    final headerDisplayName = profileProvider.isSignedIn
+        ? resolveHomeHeaderDisplayName(
+            user: profileProvider.currentUser,
+            fallbackLabel: l10n.homeDefaultDisplayName,
+          )
+        : l10n.homeGuestHeaderTitle;
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: animationTheme.fadeCurve,
@@ -650,7 +653,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final dashboardFirst = (currentUser?.isArtist ?? false) ||
         (currentUser?.isInstitution ?? false);
 
-    sections.add(animated(_buildWelcomeSection(headerDisplayName)));
+    sections.add(animated(HomeDiscoveryIntro(
+      onExploreMap: () => context.read<MainTabProvider>().setIndex(0),
+      onOpenCommunity: () => context.read<MainTabProvider>().setIndex(2),
+    )));
     sections.add(SizedBox(height: spacing));
     if (!dashboardFirst) {
       sections.add(animated(_buildHomeRails()));
@@ -669,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildQuickActions(),
                     SizedBox(height: spacing),
-                    _buildWeb3Section(),
+                    _buildRecentActivity(),
                   ],
                 ),
               ),
@@ -681,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildStatsCards(),
                     SizedBox(height: spacing),
-                    _buildRecentActivity(),
+                    _buildWeb3Section(),
                   ],
                 ),
               ),
@@ -694,21 +700,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildQuickActions()));
       sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildWeb3Section()));
-      sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
     } else {
       sections.add(animated(_buildQuickActions()));
       sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildStatsCards()));
-      sections.add(SizedBox(height: spacing));
-      sections.add(animated(_buildWeb3Section()));
-      sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildStatsCards()));
     }
     if (dashboardFirst) {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildHomeRails()));
+    }
+    // Wallet, marketplace and governance are infrastructure: offered after
+    // the cultural content, never as the landing experience.
+    if (!desktopGuidedLayout) {
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildWeb3Section()));
     }
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));
@@ -1080,250 +1088,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildWelcomeSection(String headerDisplayName) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final web3Provider = Provider.of<Web3Provider>(context);
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    final l10n = AppLocalizations.of(context)!;
-    final greeting = _getGreeting(l10n);
-    final isArtist = profileProvider.currentUser?.isArtist ?? false;
-    final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
-
-    // Foreground over the accent gradient is contrast-computed so light
-    // accents (amber gold, terracotta) never get unreadable white text.
-    final onAccent = themeProvider.onAccentColor;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
-        final padding = isSmallScreen
-            ? KubusChromeMetrics.compactCardPadding
-            : KubusSpacing.lg;
-        final iconBox = isSmallScreen
-            ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
-            : KubusChromeMetrics.heroIconBox;
-        final iconSize = isSmallScreen
-            ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
-            : KubusChromeMetrics.heroIcon;
-
-        return Container(
-          padding: EdgeInsets.all(padding),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                themeProvider.accentColor,
-                themeProvider.accentColor.withValues(alpha: 0.8),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.xl),
-            boxShadow: [
-              BoxShadow(
-                color: themeProvider.accentColor.withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '$greeting $headerDisplayName',
-                                style: KubusTextStyles.responsiveHeroTitle(
-                                  context,
-                                  availableWidth: isSmallScreen ? 220 : 320,
-                                ).copyWith(color: onAccent),
-                                maxLines: isSmallScreen ? 2 : 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isArtist) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              ArtistBadge(
-                                fontSize: isSmallScreen ? 9 : 10,
-                                useOnPrimary: true,
-                                iconOnly: true,
-                              ),
-                            ],
-                            if (isInstitution) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              InstitutionBadge(
-                                fontSize: isSmallScreen ? 9 : 10,
-                                useOnPrimary: true,
-                                iconOnly: true,
-                              ),
-                            ],
-                          ],
-                        ),
-                        SizedBox(
-                          height:
-                              isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-                        ),
-                        Text(
-                          l10n.homeWelcomeSubtitle,
-                          style: KubusTextStyles.heroSubtitle.copyWith(
-                            color: onAccent.withValues(alpha: 0.9),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: iconBox,
-                    height: iconBox,
-                    decoration: BoxDecoration(
-                      color: onAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    ),
-                    child: Icon(
-                      Icons.view_in_ar,
-                      color: onAccent,
-                      size: iconSize,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: isSmallScreen
-                    ? KubusSpacing.md
-                    : KubusChromeMetrics.cardPadding,
-              ),
-              if (web3Provider.hasWalletIdentity) ...[
-                Consumer<WalletProvider>(
-                  builder: (context, walletProvider, child) {
-                    // Get KUB8 balance
-                    final kub8Balance = walletProvider
-                                .getTokenByMint(ApiKeys.kub8MintAddress) !=
-                            null
-                        ? walletProvider
-                            .getTokenByMint(ApiKeys.kub8MintAddress)!
-                            .balance
-                        : 0.0;
-
-                    // Get SOL balance
-                    final solBalance = walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'SOL')
-                            .isNotEmpty
-                        ? walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'SOL')
-                            .first
-                            .balance
-                        : 0.0;
-
-                    return Row(
-                      children: [
-                        _buildBalanceChip(
-                            'KUB8', kub8Balance.toStringAsFixed(2)),
-                        const SizedBox(
-                            width: KubusSpacing.sm + KubusSpacing.xs),
-                        _buildBalanceChip('SOL', solBalance.toStringAsFixed(3)),
-                      ],
-                    );
-                  },
-                ),
-              ] else ...[
-                ElevatedButton.icon(
-                  onPressed: () => _showWalletOnboarding(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: onAccent,
-                    foregroundColor: AppColorUtils.onColor(onAccent),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
-                  icon: Icon(
-                    Icons.explore,
-                    size: isSmallScreen ? 16 : 18,
-                  ),
-                  label: Text(
-                    l10n.homeExploreWeb3Button,
-                    style: KubusTextStyles.actionTileTitle.copyWith(
-                      fontSize: isSmallScreen
-                          ? KubusChromeMetrics.navMetaLabel
-                          : KubusChromeMetrics.navLabel,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBalanceChip(String symbol, String amount) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const WalletHome()),
-        );
-      },
-      child: Builder(builder: (context) {
-        final themeProvider = Provider.of<ThemeProvider>(context);
-        final onAccent = themeProvider.onAccentColor;
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            vertical: KubusSpacing.xs + KubusSpacing.xxs,
-          ),
-          decoration: BoxDecoration(
-            color: onAccent.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: onAccent,
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Center(
-                  child: Text(
-                    symbol == 'KUB8' ? 'K' : 'S',
-                    style: KubusTextStyles.badgeCount.copyWith(
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-              Text(
-                '$amount $symbol',
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: onAccent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
   Widget _buildQuickActions() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1335,9 +1099,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final l10n = AppLocalizations.of(context)!;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
-        final glassTint =
-            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
         const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
@@ -1394,13 +1155,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LiquidGlassPanel(
+                  KubusFlatPanel(
                     padding:
                         const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-                    margin: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    blurSigma: KubusGlassEffects.blurSigmaLight,
-                    backgroundColor: glassTint,
                     child: Row(
                       children: [
                         Icon(
@@ -1493,6 +1250,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  /// Flat quick-action tile: neutral icon, title, 44 px+ target. The
+  /// per-feature colour and the personal visit-count badge are no longer
+  /// painted; [color] and [visitCount] are kept for the call sites.
   Widget _buildActionCard(
     String title,
     IconData icon,
@@ -1501,188 +1261,66 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required VoidCallback onTap,
     int visitCount = 0,
   }) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg);
+    final roles = KubusColorRoles.of(context);
     final cardWidth = isSmallScreen ? 176.0 : 192.0;
-    final cardHeight = isSmallScreen ? 116.0 : 96.0;
-    final iconSize = isSmallScreen ? 18.0 : 20.0;
-    final iconBoxSize = isSmallScreen ? 44.0 : 40.0;
+    final cardHeight = isSmallScreen ? 104.0 : 72.0;
+    final iconWidget = ExcludeSemantics(
+      child: Icon(icon, color: roles.foregroundMuted, size: 22),
+    );
+    final titleWidget = Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: isSmallScreen ? TextAlign.center : TextAlign.start,
+      style: KubusTextStyles.detailCardTitle.copyWith(
+        color: roles.foreground,
+        fontWeight: FontWeight.w600,
+      ),
+    );
 
     return SizedBox(
       width: cardWidth,
       height: cardHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: color.withValues(alpha: 0.22),
-            width: 1,
+      child: Semantics(
+        button: true,
+        child: Material(
+          color: roles.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
+            side: BorderSide(color: roles.rule),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            focusColor: roles.focus.withValues(alpha: 0.12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
               ),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: LiquidGlassCard(
-          onTap: onTap,
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: style.blurSigma,
-          showBorder: false,
-          backgroundColor: style.tintColor,
-          fallbackMinOpacity: style.fallbackMinOpacity,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          color.withValues(alpha: 0.12),
-                          Colors.transparent,
+              child: Center(
+                child: isSmallScreen
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          iconWidget,
+                          const SizedBox(height: KubusSpacing.sm),
+                          titleWidget,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          iconWidget,
+                          const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
+                          Flexible(child: titleWidget),
                         ],
                       ),
-                    ),
-                  ),
-                ),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
-                  vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
-                ),
-                child: Center(
-                  child: isSmallScreen
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildQuickActionIconBadge(
-                              color: color,
-                              icon: icon,
-                              iconBoxSize: iconBoxSize,
-                              iconSize: iconSize,
-                              visitCount: visitCount,
-                            ),
-                            const SizedBox(height: KubusSpacing.sm),
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildQuickActionIconBadge(
-                              color: color,
-                              icon: icon,
-                              iconBoxSize: iconBoxSize,
-                              iconSize: iconSize,
-                              visitCount: visitCount,
-                            ),
-                            const SizedBox(width: KubusSpacing.md),
-                            Flexible(
-                              child: Text(
-                                title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: KubusTextStyles.sectionTitle.copyWith(
-                                  fontSize: KubusHeaderMetrics.sectionTitle,
-                                  color: scheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickActionIconBadge({
-    required Color color,
-    required IconData icon,
-    required double iconBoxSize,
-    required double iconSize,
-    required int visitCount,
-  }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: iconBoxSize,
-          height: iconBoxSize,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.26),
-                color.withValues(alpha: 0.10),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: color.withValues(alpha: 0.25),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: iconSize,
-          ),
-        ),
-        if (visitCount > 0)
-          Positioned(
-            top: -4,
-            right: -4,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                visitCount.toString(),
-                style: KubusTextStyles.badgeCount.copyWith(
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -1934,68 +1572,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           isVerticalLayout: isVerticalLayout,
         );
 
-        return SizedBox(
-          width: isVerticalLayout ? double.infinity : null,
-          height: _statCardHeight(
+        final titleStyle = KubusTextStyles.compactBadge.copyWith(
+          fontSize: isSmallScreen
+              ? KubusChromeMetrics.navBadgeLabel - 1
+              : KubusChromeMetrics.navBadgeLabel,
+          color: scheme.onSurface.withValues(alpha: 0.68),
+        );
+        final valueStyle = KubusTextStyles.badgeCount.copyWith(
+          fontSize: isVerticalLayout
+              ? (isSmallScreen
+                  ? KubusChromeMetrics.navBadgeLabel
+                  : KubusChromeMetrics.navMetaLabel)
+              : (isSmallScreen
+                  ? KubusChromeMetrics.navMetaLabel
+                  : KubusChromeMetrics.navLabel),
+          color: scheme.onSurface,
+        );
+        final padding = EdgeInsets.all(isSmallScreen ? 10 : 12);
+        // The design height, grown to what the icon/number/label stack
+        // measures at the ambient text scale (200 % text must not clip).
+        final height = math.max(
+          _statCardHeight(
             showIconOnly: showIconOnly,
             isVerticalLayout: isVerticalLayout,
           ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: statColor.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
-                  ),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: KubusStatCard(
-              title: title,
-              value: value,
-              icon: icon,
-              layout: KubusStatCardLayout.centered,
-              showIcon: shouldShowIcon,
-              centeredWatermarkAlignment: Alignment.center,
-              centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
-              centeredWatermarkVerticalBias: 0,
-              centeredWatermarkHovered: false,
-              accent: statColor,
-              tintBase: scheme.surface,
-              onTap: action == null
-                  ? null
-                  : () => _handleHomeActivityCardTap(action, icon),
-              minHeight: _statCardHeight(
-                showIconOnly: showIconOnly,
-                isVerticalLayout: isVerticalLayout,
-              ),
-              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
-              titleMaxLines: 2,
-              iconBoxSize: showIconOnly
-                  ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
-                  : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-              iconSize: showIconOnly
-                  ? KubusSizes.sidebarActionIcon - KubusSpacing.xxs
-                  : KubusSizes.sidebarActionIcon,
-              titleStyle: KubusTextStyles.compactBadge.copyWith(
-                fontSize: isSmallScreen
-                    ? KubusChromeMetrics.navBadgeLabel - 1
-                    : KubusChromeMetrics.navBadgeLabel,
-                color: scheme.onSurface.withValues(alpha: 0.68),
-              ),
-              valueStyle: KubusTextStyles.badgeCount.copyWith(
-                fontSize: isVerticalLayout
-                    ? (isSmallScreen
-                        ? KubusChromeMetrics.navBadgeLabel
-                        : KubusChromeMetrics.navMetaLabel)
-                    : (isSmallScreen
-                        ? KubusChromeMetrics.navMetaLabel
-                        : KubusChromeMetrics.navLabel),
-                color: scheme.onSurface,
-              ),
-            ),
+          KubusStatCard.centeredExtent(
+            context,
+            valueStyle: valueStyle,
+            titleStyle: titleStyle,
+            padding: padding,
+            withIcon: shouldShowIcon,
+          ),
+        );
+
+        return SizedBox(
+          width: isVerticalLayout ? double.infinity : null,
+          height: height,
+          child: KubusStatCard(
+            title: title,
+            value: value,
+            icon: icon,
+            layout: KubusStatCardLayout.centered,
+            showIcon: shouldShowIcon,
+            accent: statColor,
+            onTap: action == null
+                ? null
+                : () => _handleHomeActivityCardTap(action, icon),
+            minHeight: height,
+            padding: padding,
+            titleMaxLines: 2,
+            titleStyle: titleStyle,
+            valueStyle: valueStyle,
           ),
         );
       },

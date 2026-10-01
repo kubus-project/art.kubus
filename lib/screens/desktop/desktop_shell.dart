@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../providers/themeprovider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/collab_provider.dart';
@@ -15,6 +14,7 @@ import '../../providers/presence_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/deep_link_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../providers/deferred_onboarding_provider.dart';
 import '../../config/config.dart';
 import '../../utils/activity_navigation.dart';
@@ -39,7 +39,6 @@ import 'community/desktop_profile_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
-import '../../widgets/glass_components.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import 'components/desktop_notifications_panel.dart';
@@ -86,6 +85,10 @@ class _DesktopShellState extends State<DesktopShell>
   static const String _web3EntryRoute = '/web3';
   late String _activeRoute;
   bool _isNavigationExpanded = true;
+
+  /// Set once the viewer explicitly expands the rail below the large
+  /// breakpoint, so the automatic narrow-width collapse never fights them.
+  bool _userExpandedNarrowRail = false;
   late AnimationController _navExpandController;
   late Animation<double> _navExpandAnimation;
 
@@ -104,6 +107,8 @@ class _DesktopShellState extends State<DesktopShell>
   bool _pendingRouteCorrection = false;
   bool _pendingNavCollapse = false;
   bool _pendingProfileHydration = false;
+  PublicEntityTakeoverTarget? _canonicalPublicEntryTarget;
+  bool _dispatchingInitialCanonicalEntry = false;
   bool? _lastCommunityViewActive;
   bool? _lastChatViewActive;
   bool? _lastNotificationsViewActive;
@@ -234,6 +239,9 @@ class _DesktopShellState extends State<DesktopShell>
     }
     setState(() {
       _screenStack.add(screen);
+      if (!_dispatchingInitialCanonicalEntry) {
+        _canonicalPublicEntryTarget = null;
+      }
     });
     _syncTelemetry();
     _syncRefreshVisibility();
@@ -244,6 +252,7 @@ class _DesktopShellState extends State<DesktopShell>
     if (_screenStack.isNotEmpty) {
       setState(() {
         _screenStack.removeLast();
+        _canonicalPublicEntryTarget = null;
       });
       _syncTelemetry();
       _syncRefreshVisibility();
@@ -262,14 +271,20 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() {
       _activeRoute = route;
       _screenStack.clear();
+      if (!_dispatchingInitialCanonicalEntry) {
+        _canonicalPublicEntryTarget = null;
+      }
     });
     _syncTelemetry();
     _syncRefreshVisibility();
   }
 
-  void _toggleNavigation() {
+  void _toggleNavigation({bool userInitiated = false}) {
     setState(() {
       _isNavigationExpanded = !_isNavigationExpanded;
+      if (userInitiated && !DesktopBreakpoints.isLarge(context)) {
+        _userExpandedNarrowRail = _isNavigationExpanded;
+      }
     });
     if (_isNavigationExpanded) {
       _navExpandController.forward();
@@ -312,6 +327,7 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() {
       _functionsPanel = DesktopFunctionsPanel.notifications;
       _functionsPanelContent = null;
+      _canonicalPublicEntryTarget = null;
     });
     _syncRefreshVisibility();
   }
@@ -339,6 +355,7 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() {
       _functionsPanel = panel;
       _functionsPanelContent = nextContent;
+      _canonicalPublicEntryTarget = null;
     });
     _syncRefreshVisibility();
   }
@@ -390,6 +407,7 @@ class _DesktopShellState extends State<DesktopShell>
       _activeRoute = item.route;
       // Clear any pushed subscreens when navigating to a new main tab
       _screenStack.clear();
+      _canonicalPublicEntryTarget = null;
     });
     _syncTelemetry();
     _syncRefreshVisibility();
@@ -459,28 +477,6 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
-  List<Color>? _backgroundColorsForRoute(BuildContext context, String route) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = _activeScreenAccent(context, route: route);
-    return _blendAccentIntoAnimatedBase(
-      base: isDark
-          ? KubusGradients.animatedDarkColors
-          : KubusGradients.animatedLightColors,
-      accent: accent,
-      isDark: isDark,
-    );
-  }
-
-  Color _fallbackBackdropColorForRoute(BuildContext context, String route) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = _activeScreenAccent(context, route: route);
-    final base =
-        isDark ? KubusColors.backgroundDark : KubusColors.backgroundLight;
-    return Color.lerp(base, accent, isDark ? 0.10 : 0.05) ?? base;
-  }
-
   bool _isInvitesScreenActive() {
     if (_screenStack.isEmpty) return false;
     final top = _screenStack.last;
@@ -489,29 +485,6 @@ class _DesktopShellState extends State<DesktopShell>
       return true;
     }
     return false;
-  }
-
-  List<Color> _blendAccentIntoAnimatedBase({
-    required List<Color> base,
-    required Color accent,
-    required bool isDark,
-  }) {
-    if (base.isEmpty) return <Color>[accent];
-    if (base.length == 1) return <Color>[base.first, accent];
-
-    // Blend factors tuned to keep the background subtle while still matching
-    // the screen's accent.
-    final f1 = isDark ? 0.16 : 0.10;
-    final f2 = isDark ? 0.22 : 0.14;
-    final f3 = isDark ? 0.14 : 0.10;
-
-    Color lerp(Color a, Color b, double t) => Color.lerp(a, b, t) ?? b;
-
-    final c0 = base[0];
-    final c1 = lerp(base.length > 1 ? base[1] : base[0], accent, f1);
-    final c2 = lerp(base.length > 2 ? base[2] : base.last, accent, f2);
-    final c3 = lerp(base.length > 3 ? base[3] : base.last, accent, f3);
-    return <Color>[c0, c1, c2, c3];
   }
 
   Widget _buildCurrentScreen(String route) {
@@ -657,7 +630,9 @@ class _DesktopShellState extends State<DesktopShell>
     }
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
-    final activeAccent = _activeScreenAccent(context, route: effectiveRoute);
+    // Navigation selection uses the family active role on every route; data
+    // and feature colours stay inside their own screens.
+    final activeAccent = KubusColorRoles.of(context).active;
     final isProfileSelected =
         _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
     final isNotificationsSelected =
@@ -665,17 +640,67 @@ class _DesktopShellState extends State<DesktopShell>
     final isSettingsSelected =
         _screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen;
     final isCollabInvitesSelected = _isInvitesScreenActive();
+    final isCanonicalPublicEntry = _canonicalPublicEntryTarget != null;
 
     final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);
     final isExpanded = DesktopBreakpoints.isExpanded(context);
-    final theme = Theme.of(context);
     const functionsPanelWidthLarge = 380.0;
     const functionsPanelWidthExpanded = 320.0;
     const functionsPanelWidthMedium = 300.0;
 
-    // Auto-collapse navigation on medium screens
-    if (!isLarge && _isNavigationExpanded && !isExpanded) {
+    void openCanonicalPublicEntryNavigation() {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          final roles = KubusColorRoles.of(dialogContext);
+          void closeThen(VoidCallback action) {
+            Navigator.of(dialogContext).pop();
+            action();
+          }
+
+          return Dialog(
+            backgroundColor: roles.surfaceRaised,
+            child: SizedBox(
+              width: DesktopNavigation.expandedWidthLarge,
+              height: MediaQuery.sizeOf(dialogContext).height * 0.84,
+              child: DesktopNavigation(
+                items: navItems,
+                activeAccent: activeAccent,
+                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                onItemSelected: (index) {
+                  Navigator.of(dialogContext).pop();
+                  _onNavItemSelected(index, navItems, isSignedIn);
+                },
+                isExpanded: true,
+                expandAnimation: const AlwaysStoppedAnimation<double>(1),
+                onToggleExpand: () {},
+                isProfileSelected: isProfileSelected,
+                isNotificationsSelected: isNotificationsSelected,
+                isSettingsSelected: isSettingsSelected,
+                isCollabInvitesSelected: isCollabInvitesSelected,
+                onProfileTap: () => closeThen(() => _showProfileMenu(context)),
+                onSettingsTap: () =>
+                    closeThen(() => _showSettingsScreen(context)),
+                onNotificationsTap: () =>
+                    closeThen(() => unawaited(_toggleNotificationsPanel())),
+                onWalletTap: () =>
+                    closeThen(() => _handleWalletTap(isSignedIn)),
+                onCollabInvitesTap:
+                    isSignedIn && AppConfig.isFeatureEnabled('collabInvites')
+                        ? () => closeThen(_showCollabInvites)
+                        : null,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // Below the large breakpoint (900–1199 px) an expanded 180 px rail
+    // squeezes both its own labels and the content column, so the rail
+    // starts collapsed there unless the viewer explicitly expanded it.
+    if (!isLarge && _isNavigationExpanded && !_userExpandedNarrowRail) {
       if (!_pendingNavCollapse) {
         _pendingNavCollapse = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -704,6 +729,11 @@ class _DesktopShellState extends State<DesktopShell>
               setFunctionsPanelContent: _setFunctionsPanelContent,
               closeFunctionsPanel: _closeFunctionsPanel,
               canPop: _screenStack.isNotEmpty,
+              isCanonicalPublicEntry:
+                  isCanonicalPublicEntry && _screenStack.isNotEmpty,
+              onOpenPublicEntryNavigation: isCanonicalPublicEntry
+                  ? openCanonicalPublicEntryNavigation
+                  : null,
               child: Builder(
                 builder: (shellContext) {
                   _shellScopeContext = shellContext;
@@ -716,78 +746,43 @@ class _DesktopShellState extends State<DesktopShell>
                         child: ColoredBox(
                           key: const ValueKey<String>(
                               'desktop-shell-fallback-backdrop'),
-                          color: _fallbackBackdropColorForRoute(
-                              context, effectiveRoute),
+                          color: isCanonicalPublicEntry
+                              ? KubusColorRoles.of(context).surface
+                              : KubusColorRoles.of(context).ground,
                         ),
                       ),
-                      if (!(kIsWeb && effectiveRoute == '/explore'))
-                        Positioned.fill(
-                          child: AnimatedGradientBackground(
-                            duration: const Duration(seconds: 12),
-                            intensity: 0.25,
-                            colors: _backgroundColorsForRoute(
-                                context, effectiveRoute),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
                       Scaffold(
                         backgroundColor: Colors.transparent,
                         body: Row(
                           children: [
                             // Primary navigation rail anchored to the LEFT edge.
-                            AnimatedBuilder(
-                              animation: _navExpandAnimation,
-                              builder: (context, child) {
-                                final expandedWidth = isLarge
-                                    ? DesktopNavigation.expandedWidthLarge
-                                    : DesktopNavigation.expandedWidthMedium;
-                                final collapsedWidth =
-                                    DesktopNavigation.collapsedWidth;
-                                final currentWidth = collapsedWidth +
-                                    (expandedWidth - collapsedWidth) *
-                                        _navExpandAnimation.value;
+                            if (!isCanonicalPublicEntry)
+                              AnimatedBuilder(
+                                animation: _navExpandAnimation,
+                                builder: (context, child) {
+                                  final expandedWidth = isLarge
+                                      ? DesktopNavigation.expandedWidthLarge
+                                      : DesktopNavigation.expandedWidthMedium;
+                                  final collapsedWidth =
+                                      DesktopNavigation.collapsedWidth;
+                                  final currentWidth = collapsedWidth +
+                                      (expandedWidth - collapsedWidth) *
+                                          _navExpandAnimation.value;
 
-                                final scheme = theme.colorScheme;
-                                final glassTint = (Color.lerp(
-                                          theme.brightness == Brightness.dark
-                                              ? Colors.black
-                                              : Colors.white,
-                                          activeAccent,
-                                          theme.brightness == Brightness.dark
-                                              ? 0.18
-                                              : 0.10,
-                                        ) ??
-                                        scheme.surface)
-                                    .withValues(
-                                  alpha: theme.brightness == Brightness.dark
-                                      ? 0.24
-                                      : 0.28,
-                                );
+                                  final roles = KubusColorRoles.of(context);
 
-                                return ClipRRect(
-                                  child: Container(
-                                    width: currentWidth,
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        right: BorderSide(
-                                          color: theme.brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.06)
-                                              : scheme.outline
-                                                  .withValues(alpha: 0.15),
-                                          width: 1,
+                                  return ClipRect(
+                                    child: Container(
+                                      width: currentWidth,
+                                      decoration: BoxDecoration(
+                                        color: roles.surface,
+                                        border: Border(
+                                          right: BorderSide(
+                                            color: roles.rule,
+                                            width: KubusSizes.hairline,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    child: LiquidGlassPanel(
-                                      padding: EdgeInsets.zero,
-                                      margin: EdgeInsets.zero,
-                                      borderRadius: BorderRadius.zero,
-                                      blurSigma:
-                                          KubusGlassEffects.blurSigmaLight,
-                                      showBorder: false,
-                                      backgroundColor: glassTint,
                                       child: RepaintBoundary(
                                         child: DesktopNavigation(
                                           items: navItems,
@@ -800,7 +795,9 @@ class _DesktopShellState extends State<DesktopShell>
                                                   index, navItems, isSignedIn),
                                           isExpanded: _isNavigationExpanded,
                                           expandAnimation: _navExpandAnimation,
-                                          onToggleExpand: _toggleNavigation,
+                                          onToggleExpand: () =>
+                                              _toggleNavigation(
+                                                  userInitiated: true),
                                           isProfileSelected: isProfileSelected,
                                           isNotificationsSelected:
                                               isNotificationsSelected,
@@ -824,22 +821,33 @@ class _DesktopShellState extends State<DesktopShell>
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
+                                  );
+                                },
+                              ),
 
                             // Main content area (dominant workspace)
                             Expanded(
-                              child: _screenStack.isNotEmpty
-                                  ? _screenStack.last
-                                  : _buildCurrentScreen(effectiveRoute),
+                              child: isCanonicalPublicEntry
+                                  ? Center(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 1216,
+                                        ),
+                                        child: _screenStack.isNotEmpty
+                                            ? _screenStack.last
+                                            : _buildCurrentScreen(
+                                                effectiveRoute),
+                                      ),
+                                    )
+                                  : _screenStack.isNotEmpty
+                                      ? _screenStack.last
+                                      : _buildCurrentScreen(effectiveRoute),
                             ),
 
                             // Functions sidebar (contextual panels like Notifications)
                             // Keep available on medium widths too, otherwise notification
                             // actions can appear to do nothing on narrower desktop windows.
-                            if (!isCompact)
+                            if (!isCompact && !isCanonicalPublicEntry)
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 220),
                                 curve: Curves.easeOutCubic,
@@ -992,7 +1000,25 @@ class _DesktopShellState extends State<DesktopShell>
       }
       if (target == null) return;
 
-      await ShareDeepLinkNavigation.open(shellContext, target);
+      PublicEntityTakeoverTarget? seededTarget;
+      try {
+        seededTarget = shellContext.read<PublicEntityTakeoverProvider>().target;
+      } catch (_) {}
+      final isExactCanonicalEntry = matchesCanonicalPublicEntry(
+        seededTarget: seededTarget,
+        requestedTarget: target,
+      );
+      if (isExactCanonicalEntry && seededTarget != null) {
+        setState(() {
+          _canonicalPublicEntryTarget = seededTarget;
+        });
+        _dispatchingInitialCanonicalEntry = true;
+      }
+      try {
+        await ShareDeepLinkNavigation.open(shellContext, target);
+      } finally {
+        _dispatchingInitialCanonicalEntry = false;
+      }
       if (!mounted) return;
       try {
         deferredOnboardingProvider?.markInitialDeepLinkHandled();
@@ -1014,11 +1040,10 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
+    // The profile owns its single header row (Back, title and utilities),
+    // so the shell pushes it bare rather than inside a titled sub-screen.
     if (shellScope != null) {
-      shellScope.pushSubScreen(
-        title: AppLocalizations.of(context)!.navigationScreenProfile,
-        child: const ProfileScreen(),
-      );
+      shellScope.pushScreen(const ProfileScreen());
       return;
     }
 
@@ -1035,35 +1060,6 @@ class _DesktopShellState extends State<DesktopShell>
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const DesktopSettingsScreen()),
-    );
-  }
-
-  Color _activeScreenAccent(BuildContext context, {String? route}) {
-    final themeProvider = context.read<ThemeProvider>();
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-
-    if (_screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen) {
-      return roles.screenAccentForKey(
-        'settings',
-        scheme,
-        appAccent: themeProvider.accentColor,
-      );
-    }
-
-    final resolvedRoute = route ?? _activeRoute;
-    if (resolvedRoute == _web3EntryRoute) {
-      return roles.screenAccentForKey(
-        'home',
-        scheme,
-        appAccent: themeProvider.accentColor,
-      );
-    }
-
-    return roles.screenAccentForRoute(
-      resolvedRoute,
-      scheme,
-      appAccent: themeProvider.accentColor,
     );
   }
 

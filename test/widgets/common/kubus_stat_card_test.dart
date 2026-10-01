@@ -1,95 +1,130 @@
+import 'package:flutter/gestures.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-void main() {
-  testWidgets('centered stat cards show cropped lower watermark by default',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 220,
-              height: 120,
-              child: KubusStatCard(
-                title: 'Followers',
-                value: '128',
-                icon: Icons.people_outline,
-                layout: KubusStatCardLayout.centered,
-                centeredWatermarkAlignment: Alignment.center,
-              ),
-            ),
-          ),
-        ),
+Widget _wrap(Widget child, {Brightness brightness = Brightness.light}) =>
+    MaterialApp(
+      theme: ThemeData(brightness: brightness),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 200, child: child)),
       ),
     );
 
-    final cardFinder = find.byType(KubusStatCard);
-    final iconFinder = find.byWidgetPredicate(
-      (widget) =>
-          widget is Icon && widget.icon == Icons.people_outline,
-    );
+void main() {
+  testWidgets('tappable tile keeps the requested height, never below 44',
+      (tester) async {
+    double heightOf(String title) => tester
+        .getSize(find.ancestor(
+          of: find.text(title),
+          matching: find.byType(KubusStatCard),
+        ))
+        .height;
 
-    expect(iconFinder, findsOneWidget);
+    await tester.pumpWidget(_wrap(Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const KubusStatCard(title: 'Static', value: '3', minHeight: 96),
+        KubusStatCard(
+          title: 'Tappable',
+          value: '3',
+          minHeight: 96,
+          onTap: () {},
+        ),
+        KubusStatCard(
+          title: 'Small',
+          value: '3',
+          minHeight: 0,
+          padding: EdgeInsets.zero,
+          onTap: () {},
+        ),
+      ],
+    )));
 
-    final cardCenter = tester.getCenter(cardFinder);
-    final iconCenter = tester.getCenter(iconFinder);
-    final iconWidget = tester.widget<Icon>(iconFinder);
-
-    expect((iconCenter.dx - cardCenter.dx).abs(), lessThan(2.0));
-    expect(iconCenter.dy, greaterThan(cardCenter.dy + 8.0));
-    expect(iconWidget.size, greaterThan(120));
+    // Adding an action must not change the tile geometry.
+    expect(heightOf('Tappable'), heightOf('Static'));
+    expect(heightOf('Tappable'), greaterThanOrEqualTo(96));
+    expect(heightOf('Small'), greaterThanOrEqualTo(44));
   });
 
-  testWidgets('centered stat cards rise and float when hovered',
-      (tester) async {
-    Widget buildCard({required bool hovered}) {
-      return MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 240,
-              height: 160,
-              child: KubusStatCard(
-                title: 'Followers',
-                value: '128',
-                icon: Icons.people_outline,
-                layout: KubusStatCardLayout.centered,
-                centeredWatermarkAlignment: Alignment.center,
-                centeredWatermarkHovered: hovered,
-              ),
-            ),
-          ),
+  testWidgets(
+      'stat tiles are flat: surface fill, rule, no glass; the icon is a '
+      'compact context tile, not a watermark', (tester) async {
+    for (final brightness in Brightness.values) {
+      await tester.pumpWidget(_wrap(
+        const KubusStatCard(
+          title: 'Followers',
+          value: '1,284',
+          icon: Icons.people_outline,
+          layout: KubusStatCardLayout.centered,
+          accent: Colors.cyan,
         ),
-      );
+        brightness: brightness,
+      ));
+      final roles =
+          KubusColorRoles.of(tester.element(find.byType(KubusStatCard)));
+      expect(find.byType(LiquidGlassCard), findsNothing);
+      final glyph = find.byIcon(Icons.people_outline);
+      expect(glyph, findsOneWidget);
+      expect(tester.getSize(glyph), const Size.square(16),
+          reason: 'a compact context glyph, never a card-sized watermark');
+      expect(tester.widget<Icon>(glyph).color, Colors.cyan);
+      final material = tester.widget<Material>(find.descendant(
+        of: find.byType(KubusStatCard),
+        matching: find.byType(Material),
+      ));
+      expect(material.color, roles.surface);
+      final shape = material.shape! as RoundedRectangleBorder;
+      expect(shape.side.color, roles.rule);
     }
+  });
 
-    await tester.pumpWidget(buildCard(hovered: false));
-
-    final iconFinder = find.byWidgetPredicate(
-      (widget) => widget is Icon && widget.icon == Icons.people_outline,
+  testWidgets('value is announced with its label; tappable tiles are buttons',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    var taps = 0;
+    await tester.pumpWidget(_wrap(KubusStatCard(
+      title: 'Followers',
+      value: '1,284',
+      onTap: () => taps++,
+    )));
+    expect(
+      tester.getSemantics(find.byType(KubusStatCard)),
+      isSemantics(label: '1,284 Followers', isButton: true),
     );
-    final transformFinder = find.ancestor(
-      of: iconFinder,
-      matching: find.byType(Transform),
+    expect(tester.getSize(find.byType(KubusStatCard)).height,
+        greaterThanOrEqualTo(44));
+    await tester.tap(find.byType(KubusStatCard));
+    expect(taps, 1);
+
+    await tester.pumpWidget(_wrap(const KubusStatCard(
+      title: 'KUB8 earned from achievements',
+      value: '25',
+      semanticsLabel: '25 KUB8 earned from achievements',
+    )));
+    expect(
+      tester.getSemantics(find.byType(KubusStatCard)),
+      isSemantics(label: '25 KUB8 earned from achievements'),
     );
+    handle.dispose();
+  });
 
-    final restingTransform = tester.widgetList<Transform>(transformFinder).last;
-    final restingYOffset = restingTransform.transform.storage[13];
-
-    await tester.pumpWidget(buildCard(hovered: true));
-    await tester.pump(const Duration(milliseconds: 320));
-
-    final hoveredTransform = tester.widgetList<Transform>(transformFinder).last;
-    final hoveredYOffset = hoveredTransform.transform.storage[13];
-
-    expect(restingYOffset - hoveredYOffset, greaterThan(35.0));
-
-    await tester.pump(const Duration(milliseconds: 700));
-    final floatingTransform = tester.widgetList<Transform>(transformFinder).last;
-    final floatingYOffset = floatingTransform.transform.storage[13];
-
-    expect((floatingYOffset - hoveredYOffset).abs(), greaterThan(1.0));
+  testWidgets('no hover motion: nothing animates on pointer enter',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const KubusStatCard(
+      title: 'Views',
+      value: '42',
+      layout: KubusStatCardLayout.centered,
+    )));
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await gesture.addPointer(location: Offset.zero);
+    addTearDown(gesture.removePointer);
+    final before = tester.getRect(find.text('42'));
+    await gesture.moveTo(tester.getCenter(find.byType(KubusStatCard)));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.getRect(find.text('42')), before);
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

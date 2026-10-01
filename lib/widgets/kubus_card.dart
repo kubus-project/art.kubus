@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import 'glass_components.dart';
- 
 
 class KubusCard extends StatelessWidget {
   final Widget child;
@@ -16,18 +17,16 @@ class KubusCard extends StatelessWidget {
     this.padding,
     this.color,
     this.onTap,
-    this.isGlass = true,
+    this.isGlass = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final radius = KubusRadius.circular(KubusRadius.md);
-    final glassTint = (color ?? scheme.surface)
-        .withValues(alpha: isDark ? 0.16 : 0.10);
-    
+    final roles = KubusColorRoles.of(context);
+    final radius = KubusRadius.circular(KubusRadius.surface);
+    final glassTint = color ?? roles.surfaceOverlay;
+
     if (isGlass) {
       return LiquidGlassPanel(
         padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
@@ -44,7 +43,7 @@ class KubusCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       elevation: theme.cardTheme.elevation,
       shape: theme.cardTheme.shape,
-      color: color ?? theme.cardTheme.color,
+      color: color ?? roles.surface,
       child: Padding(
         padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
         child: child,
@@ -79,9 +78,12 @@ class KubusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final fallbackText = textColor ?? scheme.onPrimary;
-    final bg = backgroundColor ?? scheme.primary;
+    final roles = KubusColorRoles.of(context);
+    final bg = backgroundColor ?? roles.surface;
+    final fallbackText = textColor ??
+        (backgroundColor == null
+            ? roles.foreground
+            : AppColorUtils.onColor(bg));
     return Chip(
       label: Text(
         label,
@@ -92,11 +94,14 @@ class KubusChip extends StatelessWidget {
       backgroundColor: bg,
       deleteIconColor: fallbackText,
       onDeleted: onDeleted,
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs, vertical: 0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.xs,
+        vertical: 0,
+      ),
       visualDensity: VisualDensity.compact,
-      side: BorderSide.none,
+      side: BorderSide(color: backgroundColor == null ? roles.rule : bg),
       shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.xl),
+        borderRadius: KubusRadius.circular(KubusRadius.pill),
       ),
     );
   }

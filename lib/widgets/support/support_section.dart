@@ -1,6 +1,7 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/support_links.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Home-screen Support / Donate section.
 ///
-/// Uses kubus glass primitives and token-driven spacing to match the app's
-/// liquid-glass design language.
+/// A flat PRODUCT v5 surface placed after the cultural content on Home. The
+/// tier dialog is a transient overlay and keeps its glass panel.
 class SupportSectionCard extends StatelessWidget {
   const SupportSectionCard({super.key});
 
@@ -26,26 +27,26 @@ class SupportSectionCard extends StatelessWidget {
     final subtitle = l10n?.supportSectionSubtitle ??
         'Help us keep building art.kubus - every donation helps.';
 
-    return LiquidGlassCard(
+    final roles = KubusColorRoles.of(context);
+    // Flat, secondary support notice: it closes Home without competing with
+    // cultural content (no glass card or gradient icon tile).
+    return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg),
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      decoration: BoxDecoration(
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 44,
-                width: 44,
-                decoration: BoxDecoration(
-                  gradient: KubusGradients.heroGradient,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  Icons.volunteer_activism_outlined,
-                  color: scheme.onPrimary,
-                ),
+              Icon(
+                Icons.volunteer_activism_outlined,
+                color: roles.foregroundMuted,
+                size: 24,
               ),
               const SizedBox(width: KubusSpacing.md),
               Expanded(
@@ -75,9 +76,7 @@ class SupportSectionCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: KubusSpacing.lg),
-
           Wrap(
             spacing: KubusSpacing.sm,
             runSpacing: KubusSpacing.sm,
@@ -86,20 +85,12 @@ class SupportSectionCard extends StatelessWidget {
                 label: l10n?.supportMethodKofi ?? 'Ko-fi',
                 subtitle: l10n?.supportMethodKofiHint ?? 'Coffee-sized support',
                 icon: Icons.local_cafe_outlined,
-                gradient: KubusGradients.fromColors(
-                  KubusColors.accentOrangeLight,
-                  KubusColors.accentTealDark,
-                ),
                 url: SupportLinks.kofiUrl,
               ),
               _SupportLinkChip(
                 label: l10n?.supportMethodPaypal ?? 'PayPal',
                 subtitle: l10n?.supportMethodPaypalHint ?? 'Donate via PayPal',
                 icon: Icons.payments_outlined,
-                gradient: KubusGradients.fromColors(
-                  KubusColors.primaryVariantDark,
-                  KubusColors.primary,
-                ),
                 url: SupportLinks.paypalDonateUrl,
               ),
               _SupportLinkChip(
@@ -107,10 +98,6 @@ class SupportSectionCard extends StatelessWidget {
                 subtitle: l10n?.supportMethodGithubSponsorsHint ??
                     'Support via GitHub',
                 icon: Icons.code,
-                gradient: KubusGradients.fromColors(
-                  KubusColors.surfaceDark.withValues(alpha: 0.75),
-                  KubusColors.primaryVariantDark,
-                ),
                 url: SupportLinks.githubSponsorsUrl,
               ),
             ],
@@ -149,79 +136,74 @@ class SupportSectionCard extends StatelessWidget {
             blurSigma: KubusGlassEffects.blurSigmaHeavy,
             padding: EdgeInsets.zero,
             child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(KubusSpacing.lg),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: KubusSpacing.xs),
-                                Text(
-                                  subtitle,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.72),
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            tooltip: MaterialLocalizations.of(ctx)
-                                .closeButtonTooltip,
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: KubusSpacing.lg),
-
-                      _TierCard(
-                        amount: l10n?.supportTier5Amount ?? '€5',
-                        body: l10n?.supportTier5Body ??
-                            'Helps cover monthly infrastructure costs.',
-                        accent: KubusColors.accentTealDark,
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      _TierCard(
-                        amount: l10n?.supportTier15Amount ?? '€15',
-                        body: l10n?.supportTier15Body ??
-                            'Supports steady weekly improvements.',
-                        accent: KubusColors.primary,
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      _TierCard(
-                        amount: l10n?.supportTier50Amount ?? '€50',
-                        body: l10n?.supportTier50Body ??
-                            'Funds one focused development session (new feature / fixes / content updates).',
-                        accent: KubusColors.accentOrangeLight,
-                      ),
-
-                      const SizedBox(height: KubusSpacing.lg),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: Text(l10n?.commonClose ?? 'Close'),
+                            const SizedBox(height: KubusSpacing.xs),
+                            Text(
+                              subtitle,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.72),
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      IconButton(
+                        tooltip:
+                            MaterialLocalizations.of(ctx).closeButtonTooltip,
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: KubusSpacing.lg),
+                  _TierCard(
+                    amount: l10n?.supportTier5Amount ?? '€5',
+                    body: l10n?.supportTier5Body ??
+                        'Helps cover monthly infrastructure costs.',
+                    accent: KubusColors.accentTealDark,
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  _TierCard(
+                    amount: l10n?.supportTier15Amount ?? '€15',
+                    body: l10n?.supportTier15Body ??
+                        'Supports steady weekly improvements.',
+                    accent: KubusColors.primary,
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  _TierCard(
+                    amount: l10n?.supportTier50Amount ?? '€50',
+                    body: l10n?.supportTier50Body ??
+                        'Funds one focused development session (new feature / fixes / content updates).',
+                    accent: KubusColors.accentOrangeLight,
+                  ),
+                  const SizedBox(height: KubusSpacing.lg),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(l10n?.commonClose ?? 'Close'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -234,14 +216,12 @@ class _SupportLinkChip extends StatelessWidget {
     required this.label,
     required this.subtitle,
     required this.icon,
-    required this.gradient,
     required this.url,
   });
 
   final String label;
   final String subtitle;
   final IconData icon;
-  final LinearGradient gradient;
   final String url;
 
   @override
@@ -249,55 +229,60 @@ class _SupportLinkChip extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final roles = KubusColorRoles.of(context);
     return Semantics(
       button: true,
       label: label,
       hint: subtitle,
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md,
-          vertical: KubusSpacing.sm + 2,
+      child: Material(
+        color: roles.surfaceRaised,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
         ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        onTap: () => _open(url),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 34,
-              width: 34,
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
+        child: InkWell(
+          onTap: () => _open(url),
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm + 2,
               ),
-              child: Icon(icon, size: 18, color: scheme.onPrimary),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 220),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  Icon(icon, size: 20, color: roles.foregroundMuted),
+                  const SizedBox(width: KubusSpacing.sm),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.72),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: KubusSpacing.xxs),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.72),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -343,8 +328,9 @@ class _TierCard extends StatelessWidget {
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.lg),
-      backgroundColor: (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight)
-          .withValues(alpha: isDark ? 0.28 : 0.60),
+      backgroundColor:
+          (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight)
+              .withValues(alpha: isDark ? 0.28 : 0.60),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -885,8 +885,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_initialLocaleResolved) return;
     _initialLocaleResolved = true;
 
-    final viewport =
-        MapInitialViewport.forLocale(Localizations.localeOf(context));
+    final viewport = MapInitialViewport.forLocale(
+      Localizations.localeOf(context),
+    );
     _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
     _cameraZoom = widget.initialZoom ?? viewport.initialZoom;
   }
@@ -1833,9 +1834,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _pendingTargetMarkerLoad = null;
     _pendingTargetMarkerLoadCompleter = null;
-    unawaited(_loadMarkersAroundTargetNow(position).whenComplete(() {
-      if (!completer.isCompleted) completer.complete();
-    }));
+    unawaited(
+      _loadMarkersAroundTargetNow(position).whenComplete(() {
+        if (!completer.isCompleted) completer.complete();
+      }),
+    );
   }
 
   void _handleMapCreated(ml.MapLibreMapController controller) {
@@ -3277,12 +3280,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       value: l10n.desktopMapDiscoveriesCount(
                         artwork.discoveryCount,
                       ),
-                    ),
-                  if (artwork.actualRewards > 0)
-                    DetailContextItem(
-                      icon: Icons.token,
-                      value: '${artwork.actualRewards}',
-                      label: 'KUB8',
                     ),
                 ],
               ),

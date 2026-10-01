@@ -316,8 +316,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           height: 100,
           radius: 20,
         ),
-        gradientStart: scheme.primary,
-        gradientEnd: roles.positiveAction,
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,

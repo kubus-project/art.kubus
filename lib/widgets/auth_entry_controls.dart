@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -132,48 +133,28 @@ class _AuthEntryControlChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final iconColor = isDark ? Colors.white : Colors.black;
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final iconColor = roles.foreground;
 
+    // Flat control with a hairline and a 44 px target; no glass or shadow.
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: compact
-            ? (isDark ? 0.12 : 0.7)
-            : (isDark ? 0.18 : 0.78)),
-        borderRadius: BorderRadius.circular(999),
-        border: compact
-            ? null
-            : Border.all(
-                color: scheme.outlineVariant
-                    .withValues(alpha: isDark ? 0.22 : 0.18),
-              ),
-        boxShadow: compact
-            ? const []
-            : [
-                BoxShadow(
-                  color:
-                      theme.shadowColor.withValues(alpha: isDark ? 0.06 : 0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.control + 2),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: compact ? 34 : 0,
-          minHeight: compact ? 34 : 0,
-        ),
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 7 : 14,
-            vertical: compact ? 7 : 10,
+            horizontal: compact ? 12 : 14,
+            vertical: compact ? 12 : 10,
           ),
           child: compact
               ? Icon(
                   icon,
-                  size: 17,
+                  size: 20,
                   color: iconColor,
                 )
               : Row(

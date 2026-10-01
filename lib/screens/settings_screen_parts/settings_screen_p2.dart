@@ -18,7 +18,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           trailing: Switch(
             value: configProvider.enableAnalytics,
             onChanged: configProvider.setEnableAnalytics,
-            activeThumbColor: AppColorUtils.indigoAccent,
+            activeThumbColor: KubusColorRoles.of(context).active,
           ),
         ),
         _buildSettingsTile(
@@ -28,7 +28,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           trailing: Switch(
             value: configProvider.enableCrashReporting,
             onChanged: configProvider.setEnableCrashReporting,
-            activeThumbColor: AppColorUtils.indigoAccent,
+            activeThumbColor: KubusColorRoles.of(context).active,
           ),
         ),
         _buildSettingsTile(
@@ -43,7 +43,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               });
               _saveAllSettings();
             },
-            activeThumbColor: AppColorUtils.indigoAccent,
+            activeThumbColor: KubusColorRoles.of(context).active,
           ),
         ),
         _buildSettingsTile(
@@ -59,7 +59,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           onTap: () => _showResetPermissionFlagsDialog(),
         ),
       ],
-      sectionColor: AppColorUtils.indigoAccent,
     );
   }
 
@@ -155,25 +154,22 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     );
   }
 
+  /// Flat settings surface: settings are ordinary product UI, never glass.
   Widget _buildSettingsPanel({
     required Widget child,
     EdgeInsetsGeometry padding = const EdgeInsets.all(KubusSpacing.md),
     BorderRadius? borderRadius,
     Color? tintBase,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: tintBase ?? scheme.surface,
-    );
-    return LiquidGlassPanel(
+    final roles = KubusColorRoles.of(context);
+    return Container(
       padding: padding,
-      margin: EdgeInsets.zero,
-      borderRadius: borderRadius ?? BorderRadius.circular(KubusRadius.md),
-      blurSigma: style.blurSigma,
-      backgroundColor: style.tintColor,
-      fallbackMinOpacity: style.fallbackMinOpacity,
+      decoration: BoxDecoration(
+        color: tintBase ?? roles.surface,
+        borderRadius:
+            borderRadius ?? BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+      ),
       child: child,
     );
   }
@@ -187,15 +183,13 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     bool isDestructive = false,
     Key? tileKey,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final tintBase = isDestructive
-        ? Color.lerp(scheme.surface, scheme.errorContainer, 0.32)
-        : scheme.surface;
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final tint = roles.surface;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
       child: _buildSettingsPanel(
-        tintBase: tintBase,
+        tintBase: tint,
         padding: EdgeInsets.zero,
         child: SharedSettingsRowTile(
           tileKey: tileKey,
@@ -206,21 +200,19 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           trailing: trailing,
           isDestructive: isDestructive,
           showChevron: trailing == null,
-          backgroundColor: tintBase,
-          borderColor: isDestructive
-              ? Colors.red.withValues(alpha: 0.3)
-              : scheme.outline,
+          backgroundColor: tint,
+          borderColor: Colors.transparent,
           leadingBackgroundColor: Colors.transparent,
           leadingBorderColor: Colors.transparent,
-          leadingIconColor: isDestructive ? Colors.red : accentColor,
-          titleStyle: KubusTypography.inter(
-            fontSize: 16,
+          leadingIconColor:
+              isDestructive ? roles.destructive : roles.foregroundMuted,
+          titleStyle: textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
-            color: isDestructive ? Colors.red : scheme.onSurface,
+            color: isDestructive ? roles.destructive : roles.foreground,
           ),
-          subtitleStyle: KubusTypography.inter(
-            fontSize: 14,
-            color: scheme.onSurface.withValues(alpha: 0.6),
+          subtitleStyle: textTheme.bodySmall?.copyWith(
+            color: roles.foregroundMuted,
+            height: 1.35,
           ),
         ),
       ),

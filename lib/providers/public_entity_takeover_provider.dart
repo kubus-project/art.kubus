@@ -22,10 +22,85 @@ class PublicEntityTakeoverTarget {
 
 class PublicEntityTakeoverProvider extends ChangeNotifier {
   PublicEntityTakeoverTarget? _target;
+  Map<String, dynamic>? _bootstrap;
   bool _readyDispatched = false;
 
   PublicEntityTakeoverTarget? get target => _target;
   bool get isReady => _readyDispatched;
+  Map<String, dynamic>? get bootstrap => _bootstrap;
+
+  bool _supportsBootstrapVersion(dynamic version) =>
+      version == 1 || version == 2;
+
+  /// True only while this provider's seeded identity still owns the current
+  /// canonical pathname. Screens use this to select the public first-frame
+  /// composition on compact routes that do not use the desktop shell scope.
+  bool matchesCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    final current = _target;
+    return current != null &&
+        current.type == type &&
+        current.id == id.trim() &&
+        current.path == pathname;
+  }
+
+  /// Returns the normalized public presentation only while its exact seeded
+  /// canonical route still owns the current screen. Callers should use this
+  /// for first-frame public fields, not as a replacement for entity loading.
+  Map<String, dynamic>? publicPresentationForCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    if (!matchesCanonicalPath(type: type, id: id, pathname: pathname)) {
+      return null;
+    }
+
+    final raw = _bootstrap;
+    if (raw == null || !_supportsBootstrapVersion(raw['version'])) return null;
+    final identity = _asStringMap(raw['identity']);
+    final presentation = _asStringMap(raw['presentation']);
+    final current = _target;
+    if (identity == null || presentation == null || current == null) {
+      return null;
+    }
+    final identityMatches = identity['type'] == current.type &&
+        identity['id'] == current.id &&
+        identity['canonicalPath'] == current.path;
+    final presentationMatches = presentation['version'] == raw['version'] &&
+        presentation['type'] == current.type &&
+        presentation['id'] == current.id &&
+        presentation['canonicalPath'] == current.path;
+    final expiresAt = DateTime.tryParse('${raw['expiresAt'] ?? ''}')?.toUtc();
+    if (!identityMatches ||
+        !presentationMatches ||
+        expiresAt == null ||
+        !DateTime.now().toUtc().isBefore(expiresAt)) {
+      return null;
+    }
+    return Map<String, dynamic>.unmodifiable(presentation);
+  }
+
+  /// The normalized place label is public profile context used by SSR and the
+  /// Flutter first frame. Do not infer it from profile bio or account fields.
+  String? publicPlaceLabelForCanonicalPath({
+    required String type,
+    required String id,
+    required String pathname,
+  }) {
+    final presentation = publicPresentationForCanonicalPath(
+      type: type,
+      id: id,
+      pathname: pathname,
+    );
+    final place = _asStringMap(presentation?['place']);
+    final label = place?['label'];
+    if (label is! String || label.trim().isEmpty) return null;
+    return label.trim();
+  }
 
   void seed({required Uri initialUri, required ShareDeepLinkTarget target}) {
     if (!AppConfig.isFeatureEnabled('publicFlutterTakeover')) {
@@ -53,6 +128,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (_sameTarget(_target, next)) return;
 
     _target = next;
+    _bootstrap = null;
     _readyDispatched = false;
     dispatchPublicEntityRouteParsed(
       type: next.type,
@@ -60,6 +136,73 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       path: next.path,
     );
     notifyListeners();
+  }
+
+  /// Accepts only a fresh server payload for the exact canonical route being
+  /// opened. The payload contains public presentation fields, never account
+  /// state, and remains a cache seed while normal detail requests revalidate.
+  Map<String, dynamic>? validateBootstrap({
+    required Map<String, dynamic>? raw,
+    required Uri initialUri,
+    required ShareDeepLinkTarget target,
+    DateTime? now,
+  }) {
+    _bootstrap = null;
+    if (raw == null || initialUri.path != _target?.path) return null;
+    final identity = _asStringMap(raw['identity']);
+    final presentation = _asStringMap(raw['presentation']);
+    if (!_supportsBootstrapVersion(raw['version']) ||
+        identity == null ||
+        presentation == null) {
+      return null;
+    }
+    final type = _wireType(target.type);
+    final locale = target.localeCode;
+    final id = target.id.trim();
+    final path = _target?.path;
+    if (type == null || locale == null || path == null || id.isEmpty) {
+      return null;
+    }
+    if (identity['type'] != type ||
+        identity['id'] != id ||
+        identity['locale'] != locale ||
+        identity['canonicalPath'] != path ||
+        presentation['version'] != raw['version'] ||
+        presentation['type'] != type ||
+        presentation['id'] != id ||
+        presentation['locale'] != locale ||
+        presentation['canonicalPath'] != path ||
+        initialUri.path != path) {
+      return null;
+    }
+    final revision = raw['revision'];
+    if (revision is! String || !RegExp(r'^[a-f0-9]{64}$').hasMatch(revision)) {
+      return null;
+    }
+    final generatedAt = DateTime.tryParse(
+      '${raw['generatedAt'] ?? ''}',
+    )?.toUtc();
+    final expiresAt = DateTime.tryParse('${raw['expiresAt'] ?? ''}')?.toUtc();
+    final current = (now ?? DateTime.now()).toUtc();
+    if (generatedAt == null ||
+        expiresAt == null ||
+        !expiresAt.isAfter(generatedAt) ||
+        !current.isBefore(expiresAt) ||
+        generatedAt.isAfter(current.add(const Duration(minutes: 1)))) {
+      return null;
+    }
+    _bootstrap = Map<String, dynamic>.unmodifiable(<String, dynamic>{
+      ...raw,
+      'identity': Map<String, dynamic>.unmodifiable(identity),
+      'presentation': Map<String, dynamic>.unmodifiable(presentation),
+    });
+    return _bootstrap;
+  }
+
+  Map<String, dynamic>? _asStringMap(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
   }
 
   String? returnRouteForArtwork(String artworkId) {
@@ -80,10 +223,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return markEntityReady(ShareEntityType.artwork, artworkId);
   }
 
-  Future<void> markEntityReady(
-    ShareEntityType type,
-    String entityId,
-  ) {
+  Future<void> markEntityReady(ShareEntityType type, String entityId) {
     final current = _target;
     if (current == null ||
         current.type != _wireType(type) ||

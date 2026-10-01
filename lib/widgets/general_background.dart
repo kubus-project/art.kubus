@@ -3,6 +3,25 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
+
+/// Flat PRODUCT ground used by app shells and ordinary page backgrounds.
+///
+/// [AnimatedGradientBackground] remains available for explicit legacy or
+/// spatial contexts, but is no longer the default application backdrop.
+class KubusProductBackground extends StatelessWidget {
+  const KubusProductBackground({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: KubusColorRoles.of(context).ground,
+      child: child,
+    );
+  }
+}
 
 class GeneralBackground extends StatefulWidget {
   static const String lightMapAsset =
@@ -156,8 +175,7 @@ class _GeneralBackgroundState extends State<GeneralBackground>
             1.0 - (progress * 0.5),
           );
 
-          final paletteT =
-              Curves.easeInOut.transform(_paletteController.value);
+          final paletteT = Curves.easeInOut.transform(_paletteController.value);
           final basePalette =
               _lerpColorLists(_paletteFrom, _paletteTo, paletteT);
           final effectivePalette = _applyHueShift(

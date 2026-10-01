@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../widgets/inline_loading.dart';
-import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
@@ -19,9 +17,7 @@ import '../../../features/web3/web3_capabilities.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/marketplace_value_formatter.dart';
-import '../../../utils/rarity_ui.dart';
 import '../../../utils/wallet_action_guard.dart';
-import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
@@ -31,6 +27,11 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/marketplace/marketplace_listing_card.dart';
+import '../../../widgets/states/kubus_product_states.dart';
+import '../../../widgets/common/kubus_cached_image.dart';
+import '../../../widgets/kubus_button.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -114,7 +115,7 @@ class _MarketplaceState extends State<Marketplace>
             Flexible(
               child: Text(
                 l10n.navigationScreenMarketplace,
-                style: KubusTypography.inter(
+                style: KubusTypography.content(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -176,7 +177,6 @@ class _MarketplaceState extends State<Marketplace>
 
   void _showSettings() {
     final l10n = AppLocalizations.of(context)!;
-    final themeProvider = context.read<ThemeProvider>();
     final web3Provider = context.read<Web3Provider>();
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -188,7 +188,7 @@ class _MarketplaceState extends State<Marketplace>
             borderRadius: BorderRadius.circular(KubusRadius.lg)),
         title: Text(
           '${l10n.navigationScreenMarketplace} ${l10n.settingsTitle}',
-          style: KubusTypography.inter(
+          style: KubusTypography.content(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: colorScheme.onSurface,
@@ -204,10 +204,10 @@ class _MarketplaceState extends State<Marketplace>
                   setState(() => _showArOnly = value);
                   setDialogState(() {});
                 },
-                activeThumbColor: themeProvider.accentColor,
+                activeThumbColor: KubusColorRoles.of(context).active,
                 title: Text(
                   l10n.marketplaceSettingsShowArOnlyTitle,
-                  style: KubusTypography.inter(
+                  style: KubusTypography.content(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
@@ -215,7 +215,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 subtitle: Text(
                   l10n.marketplaceSettingsShowArOnlyDescription,
-                  style: KubusTypography.inter(
+                  style: KubusTypography.content(
                     fontSize: 11,
                     color: colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -232,7 +232,7 @@ class _MarketplaceState extends State<Marketplace>
                     child: Text(
                       AppLocalizations.of(context)!
                           .marketplaceNetworkLabel(web3Provider.currentNetwork),
-                      style: KubusTypography.inter(
+                      style: KubusTypography.content(
                         fontSize: 12,
                         color: colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
@@ -253,7 +253,7 @@ class _MarketplaceState extends State<Marketplace>
                       child: Text(
                         AppLocalizations.of(context)!
                             .marketplaceWalletLabel(web3Provider.walletAddress),
-                        style: KubusTypography.inter(
+                        style: KubusTypography.content(
                           fontSize: 12,
                           color: colorScheme.onSurface.withValues(alpha: 0.8),
                         ),
@@ -271,7 +271,9 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               AppLocalizations.of(context)!.commonClose,
-              style: KubusTypography.inter(color: themeProvider.accentColor),
+              style: KubusTypography.content(
+                color: KubusColorRoles.of(context).foreground,
+              ),
             ),
           ),
         ],
@@ -281,168 +283,38 @@ class _MarketplaceState extends State<Marketplace>
 
   Widget _buildMarketplaceHeader() {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final labsFeature = KubusLabsFeature.marketplace;
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            roles.web3MarketplaceAccent,
-            roles.web3MarketplaceAccent.withValues(alpha: 0.8),
-          ],
+    return KubusDashboardHeader(
+      notion: l10n.dashboardNotionInfrastructure,
+      title: l10n.navigationScreenMarketplace,
+      lede: l10n.homeWeb3MarketplaceSubtitle,
+      actions: const [
+        KubusLabsAdornment.inlinePill(
+          feature: KubusLabsFeature.marketplace,
+          emphasized: true,
         ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.2),
-              borderRadius:
-                  BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
-            ),
-            child: Icon(
-              labsFeature.screenIcon,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: KubusSpacing.sm,
-                  runSpacing: KubusSpacing.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      l10n.navigationScreenMarketplace,
-                      style: KubusTypography.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const KubusLabsAdornment.inlinePill(
-                      feature: KubusLabsFeature.marketplace,
-                      emphasized: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.homeWeb3MarketplaceSubtitle,
-                  style: KubusTypography.inter(
-                    fontSize: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.8),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget _buildNavigationTabs() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildTabButton(
-              AppLocalizations.of(context)!.marketplaceFeaturedTab,
-              Icons.star,
-              0,
-            ),
-          ),
-          Expanded(
-            child: _buildTabButton(
-              AppLocalizations.of(context)!.marketplaceTrendingTab,
-              Icons.trending_up,
-              1,
-            ),
-          ),
-          Expanded(
-            child: _buildTabButton(
-              AppLocalizations.of(context)!.marketplaceMyListingsTab,
-              Icons.account_balance_wallet,
-              2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String label, IconData icon, int index) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: isSelected ? themeProvider.accentColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
+    final l10n = AppLocalizations.of(context)!;
+    return KubusDashboardTabs(
+      selectedIndex: _selectedIndex,
+      onSelected: (index) => setState(() => _selectedIndex = index),
+      tabs: [
+        KubusDashboardTab(
+          label: l10n.marketplaceFeaturedTab,
+          icon: Icons.star_outline,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-              size: 20,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: KubusTypography.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+        KubusDashboardTab(
+          label: l10n.marketplaceTrendingTab,
+          icon: Icons.trending_up,
         ),
-      ),
+        KubusDashboardTab(
+          label: l10n.marketplaceMyListingsTab,
+          icon: Icons.inventory_2_outlined,
+        ),
+      ],
     );
   }
 
@@ -470,7 +342,14 @@ class _MarketplaceState extends State<Marketplace>
               ),
               const SizedBox(height: KubusSpacing.lg),
               if (collectiblesProvider.isLoading)
-                const AppLoading()
+                const KubusSectionLoading(rows: 3, rowHeight: 180)
+              else if (collectiblesProvider.error != null &&
+                  featuredEntries.isEmpty)
+                KubusStateView.fromError(
+                  collectiblesProvider.error,
+                  compact: true,
+                  onRetry: () => collectiblesProvider.initialize(),
+                )
               else if (featuredEntries.isEmpty)
                 _buildMarketplaceEmptyState(
                   icon: Icons.storefront_outlined,
@@ -511,7 +390,13 @@ class _MarketplaceState extends State<Marketplace>
                 trailing: _buildFilterPill(),
               ),
               const SizedBox(height: KubusSpacing.lg),
-              if (trendingEntries.isEmpty)
+              if (collectiblesProvider.error != null && trendingEntries.isEmpty)
+                KubusStateView.fromError(
+                  collectiblesProvider.error,
+                  compact: true,
+                  onRetry: () => collectiblesProvider.initialize(),
+                )
+              else if (trendingEntries.isEmpty)
                 _buildMarketplaceEmptyState(
                   icon: Icons.trending_up,
                   title: l10n.marketplaceNoTrendingNftsTitle,
@@ -571,19 +456,17 @@ class _MarketplaceState extends State<Marketplace>
 
   Widget _buildFilterPill() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final accent = KubusColorRoles.of(context).web3MarketplaceAccent;
+    final roles = KubusColorRoles.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm,
         vertical: KubusSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: (_showArOnly ? accent : scheme.surfaceContainerHighest)
-            .withValues(alpha: _showArOnly ? 0.18 : 0.74),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
+        color: _showArOnly ? roles.surfaceRaised : roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.control),
         border: Border.all(
-          color: (_showArOnly ? accent : scheme.outline).withValues(alpha: 0.4),
+          color: _showArOnly ? roles.ruleStrong : roles.rule,
         ),
       ),
       child: Row(
@@ -592,7 +475,7 @@ class _MarketplaceState extends State<Marketplace>
           Icon(
             _showArOnly ? Icons.view_in_ar : Icons.filter_alt_outlined,
             size: 14,
-            color: _showArOnly ? accent : scheme.onSurfaceVariant,
+            color: roles.foregroundMuted,
           ),
           const SizedBox(width: KubusSpacing.xs),
           Text(
@@ -600,7 +483,7 @@ class _MarketplaceState extends State<Marketplace>
                 ? l10n.marketplaceArOnlyFilterActiveLabel
                 : l10n.marketplaceArOnlyFilterInactiveLabel,
             style: KubusTextStyles.compactBadge.copyWith(
-              color: _showArOnly ? accent : scheme.onSurfaceVariant,
+              color: roles.foreground,
             ),
           ),
         ],
@@ -684,52 +567,30 @@ class _MarketplaceState extends State<Marketplace>
             children: [
               if (capabilities.hasAccount &&
                   capabilities.hasWalletIdentity &&
-                  !capabilities.signerReady)
-                Container(
-                  margin: const EdgeInsets.only(bottom: KubusSpacing.md),
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          AppLocalizations.of(context)!
-                              .walletReconnectManualRequiredToast,
-                          style: KubusTypography.inter(
-                            fontSize: 13,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      ElevatedButton(
-                        onPressed: () async {
-                          await WalletActionGuard.ensureSignerAccess(
-                            context: context,
-                            profileProvider: profileProvider,
-                            walletProvider: walletProvider,
-                            returnRoute: '/marketplace',
-                          );
-                        },
-                        child:
-                            Text(AppLocalizations.of(context)!.commonReconnect),
-                      ),
-                    ],
-                  ),
+                  !capabilities.signerReady) ...[
+                KubusNoticeBanner(
+                  margin: EdgeInsets.zero,
+                  icon: Icons.link_off,
+                  title: l10n.walletReadOnlyStatus,
+                  message: AppLocalizations.of(context)!
+                      .walletReconnectManualRequiredToast,
                 ),
+                const SizedBox(height: KubusSpacing.sm),
+                KubusButton(
+                  onPressed: () async {
+                    await WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: profileProvider,
+                      walletProvider: walletProvider,
+                      returnRoute: '/marketplace',
+                    );
+                  },
+                  icon: Icons.link,
+                  label: AppLocalizations.of(context)!.commonReconnect,
+                  variant: KubusButtonVariant.secondary,
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ],
               // Listed for sale section
               if (myCollectiblesForSale.isNotEmpty) ...[
                 _MarketplaceSectionHeader(
@@ -739,7 +600,7 @@ class _MarketplaceState extends State<Marketplace>
                     label: l10n.marketplaceMyCollectionCount(
                       myCollectiblesForSale.length,
                     ),
-                    accent: KubusColorRoles.of(context).warningAction,
+                    accent: KubusColorRoles.of(context).foregroundMuted,
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
@@ -774,7 +635,7 @@ class _MarketplaceState extends State<Marketplace>
                   label: l10n.marketplaceMyCollectionCount(
                     myCollectibles.length,
                   ),
-                  accent: KubusColorRoles.of(context).web3MarketplaceAccent,
+                  accent: KubusColorRoles.of(context).foregroundMuted,
                 ),
               ),
               const SizedBox(height: KubusSpacing.md),
@@ -815,14 +676,15 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
+  /// An edition the viewer owns. Cultural identity first (image, artwork,
+  /// token number), then the economic state: this edition's listing price
+  /// when it is for sale, otherwise its reference value, and an explicit
+  /// List / Remove action when the wallet may perform it (44 px targets).
   Widget _buildCollectibleCard(
       Collectible collectible, MarketplaceArtworkEntry entry,
       {bool isForSale = false}) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final series = entry.series;
-    final coverUrl = entry.coverUrl;
     final collectiblesProvider =
         Provider.of<CollectiblesProvider>(context, listen: false);
     final value =
@@ -836,265 +698,122 @@ class _MarketplaceState extends State<Marketplace>
         entityIsListed: collectible.isForSale,
       ),
     );
+    final tokenLabel = l10n.marketplaceTokenNumberLabel(collectible.tokenId);
+    final hasAmount = value?.hasAmount ?? false;
+
     return Semantics(
-        button: true,
-        label: l10n.marketplaceOpenCollectibleDetailsSemantic(
-          entry.title,
-          collectible.tokenId,
+      button: true,
+      label: l10n.marketplaceOpenCollectibleDetailsSemantic(
+        entry.title,
+        collectible.tokenId,
+      ),
+      child: Material(
+        color: roles.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          side: BorderSide(color: roles.rule),
         ),
-        child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              onTap: () => _showCollectibleDetails(collectible, entry),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  border: Border.all(
-                    color: isForSale
-                        ? roles.warningAction
-                        : scheme.outline.withValues(alpha: 0.36),
-                    width: isForSale ? 2 : 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _showCollectibleDetails(collectible, entry),
+          focusColor: roles.focus.withValues(alpha: 0.12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: _getSeriesGradientColors(series?.rarity),
-                          ),
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(KubusRadius.lg)),
-                        ),
-                        child: Stack(
-                          children: [
-                            // NFT image
-                            if (coverUrl != null)
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(KubusRadius.lg)),
-                                child: Image.network(
-                                  coverUrl,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      _buildDefaultSeriesIcon(entry),
-                                ),
-                              )
-                            else
-                              _buildDefaultSeriesIcon(entry),
-
-                            // For sale badge
-                            if (isForSale)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: roles.warningAction,
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                  ),
-                                  child: Text(
-                                    l10n.commonForSale,
-                                    style:
-                                        KubusTextStyles.compactBadge.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Token ID
-                            Positioned(
-                              bottom: 8,
-                              left: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surface
-                                      .withValues(alpha: 0.86),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.sm),
-                                ),
-                                child: Text(
-                                  l10n.marketplaceTokenNumberLabel(
-                                    collectible.tokenId,
-                                  ),
-                                  style: KubusTextStyles.compactBadge.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                    ColoredBox(color: roles.surfaceRaised),
+                    if ((entry.coverUrl ?? '').trim().isNotEmpty)
+                      KubusCachedImage(
+                        imageUrl: entry.coverUrl,
+                        semanticLabel: entry.title,
+                      )
+                    else
+                      Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 32,
+                          color: roles.foregroundSubtle,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${entry.title} ${l10n.marketplaceTokenNumberLabel(collectible.tokenId)}',
-                              style: KubusTextStyles.detailCardTitle.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: scheme.onSurface,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _statusLabel(collectible.status, l10n),
-                              style: KubusTextStyles.detailCaption.copyWith(
-                                fontSize: 12,
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Price or status
-                            if (isForSale &&
-                                collectible.currentListingPrice != null)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          l10n.marketplaceListedForLabel,
-                                          style: KubusTextStyles.detailCaption
-                                              .copyWith(
-                                            fontSize: 11,
-                                            color: scheme.onSurface
-                                                .withValues(alpha: 0.58),
-                                          ),
-                                        ),
-                                        Text(
-                                          MarketplaceValueFormatter
-                                              .formatDisplayValue(
-                                            value,
-                                            fallback:
-                                                '${collectible.currentListingPrice} KUB8',
-                                          ),
-                                          style: KubusTextStyles.detailLabel
-                                              .copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: roles.warningAction,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (capabilities.canUnlistEdition)
-                                    IconButton(
-                                      onPressed: () =>
-                                          _removeFromSale(collectible),
-                                      tooltip:
-                                          l10n.marketplaceRemoveFromSaleTooltip,
-                                      icon: Icon(
-                                        Icons.remove_circle,
-                                        color: roles.negativeAction,
-                                        size: 16,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                ],
-                              )
-                            else
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _displayValueLabel(
-                                            value,
-                                            l10n,
-                                            fallback:
-                                                l10n.marketplaceOwnedLabel,
-                                          ),
-                                          style: KubusTextStyles.detailCaption
-                                              .copyWith(
-                                            fontSize: 11,
-                                            color: AppColorUtils.amberAccent,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        Text(
-                                          _displayValueText(value, l10n),
-                                          style: KubusTextStyles.detailLabel
-                                              .copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: scheme.onSurface,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (capabilities.canListEdition)
-                                    IconButton(
-                                      onPressed: () => _listForSale(
-                                          collectible, entry.title),
-                                      tooltip:
-                                          l10n.marketplaceListForSaleTooltip,
-                                      icon: Icon(
-                                        Icons.sell,
-                                        color: roles.warningAction,
-                                        size: 16,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
-            )));
+              Padding(
+                padding:
+                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
+                        color: roles.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      tokenLabel,
+                      style: KubusTextStyles.machineValue.copyWith(
+                        color: roles.foregroundMuted,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    KubusStatusText(
+                      label: isForSale || collectible.isForSale
+                          ? l10n.commonForSale
+                          : _statusLabel(collectible.status, l10n),
+                      tone: isForSale || collectible.isForSale
+                          ? KubusStatusTone.positive
+                          : KubusStatusTone.neutral,
+                    ),
+                    if (hasAmount) ...[
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        _displayValueLabel(value, l10n),
+                        style: KubusTextStyles.detailCaption.copyWith(
+                          color: roles.foregroundMuted,
+                        ),
+                      ),
+                      Text(
+                        _displayValueText(value, l10n),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.detailLabel.copyWith(
+                          color: roles.foreground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                    if (capabilities.canUnlistEdition ||
+                        capabilities.canListEdition) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      KubusButton(
+                        isFullWidth: true,
+                        onPressed: capabilities.canUnlistEdition
+                            ? () => _removeFromSale(collectible)
+                            : () => _listForSale(collectible, entry.title),
+                        label: capabilities.canUnlistEdition
+                            ? l10n.marketplaceRemoveFromSaleTitle
+                            : l10n.marketplaceListNftForSaleTitle,
+                        variant: capabilities.canUnlistEdition
+                            ? KubusButtonVariant.quiet
+                            : KubusButtonVariant.secondary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showCollectibleDetails(
@@ -1200,7 +919,7 @@ class _MarketplaceState extends State<Marketplace>
                                 const SizedBox(height: 4),
                                 Text(
                                   entry.value.toString(),
-                                  style: KubusTypography.inter(
+                                  style: KubusTypography.content(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: scheme.onSurface,
@@ -1450,11 +1169,11 @@ class _MarketplaceState extends State<Marketplace>
                 const SizedBox(height: KubusSpacing.md),
                 TextField(
                   controller: priceController,
-                  style: KubusTypography.inter(color: scheme.onSurface),
+                  style: KubusTypography.content(color: scheme.onSurface),
                   decoration: InputDecoration(
                     labelText: l10n.marketplacePriceKub8Label,
                     errorText: errorText,
-                    labelStyle: KubusTypography.inter(
+                    labelStyle: KubusTypography.content(
                       color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                     enabledBorder: OutlineInputBorder(
@@ -1490,7 +1209,7 @@ class _MarketplaceState extends State<Marketplace>
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
                   l10n.commonCancel,
-                  style: KubusTypography.inter(
+                  style: KubusTypography.content(
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -1511,7 +1230,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 child: Text(
                   l10n.marketplaceListForSaleButton,
-                  style: KubusTypography.inter(
+                  style: KubusTypography.content(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1601,14 +1320,14 @@ class _MarketplaceState extends State<Marketplace>
         ),
         title: Text(
           l10n.marketplaceRemoveFromSaleTitle,
-          style: KubusTypography.inter(
+          style: KubusTypography.content(
             color: scheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.marketplaceRemoveFromSaleConfirmBody,
-          style: KubusTypography.inter(
+          style: KubusTypography.content(
             color: scheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
@@ -1617,7 +1336,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               l10n.commonCancel,
-              style: KubusTypography.inter(
+              style: KubusTypography.content(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
@@ -1655,7 +1374,7 @@ class _MarketplaceState extends State<Marketplace>
             ),
             child: Text(
               l10n.commonRemove,
-              style: KubusTypography.inter(
+              style: KubusTypography.content(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1666,347 +1385,10 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildMarketplaceEntryCard(MarketplaceArtworkEntry entry) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final series = entry.series;
-    final progress = entry.mintProgress ?? 0;
-    final progressPercentage = (progress * 100).toInt();
-    final isNearSoldOut = progress > 0.8;
-    final hasARFeature = entry.requiresArInteraction;
-    final value = entry.displayValue;
-
-    return Semantics(
-        button: true,
-        label: l10n.marketplaceOpenSeriesDetailsSemantic(entry.title),
-        child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              onTap: () => _showNFTSeriesDetails(entry),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  border: Border.all(
-                    color: hasARFeature
-                        ? AppColorUtils.tealAccent
-                        : scheme.outline.withValues(alpha: 0.36),
-                    width: hasARFeature ? 2 : 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: _getSeriesGradientColors(entry.rarity),
-                          ),
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(KubusRadius.lg)),
-                        ),
-                        child: Stack(
-                          children: [
-                            if (entry.coverUrl != null)
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(KubusRadius.lg)),
-                                child: Image.network(
-                                  entry.coverUrl!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      _buildDefaultSeriesIcon(entry),
-                                ),
-                              )
-                            else
-                              _buildDefaultSeriesIcon(entry),
-                            if (hasARFeature)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColorUtils.tealAccent,
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.view_in_ar,
-                                        size: 12,
-                                        color: scheme.onSurface,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        l10n.marketplaceArBadgeLabel,
-                                        style: KubusTextStyles.compactBadge
-                                            .copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: scheme.onSurface,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            if (entry.isSoldOut)
-                              Positioned(
-                                top: 8,
-                                left: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: KubusColorRoles.of(context)
-                                        .negativeAction,
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                  ),
-                                  child: Text(
-                                    l10n.marketplaceSoldOutBadgeLabel,
-                                    style:
-                                        KubusTextStyles.compactBadge.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            if (entry.rarity != null)
-                              Positioned(
-                                bottom: 8,
-                                left: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        scheme.surface.withValues(alpha: 0.86),
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.sm),
-                                  ),
-                                  child: Text(
-                                    _rarityLabel(entry.rarity, l10n),
-                                    style:
-                                        KubusTextStyles.compactBadge.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: RarityUi.collectibleColor(
-                                          context, entry.rarity!),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              entry.title,
-                              style: KubusTextStyles.detailCardTitle.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: scheme.onSurface,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              l10n.commonByArtist(entry.artistName),
-                              style: KubusTextStyles.detailCaption.copyWith(
-                                fontSize: 12,
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            if (series != null) ...[
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          '${entry.mintedCount}/${entry.totalSupply}',
-                                          style: KubusTextStyles.detailCaption
-                                              .copyWith(
-                                            fontSize: 11,
-                                            color: scheme.onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$progressPercentage%',
-                                        style: KubusTextStyles.detailCaption
-                                            .copyWith(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: isNearSoldOut
-                                              ? KubusColorRoles.of(context)
-                                                  .warningAction
-                                              : KubusColorRoles.of(context)
-                                                  .web3MarketplaceAccent,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 1),
-                                  SizedBox(
-                                    height: 8,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: InlineLoading(
-                                        tileSize: 3.0,
-                                        progress: progress,
-                                        color: isNearSoldOut
-                                            ? KubusColorRoles.of(context)
-                                                .warningAction
-                                            : KubusColorRoles.of(context)
-                                                .web3MarketplaceAccent,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _displayValueLabel(
-                                          value,
-                                          l10n,
-                                          fallback: l10n.commonStatus,
-                                        ),
-                                        style: KubusTextStyles.detailCaption
-                                            .copyWith(
-                                          fontSize: 11,
-                                          color: scheme.onSurface
-                                              .withValues(alpha: 0.58),
-                                        ),
-                                      ),
-                                      Text(
-                                        _displayValueText(value, l10n),
-                                        style: KubusTextStyles.detailLabel
-                                            .copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: scheme.onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: entry.isListed
-                                        ? KubusColorRoles.of(context)
-                                            .warningAction
-                                        : (entry.isSoldOut
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.3)
-                                            : KubusColorRoles.of(context)
-                                                .web3MarketplaceAccent),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    entry.isListed
-                                        ? l10n.marketplaceCardActionListed
-                                        : l10n.marketplaceCardActionView,
-                                    style:
-                                        KubusTextStyles.compactBadge.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )));
-  }
-
-  Widget _buildDefaultSeriesIcon(MarketplaceArtworkEntry entry) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            entry.requiresArInteraction ? Icons.view_in_ar : Icons.collections,
-            size: 48,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            entry.title,
-            style: KubusTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+    return MarketplaceListingCard(
+      entry: entry,
+      onOpen: () => _showNFTSeriesDetails(entry),
     );
-  }
-
-  List<Color> _getSeriesGradientColors(CollectibleRarity? rarity) {
-    final base = rarity == null
-        ? KubusColorRoles.of(context).web3MarketplaceAccent
-        : RarityUi.collectibleColor(context, rarity);
-    return [
-      base.withValues(alpha: 0.22),
-      base.withValues(alpha: 0.5),
-    ];
   }
 
   void _showNFTSeriesDetails(MarketplaceArtworkEntry entry) {
@@ -2045,7 +1427,7 @@ class _MarketplaceState extends State<Marketplace>
                   const SizedBox(height: 16),
                   Text(
                     entry.title,
-                    style: KubusTypography.inter(
+                    style: KubusTypography.content(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2057,7 +1439,7 @@ class _MarketplaceState extends State<Marketplace>
                         ? l10n.marketplaceNftArtworkStatusArEnabled
                         : l10n.marketplaceNftArtworkStatus,
                     textAlign: TextAlign.center,
-                    style: KubusTypography.inter(
+                    style: KubusTypography.content(
                       fontSize: 14,
                       color: Theme.of(context)
                           .colorScheme
@@ -2076,7 +1458,7 @@ class _MarketplaceState extends State<Marketplace>
                   children: [
                     Text(
                       l10n.commonDescription,
-                      style: KubusTypography.inter(
+                      style: KubusTypography.content(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -2087,7 +1469,7 @@ class _MarketplaceState extends State<Marketplace>
                       series != null && series.description.isNotEmpty
                           ? series.description
                           : entry.artwork.description,
-                      style: KubusTypography.inter(
+                      style: KubusTypography.content(
                         fontSize: 14,
                         color: scheme.onSurface.withValues(alpha: 0.78),
                         height: 1.5,
@@ -2200,8 +1582,7 @@ class _MarketplaceState extends State<Marketplace>
       icon: icon,
       layout: KubusStatCardLayout.centered,
       showIcon: icon != null,
-      accent: scheme.secondary,
-      tintBase: scheme.surface,
+      accent: KubusColorRoles.of(context).web3MarketplaceAccent,
       minHeight: 88,
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       titleMaxLines: 2,

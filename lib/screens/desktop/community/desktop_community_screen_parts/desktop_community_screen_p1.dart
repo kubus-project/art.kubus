@@ -1163,15 +1163,10 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
 
   Widget _buildHeader(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final accent = themeProvider.accentColor;
-    final headerStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.header,
-      tintBase: accent,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg + KubusRadius.xs);
+    final roles = KubusColorRoles.of(context);
 
+    // Flat screen header on the page ground (no tinted glass card, gradient
+    // or decorative icon tile); search stays beside the title.
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         KubusSpacing.md,
@@ -1181,73 +1176,36 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
       ),
       child: Column(
         children: [
-          LiquidGlassCard(
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
-            borderRadius: radius,
-            blurSigma: headerStyle.blurSigma,
-            fallbackMinOpacity: headerStyle.fallbackMinOpacity,
-            showBorder: false,
-            backgroundColor: headerStyle.tintColor,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.20),
-                  width: KubusSizes.hairline,
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    accent.withValues(alpha: 0.16),
-                    accent.withValues(alpha: 0.06),
-                  ],
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                child: Row(
-                  children: [
-                    Container(
-                      width: KubusSpacing.xxl + KubusSpacing.sm,
-                      height: KubusSpacing.xxl + KubusSpacing.sm,
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
-                      ),
-                      child: Icon(
-                        Icons.groups_2_outlined,
-                        color: accent,
-                        size: KubusHeaderMetrics.actionIcon + KubusSpacing.xs,
-                      ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: KubusHeaderText(
+                    title: l10n.navigationScreenCommunity,
+                    subtitle: l10n.desktopCommunityHeaderSubtitle,
+                    titleStyle: KubusTextStyles.heroTitle.copyWith(
+                      color: roles.foreground,
+                      letterSpacing: -0.5,
                     ),
-                    const SizedBox(width: KubusSpacing.md),
-                    Expanded(
-                      child: KubusHeaderText(
-                        title: l10n.navigationScreenCommunity,
-                        subtitle: l10n.desktopCommunityHeaderSubtitle,
-                        titleStyle: KubusTextStyles.heroTitle.copyWith(
-                          color: scheme.onSurface,
-                          letterSpacing: -0.5,
-                        ),
-                        subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.76),
-                        ),
-                        maxTitleLines: 1,
-                      ),
+                    subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                      color: roles.foregroundMuted,
                     ),
-                    const SizedBox(width: KubusSpacing.lg),
-                    CommunitySearchBar(
-                      controller: _communitySearchController,
-                      hintText: l10n.desktopCommunitySearchHint,
-                      semanticsLabel: 'desktop_community_search_input',
-                      onSubmitted: _handleSearchSubmit,
-                      width: 300,
-                    ),
-                  ],
+                    maxTitleLines: 1,
+                  ),
                 ),
-              ),
+                const SizedBox(width: KubusSpacing.lg),
+                CommunitySearchBar(
+                  controller: _communitySearchController,
+                  hintText: l10n.desktopCommunitySearchHint,
+                  semanticsLabel: 'desktop_community_search_input',
+                  onSubmitted: _handleSearchSubmit,
+                  width: 300,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: KubusSpacing.sm),

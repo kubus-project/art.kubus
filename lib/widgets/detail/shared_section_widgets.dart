@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../empty_state_card.dart';
 import '../glass_components.dart';
@@ -29,30 +30,23 @@ class SharedSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = iconColor ?? scheme.primary;
+    // Section icons are wayfinding, not decoration: a bare muted glyph
+    // aligned to the title, no tinted tile. [iconColor] stays available
+    // for callers that carry a real semantic state.
+    final iconTint = iconColor ?? KubusColorRoles.of(context).foregroundMuted;
 
     return Padding(
       padding: padding ??
           const EdgeInsets.symmetric(
               vertical: KubusSpacing.sm + KubusSpacing.xxs),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (icon != null) ...[
-            Container(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: accent,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-              ),
+            Icon(
+              icon,
+              color: iconTint,
+              size: KubusHeaderMetrics.actionIcon,
             ),
             const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           ],

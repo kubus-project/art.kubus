@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/locale_provider.dart';
-import '../../../widgets/glass_components.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 
 class DesktopAuthShell extends StatelessWidget {
@@ -15,8 +15,6 @@ class DesktopAuthShell extends StatelessWidget {
   final Widget? footer;
   final List<String> highlights;
   final Widget? icon;
-  final Color? gradientStart;
-  final Color? gradientEnd;
   final bool showHeaderControls;
 
   const DesktopAuthShell({
@@ -27,49 +25,16 @@ class DesktopAuthShell extends StatelessWidget {
     this.footer,
     this.highlights = const [],
     this.icon,
-    this.gradientStart,
-    this.gradientEnd,
     this.showHeaderControls = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final fallbackStart = Theme.of(context).colorScheme.primary;
-    final fallbackEnd = themeProvider.accentColor;
-    final baseStart = gradientStart ?? fallbackStart;
-    final baseEnd = gradientEnd ?? fallbackEnd;
+    final roles = KubusColorRoles.of(context);
 
-    final isDark = themeProvider.isDarkMode;
-
-    // Keep the auth background palette tied to the screen's icon/role colors
-    // on desktop (and everywhere else), including in dark mode.
-    final bgStart = baseStart.withValues(alpha: isDark ? 0.42 : 0.55);
-    final bgEnd = baseEnd.withValues(alpha: isDark ? 0.38 : 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
-        .withValues(alpha: isDark ? 0.40 : 0.52);
-
-    final basePalette = <Color>[bgStart, bgMid, bgEnd, bgStart];
-    final bgColors = isDark
-        ? List<Color>.generate(
-            basePalette.length,
-            (i) {
-              final darkBase = KubusGradients.authDark.colors;
-              final fallback = Colors.black.withValues(alpha: 0.55);
-              final d = (darkBase.isNotEmpty
-                      ? darkBase[i % darkBase.length]
-                      : fallback)
-                  .withValues(alpha: 0.55);
-              return Color.lerp(d, basePalette[i], 0.55) ?? basePalette[i];
-            },
-            growable: false,
-          )
-        : basePalette;
-
-    return AnimatedGradientBackground(
-      duration: const Duration(seconds: 12),
-      intensity: 0.24,
-      colors: bgColors,
+    // Flat page ground and flat surfaces: account entry is not a colour show.
+    return ColoredBox(
+      color: roles.ground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: showHeaderControls ? _buildHeaderAppBar(context) : null,
@@ -85,105 +50,113 @@ class DesktopAuthShell extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: LiquidGlassPanel(
-                          padding: const EdgeInsets.all(KubusSpacing.lg),
-                          borderRadius: BorderRadius.circular(KubusRadius.lg),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  if (icon != null) icon!,
-                                ],
-                              ),
-                              const SizedBox(height: KubusSpacing.lg),
-                              KubusHeaderText(
-                                title: title,
-                                subtitle: subtitle,
-                                kind: KubusHeaderKind.screen,
-                                titleStyle:
-                                    KubusTextStyles.screenTitle.copyWith(
-                                  fontWeight: FontWeight.w800,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: roles.surfaceRaised,
+                            borderRadius:
+                                BorderRadius.circular(KubusRadius.sheet),
+                            border: Border.all(
+                              color: roles.rule,
+                              width: KubusSizes.hairline,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(KubusSpacing.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (icon != null) icon!,
+                                  ],
                                 ),
-                                titleColor:
-                                    Theme.of(context).colorScheme.onSurface,
-                                subtitleColor: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
-                                maxTitleLines: 3,
-                              ),
-                              const SizedBox(height: KubusSpacing.lg),
-                              if (highlights.isNotEmpty)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: highlights
-                                      .map(
-                                        (item) => Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: KubusSpacing.sm +
-                                                KubusSpacing.xs,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 28,
-                                                height: 28,
-                                                decoration: BoxDecoration(
-                                                  color: themeProvider
-                                                      .accentColor
-                                                      .withValues(alpha: 0.18),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          KubusRadius.sm),
-                                                ),
-                                                child: Icon(
+                                const SizedBox(height: KubusSpacing.lg),
+                                KubusHeaderText(
+                                  title: title,
+                                  subtitle: subtitle,
+                                  kind: KubusHeaderKind.screen,
+                                  titleStyle:
+                                      KubusTextStyles.screenTitle.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  titleColor:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  subtitleColor: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
+                                  maxTitleLines: 3,
+                                ),
+                                const SizedBox(height: KubusSpacing.lg),
+                                if (highlights.isNotEmpty)
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: highlights
+                                        .map(
+                                          (item) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: KubusSpacing.sm +
+                                                  KubusSpacing.xs,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
                                                   Icons.check,
-                                                  color:
-                                                      themeProvider.accentColor,
+                                                  color: roles.success,
                                                   size: 18,
                                                 ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Text(
-                                                  item,
-                                                  style: KubusTextStyles
-                                                      .navLabel
-                                                      .copyWith(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurface,
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    item,
+                                                    style: KubusTextStyles
+                                                        .navLabel
+                                                        .copyWith(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurface,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                            ],
+                                        )
+                                        .toList(),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: KubusSpacing.lg),
                       Expanded(
-                        child: LiquidGlassPanel(
-                          padding: const EdgeInsets.all(KubusSpacing.lg),
-                          borderRadius: BorderRadius.circular(KubusRadius.lg),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              form,
-                              if (footer != null) ...[
-                                const SizedBox(height: KubusSpacing.md),
-                                footer!,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: roles.surfaceRaised,
+                            borderRadius:
+                                BorderRadius.circular(KubusRadius.sheet),
+                            border: Border.all(
+                              color: roles.rule,
+                              width: KubusSizes.hairline,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(KubusSpacing.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                form,
+                                if (footer != null) ...[
+                                  const SizedBox(height: KubusSpacing.md),
+                                  footer!,
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),

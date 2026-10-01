@@ -94,9 +94,22 @@
   },
   "recentActivityRecognitionRecordedTitle": "Recognition recorded",
   "recentActivityArchiveObjectUpdateTitle": "Digital edition update",
-  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",
+  "recentActivityRecognitionAmountDescription": "+{amount} recognition",
   "@recentActivityRecognitionAmountDescription": {
     "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityKub8AmountDescription": "+{amount} KUB8",
+  "@recentActivityKub8AmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityAchievementKub8Description": "{title} (+{amount} KUB8)",
+  "@recentActivityAchievementKub8Description": {
+    "placeholders": {
+      "title": {},
       "amount": {}
     }
   },
@@ -112,6 +125,20 @@
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
   "notificationRecognitionRecordedTitle": "Recognition recorded",
+  "notificationArtworkDiscoveredTitle": "Artwork discovered",
+  "notificationArtworkDiscoveredBody": "Discovered “{title}” by {artist}",
+  "@notificationArtworkDiscoveredBody": {
+    "placeholders": {
+      "title": {},
+      "artist": {}
+    }
+  },
+  "notificationArtworkDiscoveredTitleOnlyBody": "Discovered “{title}”",
+  "@notificationArtworkDiscoveredTitleOnlyBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "pushArchiveObjectCreatingTitle": "Creating digital edition...",
   "pushArchiveObjectCreatingBody": "Creating a digital edition of \"{artworkTitle}\"",
   "@pushArchiveObjectCreatingBody": {
@@ -139,8 +166,8 @@
   "pushRecognitionChannelDescription": "Notifications for contribution recognition",
   "analyticsMetricArchiveObjectsCreatedLabel": "Digital editions created",
   "analyticsMetricArchiveObjectsCreatedDescription": "Digital editions connected to artworks.",
-  "analyticsMetricKub8RecognitionLabel": "KUB8 recognition",
-  "analyticsMetricKub8RecognitionDescription": "KUB8 recorded through contribution recognition.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 from achievements",
+  "analyticsMetricKub8RecognitionDescription": "Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.",
   "analyticsPresetArtistSubtitle": "Artwork reach, community response, AR activity, and recognition.",
   "analyticsPresetInstitutionSubtitle": "Visitor reach, hosted programs, exhibitions, and recognition.",
   "analyticsExportNoDataToast": "No analytics data available to export.",
@@ -179,6 +206,7 @@
   "activationGateSaveArtworkTitle": "Save this artwork to your collection",
   "activationGateSaveEventTitle": "Save this event to your collection",
   "activationGateSaveExhibitionTitle": "Add this place to your collection",
+  "activationGateSaveCollectionTitle": "Save this collection for later",
   "activationGateSavePostTitle": "Save this post to your collection",
   "activationGateLikeArtworkTitle": "Like this artwork",
   "activationGateFollowTitle": "Follow this artist",
@@ -202,6 +230,7 @@
   "activationConfirmSaveArtwork": "Save this artwork?",
   "activationConfirmSaveEvent": "Save this event?",
   "activationConfirmSaveExhibition": "Save this place?",
+  "activationConfirmSaveCollection": "Save this collection?",
   "activationConfirmSavePost": "Save this post?",
   "activationConfirmLikeArtwork": "Like this artwork?",
   "activationConfirmFollow": "Follow this artist?",
@@ -802,7 +831,8 @@
   "desktopSettingsAchievementsStatArtworksDiscovered": "Artworks discovered",
   "desktopSettingsAchievementsStatArViews": "AR views",
   "desktopSettingsAchievementsStatEventsAttended": "Events attended",
-  "desktopSettingsAchievementsStatKub8PointsEarned": "Contribution recognition",
+  "achievementsStatKub8Earned": "KUB8 earned from achievements",
+  "achievementUnlockedLabel": "Unlocked",
   "desktopSettingsAchievementFirstDiscoveryTitle": "First discovery",
   "desktopSettingsAchievementFirstDiscoveryDescription": "Discover your first public artwork",
   "desktopSettingsAchievementArtCollectorTitle": "Art explorer",
@@ -836,6 +866,9 @@
   "desktopSettingsLegalSectionTitle": "Legal",
   "settingsNoWalletConnected": "No wallet connected",
   "settingsAppearanceSectionTitle": "Appearance",
+  "settingsReduceEffectsTitle": "Reduce effects",
+  "settingsReduceEffectsSubtitle": "Disable blur, animations and other effects",
+  "settingsReduceEffectsAutoSubtitle": "Automatically enabled for this device",
   "settingsThemeModeTitle": "Theme mode",
   "settingsThemeModeLight": "Light",
   "settingsThemeModeDark": "Dark",
@@ -995,6 +1028,9 @@
   "settingsResetPermissionFlagsTileTitle": "Reset permission flags",
   "settingsResetPermissionFlagsTileSubtitle": "Clear saved permission/service prompts",
   "settingsAboutSectionTitle": "About",
+  "settingsGroupAccount": "Account",
+  "settingsGroupExperience": "Experience",
+  "settingsGroupInfrastructure": "Infrastructure",
   "settingsAboutVersionTileTitle": "Version",
   "settingsAboutTermsTileTitle": "Terms of service",
   "settingsAboutTermsTileSubtitle": "Read our terms",
@@ -1231,6 +1267,12 @@
   "settingsEmailPreferencesCriticalWalletSecuritySubtitle": "Wallet and custody security alerts (always on)",
   "settingsEmailPreferencesTransactionalTitle": "Account emails",
   "settingsEmailPreferencesTransactionalSubtitle": "Transactional emails (verification, reset, and recovery) are always enabled",
+  "settingsEmailGroupMarketing": "Marketing",
+  "settingsEmailGroupActivity": "Activity",
+  "settingsEmailGroupEssential": "Essential",
+  "settingsEmailGroupEssentialNote": "Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.",
+  "settingsAppNotificationsSectionTitle": "App notifications",
+  "settingsAppNotificationsSectionSubtitle": "Push and in-app alerts on this device",
   "settingsEmailPreferencesUpdateFailedToast": "Could not update email preferences. Please try again.",
   "settingsInAppNotificationsMasterTitle": "All app notifications",
   "settingsInAppNotificationsMasterSubtitle": "Master switch for in-app and push notification categories.",
@@ -1887,8 +1929,8 @@
   "mapMarkerTypeStreetArt": "Street Art",
   "mapSortNearest": "Nearest",
   "mapSortNewest": "Newest",
-  "mapSortRarity": "Rarity",
   "mapSortHighestRewards": "Most recognition",
+  "mapSortRarity": "Rarity",
   "mapSortMostViewed": "Most viewed",
   "mapArReadyChipLabel": "AR ready",
   "mapAlreadyDiscoveredTooltip": "Already discovered",
@@ -1970,6 +2012,15 @@
   "arShareSuccessToast": "Artwork shared successfully!",
   "arShareFailedToast": "Share failed. Please try again.",
   "commonActions": "Actions",
+  "subjectActionsSocialHeading": "Social",
+  "subjectActionsSpatialHeading": "Place and movement",
+  "subjectActionsMoreHeading": "More actions",
+  "subjectActionsProvenanceHeading": "Provenance",
+  "subjectSpatialArchiveEmpty": "No spatial record yet.",
+  "artworkProvenanceImageCreator": "Image creator",
+  "artworkProvenanceLicense": "Image license",
+  "artworkProvenanceCredit": "Image credit",
+  "artworkProvenanceSource": "Image source",
   "commonCurrentlyOn": "Currently ON",
   "commonCurrentlyOff": "Currently OFF",
   "commonOk": "OK",
@@ -2016,8 +2067,11 @@
   "savedItemsMarkerLabel": "markers",
   "savedItemsLoadMoreButton": "Load more",
   "messagesTitle": "Messages",
+  "messagesAttachTooltip": "Attach a file",
+  "messagesPrivateNotion": "Private",
+  "messagesUnreadSemantic": "unread",
   "messagesEmptyNoConversationsTitle": "No conversations",
-  "messagesEmptyNoConversationsDescription": "Start a conversation using the chat button below.",
+  "messagesEmptyNoConversationsDescription": "Your private conversations with artists, institutions and other members appear here.",
   "messagesEmptyStartChatAction": "Start a chat",
   "messagesListHeaderTitle": "Conversations",
   "messagesListHeaderDescription": "Pick up direct chats and group threads with artists, collectors, and institutions.",
@@ -3752,6 +3806,10 @@
   "marketplaceNftArtworkStatusArEnabled": "Digital edition artwork - AR enabled",
   "marketplaceMintUnavailableLabel": "Edition creation unavailable",
   "marketplaceSoldOutLabel": "Sold out",
+  "marketplacePrimarySoldOutLabel": "Primary sold out",
+  "@marketplacePrimarySoldOutLabel": {
+    "description": "Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out."
+  },
   "marketplaceMintNftButtonLabel": "Create digital edition",
   "marketplaceArRequiredTitle": "Location visit required",
   "marketplaceArRequiredDescription": "This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.",
@@ -4041,6 +4099,18 @@
       "count": {}
     }
   },
+  "communityPostLikesCount": "{count, plural, =1{1 like} other{{count} likes}}",
+  "@communityPostLikesCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityPostRepostsCount": "{count, plural, =1{1 repost} other{{count} reposts}}",
+  "@communityPostRepostsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "commonDistanceKmAway": "{value} km away",
   "@commonDistanceKmAway": {
     "placeholders": {
@@ -4191,6 +4261,10 @@
   "communitySearchTypeInstitutions": "Institutions",
   "communitySearchTypeScreens": "Screens",
   "communitySearchTypePosts": "Posts",
+  "communitySearchTypeEvents": "Events",
+  "communitySearchTypeExhibitions": "Exhibitions",
+  "communitySearchTypePlaces": "Places",
+  "searchResultsSemanticLabel": "Search results",
   "communitySearchHintProfiles": "Search people…",
   "communitySearchHintArtworks": "Search artworks…",
   "communitySearchHintInstitutions": "Search institutions…",
@@ -4374,6 +4448,13 @@
   "downloadAppScanQrSubtitle": "Open this page on your phone to download the app.",
   "downloadAppContinueBrowsingButton": "Continue browsing",
   "homeDefaultDisplayName": "there",
+  "activityUnreadSemanticLabel": "Unread",
+  "homeIntroNotion": "Discover",
+  "homeIntroTitle": "Public art, places and culture around you",
+  "homeIntroLede": "Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.",
+  "homeIntroExploreMapAction": "Explore the map",
+  "homeIntroCommunityAction": "See community",
+  "homeGuestHeaderTitle": "Welcome",
   "homeWelcomeSubtitle": "Open art platform for discovery, artists, institutions, and community.",
   "homeExploreWeb3Button": "Wallet and Web3 access",
   "homeQuickActionsTitle": "Start Here",
@@ -4967,6 +5048,14 @@
   "navigationScreenDaoHub": "Community Governance",
   "navigationScreenArtistStudio": "Artist Studio",
   "navigationScreenInstitutionHub": "Institution Hub",
+  "mobileNavMap": "Map",
+  "mobileNavAr": "AR",
+  "mobileNavCommunity": "Community",
+  "mobileNavHome": "Home",
+  "mobileNavProfile": "Profile",
+  "mobileNavAccount": "Account",
+  "mobileNavSemanticLabel": "Main navigation",
+  "desktopNavWalletEntry": "Wallet",
   "daoHubAppBarTitle": "Community governance",
   "labsDaoSemanticLabel": "Community Governance",
   "labsMarketplaceSemanticLabel": "Digital Editions",
@@ -5198,6 +5287,10 @@
   "communityRepostWithCommentAction": "Repost with comment",
   "communityRepostWithCommentHint": "Add your thoughts (optional)",
   "communityRepostButtonLabel": "Repost",
+  "communityComposeAuthAction": "write a post",
+  "communityCreateGroupAuthAction": "create a group",
+  "communityPostActionLike": "Like",
+  "communityPostActionComment": "Comment",
   "communityRepostedToast": "Reposted",
   "communityRepostedWithCommentToast": "Reposted with comment",
   "desktopCommunityActiveCommunitiesTitle": "Active communities",
@@ -5373,6 +5466,8 @@
   "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
   "profileMenuSavedItemsTitle": "Saved items",
   "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
+  "savedItemsEmptyLibraryTitle": "Nothing saved yet",
+  "savedItemsLibraryNotion": "Your library",
   "savedItemsSummarySubtitleLastSaved": "Last saved {timestamp}",
   "@savedItemsSummarySubtitleLastSaved": {
     "placeholders": {
@@ -6859,5 +6954,208 @@
       }
     }
   },
-  "spatialUploadResume": "Resume upload"
+  "spatialUploadResume": "Resume upload",
+  "formShowPassword": "Show password",
+  "formHidePassword": "Hide password",
+  "formSelectDate": "Select a date",
+  "formSelectTime": "Select a time",
+  "formNoValueSelected": "Not set",
+  "formAddImage": "Add image",
+  "formFixHighlightedFields": "Some fields need attention. Check the messages below them.",
+  "stateNetworkTitle": "Couldn't reach art.kubus",
+  "stateNetworkDescription": "The request didn't finish. Check your connection and try again.",
+  "stateOfflineTitle": "You're offline",
+  "stateOfflineDescription": "This needs an internet connection. Reconnect, then try again.",
+  "stateServerTitle": "art.kubus is having trouble",
+  "stateServerDescription": "The service didn't respond properly. Nothing is wrong on your side; try again in a moment.",
+  "stateAuthTitle": "Sign in to continue",
+  "stateAuthDescription": "Your session has ended or you haven't signed in yet.",
+  "statePermissionTitle": "You don't have access",
+  "statePermissionDescription": "This is limited to its owner or to approved roles. Ask the owner if you need access.",
+  "stateNotFoundTitle": "Not found",
+  "stateNotFoundDescription": "It may have been removed or made private.",
+  "stateValidationTitle": "Some details need changes",
+  "stateValidationDescription": "The request wasn't accepted as sent. Review the details and try again.",
+  "stateRateLimitTitle": "Too many attempts",
+  "stateRateLimitDescription": "Wait a minute before trying again.",
+  "stateWalletTitle": "Wallet not ready",
+  "stateWalletDescription": "Reconnect your wallet or unlock it, then try again.",
+  "stateUnsupportedTitle": "Not available here",
+  "stateUnsupportedDescription": "This feature isn't supported on this device or in this version.",
+  "stateUnknownTitle": "Something went wrong",
+  "stateUnknownDescription": "We couldn't complete this. Try again.",
+  "stateLoadingMore": "Loading more",
+  "peopleRoleArtist": "Artist",
+  "peopleRoleInstitution": "Institution",
+  "peopleVerifiedLabel": "Verified",
+  "peopleFollowToggleSemantic": "Follow {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInboxIntro": "Accept an invitation to help manage an event, exhibition, artwork or collection.",
+  "collabInviteNotion": "Invitation",
+  "collabEntityEvent": "Event",
+  "collabEntityExhibition": "Exhibition",
+  "collabEntityArtwork": "Artwork",
+  "collabEntityCollection": "Collection",
+  "collabEntityItem": "Item",
+  "collabInviteFrom": "From {name}",
+  "@collabInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteRole": "Your role: {role}",
+  "@collabInviteRole": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteReceived": "Received {date}",
+  "@collabInviteReceived": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteExpires": "Expires {date}",
+  "@collabInviteExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabUnknownSender": "Someone",
+  "collabAccept": "Accept",
+  "collabDecline": "Decline",
+  "collabAcceptedToast": "Invitation accepted. You can now help manage it.",
+  "collabDeclinedToast": "Invitation declined.",
+  "collabAcceptFailedToast": "Couldn't accept the invitation. Try again.",
+  "collabDeclineFailedToast": "Couldn't decline the invitation. Try again.",
+  "collabCannotOpenItemToast": "This invitation doesn't point to an item that can be opened here.",
+  "collabEmptyTitle": "No invitations right now",
+  "collabEmptyDescription": "When someone invites you to collaborate, it appears here.",
+  "collabInviteSemantic": "Invitation to {entity} as {role}, from {name}",
+  "@collabInviteSemantic": {
+    "placeholders": {
+      "entity": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "studioNotionPractice": "Practice",
+  "institutionNotionProgramme": "Programme",
+  "dashboardNotionNumbers": "Numbers",
+  "dashboardNotionInfrastructure": "Infrastructure",
+  "dashboardNumbersCaption": "Counts from art.kubus activity on your public profile.",
+  "institutionStatProgrammeViews": "Programme page views",
+  "walletNetworkLabel": "Network",
+  "walletAddressHeading": "Address",
+  "walletAddressSemantic": "Wallet address {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Copy address",
+  "walletReadOnlyStatus": "Read-only session",
+  "walletKub8BalanceLabel": "KUB8 balance",
+  "walletSolBalanceLabel": "SOL balance",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Actions",
+  "walletTechnicalTitle": "Technical",
+  "marketplaceListingValueSemantic": "{source}: {amount} {currency}. {state}",
+  "@marketplaceListingValueSemantic": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionBuilderSwitchNetwork": "Switch your wallet to the {cluster} network required by this quote, then try again.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Pending review",
+  "promotionStatusApproved": "Approved",
+  "promotionStatusActive": "Active",
+  "daoProposalStatusDraft": "Draft",
+  "daoProposalStatusActive": "Active",
+  "daoProposalStatusVoting": "Voting open",
+  "daoProposalStatusPassed": "Passed",
+  "daoProposalStatusFailed": "Not passed",
+  "daoProposalStatusExecuted": "Executed",
+  "daoVotingEndsLabel": "Voting ends {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Voting ended {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Quorum required: {percent}% of voting power",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Results",
+  "daoNotEligibleTitle": "No voting power in this wallet",
+  "daoNotEligibleBody": "Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.",
+  "daoTreasuryOnChainLabel": "On-chain treasury balance",
+  "daoTreasuryLedgerLabel": "Recorded treasury movements"
 }

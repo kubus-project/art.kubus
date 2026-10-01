@@ -20,13 +20,15 @@ import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
-import 'package:art_kubus/screens/community/profile_screen.dart' as mobile_owner;
+import 'package:art_kubus/screens/community/profile_screen.dart'
+    as mobile_owner;
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
     as mobile_public;
 import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
     as desktop_owner;
 import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop_public;
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +43,10 @@ enum ProfileSurface {
   communityOverlay,
   mobileOwner,
   desktopOwner,
+
+  /// The owner profile as the desktop shell pushes it: inside a poppable
+  /// [DesktopShellScope], where it owns the single sub-screen header.
+  desktopOwnerInShell,
 }
 
 /// Renders the **actual** profile screens against deterministic fixtures.
@@ -49,21 +55,12 @@ enum ProfileSurface {
 /// (`initialCriticalPackage` / `initialExtendedPackageFuture`) and through
 /// `ProfileProvider.setCurrentUser`, both of which are ordinary production
 /// APIs. No authentication check is disabled, stubbed, or bypassed.
-/// Layout errors that already exist on `origin/master` and are outside this
-/// change's scope. They are matched by source location so a *new* overflow in
-/// the same file would still fail the suite.
 ///
-/// * `kubus_stat_card.dart` — the shared stat tile overflows its 48 px host by
-///   8 px on the owner profile. Reproduced on unmodified `origin/master`;
-///   `KubusStatCard` is used far beyond profiles, so it is deliberately left
-///   for a separate change.
-const List<String> _knownPreExistingOverflows = <String>[
-  'kubus_stat_card.dart',
-];
-
-/// Errors raised while rendering the surface, excluding
-/// [_knownPreExistingOverflows].
-final List<FlutterErrorDetails> unexpectedRenderErrors = <FlutterErrorDetails>[];
+/// Every layout/render error fails the test. The former allow-list for the
+/// shared stat tile is gone: Wave 5A sizes stat grids from the measured tile
+/// extent, so a stat-card overflow is a regression again.
+final List<FlutterErrorDetails> unexpectedRenderErrors =
+    <FlutterErrorDetails>[];
 
 Future<void> pumpProfileSurface(
   WidgetTester tester, {
@@ -73,16 +70,13 @@ Future<void> pumpProfileSurface(
   Locale locale = const Locale('en'),
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
+  bool canonicalPublicEntry = false,
 }) async {
   final resolvedUser = user ?? ProfileFixtures.user();
 
   unexpectedRenderErrors.clear();
   final previousOnError = FlutterError.onError;
-  FlutterError.onError = (details) {
-    final location = details.toString();
-    final isKnown = _knownPreExistingOverflows.any(location.contains);
-    if (!isKnown) unexpectedRenderErrors.add(details);
-  };
+  FlutterError.onError = unexpectedRenderErrors.add;
   addTearDown(() {
     FlutterError.onError = previousOnError;
     // Re-assert after the widget tree is finalized so dispose-time errors can
@@ -97,11 +91,16 @@ Future<void> pumpProfileSurface(
   final themeProvider = ThemeProvider();
   final profileProvider = ProfileProvider();
   if (surface == ProfileSurface.mobileOwner ||
-      surface == ProfileSurface.desktopOwner) {
+      surface == ProfileSurface.desktopOwner ||
+      surface == ProfileSurface.desktopOwnerInShell) {
     profileProvider.setCurrentUser(_ownerProfileFrom(resolvedUser));
   }
 
-  final child = _surfaceWidget(surface, resolvedUser);
+  final child = _surfaceWidget(
+    surface,
+    resolvedUser,
+    canonicalPublicEntry: canonicalPublicEntry,
+  );
 
   await tester.pumpWidget(
     MultiProvider(
@@ -162,10 +161,14 @@ Future<void> pumpProfileSurface(
   // an 800 ms auth-token timer. Drain it here so the fake-async zone does not
   // report a pending timer for unrelated production behaviour.
   await tester.pump(const Duration(seconds: 1));
+
+  // Hand error reporting back to the test framework before the caller's
+  // assertions run: a failing expect under the capture hook hangs the test
+  // instead of failing it. Later render errors then fail the test directly.
+  FlutterError.onError = previousOnError;
 }
 
-/// Fails when the surface produced any layout/render error other than the
-/// documented pre-existing ones.
+/// Fails when the surface produced any layout/render error.
 void expectNoUnexpectedRenderErrors() {
   expect(
     unexpectedRenderErrors.map((e) => e.exceptionAsString()).toList(),
@@ -173,7 +176,11 @@ void expectNoUnexpectedRenderErrors() {
   );
 }
 
-Widget _surfaceWidget(ProfileSurface surface, User user) {
+Widget _surfaceWidget(
+  ProfileSurface surface,
+  User user, {
+  bool canonicalPublicEntry = false,
+}) {
   final critical = ProfileFixtures.critical(user: user);
   final extended = Future<ProfileExtendedPackage?>.value(
     ProfileFixtures.extended(),
@@ -187,14 +194,31 @@ Widget _surfaceWidget(ProfileSurface surface, User user) {
         initialExtendedPackageFuture: extended,
       );
     case ProfileSurface.desktopPublic:
-      return DesktopProfilePresentationScope(
-        presentation: DesktopProfilePresentation.shellSubScreen,
-        child: desktop_public.UserProfileScreen(
+      {
+        final screen = desktop_public.UserProfileScreen(
           userId: user.id,
           initialCriticalPackage: critical,
           initialExtendedPackageFuture: extended,
-        ),
-      );
+        );
+        final publicEntryScreen = canonicalPublicEntry
+            ? DesktopShellScope(
+                pushScreen: (_) {},
+                popScreen: () {},
+                navigateToRoute: (_) {},
+                openNotifications: () {},
+                openFunctionsPanel: (_, {content}) {},
+                setFunctionsPanelContent: (_) {},
+                closeFunctionsPanel: () {},
+                canPop: false,
+                isCanonicalPublicEntry: true,
+                child: screen,
+              )
+            : screen;
+        return DesktopProfilePresentationScope(
+          presentation: DesktopProfilePresentation.shellSubScreen,
+          child: publicEntryScreen,
+        );
+      }
     case ProfileSurface.communityOverlay:
       return DesktopProfilePresentationScope(
         presentation: DesktopProfilePresentation.communityOverlay,
@@ -208,6 +232,21 @@ Widget _surfaceWidget(ProfileSurface surface, User user) {
       return const mobile_owner.ProfileScreen();
     case ProfileSurface.desktopOwner:
       return const desktop_owner.ProfileScreen();
+    case ProfileSurface.desktopOwnerInShell:
+      return DesktopShellScope(
+        pushScreen: (_) {},
+        popScreen: () {},
+        navigateToRoute: (_) {},
+        openNotifications: () {},
+        openFunctionsPanel: (_, {content}) {},
+        setFunctionsPanelContent: (_) {},
+        closeFunctionsPanel: () {},
+        canPop: true,
+        child: const Material(
+          type: MaterialType.transparency,
+          child: desktop_owner.ProfileScreen(),
+        ),
+      );
   }
 }
 

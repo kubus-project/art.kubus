@@ -44,6 +44,37 @@ void main() {
       },
     );
   }
+
+  testWidgets('empty archive state is explicit without inventing a record',
+      (tester) async {
+    final provider = ArtworkProvider();
+    provider.seedSpatialHistoryForTesting(
+      'art-1',
+      const ArtworkSpatialHistory(history: []),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ArtworkSpatialArchiveSection(
+                artwork: _artwork().copyWith(spatialCaptureCount: 0),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Spatial archive'), findsOneWidget);
+    expect(find.text('No spatial record yet.'), findsOneWidget);
+    expect(find.text('Capture spatial data'), findsNothing);
+  });
 }
 
 Artwork _artwork() => Artwork(

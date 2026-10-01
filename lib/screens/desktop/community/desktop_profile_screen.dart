@@ -184,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final isArtist = _hasArtistRole(profileProvider, daoReview);
     final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
 
-    return Scaffold(
+    final body = Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
@@ -196,21 +196,21 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: RefreshIndicator(
               onRefresh: _handleRefresh,
-              color: themeProvider.accentColor,
+              color: KubusColorRoles.of(context).active,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: isLarge ? 32 : 24),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1600),
+                    constraints: const BoxConstraints(maxWidth: 1200),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: DetailSpacing.xl),
-                        _buildHeader(
-                          showNavigationChrome: !isEmbeddedSubScreen,
-                        ),
-                        const SizedBox(height: DetailSpacing.xl),
+                        if (!isEmbeddedSubScreen) ...[
+                          _buildHeader(),
+                          const SizedBox(height: DetailSpacing.xl),
+                        ],
                         // Identity leads; cultural content follows
                         // immediately. Owner utilities (stats, account
                         // health, badges, achievements) live in the side
@@ -244,6 +244,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       ),
     );
+
+    // Pushed inside the desktop shell the profile owns the one header row:
+    // Back + title from the shared sub-screen bar, and its utilities as that
+    // bar's actions. Never a second action-only band under a shell title.
+    if (isEmbeddedSubScreen) {
+      return DesktopSubScreen(
+        title: AppLocalizations.of(context)!.navigationScreenProfile,
+        actions: [_buildUtilityActions()],
+        child: body,
+      );
+    }
+    return body;
   }
 
   /// Two-column layout from 1200 px: the wide main column carries cultural
@@ -355,84 +367,77 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildHeader({required bool showNavigationChrome}) {
+  /// Owner utility actions use the same canonical square controls as the
+  /// public profile and the community overlay, so all five profile surfaces
+  /// share one action vocabulary, hit area and focus treatment.
+  Widget _buildUtilityActions() {
     final l10n = AppLocalizations.of(context)!;
-
-    // Owner utility actions use the same canonical square controls as the
-    // public profile and the community overlay, so all five profile surfaces
-    // share one action vocabulary, hit area and focus treatment.
-    Widget buildActions() {
-      return ProfileUtilityActions(
-        actions: [
-          ProfileUtilityAction(
-            icon: Icons.share_outlined,
-            tooltip: l10n.desktopProfileShareProfileLabel,
-            onPressed: _shareProfile,
-          ),
-          ProfileUtilityAction(
-            icon: Icons.inbox_outlined,
-            tooltip: l10n.profileInvitesTooltip,
-            onPressed: () {
-              final shellScope = DesktopShellScope.of(context);
-              if (shellScope != null) {
-                shellScope.pushSubScreen(
-                  title: l10n.profileInvitesTooltip,
-                  child: const InvitesInboxScreen(embedded: true),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const InvitesInboxScreen(),
-                ),
+    return ProfileUtilityActions(
+      actions: [
+        ProfileUtilityAction(
+          icon: Icons.share_outlined,
+          tooltip: l10n.desktopProfileShareProfileLabel,
+          onPressed: _shareProfile,
+        ),
+        ProfileUtilityAction(
+          icon: Icons.inbox_outlined,
+          tooltip: l10n.profileInvitesTooltip,
+          onPressed: () {
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.pushSubScreen(
+                title: l10n.profileInvitesTooltip,
+                child: const InvitesInboxScreen(embedded: true),
               );
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const InvitesInboxScreen(),
+              ),
+            );
+          },
+        ),
+        if (AppConfig.isFeatureEnabled('analytics'))
+          ProfileUtilityAction(
+            icon: Icons.analytics_outlined,
+            tooltip: l10n.navigationScreenAnalytics,
+            onPressed: () {
+              final wallet =
+                  context.read<ProfileProvider>().currentUser?.walletAddress ??
+                      '';
+              if (wallet.trim().isEmpty) return;
+              _openAnalyticsDialog(wallet);
             },
           ),
-          if (AppConfig.isFeatureEnabled('analytics'))
-            ProfileUtilityAction(
-              icon: Icons.analytics_outlined,
-              tooltip: l10n.navigationScreenAnalytics,
-              onPressed: () {
-                final wallet = context
-                        .read<ProfileProvider>()
-                        .currentUser
-                        ?.walletAddress ??
-                    '';
-                if (wallet.trim().isEmpty) return;
-                _openAnalyticsDialog(wallet);
-              },
-            ),
-          ProfileUtilityAction(
-            icon: Icons.settings_outlined,
-            tooltip: l10n.navigationScreenSettings,
-            onPressed: () {
-              final shellScope = DesktopShellScope.of(context);
-              if (shellScope != null) {
-                shellScope.pushScreen(
-                  const DesktopSettingsScreen(embeddedInShell: true),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DesktopSettingsScreen(),
-                ),
+        ProfileUtilityAction(
+          icon: Icons.settings_outlined,
+          tooltip: l10n.navigationScreenSettings,
+          onPressed: () {
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.pushScreen(
+                const DesktopSettingsScreen(embeddedInShell: true),
               );
-            },
-          ),
-        ],
-      );
-    }
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DesktopSettingsScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
-    if (!showNavigationChrome) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: buildActions(),
-      );
-    }
-
+  /// Standalone (not pushed in the shell): the page title leads its own
+  /// header row with the same utilities.
+  Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -450,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        buildActions(),
+        _buildUtilityActions(),
       ],
     );
   }
@@ -508,7 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               title: l10n.profileMenuSavedItemsTitle,
               subtitle: subtitle,
               icon: Icons.bookmarks_outlined,
-              iconColor: themeProvider.accentColor,
+              iconColor: KubusColorRoles.of(context).foregroundMuted,
               action: TextButton.icon(
                 onPressed: () => _navigateToSavedItems(
                   showClearAll: savedProvider.totalSavedCount > 0,
@@ -720,66 +725,48 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg),
+                  top: Radius.circular(KubusRadius.surface),
                 ),
                 child: Stack(
                   children: [
                     Container(
                       height: hasCoverImage ? 228 : 156,
                       width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: !hasCoverImage
-                            ? LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.25),
-                                  themeProvider.accentColor
-                                      .withValues(alpha: 0.08),
-                                ],
-                              )
-                            : null,
-                      ),
+                      // Flat cover band without an image (no accent gradient).
+                      color: hasCoverImage
+                          ? null
+                          : KubusColorRoles.of(context).surfaceRaised,
                       child: hasCoverImage
                           ? Image.network(
                               coverImageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.25),
-                                        themeProvider.accentColor
-                                            .withValues(alpha: 0.08),
-                                      ],
-                                    ),
-                                  ),
+                                return ColoredBox(
+                                  color:
+                                      KubusColorRoles.of(context).surfaceRaised,
                                 );
                               },
                             )
                           : null,
                     ),
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black
-                                  .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.26),
-                            ],
+                    // Media scrim only over a real image (keeps the edit
+                    // control legible).
+                    if (hasCoverImage)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.18),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
                     Positioned(
                       top: KubusSpacing.md,
                       right: KubusSpacing.md,
@@ -804,23 +791,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 bottom: -avatarOverlap,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: scheme.surface.withValues(alpha: 0.94),
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(
                       avatarRingShapeRadius,
                     ),
                     border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.24),
-                      width: KubusSizes.hairline + 0.2,
+                      color: KubusColorRoles.of(context).rule,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(avatarRingPadding),
@@ -976,10 +953,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     // More columns on wider screens for compact horizontal layout
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
 
+    // A fixed, text-measured tile height: an aspect ratio shrank these tiles
+    // with the narrow side column and clipped the two-line labels.
     return DesktopGrid(
       minCrossAxisCount: 2,
       maxCrossAxisCount: maxCols,
-      childAspectRatio: screenWidth >= 1400 ? 2.8 : 2.5,
+      mainAxisExtent: DesktopStatCard.extentOf(context),
       spacing: 12,
       children: [
         DesktopStatCard(
@@ -987,16 +966,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedPostsCount,
           icon: Icons.article_outlined,
           color: _profileStatAccentForIcon(Icons.article_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
         ),
         DesktopStatCard(
           label: l10n.userProfileFollowersStatLabel,
           value: profileProvider.formattedFollowersCount,
           icon: Icons.people_outline,
           color: _profileStatAccentForIcon(Icons.people_outline),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowers(context,
               walletAddress: wallet),
         ),
@@ -1005,8 +980,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedFollowingCount,
           icon: Icons.person_add_outlined,
           color: _profileStatAccentForIcon(Icons.person_add_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowing(context,
               walletAddress: wallet),
         ),
@@ -1015,8 +988,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           value: profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          centeredWatermarkAlignment: Alignment.center,
-          centeredWatermarkScale: 0.84,
           onTap: () =>
               ProfileScreenMethods.showArtworks(context, walletAddress: wallet),
         ),
@@ -1468,7 +1439,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopGrid(
               minCrossAxisCount: 2,
               maxCrossAxisCount: 4,
-              childAspectRatio: 2.0,
+              mainAxisExtent: DesktopStatCard.extentOf(context),
               children: [
                 _buildPerformanceStatCard(
                   l10n.profilePerformanceArtworksViewedTitle,
@@ -1513,41 +1484,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPerformanceStatCard(String label, String value, IconData icon) {
-    final mediaQuery = MediaQuery.of(context);
-    final desktopDense = mediaQuery.size.width < 1480;
-    final highDensity = mediaQuery.devicePixelRatio >= 2.0;
-    final accent = _profileStatAccentForIcon(icon);
-    final iconBox = desktopDense
-        ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
-        : KubusChromeMetrics.heroIconBox;
-    final iconSize = highDensity
-        ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
-        : KubusChromeMetrics.heroIcon;
-    final valueFontSize = desktopDense ? 24.0 : 26.0;
-    final titleFontSize = desktopDense ? 11.5 : 12.0;
-
-    return KubusStatCard(
-      title: label,
+    return DesktopStatCard(
+      label: label,
       value: value,
       icon: icon,
-      layout: KubusStatCardLayout.centered,
-      accent: accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: desktopDense ? 0.82 : 0.86,
-      minHeight: 0,
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      titleMaxLines: 1,
-      iconBoxSize: iconBox,
-      iconSize: iconSize,
-      titleStyle: KubusTextStyles.statLabel.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        fontSize: titleFontSize,
-      ),
-      valueStyle: KubusTextStyles.statValue.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: valueFontSize,
-        fontWeight: FontWeight.w700,
-      ),
+      color: _profileStatAccentForIcon(icon),
     );
   }
 

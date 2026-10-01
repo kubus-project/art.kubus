@@ -423,7 +423,7 @@ class ArModeDock extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     // The AR surface accent, resolved through the shared role table rather
     // than a hard-coded hue, so it tracks the theme like every other screen.
-    final accent = KubusColorRoles.of(context).screenAccentForKey('ar', scheme);
+    final accent = KubusColorRoles.of(context).screenAccentForKey('ar');
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm,
@@ -520,7 +520,7 @@ class ArControlsRegion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = KubusColorRoles.of(context).screenAccentForKey('ar', scheme);
+    final accent = KubusColorRoles.of(context).screenAccentForKey('ar');
     // Contrast-resolved rather than assumed white: the AR accent is a light
     // teal, and white-on-teal is barely readable over a bright camera feed.
     final onAccent = AppColorUtils.onColor(accent);

@@ -2158,7 +2158,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               contextType: DesktopCreatorContextType.artwork,
               semantic: DesktopCreatorSectionSemantic.status,
             ),
-            sidebarAccentColor: accent,
             actions: [
               if (_createdArtwork != null && draft.arEnabled)
                 OutlinedButton.icon(

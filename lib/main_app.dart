@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'providers/themeprovider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
@@ -24,11 +23,12 @@ import 'screens/community/profile_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
-import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
 import 'utils/keyboard_inset_resolver.dart';
-import 'utils/kubus_color_roles.dart';
 import 'widgets/glass_components.dart';
+import 'widgets/kubus_button.dart';
+import 'utils/kubus_color_roles.dart';
+import 'widgets/navigation/kubus_mobile_navigation_bar.dart';
 import 'widgets/mobile_shell_exit_scope.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
 import 'widgets/tutorial/tutorial_overlay_controller.dart';
@@ -177,15 +177,7 @@ class _MainAppState extends State<MainApp> {
       child: MobileShellExitScope(
         child: mapNeedsPlatformViewBackgroundPassthrough
             ? scaffold
-            : AnimatedGradientBackground(
-                // The app's base gradient needs to paint behind BOTH the app
-                // bar area (status bar) and the bottom navigation bar.
-                // Screens should keep their scaffolds transparent so this
-                // background remains visible.
-                animate: true,
-                intensity: 0.22,
-                child: scaffold,
-              ),
+            : KubusProductBackground(child: scaffold),
       ),
     );
 
@@ -239,168 +231,65 @@ class _MainAppState extends State<MainApp> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
-        final bottomInset = MediaQuery.of(context).padding.bottom;
-        final theme = Theme.of(context);
-        final scheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
-        final currentIndex = context.watch<MainTabProvider>().currentIndex;
-        final activeAccent = _screenAccentForTab(context, currentIndex);
-        final tintedSurface =
-            Color.lerp(scheme.surface, activeAccent, isDark ? 0.18 : 0.10) ??
-                scheme.surface;
-        final glassTint = tintedSurface.withValues(alpha: isDark ? 0.22 : 0.14);
-
-        // Explicit height prevents the nav bar from accidentally expanding to
-        // fill the entire Scaffold when it receives overly-permissive (or tight)
-        // vertical constraints.
-        return SizedBox(
-          height: KubusLayout.mainBottomNavBarHeight + bottomInset,
-          child: Container(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.10),
-                  blurRadius: 18,
-                  offset: const Offset(0, -6),
-                ),
-              ],
-            ),
-            child: LiquidGlassPanel(
-              // Bottom nav blur policy: always use shared glass components.
-              // Do not add a direct BackdropFilter here; GlassSurface applies
-              // canonical reduce-effects fallback via GlassCapabilitiesProvider.
-              margin: EdgeInsets.zero,
-              padding: EdgeInsets.zero,
-              borderRadius: BorderRadius.zero,
-              blurSigma: KubusGlassEffects.blurSigmaLight,
-              backgroundColor: glassTint,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal:
-                        isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-                    vertical: isSmallScreen ? 1 : 2,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildNavItem(
-                        context,
-                        0,
-                        Icons.explore,
-                        isSmallScreen,
-                        activeAccent: activeAccent,
-                      ),
-                      _buildNavItem(
-                        context,
-                        1,
-                        Icons.view_in_ar,
-                        isSmallScreen,
-                        activeAccent: activeAccent,
-                      ),
-                      _buildNavItem(
-                        context,
-                        2,
-                        Icons.people,
-                        isSmallScreen,
-                        activeAccent: activeAccent,
-                      ),
-                      _buildNavItem(
-                        context,
-                        3,
-                        Icons.home,
-                        isSmallScreen,
-                        activeAccent: activeAccent,
-                      ),
-                      _buildNavItem(
-                        context,
-                        4,
-                        Icons.person,
-                        isSmallScreen,
-                        activeAccent: activeAccent,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    final l10n = AppLocalizations.of(context)!;
+    final currentIndex = context.watch<MainTabProvider>().currentIndex;
+    final isSignedIn =
+        context.select<ProfileProvider, bool>((p) => p.isSignedIn);
+    return KubusMobileNavigationBar(
+      semanticLabel: l10n.mobileNavSemanticLabel,
+      selectedIndex: currentIndex,
+      onSelected: _handleNavTap,
+      destinations: [
+        KubusMobileNavigationDestination(
+          key: const Key('mobile_nav_map'),
+          icon: Icons.explore_outlined,
+          selectedIcon: Icons.explore,
+          label: l10n.mobileNavMap,
+        ),
+        KubusMobileNavigationDestination(
+          key: const Key('mobile_nav_ar'),
+          icon: Icons.view_in_ar_outlined,
+          selectedIcon: Icons.view_in_ar,
+          label: l10n.mobileNavAr,
+        ),
+        KubusMobileNavigationDestination(
+          key: const Key('mobile_nav_community'),
+          icon: Icons.people_outline,
+          selectedIcon: Icons.people,
+          label: l10n.mobileNavCommunity,
+        ),
+        KubusMobileNavigationDestination(
+          key: const Key('mobile_nav_home'),
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          label: l10n.mobileNavHome,
+        ),
+        KubusMobileNavigationDestination(
+          key: const Key('mobile_nav_profile'),
+          icon: Icons.person_outline,
+          selectedIcon: Icons.person,
+          label: isSignedIn ? l10n.mobileNavProfile : l10n.mobileNavAccount,
+        ),
+      ],
     );
   }
 
-  Widget _buildNavItem(
-      BuildContext context, int index, IconData icon, bool isSmallScreen,
-      {required Color activeAccent}) {
-    final isSelected =
-        context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
-    final animationTheme = context.animationTheme;
-    final scheme = Theme.of(context).colorScheme;
+  void _handleNavTap(int index) {
+    final tabs = context.read<MainTabProvider>();
+    if (tabs.currentIndex == index) return;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          final tabs = context.read<MainTabProvider>();
-          if (tabs.currentIndex == index) return;
+    // If onboarding is deferred due to a cold-start deep link, show it
+    // once the user tries to navigate away from the deep-linked surface.
+    final deferredOnboarding = context.read<DeferredOnboardingProvider>();
+    if (deferredOnboarding.maybeShowOnboarding(context)) return;
 
-          // If onboarding is deferred due to a cold-start deep link, show it
-          // once the user tries to navigate away from the deep-linked surface.
-          final deferredOnboarding = context.read<DeferredOnboardingProvider>();
-          if (deferredOnboarding.maybeShowOnboarding(context)) return;
-
-          if (tabs.currentIndex == 0 && index != 0) {
-            _tutorialOverlayController.deactivateOwner(
-              'mobile-map',
-              reason: 'mobile-shell-nav-tap',
-            );
-          }
-          tabs.setIndex(index);
-        },
-        child: AnimatedContainer(
-          duration: animationTheme.short,
-          curve: animationTheme.defaultCurve,
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-            vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? activeAccent.withValues(alpha: 0.14)
-                : Colors.transparent,
-            borderRadius: KubusRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: isSelected
-                  ? activeAccent.withValues(alpha: 0.30)
-                  : scheme.outlineVariant.withValues(alpha: 0.18),
-            ),
-          ),
-          child: Center(
-            child: AnimatedScale(
-              scale: isSelected ? 1.0 : 0.92,
-              duration: animationTheme.short,
-              curve: animationTheme.emphasisCurve,
-              child: AnimatedOpacity(
-                duration: animationTheme.short,
-                opacity: isSelected ? 1.0 : 0.65,
-                curve: animationTheme.fadeCurve,
-                child: Icon(
-                  icon,
-                  color: isSelected
-                      ? activeAccent
-                      : scheme.onSurface.withValues(alpha: 0.82),
-                  size: isSmallScreen ? 24 : 28,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    if (tabs.currentIndex == 0 && index != 0) {
+      _tutorialOverlayController.deactivateOwner(
+        'mobile-map',
+        reason: 'mobile-shell-nav-tap',
+      );
+    }
+    tabs.setIndex(index);
   }
 
   void _syncTelemetryForIndex(int index) {
@@ -443,51 +332,6 @@ class _MainAppState extends State<MainApp> {
     }
 
     TelemetryService().setActiveScreen(screenName: name, screenRoute: route);
-  }
-
-  Color _screenAccentForTab(BuildContext context, int index) {
-    final themeProvider = context.read<ThemeProvider>();
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-
-    switch (index) {
-      case 0:
-        return roles.screenAccentForKey(
-          'map',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-      case 1:
-        return roles.screenAccentForKey(
-          'ar',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-      case 2:
-        return roles.screenAccentForKey(
-          'community',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-      case 3:
-        return roles.screenAccentForKey(
-          'home',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-      case 4:
-        return roles.screenAccentForKey(
-          'profile',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-      default:
-        return roles.screenAccentForKey(
-          'home',
-          scheme,
-          appAccent: themeProvider.accentColor,
-        );
-    }
   }
 
   void _syncRefreshVisibility(int index) {
@@ -553,45 +397,79 @@ class GuestAccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations)!;
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final textTheme = Theme.of(context).textTheme;
     return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
+      child: Align(
+        alignment: const Alignment(0, -0.2),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusLayout.mainBottomNavBarHeight + KubusSpacing.lg,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.account_circle_outlined,
-                    size: 56, color: scheme.secondary),
-                const SizedBox(height: KubusSpacing.md),
-                Text(l10n.authSignInTitle,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: KubusSpacing.md),
-                FilledButton(
+                Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.authSignInTitle,
+                    style: textTheme.headlineSmall?.copyWith(
+                      color: roles.foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                Text(
+                  l10n.activationGateBody,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: roles.foregroundMuted,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.lg),
+                KubusButton(
                   key: const Key('guest_account_sign_in'),
+                  label: l10n.commonSignIn,
+                  isFullWidth: true,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SignInScreen()),
                   ),
-                  child: Text(l10n.commonSignIn),
                 ),
                 const SizedBox(height: KubusSpacing.sm),
-                OutlinedButton(
+                KubusButton(
                   key: const Key('guest_account_create_account'),
+                  label: l10n.commonCreateAccount,
+                  variant: KubusButtonVariant.secondary,
+                  isFullWidth: true,
                   onPressed: () => Navigator.of(context).pushNamed('/register'),
-                  child: Text(l10n.commonCreateAccount),
                 ),
-                const SizedBox(height: KubusSpacing.sm),
-                TextButton.icon(
+                const SizedBox(height: KubusSpacing.md),
+                Text(
+                  l10n.activationGateKeepBrowsingHint,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: roles.foregroundSubtle,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.lg),
+                Divider(height: 1, thickness: 1, color: roles.rule),
+                const SizedBox(height: KubusSpacing.xs),
+                // Language, appearance, accessibility and analytics consent
+                // apply without an account, so settings stay reachable.
+                KubusButton(
                   key: const Key('guest_account_settings'),
+                  label: l10n.settingsTitle,
+                  icon: Icons.settings_outlined,
+                  variant: KubusButtonVariant.quiet,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   ),
-                  icon: const Icon(Icons.settings_outlined),
-                  label: Text(l10n.settingsTitle),
                 ),
               ],
             ),

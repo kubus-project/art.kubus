@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1151,14 +1152,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
       });
     }
 
+    final roles = KubusColorRoles.of(context);
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: roles.ground,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
+        backgroundColor: roles.ground,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
+        shape: Border(
+          bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+        ),
         leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
         leading: Padding(
           padding: const EdgeInsets.only(left: KubusSpacing.sm),
@@ -1181,7 +1185,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           children: [
             Expanded(child: _buildMessagesList()),
             _buildMessageInput(),
-            if (_isUploading) InlineLoading(height: 4, borderRadius: BorderRadius.circular(2)),
+            if (_isUploading)
+              InlineLoading(height: 4, borderRadius: BorderRadius.circular(2)),
           ],
         ),
       ),
@@ -1728,17 +1733,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final double avatarRadius = 16;
     final double bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
     final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final accent = themeProvider.accentColor;
+    final roles = KubusColorRoles.of(context);
 
+    // Own messages sit on a restrained active tint; others on the raised
+    // surface. Both flat: the thread is private conversation, not cards.
     final bubbleColor = isMe
-        ? Color.lerp(
-            scheme.surfaceContainerHigh,
-            accent,
-            0.14,
-          )!
-            .withValues(alpha: 0.92)
-        : scheme.surfaceContainerHighest.withValues(alpha: 0.88);
+        ? Color.lerp(roles.surfaceRaised, roles.active, 0.12)!
+        : roles.surfaceRaised;
+    final accent = roles.active;
 
     final senderLabelColor = scheme.onSurface.withValues(alpha: 0.92);
 
@@ -1762,19 +1764,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
         decoration: BoxDecoration(
           color: bubbleColor,
-          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          borderRadius: BorderRadius.circular(KubusRadius.sheet),
           border: Border.all(
-            color: isMe
-                ? accent.withValues(alpha: 0.28)
-                : scheme.outlineVariant.withValues(alpha: 0.55),
+            color: isMe ? accent.withValues(alpha: 0.28) : roles.rule,
+            width: KubusSizes.hairline,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.12),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment:
@@ -2029,10 +2023,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       color:
                           Theme.of(context).colorScheme.surfaceContainerHighest,
                       child: Center(
-                        child: InlineLoading(tileSize: 4, progress: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null),
+                        child: InlineLoading(
+                            tileSize: 4,
+                            progress: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null),
                       ),
                     );
                   },
@@ -2246,35 +2242,45 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageInput() {
     final l10n = AppLocalizations.of(context)!;
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final roles = KubusColorRoles.of(context);
 
     return Column(
       children: [
         _buildReplyPreview(),
         Container(
           padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.md,
             KubusSpacing.sm,
-            KubusSpacing.md,
-            KubusSpacing.md,
+            KubusSpacing.sm,
+            KubusSpacing.sm,
+            KubusSpacing.sm,
           ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm,
-              vertical: KubusSpacing.xs,
+          decoration: BoxDecoration(
+            color: roles.surface,
+            border: Border(
+              top: BorderSide(color: roles.rule, width: KubusSizes.hairline),
             ),
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
+          ),
+          child: SafeArea(
+            top: false,
             child: Row(
               children: [
                 IconButton(
+                  tooltip: l10n.messagesAttachTooltip,
                   icon: const Icon(Icons.attach_file),
+                  color: roles.foregroundMuted,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
                   onPressed: _attachAndSend,
                 ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    minLines: 1,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
+                      labelText: l10n.messagesTypeMessageHint,
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
                       hintText: l10n.messagesTypeMessageHint,
                       hintStyle: KubusTextStyles.sectionSubtitle.copyWith(
                         color: Theme.of(context)
@@ -2290,9 +2296,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     onSubmitted: (_) => _send(),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.send, color: accent),
+                IconButton.filled(
+                  tooltip: l10n.commonSend,
                   onPressed: _send,
+                  style: IconButton.styleFrom(
+                    backgroundColor: roles.active,
+                    foregroundColor: roles.onActive,
+                    minimumSize: const Size(48, 48),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 20),
                 ),
               ],
             ),

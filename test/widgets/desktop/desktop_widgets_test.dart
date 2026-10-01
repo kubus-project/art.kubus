@@ -25,7 +25,8 @@ void main() {
     );
   }
 
-  testWidgets('DesktopStatCard uses standardized stat sizing', (tester) async {
+  testWidgets('DesktopStatCard uses the shared stat type roles',
+      (tester) async {
     await pumpDesktopStatCard(
       tester,
       child: const SizedBox(
@@ -41,18 +42,12 @@ void main() {
 
     final value = tester.widget<Text>(find.text('128'));
     final label = tester.widget<Text>(find.text('Followers'));
-
-    expect(
-      value.style?.fontSize,
-      closeTo(KubusChromeMetrics.statValue * 0.95, 0.001),
-    );
-    expect(
-      label.style?.fontSize,
-      closeTo(KubusTextStyles.actionTileTitle.fontSize! * 0.93, 0.001),
-    );
+    expect(value.style?.fontSize, KubusTextStyles.statValue.fontSize);
+    expect(label.style?.fontSize, KubusTextStyles.detailCaption.fontSize);
   });
 
-  testWidgets('DesktopStatCard composes through shared watermark icon',
+  testWidgets(
+      'DesktopStatCard is flat: one small context icon, no hover lift or shadow',
       (tester) async {
     await pumpDesktopStatCard(
       tester,
@@ -63,15 +58,30 @@ void main() {
           label: 'Followers',
           value: '128',
           icon: Icons.group_outlined,
-          centeredWatermarkAlignment: Alignment.center,
         ),
       ),
     );
 
-    final iconFinder = find.byWidgetPredicate(
+    // The icon is a compact context tile, not a card-sized watermark.
+    final icon = find.byWidgetPredicate(
       (widget) => widget is Icon && widget.icon == Icons.group_outlined,
     );
-
-    expect(iconFinder, findsOneWidget);
+    expect(icon, findsOneWidget);
+    expect(tester.getSize(icon).height, lessThanOrEqualTo(16));
+    expect(
+      find.descendant(
+        of: find.byType(DesktopStatCard),
+        matching: find.byType(Transform),
+      ),
+      findsNothing,
+    );
+    final decorated = tester
+        .widgetList<DecoratedBox>(find.descendant(
+          of: find.byType(DesktopStatCard),
+          matching: find.byType(DecoratedBox),
+        ))
+        .map((d) => d.decoration)
+        .whereType<BoxDecoration>();
+    expect(decorated.any((d) => (d.boxShadow ?? const []).isNotEmpty), isFalse);
   });
 }

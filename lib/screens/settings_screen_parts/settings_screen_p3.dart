@@ -758,30 +758,50 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     bool enabled = true,
     Key? tileKey,
   }) {
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: SharedSettingsToggleRow(
-          switchKey: tileKey,
-          title: title,
-          subtitle: subtitle,
-          value: value,
-          onChanged: enabled ? onChanged : null,
+        child: _buildPreferenceRow(
+          title,
+          subtitle,
+          value,
+          onChanged,
           enabled: enabled,
-          activeColor: accentColor,
-          titleStyle: KubusTypography.inter(
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          subtitleStyle: KubusTypography.inter(
-            fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
+          switchKey: tileKey,
         ),
+      ),
+    );
+  }
+
+  /// A flat preference row for grouped lists ([SharedSettingsGroup]), where
+  /// the group owns the rhythm and rules rather than a card per row.
+  Widget _buildPreferenceRow(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool>? onChanged, {
+    bool enabled = true,
+    bool mandatory = false,
+    Key? switchKey,
+  }) {
+    final roles = KubusColorRoles.of(context);
+    return SharedSettingsToggleRow(
+      switchKey: switchKey,
+      title: title,
+      subtitle: subtitle,
+      value: value,
+      onChanged: enabled ? onChanged : null,
+      enabled: enabled,
+      mandatory: mandatory,
+      titleStyle: KubusTypography.inter(
+        fontWeight: FontWeight.w500,
+        color: roles.foreground,
+      ),
+      subtitleStyle: KubusTypography.inter(
+        fontSize: 12,
+        color: roles.foregroundMuted,
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_context_icon.dart';
 
 class SharedSettingsRowTile extends StatelessWidget {
   final String title;
@@ -70,8 +72,7 @@ class SharedSettingsRowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final titleColor =
-        isDestructive ? scheme.error : scheme.onSurface;
+    final titleColor = isDestructive ? scheme.error : scheme.onSurface;
     final subtitleColor = scheme.onSurface.withValues(alpha: 0.5);
     final resolvedTitleStyle = titleStyle ??
         KubusTextStyles.sectionTitle.copyWith(
@@ -89,10 +90,12 @@ class SharedSettingsRowTile extends StatelessWidget {
     final resolvedLeadingBorder = leadingBorderColor ??
         (isDestructive ? scheme.error.withValues(alpha: 0.15) : null);
     final resolvedLeadingIconColor = leadingIconColor ??
-        (isDestructive ? scheme.error : scheme.onSurface.withValues(alpha: 0.7));
+        (isDestructive
+            ? scheme.error
+            : scheme.onSurface.withValues(alpha: 0.7));
     final shouldShowChevron = showChevron && trailing == null && onTap != null;
-    final resolvedChevronColor = chevronColor ??
-        scheme.onSurface.withValues(alpha: 0.3);
+    final resolvedChevronColor =
+        chevronColor ?? scheme.onSurface.withValues(alpha: 0.3);
 
     Widget content = Material(
       color: Colors.transparent,
@@ -185,14 +188,20 @@ class SharedSettingsRowTile extends StatelessWidget {
   }
 }
 
+/// A settings toggle: Sofia Sans title and subtitle beside a platform-native
+/// switch ([Switch.adaptive]). ON is the structural family teal
+/// ([KubusColorRoles.active]), never the personal accent.
+///
+/// [mandatory] rows (essential account/wallet/transactional mail) always show
+/// ON and cannot be changed; their [subtitle] or group note says why.
 class SharedSettingsToggleRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
   final ValueChanged<bool>? onChanged;
   final bool enabled;
+  final bool mandatory;
   final Key? switchKey;
-  final Color? activeColor;
   final EdgeInsetsGeometry padding;
   final TextStyle? titleStyle;
   final TextStyle? subtitleStyle;
@@ -205,8 +214,8 @@ class SharedSettingsToggleRow extends StatelessWidget {
     required this.value,
     this.onChanged,
     this.enabled = true,
+    this.mandatory = false,
     this.switchKey,
-    this.activeColor,
     this.padding = EdgeInsets.zero,
     this.titleStyle,
     this.subtitleStyle,
@@ -215,17 +224,15 @@ class SharedSettingsToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final effectiveValue = enabled ? value : false;
-    final resolvedActiveColor = activeColor ?? scheme.primary;
+    final roles = KubusColorRoles.of(context);
+    // A disabled optional toggle reads as off (for example a category under
+    // a master switch that is off); a mandatory one is always on.
+    final effectiveValue = mandatory ? true : (enabled ? value : false);
+    final interactive = enabled && !mandatory;
     final resolvedTitleStyle = titleStyle ??
-        KubusTextStyles.sectionTitle.copyWith(
-          color: scheme.onSurface,
-        );
+        KubusTextStyles.sectionTitle.copyWith(color: roles.foreground);
     final resolvedSubtitleStyle = subtitleStyle ??
-        KubusTextStyles.sectionSubtitle.copyWith(
-          color: scheme.onSurface.withValues(alpha: 0.5),
-        );
+        KubusTextStyles.sectionSubtitle.copyWith(color: roles.foregroundMuted);
 
     return Padding(
       padding: padding,
@@ -236,32 +243,147 @@ class SharedSettingsToggleRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  style: resolvedTitleStyle,
-                ),
-                Text(
-                  subtitle,
-                  style: resolvedSubtitleStyle,
-                ),
+                Text(title, style: resolvedTitleStyle),
+                Text(subtitle, style: resolvedSubtitleStyle),
               ],
             ),
           ),
           SizedBox(width: spacing),
-          Switch(
+          // Adaptive: platform-native toggle on iOS/macOS, Material elsewhere.
+          Switch.adaptive(
             key: switchKey,
             value: effectiveValue,
-            onChanged: enabled ? onChanged : null,
-            activeTrackColor: resolvedActiveColor.withValues(alpha: 0.5),
-            thumbColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return resolvedActiveColor;
-              }
-              return null;
-            }),
+            onChanged: interactive ? onChanged : null,
+            activeTrackColor: roles.active,
+            activeThumbColor: roles.onActive,
+            inactiveTrackColor: roles.surfaceRaised,
+            inactiveThumbColor: roles.foregroundMuted,
+            trackOutlineColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? roles.active
+                  : roles.ruleStrong,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Section identity for a settings surface: a contextual icon tile, the
+/// section title and an optional one-line explanation.
+class SharedSettingsSectionHeader extends StatelessWidget {
+  const SharedSettingsSectionHeader({
+    super.key,
+    required this.icon,
+    required this.accent,
+    required this.title,
+    this.subtitle,
+  });
+
+  final IconData icon;
+
+  /// Contextual accent from [KubusColorRoles].
+  final Color accent;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KubusContextIcon(icon: icon, accent: accent),
+        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: KubusTextStyles.detailCardTitle
+                      .copyWith(color: roles.foreground),
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: KubusSpacing.xxs),
+                Text(
+                  subtitle!,
+                  style: KubusTextStyles.detailCaption
+                      .copyWith(color: roles.foregroundMuted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A group of related settings rows under a Space Mono structural label.
+///
+/// Groups are separated from each other by space, rows inside a group by a
+/// subtle hairline. No panel of its own: a group sits inside the section's
+/// one surface, never as another card.
+class SharedSettingsGroup extends StatelessWidget {
+  const SharedSettingsGroup({
+    super.key,
+    this.label,
+    this.note,
+    required this.children,
+  });
+
+  /// Structural label, rendered uppercase (controls/notions register).
+  final String? label;
+
+  /// Optional explanation under the label (for example why rows are locked).
+  final String? note;
+  final List<Widget> children;
+
+  /// Vertical rhythm between rows; the rule sits in the middle.
+  static const double rowGap = KubusSpacing.lg;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (label != null)
+          Semantics(
+            header: true,
+            child: Text(
+              label!.toUpperCase(),
+              style: KubusTextStyles.structuralLabel.copyWith(
+                color: roles.foregroundMuted,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+        if (note != null) ...[
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            note!,
+            style: KubusTextStyles.detailCaption
+                .copyWith(color: roles.foregroundMuted),
+          ),
+        ],
+        if (label != null || note != null)
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0)
+            Divider(
+              height: rowGap,
+              thickness: KubusSizes.hairline,
+              color: roles.rule,
+            ),
+          children[i],
+        ],
+      ],
     );
   }
 }
