@@ -8,6 +8,12 @@ going back to glass, gradients or rainbow chrome.
 
 This page is the contract. The tests named under each rule enforce it.
 
+> **Amended by Wave 5A-R** (`PRODUCT_V5_ART_DIRECTION_RESTORATION.md`):
+> identity surfaces may carry a `KubusAtmosphere`, metric tiles carry a
+> cropped ghost glyph with a contextual field, and hover answers inside
+> the tile. The colour roles, measured stat extents, header ownership,
+> settings, management workspace and KUB8 rules below are unchanged.
+
 ## Colour roles
 
 | Role | Light | Dark | Use |
@@ -33,9 +39,12 @@ Tests: `test/design/product_v5_character_foundation_test.dart`,
 
 ## Surfaces
 
-Flat and neutral: surface fill plus a hairline rule. No glass, gradient
-banner or full-card tint on product surfaces (settings, profile,
-management, wallet). Glass stays available for map and media overlays.
+Flat and neutral by default: surface fill plus a hairline rule. No glass
+or full-card tint on product surfaces. Since 5A-R, page identity and hero
+context (Home opening, profile cover without an image, hub headers, wallet
+balance, achievement progress) use `KubusAtmosphere`; settings, rails,
+forms and lists stay flat. Glass stays available for map and media
+overlays.
 
 ## Contextual icons
 
@@ -55,9 +64,11 @@ Not for chevrons, back arrows, overflow menus or every list-row icon.
 ## Stats
 
 `KubusStatCard` has two layouts. The centred layout is a fixed stack:
-context icon tile, number, label. The accent paints only the icon tile and
-the hover wash; the card stays neutral. There is no watermark and no hover
-motion. The Wave-4 parameters (`tintBase`, `borderColor`, `iconBoxSize`,
+context icon tile, number, label. Since 5A-R it is expressive by default: a
+cropped ghost glyph, a corner field and an edge light in the accent, with a
+hover that moves only the glyph inside the clipped tile (never the tile or
+its text; no movement under reduced motion). The fill under the text stays
+the surface. The Wave-4 parameters (`tintBase`, `borderColor`, `iconBoxSize`,
 `iconSize`, `centeredWatermark*`) are removed.
 
 Grids of stat tiles use a **measured** height, never an aspect ratio:
