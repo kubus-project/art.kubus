@@ -22,6 +22,11 @@ enum KubusActionTileLayout {
 /// On a pointer it lifts 2 px (paint only) and the field brightens; with
 /// reduced motion it only brightens. Minimum 44 px target, button semantics,
 /// titles wrap to two lines and the tile grows with the text.
+///
+/// Width contract: a stacked tile fills its slot. An inline tile sizes to its
+/// title but never exceeds [inlineMaxWidth] (scaled with the text), so it
+/// still wraps when its parent gives it an unbounded width, as in a
+/// horizontally scrolling strip. A narrower slot wins.
 class KubusActionTile extends StatelessWidget {
   const KubusActionTile({
     super.key,
@@ -42,12 +47,18 @@ class KubusActionTile extends StatelessWidget {
   final KubusActionTileLayout layout;
   final double? minHeight;
 
+  /// Widest an inline tile grows at 1x text, before the text scale.
+  static const double inlineMaxWidth = 280;
+
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final brightness = Theme.of(context).brightness;
     final stacked = layout == KubusActionTileLayout.stacked;
     final radius = BorderRadius.circular(KubusRadius.md);
+    final maxWidth = stacked
+        ? double.infinity
+        : MediaQuery.textScalerOf(context).scale(inlineMaxWidth);
 
     final titleText = Text(
       title,
@@ -104,6 +115,7 @@ class KubusActionTile extends StatelessWidget {
         builder: (context, hovered) => ConstrainedBox(
           constraints: BoxConstraints(
             minHeight: minHeight ?? (stacked ? 112 : 56),
+            maxWidth: maxWidth,
           ),
           child: AnimatedContainer(
             duration: KubusHoverResponse.duration,

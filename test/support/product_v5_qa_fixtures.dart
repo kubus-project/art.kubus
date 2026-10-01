@@ -2,9 +2,12 @@ import 'package:art_kubus/config/api_keys.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/collab_invite.dart';
 import 'package:art_kubus/models/collab_member.dart';
+import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/models/wallet.dart';
+import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
+import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/services/collab_api.dart';
@@ -21,6 +24,43 @@ import 'profile_fixtures.dart';
 SingleChildWidget qaEmailPreferences() =>
     ChangeNotifierProvider<EmailPreferencesProvider>(
       create: (_) => EmailPreferencesProvider(),
+    );
+
+/// DAO state in which the owner's [role] application (`artist` or
+/// `institution`) is already approved, the way it lands before
+/// `currentUser` synchronises its role flags.
+class QaApprovedRoleDAOProvider extends DAOProvider {
+  QaApprovedRoleDAOProvider(String role)
+      : review = DAOReview(
+          id: 'review-$role',
+          walletAddress: ProfileFixtures.wallet,
+          portfolioUrl: 'https://example.org/portfolio',
+          medium: 'Mural',
+          statement: 'Statement',
+          status: 'approved',
+          createdAt: DateTime.utc(2026, 9, 1),
+          metadata: <String, dynamic>{'role': role},
+        );
+
+  final DAOReview review;
+
+  @override
+  DAOReview? findReviewForWallet(String walletAddress) =>
+      walletAddress.trim().toLowerCase() ==
+              review.walletAddress.trim().toLowerCase()
+          ? review
+          : null;
+}
+
+/// A returning user: [screenKeys] were visited (most recent last), so Home
+/// renders its recorded quick actions instead of the first-run suggestions.
+SingleChildWidget qaNavigationWithVisits(List<String> screenKeys) =>
+    ChangeNotifierProvider<NavigationProvider>(
+      create: (_) {
+        final navigation = NavigationProvider();
+        screenKeys.forEach(navigation.trackScreenVisit);
+        return navigation;
+      },
     );
 
 /// A shell scope that can pop, as inside the real desktop shell.
