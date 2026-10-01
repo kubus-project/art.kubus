@@ -208,6 +208,12 @@ The Netcup callers disable `USE_SSH_SMOKE_EGRESS`. Their runner pins the candida
 
 No htpasswd location is configured in GitHub. The development remote script accepts only the fixed private Netcup auth path and never emits password contents.
 
+Apache readability is checked before promotion: the password file uses mode
+0644 and its private parent directories allow traversal. The subscription home
+still restricts other hosting users. Credential rotation must retain this policy.
+Netcup reserves `/icons/` for shared server icons; application PWA and wallet
+metadata icons therefore live at `/app-icons/` with their existing image bytes.
+
 The old Domenca deployment credentials must be replaced in both web Environments with a dedicated Netcup GitHub Actions key and the verified Netcup host fingerprint. Do not copy the operator's local migration key or the old Domenca CI key. Remove obsolete repository-scoped deployment secrets only after Netcup CI and rollback are proven.
 
 ## Backend coordination

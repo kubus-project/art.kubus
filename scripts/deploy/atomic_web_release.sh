@@ -128,6 +128,19 @@ validate_auth_source() {
     || die "development authentication source is not the Netcup host-private password file"
   [ -f "$readable_auth_file" ] && [ -r "$readable_auth_file" ] && [ -s "$readable_auth_file" ] \
     || die "development authentication source is not a readable non-empty file"
+  # Readability as the SSH user does not imply readability as Apache. Require
+  # the host's proven read/traverse policy before changing the public root.
+  [ "$(ls -ld "$readable_auth_file" | cut -c 8)" = r ] \
+    || die "development password file must be readable by Apache (mode 0644)"
+  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
+    auth_directories="$RELEASE_ROOT/auth"
+  else
+    auth_directories='/deploy /deploy/dev.kubus.site /deploy/dev.kubus.site/auth'
+  fi
+  for auth_directory in $auth_directories; do
+    [ "$(ls -ld "$auth_directory" | cut -c 10)" = x ] \
+      || die "development authentication directory must be traversable by Apache"
+  done
   grep -Eq '^[^:[:space:]]+:[^:[:space:]]+' "$readable_auth_file" \
     || die "development authentication source has no usable credential record"
 }
