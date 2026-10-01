@@ -513,8 +513,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.profileMenuSavedItemsTitle,
               subtitle: subtitle,
-              icon: Icons.bookmarks_outlined,
-              iconColor: KubusColorRoles.of(context).foregroundMuted,
               action: TextButton.icon(
                 onPressed: () => _navigateToSavedItems(
                   showClearAll: savedProvider.totalSavedCount > 0,
@@ -1005,7 +1003,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfilePortfolioTitle,
           subtitle: l10n.desktopProfilePortfolioSubtitle,
-          icon: Icons.palette,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showArtworks(
@@ -1058,7 +1055,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfileCollectionsTitle,
           subtitle: l10n.userProfileCollectionsDesktopSubtitle,
-          icon: Icons.collections_outlined,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () =>
@@ -1109,7 +1105,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileEventsTitle,
           subtitle: l10n.desktopProfileEventsSubtitle,
-          icon: Icons.event,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -1152,7 +1147,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileInstitutionProgramsTitle,
           subtitle: l10n.desktopProfileInstitutionProgramsSubtitle,
-          icon: Icons.museum,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -1196,7 +1190,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfilePermanentCollectionTitle,
           subtitle: l10n.desktopProfilePermanentCollectionSubtitle,
-          icon: Icons.account_balance,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () =>
@@ -1268,7 +1261,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.desktopProfileRecentlyViewedTitle,
               subtitle: l10n.desktopProfileRecentlyViewedSubtitle,
-              icon: Icons.history,
               action: viewHistory.isNotEmpty
                   ? TextButton.icon(
                       onPressed: () {
@@ -1434,7 +1426,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.profilePerformanceSectionTitle,
               subtitle: l10n.desktopProfilePerformanceSubtitle,
-              icon: Icons.analytics_outlined,
             ),
             const SizedBox(height: DetailSpacing.xl),
             DesktopGrid(
@@ -1900,7 +1891,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileYourPostsTitle,
           subtitle: l10n.desktopProfileYourPostsSubtitle,
-          icon: Icons.article_outlined,
         ),
         const SizedBox(height: 16),
         FutureBuilder<List<CommunityPost>>(

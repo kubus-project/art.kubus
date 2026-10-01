@@ -502,9 +502,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           subtitle: created
               ? l10n.collectionCreatorStatusSavedSubtitle
               : l10n.collectionCreatorStatusDraftSubtitle,
-          icon: created ? Icons.bookmark_added_outlined : Icons.edit_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -540,9 +537,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorReadinessTitle,
           subtitle: l10n.collectionCreatorReadinessSubtitle,
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
             contextType: contextType,
@@ -552,9 +546,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorQuickActionsTitle,
           subtitle: l10n.collectionCreatorQuickActionsSubtitle,
-          icon: Icons.flash_on_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -590,9 +581,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorSummarySelectedArtworksLabel,
           subtitle: l10n.collectionCreatorAddArtworksTitle,
-          icon: Icons.collections_bookmark_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.curation,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

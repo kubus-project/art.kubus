@@ -401,9 +401,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       children: [
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorReadinessTitle,
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readinessItems,
             contextType: contextType,
@@ -412,9 +409,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: l10n.commonActions,
-          icon: Icons.save_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -1313,7 +1313,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfileArtistPortfolioTitle,
           subtitle: l10n.userProfileArtistPortfolioDesktopSubtitle,
-          icon: Icons.palette,
         ),
         const SizedBox(height: KubusSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -1358,7 +1357,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfileCollectionsTitle,
           subtitle: l10n.userProfileCollectionsDesktopSubtitle,
-          icon: Icons.collections_outlined,
         ),
         const SizedBox(height: 16),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -1400,7 +1398,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfileInstitutionHighlightsTitle,
           subtitle: l10n.userProfileInstitutionHighlightsDesktopSubtitle,
-          icon: Icons.museum,
         ),
         const SizedBox(height: 16),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -1573,7 +1570,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfilePostsTitle,
           subtitle: l10n.userProfileRecentActivitySubtitle(user!.name),
-          icon: Icons.article_outlined,
         ),
         const SizedBox(height: 16),
         if (_postsLoading)

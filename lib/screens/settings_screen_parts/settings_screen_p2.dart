@@ -144,8 +144,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
       children: [
         SharedSectionHeader(
           title: title,
-          icon: icon,
-          iconColor: sectionColor,
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),

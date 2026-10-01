@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../common/kubus_atmosphere.dart';
-import '../common/kubus_context_icon.dart';
 import '../inline_loading.dart';
 
 /// PRODUCT v5 chrome for the advanced dashboards (Artist Studio, Institution
@@ -50,9 +49,10 @@ class KubusNotionLabel extends StatelessWidget {
 ///
 /// With an [accent] (the hub's semantic colour: studio coral, institution
 /// blue, governance green, marketplace orange) the header becomes the hub's
-/// identity band: a [KubusAtmosphere] with a hero context tile beside the
-/// title and the hub [glyph] cropped in the trailing corner. Without one it
-/// stays the flat notion/title/lede block.
+/// identity band: a [KubusAtmosphere] with the hub [glyph] cropped in the
+/// trailing corner. The glyph is the band's one identity device; the text
+/// column starts at the band's leading edge with no icon tile beside it.
+/// Without an accent it stays the flat notion/title/lede block.
 class KubusDashboardHeader extends StatelessWidget {
   const KubusDashboardHeader({
     super.key,
@@ -73,7 +73,7 @@ class KubusDashboardHeader extends StatelessWidget {
   /// Hub colour from [KubusColorRoles]; turns on the identity band.
   final Color? accent;
 
-  /// Hub symbol for the context tile and the cropped ghost glyph.
+  /// Hub symbol, drawn as the band's cropped ghost glyph.
   final IconData? glyph;
 
   final String notion;
@@ -139,19 +139,11 @@ class KubusDashboardHeader extends StatelessWidget {
           glyphAlignment: Alignment.bottomRight,
           glyphExtent: 136,
           padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (glyph != null) ...[
-                KubusContextIcon(
-                  icon: glyph!,
-                  accent: accent!,
-                  size: KubusContextIconSize.hero,
-                ),
-                const SizedBox(width: KubusSpacing.md),
-              ],
-              Expanded(child: textColumn),
-            ],
+          // Keep the text clear of the glyph's corner: the cropped symbol is
+          // decoration and never sits behind the lede.
+          child: Padding(
+            padding: EdgeInsets.only(right: glyph == null ? 0 : 72),
+            child: textColumn,
           ),
         ),
       ),

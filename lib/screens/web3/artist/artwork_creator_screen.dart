@@ -1857,13 +1857,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               : (persistedArtwork.isPublic
                   ? 'Published artwork'
                   : 'Saved draft artwork'),
-          icon: persistedArtwork == null
-              ? Icons.edit_outlined
-              : (persistedArtwork.isPublic
-                  ? Icons.public_outlined
-                  : Icons.bookmark_outline),
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1904,9 +1897,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: 'Readiness',
           subtitle: 'Complete the essentials before you publish.',
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
             contextType: contextType,
@@ -1916,9 +1906,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: 'Quick actions',
           subtitle: 'Keep the workflow inside this creator.',
-          icon: Icons.flash_on_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1971,9 +1958,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: 'Media',
           subtitle: 'Cover and gallery assets for this artwork.',
-          icon: Icons.perm_media_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.media,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2019,9 +2003,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: 'Art direction',
           subtitle: 'What the creator already knows about this piece.',
-          icon: Icons.auto_awesome_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.ar,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

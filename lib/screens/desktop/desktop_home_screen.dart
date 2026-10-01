@@ -1049,8 +1049,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         DesktopSectionHeader(
           title: l10n.desktopHomeYourActivityTitle,
           subtitle: l10n.desktopHomeYourActivitySubtitle,
-          icon: Icons.analytics_outlined,
-          iconColor: AppColorUtils.coralAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (sectionLoading)
@@ -1110,8 +1108,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           subtitle: quickScreens.isEmpty
               ? l10n.desktopHomeQuickActionsEmptySubtitle
               : l10n.desktopHomeQuickActionsSubtitle,
-          icon: Icons.flash_on,
-          iconColor: AppColorUtils.amberAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (quickScreens.isEmpty)
@@ -1397,8 +1393,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       children: [
         DesktopSectionHeader(
           title: title,
-          icon: _iconForHomeRail(rail.entityType),
-          iconColor: HomeRailSemantics.of(context, rail.entityType),
         ),
         const SizedBox(height: DetailSpacing.xl),
         HomePromotionRailList(

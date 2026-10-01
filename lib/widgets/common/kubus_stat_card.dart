@@ -12,16 +12,25 @@ enum KubusStatCardLayout {
   centered,
 }
 
-/// PRODUCT v5 metric tile: a ruled surface, a small contextual icon tile,
-/// the number and its label.
+/// PRODUCT v5 metric tile: the number, its label and one contextual device.
 ///
-/// [accent] is the metric's contextual colour (from [KubusColorRoles]).
-/// Expressive tiles (the default for [KubusStatCardLayout.centered]) also
-/// use it as composition: the metric's glyph returns oversized and cropped
-/// in the trailing corner ([KubusGhostGlyph]), a diffuse field of the accent
-/// rises from that corner and the top edge catches it. Followers therefore
-/// read differently from artworks or governance without the card turning
-/// into a colour block: the fill under the text is the plain surface.
+/// The value is the primary information and the label names it. [accent] is
+/// the metric's contextual colour (from [KubusColorRoles]) and is expressed
+/// once, in one of two ways:
+///
+/// - **Expressive** (the default for [KubusStatCardLayout.centered]): the
+///   metric's glyph is cropped oversized in the trailing corner
+///   ([KubusGhostGlyph]), a diffuse field of the accent rises from that
+///   corner and the top edge catches it. There is no foreground icon tile:
+///   the ghost glyph is the metric's identity, and a small copy of the same
+///   symbol beside the number would only say it twice.
+/// - **Dense** (the default for [KubusStatCardLayout.standard]): a compact
+///   context tile leads the row, for lists of metrics where a cropped glyph
+///   would not be legible. No ghost glyph and no field.
+///
+/// Followers therefore read differently from artworks or governance without
+/// the card turning into a colour block: the fill under the text is the plain
+/// surface.
 ///
 /// Hover answers inside the clipped tile only: the glyph grows and drifts a
 /// few pixels toward the number and the field and edge brighten. The tile
@@ -76,8 +85,9 @@ class KubusStatCard extends StatelessWidget {
   /// Overrides the spoken `value title` (for units such as KUB8).
   final String? semanticsLabel;
 
-  /// Ghost glyph, contextual field and edge light. Defaults to on for the
-  /// centred (grid) layout and off for the dense standard row. Needs [icon].
+  /// Ghost glyph, contextual field and edge light instead of the foreground
+  /// context tile. Defaults to on for the centred (grid) layout and off for
+  /// the dense standard row. Needs [icon].
   final bool? expressive;
 
   /// Strength of the contextual field rising from the glyph corner.
@@ -89,8 +99,8 @@ class KubusStatCard extends StatelessWidget {
     vertical: KubusSpacing.sm + KubusSpacing.xs,
   );
 
-  /// Height a [KubusStatCardLayout.centered] tile needs for its icon tile,
-  /// number and [titleLines] label lines at the ambient text scale, measured
+  /// Height a [KubusStatCardLayout.centered] tile needs for its number and
+  /// [titleLines] label lines at the ambient text scale, measured
   /// with the same styles the tile paints. Grids of centred tiles pass it (or
   /// a larger floor) as `mainAxisExtent`, so 200 % text grows the tile
   /// instead of clipping the label.
@@ -100,7 +110,6 @@ class KubusStatCard extends StatelessWidget {
     TextStyle? valueStyle,
     TextStyle? titleStyle,
     EdgeInsets padding = defaultPadding,
-    bool withIcon = true,
   }) {
     final scaler = MediaQuery.textScalerOf(context);
     final lines = _labelLines(scaler, titleLines);
@@ -125,9 +134,7 @@ class KubusStatCard extends StatelessWidget {
 
     final valueLine = lineHeight(valueStyle ?? KubusTextStyles.statValue, 1);
     final label = lineHeight(titleStyle ?? KubusTextStyles.statLabel, lines);
-    final iconBlock =
-        withIcon ? KubusContextIconSize.compact.box + KubusSpacing.xs : 0.0;
-    return (padding.vertical + iconBlock + valueLine + KubusSpacing.xs + label)
+    return (padding.vertical + valueLine + KubusSpacing.xs + label)
         .ceilToDouble();
   }
 
@@ -142,7 +149,11 @@ class KubusStatCard extends StatelessWidget {
     final radius = borderRadius ?? BorderRadius.circular(KubusRadius.surface);
     final centered = layout == KubusStatCardLayout.centered;
     final resolvedAccent = accent ?? roles.active;
-    final contextIcon = showIcon && icon != null
+    final isExpressive = (expressive ?? centered) && showIcon && icon != null;
+    // The foreground context tile is the dense row's only identity device.
+    // Expressive tiles carry the metric's glyph as the cropped ghost glyph
+    // instead, and the centred stack keeps the number as its first line.
+    final contextIcon = showIcon && icon != null && !isExpressive && !centered
         ? KubusContextIcon(
             icon: icon!,
             accent: resolvedAccent,
@@ -174,18 +185,14 @@ class KubusStatCard extends StatelessWidget {
 
     final Widget body;
     if (centered) {
-      // A fixed stack (icon tile, number, label) so a grid can reserve the
-      // exact height with [centeredExtent]. A number wider than the tile
-      // scales down rather than being ellipsised; the label wraps.
+      // A fixed stack (number, label) so a grid can reserve the exact height
+      // with [centeredExtent]. A number wider than the tile scales down
+      // rather than being ellipsised; the label wraps.
       body = Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (contextIcon != null) ...[
-            Center(child: contextIcon),
-            const SizedBox(height: KubusSpacing.xs),
-          ],
           FittedBox(fit: BoxFit.scaleDown, child: valueText),
           const SizedBox(height: KubusSpacing.xs),
           titleText,
@@ -238,7 +245,6 @@ class KubusStatCard extends StatelessWidget {
       child: body,
     );
 
-    final isExpressive = (expressive ?? centered) && showIcon && icon != null;
     final brightness = Theme.of(context).brightness;
 
     Widget surface(bool hovered) {

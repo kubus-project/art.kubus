@@ -1888,8 +1888,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: [
         SharedSectionHeader(
           title: title,
-          icon: _iconForRailItem(rail.entityType),
-          iconColor: HomeRailSemantics.of(context, rail.entityType),
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),

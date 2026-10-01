@@ -756,10 +756,6 @@ class DesktopCreatorSubjectActionsSection extends StatelessWidget {
     return DesktopCreatorSidebarSection(
       title: title,
       subtitle: subtitle ?? l10n.commonActions,
-      icon: Icons.more_horiz,
-      contextType: contextType,
-      semantic: semantic,
-      sectionColors: colors,
       child: SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
@@ -1670,43 +1666,26 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
 /// One section of the creator management rail.
 ///
 /// PRODUCT v5: the rail reads as ONE workspace, so a section is not a card.
-/// It is a compact contextual icon tile, a title, an optional subtitle and
-/// its content, closed by a hairline. The semantic accent lives only in the
-/// icon tile; no tinted fill, no glass.
+/// It is a title, an optional subtitle and its content, closed by a
+/// hairline. Neutral by design: the section title names the content, so no
+/// icon tile or contextual tint repeats it.
 class DesktopCreatorSidebarSection extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget child;
-  final IconData? icon;
   final Widget? trailing;
-  final Color? accentColor;
-  final DesktopCreatorContextType contextType;
-  final DesktopCreatorSectionSemantic semantic;
-  final DesktopCreatorSectionColors? sectionColors;
 
   const DesktopCreatorSidebarSection({
     super.key,
     required this.title,
     required this.child,
     this.subtitle,
-    this.icon,
     this.trailing,
-    this.accentColor,
-    this.contextType = DesktopCreatorContextType.editor,
-    this.semantic = DesktopCreatorSectionSemantic.identity,
-    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final colors = sectionColors ??
-        resolveDesktopCreatorSectionColors(
-          context,
-          contextType: contextType,
-          semantic: semantic,
-          identityColor: accentColor,
-        );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1720,14 +1699,6 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                if (icon != null) ...[
-                  KubusContextIcon(
-                    icon: icon!,
-                    accent: colors.iconColor,
-                    size: KubusContextIconSize.compact,
-                  ),
-                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1812,10 +1783,6 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
     return DesktopCreatorSidebarSection(
       title: title,
       subtitle: subtitle,
-      icon: Icons.group_add_outlined,
-      contextType: contextType,
-      semantic: DesktopCreatorSectionSemantic.collaboration,
-      sectionColors: colors,
       child: draftPanel ??
           (enabled && entityId.trim().isNotEmpty
               ? CollaborationPanel(

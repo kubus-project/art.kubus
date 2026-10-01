@@ -985,8 +985,6 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SharedSettingsSectionHeader(
-                    icon: Icons.mail_outline,
-                    accent: roles.active,
                     title: l10n.settingsEmailPreferencesSectionTitle,
                     subtitle: l10n.settingsEmailPreferencesTransactionalNote,
                   ),
@@ -1098,8 +1096,6 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SharedSettingsSectionHeader(
-                    icon: Icons.notifications_none_outlined,
-                    accent: roles.secondary,
                     title: l10n.settingsAppNotificationsSectionTitle,
                     subtitle: l10n.settingsAppNotificationsSectionSubtitle,
                   ),
