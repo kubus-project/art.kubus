@@ -44,7 +44,20 @@ if sh "$release_script" prepare >/dev/null 2>&1; then
 fi
 [ -d "$LIVE_DIR" ] && [ ! -e "$RELEASE_DIR" ]
 mkdir -p "$RELEASE_ROOT/auth"
+chmod 0711 "$RELEASE_ROOT/auth"
 printf 'test-user:$2y$test-only-hash\n' > "$RELEASE_ROOT/auth/passwd"
+chmod 0600 "$RELEASE_ROOT/auth/passwd"
+if sh "$release_script" prepare >/dev/null 2>&1; then
+  echo 'development preparation accepted a password file unreadable by Apache' >&2
+  exit 1
+fi
+chmod 0644 "$RELEASE_ROOT/auth/passwd"
+chmod 0700 "$RELEASE_ROOT/auth"
+if sh "$release_script" prepare >/dev/null 2>&1; then
+  echo 'development preparation accepted an auth directory Apache cannot traverse' >&2
+  exit 1
+fi
+chmod 0711 "$RELEASE_ROOT/auth"
 sh "$release_script" prepare >/dev/null
 [ -d "$RELEASE_DIR" ]
 grep -Fq 'AuthUserFile "'"$RELEASE_ROOT/auth/passwd"'"' "$RELEASE_DIR/.htaccess"

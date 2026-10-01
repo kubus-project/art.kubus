@@ -120,7 +120,7 @@ The privileged job uses only the `development-web` environment. Promotion is ser
 
 Netcup returned HTTP 403 for symlinked `httpdocs` on both app and dev, including a symlink inside the domain directory. A physical directory moved into `httpdocs` returned HTTP 200. The release script therefore verifies a complete immutable release in `/deploy/<site>/releases/<SHA>`, copies it to a sibling of the physical document root, and promotes with guarded directory renames. The previous root remains under `/deploy/<site>/rollback-<SHA>` for an automatic or manual rollback. The two renames have a small interval between them; a failed second move immediately restores the first root.
 
-Development protection uses the hashed password database at `/deploy/dev.kubus.site/auth/passwd`, outside `httpdocs`. The source artifact must contain only application routing rules. Before promotion, the remote script verifies the password file and prepends one deterministic Basic Auth block to a copy of the application's `.htaccess`. It verifies the original application rules against the CI checksum manifest and records the final policy digest privately. Production rejects all development-auth directives. A missing password file, altered application rules, or invalid host policy stops deployment before promotion. The development smoke checks the unauthenticated challenge and an authenticated response using `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD` from the `development-web` Environment.
+Development protection uses the hashed password database at `/deploy/dev.kubus.site/auth/passwd`, outside `httpdocs`. SSH is chrooted; Apache is not. Its `AuthUserFile` must therefore use `/var/www/vhosts/hosting249437.a153b.netcup.net/deploy/dev.kubus.site/auth/passwd`. The password file must be readable by Apache; the subscription home prevents other hosting accounts from traversing it. The source artifact must contain only application routing rules. Before promotion, the remote script verifies the password file through its SSH path and prepends one deterministic Basic Auth block with the Apache path to a copy of the application's `.htaccess`. It verifies the original application rules against the CI checksum manifest and records the final policy digest privately. Production rejects all development-auth directives. A missing password file, altered application rules, or invalid host policy stops deployment before promotion. The development smoke checks the unauthenticated challenge and an authenticated response using `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD` from the `development-web` Environment.
 
 No password file or plaintext credential belongs in the repository, public artifact or document root. The existing hashed development password database was transferred to the Netcup private path without logging its contents during the initial mirror; rotate it later through a separately approved credential change.
 
@@ -207,6 +207,12 @@ The Netcup callers pass no smoke bypass token. Remove the historical Domenca `SM
 The Netcup callers disable `USE_SSH_SMOKE_EGRESS`. Their runner pins the candidate Netcup IP directly while retaining hostname and SNI. Remove the old Environment variable after candidate smoke passes. The action retains a fingerprint-verified SOCKS option only for a separately reviewed response to a measured Netcup egress problem.
 
 No htpasswd location is configured in GitHub. The development remote script accepts only the fixed private Netcup auth path and never emits password contents.
+
+Apache readability is checked before promotion: the password file uses mode
+0644 and its private parent directories allow traversal. The subscription home
+still restricts other hosting users. Credential rotation must retain this policy.
+Netcup reserves `/icons/` for shared server icons; application PWA and wallet
+metadata icons therefore live at `/app-icons/` with their existing image bytes.
 
 The old Domenca deployment credentials must be replaced in both web Environments with a dedicated Netcup GitHub Actions key and the verified Netcup host fingerprint. Do not copy the operator's local migration key or the old Domenca CI key. Remove obsolete repository-scoped deployment secrets only after Netcup CI and rollback are proven.
 

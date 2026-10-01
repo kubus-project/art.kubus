@@ -444,10 +444,11 @@ test('production smoke fails closed on a WAF 415 with a token-safe diagnosis', (
   assert.match(smoke, /waf_smoke_diagnostics\.sh/);
   assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" ""/);
   assert.match(smoke, /die "root did not boot the Flutter application/);
-  // The diagnosis never echoes the token and rejects the ineffective .htaccess
-  // pseudo-fix explicitly.
+  // The diagnosis never echoes the token and requires a Netcup investigation
+  // rather than applying the former Domenca host exception.
   assert.doesNotMatch(diagnostics, /echo[^\n]*\$SMOKE_BYPASS_TOKEN|printf[^\n]*\$SMOKE_BYPASS_TOKEN/);
-  assert.match(diagnostics, /an \.htaccess rule cannot fix this/);
+  assert.match(diagnostics, /Verify the Netcup response.*Netcup support/);
+  assert.match(diagnostics, /do not apply the old Domenca rule/);
 });
 
 test('smoke clients route through the SSH SOCKS egress when SMOKE_SOCKS_PROXY is set', () => {
