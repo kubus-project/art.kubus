@@ -39,6 +39,8 @@ library;
 export '../utils/design_tokens.dart';
 export '../utils/kubus_accent_gradients.dart';
 export '../utils/kubus_color_roles.dart';
+export 'common/kubus_action_tile.dart';
+export 'common/kubus_atmosphere.dart';
 export 'common/kubus_badge.dart';
 export 'common/kubus_glass_chip.dart';
 export 'common/kubus_meter_bar.dart';

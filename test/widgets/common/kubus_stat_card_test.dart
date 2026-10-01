@@ -1,5 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
+import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
@@ -50,8 +52,8 @@ void main() {
   });
 
   testWidgets(
-      'stat tiles are flat: surface fill, rule, no glass; the icon is a '
-      'compact context tile, not a watermark', (tester) async {
+      'expressive tiles: neutral surface and rule under the text, a compact '
+      'context tile, and a cropped decorative ghost glyph', (tester) async {
     for (final brightness in Brightness.values) {
       await tester.pumpWidget(_wrap(
         const KubusStatCard(
@@ -66,19 +68,54 @@ void main() {
       final roles =
           KubusColorRoles.of(tester.element(find.byType(KubusStatCard)));
       expect(find.byType(LiquidGlassCard), findsNothing);
-      final glyph = find.byIcon(Icons.people_outline);
-      expect(glyph, findsOneWidget);
-      expect(tester.getSize(glyph), const Size.square(16),
-          reason: 'a compact context glyph, never a card-sized watermark');
-      expect(tester.widget<Icon>(glyph).color, Colors.cyan);
-      final material = tester.widget<Material>(find.descendant(
-        of: find.byType(KubusStatCard),
-        matching: find.byType(Material),
-      ));
+      final tileGlyph = find.descendant(
+        of: find.byType(KubusContextIcon),
+        matching: find.byIcon(Icons.people_outline),
+      );
+      expect(tester.getSize(tileGlyph), const Size.square(16));
+      expect(tester.widget<Icon>(tileGlyph).color, Colors.cyan);
+
+      // The ghost glyph is composition: larger than the tile glyph, in the
+      // accent at low opacity, cropped by the card, never announced.
+      final ghost = find.descendant(
+        of: find.byType(KubusGhostGlyph),
+        matching: find.byIcon(Icons.people_outline),
+      );
+      expect(ghost, findsOneWidget);
+      final ghostIcon = tester.widget<Icon>(ghost);
+      expect(ghostIcon.size, greaterThanOrEqualTo(56));
+      expect(ghostIcon.color!.a, lessThan(0.25));
+      final card = tester.getRect(find.byType(KubusStatCard));
+      final ghostRect = tester.getRect(ghost);
+      expect(ghostRect.right, greaterThan(card.right),
+          reason: 'the glyph bleeds off the trailing edge');
+
+      final material = tester.widget<Material>(find
+          .descendant(
+            of: find.byType(KubusStatCard),
+            matching: find.byType(Material),
+          )
+          .first);
       expect(material.color, roles.surface);
       final shape = material.shape! as RoundedRectangleBorder;
       expect(shape.side.color, roles.rule);
     }
+  });
+
+  testWidgets('dense standard rows stay plain unless asked', (tester) async {
+    await tester.pumpWidget(_wrap(const KubusStatCard(
+      title: 'Views',
+      value: '42',
+      icon: Icons.visibility_outlined,
+    )));
+    expect(find.byType(KubusGhostGlyph), findsNothing);
+    await tester.pumpWidget(_wrap(const KubusStatCard(
+      title: 'Views',
+      value: '42',
+      icon: Icons.visibility_outlined,
+      expressive: true,
+    )));
+    expect(find.byType(KubusGhostGlyph), findsOneWidget);
   });
 
   testWidgets('value is announced with its label; tappable tiles are buttons',
@@ -111,20 +148,37 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('no hover motion: nothing animates on pointer enter',
-      (tester) async {
-    await tester.pumpWidget(_wrap(const KubusStatCard(
-      title: 'Views',
-      value: '42',
-      layout: KubusStatCardLayout.centered,
-    )));
-    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await gesture.addPointer(location: Offset.zero);
-    addTearDown(gesture.removePointer);
-    final before = tester.getRect(find.text('42'));
-    await gesture.moveTo(tester.getCenter(find.byType(KubusStatCard)));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(tester.getRect(find.text('42')), before);
-    expect(tester.hasRunningAnimations, isFalse);
-  });
+  for (final reduced in [false, true]) {
+    testWidgets(
+        'hover answers inside the tile; the number never moves '
+        '(reduced motion: $reduced)', (tester) async {
+      await tester.pumpWidget(MediaQuery(
+        data: MediaQueryData(disableAnimations: reduced),
+        child: _wrap(const KubusStatCard(
+          title: 'Views',
+          value: '42',
+          icon: Icons.visibility_outlined,
+          layout: KubusStatCardLayout.centered,
+        )),
+      ));
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      final before = tester.getRect(find.text('42'));
+      final ghost = find.descendant(
+        of: find.byType(KubusGhostGlyph),
+        matching: find.byIcon(Icons.visibility_outlined),
+      );
+      final ghostBefore = tester.getRect(ghost);
+      await gesture.moveTo(tester.getCenter(find.byType(KubusStatCard)));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.text('42')), before);
+      if (reduced) {
+        expect(tester.getRect(ghost), ghostBefore,
+            reason: 'reduced motion: no decorative movement');
+      } else {
+        expect(tester.getRect(ghost), isNot(ghostBefore));
+      }
+    });
+  }
 }
