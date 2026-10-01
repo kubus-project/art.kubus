@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/profile/profile_cover_field.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -342,7 +345,23 @@ class _ProfileScreenState extends State<ProfileScreen>
           final hasCoverImage = coverImageUrl != null &&
               coverImageUrl.isNotEmpty &&
               !coverUrlIsKnownBad;
-          final coverHeight = hasCoverImage ? 220.0 : 150.0;
+          // Without an image the band must still hold the title row above
+          // the avatar; a fixed 150 px let the avatar ride over the title.
+          final coverEdge = isSmallScreen ? 12.0 : 16.0;
+          final titleRow = math.max(
+            KubusHeaderMetrics.actionHitArea,
+            MediaQuery.textScalerOf(context)
+                    .scale(KubusChromeMetrics.heroTitle + KubusSpacing.sm) *
+                1.3,
+          );
+          final stackedCoverHeight = coverEdge +
+              titleRow +
+              KubusSpacing.sm +
+              (avatarRadius + avatarRingPadding) * 2 +
+              coverEdge;
+          final coverHeight = hasCoverImage
+              ? math.max(220.0, stackedCoverHeight)
+              : stackedCoverHeight;
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final cacheWidth = (constraints.maxWidth * dpr).round();
           final cacheHeight = (coverHeight * dpr).round();
@@ -394,24 +413,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Base background (always present)
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            gradient: !hasCoverImage
-                                ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.3),
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.1),
-                                    ],
-                                  )
-                                : null,
+                        // Base: the role field without an image (role colour,
+                        // not the personal accent); plain surface under one.
+                        if (hasCoverImage)
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                            ),
+                          )
+                        else
+                          ProfileCoverField(
+                            isArtist:
+                                profileProvider.currentUser?.isArtist ?? false,
+                            isInstitution:
+                                profileProvider.currentUser?.isInstitution ??
+                                    false,
                           ),
-                        ),
 
                         // Cover image layer (explicit Image widget so we can downscale/catch errors)
                         if (hasCoverImage)

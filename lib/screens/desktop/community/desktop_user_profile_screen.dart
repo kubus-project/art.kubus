@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../widgets/profile/profile_cover_field.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
@@ -986,14 +987,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 child: Stack(
                   children: [
-                    Container(
+                    SizedBox(
                       height: hasCoverImage
                           ? _kProfileCoverHeightWithImage
                           : _kProfileCoverHeightWithoutImage,
                       width: double.infinity,
-                      // Flat cover band when there is no image (no accent
-                      // gradient; the user accent is not structure).
-                      color: hasCoverImage ? null : roles.surfaceRaised,
+                      // Without an image the cover is the role field (the
+                      // role colour, never the personal user accent).
                       child: hasCoverImage
                           ? Image.network(
                               coverImageUrl,
@@ -1002,7 +1002,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 return ColoredBox(color: roles.surfaceRaised);
                               },
                             )
-                          : null,
+                          : ProfileCoverField(
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                            ),
                     ),
                     // Media scrim only over a real image.
                     if (hasCoverImage)

@@ -42,6 +42,8 @@ class KubusAtmosphere extends StatelessWidget {
     this.borderRadius,
     this.framed = true,
     this.fieldAlignment = Alignment.topRight,
+    this.glyphAlignment,
+    this.base,
   });
 
   /// Contextual colour from [KubusColorRoles]; never a raw literal.
@@ -66,6 +68,14 @@ class KubusAtmosphere extends StatelessWidget {
   /// the opposite corner.
   final Alignment fieldAlignment;
 
+  /// Corner for the glyph when it should not share the field's corner (for
+  /// example to stay clear of a control). Defaults to [fieldAlignment].
+  final Alignment? glyphAlignment;
+
+  /// Fill under the fields; defaults to the surface. Covers use the raised
+  /// surface so the band separates from the card body below it.
+  final Color? base;
+
   /// Field strengths per theme. Dark grounds take more light before a
   /// colour field reads as a tint rather than a block.
   static double accentFieldAlpha(Brightness b) =>
@@ -87,7 +97,7 @@ class KubusAtmosphere extends StatelessWidget {
       key: const ValueKey<String>('kubus_atmosphere'),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: roles.surface,
+        color: base ?? roles.surface,
         borderRadius: radius,
         border: framed ? KubusBorders.hairline(context) : null,
       ),
@@ -138,7 +148,7 @@ class KubusAtmosphere extends StatelessWidget {
               child: KubusGhostGlyph(
                 icon: glyph!,
                 color: accent,
-                alignment: fieldAlignment,
+                alignment: glyphAlignment ?? fieldAlignment,
                 extent: glyphExtent,
               ),
             ),
@@ -232,7 +242,7 @@ class KubusGhostGlyph extends StatelessWidget {
   final Offset shift;
 
   static double defaultOpacity(Brightness b) =>
-      b == Brightness.dark ? 0.13 : 0.10;
+      b == Brightness.dark ? 0.11 : 0.085;
 
   static double extentFor(Size size) =>
       (math.min(size.width, size.height) * 1.25).clamp(56.0, 220.0);

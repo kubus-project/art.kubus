@@ -294,6 +294,9 @@ class KubusStatCard extends StatelessWidget {
                         icon: icon!,
                         color: resolvedAccent,
                         alignment: Alignment.bottomRight,
+                        // Mostly cropped: a fragment of the symbol, so the
+                        // label in front of it stays the readable layer.
+                        bleed: 0.36,
                         opacity: KubusGhostGlyph.defaultOpacity(brightness) +
                             0.04 * (hovered ? 1 : 0),
                         scale: motion ? 1 + 0.06 * t : 1,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/profile/profile_cover_field.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
@@ -636,6 +637,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
+                    if (!hasCoverImage)
+                      ProfileCoverField(
+                        isArtist: isArtist,
+                        isInstitution: isInstitution,
+                      ),
                     if (hasCoverImage)
                       LayoutBuilder(
                         builder: (context, constraints) {
