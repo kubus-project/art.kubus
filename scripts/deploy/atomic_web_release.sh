@@ -104,20 +104,31 @@ extract_auth_user_file() {
   printf '%s' "$auth_file"
 }
 
+development_auth_file() {
+  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
+    printf '%s' "$RELEASE_ROOT/auth/passwd"
+  else
+    # Apache sees the subscription's real filesystem, while SSH is chrooted.
+    # An AuthUserFile starting with /deploy therefore returns HTTP 500.
+    printf '%s' '/var/www/vhosts/hosting249437.a153b.netcup.net/deploy/dev.kubus.site/auth/passwd'
+  fi
+}
+
 validate_auth_source() {
   auth_file="$1"
   require_absolute_path "development authentication source" "$auth_file"
   printf '%s' "$auth_file" | grep -Eq '^/[A-Za-z0-9._/-]+$' \
     || die "development authentication source has an unsafe path shape"
-  expected_auth_file='/deploy/dev.kubus.site/auth/passwd'
+  expected_auth_file="$(development_auth_file)"
+  readable_auth_file='/deploy/dev.kubus.site/auth/passwd'
   if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
-    expected_auth_file="$RELEASE_ROOT/auth/passwd"
+    readable_auth_file="$RELEASE_ROOT/auth/passwd"
   fi
   [ "$auth_file" = "$expected_auth_file" ] \
     || die "development authentication source is not the Netcup host-private password file"
-  [ -f "$auth_file" ] && [ -r "$auth_file" ] && [ -s "$auth_file" ] \
+  [ -f "$readable_auth_file" ] && [ -r "$readable_auth_file" ] && [ -s "$readable_auth_file" ] \
     || die "development authentication source is not a readable non-empty file"
-  grep -Eq '^[^:[:space:]]+:[^:[:space:]]+' "$auth_file" \
+  grep -Eq '^[^:[:space:]]+:[^:[:space:]]+' "$readable_auth_file" \
     || die "development authentication source has no usable credential record"
 }
 
@@ -175,10 +186,7 @@ apply_development_policy() {
   application_htaccess="$candidate/.htaccess"
   reject_auth_policy "$application_htaccess"
 
-  auth_file='/deploy/dev.kubus.site/auth/passwd'
-  if [ "${KUBUS_DEPLOY_TEST_MODE:-}" = 1 ]; then
-    auth_file="$RELEASE_ROOT/auth/passwd"
-  fi
+  auth_file="$(development_auth_file)"
   validate_auth_source "$auth_file"
 
   prepared_htaccess="$candidate/.htaccess.host-policy"
