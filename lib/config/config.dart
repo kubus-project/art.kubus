@@ -98,9 +98,6 @@ class AppConfig {
   // Auth UX: re-prompt login when backend token expires.
   static const bool enableRePromptLoginOnExpiry = true;
 
-  /// Map: allow expanding marker radius via "Travel mode".
-  static const bool enableMapTravelMode = true;
-
   /// Map: optional isometric-like perspective on the map canvas.
   ///
   /// Pitched mode renders stable screen-space pedestals beneath the canonical
@@ -188,6 +185,9 @@ class AppConfig {
   /// Analytics and tracking
   static const bool enableAnalytics = bool.fromEnvironment(
     'ANALYTICS_APP_ENABLED',
+    // Public release configuration supplies this explicitly. The fallback
+    // retains the historical safe behavior for developer and test builds that
+    // do not run the public-build preparation step.
     defaultValue: isProduction,
   );
 
@@ -563,8 +563,6 @@ class AppConfig {
         return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry':
         return enableRePromptLoginOnExpiry;
-      case 'mapTravelMode':
-        return enableMapTravelMode;
       case 'mapIsometricView':
         return enableMapIsometricView;
       case 'mapWalkingNavigation':
@@ -628,15 +626,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.7.5',
+    defaultValue: '0.8.0',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26081002,
+    defaultValue: 26081201,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-08-10',
+    defaultValue: '2026-08-12',
   );
 
   /// Get full version string
@@ -685,8 +683,6 @@ class PreferenceKeys {
   static const String userProfile = 'user_profile';
 
   /// Map UX
-  static const String mapTravelModeEnabledV1 = 'map_travel_mode_enabled_v1';
-  static const String mapTravelTutorialSeenV1 = 'map_travel_tutorial_seen_v1';
   static const String mapIsometricViewEnabledV1 =
       'map_isometric_view_enabled_v1';
 

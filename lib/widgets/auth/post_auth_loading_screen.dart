@@ -30,6 +30,7 @@ class PostAuthLoadingScreen extends StatefulWidget {
     this.embedded = false,
     this.modalReauth = false,
     this.requiresWalletBackup = false,
+    this.requiresWalletSetup = false,
     this.presentation = PostAuthLoadingPresentation.fullScreen,
     this.onBeforeSavedItemsSync,
     this.onAuthSuccess,
@@ -45,6 +46,7 @@ class PostAuthLoadingScreen extends StatefulWidget {
   final bool embedded;
   final bool modalReauth;
   final bool requiresWalletBackup;
+  final bool requiresWalletSetup;
   final PostAuthLoadingPresentation presentation;
   final Future<void> Function()? onBeforeSavedItemsSync;
   final Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
@@ -83,6 +85,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       embedded: widget.embedded,
       modalReauth: widget.modalReauth,
       requiresWalletBackup: widget.requiresWalletBackup,
+      requiresWalletSetup: widget.requiresWalletSetup,
       onBeforeSavedItemsSync: widget.onBeforeSavedItemsSync,
       onStageChanged: (stage) {
         if (!mounted) return;
@@ -121,6 +124,9 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
           builder: (_) => OnboardingFlowScreen(
             forceDesktop: MediaQuery.of(context).size.width >= 1024,
             initialStepId: result.onboardingStepId,
+            completionRoute: result.completionRoute,
+            completionArguments: result.arguments,
+            requiresWalletSetup: result.requiresWalletSetup,
           ),
           settings: const RouteSettings(name: '/onboarding'),
         ),

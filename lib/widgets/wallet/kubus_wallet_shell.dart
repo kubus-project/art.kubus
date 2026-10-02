@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../common/kubus_atmosphere.dart';
 import '../inline_loading.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../glass_components.dart';
 
 enum WalletActionType {
   send,
@@ -137,7 +137,7 @@ class KubusWalletSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,17 +146,20 @@ class KubusWalletSectionHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                title,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: scheme.onSurface,
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    color: roles.foreground,
+                  ),
                 ),
               ),
               const SizedBox(height: KubusSpacing.xs),
               Text(
                 subtitle,
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.68),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: roles.foregroundMuted,
                 ),
               ),
             ],
@@ -181,7 +184,14 @@ class KubusWalletSectionCard extends StatelessWidget {
     this.padding,
     this.margin,
     this.borderRadius,
+    this.accent,
+    this.glyph,
   });
+
+  /// Turns the section into an asset hero ([KubusAtmosphere]) in this
+  /// colour. Only the balance section uses it; other sections stay flat.
+  final Color? accent;
+  final IconData? glyph;
 
   final String? title;
   final String? subtitle;
@@ -193,10 +203,45 @@ class KubusWalletSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LiquidGlassCard(
+    final roles = KubusColorRoles.of(context);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (title != null && subtitle != null) ...<Widget>[
+          KubusWalletSectionHeader(
+            title: title!,
+            subtitle: subtitle!,
+            trailing: headerTrailing,
+          ),
+          const SizedBox(height: KubusSpacing.md),
+        ],
+        child,
+      ],
+    );
+    if (accent != null) {
+      return Padding(
+        padding: margin ?? EdgeInsets.zero,
+        child: KubusAtmosphere(
+          accent: accent!,
+          glyph: glyph,
+          glyphAlignment: Alignment.topRight,
+          glyphExtent: 150,
+          borderRadius:
+              borderRadius ?? BorderRadius.circular(KubusRadius.surface),
+          padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
+          child: content,
+        ),
+      );
+    }
+    return Container(
       margin: margin,
       padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
-      borderRadius: borderRadius,
+      decoration: BoxDecoration(
+        color: roles.surface,
+        borderRadius:
+            borderRadius ?? BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -258,11 +303,12 @@ class KubusWalletMetaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final baseColor = tintColor ?? scheme.primary;
-    final labelColor = tone == KubusWalletPillTone.accent
-        ? baseColor
-        : scheme.onSurface.withValues(alpha: 0.82);
+    final roles = KubusColorRoles.of(context);
+    // PRODUCT v5: flat chip. The tint colours only the icon, and the label
+    // when the chip reports a state (accent tone); the fill is neutral.
+    final baseColor = tintColor ?? roles.foregroundMuted;
+    final labelColor =
+        tone == KubusWalletPillTone.accent ? baseColor : roles.foreground;
 
     Widget labelText = Text(
       label,
@@ -288,10 +334,10 @@ class KubusWalletMetaPill extends StatelessWidget {
         vertical: KubusSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: baseColor.withValues(alpha: emphasized ? 0.16 : 0.08),
+        color: emphasized ? roles.surfaceRaised : roles.surface,
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(
-          color: baseColor.withValues(alpha: emphasized ? 0.26 : 0.18),
+          color: emphasized ? baseColor : roles.rule,
         ),
       ),
       child: Row(
@@ -374,98 +420,79 @@ class KubusWalletActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final effectiveColor =
-        enabled ? color : scheme.onSurface.withValues(alpha: 0.34);
+    final roles = KubusColorRoles.of(context);
     final isCompact = density == KubusWalletDensity.compact;
+    final foreground = enabled ? roles.foreground : roles.foregroundSubtle;
+    final interactive = enabled && !loading;
 
-    // One layout for every action card: icon box pinned to the top, the
-    // title/subtitle block pinned to the bottom. Cards in a rail then line up
-    // on both edges no matter how long each subtitle runs.
-    final double iconBox = isCompact
-        ? KubusSizes.walletActionIconBox
-        : KubusChromeMetrics.heroIconBox;
-    final double iconSize =
-        isCompact ? KubusSizes.walletActionIcon : KubusChromeMetrics.heroIcon;
-    final EdgeInsets cardPadding = EdgeInsets.all(
-      isCompact ? KubusSpacing.md : KubusSpacing.lg,
-    );
-
-    return LiquidGlassCard(
-      padding: EdgeInsets.zero,
-      onTap: enabled && !loading ? onTap : null,
-      child: Container(
-        constraints: BoxConstraints(minHeight: minHeight),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              effectiveColor.withValues(alpha: enabled ? 0.18 : 0.08),
-              scheme.surface.withValues(alpha: enabled ? 0.58 : 0.42),
-            ],
-          ),
-          border: Border.all(
-            color: effectiveColor.withValues(alpha: enabled ? 0.24 : 0.16),
-          ),
+    // PRODUCT v5: flat action card. Neutral icon, surface fill, hairline
+    // rule; [color] is no longer painted as a gradient or a tinted icon
+    // tile. Disabled cards explain why in the subtitle.
+    return Semantics(
+      button: true,
+      enabled: interactive,
+      child: Material(
+        color: roles.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          side: BorderSide(color: roles.rule),
         ),
-        child: Padding(
-          padding: cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Container(
-                width: iconBox,
-                height: iconBox,
-                decoration: BoxDecoration(
-                  color: effectiveColor.withValues(alpha: enabled ? 0.18 : 0.1),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: loading
-                    ? SizedBox(
-                        width: iconSize,
-                        height: iconSize,
-                        child: InlineLoading(
-                          tileSize: 4,
-                          color: effectiveColor,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: interactive ? onTap : null,
+          focusColor: roles.focus.withValues(alpha: 0.12),
+          child: Container(
+            // Cards in one rail share [minHeight] so they align on both
+            // edges regardless of subtitle length.
+            constraints: BoxConstraints(minHeight: minHeight),
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: loading
+                      ? const InlineLoading(
+                          expand: true,
+                          shape: BoxShape.circle,
+                          tileSize: 3,
+                        )
+                      : ExcludeSemantics(
+                          child: Icon(icon, color: foreground, size: 22),
                         ),
-                      )
-                    : Icon(icon, color: effectiveColor, size: iconSize),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.detailCardTitle.copyWith(
-                      color: enabled
-                          ? scheme.onSurface
-                          : scheme.onSurface.withValues(alpha: 0.55),
-                      fontWeight: FontWeight.w700,
-                    ),
+                ),
+                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.detailCardTitle.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.xxs),
+                      Text(
+                        !enabled && (disabledReason ?? '').trim().isNotEmpty
+                            ? disabledReason!.trim()
+                            : subtitle,
+                        maxLines: isCompact ? 2 : 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.detailCaption.copyWith(
+                          color: roles.foregroundMuted,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: KubusSpacing.xxs),
-                  Text(
-                    !enabled && (disabledReason ?? '').trim().isNotEmpty
-                        ? disabledReason!.trim()
-                        : subtitle,
-                    maxLines: isCompact ? 2 : 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: enabled
-                          ? scheme.onSurface.withValues(alpha: 0.68)
-                          : scheme.onSurface.withValues(alpha: 0.48),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -550,14 +577,14 @@ class _KubusWalletStatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,14 +592,14 @@ class _KubusWalletStatTile extends StatelessWidget {
           Text(
             item.label,
             style: KubusTextStyles.statLabel.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.68),
+              color: roles.foregroundMuted,
             ),
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
             item.value,
             style: KubusTextStyles.statValue.copyWith(
-              color: scheme.onSurface,
+              color: roles.foreground,
               fontSize: 20,
             ),
           ),

@@ -1,7 +1,16 @@
 // DAO and Governance Models
-enum ProposalType { platformUpdate, rewards, featureRequest, governance, community }
+enum ProposalType {
+  platformUpdate,
+  rewards,
+  featureRequest,
+  governance,
+  community
+}
+
 enum ProposalStatus { draft, active, voting, passed, failed, executed }
+
 enum VoteChoice { yes, no, abstain }
+
 enum DAOSignedActionType {
   proposalCreate('proposal.create'),
   voteCast('vote.cast'),
@@ -97,7 +106,8 @@ class DAOSignedEnvelope {
           ? Map<String, dynamic>.from(json['payload'] as Map<String, dynamic>)
           : <String, dynamic>{},
       references: json['references'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json['references'] as Map<String, dynamic>)
+          ? Map<String, dynamic>.from(
+              json['references'] as Map<String, dynamic>)
           : <String, dynamic>{},
       signature: (json['signature'] ?? '').toString(),
       referenceId: json['referenceId']?.toString(),
@@ -139,8 +149,10 @@ class DAOSignedEnvelope {
   Map<String, dynamic> toJson() {
     return {
       ...toSigningPayloadJson(),
-      if (referenceId != null && referenceId!.isNotEmpty) 'referenceId': referenceId,
-      if (referenceCid != null && referenceCid!.isNotEmpty) 'referenceCid': referenceCid,
+      if (referenceId != null && referenceId!.isNotEmpty)
+        'referenceId': referenceId,
+      if (referenceCid != null && referenceCid!.isNotEmpty)
+        'referenceCid': referenceCid,
       'signature': signature,
     };
   }
@@ -180,6 +192,7 @@ class DAOReview {
       if (value is String) return DateTime.tryParse(value);
       return null;
     }
+
     bool parseBool(dynamic value) {
       if (value is bool) return value;
       if (value is String) {
@@ -194,19 +207,26 @@ class DAOReview {
 
     return DAOReview(
       id: json['id']?.toString() ?? '',
-      walletAddress: json['walletAddress']?.toString() ?? json['wallet_address']?.toString() ?? '',
-      portfolioUrl: json['portfolioUrl']?.toString() ?? json['portfolio_url']?.toString() ?? '',
+      walletAddress: json['walletAddress']?.toString() ??
+          json['wallet_address']?.toString() ??
+          '',
+      portfolioUrl: json['portfolioUrl']?.toString() ??
+          json['portfolio_url']?.toString() ??
+          '',
       medium: json['medium']?.toString() ?? '',
       statement: json['statement']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',
-      reviewerNotes: json['reviewerNotes']?.toString() ?? json['reviewer_notes']?.toString(),
-      createdAt: parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now(),
+      reviewerNotes: json['reviewerNotes']?.toString() ??
+          json['reviewer_notes']?.toString(),
+      createdAt:
+          parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now(),
       updatedAt: parseDate(json['updatedAt'] ?? json['updated_at']),
       metadata: json['metadata'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(json['metadata'] as Map<String, dynamic>)
           : null,
       applicantProfile: json['applicantProfile'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json['applicantProfile'] as Map<String, dynamic>)
+          ? Map<String, dynamic>.from(
+              json['applicantProfile'] as Map<String, dynamic>)
           : null,
       canVote: canVoteField == null ? true : parseBool(canVoteField),
     );
@@ -244,7 +264,10 @@ extension DAOReviewRoleParsing on DAOReview {
 
   DAOReviewRole get role {
     final normalized = _normalizedRoleValue;
-    if (normalized.contains('institution') || normalized.contains('museum') || normalized.contains('gallery') || normalized.contains('org')) {
+    if (normalized.contains('institution') ||
+        normalized.contains('museum') ||
+        normalized.contains('gallery') ||
+        normalized.contains('org')) {
       return DAOReviewRole.institution;
     }
     if (normalized.contains('artist') || normalized.contains('creator')) {
@@ -253,7 +276,8 @@ extension DAOReviewRoleParsing on DAOReview {
     return DAOReviewRole.general;
   }
 
-  bool get isArtistApplication => role == DAOReviewRole.artist || role == DAOReviewRole.general;
+  bool get isArtistApplication =>
+      role == DAOReviewRole.artist || role == DAOReviewRole.general;
   bool get isInstitutionApplication => role == DAOReviewRole.institution;
 
   bool get isApproved => status.toLowerCase() == 'approved';
@@ -300,15 +324,22 @@ class Proposal {
 
   int get totalVotes => yesVotes + noVotes + abstainVotes;
   double get supportPercentage => totalVotes > 0 ? yesVotes / totalVotes : 0;
-  bool get hasQuorum => totalVotes >= (quorumRequired * 100000); // Assuming 100k total voters
+
+  /// Not a real quorum check: the backend sends only [quorumRequired] (a
+  /// fraction of voting power) and no total eligible power, so this
+  /// compares against an invented 100k electorate. Never show it as a
+  /// quorum status; display the requirement instead.
+  @Deprecated('No backend total voting power; show quorumRequired instead.')
+  bool get hasQuorum => totalVotes >= (quorumRequired * 100000);
   bool get isPassing => supportPercentage >= supportRequired;
-  bool get isActive => status == ProposalStatus.active || status == ProposalStatus.voting;
-  
+  bool get isActive =>
+      status == ProposalStatus.active || status == ProposalStatus.voting;
+
   String get timeLeft {
     if (votingEndDate == null) return 'TBD';
     final now = DateTime.now();
     if (now.isAfter(votingEndDate!)) return 'Ended';
-    
+
     final difference = votingEndDate!.difference(now);
     if (difference.inDays > 0) return '${difference.inDays} days';
     if (difference.inHours > 0) return '${difference.inHours} hours';
@@ -331,11 +362,11 @@ class Proposal {
       status: ProposalStatus.values.firstWhere((e) => e.name == json['status']),
       proposer: json['proposer'],
       createdAt: DateTime.parse(json['createdAt']),
-      votingStartDate: json['votingStartDate'] != null 
-          ? DateTime.parse(json['votingStartDate']) 
+      votingStartDate: json['votingStartDate'] != null
+          ? DateTime.parse(json['votingStartDate'])
           : null,
-      votingEndDate: json['votingEndDate'] != null 
-          ? DateTime.parse(json['votingEndDate']) 
+      votingEndDate: json['votingEndDate'] != null
+          ? DateTime.parse(json['votingEndDate'])
           : null,
       yesVotes: json['yesVotes'] ?? 0,
       noVotes: json['noVotes'] ?? 0,
@@ -452,7 +483,8 @@ class Delegate {
     return delegatorCount.toString();
   }
 
-  String get formattedParticipation => '${(participationRate * 100).toStringAsFixed(1)}%';
+  String get formattedParticipation =>
+      '${(participationRate * 100).toStringAsFixed(1)}%';
 
   factory Delegate.fromJson(Map<String, dynamic> json) {
     return Delegate(

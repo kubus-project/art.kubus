@@ -130,8 +130,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                     SizedBox(
                       height: 260,
                       child: isLoading
-                          ? const Center(
-                              child: InlineLoading(tileSize: 4))
+                          ? const Center(child: InlineLoading(tileSize: 4))
                           : results.isEmpty
                               ? Center(
                                   child: Text(
@@ -263,6 +262,18 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
 
   Future<void> _submitInlinePost() async {
     if (_composeController.text.trim().isEmpty) return;
+    // Guests see the contextual account surface; their draft stays in the
+    // composer so posting can continue after sign-in.
+    final canPost = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      returnRoute: '/community',
+      sourceScreen: 'desktop_community_screen',
+      onAuthJourneyStarted: () => context
+          .read<CommunityHubProvider>()
+          .rememberComposeIntentForAuth(CommunityComposeIntent.post),
+    );
+    if (!canPost || !mounted) return;
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -1023,7 +1034,8 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   SizedBox(
                     width: 16,
                     height: 16,
-                    child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
+                    child: InlineLoading(
+                        tileSize: 4, color: themeProvider.accentColor),
                   ),
               ],
             ),

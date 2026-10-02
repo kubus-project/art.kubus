@@ -1,6 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/wallet/kubus_token_identity.dart';
 import 'package:art_kubus/widgets/wallet_transaction_card.dart';
 import 'package:flutter/material.dart';
@@ -223,7 +224,7 @@ void main() {
     final stakeIcon = tester.widget<Icon>(
       find.byIcon(Icons.lock_outline_rounded),
     );
-    expect(stakeIcon.color, KubusColors.accentTealDark);
+    expect(stakeIcon.color, KubusColorRoles.light.statTeal);
   });
 
   testWidgets('expanded signature row shows a truncated monospace value', (

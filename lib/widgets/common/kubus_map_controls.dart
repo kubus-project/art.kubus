@@ -23,13 +23,6 @@ class KubusMapControls extends StatelessWidget {
     this.nearbyTooltip,
     this.nearbyTooltipWhenActive,
     this.nearbyTooltipWhenInactive,
-    this.showTravelModeToggle = false,
-    this.travelModeActive = false,
-    this.onToggleTravelMode,
-    this.travelModeKey,
-    this.travelModeTooltip,
-    this.travelModeTooltipWhenActive,
-    this.travelModeTooltipWhenInactive,
     this.showIsometricViewToggle = false,
     this.isometricViewActive = false,
     this.onToggleIsometricView,
@@ -66,14 +59,6 @@ class KubusMapControls extends StatelessWidget {
   final String? nearbyTooltip;
   final String? nearbyTooltipWhenActive;
   final String? nearbyTooltipWhenInactive;
-
-  final bool showTravelModeToggle;
-  final bool travelModeActive;
-  final VoidCallback? onToggleTravelMode;
-  final Key? travelModeKey;
-  final String? travelModeTooltip;
-  final String? travelModeTooltipWhenActive;
-  final String? travelModeTooltipWhenInactive;
 
   final bool showIsometricViewToggle;
   final bool isometricViewActive;
@@ -115,13 +100,6 @@ class KubusMapControls extends StatelessWidget {
       nearbyTooltip: nearbyTooltip,
       nearbyTooltipWhenActive: nearbyTooltipWhenActive,
       nearbyTooltipWhenInactive: nearbyTooltipWhenInactive,
-      showTravelModeToggle: showTravelModeToggle,
-      travelModeActive: travelModeActive,
-      onToggleTravelMode: onToggleTravelMode,
-      travelModeKey: travelModeKey,
-      travelModeTooltip: travelModeTooltip,
-      travelModeTooltipWhenActive: travelModeTooltipWhenActive,
-      travelModeTooltipWhenInactive: travelModeTooltipWhenInactive,
       showIsometricViewToggle: showIsometricViewToggle,
       isometricViewActive: isometricViewActive,
       onToggleIsometricView: onToggleIsometricView,

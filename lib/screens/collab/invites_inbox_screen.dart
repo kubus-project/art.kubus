@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -7,12 +6,24 @@ import '../../models/collab_invite.dart';
 import '../../providers/collab_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/empty_state_card.dart';
+import '../../widgets/kubus_button.dart';
+import '../../widgets/states/kubus_product_states.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
+/// Collaboration inbox: pending invitations to help manage an event,
+/// exhibition, artwork or collection.
+///
+/// Each invitation states what it is (INVITATION · entity type), who sent
+/// it, the role offered and when it arrived or expires. Actions follow the
+/// product grammar: Accept (primary), Decline (secondary), View (quiet).
+/// This is actionable collaboration state, so it is not styled as a generic
+/// notification row.
 class InvitesInboxScreen extends StatefulWidget {
   final bool embedded;
 
@@ -23,6 +34,8 @@ class InvitesInboxScreen extends StatefulWidget {
 }
 
 class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
+  final Set<String> _busy = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -41,34 +54,74 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     }
   }
 
+  void _signIn() {
+    Navigator.of(context).pushNamed('/sign-in');
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
     final provider = context.watch<CollabProvider>();
 
     final invites =
         provider.invitesInbox.where((i) => i.isPending).toList(growable: false);
-    final content = Center(
+    // Classified from the caught failure (HTTP status or transport error),
+    // never from the provider's display string, and never shown raw.
+    final loadError = provider.invitesError;
+    final hasError = loadError != null;
+
+    Widget body;
+    if (provider.isLoading && invites.isEmpty) {
+      body = const KubusSectionLoading(rows: 3, rowHeight: 132);
+    } else if (hasError && invites.isEmpty) {
+      body = KubusStateView.fromError(
+        loadError,
+        onRetry: _refresh,
+        onSignIn: _signIn,
+      );
+    } else if (invites.isEmpty) {
+      body = EmptyStateCard(
+        icon: Icons.inbox_outlined,
+        title: l10n.collabEmptyTitle,
+        description: l10n.collabEmptyDescription,
+        showAction: true,
+        actionLabel: l10n.commonRefresh,
+        onAction: _refresh,
+      );
+    } else {
+      body = ListView.separated(
+        padding: EdgeInsets.zero,
+        itemCount: invites.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+        itemBuilder: (context, index) {
+          final invite = invites[index];
+          return InviteRow(
+            invite: invite,
+            isBusy: _busy.contains(invite.id),
+            onAccept: () => _accept(invite),
+            onDecline: () => _decline(invite),
+            onOpen: () => _openEntity(invite),
+          );
+        },
+      );
+    }
+
+    final content = Align(
+      alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 860),
+        constraints: const BoxConstraints(maxWidth: 760),
         child: Padding(
           padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!widget.embedded) ...[
                 Text(
-                  l10n.profileInvitesTooltip,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.xs),
-                Text(
-                  'Accept an invite to help manage an event, exhibition, artwork, or collection.',
-                  style: KubusTextStyles.screenSubtitle.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  l10n.collabInboxIntro,
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: roles.foregroundMuted,
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
@@ -81,38 +134,16 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
                     icon: const Icon(Icons.refresh),
                   ),
                 ),
-              if ((provider.error ?? '').isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                  child: Text(
-                    'Could not load invites.',
-                    style: KubusTextStyles.statChange.copyWith(
-                      color: scheme.error,
-                    ),
-                  ),
+              if (hasError && invites.isNotEmpty) ...[
+                KubusStateView.fromError(
+                  loadError,
+                  compact: true,
+                  onRetry: _refresh,
+                  onSignIn: _signIn,
                 ),
-              Expanded(
-                child: provider.isLoading && invites.isEmpty
-                    ? Center(
-                        child: InlineLoading(tileSize: 4, color: scheme.primary),
-                      )
-                    : invites.isEmpty
-                        ? _EmptyState(onRefresh: _refresh)
-                        : ListView.separated(
-                            itemCount: invites.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              final invite = invites[index];
-                              return _InviteCard(
-                                invite: invite,
-                                onAccept: () => _accept(invite),
-                                onDecline: () => _decline(invite),
-                                onOpen: () => _openEntity(invite),
-                              );
-                            },
-                          ),
-              ),
+                const SizedBox(height: KubusSpacing.sm),
+              ],
+              Expanded(child: body),
             ],
           ),
         ),
@@ -130,7 +161,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
           style: KubusTextStyles.screenTitle.copyWith(
             fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.w600,
-            color: scheme.onSurface,
+            color: roles.foreground,
           ),
         ),
         actions: [
@@ -145,44 +176,67 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     );
   }
 
-  Future<void> _accept(CollabInvite invite) async {
+  Future<void> _runAction(
+    CollabInvite invite,
+    Future<void> Function() action, {
+    required String success,
+    required String failure,
+  }) async {
+    if (_busy.contains(invite.id)) return;
     final messenger = ScaffoldMessenger.of(context);
-    final provider = context.read<CollabProvider>();
-
+    setState(() => _busy.add(invite.id));
     try {
-      await provider.acceptInvite(invite.id);
+      await action();
       if (!mounted) return;
-      messenger
-          .showKubusSnackBar(const SnackBar(content: Text('Invite accepted.')));
+      messenger.showKubusSnackBar(SnackBar(content: Text(success)));
     } catch (_) {
+      if (!mounted) return;
       messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Could not accept invite.')));
+        SnackBar(content: Text(failure)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busy.remove(invite.id));
     }
   }
 
-  Future<void> _decline(CollabInvite invite) async {
-    final messenger = ScaffoldMessenger.of(context);
+  Future<void> _accept(CollabInvite invite) {
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.read<CollabProvider>();
+    return _runAction(
+      invite,
+      () => provider.acceptInvite(invite.id),
+      success: l10n.collabAcceptedToast,
+      failure: l10n.collabAcceptFailedToast,
+    );
+  }
 
-    try {
-      await provider.declineInvite(invite.id);
-      if (!mounted) return;
-      messenger
-          .showKubusSnackBar(const SnackBar(content: Text('Invite declined.')));
-    } catch (_) {
-      messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Could not decline invite.')));
-    }
+  Future<void> _decline(CollabInvite invite) {
+    final l10n = AppLocalizations.of(context)!;
+    final provider = context.read<CollabProvider>();
+    return _runAction(
+      invite,
+      () => provider.declineInvite(invite.id),
+      success: l10n.collabDeclinedToast,
+      failure: l10n.collabDeclineFailedToast,
+    );
   }
 
   void _openEntity(CollabInvite invite) {
     final type = invite.entityType.trim().toLowerCase();
     final id = invite.entityId;
 
-    if (id.trim().isEmpty) {
+    void cannotOpen() {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(content: Text('This invite is missing an item id.')),
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.collabCannotOpenItemToast),
+        ),
       );
+    }
+
+    if (id.trim().isEmpty) {
+      cannotOpen();
       return;
     }
 
@@ -214,212 +268,181 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(content: Text('Don\'t know how to open ${invite.entityType}.')),
-    );
+    cannotOpen();
   }
 }
 
-class _InviteCard extends StatelessWidget {
-  const _InviteCard({
+/// One pending invitation.
+class InviteRow extends StatelessWidget {
+  const InviteRow({
+    super.key,
     required this.invite,
     required this.onAccept,
     required this.onDecline,
     required this.onOpen,
+    this.isBusy = false,
   });
 
   final CollabInvite invite;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
   final VoidCallback onOpen;
+  final bool isBusy;
+
+  static String entityLabel(AppLocalizations l10n, String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'events':
+      case 'event':
+        return l10n.collabEntityEvent;
+      case 'exhibitions':
+      case 'exhibition':
+        return l10n.collabEntityExhibition;
+      case 'artworks':
+      case 'artwork':
+        return l10n.collabEntityArtwork;
+      case 'collections':
+      case 'collection':
+        return l10n.collabEntityCollection;
+      default:
+        return l10n.collabEntityItem;
+    }
+  }
+
+  static String roleLabel(AppLocalizations l10n, String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'admin':
+        return l10n.collabRoleAdmin;
+      case 'publisher':
+        return l10n.collabRolePublisher;
+      case 'editor':
+        return l10n.collabRoleEditor;
+      case 'curator':
+        return l10n.collabRoleCurator;
+      case 'viewer':
+      default:
+        return l10n.collabRoleViewer;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final material = MaterialLocalizations.of(context);
     final invitedBy = invite.invitedBy;
 
-    final inviterName = (invitedBy?.displayName ?? '').trim().isNotEmpty
-        ? invitedBy!.displayName!
-        : ((invitedBy?.username ?? '').trim().isNotEmpty
-            ? '@${invitedBy!.username}'
-            : 'Someone');
-
-    final inviterHandle = (invitedBy?.username ?? '').trim().isNotEmpty
-        ? '@${invitedBy!.username}'
-        : null;
-
+    final displayName = (invitedBy?.displayName ?? '').trim();
+    final username = (invitedBy?.username ?? '').trim();
+    final senderName = displayName.isNotEmpty
+        ? displayName
+        : (username.isNotEmpty ? '@$username' : l10n.collabUnknownSender);
     final seed = (invitedBy?.walletAddress ??
             invitedBy?.username ??
             invitedBy?.id ??
-            inviterName)
+            senderName)
         .toString();
+    final entity = entityLabel(l10n, invite.entityType);
+    final role = roleLabel(l10n, invite.role);
 
-    return InkWell(
-      onTap: onOpen,
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
+    final dates = <String>[
+      if (invite.createdAt != null)
+        l10n.collabInviteReceived(
+            material.formatMediumDate(invite.createdAt!.toLocal())),
+      if (invite.expiresAt != null)
+        l10n.collabInviteExpires(
+            material.formatMediumDate(invite.expiresAt!.toLocal())),
+    ];
+
+    return Semantics(
+      container: true,
+      label: l10n.collabInviteSemantic(entity, role, senderName),
       child: Container(
         padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          border:
-              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+          color: roles.surface,
+          borderRadius: BorderRadius.circular(KubusRadius.surface),
+          border: Border.all(color: roles.rule),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AvatarWidget(
-              avatarUrl: invitedBy?.avatarUrl,
-              wallet: seed,
-              radius: 18,
-              allowFabricatedFallback: true,
-              enableProfileNavigation: false,
+            ExcludeSemantics(
+              child: Text(
+                '${l10n.collabInviteNotion} · $entity'.toUpperCase(),
+                style: KubusTextStyles.structuralLabel.copyWith(
+                  color: roles.foregroundMuted,
+                  letterSpacing: 0.6,
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: KubusSpacing.sm),
+            ExcludeSemantics(
+              child: Row(
                 children: [
-                  Text(
-                    inviterName,
-                    style: KubusTextStyles.sectionTitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  AvatarWidget(
+                    avatarUrl: invitedBy?.avatarUrl,
+                    wallet: seed,
+                    radius: 18,
+                    allowFabricatedFallback: true,
+                    enableProfileNavigation: false,
                   ),
-                  if (inviterHandle != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                      child: Text(
-                        inviterHandle,
-                        style: KubusTextStyles.navMetaLabel.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.65),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.collabInviteFrom(senderName),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: KubusTextStyles.detailBody.copyWith(
+                            color: roles.foreground,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    'Invited you to: ${_labelForEntity(invite.entityType)}',
-                    style: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-                  Text(
-                    'Role: ${_labelForRole(invite.role)}',
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          l10n.collabInviteRole(role),
+                          style: KubusTextStyles.detailCaption.copyWith(
+                            color: roles.foreground,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
-            Column(
-              children: [
-                ElevatedButton(
-                  onPressed: onAccept,
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-                      vertical: KubusSpacing.sm + KubusSpacing.xxs,
-                    ),
-                  ),
-                  child: const Text('Accept'),
+            if (dates.isNotEmpty) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              Text(
+                dates.join('  ·  '),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: roles.foregroundMuted,
                 ),
-                const SizedBox(height: KubusSpacing.sm),
-                TextButton(
-                  onPressed: onDecline,
-                  child: const Text('Decline'),
+              ),
+            ],
+            const SizedBox(height: KubusSpacing.md),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
+              children: [
+                KubusButton(
+                  onPressed: isBusy ? null : onAccept,
+                  isLoading: isBusy,
+                  label: l10n.collabAccept,
+                ),
+                KubusButton(
+                  onPressed: isBusy ? null : onDecline,
+                  label: l10n.collabDecline,
+                  variant: KubusButtonVariant.secondary,
+                ),
+                KubusButton(
+                  onPressed: onOpen,
+                  label: l10n.commonView,
+                  variant: KubusButtonVariant.quiet,
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static String _labelForEntity(String raw) {
-    final v = raw.trim().toLowerCase();
-    switch (v) {
-      case 'events':
-      case 'event':
-        return 'Event';
-      case 'exhibitions':
-      case 'exhibition':
-        return 'Exhibition';
-      case 'artworks':
-      case 'artwork':
-        return 'Artwork';
-      case 'collections':
-      case 'collection':
-        return 'Collection';
-      default:
-        return v.isEmpty ? 'Item' : v;
-    }
-  }
-
-  static String _labelForRole(String raw) {
-    final v = raw.trim().toLowerCase();
-    switch (v) {
-      case 'admin':
-        return 'Admin';
-      case 'publisher':
-        return 'Publisher';
-      case 'editor':
-        return 'Editor';
-      case 'curator':
-        return 'Curator';
-      case 'viewer':
-      default:
-        return 'Viewer';
-    }
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onRefresh});
-
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: KubusHeaderMetrics.searchBarHeight - KubusSpacing.xs,
-              color: scheme.onSurface.withValues(alpha: 0.35),
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
-            Text(
-              'No invites right now',
-              style: KubusTextStyles.sectionTitle,
-            ),
-            const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-            Text(
-              'When someone invites you, it will show up here.',
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.65),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(
-                height: KubusSpacing.sm + KubusSpacing.xxs + KubusSpacing.xxs),
-            OutlinedButton.icon(
-              onPressed: () => onRefresh(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
             ),
           ],
         ),

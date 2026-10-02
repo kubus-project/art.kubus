@@ -36,8 +36,9 @@ StartupDecision decideStartupRoute({
   String? structuredOnboardingStepId,
 }) {
   // While either onboarding guard is active the account already exists (or a
-  // Google registration is mid-flight): never route to /sign-in. Recover into
-  // onboarding at the step that matches the session/wallet state instead.
+  // Google registration is mid-flight): never route to /sign-in. Only the
+  // account-link guard represents an explicit wallet-link operation; a Google
+  // registration remains wallet-optional until an action asks for it.
   if (hasActiveGoogleOnboardingGuard || hasActiveAccountLinkGuard) {
     if (!hasValidSession) {
       return const StartupDecision(
@@ -45,7 +46,7 @@ StartupDecision decideStartupRoute({
         onboardingInitialStepId: 'account',
       );
     }
-    if (!hasWallet) {
+    if (hasActiveAccountLinkGuard && !hasWallet) {
       return const StartupDecision(
         route: StartupRouteType.onboarding,
         onboardingInitialStepId: 'walletConnect',

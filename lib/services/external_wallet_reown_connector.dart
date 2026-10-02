@@ -53,7 +53,7 @@ class _ReownModalConnector implements ExternalWalletModalConnector {
         name: 'art.kubus',
         description: 'Noncustodial art.kubus wallet signing',
         url: 'https://app.kubus.site',
-        icons: ['https://app.kubus.site/icons/Icon-512.png'],
+        icons: ['https://app.kubus.site/app-icons/Icon-512.png'],
         redirect: Redirect(
           native: kExternalWalletCallbackUri,
           universal: 'https://app.kubus.site/walletconnect',

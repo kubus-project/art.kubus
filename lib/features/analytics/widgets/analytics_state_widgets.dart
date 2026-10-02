@@ -16,10 +16,14 @@ class AnalyticsPermissionState extends StatelessWidget {
     super.key,
     required this.title,
     required this.description,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String title;
   final String description;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +34,9 @@ class AnalyticsPermissionState extends StatelessWidget {
           icon: Icons.lock_outline,
           title: title,
           description: description,
-          showAction: false,
+          showAction: actionLabel != null && onAction != null,
+          actionLabel: actionLabel,
+          onAction: onAction,
         ),
       ),
     );

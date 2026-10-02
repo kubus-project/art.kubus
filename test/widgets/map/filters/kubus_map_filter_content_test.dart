@@ -10,75 +10,62 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('renders semantic groups and gates travel scope', (tester) async {
-    await tester.pumpWidget(
-      const _FilterHarness(initialState: null),
-    );
+  testWidgets('renders map area and near-me geographic scopes', (tester) async {
+    await tester.pumpWidget(const _FilterHarness(initialState: null));
     await tester.pumpAndSettle();
 
-    expect(find.text('Scope'), findsOneWidget);
+    expect(find.text('Area'), findsOneWidget);
     expect(find.text('Discovery status'), findsOneWidget);
     expect(find.text('Attributes'), findsOneWidget);
     expect(find.text('Content layers'), findsOneWidget);
-    expect(find.text('Current viewport'), findsOneWidget);
+    expect(find.text('Map area'), findsOneWidget);
     expect(find.text('Near me'), findsOneWidget);
-    expect(find.text('Travel'), findsNothing);
     expect(find.text('Active filters: 0'), findsOneWidget);
-
-    await tester.pumpWidget(
-      const _FilterHarness(
-        initialState: null,
-        travelScopeEnabled: true,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Travel'), findsOneWidget);
   });
 
-  testWidgets('scope and discovery choices update exclusively and immediately',
-      (tester) async {
-    KubusMapFilterState? latest;
-    await tester.pumpWidget(
-      _FilterHarness(
-        initialState: KubusMapFilterState.defaults(),
-        travelScopeEnabled: true,
-        onStateChanged: (value) => latest = value,
-      ),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'scope and discovery choices update exclusively and immediately',
+    (tester) async {
+      KubusMapFilterState? latest;
+      await tester.pumpWidget(
+        _FilterHarness(
+          initialState: KubusMapFilterState.defaults(),
+          onStateChanged: (value) => latest = value,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Near me'));
-    await tester.pump();
+      await tester.tap(find.text('Near me'));
+      await tester.pump();
 
-    expect(latest?.scope, KubusMapScope.nearMe);
-    expect(find.byKey(const ValueKey<String>('map_filter_radius_slider')),
-        findsOneWidget);
+      expect(latest?.scope, KubusMapScope.nearMe);
+      expect(
+        find.byKey(const ValueKey<String>('map_filter_radius_slider')),
+        findsOneWidget,
+      );
 
-    await tester.tap(find.text('Discovered'));
-    await tester.pump();
+      await tester.tap(find.text('Discovered'));
+      await tester.pump();
 
-    expect(latest?.scope, KubusMapScope.nearMe);
-    expect(
-      latest?.discoveryStatus,
-      KubusMapDiscoveryStatus.discovered,
-    );
+      expect(latest?.scope, KubusMapScope.nearMe);
+      expect(latest?.discoveryStatus, KubusMapDiscoveryStatus.discovered);
 
-    final allSemantics = tester.getSemantics(
-      find.byKey(const ValueKey<String>('map_filter_discovery_all')),
-    );
-    final discoveredSemantics = tester.getSemantics(
-      find.byKey(const ValueKey<String>('map_filter_discovery_discovered')),
-    );
-    expect(
-      allSemantics.flagsCollection.isSelected,
-      isNot(ui.Tristate.isTrue),
-    );
-    expect(
-      discoveredSemantics.flagsCollection.isSelected,
-      ui.Tristate.isTrue,
-    );
-  });
+      final allSemantics = tester.getSemantics(
+        find.byKey(const ValueKey<String>('map_filter_discovery_all')),
+      );
+      final discoveredSemantics = tester.getSemantics(
+        find.byKey(const ValueKey<String>('map_filter_discovery_discovered')),
+      );
+      expect(
+        allSemantics.flagsCollection.isSelected,
+        isNot(ui.Tristate.isTrue),
+      );
+      expect(
+        discoveredSemantics.flagsCollection.isSelected,
+        ui.Tristate.isTrue,
+      );
+    },
+  );
 
   testWidgets('attributes are independent live toggles', (tester) async {
     KubusMapFilterState? latest;
@@ -92,8 +79,9 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey<String>('map_filter_ar')));
     await tester.pump();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('map_filter_favorites')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('map_filter_favorites')),
+    );
     await tester.pump();
 
     expect(latest?.arOnly, isTrue);
@@ -104,14 +92,12 @@ void main() {
     final arSemantics = tester.getSemantics(
       find.byKey(const ValueKey<String>('map_filter_ar')),
     );
-    expect(
-      arSemantics.flagsCollection.isToggled,
-      ui.Tristate.isTrue,
-    );
+    expect(arSemantics.flagsCollection.isToggled, ui.Tristate.isTrue);
   });
 
-  testWidgets('near-me radius is contextual, constrained, and live',
-      (tester) async {
+  testWidgets('near-me radius is contextual, constrained, and live', (
+    tester,
+  ) async {
     KubusMapFilterState? latest;
     await tester.pumpWidget(
       _FilterHarness(
@@ -137,14 +123,17 @@ void main() {
     expect(latest?.nearMeRadiusKm, 12.5);
     expect(find.text('Radius: 12.5 km'), findsOneWidget);
 
-    await tester.tap(find.text('Current viewport'));
+    await tester.tap(find.text('Map area'));
     await tester.pump();
-    expect(find.byKey(const ValueKey<String>('map_filter_radius_slider')),
-        findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('map_filter_radius_slider')),
+      findsNothing,
+    );
   });
 
-  testWidgets('disabled radius preserves context but cannot update',
-      (tester) async {
+  testWidgets('disabled radius preserves context but cannot update', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _FilterHarness(
         initialState: KubusMapFilterState(scope: KubusMapScope.nearMe),
@@ -159,8 +148,9 @@ void main() {
     expect(slider.onChanged, isNull);
   });
 
-  testWidgets('content layers report count and preserve one visible layer',
-      (tester) async {
+  testWidgets('content layers report count and preserve one visible layer', (
+    tester,
+  ) async {
     var callbackCount = 0;
     KubusMapFilterState? latest;
     await tester.pumpWidget(
@@ -188,8 +178,9 @@ void main() {
     expect(find.text('1 of 9 visible'), findsOneWidget);
   });
 
-  testWidgets('layer changes and reset update count without an Apply action',
-      (tester) async {
+  testWidgets('layer changes and reset update count without an Apply action', (
+    tester,
+  ) async {
     KubusMapFilterState? latest;
     await tester.pumpWidget(
       _FilterHarness(
@@ -211,7 +202,9 @@ void main() {
     expect(find.text('8 of 9 visible'), findsOneWidget);
     expect(find.text('Active filters: 1'), findsOneWidget);
     expect(
-        find.byKey(const ValueKey<String>('map_filter_reset')), findsOneWidget);
+      find.byKey(const ValueKey<String>('map_filter_reset')),
+      findsOneWidget,
+    );
 
     final reset = find.byKey(const ValueKey<String>('map_filter_reset'));
     await tester.ensureVisible(reset);
@@ -221,20 +214,19 @@ void main() {
     expect(latest?.isDefault, isTrue);
     expect(find.text('9 of 9 visible'), findsOneWidget);
     expect(
-        find.byKey(const ValueKey<String>('map_filter_reset')), findsNothing);
+      find.byKey(const ValueKey<String>('map_filter_reset')),
+      findsNothing,
+    );
   });
 
-  testWidgets('360px layout scrolls without horizontal overflow',
-      (tester) async {
+  testWidgets('360px layout scrolls without horizontal overflow', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(360, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const _FilterHarness(
-        initialState: null,
-        travelScopeEnabled: true,
-        width: 360,
-      ),
+      const _FilterHarness(initialState: null, width: 360),
     );
     await tester.pumpAndSettle();
 
@@ -252,7 +244,6 @@ class _FilterHarness extends StatefulWidget {
   const _FilterHarness({
     required this.initialState,
     this.onStateChanged,
-    this.travelScopeEnabled = false,
     this.nearMeRadiusEnabled = true,
     this.minNearMeRadiusKm = KubusMapFilterState.minNearMeRadiusKm,
     this.maxNearMeRadiusKm = KubusMapFilterState.maxNearMeRadiusKm,
@@ -261,7 +252,6 @@ class _FilterHarness extends StatefulWidget {
 
   final KubusMapFilterState? initialState;
   final ValueChanged<KubusMapFilterState>? onStateChanged;
-  final bool travelScopeEnabled;
   final bool nearMeRadiusEnabled;
   final double minNearMeRadiusKm;
   final double maxNearMeRadiusKm;
@@ -294,7 +284,6 @@ class _FilterHarnessState extends State<_FilterHarness> {
               padding: const EdgeInsets.all(16),
               child: KubusMapFilterContent(
                 state: state,
-                travelScopeEnabled: widget.travelScopeEnabled,
                 nearMeRadiusEnabled: widget.nearMeRadiusEnabled,
                 minNearMeRadiusKm: widget.minNearMeRadiusKm,
                 maxNearMeRadiusKm: widget.maxNearMeRadiusKm,

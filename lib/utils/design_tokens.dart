@@ -1,6 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Product-family structural palette. Spatial and category colours remain in
+/// their existing map/data token families and are not derived from this set.
+class KubusProductPalette {
+  KubusProductPalette._();
+
+  static const Color groundLight = Color(0xFFEAECE7);
+  static const Color groundDark = Color(0xFF090C0E);
+  static const Color surfaceLight = Color(0xFFF4F5F2);
+  static const Color surfaceDark = Color(0xFF11181B);
+  static const Color surfaceRaisedLight = Color(0xFFFFFFFF);
+  static const Color surfaceRaisedDark = Color(0xFF1A2327);
+  static const Color surfaceOverlayLight = Color(0xE6F4F5F2);
+  static const Color surfaceOverlayDark = Color(0xE611181B);
+  static const Color foregroundLight = Color(0xFF11181B);
+  static const Color foregroundDark = Color(0xFFEAECE7);
+  static const Color foregroundMutedLight = Color(0xFF465357);
+  static const Color foregroundMutedDark = Color(0xFFA3AFB3);
+  static const Color foregroundSubtleLight = Color(0xFF667276);
+  static const Color foregroundSubtleDark = Color(0xFF849196);
+  static const Color ruleLight = Color(0xFFB9C2C1);
+  static const Color ruleDark = Color(0xFF344147);
+  static const Color ruleStrongLight = Color(0xFF899597);
+  static const Color ruleStrongDark = Color(0xFF536168);
+
+  /// Family primary: kubus teal/turquoise. Light is one step deeper than
+  /// [KubusColors.accentTealLight] so it clears 4.5:1 on ground, surface and
+  /// under white text; dark is [KubusColors.accentTealDark] (9.3:1 on
+  /// surface). The exact values are a tested contract, see
+  /// docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md.
+  static const Color activeLight = Color(0xFF00766A);
+  static const Color activeDark = Color(0xFF4ECDC4);
+
+  /// Family secondary: blue, for information, analytics, institution and
+  /// secondary discovery context. Never the global active/selection role.
+  static const Color secondaryLight = Color(0xFF1F5FD0);
+  static const Color secondaryDark = Color(0xFF3F83FF);
+  static const Color destructiveLight = Color(0xFFB3261E);
+  static const Color destructiveDark = Color(0xFFFF6B6B);
+  static const Color successLight = Color(0xFF267344);
+  static const Color successDark = Color(0xFF70C58B);
+  static const Color warningLight = Color(0xFF805700);
+  static const Color warningDark = Color(0xFFFFC45B);
+  static const Color focusLight = activeLight;
+  static const Color focusDark = activeDark;
+}
+
 /// Central source of truth for all kubus design tokens.
 /// This file defines the palette, spacing, radii, and typography to be used across the app.
 
@@ -9,9 +55,16 @@ class KubusColors {
   KubusColors._();
 
   // --- Brand Colors (Primary) ---
-  static const Color primary = Color(0xFF00838F); // Deep Blue-Cyan
+  /// Legacy alias for the family active role. Prefer `KubusColorRoles.active`.
+  @Deprecated('Use KubusColorRoles.active or KubusProductPalette.activeLight.')
+  static const Color primary = KubusProductPalette.activeLight;
+
+  /// Legacy cyan retained for map/data accents until their dedicated token
+  /// family is migrated in a map-scoped pass.
+  @Deprecated('Use a dedicated map/data color in a map-scoped migration.')
   static const Color primaryVariantLight = Color(0xFF0097A7);
-  static const Color primaryVariantDark = Color(0xFF00ACC1); // Cyan 600
+  @Deprecated('Use a dedicated map/data color in a map-scoped migration.')
+  static const Color primaryVariantDark = Color(0xFF00ACC1);
 
   // --- Glass & Overlay ---
   static const Color glassLight = Color(0x99FFFFFF); // 60% White
@@ -20,7 +73,8 @@ class KubusColors {
   static const Color glassBorderDark = Color(0x40000000);
 
   // --- Secondary / Accents ---
-  static const Color secondary = Color(0xCC00838F); // 80% opacity primary
+  @Deprecated('Use a semantic ColorScheme or KubusColorRoles role.')
+  static const Color secondary = Color(0xCC1F5FD0);
 
   // --- Extended Accents (Centralized; avoid per-widget Color literals) ---
   static const Color accentOrangeDark = Color(0xFFFF9800);
@@ -46,25 +100,28 @@ class KubusColors {
   static const Color warningDark = Color(0xFFFFB300); // Amber 600
 
   // --- Neutrals (Backgrounds & Surfaces) ---
-  static const Color backgroundLight = Color(0xFFF8F9FA); // Off-white
-  static const Color backgroundDark = Color(0xFF0A0A0A); // Deep black
+  static const Color backgroundLight = KubusProductPalette.groundLight;
+  static const Color backgroundDark = KubusProductPalette.groundDark;
 
-  static const Color surfaceLight = Color(0xFFFFFFFF); // Pure white
-  static const Color surfaceDark = Color(0xFF1A1A1A); // Dark grey
+  static const Color surfaceLight = KubusProductPalette.surfaceLight;
+  static const Color surfaceDark = KubusProductPalette.surfaceDark;
 
   /// Slightly elevated dark surface (matches the dark theme's
   /// secondaryContainer); used by always-dark surfaces like AR fallbacks.
-  static const Color surfaceDarkElevated = Color(0xFF2A2A2A);
+  static const Color surfaceDarkElevated =
+      KubusProductPalette.surfaceRaisedDark;
 
-  static const Color outlineLight = Color(0xFFE0E0E0); // Grey 300
-  static const Color outlineDark = Color(0xFF424242); // Grey 800
+  static const Color outlineLight = KubusProductPalette.ruleLight;
+  static const Color outlineDark = KubusProductPalette.ruleDark;
 
   // --- Text Colors ---
-  static const Color textPrimaryLight = Color(0xFF000000);
-  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textPrimaryLight = KubusProductPalette.foregroundLight;
+  static const Color textPrimaryDark = KubusProductPalette.foregroundDark;
 
-  static const Color textSecondaryLight = Color(0xFF757575); // Grey 600
-  static const Color textSecondaryDark = Color(0xFFB0B0B0); // Grey 400
+  static const Color textSecondaryLight =
+      KubusProductPalette.foregroundMutedLight;
+  static const Color textSecondaryDark =
+      KubusProductPalette.foregroundMutedDark;
 }
 
 class KubusSpacing {
@@ -112,6 +169,18 @@ class KubusRadius {
 
   /// 24.0 - Pills, large rounded edges
   static const double xl = 24.0;
+
+  /// PRODUCT control geometry: restrained corners for buttons and inputs.
+  static const double control = 4.0;
+
+  /// PRODUCT content surface geometry.
+  static const double surface = 8.0;
+
+  /// PRODUCT dialog and sheet geometry.
+  static const double sheet = 12.0;
+
+  /// Use only for controls whose shape is semantically pill-like.
+  static const double pill = 999.0;
 
   /// Returns a circular border radius for a given value
   static BorderRadius circular(double radius) => BorderRadius.circular(radius);
@@ -203,6 +272,41 @@ class KubusSizes {
   /// Common max widths for modal/dialog content.
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
+
+  /// Coloured state dot shown beside a status label (AR header, list rows).
+  static const double statusDot = 8.0;
+
+  /// Thin inline meter used inside dense chrome (AR guidance, list cards).
+  static const double meterThin = 6.0;
+
+  /// Standard inline meter used in dialogs and detail sections.
+  static const double meterStandard = 8.0;
+
+  /// Square thumbnail used in list rows (Spatial Library, pickers).
+  static const double listThumbnail = 76.0;
+
+  /// Compact square thumbnail used in dense pickers and linked-entity rows.
+  static const double compactThumbnail = 48.0;
+
+  /// Height of the preview surface at the top of a spatial detail screen.
+  static const double detailPreviewHeight = 320.0;
+}
+
+/// Canonical Material elevations.
+///
+/// Exists so surfaces stop carrying bare numbers: an "8" in one file and a
+/// "6" in another read as intent when they are only drift.
+class KubusElevation {
+  KubusElevation._();
+
+  /// Flat against its parent surface.
+  static const double flat = 0.0;
+
+  /// Cards and tiles that need separation without lifting off the page.
+  static const double resting = 2.0;
+
+  /// Primary actions and floating controls.
+  static const double raised = 8.0;
 }
 
 /// Canonical sizing for screen headers, app bars, and section chrome.
@@ -264,10 +368,61 @@ class KubusChromeMetrics {
 class KubusTypography {
   KubusTypography._();
 
-  /// Backward-compatible shortcut for creating an Inter [TextStyle].
+  static const String contentFamily = 'Sofia Sans';
+  static const String structuralFamily = 'Space Mono';
+
+  static TextStyle content({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) =>
+      TextStyle(
+        fontFamily: contentFamily,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+
+  static TextStyle structural({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) =>
+      TextStyle(
+        fontFamily: structuralFamily,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+
+  static TextStyle machine({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) =>
+      structural(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+
+  /// Compatibility helper for former Inter call sites; renders Sofia Sans.
   ///
   /// Prefer [KubusTypography.textTheme] (and [KubusTextStyles]) for most UI,
   /// but keep this helper to avoid breaking older screens.
+  @Deprecated('Use KubusTypography.content or a KubusTextStyles role.')
   static TextStyle inter({
     double? fontSize,
     FontWeight? fontWeight,
@@ -275,7 +430,7 @@ class KubusTypography {
     double? height,
     double? letterSpacing,
   }) {
-    return GoogleFonts.inter(
+    return content(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -303,10 +458,8 @@ class KubusTypography {
     );
   }
 
-  /// Monospace style for seed phrases, addresses, and code-like content.
-  ///
-  /// Central home for the app's mono font so widgets never call
-  /// `GoogleFonts.*` directly (enforced by `kubus_no_inline_google_fonts`).
+  /// Compatibility helper for mono call sites; now uses Space Mono.
+  @Deprecated('Use KubusTypography.structural or KubusTypography.machine.')
   static TextStyle mono({
     double? fontSize,
     FontWeight? fontWeight,
@@ -314,7 +467,7 @@ class KubusTypography {
     double? height,
     double? letterSpacing,
   }) {
-    return GoogleFonts.robotoMono(
+    return structural(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -327,34 +480,48 @@ class KubusTypography {
     // Important: build a color-agnostic text theme so it can inherit the active
     // ThemeData text colors (fixes dark-mode regressions where GoogleFonts
     // defaults to light theme colors).
-    return GoogleFonts.interTextTheme(const TextTheme()).copyWith(
-      displayLarge: GoogleFonts.inter(
+    return const TextTheme(
+      displayLarge: TextStyle(
+        fontFamily: contentFamily,
         fontWeight: FontWeight.bold,
         fontSize: 32,
       ),
-      displayMedium: GoogleFonts.inter(
+      displayMedium: TextStyle(
+        fontFamily: contentFamily,
         fontWeight: FontWeight.bold,
         fontSize: 28,
       ),
-      displaySmall: GoogleFonts.inter(
+      displaySmall: TextStyle(
+        fontFamily: contentFamily,
         fontWeight: FontWeight.bold,
         fontSize: 24,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: TextStyle(
+        fontFamily: contentFamily,
         fontWeight: FontWeight.w700,
         fontSize: 20,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: TextStyle(
+        fontFamily: contentFamily,
         fontWeight: FontWeight.w600,
         fontSize: 18,
       ),
-      titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
-      titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
-      bodyLarge: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 16),
-      bodyMedium: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 14),
-      labelLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-      labelMedium: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 12),
-      labelSmall: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 10),
+      titleLarge: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 18),
+      titleMedium: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 16),
+      bodyLarge: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 16),
+      bodyMedium: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 14),
+      bodySmall: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 12),
+      labelLarge: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 14),
+      labelMedium: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 12),
+      labelSmall: TextStyle(
+          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 10),
     );
   }
 }
@@ -497,6 +664,39 @@ class KubusTextStyles {
   static TextStyle get mobileAppBarTitle =>
       screenTitle.copyWith(fontSize: KubusHeaderMetrics.mobileAppBarTitle);
 
+  static TextStyle get display => KubusTypography.textTheme.displayLarge!;
+  static TextStyle get entityTitle => KubusTypography.textTheme.headlineSmall!;
+  static TextStyle get lede => KubusTypography.textTheme.bodyLarge!
+      .copyWith(height: 1.5, fontWeight: FontWeight.w400);
+  static TextStyle get body => KubusTypography.textTheme.bodyMedium!;
+  static TextStyle get bodySmall => KubusTypography.textTheme.bodySmall!;
+  static TextStyle get caption => KubusTypography.textTheme.labelSmall!;
+  static TextStyle get actionLabel => KubusTypography.textTheme.labelLarge!;
+  static TextStyle get structuralLabel => KubusTypography.structural(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+      );
+  static TextStyle get metadataRegister => KubusTypography.structural(
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+      );
+  static TextStyle get ordinal => KubusTypography.structural(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      );
+  static TextStyle get machineValue => KubusTypography.machine(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+      );
+  static TextStyle get coordinate => KubusTypography.machine(
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+      );
+  static TextStyle get version => KubusTypography.machine(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      );
+
   static TextStyle get screenTitle =>
       KubusTypography.textTheme.headlineMedium!.copyWith(
         fontSize: KubusHeaderMetrics.screenTitle,
@@ -528,12 +728,12 @@ class KubusTextStyles {
   static TextStyle get actionTileSubtitle =>
       KubusTypography.textTheme.labelMedium!;
 
-  static TextStyle get badgeCount => GoogleFonts.inter(
+  static TextStyle get badgeCount => KubusTypography.content(
         fontSize: KubusSizes.badgeCountFontSize,
         fontWeight: FontWeight.w700,
       );
 
-  static TextStyle get compactBadge => GoogleFonts.inter(
+  static TextStyle get compactBadge => KubusTypography.content(
         fontSize: KubusChromeMetrics.navBadgeLabel,
         fontWeight: FontWeight.w700,
       );
@@ -642,6 +842,7 @@ class KubusGradients {
   ///
   /// This is used by auth/onboarding surfaces where we want a subtle midpoint
   /// highlight without hardcoding a third color.
+  @Deprecated('Use flat PRODUCT roles unless the gradient has media meaning.')
   static LinearGradient fromColors(
     Color start,
     Color end, {
@@ -659,6 +860,7 @@ class KubusGradients {
     );
   }
 
+  @Deprecated('Use KubusColorRoles.active for PRODUCT emphasis.')
   static const LinearGradient primary = LinearGradient(
     colors: [KubusColors.primary, KubusColors.primaryVariantDark],
     begin: Alignment.topLeft,
@@ -687,6 +889,7 @@ class KubusGradients {
     }
   }
 
+  @Deprecated('Use KubusColorRoles.ground.')
   static const LinearGradient darkBackground = LinearGradient(
     colors: [
       Color(0xFF05070A), // Near-black
@@ -696,12 +899,14 @@ class KubusGradients {
     end: Alignment.bottomCenter,
   );
 
+  @Deprecated('Use KubusColorRoles.ground for ordinary auth surfaces.')
   static const LinearGradient authDark = LinearGradient(
     colors: [Color(0xFF05070A), Color(0xFF102A43)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
+  @Deprecated('Use KubusColorRoles.ground.')
   static const LinearGradient lightBackground = LinearGradient(
     colors: [
       Color(0xFFFFFFFF),
@@ -713,6 +918,7 @@ class KubusGradients {
     end: Alignment.bottomCenter,
   );
 
+  @Deprecated('Use KubusProductBackground for ordinary PRODUCT pages.')
   static BoxDecoration scaffoldDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(gradient: isDark ? darkBackground : lightBackground);
@@ -722,6 +928,7 @@ class KubusGradients {
   // These are designed for smooth interpolation via AnimatedContainer or TweenSequence
 
   /// Dark mode animated gradient - black to deep navy with subtle motion
+  @Deprecated('Use KubusProductBackground for ordinary PRODUCT pages.')
   static const List<Color> animatedDarkColors = [
     Color(0xFF05070A), // Near-black
     Color(0xFF060B12), // Black-blue
@@ -730,6 +937,7 @@ class KubusGradients {
   ];
 
   /// Light mode animated gradient - subtle white with a deep-blue tint
+  @Deprecated('Use KubusProductBackground for ordinary PRODUCT pages.')
   static const List<Color> animatedLightColors = [
     Color(0xFFF9FBFF), // Cool white
     Color(0xFFF1F7FF), // Very light blue
@@ -738,6 +946,7 @@ class KubusGradients {
   ];
 
   /// Hero/accent gradient for feature highlights
+  @Deprecated('Use semantic surface and active roles; avoid decorative tint.')
   static const LinearGradient heroGradient = LinearGradient(
     colors: [
       KubusColors.primaryVariantDark,
@@ -868,6 +1077,28 @@ class KubusBorders {
         width: KubusSizes.hairline,
       );
 
+  /// Keyline of a [KubusContextIcon] tile: a 38 % accent hairline, or the
+  /// solid accent when the tile is selected.
+  static BorderSide contextTileSide(Color accent, {bool selected = false}) =>
+      BorderSide(
+        color: selected ? accent : accent.withValues(alpha: 0.38),
+        width: KubusSizes.hairline,
+      );
+
+  static Border contextTile(Color accent, {bool selected = false}) =>
+      Border.fromBorderSide(contextTileSide(accent, selected: selected));
+
+  /// Width of a selected-item indicator bar (settings sidebar).
+  static const double indicatorWidth = 3;
+
+  /// Leading selection bar: the accent when [visible], transparent space
+  /// otherwise so selection does not shift the layout.
+  static BorderSide indicatorSide(Color accent, {required bool visible}) =>
+      BorderSide(
+        color: visible ? accent : Colors.transparent,
+        width: indicatorWidth,
+      );
+
   static Border accentTint(Color accent) =>
       Border.fromBorderSide(accentTintSide(accent));
 
@@ -875,7 +1106,7 @@ class KubusBorders {
   /// wallet flows) regardless of theme brightness. `strong` is for outlined
   /// buttons / emphasized cards; the default suits glass containers.
   static BorderSide onDarkSide({bool strong = false}) => BorderSide(
-        color: KubusColors.textPrimaryDark.withValues(
+        color: Colors.white.withValues(
           alpha: strong
               ? KubusGlassEffects.glassBorderOpacityStrong
               : KubusGlassEffects.glassBorderOpacitySubtle,

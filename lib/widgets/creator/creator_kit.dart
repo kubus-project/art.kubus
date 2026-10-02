@@ -8,7 +8,9 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
+import '../common/kubus_context_icon.dart';
 import '../common/subject_options_sheet.dart';
+import '../forms/kubus_form.dart';
 
 /// Shared building blocks for all creator / editor / manager screens.
 ///
@@ -108,8 +110,8 @@ DesktopCreatorSectionColors resolveDesktopCreatorSectionColors(
     DesktopCreatorSectionSemantic.identity => identityAccent,
     DesktopCreatorSectionSemantic.status => identityAccent,
     DesktopCreatorSectionSemantic.readiness => roles.positiveAction,
-    DesktopCreatorSectionSemantic.actions => roles.web3MarketplaceAccent,
-    DesktopCreatorSectionSemantic.collaboration => roles.statTeal,
+    DesktopCreatorSectionSemantic.actions => roles.active,
+    DesktopCreatorSectionSemantic.collaboration => roles.secondary,
     DesktopCreatorSectionSemantic.media => roles.statAmber,
     DesktopCreatorSectionSemantic.ar => roles.statBlue,
     DesktopCreatorSectionSemantic.visibility => scheme.primary,
@@ -603,86 +605,36 @@ class CreatorTextField extends StatelessWidget {
     this.suffixIcon,
   });
 
+  // [accentColor] is kept for call-site compatibility only: PRODUCT v5
+  // focus is the semantic focus role, never a per-screen accent.
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = accentColor ?? scheme.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        TextFormField(
-          controller: controller,
-          minLines: minLines,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          scrollPadding: scrollPadding,
-          validator: validator,
-          onChanged: onChanged,
+    final roles = KubusColorRoles.of(context);
+    return KubusFieldFrame(
+      label: label,
+      enabled: enabled,
+      child: TextFormField(
+        controller: controller,
+        minLines: minLines,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        scrollPadding: scrollPadding,
+        validator: validator,
+        onChanged: onChanged,
+        enabled: enabled,
+        style: kubusFieldTextStyle(context, enabled: enabled),
+        cursorColor: roles.focus,
+        decoration: kubusFieldDecoration(
+          context,
+          hintText: hint,
+          helperText: helperText,
+          prefixIcon: prefixIcon,
+          suffixIcon: suffixIcon,
           enabled: enabled,
-          style: TextStyle(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: scheme.onSurface.withValues(alpha: 0.4),
-            ),
-            helperText: helperText,
-            helperMaxLines: 2,
-            helperStyle: KubusTextStyles.detailCaption.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: scheme.onSurface.withValues(alpha: 0.04),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: accent, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: scheme.error),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: scheme.error, width: 1.5),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.15),
-              ),
-            ),
-          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -862,64 +814,48 @@ class _CreatorDropdownState<T> extends State<CreatorDropdown<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final animationTheme = context.animationTheme;
     final enabled = widget.enabled;
-    final accent = widget.accentColor ?? scheme.primary;
     final showFocus = _focused && enabled;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: enabled
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.55),
+    return KubusFieldFrame(
+      label: widget.label,
+      enabled: enabled,
+      child: Focus(
+        skipTraversal: true,
+        onFocusChange: (value) {
+          if (_focused != value) setState(() => _focused = value);
+        },
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm + KubusSpacing.xs,
           ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Focus(
-          skipTraversal: true,
-          onFocusChange: (value) {
-            if (_focused != value) setState(() => _focused = value);
-          },
-          child: AnimatedContainer(
-            duration: animationTheme.short,
-            curve: animationTheme.defaultCurve,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: showFocus
-                    ? accent
-                    : scheme.outline
-                        .withValues(alpha: enabled ? 0.25 : 0.15),
-                width: showFocus ? 1.5 : 1,
-              ),
-            ),
-            child: DropdownButton<T>(
-              value: widget.value,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              focusColor: Colors.transparent,
-              dropdownColor: scheme.surfaceContainerHighest,
-              style: TextStyle(
-                color: enabled
-                    ? scheme.onSurface
-                    : scheme.onSurface.withValues(alpha: 0.55),
-              ),
-              items: widget.items,
-              onChanged: enabled ? widget.onChanged : null,
+          decoration: BoxDecoration(
+            color: enabled ? roles.surface : roles.ground,
+            borderRadius: BorderRadius.circular(KubusRadius.control),
+            border: Border.all(
+              color: showFocus
+                  ? roles.focus
+                  : (enabled ? roles.rule : roles.rule.withValues(alpha: 0.5)),
+              width: showFocus ? 2 : 1,
             ),
           ),
+          child: DropdownButton<T>(
+            value: widget.value,
+            isExpanded: true,
+            underline: const SizedBox.shrink(),
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
+            focusColor: Colors.transparent,
+            dropdownColor: roles.surfaceRaised,
+            style: kubusFieldTextStyle(context, enabled: enabled),
+            items: widget.items,
+            onChanged: enabled ? widget.onChanged : null,
+          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -945,76 +881,15 @@ class CreatorSwitchTile extends StatelessWidget {
     this.activeColor,
   });
 
+  // [activeColor] is kept for call-site compatibility; PRODUCT v5 switches
+  // use the family active role. The row is flat (no tinted tile).
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = activeColor ?? scheme.primary;
-    final enabled = onChanged != null;
-    final titleColor = enabled
-        ? scheme.onSurface
-        : scheme.onSurface.withValues(alpha: 0.55);
-    final subtitleColor =
-        scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.4);
-
-    final tile = Ink(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: enabled ? 0.12 : 0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: titleColor,
-                  ),
-                ),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                    child: Text(
-                      subtitle!,
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: subtitleColor,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // The switch stays focusable for keyboard users; the surrounding
-          // InkWell extends the touch target to the whole tile.
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: accent,
-          ),
-        ],
-      ),
-    );
-
-    return Semantics(
-      label: title,
-      toggled: value,
-      enabled: enabled,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          mouseCursor:
-              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          onTap: enabled ? () => onChanged!(!value) : null,
-          child: tile,
-        ),
-      ),
+    return KubusFormSwitchRow(
+      title: title,
+      description: subtitle,
+      value: value,
+      onChanged: onChanged,
     );
   }
 }
@@ -1166,16 +1041,17 @@ class CreatorDateField extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: onPick,
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    borderRadius: BorderRadius.circular(KubusRadius.control),
                     child: Container(
                       padding: const EdgeInsets.all(
                         KubusSpacing.sm + KubusSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: scheme.onSurface.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        color: KubusColorRoles.of(context).surface,
+                        borderRadius:
+                            BorderRadius.circular(KubusRadius.control),
                         border: Border.all(
-                          color: scheme.outline.withValues(alpha: 0.25),
+                          color: KubusColorRoles.of(context).rule,
                         ),
                       ),
                       child: Row(
@@ -1258,15 +1134,15 @@ class CreatorTimeField extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onPick,
-              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderRadius: BorderRadius.circular(KubusRadius.control),
               child: Container(
                 padding:
                     const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                 decoration: BoxDecoration(
-                  color: scheme.onSurface.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  color: KubusColorRoles.of(context).surface,
+                  borderRadius: BorderRadius.circular(KubusRadius.control),
                   border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.25),
+                    color: KubusColorRoles.of(context).rule,
                   ),
                 ),
                 child: Row(
@@ -1468,7 +1344,6 @@ class DesktopCreatorShell extends StatelessWidget {
   final double paneGap;
   final EdgeInsetsGeometry contentPadding;
   final EdgeInsetsGeometry sidebarPadding;
-  final Color? sidebarAccentColor;
 
   const DesktopCreatorShell({
     super.key,
@@ -1486,128 +1361,95 @@ class DesktopCreatorShell extends StatelessWidget {
     this.paneGap = KubusSpacing.lg,
     this.contentPadding = const EdgeInsets.all(KubusSpacing.lg),
     this.sidebarPadding = const EdgeInsets.all(KubusSpacing.lg),
-    this.sidebarAccentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final headerStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.header,
-      tintBase: scheme.surface,
-    );
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
+    final roles = KubusColorRoles.of(context);
+    final hairline = KubusBorders.hairlineSide(context);
 
-    Widget buildSurface({
-      required Widget child,
-      required EdgeInsetsGeometry padding,
-      required double blurSigma,
-      required double fallbackMinOpacity,
-      required Color backgroundColor,
-      required BorderRadius borderRadius,
-    }) {
-      return LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: borderRadius,
-        blurSigma: blurSigma,
-        fallbackMinOpacity: fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: backgroundColor,
-        child: Padding(
-          padding: padding,
-          child: child,
-        ),
-      );
-    }
-
+    // PRODUCT v5 management workspace: one flat header row, one edit column
+    // and one rail, separated by hairlines. No glass, no accent bar.
     return Column(
       children: [
-        LiquidGlassPanel(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.lg,
-            vertical: KubusSpacing.md,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: roles.surface,
+            border: Border(bottom: hairline),
           ),
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.zero,
-          blurSigma: headerStyle.blurSigma,
-          fallbackMinOpacity: headerStyle.fallbackMinOpacity,
-          showBorder: false,
-          backgroundColor: headerStyle.tintColor,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (onBack != null)
-                IconButton(
-                  tooltip: backTooltip,
-                  onPressed: onBack,
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: scheme.onSurface,
-                  ),
-                )
-              else
-                const SizedBox(width: KubusHeaderMetrics.actionHitArea),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: KubusTextStyles.screenTitle.copyWith(
-                              color: scheme.onSurface,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.lg,
+              vertical: KubusSpacing.md,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (onBack != null)
+                  IconButton(
+                    tooltip: backTooltip,
+                    onPressed: onBack,
+                    icon: Icon(Icons.arrow_back, color: roles.foreground),
+                  )
+                else
+                  const SizedBox(width: KubusHeaderMetrics.actionHitArea),
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: KubusTextStyles.screenTitle.copyWith(
+                                color: roles.foreground,
+                              ),
                             ),
                           ),
-                        ),
-                        if (headerBadge != null) ...[
-                          const SizedBox(width: KubusSpacing.sm),
-                          headerBadge!,
+                          if (headerBadge != null) ...[
+                            const SizedBox(width: KubusSpacing.sm),
+                            headerBadge!,
+                          ],
                         ],
-                      ],
-                    ),
-                    if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        subtitle!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.sectionSubtitle.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.68),
-                        ),
                       ),
+                      if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
+                            color: roles.foregroundMuted,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (actions.isNotEmpty) ...[
-                const SizedBox(width: KubusSpacing.md),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: KubusSpacing.sm,
-                  runSpacing: KubusSpacing.sm,
-                  children: actions,
-                ),
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(width: KubusSpacing.md),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: KubusSpacing.sm,
+                    runSpacing: KubusSpacing.sm,
+                    children: actions,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= wideBreakpoint;
-              final mainSurface = buildSurface(
+              final mainSurface = Padding(
+                padding: contentPadding,
                 child: Align(
                   alignment: Alignment.topCenter,
                   child: ConstrainedBox(
@@ -1615,44 +1457,14 @@ class DesktopCreatorShell extends StatelessWidget {
                     child: mainContent,
                   ),
                 ),
-                padding: contentPadding,
-                blurSigma: panelStyle.blurSigma,
-                fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-                backgroundColor: panelStyle.tintColor,
-                borderRadius: BorderRadius.zero,
               );
-
-              final sidebarSurface = buildSurface(
-                child: sidebarAccentColor == null
-                    ? sidebar
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Container(
-                            height: 4,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  sidebarAccentColor!.withValues(alpha: 0.95),
-                                  sidebarAccentColor!.withValues(alpha: 0.32),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.only(top: KubusSpacing.sm),
-                              child: sidebar,
-                            ),
-                          ),
-                        ],
-                      ),
-                padding: sidebarPadding,
-                blurSigma: panelStyle.blurSigma,
-                fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-                backgroundColor: panelStyle.tintColor,
-                borderRadius: BorderRadius.zero,
+              final sidebarSurface = DecoratedBox(
+                decoration: BoxDecoration(
+                  color: roles.surface,
+                  border:
+                      isWide ? Border(left: hairline) : Border(top: hairline),
+                ),
+                child: Padding(padding: sidebarPadding, child: sidebar),
               );
 
               if (isWide) {
@@ -1661,10 +1473,7 @@ class DesktopCreatorShell extends StatelessWidget {
                   children: [
                     Expanded(child: mainSurface),
                     SizedBox(width: paneGap),
-                    SizedBox(
-                      width: sidebarWidth,
-                      child: sidebarSurface,
-                    ),
+                    SizedBox(width: sidebarWidth, child: sidebarSurface),
                   ],
                 );
               }
@@ -1727,75 +1536,143 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
         );
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items.map((item) {
-        final itemAccent =
-            item.complete ? colors.completeAccent : colors.incompleteAccent;
-        final labelColor = item.complete
-            ? scheme.onSurface
-            : scheme.onSurface.withValues(alpha: 0.82);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
-                height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
-                decoration: BoxDecoration(
-                  color: itemAccent.withValues(
-                    alpha: item.complete ? 0.14 : 0.10,
-                  ),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                    color: itemAccent.withValues(
-                      alpha: item.complete ? 0.22 : 0.18,
+    final done = items.where((item) => item.complete).length;
+
+    // At a glance: the count as a machine value and one segment per item,
+    // in the same green/amber the rows use. Rows below carry the meaning
+    // (and the semantics), so this composition is decorative.
+    final summary = ExcludeSemantics(
+      key: const ValueKey<String>('creator_readiness_summary'),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$done',
+                    style: KubusTextStyles.machineValue.copyWith(
+                      fontSize: 28,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      color: done == items.length
+                          ? colors.completeAccent
+                          : scheme.onSurface,
                     ),
                   ),
-                ),
-                child: Icon(
-                  item.icon ??
-                      (item.complete
-                          ? Icons.check_rounded
-                          : Icons.radio_button_unchecked),
-                  size: 18,
-                  color: itemAccent,
-                ),
+                  TextSpan(
+                    text: '/${items.length}',
+                    style: KubusTextStyles.machineValue.copyWith(
+                      fontSize: 14,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                child: Row(
                   children: [
-                    Text(
-                      item.label,
-                      style: KubusTextStyles.detailLabel.copyWith(
-                        color: labelColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if ((item.description ?? '').trim().isNotEmpty) ...[
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Text(
-                        item.description!,
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.66),
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(width: KubusSpacing.xxs),
+                      Expanded(
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: items[i].complete
+                                ? colors.completeAccent
+                                : colors.incompleteAccent
+                                    .withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(KubusRadius.xs),
+                          ),
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-            ],
-          ),
-        );
-      }).toList(growable: false),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Truthful state, stated once per row: a green check when complete, an
+    // amber open mark when missing. The label carries the meaning; no tile.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        summary,
+        ...items.map((item) {
+          final itemAccent =
+              item.complete ? colors.completeAccent : colors.incompleteAccent;
+          final labelColor = item.complete
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: 0.82);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+            child: Semantics(
+              checked: item.complete,
+              label: item.label,
+              excludeSemantics: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: KubusSpacing.xxs),
+                    child: Icon(
+                      item.complete
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: itemAccent,
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.label,
+                          style: KubusTextStyles.detailLabel.copyWith(
+                            color: labelColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if ((item.description ?? '').trim().isNotEmpty) ...[
+                          const SizedBox(height: KubusSpacing.xxs),
+                          Text(
+                            item.description!,
+                            style: KubusTextStyles.detailCaption.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.66),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        })
+      ],
     );
   }
 }
 
-/// Shared surface for creator sidebar sections.
+/// One section of the creator management rail.
+///
+/// PRODUCT v5: the rail reads as ONE workspace, so a section is not a card.
+/// It is a compact contextual icon tile, a title, an optional subtitle and
+/// its content, closed by a hairline. The semantic accent lives only in the
+/// icon tile; no tinted fill, no glass.
 class DesktopCreatorSidebarSection extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -1831,61 +1708,61 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
           identityColor: accentColor,
         );
 
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      showBorder: true,
-      backgroundColor: colors.backgroundTint,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (icon != null) ...[
-                Container(
-                  width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
-                  height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
-                  decoration: BoxDecoration(
-                    color: colors.iconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(color: colors.border),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: KubusBorders.hairlineSide(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: KubusSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  KubusContextIcon(
+                    icon: icon!,
+                    accent: colors.iconColor,
+                    size: KubusContextIconSize.compact,
                   ),
-                  child: Icon(icon, color: colors.iconColor, size: 18),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTextStyles.detailSectionTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    if ((subtitle ?? '').trim().isNotEmpty) ...[
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Text(
-                        subtitle!,
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.66),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          style: KubusTextStyles.detailSectionTitle.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
+                      if ((subtitle ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          subtitle!,
+                          style: KubusTextStyles.detailCaption.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.66),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: KubusSpacing.sm),
-                trailing!,
+                if (trailing != null) ...[
+                  const SizedBox(width: KubusSpacing.sm),
+                  trailing!,
+                ],
               ],
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          child,
-        ],
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -1945,6 +1822,7 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
                   entityType: entityType,
                   entityId: entityId,
                   myRole: myRole,
+                  embedded: true,
                 )
               : CreatorInfoBox(
                   text: lockedMessage,

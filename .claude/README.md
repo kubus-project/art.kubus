@@ -3,6 +3,13 @@
 Shared, version-controlled Claude Code setup for the art.kubus workspace.
 Personal overrides go in `settings.local.json` (gitignored).
 
+> Product/design note: the repository root `CLAUDE.md` is the current Claude
+> entrypoint for SEO, public-entry, map and UI/UX work. This directory documents
+> operational Claude Code configuration (hooks, skills and permissions); it is
+> not the product/design source of truth. Read root `CLAUDE.md` and
+> `AGENTS.md` before using the skills below.
+
+
 ## Layout
 
 ```

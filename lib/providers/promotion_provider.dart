@@ -1,5 +1,10 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../config/config.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 
@@ -83,6 +88,9 @@ class PromotionProvider extends ChangeNotifier {
   String? _pendingKub8Signature;
   String? _pendingKub8RequestId;
 
+  /// Where an unverified transfer is recorded across a restart.
+  static const String _pendingKub8Key = 'promotion_pending_kub8_payment_v1';
+
   // Monotonic request generations. Only a response whose generation still matches the latest
   // request may write to state, so a slow earlier response can never overwrite a newer one.
   int _quoteGeneration = 0;
@@ -134,8 +142,70 @@ class PromotionProvider extends ChangeNotifier {
 
   /// Load the backend's scheduling and payment policy. The booking horizon and the canonical
   /// KUB8 mint come from here rather than being duplicated in the client.
+  /// Re-reads a transfer that was submitted but never confirmed.
+  ///
+  /// Restores the request/signature pair so the app can finish verifying the
+  /// payment the user already made, instead of presenting the promotion as
+  /// unpaid and inviting a second transfer. Returns the request id when there
+  /// was one to resume.
+  Future<String?> restorePendingKub8Payment() async {
+    if (_pendingKub8RequestId != null) return _pendingKub8RequestId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_pendingKub8Key);
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final requestId = (decoded['requestId'] ?? '').toString();
+      final signature = (decoded['signature'] ?? '').toString();
+      if (requestId.isEmpty || signature.isEmpty) return null;
+      _pendingKub8RequestId = requestId;
+      _pendingKub8Signature = signature;
+      _setKub8Stage(Kub8PaymentStage.submitted);
+      return requestId;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'PromotionProvider.restorePendingKub8Payment failed: $e');
+      return null;
+    }
+  }
+
+  Future<void> _rememberPendingKub8Payment(
+    String requestId,
+    String signature,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _pendingKub8Key,
+        jsonEncode(<String, String>{
+          'requestId': requestId,
+          'signature': signature,
+        }),
+      );
+    } catch (e) {
+      // Best effort. Failing to write must not stop a transfer that has already
+      // happened from being verified now, while this process is still alive.
+      AppConfig.debugPrint(
+          'PromotionProvider could not record the pending payment: $e');
+    }
+  }
+
+  Future<void> _forgetPendingKub8Payment() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_pendingKub8Key);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'PromotionProvider could not clear the pending payment: $e');
+    }
+  }
+
   Future<void> loadConfig({bool force = false}) async {
     if (_configLoaded && !force) return;
+    // A transfer left unverified by a previous run is resumed before anything
+    // reads the promotion state, so the UI never offers to pay a second time.
+    await restorePendingKub8Payment();
     try {
       _config = await _api.getPromotionConfig();
       _configLoaded = true;
@@ -143,7 +213,7 @@ class PromotionProvider extends ChangeNotifier {
     } catch (e) {
       // Config is advisory; the backend still enforces every rule. Keep the defaults.
       _configLoaded = false;
-      debugPrint('PromotionProvider.loadConfig failed: $e');
+      AppConfig.debugPrint('PromotionProvider.loadConfig failed: $e');
     }
   }
 
@@ -412,7 +482,15 @@ class PromotionProvider extends ChangeNotifier {
     }
 
     // The transfer is on chain from here on. Never sign again for this request.
+    //
+    // Recorded durably before verification is attempted, not after it succeeds.
+    // Verification waits on finalization, so the window is a real one, and for
+    // its whole length the only thing that knows which request this transfer
+    // paid for is this process. If the app stops here the user's KUB8 is
+    // already gone, the request still reads as `awaiting_payment` on restart,
+    // and the UI would offer to pay again — for a promotion that has been paid.
     _pendingKub8Signature = signature;
+    await _rememberPendingKub8Payment(requestId, signature);
     _setKub8Stage(Kub8PaymentStage.submitted);
 
     return verifyPendingKub8Payment(
@@ -441,6 +519,9 @@ class PromotionProvider extends ChangeNotifier {
       _myRequests.insert(0, request);
       _pendingKub8Signature = null;
       _pendingKub8RequestId = null;
+      // Confirmed by the backend, so the record has done its job. Anything
+      // short of confirmed keeps it, including the pending path below.
+      unawaited(_forgetPendingKub8Payment());
       _setKub8Stage(Kub8PaymentStage.confirmed);
       return Kub8PaymentOutcome(
         stage: Kub8PaymentStage.confirmed,

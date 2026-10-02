@@ -2,7 +2,7 @@
 
 ## Project model
 
-This repository is maintained as an open-source client project under Apache-2.0.
+This repository is maintained as an open-source client project under MPL-2.0.
 The hosted backend platform is operated separately.
 
 ## Maintainers

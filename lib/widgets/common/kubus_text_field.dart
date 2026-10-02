@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
+import '../forms/kubus_form.dart';
 
-/// Canonical general-purpose text field: optional above-label + a
-/// `TextFormField` styled entirely by the app-level `inputDecorationTheme`.
+/// Compatibility text field: optional above-label + a `TextFormField` with
+/// the PRODUCT v5 field decoration ([kubusFieldDecoration]).
 ///
-/// Use this instead of hand-rolling `InputDecoration` per screen. Creator
-/// flows keep `CreatorTextField` (same visual family); consolidation of the
-/// two is tracked for the glass-sweep slice.
+/// New forms use [KubusFormTextField] (kinds, required semantics, unit
+/// suffix). This widget keeps its API for existing call sites and renders
+/// the same flat field.
 class KubusTextField extends StatelessWidget {
   const KubusTextField({
     super.key,
@@ -51,7 +53,7 @@ class KubusTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     final field = TextFormField(
       controller: controller,
@@ -64,31 +66,39 @@ class KubusTextField extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: textInputAction,
       autofillHints: autofillHints,
-      decoration: InputDecoration(
+      style: kubusFieldTextStyle(context, enabled: enabled),
+      cursorColor: roles.focus,
+      decoration: kubusFieldDecoration(
+        context,
         hintText: hintText,
         prefixIcon: prefixIcon,
         suffixIcon: suffix,
         errorText: errorText,
         helperText: helperText,
+        enabled: enabled,
       ),
     );
 
     if (label == null || label!.isEmpty) return field;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label!,
-          key: labelKey,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.75),
+    // Merge so the persistent label is the field's spoken name.
+    return MergeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label!,
+            key: labelKey,
+            style: KubusTextStyles.detailLabel.copyWith(
+              color: enabled ? roles.foreground : roles.foregroundMuted,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(height: KubusSpacing.xs + 2),
-        field,
-      ],
+          const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
+          field,
+        ],
+      ),
     );
   }
 }

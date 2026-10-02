@@ -12,9 +12,9 @@ import io.flutter.plugin.platform.PlatformViewFactory
 class ArCoreViewFactory(val activity: Activity, val messenger: BinaryMessenger) : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
 
     override fun create(context: Context, id: Int, args: Any?): PlatformView {
-        val params = args as HashMap<*, *>
-        val debug = params["debug"] as Boolean
-        val type = params["type"] as String
+        val params = args as? Map<*, *> ?: emptyMap<Any, Any>()
+        val debug = params["debug"] as? Boolean ?: false
+        val type = params["type"] as? String ?: "standard"
 
         if (debug) {
             Log.i("ArCoreViewFactory", id.toString())

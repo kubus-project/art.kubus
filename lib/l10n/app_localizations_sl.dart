@@ -220,7 +220,17 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
-    return '+$amount KUB8 priznanja';
+    return '+$amount priznanja';
+  }
+
+  @override
+  String recentActivityKub8AmountDescription(Object amount) {
+    return '+$amount KUB8';
+  }
+
+  @override
+  String recentActivityAchievementKub8Description(Object title, Object amount) {
+    return '$title (+$amount KUB8)';
   }
 
   @override
@@ -243,6 +253,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get notificationRecognitionRecordedTitle => 'Priznanje zabeleženo';
+
+  @override
+  String get notificationArtworkDiscoveredTitle => 'Odkrito umetniško delo';
+
+  @override
+  String notificationArtworkDiscoveredBody(Object title, Object artist) {
+    return 'Odkrito: »$title« · $artist';
+  }
+
+  @override
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title) {
+    return 'Odkrito: »$title«';
+  }
 
   @override
   String get pushArchiveObjectCreatingTitle =>
@@ -293,11 +316,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Digitalne izdaje, povezane z umetninami.';
 
   @override
-  String get analyticsMetricKub8RecognitionLabel => 'KUB8 priznanja';
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 iz dosežkov';
 
   @override
   String get analyticsMetricKub8RecognitionDescription =>
-      'KUB8, zabeležen kot priznanje za prispevke.';
+      'Vsota nagrad KUB8, določenih pri dosežkih, ki jih je ta profil odklenil. Ni prihodek ali prodaja.';
 
   @override
   String get analyticsPresetArtistSubtitle =>
@@ -384,6 +407,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'Dodaj ta kraj v svojo zbirko';
 
   @override
+  String get activationGateSaveCollectionTitle => 'Shrani to zbirko za pozneje';
+
+  @override
   String get activationGateSavePostTitle => 'Shrani to objavo v svojo zbirko';
 
   @override
@@ -435,6 +461,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get activationConfirmSaveExhibition => 'Želiš shraniti ta kraj?';
+
+  @override
+  String get activationConfirmSaveCollection => 'Želiš shraniti to zbirko?';
 
   @override
   String get activationConfirmSavePost => 'Želiš shraniti to objavo?';
@@ -2285,8 +2314,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Obiskani dogodki';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned =>
-      'Priznanja za prispevke';
+  String get achievementsStatKub8Earned => 'KUB8 iz dosežkov';
+
+  @override
+  String get achievementUnlockedLabel => 'Odklenjeno';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'Prvo odkritje';
@@ -2404,6 +2435,17 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsAppearanceSectionTitle => 'Videz';
+
+  @override
+  String get settingsReduceEffectsTitle => 'Zmanjšaj učinke';
+
+  @override
+  String get settingsReduceEffectsSubtitle =>
+      'Izklopi zameglitev, animacije in druge učinke';
+
+  @override
+  String get settingsReduceEffectsAutoSubtitle =>
+      'Samodejno vklopljeno za to napravo';
 
   @override
   String get settingsThemeModeTitle => 'Način teme';
@@ -2785,6 +2827,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsAboutSectionTitle => 'O aplikaciji';
 
   @override
+  String get settingsGroupAccount => 'Račun';
+
+  @override
+  String get settingsGroupExperience => 'Izkušnja';
+
+  @override
+  String get settingsGroupInfrastructure => 'Infrastruktura';
+
+  @override
   String get settingsAboutVersionTileTitle => 'Različica';
 
   @override
@@ -3159,7 +3210,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsViewFaqButton => 'Ogled FAQ';
 
   @override
-  String get settingsOpeningEmailClientToast => 'Odpiram e‑poštni odjemalec…';
+  String get settingsOpeningEmailClientToast => 'Odpiram e-poštni odjemalec…';
 
   @override
   String get settingsContactSupportButton => 'Kontaktiraj podporo';
@@ -3327,11 +3378,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsAccountManagementDialogTitle => 'Upravljanje računa';
 
   @override
-  String get settingsEmailNotificationsTitle => 'E‑poštna obvestila';
+  String get settingsEmailNotificationsTitle => 'E-poštna obvestila';
 
   @override
   String get settingsEmailNotificationsSubtitle =>
-      'Prejemaj posodobitve prek e‑pošte';
+      'Prejemaj posodobitve prek e-pošte';
 
   @override
   String get settingsPushNotificationsTitle => 'Potisna obvestila';
@@ -3340,17 +3391,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsPushNotificationsSubtitle => 'Obvestila na napravi';
 
   @override
-  String get settingsMarketingEmailsTitle => 'Marketinška e‑pošta';
+  String get settingsMarketingEmailsTitle => 'Marketinška e-pošta';
 
   @override
   String get settingsMarketingEmailsSubtitle => 'Prejemaj promocijsko vsebino';
 
   @override
-  String get settingsEmailPreferencesSectionTitle => 'Nastavitve e‑pošte';
+  String get settingsEmailPreferencesSectionTitle => 'Nastavitve e-pošte';
 
   @override
   String get settingsEmailPreferencesTransactionalNote =>
-      'Kritična varnostna e‑pošta za račun in denarnico je vedno omogočena.';
+      'Kritična varnostna e-pošta za račun in denarnico je vedno omogočena.';
 
   @override
   String get settingsEmailPreferencesProductUpdatesTitle =>
@@ -3447,15 +3498,35 @@ class AppLocalizationsSl extends AppLocalizations {
       'Varnostna opozorila za denarnico in skrbništvo (vedno vključeno)';
 
   @override
-  String get settingsEmailPreferencesTransactionalTitle => 'E‑pošta za račun';
+  String get settingsEmailPreferencesTransactionalTitle => 'E-pošta za račun';
 
   @override
   String get settingsEmailPreferencesTransactionalSubtitle =>
-      'Transakcijska e‑pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
+      'Transakcijska e-pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
+
+  @override
+  String get settingsEmailGroupMarketing => 'Trženje';
+
+  @override
+  String get settingsEmailGroupActivity => 'Dejavnost';
+
+  @override
+  String get settingsEmailGroupEssential => 'Bistveno';
+
+  @override
+  String get settingsEmailGroupEssentialNote =>
+      'Vedno vklopljeno. Ta e-poštna sporočila varujejo vaš račun in denarnico ter potrjujejo vaša dejanja, zato jih ni mogoče izklopiti.';
+
+  @override
+  String get settingsAppNotificationsSectionTitle => 'Obvestila v aplikaciji';
+
+  @override
+  String get settingsAppNotificationsSectionSubtitle =>
+      'Potisna obvestila in obvestila v aplikaciji na tej napravi';
 
   @override
   String get settingsEmailPreferencesUpdateFailedToast =>
-      'Nastavitev e‑pošte ni bilo mogoče posodobiti. Poskusi znova.';
+      'Nastavitev e-pošte ni bilo mogoče posodobiti. Poskusi znova.';
 
   @override
   String get settingsInAppNotificationsMasterTitle =>
@@ -4302,19 +4373,6 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get mapNearbyRadiusTooltipWorld => 'Radij bližine (Svet)';
-
-  @override
-  String get mapNearbyRadiusWorldShort => 'Radij: Svet';
-
-  @override
-  String get mapTravelModeStatusTravelling => 'Potuješ';
-
-  @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Način potovanja je vklopljen - prikazujem označevalce v pogledu';
-
-  @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
 
   @override
@@ -4717,16 +4775,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapFilterFavorites => 'Priljubljene';
 
   @override
-  String get mapFilterScopeTitle => 'Obseg';
+  String get mapFilterScopeTitle => 'Območje';
 
   @override
-  String get mapFilterScopeCurrentViewport => 'Trenutni pogled';
+  String get mapFilterScopeCurrentViewport => 'Območje zemljevida';
 
   @override
   String get mapFilterScopeNearMe => 'V moji bližini';
-
-  @override
-  String get mapFilterScopeTravel => 'Potovanje';
 
   @override
   String get mapFilterDiscoveryStatusTitle => 'Stanje odkritja';
@@ -4787,15 +4842,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapZoomInTooltip => 'Približaj';
-
-  @override
-  String get mapTravelModeTooltip => 'Način potovanja';
-
-  @override
-  String get mapTravelModeEnableTooltip => 'Vklopi način potovanja';
-
-  @override
-  String get mapTravelModeDisableTooltip => 'Izklopi način potovanja';
 
   @override
   String get mapIsometricViewEnableTooltip => 'Vklopi izometrični pogled';
@@ -4861,13 +4907,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odpri panel s filtri za natančnejšo izbiro (vrsta, razdalja, odkrito/neodkrito …).';
 
   @override
-  String get mapTutorialStepTravelTitle => 'Način potovanja';
-
-  @override
-  String get mapTutorialStepTravelBody =>
-      'Način potovanja naloži označevalce za trenutno viden del zemljevida, da lahko raziskuješ kjerkoli.';
-
-  @override
   String get mapTutorialStepRecenterTitle => 'Nazaj na mojo lokacijo';
 
   @override
@@ -4880,23 +4919,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get mapTutorialStepSearchBody =>
       'Poišči umetnine, umetnike, institucije ali kraje in hitro skoči na rezultat.';
-
-  @override
-  String get mapTravelModeTutorialTitle => 'Razišči širše območje';
-
-  @override
-  String get mapTravelModeTutorialBody =>
-      'Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.';
-
-  @override
-  String get mapTravelModeTutorialHint =>
-      'Namig: Premakni in približaj/oddalji - označevalci se osvežijo glede na pogled.';
-
-  @override
-  String get mapTravelModeTutorialGotIt => 'Razumem';
-
-  @override
-  String get mapTravelModeTutorialEnable => 'Vključi način potovanja';
 
   @override
   String get mapNearbyArtTitle => 'Umetnost in kraji v bližini';
@@ -5017,10 +5039,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapSortNewest => 'Najnovejše';
 
   @override
-  String get mapSortRarity => 'Redkost';
+  String get mapSortHighestRewards => 'Največ priznanj';
 
   @override
-  String get mapSortHighestRewards => 'Največ priznanj';
+  String get mapSortRarity => 'Redkost';
 
   @override
   String get mapSortMostViewed => 'Največ ogledov';
@@ -5042,20 +5064,20 @@ class AppLocalizationsSl extends AppLocalizations {
       'Funkcije razširjene resničnosti (AR) zahtevajo zmogljivosti na napravi. Prenesi aplikacijo art.kubus, da si ogledaš digitalne umetnine v fizičnem prostoru s kamero telefona.';
 
   @override
-  String get arModeScanName => 'Skeniraj';
+  String get arModeScanName => 'Odkrij';
 
   @override
   String get arModePlaceName => 'Postavi';
 
   @override
-  String get arModeViewName => 'Ogled';
+  String get arModeViewName => 'Arhiv';
 
   @override
-  String get arModeCreateName => 'Ustvari';
+  String get arModeCreateName => 'Zajem';
 
   @override
   String get arModeScanDescription =>
-      'Skeniraj AR označevalce za odkrivanje umetnin v okolici.';
+      'Prepoznaj in odkrij fizične umetnine v bližini.';
 
   @override
   String get arModePlaceDescription =>
@@ -5063,11 +5085,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arModeViewDescription =>
-      'Oglej si postavljene umetnine in se vrni k njim.';
+      'Razišči obstoječi prostorski ali 3D-arhiv.';
 
   @override
   String get arModeCreateDescription =>
-      'Ustvarjaj in preizkušaj AR postavitve.';
+      'Prostorsko dokumentiraj fizično umetnino na svoji napravi.';
 
   @override
   String arMarkerNearbyToast(Object name) {
@@ -5116,16 +5138,16 @@ class AppLocalizationsSl extends AppLocalizations {
       'Umetnine ni bilo mogoče postaviti. Poskusi znova.';
 
   @override
-  String get arActionScan => 'Skeniraj umetnino';
+  String get arActionScan => 'Odkrij umetnino';
 
   @override
   String get arActionPlace => 'Postavi umetnino sem';
 
   @override
-  String get arActionView => 'Ogled podrobnosti';
+  String get arActionView => 'Razišči prostorski arhiv';
 
   @override
-  String get arActionCreate => 'Ustvari AR umetnino';
+  String get arActionCreate => 'Zajemi sleden pogled';
 
   @override
   String get arArtworkPlacedToast => 'Umetnina je postavljena!';
@@ -5201,6 +5223,33 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonActions => 'Dejanja';
+
+  @override
+  String get subjectActionsSocialHeading => 'Skupnost';
+
+  @override
+  String get subjectActionsSpatialHeading => 'Kraj in pot';
+
+  @override
+  String get subjectActionsMoreHeading => 'Dodatna dejanja';
+
+  @override
+  String get subjectActionsProvenanceHeading => 'Provenienca';
+
+  @override
+  String get subjectSpatialArchiveEmpty => 'Prostorski zapis še ne obstaja.';
+
+  @override
+  String get artworkProvenanceImageCreator => 'Avtor fotografije';
+
+  @override
+  String get artworkProvenanceLicense => 'Licenca slike';
+
+  @override
+  String get artworkProvenanceCredit => 'Zasluge za sliko';
+
+  @override
+  String get artworkProvenanceSource => 'Vir slike';
 
   @override
   String get commonCurrentlyOn => 'Trenutno VKLOPLJENO';
@@ -5321,11 +5370,20 @@ class AppLocalizationsSl extends AppLocalizations {
   String get messagesTitle => 'Sporočila';
 
   @override
+  String get messagesAttachTooltip => 'Priloži datoteko';
+
+  @override
+  String get messagesPrivateNotion => 'Zasebno';
+
+  @override
+  String get messagesUnreadSemantic => 'neprebrano';
+
+  @override
   String get messagesEmptyNoConversationsTitle => 'Ni pogovorov';
 
   @override
   String get messagesEmptyNoConversationsDescription =>
-      'Začni pogovor z gumbom za klepet spodaj.';
+      'Tu se prikažejo vaši zasebni pogovori z umetniki, institucijami in drugimi člani.';
 
   @override
   String get messagesEmptyStartChatAction => 'Začni klepet';
@@ -6010,30 +6068,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get collectionCreatorArtworkAddLabel => 'Dodaj';
-
-  @override
-  String get collectionCreatorConnectWalletToLoad =>
-      'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
-
-  @override
-  String get collectionCreatorLoadingLibrary => 'Nalagam knjižnico…';
-
-  @override
-  String get collectionCreatorLoadArtworkLibrary => 'Naloži knjižnico umetnin';
-
-  @override
-  String get collectionCreatorLibraryStillLoading =>
-      'Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem kasneje.';
-
-  @override
-  String get collectionCreatorLoadBeforeSave =>
-      'Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.';
-
-  @override
-  String get collectionCreatorArtworkSelected => 'Izbrano';
-
-  @override
-  String get collectionCreatorArtworkAdd => 'Dodaj';
 
   @override
   String get collectionCreatorNoArtworksAvailable =>
@@ -6854,18 +6888,419 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Zaščiti denarnico';
 
   @override
-  String get availabilityNodeTitle => 'Vozlišče razpoložljivosti';
+  String get availabilityNodeTitle => 'kubus Node';
 
   @override
   String get availabilityNodeNavTitle => 'kubus vozlišče';
 
   @override
   String get availabilityNodeNavSubtitle =>
-      'Ustvari in upravljaj operatorske tokene za svoje vozlišče.';
+      'Javni arhiv, lokalna obdelava in preverjen prispevek.';
 
   @override
   String get availabilityNodeSubtitle =>
-      'Ustvari in upravljaj omejene operatorske žetone za vozlišče.';
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeHeroTitle =>
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeHeroBody =>
+      'kubus Node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi; objavijo se le izbrane obdelane različice.';
+
+  @override
+  String get kubusNodePrivacyBody =>
+      'Izvorni zajem ostane lokalen. V javno omrežje se doda le prostorski arhiv, ki ga izbereš za objavo.';
+
+  @override
+  String get kubusNodeOverview => 'Pregled';
+
+  @override
+  String get kubusNodeArchive => 'Arhiv';
+
+  @override
+  String get kubusNodeSpatial => 'Prostorsko';
+
+  @override
+  String get kubusNodeRewards => 'Prispevek';
+
+  @override
+  String get kubusNodeSecuritySetup => 'Varnost / Nastavitve';
+
+  @override
+  String get kubusNodeOnline => 'Povezano';
+
+  @override
+  String get kubusNodeOffline => 'Brez povezave';
+
+  @override
+  String get kubusNodeNotPaired => 'Lokalno vozlišče kubus Node ni povezano';
+
+  @override
+  String get kubusNodeUnavailable => 'Vozlišče ni dosegljivo';
+
+  @override
+  String get kubusNodeAvailable => 'Na voljo';
+
+  @override
+  String get kubusNodeArchiveTitle => 'Ohrani javno umetnost dostopno';
+
+  @override
+  String get kubusNodeArchiveBody =>
+      'Hrani preverjene zapise javnega arhiva in drugim pomaga do njih med raziskovanjem art.kubus.';
+
+  @override
+  String get kubusNodeBytesStored => 'Shranjeno';
+
+  @override
+  String get kubusNodeRecords => 'Javni zapisi';
+
+  @override
+  String get kubusNodeRetrievalHealth => 'Uspešnost pridobivanja';
+
+  @override
+  String get kubusNodeSpatialTitle => 'Lokalno obdela prostorske arhive';
+
+  @override
+  String get kubusNodeSpatialBody =>
+      'Zajem pretvori v optimiziran prostorski zapis brez nalaganja izvornega gradiva na strežnik za obdelavo.';
+
+  @override
+  String get kubusNodeWorker => 'Prostorski procesor';
+
+  @override
+  String get kubusNodeGpu => 'Zmogljivost GPU';
+
+  @override
+  String get kubusNodeRunningJobs => 'Aktivna opravila';
+
+  @override
+  String get kubusNodeLocalCaptures => 'Lokalni zajemi';
+
+  @override
+  String get kubusNodeRewardsTitle => 'Preverjen prispevek';
+
+  @override
+  String get kubusNodeRewardsBody =>
+      'Zapisi prispevkov KUB8 temeljijo na preverjeni dostopnosti arhiva, času delovanja in uspešnem pridobivanju — ne zgolj na zagnani programski opremi.';
+
+  @override
+  String get kubusNodeSettledKub8 => 'Poravnani KUB8';
+
+  @override
+  String get kubusNodePendingBody =>
+      'Izračunano iz preverjene dostopnosti arhiva. Poravnava še ni aktivna.';
+
+  @override
+  String get kubusNodePairTitle => 'Poveži to napravo';
+
+  @override
+  String get kubusNodePairBody =>
+      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo. Ta naprava prejme le omejeno lokalno poverilnico.';
+
+  @override
+  String get kubusNodePairingPayload => 'Podatki za povezavo';
+
+  @override
+  String get kubusNodePairAction => 'Poveži kubus Node';
+
+  @override
+  String get kubusNodeUnpairAction => 'Pozabi povezano vozlišče';
+
+  @override
+  String get kubusNodePairedToast => 'kubus Node je povezan';
+
+  @override
+  String get kubusNodePairFailed => 'Povezava ni uspela';
+
+  @override
+  String get kubusNodeStateContributing => 'Prispeva';
+
+  @override
+  String get kubusNodeStateContributingBody =>
+      'Sodelovanje v arhivu je aktivno.';
+
+  @override
+  String get kubusNodeStateJoining => 'Priključevanje omrežju';
+
+  @override
+  String get kubusNodeStateJoiningBody =>
+      'kubus Node usklajuje in preverja svoj prispevek k javnemu arhivu.';
+
+  @override
+  String get kubusNodeStateDegraded => 'Povezava je prekinjena';
+
+  @override
+  String get kubusNodeStateDegradedBody =>
+      'Predhodno preverjeno vozlišče je v začasnem obdobju dopuščanja. Če sodelovanje v arhivu ni pravočasno obnovljeno, se obdelava zaklene.';
+
+  @override
+  String get kubusNodeStateLocked => 'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get kubusNodeStateLockedBody =>
+      'Prostorska obdelava postane na voljo, ko to vozlišče kubus Node dejavno prispeva k javnemu arhivu.';
+
+  @override
+  String get kubusNodeStateUnconfigured => 'Potrebna je nastavitev';
+
+  @override
+  String get kubusNodeStateUnconfiguredBody =>
+      'Za začetek poveži to vozlišče s svojim operaterskim računom art.kubus.';
+
+  @override
+  String get kubusNodeStateOffline => 'Vozlišče ni dosegljivo';
+
+  @override
+  String get kubusNodeStateOfflineBody =>
+      'Aplikacija trenutno ne more doseči tega vozlišča kubus Node. Povezava ostane shranjena in se samodejno vzpostavi znova.';
+
+  @override
+  String get kubusNodeReciprocity =>
+      'kubus Node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.';
+
+  @override
+  String get kubusNodeCheckStatusAction => 'Preveri stanje vozlišča';
+
+  @override
+  String get kubusNodeWorkerReady => 'Pripravljeno';
+
+  @override
+  String get kubusNodeWorkerReadyBody =>
+      'Rekonstrukcija Gaussian splatting je na voljo.';
+
+  @override
+  String get kubusNodeWorkerNoGpu => 'Ni na voljo';
+
+  @override
+  String get kubusNodeWorkerNoGpuBody => 'Združljiv GPU NVIDIA ni bil zaznan.';
+
+  @override
+  String get kubusNodeWorkerDown => 'Prostorski procesor ni odziven';
+
+  @override
+  String get kubusNodeWorkerDownBody =>
+      'GPU je zaznan, a se prostorski procesor ne odziva.';
+
+  @override
+  String get kubusNodeEntryTitle => 'kubus Node';
+
+  @override
+  String get kubusNodeEntrySubtitle =>
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeEntryFeatureArchive => 'Ohranjaj javni arhiv dostopen';
+
+  @override
+  String get kubusNodeEntryFeatureSpatial =>
+      'Prostorske zajeme obdelaj lokalno';
+
+  @override
+  String get kubusNodeEntryFeatureNetwork =>
+      'Po potrebi uporabi zmogljivost GPU v omrežju';
+
+  @override
+  String get kubusNodeEntryFeatureContribution =>
+      'Prejmi preverjene zapise prispevka KUB8';
+
+  @override
+  String get kubusNodeEntryConnectCta => 'Poveži ali nastavi kubus Node';
+
+  @override
+  String get kubusNodeEntryOpenCta => 'Odpri kubus Node';
+
+  @override
+  String get kubusNodeEntryAttention => 'Vozlišče potrebuje pozornost';
+
+  @override
+  String get kubusNodeScanTitle => 'Skeniraj kodo za povezavo';
+
+  @override
+  String get kubusNodeScanBody =>
+      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo.';
+
+  @override
+  String get kubusNodeScanManualAction => 'Vnesi kodo ročno';
+
+  @override
+  String get kubusNodeScanPermission =>
+      'Za skeniranje kode je potreben dostop do kamere.';
+
+  @override
+  String get kubusNodeScanInvalid => 'To ni koda za povezavo s kubus Node.';
+
+  @override
+  String get kubusNodeConfirmTitle => 'Se želiš povezati s tem vozliščem?';
+
+  @override
+  String get kubusNodeConfirmBody =>
+      'Ta naprava bo lahko uporabljala vozlišče za prostorsko obdelavo. Povezavo lahko kadar koli prekineš na vozlišču.';
+
+  @override
+  String get kubusNodeConfirmAction => 'Poveži';
+
+  @override
+  String get kubusNodeConnectedTitle => 'Povezano';
+
+  @override
+  String kubusNodeConnectedBody(Object label) {
+    return 'Ta naprava lahko zdaj uporablja $label za prostorsko obdelavo.';
+  }
+
+  @override
+  String get kubusNodeFingerprintLabel => 'Prstni odtis';
+
+  @override
+  String get kubusNodeEmptyCapturesTitle => 'Prostorskih zajemov še ni';
+
+  @override
+  String get kubusNodeEmptyCapturesBody =>
+      'Prostorsko dokumentiraj umetnino in ustvari njen prvi 3D arhiv.';
+
+  @override
+  String get kubusNodeEmptyContributionTitle => 'Preverjenega prispevka še ni';
+
+  @override
+  String get kubusNodeEmptyContributionBody =>
+      'Prispevek se pokaže, ko omrežje preveri dostopnost arhiva ali zaključene računske naloge.';
+
+  @override
+  String get kubusNodeEmptyProvidersTitle =>
+      'Trenutno ni na voljo nobenega združljivega GPU v omrežju';
+
+  @override
+  String get kubusNodeEmptyProvidersBody =>
+      'Zajem ohrani lokalno ali ga obdelaj pozneje.';
+
+  @override
+  String get kubusNodeNoNodeTitle => 'Nobeno vozlišče kubus Node ni povezano';
+
+  @override
+  String get kubusNodeStoredLabel => 'Shranjeno';
+
+  @override
+  String get kubusNodeCoverageLabel => 'Pokritost';
+
+  @override
+  String get kubusNodePublicRecordsLabel => 'Javni zapisi';
+
+  @override
+  String get kubusNodeContribution => 'Prispevek';
+
+  @override
+  String get kubusNodeHowCalculated => 'Kako se izračuna prispevek';
+
+  @override
+  String get kubusNodeAdvancedDetails => 'Tehnične podrobnosti';
+
+  @override
+  String get kubusNodeCopiedToast => 'Kopirano';
+
+  @override
+  String get spatialStagePreparing => 'Pripravljanje';
+
+  @override
+  String get spatialStageProcessingLocally => 'Lokalna obdelava';
+
+  @override
+  String get spatialStageOptimising => 'Optimiranje';
+
+  @override
+  String get spatialStageCreatingPreview => 'Ustvarjanje predogleda';
+
+  @override
+  String get spatialStageComplete => 'Končano';
+
+  @override
+  String get spatialStageEncrypting => 'Šifriranje';
+
+  @override
+  String get spatialStageSending => 'Pošiljanje na vozlišče';
+
+  @override
+  String get spatialStageWaitingForGpu => 'Čakanje na GPU';
+
+  @override
+  String get spatialStageProcessing => 'Obdelava';
+
+  @override
+  String get spatialStagePreparingArchive =>
+      'Pripravljanje prostorskega arhiva';
+
+  @override
+  String get spatialStageReceiving => 'Prejemanje rezultata';
+
+  @override
+  String get spatialStageVerifying => 'Preverjanje';
+
+  @override
+  String get spatialProgressLocalBody =>
+      'Obdelava poteka na tvojem vozlišču kubus Node.';
+
+  @override
+  String get spatialProgressRemoteBody => 'Obdelava poteka v omrežju Kubus.';
+
+  @override
+  String get spatialProgressLeaveHint =>
+      'Ta zaslon lahko zapustiš. Obdelava se nadaljuje na tvojem vozlišču kubus Node.';
+
+  @override
+  String get spatialFailedTitle => 'Obdelava je bila prekinjena';
+
+  @override
+  String get spatialFailedRemoteBody =>
+      'Ponudnikovo vozlišče je postalo nedosegljivo, preden se je rekonstrukcija zaključila. Tvoj izvorni zajem je še vedno na voljo.';
+
+  @override
+  String get spatialFailedLocalBody =>
+      'Obdelava se ni zaključila. Tvoj izvorni zajem je še vedno na voljo na vozlišču kubus Node.';
+
+  @override
+  String get spatialFailedTryAnother => 'Poskusi z drugim vozliščem';
+
+  @override
+  String get spatialFailedProcessLocally => 'Obdelaj lokalno';
+
+  @override
+  String get spatialFailedKeepForLater => 'Shrani za pozneje';
+
+  @override
+  String get spatialErrorParticipation => 'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get spatialErrorNoProvider =>
+      'Trenutno ni na voljo nobenega združljivega GPU v omrežju.';
+
+  @override
+  String get spatialErrorExpired =>
+      'Zahteva za obdelavo je potekla, preden jo je katero od vozlišč sprejelo.';
+
+  @override
+  String get spatialErrorRetrieval =>
+      'Obdelovalno vozlišče ni moglo prevzeti šifriranega zajema.';
+
+  @override
+  String get spatialErrorSignIn =>
+      'Za obdelavo v omrežju se prijavi v art.kubus.';
+
+  @override
+  String get spatialErrorGeneric =>
+      'Pri obdelavi tega zajema je prišlo do napake.';
+
+  @override
+  String get spatialProcessLocallyAction => 'Obdelaj lokalno';
+
+  @override
+  String get spatialProcessNetworkAction => 'Uporabi GPU v omrežju';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetup => 'Napredne nastavitve operaterja';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetupBody =>
+      'Izbirna omrežna identiteta, operatorski žeton in nastavitve okolja.';
 
   @override
   String get availabilityNodeWhatIsTitle => 'Kaj to naredi';
@@ -7043,9 +7478,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get walletHomeNoCollectiblesDescription =>
       'Digitalne izdaje se prikažejo tukaj, ko so povezane s to denarnico.';
-
-  @override
-  String get walletHomeNoCollectiblesTitle => 'Digitalnih izdaj še ni';
 
   @override
   String walletHomeCollectibleByline(Object creator) {
@@ -9151,6 +9583,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Razprodano';
 
   @override
+  String get marketplacePrimarySoldOutLabel => 'Primarna prodaja razprodana';
+
+  @override
   String get marketplaceMintNftButtonLabel => 'Ustvari digitalno izdajo';
 
   @override
@@ -9787,6 +10222,32 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String communityPostLikesCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count všečkov',
+      few: '$count všečki',
+      two: '$count všečka',
+      one: '$count všeček',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityPostRepostsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ponovnih objav',
+      few: '$count ponovne objave',
+      two: '$count ponovni objavi',
+      one: '$count ponovna objava',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String commonDistanceKmAway(Object value) {
     return '$value km stran';
   }
@@ -10155,6 +10616,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communitySearchTypePosts => 'Objave';
+
+  @override
+  String get communitySearchTypeEvents => 'Dogodki';
+
+  @override
+  String get communitySearchTypeExhibitions => 'Razstave';
+
+  @override
+  String get communitySearchTypePlaces => 'Kraji';
+
+  @override
+  String get searchResultsSemanticLabel => 'Rezultati iskanja';
 
   @override
   String get communitySearchHintProfiles => 'Išči ljudi…';
@@ -10572,6 +11045,28 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get homeDefaultDisplayName => 'prijatelj';
+
+  @override
+  String get activityUnreadSemanticLabel => 'Neprebrano';
+
+  @override
+  String get homeIntroNotion => 'Odkrivaj';
+
+  @override
+  String get homeIntroTitle => 'Javna umetnost, kraji in kultura okoli vas';
+
+  @override
+  String get homeIntroLede =>
+      'Poiščite umetnine na zemljevidu, spremljajte umetnike in institucije ter poglejte, kaj skupnost dodaja v arhiv.';
+
+  @override
+  String get homeIntroExploreMapAction => 'Raziskuj zemljevid';
+
+  @override
+  String get homeIntroCommunityAction => 'Poglej skupnost';
+
+  @override
+  String get homeGuestHeaderTitle => 'Dobrodošli';
 
   @override
   String get homeWelcomeSubtitle =>
@@ -12124,6 +12619,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institucijsko središče';
 
   @override
+  String get mobileNavMap => 'Zemljevid';
+
+  @override
+  String get mobileNavAr => 'AR';
+
+  @override
+  String get mobileNavCommunity => 'Skupnost';
+
+  @override
+  String get mobileNavHome => 'Domov';
+
+  @override
+  String get mobileNavProfile => 'Profil';
+
+  @override
+  String get mobileNavAccount => 'Račun';
+
+  @override
+  String get mobileNavSemanticLabel => 'Glavna navigacija';
+
+  @override
+  String get desktopNavWalletEntry => 'Denarnica';
+
+  @override
   String get daoHubAppBarTitle => 'Skupnostno upravljanje';
 
   @override
@@ -12809,6 +13328,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityRepostButtonLabel => 'Ponovno objavi';
 
   @override
+  String get communityComposeAuthAction => 'objavi prispevek';
+
+  @override
+  String get communityCreateGroupAuthAction => 'ustvari skupino';
+
+  @override
+  String get communityPostActionLike => 'Všečkaj';
+
+  @override
+  String get communityPostActionComment => 'Komentiraj';
+
+  @override
   String get communityRepostedToast => 'Ponovno objavljeno';
 
   @override
@@ -13222,6 +13753,12 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get savedItemsSummarySubtitleEmpty =>
       'Dodaj umetnine, dogodke, zbirke, razstave in objave, da ostanejo tukaj.';
+
+  @override
+  String get savedItemsEmptyLibraryTitle => 'Ničesar še niste shranili';
+
+  @override
+  String get savedItemsLibraryNotion => 'Vaša knjižnica';
 
   @override
   String savedItemsSummarySubtitleLastSaved(Object timestamp) {
@@ -15105,6 +15642,16 @@ class AppLocalizationsSl extends AppLocalizations {
       'V nastavitvah omogoči analitiko za prikaz grafov in vpogledov.';
 
   @override
+  String get analyticsBlockedOpenSettings => 'Odpri nastavitve';
+
+  @override
+  String get analyticsBlockedUnavailableTitle => 'Analitika ni na voljo';
+
+  @override
+  String get analyticsBlockedUnavailableDescription =>
+      'Analitika v tej različici aplikacije ni na voljo.';
+
+  @override
   String get analyticsBlockedAdminRequiredTitle => 'Skrbniška analitika';
 
   @override
@@ -15357,6 +15904,946 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authSecureAccountBannerCta => 'Zavaruj';
 
   @override
+  String get spatialProcessTitle => 'Obdelaj prostorski zajem';
+
+  @override
+  String get spatialProcessLocalTitle => 'To vozlišče kubus Node';
+
+  @override
+  String get spatialProcessLocalPrivacy =>
+      'Izvorni zajem ostane na strojni opremi, ki jo nadzoruješ.';
+
+  @override
+  String get spatialProcessNetworkTitle => 'Omrežje Kubus';
+
+  @override
+  String spatialProcessNetworkAvailable(int count) {
+    return 'Na voljo je $count združljivih vozlišč';
+  }
+
+  @override
+  String get spatialProcessNetworkPrivacy =>
+      'Zajem se šifrirano prenese in začasno obdela na izbranem ponudnikovem vozlišču.';
+
+  @override
+  String get spatialProcessMaximumPrivacy =>
+      'Za največ zasebnosti izberi lokalno obdelavo.';
+
+  @override
+  String get spatialProcessNoLocalGpu => 'Združljiv lokalni GPU ni bil zaznan.';
+
+  @override
+  String get spatialProcessKeepLocal => 'Ohrani zajem lokalno';
+
+  @override
+  String get spatialProcessStart => 'Začni obdelavo';
+
+  @override
+  String get spatialProcessAutoSelect => 'Samodejno izberi najboljše vozlišče';
+
+  @override
+  String get spatialProcessAdvanced => 'Izberi vozlišče';
+
+  @override
+  String get spatialProcessReady => 'Pripravljeno';
+
+  @override
+  String spatialProcessJobsAhead(int count) {
+    return 'Pred tabo je $count nalog';
+  }
+
+  @override
+  String spatialProcessSuccessRate(Object rate) {
+    return '$rate % uspešno zaključenih nalog';
+  }
+
+  @override
+  String get spatialRemotePrivacyTitle =>
+      'Želiš uporabiti GPU v omrežju Kubus?';
+
+  @override
+  String get spatialRemotePrivacyBody =>
+      'Zajem se šifrirano prenese na izbrano računsko vozlišče, kjer se izvorni podatki začasno dešifrirajo za izvedbo obdelave. Izvorni zajem se ne objavi v javnem arhivu.';
+
+  @override
+  String get spatialRemotePrivacyConfirm => 'Nadaljuj z omrežnim GPU-jem';
+
+  @override
+  String get spatialResultReviewTitle => 'Prostorski rezultat je pripravljen';
+
+  @override
+  String get spatialResultReviewBody =>
+      'Pred objavo preglej neobjavljeni rezultat. Z objavo izbrane prostorske različice dodaš v javni arhiv art.kubus, kjer jih sodelujoča vozlišča ohranjajo na voljo. Izvorni zajem ostane lokalno na tvojem vozlišču kubus Node. Če rezultat ostane neobjavljen, potrdiš zaključeno računsko nalogo, ne da bi ga dodal v javni arhiv; njegov CID v Kubo je nenaveden, ne pa kriptografsko zaseben, če ga izve druga oseba.';
+
+  @override
+  String get spatialResultKeepPrivate => 'Ohrani neobjavljeno';
+
+  @override
+  String get spatialResultReject => 'Zavrni rezultat';
+
+  @override
+  String get spatialResultPublish => 'Objavi prostorski arhiv';
+
+  @override
+  String get kubusNodeCompute => 'Računsko omrežje';
+
+  @override
+  String get kubusNodeComputeTitle => 'Računsko omrežje';
+
+  @override
+  String get kubusNodeComputeBody =>
+      'Deljenje GPU-ja je prostovoljno. Lokalne naloge imajo prednost, prispevek k arhivu pa ostaja obvezen.';
+
+  @override
+  String get kubusNodeOfferGpu => 'Ponudi GPU omrežju Kubus';
+
+  @override
+  String get kubusNodeOfferGpuBody =>
+      'Sprejemaj nove združljive prostorske naloge drugih uporabnikov art.kubus.';
+
+  @override
+  String get kubusNodePauseRemoteJobs =>
+      'Začasno ustavi sprejem novih oddaljenih nalog';
+
+  @override
+  String get kubusNodeMaxRemoteJobs => 'Največ sočasnih oddaljenih nalog';
+
+  @override
+  String get kubusNodeArchiveContribution => 'Prispevek k arhivu';
+
+  @override
+  String get kubusNodeComputeContribution => 'Računski prispevek';
+
+  @override
+  String get kubusNodePendingTotal => 'Skupaj v čakanju';
+
+  @override
+  String get kubusNodeSettlementPending =>
+      'Omrežje nagrade trenutno le beleži. Poravnava še ni aktivna.';
+
+  @override
+  String get kubusNodeVerifiedArchiveCopy =>
+      'Zapisi o prispevku KUB8 se izračunajo iz preverjene razpoložljivosti javnega arhiva, zdravega sodelovanja in uspešnega pridobivanja vsebin.';
+
+  @override
+  String get kubusNodeVerifiedComputeCopy =>
+      'Če prostovoljno ponudiš prosto zmogljivost GPU-ja, se uspešno zaključene in preverjene omrežne računske naloge lahko upoštevajo v tvojem zapisu nagrad KUB8.';
+
+  @override
+  String get kubusNodeParticipationContributing => 'Prispeva';
+
+  @override
+  String get kubusNodeParticipationDegraded => 'Povezava je prekinjena';
+
+  @override
+  String get kubusNodeParticipationLocked =>
+      'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get kubusNodeRemoteJobsCompleted => 'Zaključene oddaljene naloge';
+
+  @override
+  String get spatialArchiveTitle => 'Prostorski arhiv';
+
+  @override
+  String get spatialViewIn3d => 'Prikaži v 3D';
+
+  @override
+  String spatialCaptureCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prostorskih zajemov',
+      two: '2 prostorska zajema',
+      one: '1 prostorski zajem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialCapturedOn(String date) {
+    return 'Zajeto $date';
+  }
+
+  @override
+  String get spatialHistoryTitle => 'Prostorska zgodovina';
+
+  @override
+  String get spatialLoadArchiveQuality => 'Naloži arhivsko kakovost';
+
+  @override
+  String get spatialQualityMobile => 'Optimizirano';
+
+  @override
+  String get spatialQualityPreview => 'Predogled';
+
+  @override
+  String get spatialQualityArchive => 'Arhivsko';
+
+  @override
+  String get spatialViewerReset => 'Ponastavi pogled';
+
+  @override
+  String get spatialViewerFullscreen => 'Celozaslonsko';
+
+  @override
+  String get spatialViewerRetry => 'Poskusi znova';
+
+  @override
+  String get spatialViewerUnavailable =>
+      'Ta prostorski arhiv trenutno ni na voljo.';
+
+  @override
+  String get spatialViewerFallback => 'Poskušam drugo pot do arhiva …';
+
+  @override
+  String get spatialViewerWebSafety =>
+      'Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.';
+
+  @override
+  String get spatialCaptureFinish => 'Zaključi zajem';
+
+  @override
+  String get spatialCaptureGuideStart =>
+      'Počasi se premikaj okoli umetniškega dela.';
+
+  @override
+  String get spatialCaptureGuideOverlap =>
+      'Umetniško delo naj ostane v kadru, posnetki pa naj se prekrivajo.';
+
+  @override
+  String get spatialCaptureGuideDetails =>
+      'Zajemi še stranice in podrobnosti, ki jih nisi pokril.';
+
+  @override
+  String get spatialCaptureGuideReady =>
+      'Pokritost je zadostna. Zajem lahko zaključiš ali dodaš še nekaj kotov.';
+
+  @override
+  String get spatialCaptureDepthAvailable => 'globina je na voljo';
+
+  @override
+  String get spatialCaptureRgbPose => 'RGB in položaj kamere';
+
+  @override
+  String spatialCaptureTrackedViews(int count, String detail) {
+    return '$count sledenih pogledov · $detail';
+  }
+
+  @override
+  String get mapSpatialAvailable => 'Prostorski arhiv je na voljo';
+
+  @override
+  String get arErrorCameraUnavailable =>
+      'Kamera trenutno ni na voljo. Poskusite znova.';
+
+  @override
+  String get arErrorArcoreInstallRequired =>
+      'AR potrebuje Google Play storitve za AR. Namestite jih za nadaljevanje.';
+
+  @override
+  String get arErrorArcoreUpdateRequired =>
+      'Google Play storitve za AR je treba posodobiti za nadaljevanje.';
+
+  @override
+  String get arErrorAppUpdateRequired =>
+      'Za uporabo AR je treba posodobiti aplikacijo.';
+
+  @override
+  String get arErrorArcoreUnsupportedDevice => 'Ta naprava ne podpira AR.';
+
+  @override
+  String get arErrorArcoreInstallDeclined =>
+      'AR potrebuje Google Play storitve za AR. Namestite jih in poskusite znova.';
+
+  @override
+  String get arErrorSessionUnavailable =>
+      'AR trenutno ni na voljo. Poskusite znova.';
+
+  @override
+  String get arErrorCameraPermissionRequired =>
+      'AR potrebuje dostop do kamere. Dovolite ga za nadaljevanje.';
+
+  @override
+  String get arTrackingInitializing =>
+      'AR se še umerja. Telefon premikajte počasi.';
+
+  @override
+  String get arTrackingInsufficientLight =>
+      'Več svetlobe bo AR pomagalo razumeti prostor.';
+
+  @override
+  String get arTrackingExcessiveMotion => 'Telefon premikajte počasneje.';
+
+  @override
+  String get arTrackingInsufficientFeatures =>
+      'Kamero usmerite v območje z več vidnimi podrobnostmi.';
+
+  @override
+  String get arTrackingBadState => 'AR se obnavlja.';
+
+  @override
+  String get arPlacementSelectArtwork => 'Izberite umetnino za postavitev.';
+
+  @override
+  String get arPlacementFindingSurface =>
+      'Telefon premikajte počasi, da najdete površino.';
+
+  @override
+  String get arPlacementTapToPlace =>
+      'Tapnite površino za postavitev umetnine.';
+
+  @override
+  String get arPlacementAdjustOrConfirm =>
+      'Povlecite za premik, zavrtite za prilagoditev, nato potrdite.';
+
+  @override
+  String get arPlacementRotate => 'Zavrti';
+
+  @override
+  String get spatialCaptureGuideIdle =>
+      'Telefon usmerite v umetnino za začetek.';
+
+  @override
+  String get spatialCaptureGuidePaused =>
+      'Zajem je zaustavljen. Nadaljujte, ko ste pripravljeni.';
+
+  @override
+  String get spatialCaptureGuideTrackingLost =>
+      'AR je izgubil sled prostora. Telefon premikajte počasi za nadaljevanje.';
+
+  @override
+  String get spatialCaptureGuideFull =>
+      'Zajem je poln. Zaključite za obdelavo zajetega.';
+
+  @override
+  String get spatialCaptureResume => 'Nadaljuj zajem';
+
+  @override
+  String get spatialCaptureStart => 'Začni zajem';
+
+  @override
+  String get spatialCaptureContributorOnly =>
+      'Prostorski zajem je na voljo potrjenim sodelujočim, umetnikom in institucijam.';
+
+  @override
+  String get spatialCaptureChooseArtwork =>
+      'Pred začetkom prostorskega zajema izberite umetnino.';
+
+  @override
+  String get spatialCaptureNotReadyToast =>
+      'Pred zaključkom zajemite še nekaj kotov.';
+
+  @override
+  String get spatialCaptureNodeRequired =>
+      'Izvorni zajem ostane na tej napravi. Povežite kubus Node s prostorsko zmogljivostjo za prenos in lokalno obdelavo.';
+
+  @override
+  String get spatialCaptureNodeOutdated =>
+      'Ta kubus Node ne more prejeti pretočnega zajema. Posodobite vozlišče in poskusite znova.';
+
+  @override
+  String get spatialCaptureTransferFailed =>
+      'Zajema ni bilo mogoče prenesti. Še vedno je na tej napravi, zato lahko poskusite znova.';
+
+  @override
+  String get spatialCaptureRetryTransfer => 'Ponovi prenos';
+
+  @override
+  String get spatialTransferPreparing => 'Pripravljam zajem …';
+
+  @override
+  String get spatialTransferCommitting => 'Zaključujem na vašem vozlišču …';
+
+  @override
+  String spatialTransferUploading(int done, int total) {
+    return 'Nalagam $done od $total datotek';
+  }
+
+  @override
+  String get spatialArchiveEmptyTitle => 'Prostorski arhiv';
+
+  @override
+  String get spatialArchiveEmptyBody =>
+      'Objavljeni in lokalno obdelani prostorski zapisi se bodo sčasoma pojavili tukaj.';
+
+  @override
+  String get spatialArchiveRecord => 'Prostorski zapis';
+
+  @override
+  String get spatialRecoveryTitle => 'Nedokončan zajem';
+
+  @override
+  String spatialRecoveryBody(int count) {
+    return '$count sledenih pogledov iz prekinjenega zajema je še vedno na tej napravi.';
+  }
+
+  @override
+  String get spatialRecoveryResume => 'Nadaljuj zajem';
+
+  @override
+  String get spatialRecoveryDiscard => 'Zavrzi zajem';
+
+  @override
+  String get spatialRecoveryKeep => 'Shrani za pozneje';
+
+  @override
+  String get arPlacementScaleUp => 'Večje';
+
+  @override
+  String get arPlacementScaleDown => 'Manjše';
+
+  @override
+  String get arPlacementReposition => 'Premakni';
+
+  @override
+  String get arPlacementConfirm => 'Potrdi postavitev';
+
+  @override
+  String get arPlacementRepositionHint =>
+      'Tapnite drugo površino za premik umetnine.';
+
+  @override
+  String get arPlacementAdjustHint =>
+      'Uščipnite za spremembo velikosti, povlecite za vrtenje, nato potrdite.';
+
+  @override
+  String get arPlacementTrackingLost =>
+      'AR je izgubil sled prostora. Postavitev je ohranjena – premikajte se počasi za nadaljevanje.';
+
+  @override
+  String get arPlacementPreviewFailed =>
+      'Predogleda umetnine ni bilo mogoče prikazati. Poskusite znova izbrati površino.';
+
+  @override
+  String get arCameraSwitching => 'Preklapljam kamero …';
+
+  @override
+  String get spatialCaptureDiscardAndRestart => 'Zavrzi in začni znova';
+
+  @override
+  String get spatialCaptureGuideFullUnusable =>
+      'Zajem je dosegel omejitev, preden je zajel dovolj umetnine. Začnite znova in se več premikajte okoli nje.';
+
+  @override
+  String get arCaptureFrameFailed => 'Zajem sličice ni uspel. Poskusite znova.';
+
+  @override
+  String get spatialCaptureSaved =>
+      'Zajeto zasebno na tem telefonu. Obdelajte zdaj ali pozneje v Prostorski knjižnici.';
+
+  @override
+  String get spatialLibraryTitle => 'Prostorska knjižnica';
+
+  @override
+  String get spatialLibraryOpen => 'Odpri knjižnico';
+
+  @override
+  String get spatialLibraryEmpty =>
+      'Vaši zasebni prostorski zajemi bodo prikazani tukaj.';
+
+  @override
+  String get spatialLibraryFilterAll => 'Vse';
+
+  @override
+  String get spatialLibraryFilterCaptured => 'Zajeto';
+
+  @override
+  String get spatialLibraryFilterProcessing => 'Obdelava';
+
+  @override
+  String get spatialLibraryFilterReady => 'Pripravljeno';
+
+  @override
+  String get spatialLibraryFilterPublished => 'Objavljeno';
+
+  @override
+  String get spatialLibraryStatusCaptured => 'Zajeto';
+
+  @override
+  String get spatialLibraryStatusWaiting => 'Čaka na Node';
+
+  @override
+  String get spatialLibraryStatusUploading => 'Nalaganje';
+
+  @override
+  String get spatialLibraryStatusQueued => 'V čakalni vrsti';
+
+  @override
+  String get spatialLibraryStatusProcessing => 'Obdelava';
+
+  @override
+  String get spatialLibraryStatusDownloading => 'Prenašanje';
+
+  @override
+  String get spatialLibraryStatusReady => 'Pripravljeno';
+
+  @override
+  String get spatialLibraryStatusPublished => 'Objavljeno';
+
+  @override
+  String get spatialLibraryStatusFailed => 'Neuspešno';
+
+  @override
+  String get spatialLibraryPrivate => 'Zasebno';
+
+  @override
+  String get spatialLibraryPublic => 'Javno';
+
+  @override
+  String get spatialLibraryRawStorage => 'Izvorni zajem';
+
+  @override
+  String get spatialLibraryProcessedStorage => 'Obdelano';
+
+  @override
+  String get spatialLibraryTotalStorage => 'Skupaj';
+
+  @override
+  String get spatialLibraryNodeConnected => 'Node povezan';
+
+  @override
+  String get spatialLibraryNodeConnect => 'Poveži Node';
+
+  @override
+  String get spatialLibraryProcess => 'Obdelaj';
+
+  @override
+  String get spatialLibraryRetryUpload => 'Ponovi nalaganje';
+
+  @override
+  String get spatialLibraryRetryProcessing => 'Ponovi obdelavo';
+
+  @override
+  String get spatialLibraryView => 'Ogled';
+
+  @override
+  String get spatialLibraryPublish => 'Objavi';
+
+  @override
+  String get spatialLibraryShare => 'Deli';
+
+  @override
+  String get spatialLibraryDeleteRaw => 'Izbriši izvorni zajem';
+
+  @override
+  String get spatialLibraryDeleteProcessed =>
+      'Izbriši lokalni obdelani rezultat';
+
+  @override
+  String get spatialLibraryDeleteRecord => 'Izbriši lokalni zapis';
+
+  @override
+  String get spatialLibraryDeleteRecordWarning =>
+      'To izbriše samo lokalni zapis. Objavljeni javni arhiv bo ostal objavljen.';
+
+  @override
+  String get spatialLibraryProcessorUnavailable =>
+      'Noben procesor ni na voljo. Vaš zasebni zajem ostaja varno shranjen.';
+
+  @override
+  String get spatialLibraryOperationFailed =>
+      'Dejanja ni bilo mogoče dokončati. Vaš zasebni izvor ostaja nedotaknjen.';
+
+  @override
+  String get arStatusTracking => 'Sledenje';
+
+  @override
+  String get arStatusFindingSurface => 'Iskanje površine';
+
+  @override
+  String get arStatusCapturing => 'Zajemanje';
+
+  @override
+  String get arStatusPaused => 'Zaustavljeno';
+
+  @override
+  String get arStatusError => 'Napaka';
+
+  @override
+  String get arStatusSwitching => 'Preklapljanje';
+
+  @override
+  String get arMoreActions => 'Več dejanj';
+
+  @override
+  String get arToggleFlash => 'Bliskavica';
+
+  @override
+  String get arOpenArSettings => 'Nastavitve AR';
+
+  @override
+  String get spatialTargetPickerTitle => 'Izberite umetniško delo';
+
+  @override
+  String get spatialTargetPickerSubtitle =>
+      'Vsak prostorski zajem je shranjen pod eno umetniško delo.';
+
+  @override
+  String get spatialTargetSearchHint => 'Iskanje umetniških del';
+
+  @override
+  String get spatialTargetNoArtworksTitle => 'Ni umetniških del';
+
+  @override
+  String get spatialTargetNoArtworksBody =>
+      'Najprej dodajte umetniško delo, nato zanj zajemite prostorske podatke.';
+
+  @override
+  String get spatialTargetNoResultsTitle => 'Ni zadetkov';
+
+  @override
+  String get spatialTargetNoResultsBody =>
+      'Nobeno umetniško delo ne ustreza iskanju.';
+
+  @override
+  String get spatialTargetMarkerTitle => 'Izberite označevalnik';
+
+  @override
+  String get spatialTargetMarkerSubtitle =>
+      'Neobvezno. Zajem poveže z določeno lokacijo ali označevalnikom AR.';
+
+  @override
+  String get spatialTargetNoMarker => 'Brez določenega označevalnika';
+
+  @override
+  String get spatialTargetChangeArtwork => 'Zamenjaj umetniško delo';
+
+  @override
+  String get spatialMarkerKindLocation => 'Lokacija na zemljevidu';
+
+  @override
+  String get spatialMarkerKindConfiguration => 'Označevalnik AR';
+
+  @override
+  String get spatialLibraryStatusReprocessNeeded =>
+      'Potrebna je ponovna obdelava';
+
+  @override
+  String get spatialLibraryStatusPublishing => 'Objavljanje';
+
+  @override
+  String get spatialNetworkStateRequested => 'Zahtevano';
+
+  @override
+  String get spatialNetworkStateSearching => 'Iskanje obdelovalca';
+
+  @override
+  String get spatialNetworkStateOffered => 'Ponudnik je na voljo';
+
+  @override
+  String get spatialNetworkStateAccepted => 'Ponudnik je sprejel';
+
+  @override
+  String get spatialNetworkStateVerifying => 'Preverjanje';
+
+  @override
+  String get spatialNetworkStateExpired => 'Zahteva je potekla';
+
+  @override
+  String get spatialNetworkStateCancelled => 'Zahteva je preklicana';
+
+  @override
+  String spatialLibraryVersionLabel(int version) {
+    return 'r$version';
+  }
+
+  @override
+  String get spatialLibraryArtworkUnavailable => 'Umetniško delo ni na voljo';
+
+  @override
+  String get spatialLibraryMarkerUnavailable => 'Označevalnik ni na voljo';
+
+  @override
+  String get spatialLibraryLinkedTo => 'Povezano z';
+
+  @override
+  String get spatialLibraryArtworkLabel => 'Umetniško delo';
+
+  @override
+  String get spatialLibraryMarkerLabel => 'Označevalnik';
+
+  @override
+  String get spatialLibrarySectionCapture => 'Zajem';
+
+  @override
+  String get spatialLibrarySectionProcessing => 'Obdelava';
+
+  @override
+  String get spatialLibrarySectionArchive => 'Arhiv';
+
+  @override
+  String get spatialLibraryCoverage => 'Pokritost';
+
+  @override
+  String spatialLibraryCoveragePercent(int percent) {
+    return '$percent % pokritosti';
+  }
+
+  @override
+  String spatialLibraryTrackedViews(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sledenih pogledov',
+      one: '1 sledeni pogled',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get spatialLibraryDepthAvailable => 'Globina je na voljo';
+
+  @override
+  String get spatialLibraryDepthUnavailable => 'Ni podatkov o globini';
+
+  @override
+  String get spatialLibraryRawSource => 'Izvorni zajem';
+
+  @override
+  String get spatialLibraryRawSourceDeleted => 'Izvorni zajem je izbrisan';
+
+  @override
+  String get spatialLibraryContinueCapture => 'Nadaljuj zajem';
+
+  @override
+  String get spatialLibraryEditAssociation => 'Uredi povezavo';
+
+  @override
+  String get spatialLibraryEditMetadata => 'Preimenuj ali dodaj opombo';
+
+  @override
+  String get spatialLibraryProcessScene => 'Obdelaj prizor';
+
+  @override
+  String get spatialLibraryNotProcessed => 'Ni obdelano';
+
+  @override
+  String get spatialLibraryViewResult => 'Ogled rezultata';
+
+  @override
+  String get spatialLibraryViewPublicArchive => 'Ogled javnega arhiva';
+
+  @override
+  String get spatialLibraryNewRevision => 'Dodaj prostorsko posodobitev';
+
+  @override
+  String get spatialLibraryMoreActions => 'Več';
+
+  @override
+  String get spatialLibraryCancelRequest => 'Prekliči zahtevo';
+
+  @override
+  String get spatialLibraryChangeProcessor => 'Zamenjaj obdelovalca';
+
+  @override
+  String get spatialLibraryVersionsTitle => 'Različice';
+
+  @override
+  String get spatialLibraryCurrentPublicVersion => 'Trenutna javna različica';
+
+  @override
+  String get spatialLibraryLocalDraft => 'Lokalni osnutek';
+
+  @override
+  String spatialLibraryRevisionOf(int revision) {
+    return 'Revizija $revision';
+  }
+
+  @override
+  String get spatialLibraryStaleResultWarning =>
+      'Po tem rezultatu ste dodali nove podatke zajema. Za osvežitev prizora ga znova obdelajte.';
+
+  @override
+  String get spatialLibraryStorageTitle => 'Shramba';
+
+  @override
+  String get spatialLibraryCapturedOnLabel => 'Zajeto';
+
+  @override
+  String get spatialEditMetadataTitle => 'Podrobnosti zajema';
+
+  @override
+  String get spatialEditDisplayNameLabel => 'Ime';
+
+  @override
+  String get spatialEditDisplayNameHint =>
+      'Na primer: Severna fasada, večerni zajem';
+
+  @override
+  String get spatialEditNoteLabel => 'Opomba';
+
+  @override
+  String get spatialEditAssociationTitle => 'Spremeni povezavo';
+
+  @override
+  String get spatialEditAssociationProcessedWarning =>
+      'Ta zajem že ima obdelan rezultat. Sprememba umetniškega dela spremeni metapodatke, s katerimi bi bil objavljen.';
+
+  @override
+  String get spatialEditAssociationPublishedWarning =>
+      'Ta zajem je objavljen. Sprememba ustvari nov osnutek revizije, objavljena različica pa ostane nespremenjena.';
+
+  @override
+  String get spatialEditAssociationConfirm => 'Spremeni povezavo';
+
+  @override
+  String get spatialProcessOwnNodeSubtitle =>
+      'Uporabite svoje seznanjeno vozlišče kubus Node.';
+
+  @override
+  String get spatialProcessOwnNodeRemote => 'Povezano na daljavo';
+
+  @override
+  String get spatialProcessOwnNodeLocal => 'V vašem omrežju';
+
+  @override
+  String get spatialProcessOwnNodeUnpaired =>
+      'Ni povezano — dotaknite se za povezavo';
+
+  @override
+  String get spatialProcessConnectOwnNode => 'Poveži moj Node';
+
+  @override
+  String get spatialProcessNetworkSubtitle =>
+      'Zahtevajte obdelavo pri razpoložljivem ponudniku GPU.';
+
+  @override
+  String get spatialProcessRequestNetwork => 'Zahtevaj obdelavo v omrežju';
+
+  @override
+  String get spatialProcessNoProviderNow =>
+      'Trenutno ni na voljo nobenega ponudnika. Zahteva ostane odprta, dokler se kateri ne pojavi.';
+
+  @override
+  String spatialProviderQueueAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count opravil pred vami',
+      one: '1 opravilo pred vami',
+      zero: 'Ni opravil pred vami',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialProviderEstimatedDuration(int minutes) {
+    return 'Približno $minutes min';
+  }
+
+  @override
+  String spatialProviderEstimatedCost(String amount) {
+    return 'Približno $amount KUB8';
+  }
+
+  @override
+  String get spatialProviderNoEstimate => 'Ni navedeno';
+
+  @override
+  String get spatialProviderLabel => 'Ponudnik';
+
+  @override
+  String get spatialFailureNodeUnavailable => 'Vozlišče ni dosegljivo';
+
+  @override
+  String get spatialFailureUploadInterrupted => 'Nalaganje je bilo prekinjeno';
+
+  @override
+  String get spatialFailureProcessorDeclined =>
+      'Obdelovalec je opravilo zavrnil';
+
+  @override
+  String get spatialFailureProcessingFailed => 'Obdelava ni uspela';
+
+  @override
+  String get spatialFailureResultDownload => 'Prenos rezultata ni uspel';
+
+  @override
+  String get spatialFailureResultVerification =>
+      'Preverjanje rezultata ni uspelo';
+
+  @override
+  String get spatialFailureRequestExpired =>
+      'Zahteva je potekla, preden jo je prevzel obdelovalec';
+
+  @override
+  String get spatialFailureGeneric => 'Prišlo je do napake';
+
+  @override
+  String get spatialFailureRawIntact => 'Vaš izvorni zajem ostaja nedotaknjen.';
+
+  @override
+  String get spatialCaptureSavedTitle => 'Shranjeno v prostorsko knjižnico';
+
+  @override
+  String get spatialCaptureContinueLater => 'Nadaljuj pozneje';
+
+  @override
+  String get spatialCaptureTargetRequired =>
+      'Pred začetkom zajema izberite umetniško delo.';
+
+  @override
+  String spatialCaptureTargetLabel(String title) {
+    return 'Zajem za $title';
+  }
+
+  @override
+  String get spatialCaptureSourceUnavailable =>
+      'Izvornega zajema tega zapisa ni več na tej napravi.';
+
+  @override
+  String get spatialCaptureContinueFailed =>
+      'Tega zajema ni bilo mogoče znova odpreti.';
+
+  @override
+  String get spatialArtworkDraftsTitle => 'Vaši prostorski osnutki';
+
+  @override
+  String get spatialArtworkDraftsSubtitle =>
+      'Zasebni na tej napravi, dokler jih ne objavite.';
+
+  @override
+  String get spatialArtworkAddUpdate => 'Dodaj prostorsko posodobitev';
+
+  @override
+  String get spatialArtworkCaptureCta => 'Zajemi prostorske podatke';
+
+  @override
+  String get spatialViewOnMap => 'Pokaži na zemljevidu';
+
+  @override
+  String get spatialCaptureAnotherOpen =>
+      'Zajem za drugo umetniško delo je še odprt. Preden začnete novega, ga dokončajte ali zavrzite.';
+
+  @override
+  String get collectionCreatorConnectWalletToLoad =>
+      'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
+
+  @override
+  String get collectionCreatorLoadingLibrary => 'Nalagam knjižnico…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibrary => 'Naloži knjižnico umetnin';
+
+  @override
+  String get collectionCreatorLibraryStillLoading =>
+      'Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem kasneje.';
+
+  @override
+  String get collectionCreatorLoadBeforeSave =>
+      'Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.';
+
+  @override
+  String get collectionCreatorArtworkSelected => 'Izbrano';
+
+  @override
+  String get collectionCreatorArtworkAdd => 'Dodaj';
+
+  @override
+  String get walletHomeNoCollectiblesTitle => 'Digitalnih izdaj še ni';
+
+  @override
   String get artworkCreatorOptionalExtensionsDescription =>
       'Umetnino najprej objavi, nato pa po potrebi dodaj AR- ali prostorske plasti, zapise prisotnosti ali digitalne izdaje.';
 
@@ -15558,6 +17045,52 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletGalleryStatusTransferred => 'Prenesena';
 
   @override
+  String get kubusMyNodesTitle => 'Moja vozlišča';
+
+  @override
+  String get kubusConnectionNearby => 'Povezano v bližini';
+
+  @override
+  String get kubusConnectionRemote => 'Povezano na daljavo';
+
+  @override
+  String get kubusComputeAuthorizationRequired =>
+      'Za omrežno obdelavo posodobite dovoljenja tega vozlišča. Vozlišče ostaja seznanjeno.';
+
+  @override
+  String get kubusConnectionIdentityMismatch =>
+      'Preverjanje identitete vozlišča ni uspelo. Povezava je bila zavrnjena, shranjena identiteta pa je ohranjena.';
+
+  @override
+  String get kubusNetworkStagingExplanation =>
+      'Omrežna obdelava trenutno uporablja vaše vozlišče kubus za varno pripravo šifriranega zajema.';
+
+  @override
+  String get kubusMyNodesDiscoveryFailed =>
+      'Vozlišč ni bilo mogoče naložiti. Preverite povezavo, se prijavite in poskusite znova.';
+
+  @override
+  String get kubusMyNodesEmpty =>
+      'Ta račun nima registriranih vozlišč. Za nadaljevanje nastavite vozlišče kubus.';
+
+  @override
+  String get kubusMyNodesAvailable => 'Na voljo za oddaljeno povezavo';
+
+  @override
+  String get kubusMyNodesUnavailable =>
+      'Oddaljena povezava ni na voljo. Zaženite vozlišče ter preverite različico programske opreme in dovoljenja za signalizacijo.';
+
+  @override
+  String get kubusMyNodesAttaching => 'Varno povezovanje…';
+
+  @override
+  String get kubusMyNodesAttachFailed =>
+      'Varne povezave ni bilo mogoče vzpostaviti. Shranjena seznanitev je ohranjena.';
+
+  @override
+  String get kubusMyNodesLocalPairing => 'Lokalna seznanitev s kodo QR';
+
+  @override
   String get walletGalleryStatusBurned => 'Umaknjena';
 
   @override
@@ -15569,4 +17102,492 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artworkCreatorAttendanceImageTooSmall =>
       'Slika zapisa prisotnosti mora biti na krajši stranici velika vsaj 256 px.';
+
+  @override
+  String get kubusAddNodeTitle => 'Dodaj vozlišče';
+
+  @override
+  String get kubusAddNodeIntro =>
+      'Namestite kubus Node na računalnik in odprite njegovo stran za nastavitev. Prikaže osemmestno kodo. Vnesite jo tukaj in vozlišče pooblastite za ta račun.';
+
+  @override
+  String get kubusAddNodeCodeLabel => 'Koda za nastavitev';
+
+  @override
+  String get kubusAddNodeLookup => 'Poišči vozlišče';
+
+  @override
+  String get kubusAddNodeNotFound =>
+      'Za to kodo ne čaka nobeno vozlišče. Preverite kodo na strani za nastavitev ali znova zaženite nastavitev.';
+
+  @override
+  String get kubusAddNodeReview => 'Ali pooblastite to vozlišče?';
+
+  @override
+  String get kubusAddNodeFingerprint => 'Prstni odtis vozlišča';
+
+  @override
+  String get kubusAddNodeGrants =>
+      'S pooblastitvijo vozlišče dobi poverilnico za razpoložljivost arhiva, usklajevanje povezav in omrežno računanje. Vaši zajemi ostanejo na vozlišču.';
+
+  @override
+  String get kubusAddNodeAuthorize => 'Pooblasti';
+
+  @override
+  String get kubusAddNodeDecline => 'Zavrni';
+
+  @override
+  String get kubusAddNodeAuthorized =>
+      'Pooblaščeno. Vozlišče zaključuje nastavitev in se bo kmalu pojavilo med Mojimi vozlišči.';
+
+  @override
+  String get kubusAddNodeDeclined =>
+      'Zavrnjeno. Nobena poverilnica ni bila izdana.';
+
+  @override
+  String get kubusAddNodeFailed =>
+      'Pooblastitve ni bilo mogoče dokončati. Nič ni bilo izdano; poskusite znova.';
+
+  @override
+  String get kubusPermissionUpdateTitle => 'Posodobi dovoljenja';
+
+  @override
+  String get kubusPermissionUpdateBody =>
+      'To vozlišče je bilo nastavljeno pred trenutnimi dovoljenji. Pooblastite posodobljeno poverilnico za omrežno računanje. Njegova identiteta, seznanitve, zajemi in arhiv ostanejo nespremenjeni.';
+
+  @override
+  String get kubusPermissionUpdateAction => 'Posodobi dovoljenja';
+
+  @override
+  String get kubusPermissionUpdateWorking =>
+      'Posodabljanje dovoljenj vozlišča …';
+
+  @override
+  String get kubusPermissionUpdateDone =>
+      'Dovoljenja so posodobljena. Vozlišče se ponovno zaganja, da jih uporabi.';
+
+  @override
+  String get kubusPermissionUpdateDeclined =>
+      'Posodobitev je zavrnjena. Vozlišče ohrani trenutna dovoljenja.';
+
+  @override
+  String get kubusPermissionUpdateFailed =>
+      'Dovoljenj ni bilo mogoče posodobiti. Vozlišče je ohranilo obstoječo poverilnico.';
+
+  @override
+  String get spatialTransferValidating =>
+      'Preverjam nalaganje na vašem vozlišču …';
+
+  @override
+  String get spatialTransferRepairing => 'Dokončujem nalaganje …';
+
+  @override
+  String get spatialTransferWaiting => 'Čakam na vaše vozlišče …';
+
+  @override
+  String spatialTransferBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String spatialTransferThroughput(String rate) {
+    return '$rate/s';
+  }
+
+  @override
+  String spatialTransferEta(String duration) {
+    return 'Še približno $duration';
+  }
+
+  @override
+  String spatialTransferFiles(int done, int total) {
+    return '$done / $total datotek';
+  }
+
+  @override
+  String get spatialTransferRouteLocal => 'Lokalno omrežje';
+
+  @override
+  String get spatialTransferRouteRemote => 'Varna internetna povezava';
+
+  @override
+  String get spatialTransferRouteDirect => 'Neposredna povezava';
+
+  @override
+  String get spatialTransferRouteRelay => 'Posredovana povezava';
+
+  @override
+  String spatialDurationSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String spatialDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String spatialDurationHours(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String get spatialFailureSourceIncomplete =>
+      'Temu zajemu na tej napravi manjkajo datoteke';
+
+  @override
+  String get spatialFailureSourceUnrepairable =>
+      'Tega zajema ni mogoče obdelati';
+
+  @override
+  String get spatialFailureNodeCaptureIncomplete => 'Nalaganje se ni dokončalo';
+
+  @override
+  String get spatialFailureNodeValidation =>
+      'Vaše vozlišče tega zajema ni moglo sprejeti';
+
+  @override
+  String get spatialUploadIncompleteTitle => 'Nalaganje zajema ni dokončano';
+
+  @override
+  String spatialUploadIncompleteBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count datotek',
+      few: '$count datoteke',
+      two: '$count datoteki',
+      one: '1 datoteka',
+    );
+    return 'Vašemu vozlišču manjka $_temp0 iz tega zajema.';
+  }
+
+  @override
+  String spatialUploadAvailableFiles(int available, int expected) {
+    return 'Na voljo $available / $expected datotek';
+  }
+
+  @override
+  String get spatialUploadResume => 'Nadaljuj nalaganje';
+
+  @override
+  String get formShowPassword => 'Pokaži geslo';
+
+  @override
+  String get formHidePassword => 'Skrij geslo';
+
+  @override
+  String get formSelectDate => 'Izberite datum';
+
+  @override
+  String get formSelectTime => 'Izberite čas';
+
+  @override
+  String get formNoValueSelected => 'Ni nastavljeno';
+
+  @override
+  String get formAddImage => 'Dodaj sliko';
+
+  @override
+  String get formFixHighlightedFields =>
+      'Nekatera polja je treba popraviti. Preberite sporočila pod njimi.';
+
+  @override
+  String get stateNetworkTitle =>
+      'Povezave z art.kubus ni bilo mogoče vzpostaviti';
+
+  @override
+  String get stateNetworkDescription =>
+      'Zahteva se ni zaključila. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get stateOfflineTitle => 'Niste povezani';
+
+  @override
+  String get stateOfflineDescription =>
+      'Za to potrebujete internetno povezavo. Znova se povežite in poskusite še enkrat.';
+
+  @override
+  String get stateServerTitle => 'art.kubus ima težave';
+
+  @override
+  String get stateServerDescription =>
+      'Storitev se ni pravilno odzvala. Na vaši strani je vse v redu; poskusite znova čez trenutek.';
+
+  @override
+  String get stateAuthTitle => 'Za nadaljevanje se prijavite';
+
+  @override
+  String get stateAuthDescription =>
+      'Vaša seja je potekla ali pa se še niste prijavili.';
+
+  @override
+  String get statePermissionTitle => 'Do tega nimate dostopa';
+
+  @override
+  String get statePermissionDescription =>
+      'To je na voljo samo lastniku ali potrjenim vlogam. Če potrebujete dostop, se obrnite na lastnika.';
+
+  @override
+  String get stateNotFoundTitle => 'Ni najdeno';
+
+  @override
+  String get stateNotFoundDescription =>
+      'Morda je bilo odstranjeno ali nastavljeno kot zasebno.';
+
+  @override
+  String get stateValidationTitle => 'Nekatere podatke je treba popraviti';
+
+  @override
+  String get stateValidationDescription =>
+      'Zahteva v tej obliki ni bila sprejeta. Preverite podatke in poskusite znova.';
+
+  @override
+  String get stateRateLimitTitle => 'Preveč poskusov';
+
+  @override
+  String get stateRateLimitDescription =>
+      'Pred naslednjim poskusom počakajte minuto.';
+
+  @override
+  String get stateWalletTitle => 'Denarnica ni pripravljena';
+
+  @override
+  String get stateWalletDescription =>
+      'Znova povežite ali odklenite denarnico in poskusite znova.';
+
+  @override
+  String get stateUnsupportedTitle => 'Tu ni na voljo';
+
+  @override
+  String get stateUnsupportedDescription =>
+      'Ta funkcija na tej napravi ali v tej različici ni podprta.';
+
+  @override
+  String get stateUnknownTitle => 'Nekaj je šlo narobe';
+
+  @override
+  String get stateUnknownDescription =>
+      'Tega ni bilo mogoče dokončati. Poskusite znova.';
+
+  @override
+  String get stateLoadingMore => 'Nalaganje dodatnih vsebin';
+
+  @override
+  String get peopleRoleArtist => 'Umetnik';
+
+  @override
+  String get peopleRoleInstitution => 'Institucija';
+
+  @override
+  String get peopleVerifiedLabel => 'Preverjeno';
+
+  @override
+  String peopleFollowToggleSemantic(String name) {
+    return 'Sledi: $name';
+  }
+
+  @override
+  String get collabInboxIntro =>
+      'Sprejmite povabilo in pomagajte upravljati dogodek, razstavo, umetnino ali zbirko.';
+
+  @override
+  String get collabInviteNotion => 'Povabilo';
+
+  @override
+  String get collabEntityEvent => 'Dogodek';
+
+  @override
+  String get collabEntityExhibition => 'Razstava';
+
+  @override
+  String get collabEntityArtwork => 'Umetnina';
+
+  @override
+  String get collabEntityCollection => 'Zbirka';
+
+  @override
+  String get collabEntityItem => 'Vsebina';
+
+  @override
+  String collabInviteFrom(String name) {
+    return 'Pošiljatelj: $name';
+  }
+
+  @override
+  String collabInviteRole(String role) {
+    return 'Vaša vloga: $role';
+  }
+
+  @override
+  String collabInviteReceived(String date) {
+    return 'Prejeto $date';
+  }
+
+  @override
+  String collabInviteExpires(String date) {
+    return 'Poteče $date';
+  }
+
+  @override
+  String get collabUnknownSender => 'Nekdo';
+
+  @override
+  String get collabAccept => 'Sprejmi';
+
+  @override
+  String get collabDecline => 'Zavrni';
+
+  @override
+  String get collabAcceptedToast =>
+      'Povabilo je sprejeto. Zdaj lahko pomagate pri upravljanju.';
+
+  @override
+  String get collabDeclinedToast => 'Povabilo je zavrnjeno.';
+
+  @override
+  String get collabAcceptFailedToast =>
+      'Povabila ni bilo mogoče sprejeti. Poskusite znova.';
+
+  @override
+  String get collabDeclineFailedToast =>
+      'Povabila ni bilo mogoče zavrniti. Poskusite znova.';
+
+  @override
+  String get collabCannotOpenItemToast =>
+      'To povabilo ne kaže na vsebino, ki jo je mogoče odpreti tukaj.';
+
+  @override
+  String get collabEmptyTitle => 'Trenutno ni povabil';
+
+  @override
+  String get collabEmptyDescription =>
+      'Ko vas kdo povabi k sodelovanju, se povabilo prikaže tukaj.';
+
+  @override
+  String collabInviteSemantic(String entity, String role, String name) {
+    return 'Povabilo: $entity, vloga $role, pošiljatelj $name';
+  }
+
+  @override
+  String get studioNotionPractice => 'Ustvarjanje';
+
+  @override
+  String get institutionNotionProgramme => 'Program';
+
+  @override
+  String get dashboardNotionNumbers => 'Številke';
+
+  @override
+  String get dashboardNotionInfrastructure => 'Infrastruktura';
+
+  @override
+  String get dashboardNumbersCaption =>
+      'Števila iz dejavnosti na vašem javnem profilu art.kubus.';
+
+  @override
+  String get institutionStatProgrammeViews => 'Ogledi strani programa';
+
+  @override
+  String get walletNetworkLabel => 'Omrežje';
+
+  @override
+  String get walletAddressHeading => 'Naslov';
+
+  @override
+  String walletAddressSemantic(String address) {
+    return 'Naslov denarnice $address';
+  }
+
+  @override
+  String get walletCopyAddressTooltip => 'Kopiraj naslov';
+
+  @override
+  String get walletReadOnlyStatus => 'Seja samo za branje';
+
+  @override
+  String get walletKub8BalanceLabel => 'Stanje KUB8';
+
+  @override
+  String get walletSolBalanceLabel => 'Stanje SOL';
+
+  @override
+  String walletBalanceAmountSemantic(String label, String amount, String unit) {
+    return '$label: $amount $unit';
+  }
+
+  @override
+  String get walletActionsTitle => 'Dejanja';
+
+  @override
+  String get walletTechnicalTitle => 'Tehnično';
+
+  @override
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state) {
+    return '$source: $amount $currency. $state';
+  }
+
+  @override
+  String promotionBuilderSwitchNetwork(String cluster) {
+    return 'Denarnico preklopite na omrežje $cluster, ki ga zahteva ta ponudba, in poskusite znova.';
+  }
+
+  @override
+  String get promotionStatusPendingReview => 'Čaka na pregled';
+
+  @override
+  String get promotionStatusApproved => 'Odobreno';
+
+  @override
+  String get promotionStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusDraft => 'Osnutek';
+
+  @override
+  String get daoProposalStatusActive => 'Aktivno';
+
+  @override
+  String get daoProposalStatusVoting => 'Glasovanje odprto';
+
+  @override
+  String get daoProposalStatusPassed => 'Sprejeto';
+
+  @override
+  String get daoProposalStatusFailed => 'Ni sprejeto';
+
+  @override
+  String get daoProposalStatusExecuted => 'Izvedeno';
+
+  @override
+  String daoVotingEndsLabel(String date) {
+    return 'Glasovanje se konča $date';
+  }
+
+  @override
+  String daoVotingEndedLabel(String date) {
+    return 'Glasovanje se je končalo $date';
+  }
+
+  @override
+  String daoQuorumRequirementLabel(String percent) {
+    return 'Potrebna sklepčnost: $percent % glasovalne moči';
+  }
+
+  @override
+  String get daoResultsNotion => 'Rezultati';
+
+  @override
+  String get daoNotEligibleTitle => 'Ta denarnica nima glasovalne moči';
+
+  @override
+  String get daoNotEligibleBody =>
+      'Glasovi so uteženi s KUB8 v vaši denarnici v trenutku glasovanja. Denarnica brez KUB8 ne more glasovati.';
+
+  @override
+  String get daoTreasuryOnChainLabel => 'Stanje zakladnice na verigi';
+
+  @override
+  String get daoTreasuryLedgerLabel => 'Zabeleženi premiki zakladnice';
 }

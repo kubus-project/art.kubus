@@ -6,16 +6,17 @@ import '../../../providers/web3provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../features/web3/web3_capabilities.dart';
-import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
-import '../../../widgets/glass_components.dart';
 import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
 import '../../web3/dao/dao_analytics.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/common/kubus_stat_card.dart';
+import '../../../widgets/dao/dao_proposal_status.dart';
 
 /// Native desktop governance workspace with a contextual right rail.
 class DesktopGovernanceHubScreen extends StatefulWidget {
@@ -107,37 +108,20 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   }
 
   Widget _buildRightPanel(Web3Capabilities capabilities) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     const sectionGap = KubusSpacing.lg;
     const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
     const blockGap = KubusSpacing.md + KubusSpacing.xs;
-    final panelGlassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-    );
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : scheme.outline.withValues(alpha: 0.10),
-            width: 1,
-          ),
-        ),
+        color: roles.ground,
+        border: Border(left: BorderSide(color: roles.rule)),
       ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.zero,
-        showBorder: false,
-        backgroundColor: panelGlassStyle.tintColor,
-        blurSigma: panelGlassStyle.blurSigma,
-        fallbackMinOpacity: panelGlassStyle.fallbackMinOpacity,
+      child: Material(
+        type: MaterialType.transparency,
         child: ValueListenableBuilder<int>(
           valueListenable: _hubSelectedIndex,
           builder: (context, currentSection, _) => ListView(
@@ -230,119 +214,38 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     }
   }
 
+  /// Voting power is the KUB8 the backend snapshots at vote time; with
+  /// none, the wallet cannot vote (the backend rejects zero-power votes).
   Widget _buildVotingPowerCard() {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, _) {
         final l10n = AppLocalizations.of(context)!;
-        final daoAccent = KubusColorRoles.of(context).web3DaoAccent;
         final roles = KubusColorRoles.of(context);
         final votingPower = web3Provider.kub8Balance;
-        final hasVotingPower = votingPower > 0;
-        final cardGlassStyle = KubusGlassStyle.resolve(
-          context,
-          surfaceType: KubusGlassSurfaceType.card,
-        );
-
-        return LiquidGlassCard(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          showBorder: false,
-          backgroundColor: cardGlassStyle.tintColor,
-          blurSigma: cardGlassStyle.blurSigma,
-          fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: daoAccent.withValues(alpha: 0.18),
-                width: KubusSizes.hairline,
+        final amount = votingPower.toStringAsFixed(2);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            KubusStatCard(
+              title: l10n.daoHubStatYourVotingPowerLabel,
+              value: '$amount KUB8',
+              semanticsLabel: l10n.walletBalanceAmountSemantic(
+                l10n.daoHubStatYourVotingPowerLabel,
+                amount,
+                'KUB8',
               ),
+              minHeight: 64,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: KubusSizes.sidebarActionIconBox,
-                        height: KubusSizes.sidebarActionIconBox,
-                        decoration: BoxDecoration(
-                          color: daoAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        ),
-                        child: Icon(
-                          Icons.how_to_vote,
-                          color: daoAccent,
-                          size: KubusSizes.sidebarActionIcon,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.daoHubStatYourVotingPowerLabel,
-                              style:
-                                  KubusTextStyles.actionTileSubtitle.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.62),
-                              ),
-                            ),
-                            const SizedBox(height: KubusSpacing.xxs),
-                            Text(
-                              '${votingPower.toStringAsFixed(2)} KUB8',
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (!hasVotingPower) ...[
-                    const SizedBox(height: KubusSpacing.md),
-                    LiquidGlassPanel(
-                      padding: const EdgeInsets.all(
-                          KubusSpacing.md - KubusSpacing.xs),
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                      showBorder: false,
-                      backgroundColor: cardGlassStyle.tintColor,
-                      blurSigma: cardGlassStyle.blurSigma,
-                      fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: roles.lockedFeature,
-                            size: KubusHeaderMetrics.actionIcon,
-                          ),
-                          const SizedBox(width: KubusSpacing.md),
-                          Expanded(
-                            child: Text(
-                              l10n.desktopGovernanceAcquireKub8Hint,
-                              style:
-                                  KubusTextStyles.actionTileSubtitle.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+            if (votingPower <= 0) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              Text(
+                l10n.daoNotEligibleBody,
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: roles.foregroundMuted,
+                ),
               ),
-            ),
-          ),
+            ],
+          ],
         );
       },
     );
@@ -352,106 +255,47 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
         final l10n = AppLocalizations.of(context)!;
+        final roles = KubusColorRoles.of(context);
         final recentProposals = daoProvider.proposals.take(3).toList();
-        final activityGlassStyle = KubusGlassStyle.resolve(
-          context,
-          surfaceType: KubusGlassSurfaceType.card,
-        );
 
         if (recentProposals.isEmpty) {
-          return LiquidGlassPanel(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            showBorder: false,
-            backgroundColor: activityGlassStyle.tintColor,
-            blurSigma: activityGlassStyle.blurSigma,
-            fallbackMinOpacity: activityGlassStyle.fallbackMinOpacity,
-            child: Column(
-              children: [
-                Icon(
-                  Icons.inbox_outlined,
-                  size: KubusChromeMetrics.heroIcon - KubusSpacing.xs,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  l10n.homeNoRecentActivityTitle,
-                  style: KubusTextStyles.actionTileSubtitle.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
+          return Text(
+            l10n.homeNoRecentActivityTitle,
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: roles.foregroundMuted,
             ),
           );
         }
 
         return Column(
-          children: recentProposals.map((proposal) {
-            final scheme = Theme.of(context).colorScheme;
-            return Padding(
-              padding: const EdgeInsets.only(
-                  bottom: KubusSpacing.md - KubusSpacing.xs),
-              child: LiquidGlassCard(
-                padding:
-                    const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                showBorder: false,
-                backgroundColor: activityGlassStyle.tintColor,
-                blurSigma: activityGlassStyle.blurSigma,
-                fallbackMinOpacity: activityGlassStyle.fallbackMinOpacity,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: scheme.primary.withValues(alpha: 0.14),
-                      width: KubusSizes.hairline,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final proposal in recentProposals)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: roles.rule)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      proposal.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.actionTileTitle.copyWith(
+                        color: roles.foreground,
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: KubusChromeMetrics.navBadgeDot,
-                          height: KubusChromeMetrics.navBadgeDot,
-                          decoration: BoxDecoration(
-                            color: proposal.status == ProposalStatus.active
-                                ? scheme.tertiary
-                                : scheme.onSurface.withValues(alpha: 0.4),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: KubusSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                proposal.title,
-                                style: KubusTextStyles.actionTileTitle.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: KubusSpacing.xxs),
+                    KubusStatusText(
+                      label: daoProposalStatusLabel(l10n, proposal.status),
+                      tone: daoProposalStatusTone(proposal.status),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            );
-          }).toList(),
+          ],
         );
       },
     );

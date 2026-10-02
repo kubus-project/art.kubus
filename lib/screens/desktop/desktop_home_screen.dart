@@ -28,9 +28,11 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
+import '../../widgets/common/kubus_action_tile.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/home/home_discovery_intro.dart';
 import '../../widgets/home/home_promotion_rail.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../utils/app_animations.dart';
@@ -54,9 +56,6 @@ import '../../utils/user_profile_navigation.dart';
 import '../../utils/profile_identity_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
-import '../web3/wallet/connectwallet_screen.dart';
-import '../onboarding/web3/web3_onboarding.dart' as web3;
-import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
@@ -77,7 +76,6 @@ import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
-import '../../config/api_keys.dart';
 
 @visibleForTesting
 int resolveArtworksDiscoveredCount({
@@ -170,7 +168,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _schedulePlatformStatsPrefetch();
-    _refreshHomeRails();
+    // Loading notifies PromotionProvider synchronously; never during build.
+    if (Localizations.localeOf(context).languageCode !=
+        _lastHomeRailsLocaleRefresh) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshHomeRails());
+    }
 
     final walletAddress =
         (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
@@ -642,12 +644,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   child: _buildHeader(),
                 ),
 
-                // Welcome card
+                // Discovery-first introduction (no wallet/status content).
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                         DetailSpacing.xxl, DetailSpacing.xl),
-                    child: _buildWelcomeCard(),
+                    child: HomeDiscoveryIntro(
+                      large: true,
+                      onExploreMap: () => DesktopShellScope.of(context)
+                          ?.navigateToRoute('/explore'),
+                      onOpenCommunity: () => DesktopShellScope.of(context)
+                          ?.navigateToRoute('/community'),
+                    ),
                   ),
                 ),
 
@@ -660,14 +668,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildStatsGrid(),
+                      child: Builder(builder: _buildStatsGrid),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildQuickActions(),
+                      child: Builder(builder: _buildQuickActions),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -689,14 +697,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                           DetailSpacing.xxl, DetailSpacing.xxl),
-                      child: _buildQuickActions(),
+                      child: Builder(builder: _buildQuickActions),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
                           DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
-                      child: _buildStatsGrid(),
+                      child: Builder(builder: _buildStatsGrid),
                     ),
                   ),
                 ],
@@ -723,10 +731,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final user = profileProvider.currentUser;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final headerDisplayName = resolveHomeHeaderDisplayName(
-      user: user,
-      fallbackLabel: l10n.homeDefaultDisplayName,
-    );
+    // Guests are welcomed to the product rather than addressed as "there".
+    final headerDisplayName = profileProvider.isSignedIn
+        ? resolveHomeHeaderDisplayName(
+            user: user,
+            fallbackLabel: l10n.homeDefaultDisplayName,
+          )
+        : l10n.homeGuestHeaderTitle;
     final isArtist = user?.isArtist ?? false;
     final isInstitution = user?.isInstitution ?? false;
     // Same live network pill as mobile home: label from the provider and
@@ -898,156 +909,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildWelcomeCard() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final web3Provider = Provider.of<Web3Provider>(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      showBorder: false,
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.xxl),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              themeProvider.accentColor,
-              themeProvider.accentColor.withValues(alpha: 0.8),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(DetailRadius.xl),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.desktopHomeDiscoverArtTitle,
-                    style: KubusTextStyles.heroTitle.copyWith(
-                      color: Colors.white,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: DetailSpacing.md),
-                  Text(
-                    l10n.desktopHomeDiscoverArtDescription,
-                    style: KubusTextStyles.heroSubtitle.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: DetailSpacing.xl),
-                  if (web3Provider.hasWalletIdentity)
-                    _buildWalletBalances()
-                  else
-                    ElevatedButton.icon(
-                      onPressed: _showWalletOnboarding,
-                      icon: const Icon(Icons.account_balance_wallet),
-                      label: Text(l10n.authConnectWalletButton),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: themeProvider.accentColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DetailSpacing.xl,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(DetailRadius.md),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 56),
-            // Decorative 3D cube/AR icon
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(DetailRadius.xl),
-              ),
-              child: const Icon(
-                Icons.view_in_ar,
-                size: 80,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWalletBalances() {
-    return Consumer<WalletProvider>(
-      builder: (context, walletProvider, _) {
-        // KUB8 is the canonical mint, never the symbol.
-        final kub8 = walletProvider.getTokenByMint(ApiKeys.kub8MintAddress);
-        final sol = walletProvider.tokens
-            .where((t) => t.symbol.toUpperCase() == 'SOL')
-            .firstOrNull;
-
-        return Row(
-          children: [
-            _buildBalanceChip(
-                'KUB8', kub8?.balance.toStringAsFixed(2) ?? '0.00'),
-            const SizedBox(width: 16),
-            _buildBalanceChip(
-                'SOL', sol?.balance.toStringAsFixed(3) ?? '0.000'),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildBalanceChip(String symbol, String amount) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DetailSpacing.lg,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(DetailRadius.md),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                symbol == 'KUB8' ? 'K' : 'S',
-                style: KubusTextStyles.navLabel.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            '$amount $symbol',
-            style: KubusTextStyles.actionTileTitle.copyWith(
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(BuildContext context) {
     final artworkProvider = Provider.of<ArtworkProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final activityProvider = Provider.of<RecentActivityProvider>(context);
@@ -1208,15 +1070,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: cards
                   .map((card) => SizedBox(
                         width: cardWidth,
-                        height: 160,
+                        height: DesktopStatCard.extentOf(context),
                         child: DesktopStatCard(
                           label: card.label,
                           value:
                               card.isLoading ? '\u2026' : card.value.toString(),
                           icon: card.icon,
                           color: card.color,
-                          centeredWatermarkAlignment: Alignment.center,
-                          centeredWatermarkScale: 0.84,
                           onTap: card.action == null
                               ? null
                               : () => _handleHomeActivityCardTap(card.action!),
@@ -1230,7 +1090,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
     final navigationProvider = Provider.of<NavigationProvider>(context);
     final persona =
         context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
@@ -1449,68 +1309,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     VoidCallback onTap, {
     int visitCount = 0,
   }) {
-    return DesktopCard(
+    return KubusActionTile(
+      title: title,
+      icon: icon,
+      accent: color,
       onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(DetailRadius.md),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              if (visitCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    child: Text(
-                      visitCount.toString(),
-                      style: KubusTextStyles.badgeCount.copyWith(
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: DetailSpacing.md),
-          Text(
-            title,
-            style: KubusTextStyles.detailCardTitle.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: DetailSpacing.sm),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 14,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-        ],
-      ),
+      layout: KubusActionTileLayout.inline,
     );
   }
 
@@ -1739,29 +1543,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         );
         return;
     }
-  }
-
-  void _showWalletOnboarding() {
-    final l10n = AppLocalizations.of(context)!;
-    final navigator = Navigator.of(context);
-    navigator.push(
-      MaterialPageRoute(
-        builder: (_) => web3.Web3OnboardingScreen(
-          featureKey: Web3FeaturesOnboardingData.featureKey,
-          featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
-          pages: _getWeb3OnboardingPages(l10n),
-          onComplete: () {
-            navigator.push(
-              MaterialPageRoute(builder: (_) => const ConnectWallet()),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  List<web3.OnboardingPage> _getWeb3OnboardingPages(AppLocalizations l10n) {
-    return Web3FeaturesOnboardingData.pages(l10n);
   }
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {

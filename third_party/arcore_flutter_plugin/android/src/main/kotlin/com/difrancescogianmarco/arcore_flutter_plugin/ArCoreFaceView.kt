@@ -77,17 +77,27 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
             debugLog(call.method +"called on supported device")
             when (call.method) {
                 "init" -> {
-                    arScenViewInit(call, result)
+                    if (!ArCoreUtils.hasCameraPermission(activity)) {
+                        result.error("camera_permission_required", "Camera permission must be granted before mounting AR.", null)
+                    } else {
+                        arScenViewInit(call, result)
+                    }
                 }
                 "loadMesh" -> {
-                    val map = call.arguments as HashMap<*, *>
-                    val textureBytes = map["textureBytes"] as ByteArray
+                    val map = call.arguments as? Map<*, *>
+                    val textureBytes = map?.get("textureBytes") as? ByteArray
+                    if (textureBytes == null) {
+                        result.error("invalid_mesh_texture", "textureBytes must be a byte array", null)
+                        return
+                    }
                     val skin3DModelFilename = map["skin3DModelFilename"] as? String
                     loadMesh(textureBytes, skin3DModelFilename)
+                    result.success(null)
                 }
                 "dispose" -> {
-                    debugLog( " updateMaterials")
+                    debugLog(" dispose")
                     dispose()
+                    result.success(null)
                 }
                 else -> {
                     result.notImplemented()
@@ -95,11 +105,11 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
             }
         }else{
             debugLog("Impossible call " + call.method + " method on unsupported device")
-            result.error("Unsupported Device","",null)
+            result.error("arcore_unsupported_device", "This device cannot run ARCore.", null)
         }
     }
 
-    fun loadMesh(textureBytes: ByteArray?, skin3DModelFilename: String?) {
+    fun loadMesh(textureBytes: ByteArray, skin3DModelFilename: String?) {
         if (skin3DModelFilename != null) {
             // Load the face regions renderable.
             // This is a skinned model that renders 3D objects mapped to the regions of the augmented face.
@@ -116,7 +126,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         // Load the face mesh texture.
         Texture.builder()
                 //.setSource(activity, Uri.parse("fox_face_mesh_texture.png"))
-                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes!!.size))
+                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes.size))
                 .build()
                 .thenAccept { texture -> faceMeshTexture = texture }
     }
@@ -140,9 +150,12 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
 
         if (arSceneView?.session == null) {
 
-            // request camera permission if not already requested
+            // Flutter owns the permission flow and only mounts this view once
+            // CAMERA is granted. Raising a second request here paused the
+            // activity mid-initialization and raced the session startup.
             if (!ArCoreUtils.hasCameraPermission(activity)) {
-                ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
+                methodChannel.invokeMethod("onSessionError", hashMapOf("code" to "camera_permission_required"))
+                return
             }
 
             // If the session wasn't created yet, don't resume rendering.
@@ -167,8 +180,9 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         try {
             arSceneView?.resume()
         } catch (ex: CameraNotAvailableException) {
+            // The camera being briefly held elsewhere is recoverable. Closing
+            // the activity over it tore down the whole single-activity app.
             ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
             return
         }
 

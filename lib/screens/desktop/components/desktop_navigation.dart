@@ -3,16 +3,15 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/wallet_provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../config/config.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
-import '../../../config/api_keys.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -228,6 +227,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 children: [
                   Text(
                     l10n.appTitle,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
                     style: KubusTextStyles.sectionTitle.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -235,6 +237,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   ),
                   Text(
                     l10n.desktopNavigationSubtitle,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
                     style: KubusTextStyles.navMetaLabel.copyWith(
                       color: Theme.of(context)
                           .colorScheme
@@ -280,7 +285,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     final showCompactLabs =
         !widget.isExpanded && (labsFeature?.showLabsMarker ?? false);
 
-    return Padding(
+    final roles = KubusColorRoles.of(context);
+    final label = item.labelKey.resolve(l10n);
+    Widget tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: MouseRegion(
         onEnter: (_) => setState(() => _hoveredIndex = index),
@@ -289,99 +296,112 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           decoration: BoxDecoration(
+            // Neutral selection: a restrained active tint plus a leading
+            // active rule, so selection never depends on hue alone.
             color: isSelected
-                ? widget.activeAccent.withValues(alpha: 0.16)
+                ? roles.active.withValues(alpha: 0.10)
                 : isHovered
-                    ? widget.activeAccent.withValues(alpha: 0.08)
+                    ? roles.foreground.withValues(alpha: 0.05)
                     : Colors.transparent,
-            borderRadius: KubusRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: isSelected
-                  ? widget.activeAccent.withValues(alpha: 0.30)
-                  : isHovered
-                      ? widget.activeAccent.withValues(alpha: 0.12)
-                      : Colors.transparent,
-            ),
+            borderRadius: KubusRadius.circular(KubusRadius.surface),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => widget.onItemSelected(index),
-              borderRadius: KubusRadius.circular(KubusRadius.md),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal:
-                      widget.isExpanded ? 12 : collapsedItemHorizontalPadding,
-                  vertical: 9,
-                ),
+              borderRadius: KubusRadius.circular(KubusRadius.surface),
+              focusColor: roles.focus.withValues(alpha: 0.16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
                 child: Row(
-                  mainAxisAlignment: widget.isExpanded
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
                   children: [
-                    AnimatedSwitcher(
-                      duration: animationTheme.short,
-                      child: SizedBox(
-                        key: ValueKey('${item.route}_$isSelected'),
-                        width: KubusChromeMetrics.navIcon,
-                        height: KubusChromeMetrics.navIcon,
-                        child: Stack(
-                          clipBehavior: Clip.none,
+                    Container(
+                      width: 3,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: isSelected ? roles.active : Colors.transparent,
+                        borderRadius: KubusRadius.circular(KubusRadius.control),
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: widget.isExpanded
+                              ? 9
+                              : collapsedItemHorizontalPadding - 3,
+                          right: widget.isExpanded
+                              ? 12
+                              : collapsedItemHorizontalPadding,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: widget.isExpanded
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.center,
                           children: [
-                            Align(
-                              alignment: Alignment.center,
-                              child: Icon(
-                                isSelected ? item.activeIcon : item.icon,
-                                color: isSelected
-                                    ? widget.activeAccent
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                size: KubusChromeMetrics.navIcon,
+                            SizedBox(
+                              width: KubusChromeMetrics.navIcon,
+                              height: KubusChromeMetrics.navIcon,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      isSelected ? item.activeIcon : item.icon,
+                                      color: isSelected
+                                          ? roles.active
+                                          : roles.foregroundMuted,
+                                      size: KubusChromeMetrics.navIcon,
+                                    ),
+                                  ),
+                                  if (showCompactLabs && labsFeature != null)
+                                    Positioned(
+                                      top: -KubusSpacing.xs,
+                                      right: -6,
+                                      child: KubusLabsAdornment.compactOverlay(
+                                        feature: labsFeature,
+                                        emphasized: isSelected,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                            if (showCompactLabs && labsFeature != null)
-                              Positioned(
-                                top: -KubusSpacing.xs,
-                                right: -6,
-                                child: KubusLabsAdornment.compactOverlay(
+                            if (widget.isExpanded) ...[
+                              const SizedBox(
+                                  width: KubusSpacing.sm + KubusSpacing.xs),
+                              Expanded(
+                                child: AnimatedOpacity(
+                                  opacity: widget.expandAnimation.value,
+                                  duration: const Duration(milliseconds: 150),
+                                  child: Text(
+                                    label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: KubusTextStyles.navLabel.copyWith(
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? roles.foreground
+                                          : roles.foregroundMuted,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (showInlineLabs && labsFeature != null) ...[
+                                const SizedBox(width: KubusSpacing.xs),
+                                KubusLabsAdornment.inlinePill(
                                   feature: labsFeature,
                                   emphasized: isSelected,
                                 ),
-                              ),
+                              ],
+                            ],
+                            if (item.badgeCount > 0)
+                              _buildBadge(item.badgeCount),
                           ],
                         ),
                       ),
                     ),
-                    if (widget.isExpanded) ...[
-                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                      Expanded(
-                        child: AnimatedOpacity(
-                          opacity: widget.expandAnimation.value,
-                          duration: const Duration(milliseconds: 150),
-                          child: Text(
-                            item.labelKey.resolve(l10n),
-                            style: KubusTextStyles.navLabel.copyWith(
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                              color: isSelected
-                                  ? widget.activeAccent
-                                  : Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (showInlineLabs && labsFeature != null) ...[
-                        const SizedBox(width: KubusSpacing.xs),
-                        KubusLabsAdornment.inlinePill(
-                          feature: labsFeature,
-                          emphasized: isSelected,
-                        ),
-                      ],
-                    ],
-                    if (item.badgeCount > 0) _buildBadge(item.badgeCount),
                   ],
                 ),
               ),
@@ -389,6 +409,17 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           ),
         ),
       ),
+    );
+    if (!widget.isExpanded) {
+      tile = Tooltip(message: label, child: tile);
+    }
+    return Semantics(
+      container: true,
+      button: true,
+      selected: isSelected,
+      label: label,
+      onTap: () => widget.onItemSelected(index),
+      child: ExcludeSemantics(child: tile),
     );
   }
 
@@ -795,155 +826,67 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
+  /// Quiet wallet entry. Wallet is infrastructure: the rail links to it but
+  /// does not display balances or promote it above cultural destinations.
   Widget _buildWalletBalanceSection() {
-    return Consumer2<WalletProvider, ProfileProvider>(
-      builder: (context, walletProvider, profileProvider, _) {
-        final tokens = walletProvider.tokens;
-        // KUB8 is the canonical mint, never the symbol.
-        final kub8Balance =
-            walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ??
-                0.0;
-        final solBalance = tokens
-            .where((t) => t.symbol.toUpperCase() == 'SOL')
-            .fold<double>(0.0, (prev, t) => t.balance);
-        final showFullWallet = profileProvider.isSignedIn;
-
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onWalletTap,
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: Container(
-              padding: widget.isExpanded
-                  ? const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xxs)
-                  : const EdgeInsets.all(KubusSpacing.sm),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    widget.activeAccent,
-                    widget.activeAccent.withValues(alpha: 0.82),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final label = l10n.desktopNavWalletEntry;
+    Widget entry = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onWalletTap,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        focusColor: roles.focus.withValues(alpha: 0.16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isExpanded ? KubusSpacing.sm + 4 : 0,
+            ),
+            child: Row(
+              mainAxisAlignment: widget.isExpanded
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: roles.foregroundMuted,
+                  size: KubusChromeMetrics.navIcon,
                 ),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.activeAccent.withValues(alpha: 0.30),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: widget.isExpanded
-                  ? (showFullWallet
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.account_balance_wallet,
-                                  color: Colors.white,
-                                  size: KubusSizes.trailingChevron,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  AppLocalizations.of(context)!.walletHomeTitle,
-                                  style: KubusTextStyles.navMetaLabel.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 5),
-                            AnimatedOpacity(
-                              opacity: widget.expandAnimation.value,
-                              duration: const Duration(milliseconds: 150),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'KUB8',
-                                        style: KubusTypography
-                                            .textTheme.bodySmall
-                                            ?.copyWith(
-                                          fontSize:
-                                              KubusChromeMetrics.navMetaLabel,
-                                          color: Colors.white
-                                              .withValues(alpha: 0.7),
-                                        ),
-                                      ),
-                                      Text(
-                                        kub8Balance.toStringAsFixed(2),
-                                        style: KubusTypography
-                                            .textTheme.bodySmall
-                                            ?.copyWith(
-                                          fontSize:
-                                              KubusChromeMetrics.profileHandle,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'SOL',
-                                        style: KubusTypography
-                                            .textTheme.bodySmall
-                                            ?.copyWith(
-                                          fontSize:
-                                              KubusChromeMetrics.navMetaLabel,
-                                          color: Colors.white
-                                              .withValues(alpha: 0.7),
-                                        ),
-                                      ),
-                                      Text(
-                                        solBalance.toStringAsFixed(3),
-                                        style: KubusTypography
-                                            .textTheme.bodySmall
-                                            ?.copyWith(
-                                          fontSize:
-                                              KubusChromeMetrics.profileHandle,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : Center(
-                          child: Icon(
-                            Icons.account_balance_wallet,
-                            color: Colors.white,
-                            size: KubusHeaderMetrics.actionIcon,
-                          ),
-                        ))
-                  : Center(
-                      child: Icon(
-                        Icons.account_balance_wallet,
-                        color: Colors.white,
-                        size: 20,
+                if (widget.isExpanded) ...[
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  Expanded(
+                    child: AnimatedOpacity(
+                      opacity: widget.expandAnimation.value,
+                      duration: const Duration(milliseconds: 150),
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.navLabel.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: roles.foregroundMuted,
+                        ),
                       ),
                     ),
+                  ),
+                ],
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+    if (!widget.isExpanded) {
+      entry = Tooltip(message: label, child: entry);
+    }
+    return Semantics(
+      container: true,
+      button: true,
+      label: label,
+      onTap: widget.onWalletTap,
+      child: ExcludeSemantics(child: entry),
     );
   }
 
@@ -986,13 +929,24 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       : MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AvatarWidget(
-                      wallet: user?.walletAddress ?? '',
-                      avatarUrl: user?.avatar,
-                      radius: widget.isExpanded ? 17 : 16,
-                      allowFabricatedFallback: true,
-                      enableProfileNavigation: false,
-                    ),
+                    if (profileProvider.isSignedIn)
+                      AvatarWidget(
+                        wallet: user?.walletAddress ?? '',
+                        avatarUrl: user?.avatar,
+                        radius: widget.isExpanded ? 17 : 16,
+                        allowFabricatedFallback: true,
+                        enableProfileNavigation: false,
+                      )
+                    else
+                      SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Icon(
+                          Icons.login,
+                          size: KubusChromeMetrics.navIcon,
+                          color: KubusColorRoles.of(context).foregroundMuted,
+                        ),
+                      ),
                     if (widget.isExpanded) ...[
                       const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                       Expanded(
@@ -1004,9 +958,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                user?.displayName ??
-                                    AppLocalizations.of(context)!
-                                        .profilePersonaArtEnthusiast,
+                                !profileProvider.isSignedIn
+                                    ? AppLocalizations.of(context)!.commonSignIn
+                                    : user?.displayName ??
+                                        AppLocalizations.of(context)!
+                                            .profilePersonaArtEnthusiast,
                                 style: KubusTextStyles.profileName.copyWith(
                                   color: isSelected
                                       ? widget.activeAccent

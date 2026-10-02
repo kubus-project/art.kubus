@@ -49,4 +49,20 @@ void main() {
     );
     expect((deco.decoration as BoxDecoration).color, accent);
   });
+
+  testWidgets('the fill actually paints: full height, progress width',
+      (tester) async {
+    // Regression: under the Stack's loose constraints the fill used to
+    // size to its empty child and render 0 px tall (invisible bar).
+    await tester.pumpWidget(_wrap(const KubusMeterBar(progress: 0.5)));
+    final fill = tester.getSize(
+      find.descendant(
+        of: find.byType(FractionallySizedBox),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(fill.height, 6);
+    expect(fill.width, 100);
+    expect(tester.getSize(find.byType(KubusMeterBar)).width, 200);
+  });
 }

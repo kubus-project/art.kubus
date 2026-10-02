@@ -64,8 +64,6 @@ import 'app_localizations_sl.dart';
 abstract class AppLocalizations {
   AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
 
-  // gen-l10n accepts arbitrary constructor values. Keep transient values from
-  // reaching intl, which only supports the locales shipped by this client.
   static String _supportedLocaleName(String locale) {
     final localeName = intl.Intl.canonicalizedLocale(locale.trim());
     return switch (localeName) {
@@ -454,8 +452,20 @@ abstract class AppLocalizations {
   /// No description provided for @recentActivityRecognitionAmountDescription.
   ///
   /// In en, this message translates to:
-  /// **'+{amount} KUB8 recognition'**
+  /// **'+{amount} recognition'**
   String recentActivityRecognitionAmountDescription(Object amount);
+
+  /// No description provided for @recentActivityKub8AmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} KUB8'**
+  String recentActivityKub8AmountDescription(Object amount);
+
+  /// No description provided for @recentActivityAchievementKub8Description.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} (+{amount} KUB8)'**
+  String recentActivityAchievementKub8Description(Object title, Object amount);
 
   /// No description provided for @recentActivityNewRecognitionDescription.
   ///
@@ -493,6 +503,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recognition recorded'**
   String get notificationRecognitionRecordedTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork discovered'**
+  String get notificationArtworkDiscoveredTitle;
+
+  /// No description provided for @notificationArtworkDiscoveredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}” by {artist}'**
+  String notificationArtworkDiscoveredBody(Object title, Object artist);
+
+  /// No description provided for @notificationArtworkDiscoveredTitleOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered “{title}”'**
+  String notificationArtworkDiscoveredTitleOnlyBody(Object title);
 
   /// No description provided for @pushArchiveObjectCreatingTitle.
   ///
@@ -569,13 +597,13 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsMetricKub8RecognitionLabel.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recognition'**
+  /// **'KUB8 from achievements'**
   String get analyticsMetricKub8RecognitionLabel;
 
   /// No description provided for @analyticsMetricKub8RecognitionDescription.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recorded through contribution recognition.'**
+  /// **'Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.'**
   String get analyticsMetricKub8RecognitionDescription;
 
   /// No description provided for @analyticsPresetArtistSubtitle.
@@ -716,6 +744,12 @@ abstract class AppLocalizations {
   /// **'Add this place to your collection'**
   String get activationGateSaveExhibitionTitle;
 
+  /// No description provided for @activationGateSaveCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection for later'**
+  String get activationGateSaveCollectionTitle;
+
   /// No description provided for @activationGateSavePostTitle.
   ///
   /// In en, this message translates to:
@@ -811,6 +845,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save this place?'**
   String get activationConfirmSaveExhibition;
+
+  /// No description provided for @activationConfirmSaveCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this collection?'**
+  String get activationConfirmSaveCollection;
 
   /// No description provided for @activationConfirmSavePost.
   ///
@@ -4070,11 +4110,17 @@ abstract class AppLocalizations {
   /// **'Events attended'**
   String get desktopSettingsAchievementsStatEventsAttended;
 
-  /// No description provided for @desktopSettingsAchievementsStatKub8PointsEarned.
+  /// No description provided for @achievementsStatKub8Earned.
   ///
   /// In en, this message translates to:
-  /// **'Contribution recognition'**
-  String get desktopSettingsAchievementsStatKub8PointsEarned;
+  /// **'KUB8 earned from achievements'**
+  String get achievementsStatKub8Earned;
+
+  /// No description provided for @achievementUnlockedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked'**
+  String get achievementUnlockedLabel;
 
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryTitle.
   ///
@@ -4273,6 +4319,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Appearance'**
   String get settingsAppearanceSectionTitle;
+
+  /// No description provided for @settingsReduceEffectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce effects'**
+  String get settingsReduceEffectsTitle;
+
+  /// No description provided for @settingsReduceEffectsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable blur, animations and other effects'**
+  String get settingsReduceEffectsSubtitle;
+
+  /// No description provided for @settingsReduceEffectsAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically enabled for this device'**
+  String get settingsReduceEffectsAutoSubtitle;
 
   /// No description provided for @settingsThemeModeTitle.
   ///
@@ -4922,6 +4986,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'About'**
   String get settingsAboutSectionTitle;
+
+  /// No description provided for @settingsGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsGroupAccount;
+
+  /// No description provided for @settingsGroupExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience'**
+  String get settingsGroupExperience;
+
+  /// No description provided for @settingsGroupInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get settingsGroupInfrastructure;
 
   /// No description provided for @settingsAboutVersionTileTitle.
   ///
@@ -6092,6 +6174,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transactional emails (verification, reset, and recovery) are always enabled'**
   String get settingsEmailPreferencesTransactionalSubtitle;
+
+  /// No description provided for @settingsEmailGroupMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get settingsEmailGroupMarketing;
+
+  /// No description provided for @settingsEmailGroupActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get settingsEmailGroupActivity;
+
+  /// No description provided for @settingsEmailGroupEssential.
+  ///
+  /// In en, this message translates to:
+  /// **'Essential'**
+  String get settingsEmailGroupEssential;
+
+  /// No description provided for @settingsEmailGroupEssentialNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.'**
+  String get settingsEmailGroupEssentialNote;
+
+  /// No description provided for @settingsAppNotificationsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App notifications'**
+  String get settingsAppNotificationsSectionTitle;
+
+  /// No description provided for @settingsAppNotificationsSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push and in-app alerts on this device'**
+  String get settingsAppNotificationsSectionSubtitle;
 
   /// No description provided for @settingsEmailPreferencesUpdateFailedToast.
   ///
@@ -7605,30 +7723,6 @@ abstract class AppLocalizations {
   /// **'Nearby radius ({radiusKm} km)'**
   String mapNearbyRadiusTooltip(Object radiusKm);
 
-  /// Tooltip for nearby radius when travel mode is enabled (worldwide).
-  ///
-  /// In en, this message translates to:
-  /// **'Nearby radius (World)'**
-  String get mapNearbyRadiusTooltipWorld;
-
-  /// Short label shown in Nearby Art when travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Radius: World'**
-  String get mapNearbyRadiusWorldShort;
-
-  /// Short status label shown when Travel mode is enabled (instead of a numeric radius).
-  ///
-  /// In en, this message translates to:
-  /// **'You are travelling'**
-  String get mapTravelModeStatusTravelling;
-
-  /// Tooltip shown near the Nearby Art radius control when Travel mode is enabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode is on - showing markers in view'**
-  String get mapTravelModeStatusTravellingTooltip;
-
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:
@@ -8358,13 +8452,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapFilterScopeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Scope'**
+  /// **'Area'**
   String get mapFilterScopeTitle;
 
   /// No description provided for @mapFilterScopeCurrentViewport.
   ///
   /// In en, this message translates to:
-  /// **'Current viewport'**
+  /// **'Map area'**
   String get mapFilterScopeCurrentViewport;
 
   /// No description provided for @mapFilterScopeNearMe.
@@ -8372,12 +8466,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Near me'**
   String get mapFilterScopeNearMe;
-
-  /// No description provided for @mapFilterScopeTravel.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel'**
-  String get mapFilterScopeTravel;
 
   /// No description provided for @mapFilterDiscoveryStatusTitle.
   ///
@@ -8487,24 +8575,6 @@ abstract class AppLocalizations {
   /// **'Zoom in'**
   String get mapZoomInTooltip;
 
-  /// No description provided for @mapTravelModeTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTravelModeTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeEnableTooltip;
-
-  /// Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode).
-  ///
-  /// In en, this message translates to:
-  /// **'Disable travel mode'**
-  String get mapTravelModeDisableTooltip;
-
   /// Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view).
   ///
   /// In en, this message translates to:
@@ -8613,18 +8683,6 @@ abstract class AppLocalizations {
   /// **'Open the Filters panel to refine results (type, distance, discovery status, and more).'**
   String get mapTutorialStepFiltersDesktopBody;
 
-  /// Title for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode'**
-  String get mapTutorialStepTravelTitle;
-
-  /// Body text for the travel mode step of the interactive map tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode loads markers for the visible map area so you can explore anywhere.'**
-  String get mapTutorialStepTravelBody;
-
   /// Title for the recenter step of the interactive map tutorial (mobile).
   ///
   /// In en, this message translates to:
@@ -8648,36 +8706,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search for artworks, artists, institutions, or places to jump to them quickly.'**
   String get mapTutorialStepSearchBody;
-
-  /// No description provided for @mapTravelModeTutorialTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Explore beyond nearby'**
-  String get mapTravelModeTutorialTitle;
-
-  /// No description provided for @mapTravelModeTutorialBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.'**
-  String get mapTravelModeTutorialBody;
-
-  /// No description provided for @mapTravelModeTutorialHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Tip: Pan and zoom - markers refresh to match the viewport.'**
-  String get mapTravelModeTutorialHint;
-
-  /// No description provided for @mapTravelModeTutorialGotIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Got it'**
-  String get mapTravelModeTutorialGotIt;
-
-  /// No description provided for @mapTravelModeTutorialEnable.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable travel mode'**
-  String get mapTravelModeTutorialEnable;
 
   /// No description provided for @mapNearbyArtTitle.
   ///
@@ -8883,17 +8911,17 @@ abstract class AppLocalizations {
   /// **'Newest'**
   String get mapSortNewest;
 
-  /// No description provided for @mapSortRarity.
-  ///
-  /// In en, this message translates to:
-  /// **'Rarity'**
-  String get mapSortRarity;
-
   /// No description provided for @mapSortHighestRewards.
   ///
   /// In en, this message translates to:
   /// **'Most recognition'**
   String get mapSortHighestRewards;
+
+  /// No description provided for @mapSortRarity.
+  ///
+  /// In en, this message translates to:
+  /// **'Rarity'**
+  String get mapSortRarity;
 
   /// No description provided for @mapSortMostViewed.
   ///
@@ -8934,7 +8962,7 @@ abstract class AppLocalizations {
   /// No description provided for @arModeScanName.
   ///
   /// In en, this message translates to:
-  /// **'Scan'**
+  /// **'Discover'**
   String get arModeScanName;
 
   /// No description provided for @arModePlaceName.
@@ -8946,19 +8974,19 @@ abstract class AppLocalizations {
   /// No description provided for @arModeViewName.
   ///
   /// In en, this message translates to:
-  /// **'View'**
+  /// **'Archive'**
   String get arModeViewName;
 
   /// No description provided for @arModeCreateName.
   ///
   /// In en, this message translates to:
-  /// **'Create'**
+  /// **'Capture'**
   String get arModeCreateName;
 
   /// No description provided for @arModeScanDescription.
   ///
   /// In en, this message translates to:
-  /// **'Scan AR markers to discover artworks around you.'**
+  /// **'Identify and discover nearby physical art.'**
   String get arModeScanDescription;
 
   /// No description provided for @arModePlaceDescription.
@@ -8970,13 +8998,13 @@ abstract class AppLocalizations {
   /// No description provided for @arModeViewDescription.
   ///
   /// In en, this message translates to:
-  /// **'View your placed artworks and revisit them.'**
+  /// **'Explore an existing spatial or 3D archive.'**
   String get arModeViewDescription;
 
   /// No description provided for @arModeCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create and experiment with AR placements.'**
+  /// **'Document a physical artwork spatially on your device.'**
   String get arModeCreateDescription;
 
   /// No description provided for @arMarkerNearbyToast.
@@ -9054,7 +9082,7 @@ abstract class AppLocalizations {
   /// No description provided for @arActionScan.
   ///
   /// In en, this message translates to:
-  /// **'Scan for artwork'**
+  /// **'Discover artwork'**
   String get arActionScan;
 
   /// No description provided for @arActionPlace.
@@ -9066,13 +9094,13 @@ abstract class AppLocalizations {
   /// No description provided for @arActionView.
   ///
   /// In en, this message translates to:
-  /// **'View details'**
+  /// **'Explore spatial archive'**
   String get arActionView;
 
   /// No description provided for @arActionCreate.
   ///
   /// In en, this message translates to:
-  /// **'Create AR artwork'**
+  /// **'Capture tracked view'**
   String get arActionCreate;
 
   /// No description provided for @arArtworkPlacedToast.
@@ -9194,6 +9222,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions'**
   String get commonActions;
+
+  /// No description provided for @subjectActionsSocialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get subjectActionsSocialHeading;
+
+  /// No description provided for @subjectActionsSpatialHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Place and movement'**
+  String get subjectActionsSpatialHeading;
+
+  /// No description provided for @subjectActionsMoreHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get subjectActionsMoreHeading;
+
+  /// No description provided for @subjectActionsProvenanceHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Provenance'**
+  String get subjectActionsProvenanceHeading;
+
+  /// No description provided for @subjectSpatialArchiveEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No spatial record yet.'**
+  String get subjectSpatialArchiveEmpty;
+
+  /// No description provided for @artworkProvenanceImageCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Image creator'**
+  String get artworkProvenanceImageCreator;
+
+  /// No description provided for @artworkProvenanceLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'Image license'**
+  String get artworkProvenanceLicense;
+
+  /// No description provided for @artworkProvenanceCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Image credit'**
+  String get artworkProvenanceCredit;
+
+  /// No description provided for @artworkProvenanceSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Image source'**
+  String get artworkProvenanceSource;
 
   /// No description provided for @commonCurrentlyOn.
   ///
@@ -9351,6 +9433,24 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get messagesTitle;
 
+  /// No description provided for @messagesAttachTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a file'**
+  String get messagesAttachTooltip;
+
+  /// No description provided for @messagesPrivateNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get messagesPrivateNotion;
+
+  /// No description provided for @messagesUnreadSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'unread'**
+  String get messagesUnreadSemantic;
+
   /// No description provided for @messagesEmptyNoConversationsTitle.
   ///
   /// In en, this message translates to:
@@ -9360,7 +9460,7 @@ abstract class AppLocalizations {
   /// No description provided for @messagesEmptyNoConversationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a conversation using the chat button below.'**
+  /// **'Your private conversations with artists, institutions and other members appear here.'**
   String get messagesEmptyNoConversationsDescription;
 
   /// No description provided for @messagesEmptyStartChatAction.
@@ -10466,48 +10566,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get collectionCreatorArtworkAddLabel;
-
-  /// No description provided for @collectionCreatorConnectWalletToLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet to load and curate your artwork library in this creator.'**
-  String get collectionCreatorConnectWalletToLoad;
-
-  /// No description provided for @collectionCreatorLoadingLibrary.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading library…'**
-  String get collectionCreatorLoadingLibrary;
-
-  /// No description provided for @collectionCreatorLoadArtworkLibrary.
-  ///
-  /// In en, this message translates to:
-  /// **'Load artwork library'**
-  String get collectionCreatorLoadArtworkLibrary;
-
-  /// No description provided for @collectionCreatorLibraryStillLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Your artwork library is still loading. You can continue with the collection details and return here later.'**
-  String get collectionCreatorLibraryStillLoading;
-
-  /// No description provided for @collectionCreatorLoadBeforeSave.
-  ///
-  /// In en, this message translates to:
-  /// **'Load your artwork library to select pieces for this collection.'**
-  String get collectionCreatorLoadBeforeSave;
-
-  /// No description provided for @collectionCreatorArtworkSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get collectionCreatorArtworkSelected;
-
-  /// No description provided for @collectionCreatorArtworkAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get collectionCreatorArtworkAdd;
 
   /// No description provided for @collectionCreatorNoArtworksAvailable.
   ///
@@ -11934,26 +11992,746 @@ abstract class AppLocalizations {
   /// No description provided for @availabilityNodeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Availability Node'**
+  /// **'kubus Node'**
   String get availabilityNodeTitle;
 
   /// No description provided for @availabilityNodeNavTitle.
   ///
   /// In en, this message translates to:
-  /// **'Availability Node'**
+  /// **'kubus Node'**
   String get availabilityNodeNavTitle;
 
   /// No description provided for @availabilityNodeNavSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage scoped node operator tokens.'**
+  /// **'Public archive, local processing and verified contribution.'**
   String get availabilityNodeNavSubtitle;
 
   /// No description provided for @availabilityNodeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage scoped node operator tokens.'**
+  /// **'Run part of the art.kubus network on hardware you control.'**
   String get availabilityNodeSubtitle;
+
+  /// No description provided for @kubusNodeHeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run part of the art.kubus network on hardware you control.'**
+  String get kubusNodeHeroTitle;
+
+  /// No description provided for @kubusNodeHeroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.'**
+  String get kubusNodeHeroBody;
+
+  /// No description provided for @kubusNodePrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your source capture stays local. Only the spatial archive you choose to publish is added to the public network.'**
+  String get kubusNodePrivacyBody;
+
+  /// No description provided for @kubusNodeOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get kubusNodeOverview;
+
+  /// No description provided for @kubusNodeArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get kubusNodeArchive;
+
+  /// No description provided for @kubusNodeSpatial.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial'**
+  String get kubusNodeSpatial;
+
+  /// No description provided for @kubusNodeRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution'**
+  String get kubusNodeRewards;
+
+  /// No description provided for @kubusNodeSecuritySetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Security / Setup'**
+  String get kubusNodeSecuritySetup;
+
+  /// No description provided for @kubusNodeOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get kubusNodeOnline;
+
+  /// No description provided for @kubusNodeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get kubusNodeOffline;
+
+  /// No description provided for @kubusNodeNotPaired.
+  ///
+  /// In en, this message translates to:
+  /// **'No local kubus Node paired'**
+  String get kubusNodeNotPaired;
+
+  /// No description provided for @kubusNodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Node unavailable'**
+  String get kubusNodeUnavailable;
+
+  /// No description provided for @kubusNodeAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get kubusNodeAvailable;
+
+  /// No description provided for @kubusNodeArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep public art available'**
+  String get kubusNodeArchiveTitle;
+
+  /// No description provided for @kubusNodeArchiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Store verified public archive records and help other people retrieve them when they explore art.kubus.'**
+  String get kubusNodeArchiveBody;
+
+  /// No description provided for @kubusNodeBytesStored.
+  ///
+  /// In en, this message translates to:
+  /// **'Stored'**
+  String get kubusNodeBytesStored;
+
+  /// No description provided for @kubusNodeRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Public records'**
+  String get kubusNodeRecords;
+
+  /// No description provided for @kubusNodeRetrievalHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrieval health'**
+  String get kubusNodeRetrievalHealth;
+
+  /// No description provided for @kubusNodeSpatialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Process spatial archives locally'**
+  String get kubusNodeSpatialTitle;
+
+  /// No description provided for @kubusNodeSpatialBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn a capture into an optimized spatial record without uploading the source material to a processing server.'**
+  String get kubusNodeSpatialBody;
+
+  /// No description provided for @kubusNodeWorker.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial worker'**
+  String get kubusNodeWorker;
+
+  /// No description provided for @kubusNodeGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU capability'**
+  String get kubusNodeGpu;
+
+  /// No description provided for @kubusNodeRunningJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Running jobs'**
+  String get kubusNodeRunningJobs;
+
+  /// No description provided for @kubusNodeLocalCaptures.
+  ///
+  /// In en, this message translates to:
+  /// **'Local captures'**
+  String get kubusNodeLocalCaptures;
+
+  /// No description provided for @kubusNodeRewardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified contribution'**
+  String get kubusNodeRewardsTitle;
+
+  /// No description provided for @kubusNodeRewardsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 contribution records are calculated from verified archive availability, uptime and successful retrieval — not simply from running the software.'**
+  String get kubusNodeRewardsBody;
+
+  /// No description provided for @kubusNodeSettledKub8.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled KUB8'**
+  String get kubusNodeSettledKub8;
+
+  /// No description provided for @kubusNodePendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated from verified archive availability. Settlement is not yet active.'**
+  String get kubusNodePendingBody;
+
+  /// No description provided for @kubusNodePairTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair this device'**
+  String get kubusNodePairTitle;
+
+  /// No description provided for @kubusNodePairBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Devices in your kubus Node interface and scan the code it shows. This device receives only a limited local credential.'**
+  String get kubusNodePairBody;
+
+  /// No description provided for @kubusNodePairingPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing payload'**
+  String get kubusNodePairingPayload;
+
+  /// No description provided for @kubusNodePairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair kubus Node'**
+  String get kubusNodePairAction;
+
+  /// No description provided for @kubusNodeUnpairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget paired node'**
+  String get kubusNodeUnpairAction;
+
+  /// No description provided for @kubusNodePairedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node paired'**
+  String get kubusNodePairedToast;
+
+  /// No description provided for @kubusNodePairFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing failed'**
+  String get kubusNodePairFailed;
+
+  /// No description provided for @kubusNodeStateContributing.
+  ///
+  /// In en, this message translates to:
+  /// **'Contributing'**
+  String get kubusNodeStateContributing;
+
+  /// No description provided for @kubusNodeStateContributingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive participation is active.'**
+  String get kubusNodeStateContributingBody;
+
+  /// No description provided for @kubusNodeStateJoining.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining network'**
+  String get kubusNodeStateJoining;
+
+  /// No description provided for @kubusNodeStateJoiningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node is synchronising and verifying its public archive contribution.'**
+  String get kubusNodeStateJoiningBody;
+
+  /// No description provided for @kubusNodeStateDegraded.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection interrupted'**
+  String get kubusNodeStateDegraded;
+
+  /// No description provided for @kubusNodeStateDegradedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This previously verified node is in a temporary grace period. Processing locks if archive participation is not restored before grace expires.'**
+  String get kubusNodeStateDegradedBody;
+
+  /// No description provided for @kubusNodeStateLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Network participation required'**
+  String get kubusNodeStateLocked;
+
+  /// No description provided for @kubusNodeStateLockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial processing becomes available when this kubus Node is actively contributing to the public archive.'**
+  String get kubusNodeStateLockedBody;
+
+  /// No description provided for @kubusNodeStateUnconfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup required'**
+  String get kubusNodeStateUnconfigured;
+
+  /// No description provided for @kubusNodeStateUnconfiguredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect this node to your art.kubus operator account to begin.'**
+  String get kubusNodeStateUnconfiguredBody;
+
+  /// No description provided for @kubusNodeStateOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Node unavailable'**
+  String get kubusNodeStateOffline;
+
+  /// No description provided for @kubusNodeStateOfflineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The app cannot reach this kubus Node right now. It stays paired and reconnects automatically.'**
+  String get kubusNodeStateOfflineBody;
+
+  /// No description provided for @kubusNodeReciprocity.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node gives you local spatial processing while your node contributes storage and availability to the shared public archive.'**
+  String get kubusNodeReciprocity;
+
+  /// No description provided for @kubusNodeCheckStatusAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check node status'**
+  String get kubusNodeCheckStatusAction;
+
+  /// No description provided for @kubusNodeWorkerReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get kubusNodeWorkerReady;
+
+  /// No description provided for @kubusNodeWorkerReadyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Gaussian reconstruction available.'**
+  String get kubusNodeWorkerReadyBody;
+
+  /// No description provided for @kubusNodeWorkerNoGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get kubusNodeWorkerNoGpu;
+
+  /// No description provided for @kubusNodeWorkerNoGpuBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No compatible NVIDIA GPU detected.'**
+  String get kubusNodeWorkerNoGpuBody;
+
+  /// No description provided for @kubusNodeWorkerDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Worker unavailable'**
+  String get kubusNodeWorkerDown;
+
+  /// No description provided for @kubusNodeWorkerDownBody.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU detected, but the spatial worker is not responding.'**
+  String get kubusNodeWorkerDownBody;
+
+  /// No description provided for @kubusNodeEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node'**
+  String get kubusNodeEntryTitle;
+
+  /// No description provided for @kubusNodeEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run part of the art.kubus network on hardware you control.'**
+  String get kubusNodeEntrySubtitle;
+
+  /// No description provided for @kubusNodeEntryFeatureArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the public archive available'**
+  String get kubusNodeEntryFeatureArchive;
+
+  /// No description provided for @kubusNodeEntryFeatureSpatial.
+  ///
+  /// In en, this message translates to:
+  /// **'Process spatial captures locally'**
+  String get kubusNodeEntryFeatureSpatial;
+
+  /// No description provided for @kubusNodeEntryFeatureNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Use network GPU capacity when needed'**
+  String get kubusNodeEntryFeatureNetwork;
+
+  /// No description provided for @kubusNodeEntryFeatureContribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive verified KUB8 contribution records'**
+  String get kubusNodeEntryFeatureContribution;
+
+  /// No description provided for @kubusNodeEntryConnectCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect or set up a kubus Node'**
+  String get kubusNodeEntryConnectCta;
+
+  /// No description provided for @kubusNodeEntryOpenCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open kubus Node'**
+  String get kubusNodeEntryOpenCta;
+
+  /// No description provided for @kubusNodeEntryAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Node needs attention'**
+  String get kubusNodeEntryAttention;
+
+  /// No description provided for @kubusNodeScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the pairing code'**
+  String get kubusNodeScanTitle;
+
+  /// No description provided for @kubusNodeScanBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Devices in your kubus Node interface and scan the code it shows.'**
+  String get kubusNodeScanBody;
+
+  /// No description provided for @kubusNodeScanManualAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter code manually'**
+  String get kubusNodeScanManualAction;
+
+  /// No description provided for @kubusNodeScanPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is needed to scan the pairing code.'**
+  String get kubusNodeScanPermission;
+
+  /// No description provided for @kubusNodeScanInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That is not a kubus Node pairing code.'**
+  String get kubusNodeScanInvalid;
+
+  /// No description provided for @kubusNodeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to this node?'**
+  String get kubusNodeConfirmTitle;
+
+  /// No description provided for @kubusNodeConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device will be allowed to use the node for spatial processing. You can disconnect it at any time from the node.'**
+  String get kubusNodeConfirmBody;
+
+  /// No description provided for @kubusNodeConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get kubusNodeConfirmAction;
+
+  /// No description provided for @kubusNodeConnectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get kubusNodeConnectedTitle;
+
+  /// No description provided for @kubusNodeConnectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device can now use {label} for spatial processing.'**
+  String kubusNodeConnectedBody(Object label);
+
+  /// No description provided for @kubusNodeFingerprintLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fingerprint'**
+  String get kubusNodeFingerprintLabel;
+
+  /// No description provided for @kubusNodeEmptyCapturesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No spatial captures yet'**
+  String get kubusNodeEmptyCapturesTitle;
+
+  /// No description provided for @kubusNodeEmptyCapturesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Document an artwork spatially to create its first 3D archive.'**
+  String get kubusNodeEmptyCapturesBody;
+
+  /// No description provided for @kubusNodeEmptyContributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No verified contribution yet'**
+  String get kubusNodeEmptyContributionTitle;
+
+  /// No description provided for @kubusNodeEmptyContributionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution appears after the network verifies archive availability or completed compute jobs.'**
+  String get kubusNodeEmptyContributionBody;
+
+  /// No description provided for @kubusNodeEmptyProvidersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No compatible network GPUs are available right now'**
+  String get kubusNodeEmptyProvidersTitle;
+
+  /// No description provided for @kubusNodeEmptyProvidersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the capture locally or process it later.'**
+  String get kubusNodeEmptyProvidersBody;
+
+  /// No description provided for @kubusNodeNoNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No kubus Node connected'**
+  String get kubusNodeNoNodeTitle;
+
+  /// No description provided for @kubusNodeStoredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stored'**
+  String get kubusNodeStoredLabel;
+
+  /// No description provided for @kubusNodeCoverageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage'**
+  String get kubusNodeCoverageLabel;
+
+  /// No description provided for @kubusNodePublicRecordsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public records'**
+  String get kubusNodePublicRecordsLabel;
+
+  /// No description provided for @kubusNodeContribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution'**
+  String get kubusNodeContribution;
+
+  /// No description provided for @kubusNodeHowCalculated.
+  ///
+  /// In en, this message translates to:
+  /// **'How contribution is calculated'**
+  String get kubusNodeHowCalculated;
+
+  /// No description provided for @kubusNodeAdvancedDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get kubusNodeAdvancedDetails;
+
+  /// No description provided for @kubusNodeCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get kubusNodeCopiedToast;
+
+  /// No description provided for @spatialStagePreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing'**
+  String get spatialStagePreparing;
+
+  /// No description provided for @spatialStageProcessingLocally.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing locally'**
+  String get spatialStageProcessingLocally;
+
+  /// No description provided for @spatialStageOptimising.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimising'**
+  String get spatialStageOptimising;
+
+  /// No description provided for @spatialStageCreatingPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating preview'**
+  String get spatialStageCreatingPreview;
+
+  /// No description provided for @spatialStageComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get spatialStageComplete;
+
+  /// No description provided for @spatialStageEncrypting.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypting'**
+  String get spatialStageEncrypting;
+
+  /// No description provided for @spatialStageSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending to node'**
+  String get spatialStageSending;
+
+  /// No description provided for @spatialStageWaitingForGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for GPU'**
+  String get spatialStageWaitingForGpu;
+
+  /// No description provided for @spatialStageProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialStageProcessing;
+
+  /// No description provided for @spatialStagePreparingArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing spatial archive'**
+  String get spatialStagePreparingArchive;
+
+  /// No description provided for @spatialStageReceiving.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving result'**
+  String get spatialStageReceiving;
+
+  /// No description provided for @spatialStageVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying'**
+  String get spatialStageVerifying;
+
+  /// No description provided for @spatialProgressLocalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing on your kubus Node.'**
+  String get spatialProgressLocalBody;
+
+  /// No description provided for @spatialProgressRemoteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing on the Kubus network.'**
+  String get spatialProgressRemoteBody;
+
+  /// No description provided for @spatialProgressLeaveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can leave this screen. Processing continues on your kubus Node.'**
+  String get spatialProgressLeaveHint;
+
+  /// No description provided for @spatialFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing stopped'**
+  String get spatialFailedTitle;
+
+  /// No description provided for @spatialFailedRemoteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The provider node became unavailable before reconstruction finished. Your original capture is still available.'**
+  String get spatialFailedRemoteBody;
+
+  /// No description provided for @spatialFailedLocalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing did not finish. Your original capture is still available on your kubus Node.'**
+  String get spatialFailedLocalBody;
+
+  /// No description provided for @spatialFailedTryAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another node'**
+  String get spatialFailedTryAnother;
+
+  /// No description provided for @spatialFailedProcessLocally.
+  ///
+  /// In en, this message translates to:
+  /// **'Process locally'**
+  String get spatialFailedProcessLocally;
+
+  /// No description provided for @spatialFailedKeepForLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep for later'**
+  String get spatialFailedKeepForLater;
+
+  /// No description provided for @spatialErrorParticipation.
+  ///
+  /// In en, this message translates to:
+  /// **'Network participation required'**
+  String get spatialErrorParticipation;
+
+  /// No description provided for @spatialErrorNoProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'No compatible network GPU is currently available.'**
+  String get spatialErrorNoProvider;
+
+  /// No description provided for @spatialErrorExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This processing request expired before a node accepted it.'**
+  String get spatialErrorExpired;
+
+  /// No description provided for @spatialErrorRetrieval.
+  ///
+  /// In en, this message translates to:
+  /// **'The processing node could not retrieve the encrypted capture.'**
+  String get spatialErrorRetrieval;
+
+  /// No description provided for @spatialErrorSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to art.kubus to use network processing.'**
+  String get spatialErrorSignIn;
+
+  /// No description provided for @spatialErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while processing this capture.'**
+  String get spatialErrorGeneric;
+
+  /// No description provided for @spatialProcessLocallyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Process locally'**
+  String get spatialProcessLocallyAction;
+
+  /// No description provided for @spatialProcessNetworkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Use network GPU'**
+  String get spatialProcessNetworkAction;
+
+  /// No description provided for @kubusNodeAdvancedOperatorSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced operator setup'**
+  String get kubusNodeAdvancedOperatorSetup;
+
+  /// No description provided for @kubusNodeAdvancedOperatorSetupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional network identity, operator token and environment configuration.'**
+  String get kubusNodeAdvancedOperatorSetupBody;
 
   /// No description provided for @availabilityNodeWhatIsTitle.
   ///
@@ -12266,12 +13044,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital editions will appear here when they are linked to this wallet.'**
   String get walletHomeNoCollectiblesDescription;
-
-  /// No description provided for @walletHomeNoCollectiblesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No digital editions yet'**
-  String get walletHomeNoCollectiblesTitle;
 
   /// No description provided for @walletHomeCollectibleByline.
   ///
@@ -15834,6 +16606,12 @@ abstract class AppLocalizations {
   /// **'Sold out'**
   String get marketplaceSoldOutLabel;
 
+  /// Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary sold out'**
+  String get marketplacePrimarySoldOutLabel;
+
   /// No description provided for @marketplaceMintNftButtonLabel.
   ///
   /// In en, this message translates to:
@@ -16916,6 +17694,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 comment} other{{count} comments}}'**
   String commonCommentsCount(num count);
 
+  /// No description provided for @communityPostLikesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 like} other{{count} likes}}'**
+  String communityPostLikesCount(num count);
+
+  /// No description provided for @communityPostRepostsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 repost} other{{count} reposts}}'**
+  String communityPostRepostsCount(num count);
+
   /// No description provided for @commonDistanceKmAway.
   ///
   /// In en, this message translates to:
@@ -17545,6 +18335,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posts'**
   String get communitySearchTypePosts;
+
+  /// No description provided for @communitySearchTypeEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get communitySearchTypeEvents;
+
+  /// No description provided for @communitySearchTypeExhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get communitySearchTypeExhibitions;
+
+  /// No description provided for @communitySearchTypePlaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Places'**
+  String get communitySearchTypePlaces;
+
+  /// No description provided for @searchResultsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get searchResultsSemanticLabel;
 
   /// No description provided for @communitySearchHintProfiles.
   ///
@@ -18265,6 +19079,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'there'**
   String get homeDefaultDisplayName;
+
+  /// No description provided for @activityUnreadSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get activityUnreadSemanticLabel;
+
+  /// No description provided for @homeIntroNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get homeIntroNotion;
+
+  /// No description provided for @homeIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art, places and culture around you'**
+  String get homeIntroTitle;
+
+  /// No description provided for @homeIntroLede.
+  ///
+  /// In en, this message translates to:
+  /// **'Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.'**
+  String get homeIntroLede;
+
+  /// No description provided for @homeIntroExploreMapAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the map'**
+  String get homeIntroExploreMapAction;
+
+  /// No description provided for @homeIntroCommunityAction.
+  ///
+  /// In en, this message translates to:
+  /// **'See community'**
+  String get homeIntroCommunityAction;
+
+  /// No description provided for @homeGuestHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get homeGuestHeaderTitle;
 
   /// No description provided for @homeWelcomeSubtitle.
   ///
@@ -20967,6 +21823,54 @@ abstract class AppLocalizations {
   /// **'Institution Hub'**
   String get navigationScreenInstitutionHub;
 
+  /// No description provided for @mobileNavMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get mobileNavMap;
+
+  /// No description provided for @mobileNavAr.
+  ///
+  /// In en, this message translates to:
+  /// **'AR'**
+  String get mobileNavAr;
+
+  /// No description provided for @mobileNavCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get mobileNavCommunity;
+
+  /// No description provided for @mobileNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get mobileNavHome;
+
+  /// No description provided for @mobileNavProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get mobileNavProfile;
+
+  /// No description provided for @mobileNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get mobileNavAccount;
+
+  /// No description provided for @mobileNavSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Main navigation'**
+  String get mobileNavSemanticLabel;
+
+  /// No description provided for @desktopNavWalletEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get desktopNavWalletEntry;
+
   /// No description provided for @daoHubAppBarTitle.
   ///
   /// In en, this message translates to:
@@ -22167,6 +23071,30 @@ abstract class AppLocalizations {
   /// **'Repost'**
   String get communityRepostButtonLabel;
 
+  /// No description provided for @communityComposeAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'write a post'**
+  String get communityComposeAuthAction;
+
+  /// No description provided for @communityCreateGroupAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'create a group'**
+  String get communityCreateGroupAuthAction;
+
+  /// No description provided for @communityPostActionLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get communityPostActionLike;
+
+  /// No description provided for @communityPostActionComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get communityPostActionComment;
+
   /// No description provided for @communityRepostedToast.
   ///
   /// In en, this message translates to:
@@ -22820,6 +23748,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.'**
   String get savedItemsSummarySubtitleEmpty;
+
+  /// No description provided for @savedItemsEmptyLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get savedItemsEmptyLibraryTitle;
+
+  /// No description provided for @savedItemsLibraryNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your library'**
+  String get savedItemsLibraryNotion;
 
   /// No description provided for @savedItemsSummarySubtitleLastSaved.
   ///
@@ -26027,6 +26967,24 @@ abstract class AppLocalizations {
   /// **'Enable analytics in Settings to view charts and insights.'**
   String get analyticsBlockedDisabledDescription;
 
+  /// No description provided for @analyticsBlockedOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get analyticsBlockedOpenSettings;
+
+  /// No description provided for @analyticsBlockedUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics unavailable'**
+  String get analyticsBlockedUnavailableTitle;
+
+  /// No description provided for @analyticsBlockedUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are not available in this app build.'**
+  String get analyticsBlockedUnavailableDescription;
+
   /// No description provided for @analyticsBlockedAdminRequiredTitle.
   ///
   /// In en, this message translates to:
@@ -26436,6 +27394,1626 @@ abstract class AppLocalizations {
   /// **'Secure'**
   String get authSecureAccountBannerCta;
 
+  /// No description provided for @spatialProcessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Process spatial capture'**
+  String get spatialProcessTitle;
+
+  /// No description provided for @spatialProcessLocalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This kubus Node'**
+  String get spatialProcessLocalTitle;
+
+  /// No description provided for @spatialProcessLocalPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Source capture stays on hardware you control.'**
+  String get spatialProcessLocalPrivacy;
+
+  /// No description provided for @spatialProcessNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kubus network'**
+  String get spatialProcessNetworkTitle;
+
+  /// No description provided for @spatialProcessNetworkAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} compatible nodes available'**
+  String spatialProcessNetworkAvailable(int count);
+
+  /// No description provided for @spatialProcessNetworkPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'The capture is encrypted in transit and processed temporarily by the selected provider node.'**
+  String get spatialProcessNetworkPrivacy;
+
+  /// No description provided for @spatialProcessMaximumPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'For maximum privacy, process locally.'**
+  String get spatialProcessMaximumPrivacy;
+
+  /// No description provided for @spatialProcessNoLocalGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'No compatible local GPU was found.'**
+  String get spatialProcessNoLocalGpu;
+
+  /// No description provided for @spatialProcessKeepLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep capture locally'**
+  String get spatialProcessKeepLocal;
+
+  /// No description provided for @spatialProcessStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start processing'**
+  String get spatialProcessStart;
+
+  /// No description provided for @spatialProcessAutoSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-select best node'**
+  String get spatialProcessAutoSelect;
+
+  /// No description provided for @spatialProcessAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a node'**
+  String get spatialProcessAdvanced;
+
+  /// No description provided for @spatialProcessReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get spatialProcessReady;
+
+  /// No description provided for @spatialProcessJobsAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} jobs ahead'**
+  String spatialProcessJobsAhead(int count);
+
+  /// No description provided for @spatialProcessSuccessRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}% successful jobs'**
+  String spatialProcessSuccessRate(Object rate);
+
+  /// No description provided for @spatialRemotePrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a Kubus network GPU?'**
+  String get spatialRemotePrivacyTitle;
+
+  /// No description provided for @spatialRemotePrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.'**
+  String get spatialRemotePrivacyBody;
+
+  /// No description provided for @spatialRemotePrivacyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with network GPU'**
+  String get spatialRemotePrivacyConfirm;
+
+  /// No description provided for @spatialResultReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial result is ready'**
+  String get spatialResultReviewTitle;
+
+  /// No description provided for @spatialResultReviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus Node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.'**
+  String get spatialResultReviewBody;
+
+  /// No description provided for @spatialResultKeepPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep unpublished'**
+  String get spatialResultKeepPrivate;
+
+  /// No description provided for @spatialResultReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject result'**
+  String get spatialResultReject;
+
+  /// No description provided for @spatialResultPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish spatial archive'**
+  String get spatialResultPublish;
+
+  /// No description provided for @kubusNodeCompute.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute'**
+  String get kubusNodeCompute;
+
+  /// No description provided for @kubusNodeComputeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute network'**
+  String get kubusNodeComputeTitle;
+
+  /// No description provided for @kubusNodeComputeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.'**
+  String get kubusNodeComputeBody;
+
+  /// No description provided for @kubusNodeOfferGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer GPU to Kubus network'**
+  String get kubusNodeOfferGpu;
+
+  /// No description provided for @kubusNodeOfferGpuBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept new compatible spatial jobs from other art.kubus users.'**
+  String get kubusNodeOfferGpuBody;
+
+  /// No description provided for @kubusNodePauseRemoteJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause accepting new remote jobs'**
+  String get kubusNodePauseRemoteJobs;
+
+  /// No description provided for @kubusNodeMaxRemoteJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum concurrent remote jobs'**
+  String get kubusNodeMaxRemoteJobs;
+
+  /// No description provided for @kubusNodeArchiveContribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive contribution'**
+  String get kubusNodeArchiveContribution;
+
+  /// No description provided for @kubusNodeComputeContribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute contribution'**
+  String get kubusNodeComputeContribution;
+
+  /// No description provided for @kubusNodePendingTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending total'**
+  String get kubusNodePendingTotal;
+
+  /// No description provided for @kubusNodeSettlementPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards are currently recorded by the network. Settlement is not yet active.'**
+  String get kubusNodeSettlementPending;
+
+  /// No description provided for @kubusNodeVerifiedArchiveCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 contribution records are calculated from verified public archive availability, healthy participation and successful retrieval.'**
+  String get kubusNodeVerifiedArchiveCopy;
+
+  /// No description provided for @kubusNodeVerifiedComputeCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'When you choose to offer spare GPU capacity, successfully completed and verified network compute jobs can contribute to your KUB8 reward record.'**
+  String get kubusNodeVerifiedComputeCopy;
+
+  /// No description provided for @kubusNodeParticipationContributing.
+  ///
+  /// In en, this message translates to:
+  /// **'Contributing'**
+  String get kubusNodeParticipationContributing;
+
+  /// No description provided for @kubusNodeParticipationDegraded.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection interrupted'**
+  String get kubusNodeParticipationDegraded;
+
+  /// No description provided for @kubusNodeParticipationLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Network participation required'**
+  String get kubusNodeParticipationLocked;
+
+  /// No description provided for @kubusNodeRemoteJobsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote jobs completed'**
+  String get kubusNodeRemoteJobsCompleted;
+
+  /// No description provided for @spatialArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial archive'**
+  String get spatialArchiveTitle;
+
+  /// No description provided for @spatialViewIn3d.
+  ///
+  /// In en, this message translates to:
+  /// **'View in 3D'**
+  String get spatialViewIn3d;
+
+  /// No description provided for @spatialCaptureCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 spatial capture} other{{count} spatial captures}}'**
+  String spatialCaptureCount(int count);
+
+  /// No description provided for @spatialCapturedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured {date}'**
+  String spatialCapturedOn(String date);
+
+  /// No description provided for @spatialHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial history'**
+  String get spatialHistoryTitle;
+
+  /// No description provided for @spatialLoadArchiveQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Load archival quality'**
+  String get spatialLoadArchiveQuality;
+
+  /// No description provided for @spatialQualityMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimised'**
+  String get spatialQualityMobile;
+
+  /// No description provided for @spatialQualityPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get spatialQualityPreview;
+
+  /// No description provided for @spatialQualityArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archival'**
+  String get spatialQualityArchive;
+
+  /// No description provided for @spatialViewerReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset view'**
+  String get spatialViewerReset;
+
+  /// No description provided for @spatialViewerFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Fullscreen'**
+  String get spatialViewerFullscreen;
+
+  /// No description provided for @spatialViewerRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get spatialViewerRetry;
+
+  /// No description provided for @spatialViewerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This spatial archive is currently unavailable.'**
+  String get spatialViewerUnavailable;
+
+  /// No description provided for @spatialViewerFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Trying another archive route…'**
+  String get spatialViewerFallback;
+
+  /// No description provided for @spatialViewerWebSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.'**
+  String get spatialViewerWebSafety;
+
+  /// No description provided for @spatialCaptureFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish capture'**
+  String get spatialCaptureFinish;
+
+  /// No description provided for @spatialCaptureGuideStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Move slowly around the artwork.'**
+  String get spatialCaptureGuideStart;
+
+  /// No description provided for @spatialCaptureGuideOverlap.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the artwork in view and maintain overlap.'**
+  String get spatialCaptureGuideOverlap;
+
+  /// No description provided for @spatialCaptureGuideDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture the sides and details you have not covered.'**
+  String get spatialCaptureGuideDetails;
+
+  /// No description provided for @spatialCaptureGuideReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage is ready. You can finish or add a few more angles.'**
+  String get spatialCaptureGuideReady;
+
+  /// No description provided for @spatialCaptureDepthAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'depth available'**
+  String get spatialCaptureDepthAvailable;
+
+  /// No description provided for @spatialCaptureRgbPose.
+  ///
+  /// In en, this message translates to:
+  /// **'RGB and pose'**
+  String get spatialCaptureRgbPose;
+
+  /// No description provided for @spatialCaptureTrackedViews.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracked views · {detail}'**
+  String spatialCaptureTrackedViews(int count, String detail);
+
+  /// No description provided for @mapSpatialAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial archive available'**
+  String get mapSpatialAvailable;
+
+  /// No description provided for @arErrorCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is currently unavailable. Try again.'**
+  String get arErrorCameraUnavailable;
+
+  /// No description provided for @arErrorArcoreInstallRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs Google Play Services for AR. Install it to continue.'**
+  String get arErrorArcoreInstallRequired;
+
+  /// No description provided for @arErrorArcoreUpdateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play Services for AR needs an update to continue.'**
+  String get arErrorArcoreUpdateRequired;
+
+  /// No description provided for @arErrorAppUpdateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This app needs an update to use AR.'**
+  String get arErrorAppUpdateRequired;
+
+  /// No description provided for @arErrorArcoreUnsupportedDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device does not support AR.'**
+  String get arErrorArcoreUnsupportedDevice;
+
+  /// No description provided for @arErrorArcoreInstallDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs Google Play Services for AR. You can install it and try again.'**
+  String get arErrorArcoreInstallDeclined;
+
+  /// No description provided for @arErrorSessionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is unavailable right now. Try again.'**
+  String get arErrorSessionUnavailable;
+
+  /// No description provided for @arErrorCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs camera access. Allow it to continue.'**
+  String get arErrorCameraPermissionRequired;
+
+  /// No description provided for @arTrackingInitializing.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is still locating itself. Move your phone slowly.'**
+  String get arTrackingInitializing;
+
+  /// No description provided for @arTrackingInsufficientLight.
+  ///
+  /// In en, this message translates to:
+  /// **'More light will help AR understand the space.'**
+  String get arTrackingInsufficientLight;
+
+  /// No description provided for @arTrackingExcessiveMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your phone more slowly.'**
+  String get arTrackingExcessiveMotion;
+
+  /// No description provided for @arTrackingInsufficientFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera toward an area with more visible detail.'**
+  String get arTrackingInsufficientFeatures;
+
+  /// No description provided for @arTrackingBadState.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is recovering.'**
+  String get arTrackingBadState;
+
+  /// No description provided for @arPlacementSelectArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork to place.'**
+  String get arPlacementSelectArtwork;
+
+  /// No description provided for @arPlacementFindingSurface.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your phone slowly to find a surface.'**
+  String get arPlacementFindingSurface;
+
+  /// No description provided for @arPlacementTapToPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a surface to place the artwork.'**
+  String get arPlacementTapToPlace;
+
+  /// No description provided for @arPlacementAdjustOrConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move, rotate to adjust, then confirm.'**
+  String get arPlacementAdjustOrConfirm;
+
+  /// No description provided for @arPlacementRotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate'**
+  String get arPlacementRotate;
+
+  /// No description provided for @spatialCaptureGuideIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Point your phone at the artwork to begin.'**
+  String get spatialCaptureGuideIdle;
+
+  /// No description provided for @spatialCaptureGuidePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture is paused. Resume when you are ready.'**
+  String get spatialCaptureGuidePaused;
+
+  /// No description provided for @spatialCaptureGuideTrackingLost.
+  ///
+  /// In en, this message translates to:
+  /// **'AR lost track of the space. Move your phone slowly to continue.'**
+  String get spatialCaptureGuideTrackingLost;
+
+  /// No description provided for @spatialCaptureGuideFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture is full. Finish to process what you have.'**
+  String get spatialCaptureGuideFull;
+
+  /// No description provided for @spatialCaptureResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume capture'**
+  String get spatialCaptureResume;
+
+  /// No description provided for @spatialCaptureStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start capture'**
+  String get spatialCaptureStart;
+
+  /// No description provided for @spatialCaptureContributorOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial capture is available to approved contributors, artists and institutions.'**
+  String get spatialCaptureContributorOnly;
+
+  /// No description provided for @spatialCaptureChooseArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork before starting a spatial capture.'**
+  String get spatialCaptureChooseArtwork;
+
+  /// No description provided for @spatialCaptureNotReadyToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture a few more angles before finishing.'**
+  String get spatialCaptureNotReadyToast;
+
+  /// No description provided for @spatialCaptureNodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.'**
+  String get spatialCaptureNodeRequired;
+
+  /// No description provided for @spatialCaptureNodeOutdated.
+  ///
+  /// In en, this message translates to:
+  /// **'This kubus Node cannot receive a streamed capture. Update the node and try again.'**
+  String get spatialCaptureNodeOutdated;
+
+  /// No description provided for @spatialCaptureTransferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The capture could not be transferred. It is still on this device, so you can try again.'**
+  String get spatialCaptureTransferFailed;
+
+  /// No description provided for @spatialCaptureRetryTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry transfer'**
+  String get spatialCaptureRetryTransfer;
+
+  /// No description provided for @spatialTransferPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing capture…'**
+  String get spatialTransferPreparing;
+
+  /// No description provided for @spatialTransferCommitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalising on your node…'**
+  String get spatialTransferCommitting;
+
+  /// No description provided for @spatialTransferUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {done} of {total} files'**
+  String spatialTransferUploading(int done, int total);
+
+  /// No description provided for @spatialArchiveEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial archive'**
+  String get spatialArchiveEmptyTitle;
+
+  /// No description provided for @spatialArchiveEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Published and locally processed spatial records will appear here over time.'**
+  String get spatialArchiveEmptyBody;
+
+  /// No description provided for @spatialArchiveRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial record'**
+  String get spatialArchiveRecord;
+
+  /// No description provided for @spatialRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfinished capture'**
+  String get spatialRecoveryTitle;
+
+  /// No description provided for @spatialRecoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracked views from an interrupted capture are still on this device.'**
+  String spatialRecoveryBody(int count);
+
+  /// No description provided for @spatialRecoveryResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume capture'**
+  String get spatialRecoveryResume;
+
+  /// No description provided for @spatialRecoveryDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard capture'**
+  String get spatialRecoveryDiscard;
+
+  /// No description provided for @spatialRecoveryKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep for later'**
+  String get spatialRecoveryKeep;
+
+  /// No description provided for @arPlacementScaleUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Larger'**
+  String get arPlacementScaleUp;
+
+  /// No description provided for @arPlacementScaleDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller'**
+  String get arPlacementScaleDown;
+
+  /// No description provided for @arPlacementReposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get arPlacementReposition;
+
+  /// No description provided for @arPlacementConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm placement'**
+  String get arPlacementConfirm;
+
+  /// No description provided for @arPlacementRepositionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap another surface to move the artwork.'**
+  String get arPlacementRepositionHint;
+
+  /// No description provided for @arPlacementAdjustHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinch to resize, drag to rotate, then confirm.'**
+  String get arPlacementAdjustHint;
+
+  /// No description provided for @arPlacementTrackingLost.
+  ///
+  /// In en, this message translates to:
+  /// **'AR lost track of the space. Your placement is kept — move slowly to continue.'**
+  String get arPlacementTrackingLost;
+
+  /// No description provided for @arPlacementPreviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The artwork preview could not be shown. Try choosing the surface again.'**
+  String get arPlacementPreviewFailed;
+
+  /// No description provided for @arCameraSwitching.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching camera…'**
+  String get arCameraSwitching;
+
+  /// No description provided for @spatialCaptureDiscardAndRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard and start over'**
+  String get spatialCaptureDiscardAndRestart;
+
+  /// No description provided for @spatialCaptureGuideFullUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture reached its limit before covering enough of the artwork. Start over and move around it more.'**
+  String get spatialCaptureGuideFullUnusable;
+
+  /// No description provided for @arCaptureFrameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture a frame. Try again.'**
+  String get arCaptureFrameFailed;
+
+  /// No description provided for @spatialCaptureSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured privately on this phone. Process it now or later from Spatial Library.'**
+  String get spatialCaptureSaved;
+
+  /// No description provided for @spatialLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial Library'**
+  String get spatialLibraryTitle;
+
+  /// No description provided for @spatialLibraryOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open library'**
+  String get spatialLibraryOpen;
+
+  /// No description provided for @spatialLibraryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your private spatial captures will appear here.'**
+  String get spatialLibraryEmpty;
+
+  /// No description provided for @spatialLibraryFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get spatialLibraryFilterAll;
+
+  /// No description provided for @spatialLibraryFilterCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryFilterCaptured;
+
+  /// No description provided for @spatialLibraryFilterProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibraryFilterProcessing;
+
+  /// No description provided for @spatialLibraryFilterReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get spatialLibraryFilterReady;
+
+  /// No description provided for @spatialLibraryFilterPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get spatialLibraryFilterPublished;
+
+  /// No description provided for @spatialLibraryStatusCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryStatusCaptured;
+
+  /// No description provided for @spatialLibraryStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Node'**
+  String get spatialLibraryStatusWaiting;
+
+  /// No description provided for @spatialLibraryStatusUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading'**
+  String get spatialLibraryStatusUploading;
+
+  /// No description provided for @spatialLibraryStatusQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get spatialLibraryStatusQueued;
+
+  /// No description provided for @spatialLibraryStatusProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibraryStatusProcessing;
+
+  /// No description provided for @spatialLibraryStatusDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get spatialLibraryStatusDownloading;
+
+  /// No description provided for @spatialLibraryStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get spatialLibraryStatusReady;
+
+  /// No description provided for @spatialLibraryStatusPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get spatialLibraryStatusPublished;
+
+  /// No description provided for @spatialLibraryStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get spatialLibraryStatusFailed;
+
+  /// No description provided for @spatialLibraryPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get spatialLibraryPrivate;
+
+  /// No description provided for @spatialLibraryPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get spatialLibraryPublic;
+
+  /// No description provided for @spatialLibraryRawStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source'**
+  String get spatialLibraryRawStorage;
+
+  /// No description provided for @spatialLibraryProcessedStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed'**
+  String get spatialLibraryProcessedStorage;
+
+  /// No description provided for @spatialLibraryTotalStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get spatialLibraryTotalStorage;
+
+  /// No description provided for @spatialLibraryNodeConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Node connected'**
+  String get spatialLibraryNodeConnected;
+
+  /// No description provided for @spatialLibraryNodeConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Node'**
+  String get spatialLibraryNodeConnect;
+
+  /// No description provided for @spatialLibraryProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Process'**
+  String get spatialLibraryProcess;
+
+  /// No description provided for @spatialLibraryRetryUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get spatialLibraryRetryUpload;
+
+  /// No description provided for @spatialLibraryRetryProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry processing'**
+  String get spatialLibraryRetryProcessing;
+
+  /// No description provided for @spatialLibraryView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get spatialLibraryView;
+
+  /// No description provided for @spatialLibraryPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get spatialLibraryPublish;
+
+  /// No description provided for @spatialLibraryShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get spatialLibraryShare;
+
+  /// No description provided for @spatialLibraryDeleteRaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete raw capture'**
+  String get spatialLibraryDeleteRaw;
+
+  /// No description provided for @spatialLibraryDeleteProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local processed result'**
+  String get spatialLibraryDeleteProcessed;
+
+  /// No description provided for @spatialLibraryDeleteRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local record'**
+  String get spatialLibraryDeleteRecord;
+
+  /// No description provided for @spatialLibraryDeleteRecordWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the local record only. A published public archive will stay published.'**
+  String get spatialLibraryDeleteRecordWarning;
+
+  /// No description provided for @spatialLibraryProcessorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No processor is available. Your private capture remains safely stored.'**
+  String get spatialLibraryProcessorUnavailable;
+
+  /// No description provided for @spatialLibraryOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That action could not be completed. Your private source remains intact.'**
+  String get spatialLibraryOperationFailed;
+
+  /// No description provided for @arStatusTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking'**
+  String get arStatusTracking;
+
+  /// No description provided for @arStatusFindingSurface.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding surface'**
+  String get arStatusFindingSurface;
+
+  /// No description provided for @arStatusCapturing.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing'**
+  String get arStatusCapturing;
+
+  /// No description provided for @arStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get arStatusPaused;
+
+  /// No description provided for @arStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get arStatusError;
+
+  /// No description provided for @arStatusSwitching.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching'**
+  String get arStatusSwitching;
+
+  /// No description provided for @arMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get arMoreActions;
+
+  /// No description provided for @arToggleFlash.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get arToggleFlash;
+
+  /// No description provided for @arOpenArSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'AR settings'**
+  String get arOpenArSettings;
+
+  /// No description provided for @spatialTargetPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the artwork'**
+  String get spatialTargetPickerTitle;
+
+  /// No description provided for @spatialTargetPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every spatial capture is filed under one artwork.'**
+  String get spatialTargetPickerSubtitle;
+
+  /// No description provided for @spatialTargetSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search artworks'**
+  String get spatialTargetSearchHint;
+
+  /// No description provided for @spatialTargetNoArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks yet'**
+  String get spatialTargetNoArtworksTitle;
+
+  /// No description provided for @spatialTargetNoArtworksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an artwork before capturing spatial data for it.'**
+  String get spatialTargetNoArtworksBody;
+
+  /// No description provided for @spatialTargetNoResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get spatialTargetNoResultsTitle;
+
+  /// No description provided for @spatialTargetNoResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No artwork matches that search.'**
+  String get spatialTargetNoResultsBody;
+
+  /// No description provided for @spatialTargetMarkerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a marker'**
+  String get spatialTargetMarkerTitle;
+
+  /// No description provided for @spatialTargetMarkerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Links this capture to a specific location or AR marker.'**
+  String get spatialTargetMarkerSubtitle;
+
+  /// No description provided for @spatialTargetNoMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific marker'**
+  String get spatialTargetNoMarker;
+
+  /// No description provided for @spatialTargetChangeArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Change artwork'**
+  String get spatialTargetChangeArtwork;
+
+  /// No description provided for @spatialMarkerKindLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Map location'**
+  String get spatialMarkerKindLocation;
+
+  /// No description provided for @spatialMarkerKindConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'AR marker'**
+  String get spatialMarkerKindConfiguration;
+
+  /// No description provided for @spatialLibraryStatusReprocessNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocessing required'**
+  String get spatialLibraryStatusReprocessNeeded;
+
+  /// No description provided for @spatialLibraryStatusPublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing'**
+  String get spatialLibraryStatusPublishing;
+
+  /// No description provided for @spatialNetworkStateRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested'**
+  String get spatialNetworkStateRequested;
+
+  /// No description provided for @spatialNetworkStateSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding a processor'**
+  String get spatialNetworkStateSearching;
+
+  /// No description provided for @spatialNetworkStateOffered.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider offered'**
+  String get spatialNetworkStateOffered;
+
+  /// No description provided for @spatialNetworkStateAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider accepted'**
+  String get spatialNetworkStateAccepted;
+
+  /// No description provided for @spatialNetworkStateVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying'**
+  String get spatialNetworkStateVerifying;
+
+  /// No description provided for @spatialNetworkStateExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Request expired'**
+  String get spatialNetworkStateExpired;
+
+  /// No description provided for @spatialNetworkStateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled'**
+  String get spatialNetworkStateCancelled;
+
+  /// No description provided for @spatialLibraryVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'v{version}'**
+  String spatialLibraryVersionLabel(int version);
+
+  /// No description provided for @spatialLibraryArtworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork unavailable'**
+  String get spatialLibraryArtworkUnavailable;
+
+  /// No description provided for @spatialLibraryMarkerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker unavailable'**
+  String get spatialLibraryMarkerUnavailable;
+
+  /// No description provided for @spatialLibraryLinkedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to'**
+  String get spatialLibraryLinkedTo;
+
+  /// No description provided for @spatialLibraryArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get spatialLibraryArtworkLabel;
+
+  /// No description provided for @spatialLibraryMarkerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker'**
+  String get spatialLibraryMarkerLabel;
+
+  /// No description provided for @spatialLibrarySectionCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture'**
+  String get spatialLibrarySectionCapture;
+
+  /// No description provided for @spatialLibrarySectionProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibrarySectionProcessing;
+
+  /// No description provided for @spatialLibrarySectionArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get spatialLibrarySectionArchive;
+
+  /// No description provided for @spatialLibraryCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage'**
+  String get spatialLibraryCoverage;
+
+  /// No description provided for @spatialLibraryCoveragePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% coverage'**
+  String spatialLibraryCoveragePercent(int percent);
+
+  /// No description provided for @spatialLibraryTrackedViews.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 tracked view} other{{count} tracked views}}'**
+  String spatialLibraryTrackedViews(int count);
+
+  /// No description provided for @spatialLibraryDepthAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Depth available'**
+  String get spatialLibraryDepthAvailable;
+
+  /// No description provided for @spatialLibraryDepthUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No depth data'**
+  String get spatialLibraryDepthUnavailable;
+
+  /// No description provided for @spatialLibraryRawSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source'**
+  String get spatialLibraryRawSource;
+
+  /// No description provided for @spatialLibraryRawSourceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source deleted'**
+  String get spatialLibraryRawSourceDeleted;
+
+  /// No description provided for @spatialLibraryContinueCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue capture'**
+  String get spatialLibraryContinueCapture;
+
+  /// No description provided for @spatialLibraryEditAssociation.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit association'**
+  String get spatialLibraryEditAssociation;
+
+  /// No description provided for @spatialLibraryEditMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename or add a note'**
+  String get spatialLibraryEditMetadata;
+
+  /// No description provided for @spatialLibraryProcessScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Process scene'**
+  String get spatialLibraryProcessScene;
+
+  /// No description provided for @spatialLibraryNotProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not processed'**
+  String get spatialLibraryNotProcessed;
+
+  /// No description provided for @spatialLibraryViewResult.
+  ///
+  /// In en, this message translates to:
+  /// **'View result'**
+  String get spatialLibraryViewResult;
+
+  /// No description provided for @spatialLibraryViewPublicArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'View public archive'**
+  String get spatialLibraryViewPublicArchive;
+
+  /// No description provided for @spatialLibraryNewRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Add spatial update'**
+  String get spatialLibraryNewRevision;
+
+  /// No description provided for @spatialLibraryMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get spatialLibraryMoreActions;
+
+  /// No description provided for @spatialLibraryCancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get spatialLibraryCancelRequest;
+
+  /// No description provided for @spatialLibraryChangeProcessor.
+  ///
+  /// In en, this message translates to:
+  /// **'Change processor'**
+  String get spatialLibraryChangeProcessor;
+
+  /// No description provided for @spatialLibraryVersionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Versions'**
+  String get spatialLibraryVersionsTitle;
+
+  /// No description provided for @spatialLibraryCurrentPublicVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current public version'**
+  String get spatialLibraryCurrentPublicVersion;
+
+  /// No description provided for @spatialLibraryLocalDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Local draft'**
+  String get spatialLibraryLocalDraft;
+
+  /// No description provided for @spatialLibraryRevisionOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision {revision}'**
+  String spatialLibraryRevisionOf(int revision);
+
+  /// No description provided for @spatialLibraryStaleResultWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'More capture data was added after this result. Process it again to refresh the scene.'**
+  String get spatialLibraryStaleResultWarning;
+
+  /// No description provided for @spatialLibraryStorageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get spatialLibraryStorageTitle;
+
+  /// No description provided for @spatialLibraryCapturedOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryCapturedOnLabel;
+
+  /// No description provided for @spatialEditMetadataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture details'**
+  String get spatialEditMetadataTitle;
+
+  /// No description provided for @spatialEditDisplayNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get spatialEditDisplayNameLabel;
+
+  /// No description provided for @spatialEditDisplayNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: North facade, evening capture'**
+  String get spatialEditDisplayNameHint;
+
+  /// No description provided for @spatialEditNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get spatialEditNoteLabel;
+
+  /// No description provided for @spatialEditAssociationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change association'**
+  String get spatialEditAssociationTitle;
+
+  /// No description provided for @spatialEditAssociationProcessedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture already has a processed result. Changing the artwork changes the metadata it would be published with.'**
+  String get spatialEditAssociationProcessedWarning;
+
+  /// No description provided for @spatialEditAssociationPublishedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture is published. Changing it starts a new draft revision; the published version stays exactly as it is.'**
+  String get spatialEditAssociationPublishedWarning;
+
+  /// No description provided for @spatialEditAssociationConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Change association'**
+  String get spatialEditAssociationConfirm;
+
+  /// No description provided for @spatialProcessOwnNodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your paired kubus Node.'**
+  String get spatialProcessOwnNodeSubtitle;
+
+  /// No description provided for @spatialProcessOwnNodeRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected remotely'**
+  String get spatialProcessOwnNodeRemote;
+
+  /// No description provided for @spatialProcessOwnNodeLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'On your network'**
+  String get spatialProcessOwnNodeLocal;
+
+  /// No description provided for @spatialProcessOwnNodeUnpaired.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected — tap to pair'**
+  String get spatialProcessOwnNodeUnpaired;
+
+  /// No description provided for @spatialProcessConnectOwnNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect my Node'**
+  String get spatialProcessConnectOwnNode;
+
+  /// No description provided for @spatialProcessNetworkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request processing from an available GPU provider.'**
+  String get spatialProcessNetworkSubtitle;
+
+  /// No description provided for @spatialProcessRequestNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Request network processing'**
+  String get spatialProcessRequestNetwork;
+
+  /// No description provided for @spatialProcessNoProviderNow.
+  ///
+  /// In en, this message translates to:
+  /// **'No provider is available right now. The request stays open until one is.'**
+  String get spatialProcessNoProviderNow;
+
+  /// No description provided for @spatialProviderQueueAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No jobs ahead} =1{1 job ahead} other{{count} jobs ahead}}'**
+  String spatialProviderQueueAhead(int count);
+
+  /// No description provided for @spatialProviderEstimatedDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About {minutes} min'**
+  String spatialProviderEstimatedDuration(int minutes);
+
+  /// No description provided for @spatialProviderEstimatedCost.
+  ///
+  /// In en, this message translates to:
+  /// **'About {amount} KUB8'**
+  String spatialProviderEstimatedCost(String amount);
+
+  /// No description provided for @spatialProviderNoEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Not offered'**
+  String get spatialProviderNoEstimate;
+
+  /// No description provided for @spatialProviderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get spatialProviderLabel;
+
+  /// No description provided for @spatialFailureNodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Node unavailable'**
+  String get spatialFailureNodeUnavailable;
+
+  /// No description provided for @spatialFailureUploadInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload interrupted'**
+  String get spatialFailureUploadInterrupted;
+
+  /// No description provided for @spatialFailureProcessorDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'The processor declined the job'**
+  String get spatialFailureProcessorDeclined;
+
+  /// No description provided for @spatialFailureProcessingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing failed'**
+  String get spatialFailureProcessingFailed;
+
+  /// No description provided for @spatialFailureResultDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Result download failed'**
+  String get spatialFailureResultDownload;
+
+  /// No description provided for @spatialFailureResultVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Result verification failed'**
+  String get spatialFailureResultVerification;
+
+  /// No description provided for @spatialFailureRequestExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The request expired before a processor took it'**
+  String get spatialFailureRequestExpired;
+
+  /// No description provided for @spatialFailureGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get spatialFailureGeneric;
+
+  /// No description provided for @spatialFailureRawIntact.
+  ///
+  /// In en, this message translates to:
+  /// **'Your raw capture is untouched.'**
+  String get spatialFailureRawIntact;
+
+  /// No description provided for @spatialCaptureSavedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to Spatial Library'**
+  String get spatialCaptureSavedTitle;
+
+  /// No description provided for @spatialCaptureContinueLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue later'**
+  String get spatialCaptureContinueLater;
+
+  /// No description provided for @spatialCaptureTargetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork before starting a capture.'**
+  String get spatialCaptureTargetRequired;
+
+  /// No description provided for @spatialCaptureTargetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing for {title}'**
+  String spatialCaptureTargetLabel(String title);
+
+  /// No description provided for @spatialCaptureSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The raw capture for this record is no longer on this device.'**
+  String get spatialCaptureSourceUnavailable;
+
+  /// No description provided for @spatialCaptureContinueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That capture could not be reopened.'**
+  String get spatialCaptureContinueFailed;
+
+  /// No description provided for @spatialArtworkDraftsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spatial drafts'**
+  String get spatialArtworkDraftsTitle;
+
+  /// No description provided for @spatialArtworkDraftsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private to this device until you publish.'**
+  String get spatialArtworkDraftsSubtitle;
+
+  /// No description provided for @spatialArtworkAddUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Add spatial update'**
+  String get spatialArtworkAddUpdate;
+
+  /// No description provided for @spatialArtworkCaptureCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture spatial data'**
+  String get spatialArtworkCaptureCta;
+
+  /// No description provided for @spatialViewOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'View on map'**
+  String get spatialViewOnMap;
+
+  /// No description provided for @spatialCaptureAnotherOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'A capture for another artwork is still open. Finish or discard it before starting a new one.'**
+  String get spatialCaptureAnotherOpen;
+
+  /// No description provided for @collectionCreatorConnectWalletToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet to load and curate your artwork library in this creator.'**
+  String get collectionCreatorConnectWalletToLoad;
+
+  /// No description provided for @collectionCreatorLoadingLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading library…'**
+  String get collectionCreatorLoadingLibrary;
+
+  /// No description provided for @collectionCreatorLoadArtworkLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Load artwork library'**
+  String get collectionCreatorLoadArtworkLibrary;
+
+  /// No description provided for @collectionCreatorLibraryStillLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artwork library is still loading. You can continue with the collection details and return here later.'**
+  String get collectionCreatorLibraryStillLoading;
+
+  /// No description provided for @collectionCreatorLoadBeforeSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Load your artwork library to select pieces for this collection.'**
+  String get collectionCreatorLoadBeforeSave;
+
+  /// No description provided for @collectionCreatorArtworkSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get collectionCreatorArtworkSelected;
+
+  /// No description provided for @collectionCreatorArtworkAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get collectionCreatorArtworkAdd;
+
+  /// No description provided for @walletHomeNoCollectiblesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No digital editions yet'**
+  String get walletHomeNoCollectiblesTitle;
+
   /// No description provided for @artworkCreatorOptionalExtensionsDescription.
   ///
   /// In en, this message translates to:
@@ -26778,6 +29356,84 @@ abstract class AppLocalizations {
   /// **'Transferred'**
   String get walletGalleryStatusTransferred;
 
+  /// No description provided for @kubusMyNodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Nodes'**
+  String get kubusMyNodesTitle;
+
+  /// No description provided for @kubusConnectionNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected nearby'**
+  String get kubusConnectionNearby;
+
+  /// No description provided for @kubusConnectionRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected remotely'**
+  String get kubusConnectionRemote;
+
+  /// No description provided for @kubusComputeAuthorizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.'**
+  String get kubusComputeAuthorizationRequired;
+
+  /// No description provided for @kubusConnectionIdentityMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Node identity verification failed. The connection was refused and your saved identity was preserved.'**
+  String get kubusConnectionIdentityMismatch;
+
+  /// No description provided for @kubusNetworkStagingExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Network processing currently uses your kubus Node to securely stage the encrypted capture.'**
+  String get kubusNetworkStagingExplanation;
+
+  /// No description provided for @kubusMyNodesDiscoveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your Nodes. Check your connection and sign in, then retry.'**
+  String get kubusMyNodesDiscoveryFailed;
+
+  /// No description provided for @kubusMyNodesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has no registered Nodes. Set up a kubus Node to continue.'**
+  String get kubusMyNodesEmpty;
+
+  /// No description provided for @kubusMyNodesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available to connect remotely'**
+  String get kubusMyNodesAvailable;
+
+  /// No description provided for @kubusMyNodesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.'**
+  String get kubusMyNodesUnavailable;
+
+  /// No description provided for @kubusMyNodesAttaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting securely…'**
+  String get kubusMyNodesAttaching;
+
+  /// No description provided for @kubusMyNodesAttachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect securely. Your saved pairing has been preserved.'**
+  String get kubusMyNodesAttachFailed;
+
+  /// No description provided for @kubusMyNodesLocalPairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair locally with a QR code'**
+  String get kubusMyNodesLocalPairing;
+
   /// No description provided for @walletGalleryStatusBurned.
   ///
   /// In en, this message translates to:
@@ -26801,6 +29457,805 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The attendance record image must be at least 256 px on its shortest side.'**
   String get artworkCreatorAttendanceImageTooSmall;
+
+  /// No description provided for @kubusAddNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Node'**
+  String get kubusAddNodeTitle;
+
+  /// No description provided for @kubusAddNodeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.'**
+  String get kubusAddNodeIntro;
+
+  /// No description provided for @kubusAddNodeCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup code'**
+  String get kubusAddNodeCodeLabel;
+
+  /// No description provided for @kubusAddNodeLookup.
+  ///
+  /// In en, this message translates to:
+  /// **'Find Node'**
+  String get kubusAddNodeLookup;
+
+  /// No description provided for @kubusAddNodeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Node is waiting for that code. Check the code on the setup page, or start setup again.'**
+  String get kubusAddNodeNotFound;
+
+  /// No description provided for @kubusAddNodeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize this Node?'**
+  String get kubusAddNodeReview;
+
+  /// No description provided for @kubusAddNodeFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Node fingerprint'**
+  String get kubusAddNodeFingerprint;
+
+  /// No description provided for @kubusAddNodeGrants.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorizing issues this Node a credential for archive availability, connection signaling and network compute. Your captures stay on the Node.'**
+  String get kubusAddNodeGrants;
+
+  /// No description provided for @kubusAddNodeAuthorize.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize'**
+  String get kubusAddNodeAuthorize;
+
+  /// No description provided for @kubusAddNodeDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get kubusAddNodeDecline;
+
+  /// No description provided for @kubusAddNodeAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorized. Your Node is finishing setup and will appear in My Nodes shortly.'**
+  String get kubusAddNodeAuthorized;
+
+  /// No description provided for @kubusAddNodeDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined. No credential was issued.'**
+  String get kubusAddNodeDeclined;
+
+  /// No description provided for @kubusAddNodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete authorization. Nothing was issued; try again.'**
+  String get kubusAddNodeFailed;
+
+  /// No description provided for @kubusPermissionUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateTitle;
+
+  /// No description provided for @kubusPermissionUpdateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This Node was set up before the current permissions. Authorize an updated credential to use network compute. Its identity, pairings, captures and archive stay exactly as they are.'**
+  String get kubusPermissionUpdateBody;
+
+  /// No description provided for @kubusPermissionUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update permissions'**
+  String get kubusPermissionUpdateAction;
+
+  /// No description provided for @kubusPermissionUpdateWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating this Node\'s permissions…'**
+  String get kubusPermissionUpdateWorking;
+
+  /// No description provided for @kubusPermissionUpdateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions updated. Your Node is restarting to use them.'**
+  String get kubusPermissionUpdateDone;
+
+  /// No description provided for @kubusPermissionUpdateDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Update declined. This Node keeps its current permissions.'**
+  String get kubusPermissionUpdateDeclined;
+
+  /// No description provided for @kubusPermissionUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update permissions. This Node kept its existing credential.'**
+  String get kubusPermissionUpdateFailed;
+
+  /// No description provided for @spatialTransferValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the upload on your node…'**
+  String get spatialTransferValidating;
+
+  /// No description provided for @spatialTransferRepairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Completing the upload…'**
+  String get spatialTransferRepairing;
+
+  /// No description provided for @spatialTransferWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your node…'**
+  String get spatialTransferWaiting;
+
+  /// Transferred bytes over total, both already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String spatialTransferBytes(String done, String total);
+
+  /// Measured transfer speed, already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/s'**
+  String spatialTransferThroughput(String rate);
+
+  /// Evidence-based estimate of time left.
+  ///
+  /// In en, this message translates to:
+  /// **'About {duration} remaining'**
+  String spatialTransferEta(String duration);
+
+  /// Files delivered over total.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total} files'**
+  String spatialTransferFiles(int done, int total);
+
+  /// No description provided for @spatialTransferRouteLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network'**
+  String get spatialTransferRouteLocal;
+
+  /// No description provided for @spatialTransferRouteRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure internet connection'**
+  String get spatialTransferRouteRemote;
+
+  /// No description provided for @spatialTransferRouteDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct connection'**
+  String get spatialTransferRouteDirect;
+
+  /// No description provided for @spatialTransferRouteRelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Relayed connection'**
+  String get spatialTransferRouteRelay;
+
+  /// No description provided for @spatialDurationSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} sec'**
+  String spatialDurationSeconds(int seconds);
+
+  /// No description provided for @spatialDurationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String spatialDurationMinutes(int minutes);
+
+  /// No description provided for @spatialDurationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String spatialDurationHours(int hours, int minutes);
+
+  /// No description provided for @spatialFailureSourceIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture is missing files on this device'**
+  String get spatialFailureSourceIncomplete;
+
+  /// No description provided for @spatialFailureSourceUnrepairable.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture cannot be processed'**
+  String get spatialFailureSourceUnrepairable;
+
+  /// No description provided for @spatialFailureNodeCaptureIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload did not finish'**
+  String get spatialFailureNodeCaptureIncomplete;
+
+  /// No description provided for @spatialFailureNodeValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your node could not accept this capture'**
+  String get spatialFailureNodeValidation;
+
+  /// No description provided for @spatialUploadIncompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture upload incomplete'**
+  String get spatialUploadIncompleteTitle;
+
+  /// No description provided for @spatialUploadIncompleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your node is missing {count, plural, =1{1 file} other{{count} files}} from this capture.'**
+  String spatialUploadIncompleteBody(int count);
+
+  /// No description provided for @spatialUploadAvailableFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{available} / {expected} files available'**
+  String spatialUploadAvailableFiles(int available, int expected);
+
+  /// No description provided for @spatialUploadResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume upload'**
+  String get spatialUploadResume;
+
+  /// No description provided for @formShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get formShowPassword;
+
+  /// No description provided for @formHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get formHidePassword;
+
+  /// No description provided for @formSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get formSelectDate;
+
+  /// No description provided for @formSelectTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get formSelectTime;
+
+  /// No description provided for @formNoValueSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get formNoValueSelected;
+
+  /// No description provided for @formAddImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add image'**
+  String get formAddImage;
+
+  /// No description provided for @formFixHighlightedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Some fields need attention. Check the messages below them.'**
+  String get formFixHighlightedFields;
+
+  /// No description provided for @stateNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach art.kubus'**
+  String get stateNetworkTitle;
+
+  /// No description provided for @stateNetworkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request didn\'t finish. Check your connection and try again.'**
+  String get stateNetworkDescription;
+
+  /// No description provided for @stateOfflineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get stateOfflineTitle;
+
+  /// No description provided for @stateOfflineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This needs an internet connection. Reconnect, then try again.'**
+  String get stateOfflineDescription;
+
+  /// No description provided for @stateServerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus is having trouble'**
+  String get stateServerTitle;
+
+  /// No description provided for @stateServerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The service didn\'t respond properly. Nothing is wrong on your side; try again in a moment.'**
+  String get stateServerDescription;
+
+  /// No description provided for @stateAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue'**
+  String get stateAuthTitle;
+
+  /// No description provided for @stateAuthDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has ended or you haven\'t signed in yet.'**
+  String get stateAuthDescription;
+
+  /// No description provided for @statePermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have access'**
+  String get statePermissionTitle;
+
+  /// No description provided for @statePermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This is limited to its owner or to approved roles. Ask the owner if you need access.'**
+  String get statePermissionDescription;
+
+  /// No description provided for @stateNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get stateNotFoundTitle;
+
+  /// No description provided for @stateNotFoundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'It may have been removed or made private.'**
+  String get stateNotFoundDescription;
+
+  /// No description provided for @stateValidationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Some details need changes'**
+  String get stateValidationTitle;
+
+  /// No description provided for @stateValidationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The request wasn\'t accepted as sent. Review the details and try again.'**
+  String get stateValidationDescription;
+
+  /// No description provided for @stateRateLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts'**
+  String get stateRateLimitTitle;
+
+  /// No description provided for @stateRateLimitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a minute before trying again.'**
+  String get stateRateLimitDescription;
+
+  /// No description provided for @stateWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet not ready'**
+  String get stateWalletTitle;
+
+  /// No description provided for @stateWalletDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect your wallet or unlock it, then try again.'**
+  String get stateWalletDescription;
+
+  /// No description provided for @stateUnsupportedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available here'**
+  String get stateUnsupportedTitle;
+
+  /// No description provided for @stateUnsupportedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature isn\'t supported on this device or in this version.'**
+  String get stateUnsupportedDescription;
+
+  /// No description provided for @stateUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get stateUnknownTitle;
+
+  /// No description provided for @stateUnknownDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete this. Try again.'**
+  String get stateUnknownDescription;
+
+  /// No description provided for @stateLoadingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more'**
+  String get stateLoadingMore;
+
+  /// No description provided for @peopleRoleArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get peopleRoleArtist;
+
+  /// No description provided for @peopleRoleInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get peopleRoleInstitution;
+
+  /// No description provided for @peopleVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get peopleVerifiedLabel;
+
+  /// No description provided for @peopleFollowToggleSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow {name}'**
+  String peopleFollowToggleSemantic(String name);
+
+  /// No description provided for @collabInboxIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept an invitation to help manage an event, exhibition, artwork or collection.'**
+  String get collabInboxIntro;
+
+  /// No description provided for @collabInviteNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation'**
+  String get collabInviteNotion;
+
+  /// No description provided for @collabEntityEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get collabEntityEvent;
+
+  /// No description provided for @collabEntityExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get collabEntityExhibition;
+
+  /// No description provided for @collabEntityArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get collabEntityArtwork;
+
+  /// No description provided for @collabEntityCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get collabEntityCollection;
+
+  /// No description provided for @collabEntityItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get collabEntityItem;
+
+  /// No description provided for @collabInviteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String collabInviteFrom(String name);
+
+  /// No description provided for @collabInviteRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role: {role}'**
+  String collabInviteRole(String role);
+
+  /// No description provided for @collabInviteReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {date}'**
+  String collabInviteReceived(String date);
+
+  /// No description provided for @collabInviteExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String collabInviteExpires(String date);
+
+  /// No description provided for @collabUnknownSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get collabUnknownSender;
+
+  /// No description provided for @collabAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get collabAccept;
+
+  /// No description provided for @collabDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get collabDecline;
+
+  /// No description provided for @collabAcceptedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation accepted. You can now help manage it.'**
+  String get collabAcceptedToast;
+
+  /// No description provided for @collabDeclinedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation declined.'**
+  String get collabDeclinedToast;
+
+  /// No description provided for @collabAcceptFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t accept the invitation. Try again.'**
+  String get collabAcceptFailedToast;
+
+  /// No description provided for @collabDeclineFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t decline the invitation. Try again.'**
+  String get collabDeclineFailedToast;
+
+  /// No description provided for @collabCannotOpenItemToast.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation doesn\'t point to an item that can be opened here.'**
+  String get collabCannotOpenItemToast;
+
+  /// No description provided for @collabEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No invitations right now'**
+  String get collabEmptyTitle;
+
+  /// No description provided for @collabEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone invites you to collaborate, it appears here.'**
+  String get collabEmptyDescription;
+
+  /// No description provided for @collabInviteSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation to {entity} as {role}, from {name}'**
+  String collabInviteSemantic(String entity, String role, String name);
+
+  /// No description provided for @studioNotionPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get studioNotionPractice;
+
+  /// No description provided for @institutionNotionProgramme.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get institutionNotionProgramme;
+
+  /// No description provided for @dashboardNotionNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers'**
+  String get dashboardNotionNumbers;
+
+  /// No description provided for @dashboardNotionInfrastructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Infrastructure'**
+  String get dashboardNotionInfrastructure;
+
+  /// No description provided for @dashboardNumbersCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts from art.kubus activity on your public profile.'**
+  String get dashboardNumbersCaption;
+
+  /// No description provided for @institutionStatProgrammeViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme page views'**
+  String get institutionStatProgrammeViews;
+
+  /// No description provided for @walletNetworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get walletNetworkLabel;
+
+  /// No description provided for @walletAddressHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get walletAddressHeading;
+
+  /// No description provided for @walletAddressSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet address {address}'**
+  String walletAddressSemantic(String address);
+
+  /// No description provided for @walletCopyAddressTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get walletCopyAddressTooltip;
+
+  /// No description provided for @walletReadOnlyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only session'**
+  String get walletReadOnlyStatus;
+
+  /// No description provided for @walletKub8BalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 balance'**
+  String get walletKub8BalanceLabel;
+
+  /// No description provided for @walletSolBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SOL balance'**
+  String get walletSolBalanceLabel;
+
+  /// No description provided for @walletBalanceAmountSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: {amount} {unit}'**
+  String walletBalanceAmountSemantic(String label, String amount, String unit);
+
+  /// No description provided for @walletActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get walletActionsTitle;
+
+  /// No description provided for @walletTechnicalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical'**
+  String get walletTechnicalTitle;
+
+  /// No description provided for @marketplaceListingValueSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'{source}: {amount} {currency}. {state}'**
+  String marketplaceListingValueSemantic(
+      String source, String amount, String currency, String state);
+
+  /// No description provided for @promotionBuilderSwitchNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch your wallet to the {cluster} network required by this quote, then try again.'**
+  String promotionBuilderSwitchNetwork(String cluster);
+
+  /// No description provided for @promotionStatusPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get promotionStatusPendingReview;
+
+  /// No description provided for @promotionStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get promotionStatusApproved;
+
+  /// No description provided for @promotionStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get promotionStatusActive;
+
+  /// No description provided for @daoProposalStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get daoProposalStatusDraft;
+
+  /// No description provided for @daoProposalStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get daoProposalStatusActive;
+
+  /// No description provided for @daoProposalStatusVoting.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting open'**
+  String get daoProposalStatusVoting;
+
+  /// No description provided for @daoProposalStatusPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed'**
+  String get daoProposalStatusPassed;
+
+  /// No description provided for @daoProposalStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not passed'**
+  String get daoProposalStatusFailed;
+
+  /// No description provided for @daoProposalStatusExecuted.
+  ///
+  /// In en, this message translates to:
+  /// **'Executed'**
+  String get daoProposalStatusExecuted;
+
+  /// No description provided for @daoVotingEndsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ends {date}'**
+  String daoVotingEndsLabel(String date);
+
+  /// No description provided for @daoVotingEndedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting ended {date}'**
+  String daoVotingEndedLabel(String date);
+
+  /// No description provided for @daoQuorumRequirementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quorum required: {percent}% of voting power'**
+  String daoQuorumRequirementLabel(String percent);
+
+  /// No description provided for @daoResultsNotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get daoResultsNotion;
+
+  /// No description provided for @daoNotEligibleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No voting power in this wallet'**
+  String get daoNotEligibleTitle;
+
+  /// No description provided for @daoNotEligibleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.'**
+  String get daoNotEligibleBody;
+
+  /// No description provided for @daoTreasuryOnChainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain treasury balance'**
+  String get daoTreasuryOnChainLabel;
+
+  /// No description provided for @daoTreasuryLedgerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded treasury movements'**
+  String get daoTreasuryLedgerLabel;
 }
 
 class _AppLocalizationsDelegate

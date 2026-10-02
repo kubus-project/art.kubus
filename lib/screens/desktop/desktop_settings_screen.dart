@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/config_provider.dart';
 import '../../providers/glass_capabilities_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
@@ -46,12 +47,14 @@ import '../../widgets/glass_components.dart';
 import '../../widgets/wallet_custody_status_panel.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_backup_status.dart';
+import '../../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
 part 'desktop_settings_screen_parts/desktop_settings_screen_p1.dart';
 part 'desktop_settings_screen_parts/desktop_settings_screen_p2.dart';
 part 'desktop_settings_screen_parts/desktop_settings_screen_p3.dart';
+
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
 class DesktopSettingsScreen extends StatefulWidget {
@@ -107,8 +110,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _publicProfile = true;
 
   // App settings state
-  bool _analytics = true;
-  bool _crashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
 
   // Wallet settings state
@@ -136,15 +137,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _loadSettings();
   }
 
-
-
-
-
-
-
-
-
-
   @override
   void dispose() {
     _animationController.dispose();
@@ -158,12 +150,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
-    final scheme = Theme.of(context).colorScheme;
-    final sidebarStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-      tintBase: scheme.surface,
-    );
+    final roles = KubusColorRoles.of(context);
     final content = AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -176,29 +163,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (isLarge)
+                // Settings is structure, not a map/media overlay: a flat
+                // surface with a right hairline, no glass.
                 SizedBox(
                   width: 280,
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
+                      color: roles.surface,
                       border: Border(
-                        right: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
-                        ),
+                        right: KubusBorders.hairlineSide(context),
                       ),
                     ),
-                    child: LiquidGlassPanel(
-                      padding: EdgeInsets.zero,
-                      margin: EdgeInsets.zero,
-                      borderRadius: BorderRadius.zero,
-                      blurSigma: sidebarStyle.blurSigma,
-                      fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
-                      showBorder: false,
-                      backgroundColor: sidebarStyle.tintColor,
-                      child: _buildSettingsSidebar(themeProvider),
-                    ),
+                    child: _buildSettingsSidebar(themeProvider),
                   ),
                 ),
               Expanded(
@@ -221,52 +197,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
     return AnimatedGradientBackground(child: scaffold);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 class _SettingsItem {

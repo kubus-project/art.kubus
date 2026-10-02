@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
@@ -328,7 +330,11 @@ class ARIntegrationService {
 
   /// Dispose resources
   void dispose() {
-    _arManager.dispose();
+    // Callers are `State.dispose()`, which cannot await. `ARManager.dispose()`
+    // never throws, so dropping the future cannot produce an unobserved
+    // rejection. Await `ARManager.dispose()` directly where the camera must be
+    // confirmed released before another owner starts.
+    unawaited(_arManager.dispose());
     _nearbyMarkers.clear();
     _currentLocation = null;
     _lastMarkerRefresh = null;

@@ -68,10 +68,17 @@ class CollabProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
+  Object? _invitesError;
   bool _initialized = false;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  /// Why the last invite inbox load failed, as the caught object (typically
+  /// a [BackendApiRequestException] carrying the HTTP status), so the inbox
+  /// can classify it with `classifyKubusFailure`. Null after a successful
+  /// load. Never shown to people as text.
+  Object? get invitesError => _invitesError;
   bool get initialized => _initialized;
   List<CollabInvite> get invitesInbox => List.unmodifiable(_invitesInbox);
 
@@ -209,6 +216,7 @@ class CollabProvider extends ChangeNotifier {
     _invitesInbox.clear();
     _membersByEntityKey.clear();
     _error = null;
+    _invitesError = null;
 
     if (clearKnownInvites) {
       _knownInviteIds.clear();
@@ -474,6 +482,7 @@ class CollabProvider extends ChangeNotifier {
       _setLoading(true);
     }
     _error = null;
+    _invitesError = null;
 
     try {
       final token = (_api.getAuthToken() ?? '').trim();
@@ -526,12 +535,14 @@ class CollabProvider extends ChangeNotifier {
         _inviteBackoffUntil = DateTime.now().add(next);
 
         _error = 'Invites temporarily unavailable';
+        _invitesError = e;
         notifyListeners();
         _evaluateInvitePollingState();
         return;
       }
 
       _error = e.toString();
+      _invitesError = e;
       notifyListeners();
       _evaluateInvitePollingState();
     } finally {

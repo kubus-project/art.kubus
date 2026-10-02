@@ -30,7 +30,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
     required this.markers,
     required this.basePosition,
     required this.isLoading,
-    required this.travelModeEnabled,
+    required this.viewportScope,
     required this.radiusKm,
     this.titleKey,
     this.discoveryProgress,
@@ -47,7 +47,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
   final List<ArtMarker> markers;
   final LatLng? basePosition;
   final bool isLoading;
-  final bool travelModeEnabled;
+  final bool viewportScope;
   final double radiusKm;
   final Key? titleKey;
   final double? discoveryProgress;
@@ -103,7 +103,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       markers: widget.markers,
       basePosition: widget.basePosition,
       isLoading: widget.isLoading,
-      travelModeEnabled: widget.travelModeEnabled,
+      viewportScope: widget.viewportScope,
       radiusKm: widget.radiusKm,
       titleKey: widget.titleKey,
       discoveryProgress: widget.discoveryProgress,

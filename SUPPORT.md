@@ -21,8 +21,11 @@ Helpful commands to include:
 
 ### Questions, ideas, and proposals
 
-- If GitHub Discussions are enabled for this repo: use Discussions.
-- Otherwise: open an issue and label it as a question/idea.
+- Questions about using or building the app: [Discussions, Q&A](https://github.com/kubus-project/art.kubus/discussions/categories/q-a)
+- Ideas and proposals: [Discussions, Ideas](https://github.com/kubus-project/art.kubus/discussions/categories/ideas)
+- Anything else, including feedback: [Discussions, General](https://github.com/kubus-project/art.kubus/discussions/categories/general)
+
+Want to contribute a fix yourself? Start with [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Security vulnerabilities
 

@@ -17,6 +17,7 @@ import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -304,7 +305,8 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Create an account" to enter account branch
-    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
+    await tester
+        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     // Should show account step with auth panel
@@ -1311,8 +1313,13 @@ void main() {
         tester.widget<Icon>(find.byIcon(Icons.language).first);
     final lightThemeIcon =
         tester.widget<Icon>(find.byIcon(Icons.brightness_6_outlined).first);
-    expect(lightLanguageIcon.color, equals(Colors.black));
-    expect(lightThemeIcon.color, equals(Colors.black));
+    // Header controls use the foreground role: near-black on light ground.
+    final lightForeground = KubusColorRoles.of(
+      tester.element(find.byIcon(Icons.language).first),
+    ).foreground;
+    expect(lightLanguageIcon.color, equals(lightForeground));
+    expect(lightThemeIcon.color, equals(lightForeground));
+    expect(lightForeground.computeLuminance(), lessThan(0.1));
 
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(
@@ -1328,8 +1335,12 @@ void main() {
         tester.widget<Icon>(find.byIcon(Icons.language).first);
     final darkThemeIcon =
         tester.widget<Icon>(find.byIcon(Icons.brightness_6_outlined).first);
-    expect(darkLanguageIcon.color, equals(Colors.white));
-    expect(darkThemeIcon.color, equals(Colors.white));
+    final darkForeground = KubusColorRoles.of(
+      tester.element(find.byIcon(Icons.language).first),
+    ).foreground;
+    expect(darkLanguageIcon.color, equals(darkForeground));
+    expect(darkThemeIcon.color, equals(darkForeground));
+    expect(darkForeground.computeLuminance(), greaterThan(0.6));
   });
 
   testWidgets('onboarding header keeps enlarged auth title footprint',
@@ -1346,7 +1357,8 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Enter account branch to get the header with AuthTitleRow
-    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
+    await tester
+        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     final titleSize = tester.getSize(find.byType(AuthTitleRow).first);

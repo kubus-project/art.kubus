@@ -46,6 +46,40 @@ class EventsProvider extends ChangeNotifier {
   KubusEvent? get selectedEvent => _selected;
   KubusEvent? eventById(String id) => _byId[id.trim()];
 
+  /// Adds a public SSR presentation to the existing event cache without
+  /// marking it detail-hydrated, so the detail endpoint still revalidates it.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final dates = presentation['dates'];
+    final dateMap = dates is Map
+        ? Map<String, dynamic>.from(dates)
+        : const <String, dynamic>{};
+    final place = presentation['place'];
+    final placeMap = place is Map
+        ? Map<String, dynamic>.from(place)
+        : const <String, dynamic>{};
+    final media = presentation['primaryMedia'];
+    final mediaMap = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
+    final event = KubusEvent.fromJson(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'description': presentation['description']?.toString() ?? '',
+      'starts_at': dateMap['start'],
+      'ends_at': dateMap['end'],
+      'location_name': placeMap['label'],
+      'city': placeMap['city'],
+      'country': placeMap['country'],
+      'latitude': placeMap['latitude'],
+      'longitude': placeMap['longitude'],
+      'cover_url': mediaMap['url'],
+      'status': 'published',
+    });
+    if (event.id.trim().isNotEmpty && event.title.trim().isNotEmpty) {
+      _upsertEvent(event, notify: true, detailHydrated: false);
+    }
+  }
+
   /// Whether [eventById] would return a detail-loaded record for [id].
   bool isEventDetailHydrated(String id) =>
       _detailHydratedIds.contains(id.trim());
@@ -65,7 +99,8 @@ class EventsProvider extends ChangeNotifier {
 
   List<Exhibition> exhibitionsForEvent(String eventId) {
     return List.unmodifiable(
-        _exhibitionsByEventId[eventId] ?? const <Exhibition>[]);
+      _exhibitionsByEventId[eventId] ?? const <Exhibition>[],
+    );
   }
 
   EventPoapStatus? poapStatusFor(String eventId) => _poapByEventId[eventId];
@@ -222,7 +257,9 @@ class EventsProvider extends ChangeNotifier {
   /// activation counts things brought into existence, and a member who renames
   /// last month's opening has not activated again.
   Future<KubusEvent?> updateEvent(
-      String id, Map<String, dynamic> updates) async {
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     _setFlag(_Flag.mutating, true);
     _error = null;
     try {
@@ -279,8 +316,11 @@ class EventsProvider extends ChangeNotifier {
   }) async {
     _setFlag(_Flag.relation, true);
     try {
-      final list = await _api.listEventExhibitions(eventId,
-          limit: limit, offset: offset);
+      final list = await _api.listEventExhibitions(
+        eventId,
+        limit: limit,
+        offset: offset,
+      );
       if (refresh) {
         _exhibitionsByEventId[eventId] = list;
       } else {
@@ -319,7 +359,9 @@ class EventsProvider extends ChangeNotifier {
   }
 
   Future<void> unlinkEventExhibition(
-      String eventId, String exhibitionId) async {
+    String eventId,
+    String exhibitionId,
+  ) async {
     _setFlag(_Flag.relation, true);
     try {
       await _api.unlinkEventExhibition(eventId, exhibitionId);
@@ -337,8 +379,10 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
-  Future<EventPoapStatus?> fetchEventPoap(String eventId,
-      {bool force = false}) async {
+  Future<EventPoapStatus?> fetchEventPoap(
+    String eventId, {
+    bool force = false,
+  }) async {
     if (!force && _poapByEventId.containsKey(eventId)) {
       return _poapByEventId[eventId];
     }
@@ -388,7 +432,9 @@ class EventsProvider extends ChangeNotifier {
 
   /// Creator-side POAP badge configuration (enable/update/disable).
   Future<void> upsertEventPoap(
-      String eventId, Map<String, dynamic> payload) async {
+    String eventId,
+    Map<String, dynamic> payload,
+  ) async {
     _setFlag(_Flag.relation, true);
     try {
       await _api.upsertEventPoap(eventId, payload);
@@ -461,11 +507,4 @@ class EventsProvider extends ChangeNotifier {
   }
 }
 
-enum _Flag {
-  list,
-  detail,
-  mutating,
-  relation,
-  poapLoading,
-  poapClaiming,
-}
+enum _Flag { list, detail, mutating, relation, poapLoading, poapClaiming }

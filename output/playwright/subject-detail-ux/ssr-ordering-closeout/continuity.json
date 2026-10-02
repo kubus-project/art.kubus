@@ -1,0 +1,765 @@
+{
+  "sourceAppHead": "a3dff933e8983f348d6a638664e1d17a0d5786c1",
+  "rendererBranch": "fix/subject-detail-ssr-ordering",
+  "preview": "http://127.0.0.1:4177",
+  "fixtures": "synthetic public-only SEO preview fixtures",
+  "comparison": "SSR top-order/identity bounds and Flutter viewport/scroll/canonical continuity; screenshots are retained alongside this report",
+  "desktopRegressionWidths": [
+    900,
+    1024,
+    1280,
+    1440
+  ],
+  "results": [
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "media": {
+        "top": 70,
+        "left": 16,
+        "width": 358,
+        "height": 464
+      },
+      "mediaOrder": "-1",
+      "title": {
+        "top": 584,
+        "left": 16,
+        "width": 358,
+        "height": 44
+      },
+      "firstContext": {
+        "top": 650,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 0,
+        "left": 0,
+        "width": 0,
+        "height": 0
+      },
+      "venueOrInstitutionDisplay": "none",
+      "dateAndLocationFacts": {
+        "top": 650,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 554,
+        "left": 16,
+        "width": 358,
+        "height": 313
+      },
+      "layoutColumns": "358px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-390-chromium-ssr.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "flutter",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 390,
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "pathname": "/en/events/33333333-3333-4333-8333-333333333333",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-390-chromium-flutter.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 1440,
+      "scrollY": 0,
+      "scrollWidth": 1440,
+      "media": {
+        "top": 99,
+        "left": 832,
+        "width": 472,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 128,
+        "left": 136,
+        "width": 638,
+        "height": 72
+      },
+      "firstContext": {
+        "top": 263,
+        "left": 136,
+        "width": 638,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 216,
+        "left": 136,
+        "width": 638,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 263,
+        "left": 136,
+        "width": 638,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 99,
+        "left": 136,
+        "width": 638,
+        "height": 381
+      },
+      "layoutColumns": "638.469px 471.938px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-1440-chromium-ssr.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "flutter",
+      "viewportWidth": 1440,
+      "scrollY": 0,
+      "scrollWidth": 1440,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 1440,
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "pathname": "/en/events/33333333-3333-4333-8333-333333333333",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-1440-chromium-flutter.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 900,
+      "scrollY": 0,
+      "scrollWidth": 900,
+      "media": {
+        "top": 86,
+        "left": 529,
+        "width": 347,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 115,
+        "left": 24,
+        "width": 469,
+        "height": 46
+      },
+      "firstContext": {
+        "top": 224,
+        "left": 24,
+        "width": 469,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 177,
+        "left": 24,
+        "width": 469,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 224,
+        "left": 24,
+        "width": 469,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 86,
+        "left": 24,
+        "width": 469,
+        "height": 355
+      },
+      "layoutColumns": "469.188px 346.812px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": null
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 1024,
+      "scrollY": 0,
+      "scrollWidth": 1024,
+      "media": {
+        "top": 89,
+        "left": 603,
+        "width": 397,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 119,
+        "left": 24,
+        "width": 538,
+        "height": 52
+      },
+      "firstContext": {
+        "top": 234,
+        "left": 24,
+        "width": 538,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 187,
+        "left": 24,
+        "width": 538,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 234,
+        "left": 24,
+        "width": 538,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 89,
+        "left": 24,
+        "width": 538,
+        "height": 362
+      },
+      "layoutColumns": "537.641px 397.391px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": null
+    },
+    {
+      "browser": "chromium",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 1280,
+      "scrollY": 0,
+      "scrollWidth": 1280,
+      "media": {
+        "top": 97,
+        "left": 749,
+        "width": 475,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 127,
+        "left": 56,
+        "width": 642,
+        "height": 65
+      },
+      "firstContext": {
+        "top": 255,
+        "left": 56,
+        "width": 642,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 208,
+        "left": 56,
+        "width": 642,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 255,
+        "left": 56,
+        "width": 642,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 97,
+        "left": 56,
+        "width": 642,
+        "height": 375
+      },
+      "layoutColumns": "642.156px 474.656px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": null
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "media": {
+        "top": 70,
+        "left": 16,
+        "width": 358,
+        "height": 464
+      },
+      "mediaOrder": "-1",
+      "title": {
+        "top": 584,
+        "left": 16,
+        "width": 358,
+        "height": 44
+      },
+      "firstContext": {
+        "top": 643,
+        "left": 16,
+        "width": 358,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 643,
+        "left": 16,
+        "width": 358,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 690,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 554,
+        "left": 16,
+        "width": 358,
+        "height": 485
+      },
+      "layoutColumns": "358px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-390-chromium-ssr.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "flutter",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 390,
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "pathname": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-390-chromium-flutter.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 1440,
+      "scrollY": 0,
+      "scrollWidth": 1440,
+      "media": {
+        "top": 99,
+        "left": 832,
+        "width": 472,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 128,
+        "left": 136,
+        "width": 638,
+        "height": 72
+      },
+      "firstContext": {
+        "top": 216,
+        "left": 136,
+        "width": 638,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 216,
+        "left": 136,
+        "width": 638,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 263,
+        "left": 136,
+        "width": 638,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 99,
+        "left": 136,
+        "width": 638,
+        "height": 487
+      },
+      "layoutColumns": "638.469px 471.938px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-1440-chromium-ssr.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "flutter",
+      "viewportWidth": 1440,
+      "scrollY": 0,
+      "scrollWidth": 1440,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 1440,
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "pathname": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-1440-chromium-flutter.png"
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 900,
+      "scrollY": 0,
+      "scrollWidth": 900,
+      "media": {
+        "top": 86,
+        "left": 529,
+        "width": 347,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 115,
+        "left": 24,
+        "width": 469,
+        "height": 46
+      },
+      "firstContext": {
+        "top": 177,
+        "left": 24,
+        "width": 469,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 177,
+        "left": 24,
+        "width": 469,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 224,
+        "left": 24,
+        "width": 469,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 86,
+        "left": 24,
+        "width": 469,
+        "height": 488
+      },
+      "layoutColumns": "469.188px 346.812px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": null
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 1024,
+      "scrollY": 0,
+      "scrollWidth": 1024,
+      "media": {
+        "top": 89,
+        "left": 603,
+        "width": 397,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 119,
+        "left": 24,
+        "width": 538,
+        "height": 52
+      },
+      "firstContext": {
+        "top": 187,
+        "left": 24,
+        "width": 538,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 187,
+        "left": 24,
+        "width": 538,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 234,
+        "left": 24,
+        "width": 538,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 89,
+        "left": 24,
+        "width": 538,
+        "height": 467
+      },
+      "layoutColumns": "537.641px 397.391px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": null
+    },
+    {
+      "browser": "chromium",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 1280,
+      "scrollY": 0,
+      "scrollWidth": 1280,
+      "media": {
+        "top": 97,
+        "left": 749,
+        "width": 475,
+        "height": 608
+      },
+      "mediaOrder": "0",
+      "title": {
+        "top": 127,
+        "left": 56,
+        "width": 642,
+        "height": 65
+      },
+      "firstContext": {
+        "top": 208,
+        "left": 56,
+        "width": 642,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 208,
+        "left": 56,
+        "width": 642,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 255,
+        "left": 56,
+        "width": 642,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 97,
+        "left": 56,
+        "width": 642,
+        "height": 480
+      },
+      "layoutColumns": "642.156px 474.656px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": null
+    },
+    {
+      "browser": "firefox",
+      "type": "event",
+      "state": "ssr",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "media": {
+        "top": 70,
+        "left": 16,
+        "width": 358,
+        "height": 464
+      },
+      "mediaOrder": "-1",
+      "title": {
+        "top": 584,
+        "left": 16,
+        "width": 358,
+        "height": 44
+      },
+      "firstContext": {
+        "top": 650,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "venueOrInstitution": {
+        "top": 0,
+        "left": 0,
+        "width": 0,
+        "height": 0
+      },
+      "venueOrInstitutionDisplay": "none",
+      "dateAndLocationFacts": {
+        "top": 650,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 554,
+        "left": 16,
+        "width": 358,
+        "height": 313
+      },
+      "layoutColumns": "358px",
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "heading": "Art by the River",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-390-firefox-ssr.png"
+    },
+    {
+      "browser": "firefox",
+      "type": "event",
+      "state": "flutter",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 390,
+      "canonical": "http://127.0.0.1:4177/en/events/33333333-3333-4333-8333-333333333333",
+      "pathname": "/en/events/33333333-3333-4333-8333-333333333333",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/event-390-firefox-flutter.png"
+    },
+    {
+      "browser": "firefox",
+      "type": "exhibition",
+      "state": "ssr",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "media": {
+        "top": 70,
+        "left": 16,
+        "width": 358,
+        "height": 464
+      },
+      "mediaOrder": "-1",
+      "title": {
+        "top": 584,
+        "left": 16,
+        "width": 358,
+        "height": 44
+      },
+      "firstContext": {
+        "top": 643,
+        "left": 16,
+        "width": 358,
+        "height": 24
+      },
+      "venueOrInstitution": {
+        "top": 643,
+        "left": 16,
+        "width": 358,
+        "height": 24
+      },
+      "venueOrInstitutionDisplay": "block",
+      "dateAndLocationFacts": {
+        "top": 690,
+        "left": 16,
+        "width": 358,
+        "height": 82
+      },
+      "mediaImage": {
+        "complete": true,
+        "width": 1200,
+        "height": 630
+      },
+      "detail": {
+        "top": 554,
+        "left": 16,
+        "width": 358,
+        "height": 488
+      },
+      "layoutColumns": "358px",
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "heading": "Shared Currents",
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-390-firefox-ssr.png"
+    },
+    {
+      "browser": "firefox",
+      "type": "exhibition",
+      "state": "flutter",
+      "viewportWidth": 390,
+      "scrollY": 0,
+      "scrollWidth": 390,
+      "flutterLeft": 0,
+      "flutterTop": 0,
+      "flutterWidth": 390,
+      "canonical": "http://127.0.0.1:4177/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "pathname": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "publicDocumentHidden": true,
+      "screenshot": "output/playwright/subject-detail-ux/ssr-ordering-closeout/exhibition-390-firefox-flutter.png"
+    }
+  ]
+}

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum MapViewModeControlsDensity {
-  mobileRail,
-  desktopToolbar,
-}
+enum MapViewModeControlsDensity { mobileRail, desktopToolbar }
 
 @immutable
 class MapViewModeControlSpec {
@@ -23,32 +20,23 @@ class MapViewModeControlSpec {
 }
 
 typedef MapViewModeControlButtonBuilder = Widget Function(
-  BuildContext context,
-  MapViewModeControlSpec spec,
-);
+    BuildContext context, MapViewModeControlSpec spec);
 
 typedef MapViewModeControlsSeparatorBuilder = Widget Function(
-  BuildContext context,
-);
+    BuildContext context);
 
-/// Shared travel/isometric map mode controls used by mobile + desktop layouts.
+/// Shared isometric map mode controls used by mobile + desktop layouts.
 ///
 /// This widget is UI-only; screens/controllers own side effects.
 class MapViewModeControls extends StatelessWidget {
   const MapViewModeControls({
     super.key,
     required this.density,
-    required this.showTravelModeToggle,
-    required this.travelModeActive,
-    required this.onToggleTravelMode,
     required this.showIsometricViewToggle,
     required this.isometricViewActive,
     required this.onToggleIsometricView,
-    required this.travelModeIcon,
     required this.isometricViewIcon,
-    required this.travelModeTooltip,
     required this.isometricViewTooltip,
-    this.travelModeKey,
     this.buttonBuilder,
     this.separatorBuilder,
     this.gap = 10.0,
@@ -56,13 +44,6 @@ class MapViewModeControls extends StatelessWidget {
   });
 
   final MapViewModeControlsDensity density;
-
-  final bool showTravelModeToggle;
-  final bool travelModeActive;
-  final VoidCallback? onToggleTravelMode;
-  final IconData travelModeIcon;
-  final String travelModeTooltip;
-  final Key? travelModeKey;
 
   final bool showIsometricViewToggle;
   final bool isometricViewActive;
@@ -113,17 +94,6 @@ class MapViewModeControls extends StatelessWidget {
 
   List<MapViewModeControlSpec> _buildSpecs() {
     final specs = <MapViewModeControlSpec>[];
-    if (showTravelModeToggle && onToggleTravelMode != null) {
-      specs.add(
-        MapViewModeControlSpec(
-          icon: travelModeIcon,
-          tooltip: travelModeTooltip,
-          active: travelModeActive,
-          onPressed: onToggleTravelMode,
-          controlKey: travelModeKey,
-        ),
-      );
-    }
     if (showIsometricViewToggle && onToggleIsometricView != null) {
       specs.add(
         MapViewModeControlSpec(
@@ -150,9 +120,6 @@ class MapViewModeControls extends StatelessWidget {
       color: spec.active ? Theme.of(context).colorScheme.primary : null,
     );
     if (spec.controlKey == null) return child;
-    return KeyedSubtree(
-      key: spec.controlKey,
-      child: child,
-    );
+    return KeyedSubtree(key: spec.controlKey, child: child);
   }
 }

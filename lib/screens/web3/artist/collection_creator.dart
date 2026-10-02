@@ -436,7 +436,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           contextType: DesktopCreatorContextType.collection,
           semantic: DesktopCreatorSectionSemantic.status,
         ),
-        sidebarAccentColor: studioAccent,
         mainContent: formBody,
         sidebar: _buildDesktopSidebar(
           l10n,

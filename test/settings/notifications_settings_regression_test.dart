@@ -1,5 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
+import 'package:art_kubus/providers/config_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -19,6 +21,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+UserProfile _signedInProfile() => UserProfile(
+      id: 'notification-settings-profile',
+      walletAddress: 'notification-settings-wallet',
+      username: 'tester',
+      displayName: 'Tester',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
 Widget _wrapWithApp({
   required Widget home,
   required ThemeProvider themeProvider,
@@ -33,6 +46,7 @@ Widget _wrapWithApp({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => ConfigProvider()),
       ChangeNotifierProvider.value(value: themeProvider),
       ChangeNotifierProvider.value(value: profileProvider),
       ChangeNotifierProvider.value(value: web3Provider),
@@ -92,7 +106,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final themeProvider = ThemeProvider();
-    final profileProvider = ProfileProvider();
+    final profileProvider = ProfileProvider()
+      ..setCurrentUser(_signedInProfile());
     await profileProvider.initialize();
 
     final solana = SolanaWalletService();
@@ -145,7 +160,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final themeProvider = ThemeProvider();
-    final profileProvider = ProfileProvider();
+    final profileProvider = ProfileProvider()
+      ..setCurrentUser(_signedInProfile());
     await profileProvider.initialize();
 
     final solana = SolanaWalletService();

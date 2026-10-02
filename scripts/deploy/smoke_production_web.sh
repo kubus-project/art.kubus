@@ -37,10 +37,9 @@ smoke_curl() { curl "${smoke_proxy_args[@]}" "${smoke_bypass_args[@]}" "$@"; }
 
 # The application now boots directly at the site root: there is no longer a 308
 # to /en, and /en and /sl are localized Flutter entries rather than generic
-# server-rendered homepages. Root is still the first request after the atomic
-# symlink swap, and it was the only assertion here without a retry, so any single
-# transient response (a host filter's first-contact challenge, or LiteSpeed still
-# holding the previous release's document root) failed the deploy and rolled back
+# server-rendered homepages. Root is still the first request after physical
+# webroot promotion, and it was the only assertion here without a retry, so any single
+# transient response from the host or its cache failed the deploy and rolled back
 # a good release. curl's own --retry cannot cover this: it only retries transient
 # statuses (408/429/5xx), and the body has to be inspected rather than --fail on
 # status, so the poll is explicit. Status and body come from one request so the

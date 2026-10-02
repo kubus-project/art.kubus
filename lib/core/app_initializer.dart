@@ -30,7 +30,7 @@ import '../services/share/share_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
-import 'app_navigator.dart';
+import 'app_navigator.dart' show AppStartupGate, appNavigatorKey;
 import 'app_initializer_helper.dart';
 import 'startup_trace.dart';
 import 'deep_link_startup_routing.dart';
@@ -119,10 +119,7 @@ class _AppInitializerState extends State<AppInitializer> {
     return true;
   }
 
-  Future<bool> _openPreferredPublicMap(
-    NavigatorState navigator, {
-    String initialStepId = 'account',
-  }) async {
+  Future<bool> _openPreferredPublicMap(NavigatorState navigator) async {
     if (!_isDirectPublicMapEntry) return false;
     // Mirror the normal direct-map entry: both map screens suppress automatic
     // coach marks by reading the guest flag, so it has to be persisted before
@@ -138,15 +135,6 @@ class _AppInitializerState extends State<AppInitializer> {
       timeout: const Duration(seconds: 2),
     );
     if (!mounted || _didNavigate) return true;
-    try {
-      Provider.of<DeferredOnboardingProvider>(
-        navigator.context,
-        listen: false,
-      ).enableForProtectedAction(
-        initialStepId: initialStepId,
-        completionRoute: ShellRoutes.map,
-      );
-    } catch (_) {}
     _didNavigate = true;
     navigator.pushReplacementNamed(ShellRoutes.map);
     return true;
@@ -170,17 +158,21 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!mounted || _didNavigate) return;
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
-    if (_openPendingPublicTarget(navigator)) return;
-    if (await _openPreferredPublicMap(navigator)) return;
-    if (!mounted || _didNavigate) return;
-    final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
-    _didNavigate = true;
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-        settings: const RouteSettings(name: '/onboarding'),
-      ),
-    );
+    try {
+      if (_openPendingPublicTarget(navigator)) return;
+      if (await _openPreferredPublicMap(navigator)) return;
+      if (!mounted || _didNavigate) return;
+      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
+      _didNavigate = true;
+      navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+          settings: const RouteSettings(name: '/onboarding'),
+        ),
+      );
+    } finally {
+      AppStartupGate.markReady();
+    }
   }
 
   @override
@@ -732,7 +724,7 @@ class _AppInitializerState extends State<AppInitializer> {
         final pendingVerificationEmail =
             prefs.getString('onboarding_verification_email_v3');
 
-        if (hasActiveOnboardingGuard && hasValidSession) {
+        if (hasActiveAccountLinkGuard && hasValidSession) {
           final hydratedProfileWallet =
               (profileProvider.currentUser?.walletAddress ?? '').trim();
           final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
@@ -749,6 +741,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 builder: (context) => OnboardingFlowScreen(
                   forceDesktop: isDesktop,
                   initialStepId: 'walletConnect',
+                  requiresWalletSetup: true,
                 ),
                 settings: const RouteSettings(name: '/onboarding'),
               ),
@@ -819,10 +812,9 @@ class _AppInitializerState extends State<AppInitializer> {
             (profileProvider.currentUser?.walletAddress ?? '').trim();
         final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
             (walletAddress ?? '').trim().isNotEmpty;
-        if (!hasValidSession || !hasResolvedWallet) {
-          final initialStepId = hasValidSession && !hasResolvedWallet
-              ? 'walletConnect'
-              : 'account';
+        if (!hasValidSession ||
+            (hasActiveAccountLinkGuard && !hasResolvedWallet)) {
+          final initialStepId = hasValidSession ? 'walletConnect' : 'account';
           if (kDebugMode) {
             debugPrint(
               'AppInitializer: route -> OnboardingFlowScreen (onboarding guard, initialStep=$initialStepId)',
@@ -834,6 +826,8 @@ class _AppInitializerState extends State<AppInitializer> {
               builder: (context) => OnboardingFlowScreen(
                 forceDesktop: isDesktop,
                 initialStepId: initialStepId,
+                requiresWalletSetup:
+                    hasActiveAccountLinkGuard && hasValidSession,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
@@ -928,6 +922,7 @@ class _AppInitializerState extends State<AppInitializer> {
       StartupTrace.mark('critical bootstrap end (shell route pushed)');
       _startupWatchdog?.cancel();
       _startupWatchdog = null;
+      AppStartupGate.markReady();
       if (!completer.isCompleted) completer.complete();
       _initCompleter = null;
     }

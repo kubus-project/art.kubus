@@ -432,7 +432,6 @@ class _EventCreatorState extends State<EventCreator>
               : l10n.commonSavedToast,
           color: KubusColorRoles.of(context).web3InstitutionAccent,
         ),
-        sidebarAccentColor: KubusColorRoles.of(context).web3InstitutionAccent,
         actions: [
           IconButton(
             tooltip: l10n.eventCreatorHelpTooltip,

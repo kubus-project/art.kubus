@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/attestation_provider.dart';
+import 'package:art_kubus/providers/config_provider.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -152,6 +153,7 @@ Widget _wrapWithApp({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => ConfigProvider()),
       // Provide existing instances via `create` so Provider owns disposal.
       ChangeNotifierProvider(create: (_) => themeProvider),
       ChangeNotifierProvider(create: (_) => profileProvider),

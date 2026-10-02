@@ -132,6 +132,23 @@ void main() {
   });
 
   group('serialisation', () {
+    test('round-trips a collection save action', () {
+      final intent = PendingActionIntent.create(
+        actionType: PendingActionType.save,
+        targetType: PendingActionTargetType.collection,
+        targetId: 'collection-1',
+        targetLabel: 'River walks',
+        returnRoute: '/en/collections/collection-1',
+        sourceScreen: 'collection_detail',
+      )!;
+
+      final decoded = PendingActionIntent.decode(intent.encode())!;
+
+      expect(decoded.targetType, PendingActionTargetType.collection);
+      expect(decoded.targetId, 'collection-1');
+      expect(decoded.returnRoute, '/en/collections/collection-1');
+    });
+
     test('round-trips through storage', () {
       final intent = PendingActionIntent.create(
         actionType: PendingActionType.follow,

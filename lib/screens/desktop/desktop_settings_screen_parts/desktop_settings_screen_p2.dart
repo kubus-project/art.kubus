@@ -544,7 +544,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
-      savedItemsProvider: Provider.of<SavedItemsProvider>(context, listen: false),
+      savedItemsProvider:
+          Provider.of<SavedItemsProvider>(context, listen: false),
     );
 
     if (!mounted) return;
@@ -802,7 +803,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Reduce effects',
+                            AppLocalizations.of(context)!
+                                .settingsReduceEffectsTitle,
                             style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -810,8 +812,10 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           const SizedBox(height: KubusSpacing.xs),
                           Text(
                             autoDetected
-                                ? 'Automatically enabled for this device'
-                                : 'Disable blur, animations and other effects',
+                                ? AppLocalizations.of(context)!
+                                    .settingsReduceEffectsAutoSubtitle
+                                : AppLocalizations.of(context)!
+                                    .settingsReduceEffectsSubtitle,
                             style: KubusTextStyles.detailCaption.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -922,6 +926,47 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
       await profileProvider.updateNotificationPreferences(next);
     }
 
+    final roles = KubusColorRoles.of(context);
+    final canEditEmail = emailPreferencesProvider.canManage &&
+        !emailPreferencesProvider.isUpdating;
+    final email = emailPreferencesProvider.preferences;
+
+    Widget emailToggle(
+      String title,
+      String subtitle,
+      bool value,
+      EmailPreferences Function(bool value) next,
+    ) {
+      return _buildToggleSetting(
+        title,
+        subtitle,
+        value,
+        saveAfterToggle: false,
+        enabled: canEditEmail,
+        onChanged: (value) => unawaited(persistEmailPreferences(next(value))),
+      );
+    }
+
+    Widget appToggle(
+      String title,
+      String subtitle,
+      bool value,
+      NotificationPreferenceSettings Function(bool value) next,
+    ) {
+      return _buildToggleSetting(
+        title,
+        subtitle,
+        value,
+        saveAfterToggle: false,
+        enabled: notificationPreferences.enabled,
+        onChanged: (value) =>
+            unawaited(persistNotificationPreferences(next(value))),
+      );
+    }
+
+    // Email preferences read as three groups (what you opted into, what your
+    // activity sends, what is always on), then app notifications stand as
+    // their own section. Backend keys and semantics are unchanged.
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
@@ -931,426 +976,213 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             Text(
               l10n.permissionsNotificationsTitle,
               style: KubusTextStyles.screenTitle.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: roles.foreground,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: KubusSpacing.lg),
             DesktopCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildToggleSetting(
-                    l10n.settingsPushNotificationsTitle,
-                    l10n.settingsPushNotificationsSubtitle,
-                    _pushNotifications,
-                    saveAfterToggle: false,
-                    onChanged: (value) {
-                      _applyState(() => _pushNotifications = value);
-                      _togglePushNotifications(value);
-                    },
-                  ),
-                  const Divider(height: 32),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.settingsEmailPreferencesSectionTitle,
-                      style: KubusTextStyles.detailCardTitle.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.settingsEmailPreferencesTransactionalNote,
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
+                  SharedSettingsSectionHeader(
+                    icon: Icons.mail_outline,
+                    accent: roles.active,
+                    title: l10n.settingsEmailPreferencesSectionTitle,
+                    subtitle: l10n.settingsEmailPreferencesTransactionalNote,
                   ),
                   if (emailPreferencesProvider.isLoading) ...[
-                    const SizedBox(height: 12),
-                    InlineLoading(height: 2, borderRadius: BorderRadius.circular(2), color: Provider.of<ThemeProvider>(context, listen: false)
-                            .accentColor,),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                    InlineLoading(
+                      height: 2,
+                      borderRadius: BorderRadius.circular(2),
+                      color: roles.active,
+                    ),
                   ],
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesProductUpdatesTitle,
-                    l10n.settingsEmailPreferencesProductUpdatesSubtitle,
-                    emailPreferencesProvider.preferences.marketingProductUpdates,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(marketingProductUpdates: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesNewsletterTitle,
-                    l10n.settingsEmailPreferencesNewsletterSubtitle,
-                    emailPreferencesProvider.preferences.marketingNewsletter,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(marketingNewsletter: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesCommunityDigestTitle,
-                    l10n.settingsEmailPreferencesCommunityDigestSubtitle,
-                    emailPreferencesProvider
-                        .preferences.marketingCommunityDigest,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(marketingCommunityDigest: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityArtTitle,
-                    l10n.settingsEmailPreferencesActivityArtSubtitle,
-                    emailPreferencesProvider.preferences.activityArt,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(activityArt: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityCommunityTitle,
-                    l10n.settingsEmailPreferencesActivityCommunitySubtitle,
-                    emailPreferencesProvider.preferences.activityCommunity,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(activityCommunity: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityDaoTitle,
-                    l10n.settingsEmailPreferencesActivityDaoSubtitle,
-                    emailPreferencesProvider.preferences.activityDao,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(activityDao: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityArtistHubTitle,
-                    l10n.settingsEmailPreferencesActivityArtistHubSubtitle,
-                    emailPreferencesProvider.preferences.activityArtistHub,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(activityArtistHub: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityInstitutionHubTitle,
-                    l10n.settingsEmailPreferencesActivityInstitutionHubSubtitle,
-                    emailPreferencesProvider.preferences.activityInstitutionHub,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(activityInstitutionHub: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesActivityPromotionTitle,
-                    l10n.settingsEmailPreferencesActivityPromotionSubtitle,
-                    emailPreferencesProvider.preferences.activityPromotion,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next =
-                          emailPreferencesProvider.preferences.copyWith(
-                        activityPromotion: value,
-                      );
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  Row(
+                  const SizedBox(height: KubusSpacing.xl),
+                  SharedSettingsGroup(
+                    label: l10n.settingsEmailGroupMarketing,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalAccountSecurityTitle,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                fontSize: KubusChromeMetrics.profileName + 1,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalAccountSecuritySubtitle,
-                              style: KubusTextStyles.detailCaption.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ),
-                          ],
-                        ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesProductUpdatesTitle,
+                        l10n.settingsEmailPreferencesProductUpdatesSubtitle,
+                        email.marketingProductUpdates,
+                        (v) => email.copyWith(marketingProductUpdates: v),
                       ),
-                      Switch(
-                        value: true,
-                        onChanged: null,
-                        activeTrackColor: Provider.of<ThemeProvider>(context)
-                            .accentColor
-                            .withValues(alpha: 0.5),
-                        thumbColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return Provider.of<ThemeProvider>(context,
-                                    listen: false)
-                                .accentColor;
-                          }
-                          return null;
-                        }),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesNewsletterTitle,
+                        l10n.settingsEmailPreferencesNewsletterSubtitle,
+                        email.marketingNewsletter,
+                        (v) => email.copyWith(marketingNewsletter: v),
+                      ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesCommunityDigestTitle,
+                        l10n.settingsEmailPreferencesCommunityDigestSubtitle,
+                        email.marketingCommunityDigest,
+                        (v) => email.copyWith(marketingCommunityDigest: v),
                       ),
                     ],
                   ),
-                  const Divider(height: 32),
-                  Row(
+                  const SizedBox(height: KubusSpacing.xxl),
+                  SharedSettingsGroup(
+                    label: l10n.settingsEmailGroupActivity,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalWalletSecurityTitle,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                fontSize: KubusChromeMetrics.profileName + 1,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              l10n
-                                  .settingsEmailPreferencesCriticalWalletSecuritySubtitle,
-                              style: KubusTextStyles.detailCaption.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ),
-                          ],
-                        ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityArtTitle,
+                        l10n.settingsEmailPreferencesActivityArtSubtitle,
+                        email.activityArt,
+                        (v) => email.copyWith(activityArt: v),
                       ),
-                      Switch(
-                        value: true,
-                        onChanged: null,
-                        activeTrackColor: Provider.of<ThemeProvider>(context)
-                            .accentColor
-                            .withValues(alpha: 0.5),
-                        thumbColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return Provider.of<ThemeProvider>(context,
-                                    listen: false)
-                                .accentColor;
-                          }
-                          return null;
-                        }),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityCommunityTitle,
+                        l10n.settingsEmailPreferencesActivityCommunitySubtitle,
+                        email.activityCommunity,
+                        (v) => email.copyWith(activityCommunity: v),
+                      ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityDaoTitle,
+                        l10n.settingsEmailPreferencesActivityDaoSubtitle,
+                        email.activityDao,
+                        (v) => email.copyWith(activityDao: v),
+                      ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityArtistHubTitle,
+                        l10n.settingsEmailPreferencesActivityArtistHubSubtitle,
+                        email.activityArtistHub,
+                        (v) => email.copyWith(activityArtistHub: v),
+                      ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityInstitutionHubTitle,
+                        l10n.settingsEmailPreferencesActivityInstitutionHubSubtitle,
+                        email.activityInstitutionHub,
+                        (v) => email.copyWith(activityInstitutionHub: v),
+                      ),
+                      emailToggle(
+                        l10n.settingsEmailPreferencesActivityPromotionTitle,
+                        l10n.settingsEmailPreferencesActivityPromotionSubtitle,
+                        email.activityPromotion,
+                        (v) => email.copyWith(activityPromotion: v),
                       ),
                     ],
                   ),
-                  const Divider(height: 32),
-                  Row(
+                  const SizedBox(height: KubusSpacing.xxl),
+                  SharedSettingsGroup(
+                    label: l10n.settingsEmailGroupEssential,
+                    note: l10n.settingsEmailGroupEssentialNote,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.settingsEmailPreferencesTransactionalTitle,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                fontSize: KubusChromeMetrics.profileName + 1,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              l10n.settingsEmailPreferencesTransactionalSubtitle,
-                              style: KubusTextStyles.detailCaption.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ),
-                          ],
-                        ),
+                      _buildToggleSetting(
+                        l10n.settingsEmailPreferencesCriticalAccountSecurityTitle,
+                        l10n.settingsEmailPreferencesCriticalAccountSecuritySubtitle,
+                        true,
+                        mandatory: true,
                       ),
-                      Switch(
-                        value: true,
-                        onChanged: null,
-                        activeTrackColor: Provider.of<ThemeProvider>(context)
-                            .accentColor
-                            .withValues(alpha: 0.5),
-                        thumbColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return Provider.of<ThemeProvider>(context,
-                                    listen: false)
-                                .accentColor;
-                          }
-                          return null;
-                        }),
+                      _buildToggleSetting(
+                        l10n.settingsEmailPreferencesCriticalWalletSecurityTitle,
+                        l10n.settingsEmailPreferencesCriticalWalletSecuritySubtitle,
+                        true,
+                        mandatory: true,
+                      ),
+                      _buildToggleSetting(
+                        l10n.settingsEmailPreferencesTransactionalTitle,
+                        l10n.settingsEmailPreferencesTransactionalSubtitle,
+                        true,
+                        mandatory: true,
                       ),
                     ],
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsLoginNotificationsTitle,
-                    l10n.settingsLoginNotificationsSubtitle,
-                    _loginNotifications,
-                    onChanged: (value) =>
-                        _applyState(() => _loginNotifications = value),
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsMasterTitle,
-                    l10n.settingsInAppNotificationsMasterSubtitle,
-                    notificationPreferences.enabled,
-                    saveAfterToggle: false,
-                    onChanged: (value) {
-                      final next =
-                          notificationPreferences.copyWith(enabled: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsArtTitle,
-                    l10n.settingsInAppNotificationsArtSubtitle,
-                    notificationPreferences.art,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next = notificationPreferences.copyWith(art: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsCommunityTitle,
-                    l10n.settingsInAppNotificationsCommunitySubtitle,
-                    notificationPreferences.community,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next =
-                          notificationPreferences.copyWith(community: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsDaoTitle,
-                    l10n.settingsInAppNotificationsDaoSubtitle,
-                    notificationPreferences.dao,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next = notificationPreferences.copyWith(dao: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsArtistHubTitle,
-                    l10n.settingsInAppNotificationsArtistHubSubtitle,
-                    notificationPreferences.artistHub,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next =
-                          notificationPreferences.copyWith(artistHub: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsInstitutionHubTitle,
-                    l10n.settingsInAppNotificationsInstitutionHubSubtitle,
-                    notificationPreferences.institutionHub,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next = notificationPreferences.copyWith(
-                        institutionHub: value,
-                      );
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsAccountTitle,
-                    l10n.settingsInAppNotificationsAccountSubtitle,
-                    notificationPreferences.account,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next =
-                          notificationPreferences.copyWith(account: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsInAppNotificationsPromotionTitle,
-                    l10n.settingsInAppNotificationsPromotionSubtitle,
-                    notificationPreferences.promotion,
-                    saveAfterToggle: false,
-                    enabled: notificationPreferences.enabled,
-                    onChanged: (value) {
-                      final next =
-                          notificationPreferences.copyWith(promotion: value);
-                      unawaited(persistNotificationPreferences(next));
-                    },
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: KubusSpacing.xl),
+            DesktopCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SharedSettingsSectionHeader(
+                    icon: Icons.notifications_none_outlined,
+                    accent: roles.secondary,
+                    title: l10n.settingsAppNotificationsSectionTitle,
+                    subtitle: l10n.settingsAppNotificationsSectionSubtitle,
+                  ),
+                  const SizedBox(height: KubusSpacing.xl),
+                  SharedSettingsGroup(
+                    children: [
+                      _buildToggleSetting(
+                        l10n.settingsPushNotificationsTitle,
+                        l10n.settingsPushNotificationsSubtitle,
+                        _pushNotifications,
+                        saveAfterToggle: false,
+                        onChanged: (value) {
+                          _applyState(() => _pushNotifications = value);
+                          _togglePushNotifications(value);
+                        },
+                      ),
+                      _buildToggleSetting(
+                        l10n.settingsLoginNotificationsTitle,
+                        l10n.settingsLoginNotificationsSubtitle,
+                        _loginNotifications,
+                        onChanged: (value) =>
+                            _applyState(() => _loginNotifications = value),
+                      ),
+                      _buildToggleSetting(
+                        l10n.settingsInAppNotificationsMasterTitle,
+                        l10n.settingsInAppNotificationsMasterSubtitle,
+                        notificationPreferences.enabled,
+                        saveAfterToggle: false,
+                        onChanged: (value) {
+                          final next =
+                              notificationPreferences.copyWith(enabled: value);
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsArtTitle,
+                        l10n.settingsInAppNotificationsArtSubtitle,
+                        notificationPreferences.art,
+                        (v) => notificationPreferences.copyWith(art: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsCommunityTitle,
+                        l10n.settingsInAppNotificationsCommunitySubtitle,
+                        notificationPreferences.community,
+                        (v) => notificationPreferences.copyWith(community: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsDaoTitle,
+                        l10n.settingsInAppNotificationsDaoSubtitle,
+                        notificationPreferences.dao,
+                        (v) => notificationPreferences.copyWith(dao: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsArtistHubTitle,
+                        l10n.settingsInAppNotificationsArtistHubSubtitle,
+                        notificationPreferences.artistHub,
+                        (v) => notificationPreferences.copyWith(artistHub: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsInstitutionHubTitle,
+                        l10n.settingsInAppNotificationsInstitutionHubSubtitle,
+                        notificationPreferences.institutionHub,
+                        (v) =>
+                            notificationPreferences.copyWith(institutionHub: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsAccountTitle,
+                        l10n.settingsInAppNotificationsAccountSubtitle,
+                        notificationPreferences.account,
+                        (v) => notificationPreferences.copyWith(account: v),
+                      ),
+                      appToggle(
+                        l10n.settingsInAppNotificationsPromotionTitle,
+                        l10n.settingsInAppNotificationsPromotionSubtitle,
+                        notificationPreferences.promotion,
+                        (v) => notificationPreferences.copyWith(promotion: v),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.xl),
           ],
         ),
       ),

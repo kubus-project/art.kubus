@@ -8,13 +8,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
 import androidx.core.app.ActivityCompat
-import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.core.content.ContextCompat
 import com.google.ar.core.exceptions.*
@@ -118,76 +114,69 @@ class ArCoreUtils {
         }
 
         /**
-         * Creates and shows a Toast containing an error message. If there was an exception passed in it
-         * will be appended to the toast. The error will also be written to the Log
+         * Logs an AR error.
+         *
+         * User-facing wording belongs to Flutter, which localizes it and
+         * attaches an action. The platform Toast this used to raise was
+         * untranslated, unattributable and appeared over unrelated screens.
          */
         fun displayError(
                 context: Context, errorMsg: String, @Nullable problem: Throwable?) {
             val tag = context.javaClass.simpleName
-            val toastText: String
-            if (problem != null && problem.message != null) {
+            if (problem != null) {
                 Log.e(tag, errorMsg, problem)
-                toastText = errorMsg + ": " + problem.message
-            } else if (problem != null) {
-                Log.e(tag, errorMsg, problem)
-                toastText = errorMsg
             } else {
                 Log.e(tag, errorMsg)
-                toastText = errorMsg
             }
-
-            Handler(Looper.getMainLooper())
-                    .post {
-                        val toast = Toast.makeText(context, toastText, Toast.LENGTH_LONG)
-                        toast.setGravity(Gravity.CENTER, 0, 0)
-                        toast.show()
-                    }
-        }
-
-        fun handleSessionException(
-                activity: Activity, sessionException: UnavailableException) {
-
-            val message: String
-            if (sessionException is UnavailableArcoreNotInstalledException) {
-                message = "Please install ARCore"
-            } else if (sessionException is UnavailableApkTooOldException) {
-                message = "Please update ARCore"
-            } else if (sessionException is UnavailableSdkTooOldException) {
-                message = "Please update this app"
-            } else if (sessionException is UnavailableDeviceNotCompatibleException) {
-                message = "This device does not support AR"
-            } else {
-                message = "Failed to create AR session"
-                Log.e(TAG, "Exception: $sessionException")
-            }
-            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
         }
 
         /**
-         * Returns false and displays an error message if Sceneform can not run, true if Sceneform can run
-         * on this device.
+         * Maps an ARCore availability failure to a stable code for Flutter.
          *
-         *
-         * Sceneform requires Android N on the device as well as OpenGL 3.0 capabilities.
-         *
-         *
-         * Finishes the activity if Sceneform can not run
+         * Flutter owns the user-facing wording so install, update, and
+         * unsupported-device states can be localized and given an action,
+         * rather than surfaced as an untranslated platform Toast.
          */
-        fun checkIsSupportedDeviceOrFinish(activity: Activity): Boolean {
+        fun availabilityCodeFor(sessionException: UnavailableException): String {
+            // Delegates to ArCoreSessionMapping so the mapping itself is unit
+            // testable on the JVM without the ARCore runtime.
+            return com.difrancescogianmarco.arcore_flutter_plugin
+                    .ArCoreSessionMapping
+                    .availabilityCode(sessionException.javaClass.simpleName)
+        }
+
+        /**
+         * Logs an availability failure and returns its stable code.
+         *
+         * Flutter turns the code into localized, actionable guidance, so no
+         * platform Toast is raised here.
+         */
+        fun handleSessionException(
+                activity: Activity, sessionException: UnavailableException): String {
+            val code = availabilityCodeFor(sessionException)
+            Log.e(TAG, "ARCore unavailable ($code): $sessionException")
+            return code
+        }
+
+        /**
+         * Whether Sceneform can run on this device.
+         *
+         * Sceneform requires Android N and OpenGL ES 3.0. This previously
+         * called `activity.finish()` on failure, which tore down the whole
+         * single-activity Flutter app - an unsupported device closed the
+         * entire product rather than one screen. The caller now reports a
+         * typed unsupported-device state and the app stays alive.
+         */
+        fun isSupportedDevice(activity: Activity): Boolean {
             if (Build.VERSION.SDK_INT < VERSION_CODES.N) {
                 Log.e(TAG, "Sceneform requires Android N or later")
-                Toast.makeText(activity, "Sceneform requires Android N or later", Toast.LENGTH_LONG).show()
-                activity.finish()
                 return false
             }
             val openGlVersionString = (activity.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager)
                     .deviceConfigurationInfo
                     .glEsVersion
             if (java.lang.Double.parseDouble(openGlVersionString) < MIN_OPENGL_VERSION) {
-                Log.e(TAG, "Sceneform requires OpenGL ES 3.0 later")
-                Toast.makeText(activity, "Sceneform requires OpenGL ES 3.0 or later", Toast.LENGTH_LONG)
-                        .show()
-                activity.finish()
+                Log.e(TAG, "Sceneform requires OpenGL ES 3.0 or later")
                 return false
             }
             return true

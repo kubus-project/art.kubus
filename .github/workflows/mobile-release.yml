@@ -76,11 +76,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
       - run: npm install --global "npm@${NPM_VERSION}"
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with: { distribution: temurin, java-version: '21', cache: gradle }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
       - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        # v4.0.1 defaults to installing the legacy `tools` package, which the
+        # current cmdline-tools no longer lists; sdkmanager then fails before
+        # anything compiles. platform-tools is the only package this step needs.
+        with:
+          packages: platform-tools
       - name: Configure protected Android signing
         shell: bash
         env:
@@ -106,6 +111,7 @@ jobs:
           KUBUS_APP_VERSION: ${{ needs.source.outputs.version }}
           KUBUS_BUILD_NUMBER: ${{ needs.source.outputs.build_number }}
           KUBUS_BUILD_DATE: ${{ needs.source.outputs.build_date }}
+          KUBUS_ANALYTICS_APP_ENABLED: ${{ vars.KUBUS_ANALYTICS_APP_ENABLED }}
         run: node scripts/prepare_public_build_config.mjs
       - name: Build signed packages
         run: |
@@ -163,6 +169,7 @@ jobs:
           KUBUS_APP_VERSION: ${{ needs.source.outputs.version }}
           KUBUS_BUILD_NUMBER: ${{ needs.source.outputs.build_number }}
           KUBUS_BUILD_DATE: ${{ needs.source.outputs.build_date }}
+          KUBUS_ANALYTICS_APP_ENABLED: ${{ vars.KUBUS_ANALYTICS_APP_ENABLED }}
         run: node scripts/prepare_public_build_config.mjs
       - name: Configure protected iOS signing
         env:

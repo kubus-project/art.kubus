@@ -55,8 +55,6 @@ class SettingsService {
     await prefs.setBool('useBiometricsOnUnlock', state.useBiometricsOnUnlock);
     await prefs.setBool('privacyMode', state.privacyMode);
 
-    await prefs.setBool('enableAnalytics', state.analytics);
-    await prefs.setBool('enableCrashReporting', state.crashReporting);
     await prefs.setBool(
         'skipOnboardingForReturningUsers', state.skipOnboarding);
 
@@ -201,8 +199,6 @@ class SettingsState {
   final bool useBiometricsOnUnlock;
   final bool privacyMode;
 
-  final bool analytics;
-  final bool crashReporting;
   final bool skipOnboarding;
 
   final String networkSelection;
@@ -234,8 +230,6 @@ class SettingsState {
     required this.biometricsDeclined,
     required this.useBiometricsOnUnlock,
     required this.privacyMode,
-    required this.analytics,
-    required this.crashReporting,
     required this.skipOnboarding,
     required this.networkSelection,
     required this.autoBackup,
@@ -266,8 +260,6 @@ class SettingsState {
       biometricsDeclined: false,
       useBiometricsOnUnlock: true,
       privacyMode: false,
-      analytics: true,
-      crashReporting: true,
       skipOnboarding: AppConfig.skipOnboardingForReturningUsers,
       networkSelection: fallbackNetwork ?? 'Mainnet',
       autoBackup: true,
@@ -317,12 +309,6 @@ class SettingsState {
       useBiometricsOnUnlock: prefs.getBool('useBiometricsOnUnlock') ??
           defaults.useBiometricsOnUnlock,
       privacyMode: prefs.getBool('privacyMode') ?? defaults.privacyMode,
-      analytics: prefs.getBool('enableAnalytics') ??
-          prefs.getBool('analytics') ??
-          defaults.analytics,
-      crashReporting: prefs.getBool('enableCrashReporting') ??
-          prefs.getBool('crashReporting') ??
-          defaults.crashReporting,
       skipOnboarding: prefs.getBool('skipOnboardingForReturningUsers') ??
           defaults.skipOnboarding,
       networkSelection: prefs.getString('networkSelection') ??
@@ -358,8 +344,6 @@ class SettingsState {
     bool? biometricsDeclined,
     bool? useBiometricsOnUnlock,
     bool? privacyMode,
-    bool? analytics,
-    bool? crashReporting,
     bool? skipOnboarding,
     String? networkSelection,
     bool? autoBackup,
@@ -389,8 +373,6 @@ class SettingsState {
       useBiometricsOnUnlock:
           useBiometricsOnUnlock ?? this.useBiometricsOnUnlock,
       privacyMode: privacyMode ?? this.privacyMode,
-      analytics: analytics ?? this.analytics,
-      crashReporting: crashReporting ?? this.crashReporting,
       skipOnboarding: skipOnboarding ?? this.skipOnboarding,
       networkSelection: networkSelection ?? this.networkSelection,
       autoBackup: autoBackup ?? this.autoBackup,

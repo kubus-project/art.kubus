@@ -10,6 +10,7 @@ import '../../../config/api_keys.dart';
 import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
@@ -19,6 +20,7 @@ import '../../../widgets/wallet_transaction_card.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
+import 'package:art_kubus/utils/wallet_action_guard.dart';
 
 class TokenSwap extends StatefulWidget {
   const TokenSwap({super.key});
@@ -275,7 +277,11 @@ class _TokenSwapState extends State<TokenSwap> {
                   compact: true,
                   onRestoreSigner: canRestore ? _handleReadOnlyReconnect : null,
                   onConnectExternalWallet: authority.hasWalletIdentity
-                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                      ? () => WalletActionGuard.ensureSignerAccess(
+                            context: context,
+                            profileProvider: context.read<ProfileProvider>(),
+                            walletProvider: context.read<WalletProvider>(),
+                          )
                       : null,
                 ),
                 const SizedBox(height: KubusSpacing.lg),
@@ -285,10 +291,10 @@ class _TokenSwapState extends State<TokenSwap> {
                       _handleReadOnlyReconnect();
                       return;
                     }
-                    Navigator.of(context).pushNamed(
-                      authority.state == WalletAuthorityState.signedOut
-                          ? '/sign-in'
-                          : '/connect-wallet',
+                    WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: context.read<ProfileProvider>(),
+                      walletProvider: context.read<WalletProvider>(),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -532,7 +538,11 @@ class _TokenSwapState extends State<TokenSwap> {
                     ? _handleReadOnlyReconnect
                     : null,
             onConnectExternalWallet: !walletProvider.canTransact
-                ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                ? () => WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: context.read<ProfileProvider>(),
+                      walletProvider: walletProvider,
+                    )
                 : null,
           ),
         ),
@@ -813,8 +823,7 @@ class _TokenSwapState extends State<TokenSwap> {
             SizedBox(
               width: 22,
               height: 22,
-              child:
-                  InlineLoading(tileSize: 4, color: swapColor),
+              child: InlineLoading(tileSize: 4, color: swapColor),
             ),
             const SizedBox(width: 12),
             Text(
@@ -1034,7 +1043,8 @@ class _TokenSwapState extends State<TokenSwap> {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: InlineLoading(tileSize: 4, color: theme.colorScheme.onPrimary),
+                child: InlineLoading(
+                    tileSize: 4, color: theme.colorScheme.onPrimary),
               )
             : Text(
                 _quote == null

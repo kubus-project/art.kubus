@@ -10,6 +10,13 @@ const required = [
   'KUBUS_GOOGLE_IOS_CLIENT_ID',
 ];
 const optional = ['KUBUS_WALLETCONNECT_PROJECT_ID'];
+const analyticsBuildEnabled = (process.env.KUBUS_ANALYTICS_APP_ENABLED || 'true')
+  .trim()
+  .toLowerCase();
+if (!['true', 'false'].includes(analyticsBuildEnabled)) {
+  console.error('KUBUS_ANALYTICS_APP_ENABLED must be true or false when set.');
+  process.exit(1);
+}
 const buildMetadata = [
   'KUBUS_APP_VERSION',
   'KUBUS_BUILD_NUMBER',
@@ -62,6 +69,9 @@ if (suppliedBuildMetadataCount === buildMetadata.length) {
   Object.assign(values, suppliedBuildMetadata);
 }
 values.KUBUS_ENABLE_WEB_SEMANTICS = false;
+// This is build capability, never consent. ConfigProvider owns the persisted
+// user preference and TelemetryService requires both layers to be enabled.
+values.ANALYTICS_APP_ENABLED = analyticsBuildEnabled === 'true';
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');
 mkdirSync(dirname(outputPath), { recursive: true });

@@ -571,7 +571,9 @@ class AchievementService {
               rarity: def.rarity.name,
               isPoap: def.isPOAP,
               requiredCount: def.requiredCount,
-              kub8Reward: def.tokenReward.toDouble(),
+              // Local definitions carry no authoritative reward:
+              // a KUB8 amount is only ever shown from the backend.
+              kub8Reward: 0,
             ),
           )
           .toList(growable: false),
@@ -677,7 +679,8 @@ class AchievementService {
             rarity: def.rarity.name,
             isPoap: def.isPOAP,
             requiredCount: def.requiredCount,
-            kub8Reward: def.tokenReward.toDouble(),
+            // Offline fallback: no invented KUB8 reward.
+            kub8Reward: 0,
           ),
         )
         .toList(growable: false);

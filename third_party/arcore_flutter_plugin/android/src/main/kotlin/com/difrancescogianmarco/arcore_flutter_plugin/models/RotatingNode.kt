@@ -24,6 +24,7 @@ import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.QuaternionEvaluator
 import com.google.ar.sceneform.math.Vector3
+import kotlin.math.abs
 
 /** Node demonstrating rotation and transformations.  */
 class RotatingNode(var degreesPerSecond: Float = 90.0f, private val clockwise: Boolean, private val axisTiltDeg: Float) : Node() {
@@ -35,15 +36,16 @@ class RotatingNode(var degreesPerSecond: Float = 90.0f, private val clockwise: B
     private var rotationSpeedMultiplier = 1.0f
 
     private val animationDuration: Long
-        get() = (1000 * 360 / (degreesPerSecond * rotationSpeedMultiplier)).toLong()
+        get() {
+            val speed = abs(degreesPerSecond * rotationSpeedMultiplier)
+            return if (speed <= 0.0001f) 1000L else (1000 * 360 / speed).toLong()
+        }
 
     override fun onUpdate(frameTime: FrameTime?) {
         super.onUpdate(frameTime)
 
         // Animation hasn't been set up.
-        if (orbitAnimation == null) {
-            return
-        }
+        val animation = orbitAnimation ?: return
 
 //        // Check if we need to change the speed of rotation.
 //        val rotationSpeedMultiplier = rotationSpeedMultiplier
@@ -61,13 +63,13 @@ class RotatingNode(var degreesPerSecond: Float = 90.0f, private val clockwise: B
 
 //        if (rotationSpeedMultiplier == 0.0f) {
         if (degreePerS == 0.0f) {
-            orbitAnimation!!.pause()
+            animation.pause()
         } else {
-            orbitAnimation!!.resume()
+            animation.resume()
 
-            val animatedFraction = orbitAnimation!!.animatedFraction
-            orbitAnimation!!.duration = animationDuration
-            orbitAnimation!!.setCurrentFraction(animatedFraction)
+            val animatedFraction = animation.animatedFraction
+            animation.duration = animationDuration
+            animation.setCurrentFraction(animatedFraction)
         }
 //        lastSpeedMultiplier = rotationSpeedMultiplier
         lastDegreePerSecond = degreePerS
@@ -91,17 +93,15 @@ class RotatingNode(var degreesPerSecond: Float = 90.0f, private val clockwise: B
             return
         }
 
-        orbitAnimation = createAnimator(clockwise, axisTiltDeg)
-        orbitAnimation!!.target = this
-        orbitAnimation!!.duration = animationDuration
-        orbitAnimation!!.start()
+        val animation = createAnimator(clockwise, axisTiltDeg)
+        orbitAnimation = animation
+        animation.target = this
+        animation.duration = animationDuration
+        animation.start()
     }
 
     private fun stopAnimation() {
-        if (orbitAnimation == null) {
-            return
-        }
-        orbitAnimation!!.cancel()
+        orbitAnimation?.cancel()
         orbitAnimation = null
     }
 

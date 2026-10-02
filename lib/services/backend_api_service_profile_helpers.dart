@@ -8,10 +8,7 @@ Future<Map<String, dynamic>> _backendApiUpdateProfileImpl(
   service._throwIfIpfsFallbackUnavailable('Profile editing');
   try {
     await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
-    final payload = {
-      'walletAddress': walletAddress,
-      ...updates,
-    };
+    final payload = {'walletAddress': walletAddress, ...updates};
     final response = await service._post(
       Uri.parse('${service.baseUrl}/api/profiles'),
       headers: service._getHeaders(),
@@ -39,8 +36,12 @@ Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
     // Avoid making pointless network calls when wallet is a known placeholder
     final normalized = WalletUtils.normalize(identifier);
     if (normalized.isEmpty ||
-        ['unknown', 'anonymous', 'n/a', 'none']
-            .contains(normalized.toLowerCase())) {
+        [
+          'unknown',
+          'anonymous',
+          'n/a',
+          'none',
+        ].contains(normalized.toLowerCase())) {
       throw Exception('Profile not found');
     }
     // URL-encode the identifier for a safe path segment.
@@ -74,9 +75,9 @@ Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
             profile['public_actor_id'],
             profile['username'],
             profile['id'],
-          ].map((value) => WalletUtils.normalize(value?.toString())).where(
-                (value) => value.isNotEmpty,
-              );
+          ]
+              .map((value) => WalletUtils.normalize(value?.toString()))
+              .where((value) => value.isNotEmpty);
           if (candidates.any(
             (candidate) =>
                 candidate == normalized ||
@@ -100,22 +101,50 @@ Future<Map<String, dynamic>> _backendApiGetProfilesBatchImpl(
 ) async {
   try {
     if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
-    await service._ensureAuthBeforeRequest();
-    final response = await service._post(
-      Uri.parse('${service.baseUrl}/api/profiles/batch'),
-      headers: service._getHeaders(),
-      body: jsonEncode({'wallets': wallets}),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return {'success': true, 'data': data['data'] ?? data};
+    Future<Map<String, dynamic>> snapshotRead() async {
+      final requested = wallets
+          .map(WalletUtils.normalize)
+          .where((wallet) => wallet.isNotEmpty)
+          .toSet();
+      final profiles = await service._loadSnapshotDatasetMaps('profiles');
+      final matches = profiles.where((profile) {
+        final candidates = <dynamic>[
+          profile['walletAddress'],
+          profile['wallet_address'],
+          profile['wallet'],
+          profile['publicActorId'],
+          profile['public_actor_id'],
+        ]
+            .map((value) => WalletUtils.normalize(value?.toString()))
+            .where((value) => value.isNotEmpty);
+        return candidates.any(requested.contains);
+      }).toList(growable: false);
+      return {'success': true, 'data': matches, 'source': 'ipfs_snapshot'};
     }
-    return {
-      'success': false,
-      'status': response.statusCode,
-      'body': response.body
-    };
+
+    return await service._performPublicRead<Map<String, dynamic>>(
+      liveRead: (candidateBaseUrl) async {
+        final response = await service._request(
+          'POST',
+          service._buildApiUri(candidateBaseUrl, '/api/profiles/batch'),
+          includeAuth: false,
+          headers: service._getHeaders(includeAuth: false),
+          body: jsonEncode({'wallets': wallets}),
+          isIdempotent: true,
+          allowImplicitBackendFailover: false,
+        );
+        if (response.statusCode != 200) {
+          throw BackendApiRequestException(
+            statusCode: response.statusCode,
+            path: '/api/profiles/batch',
+            body: response.body,
+          );
+        }
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      },
+      snapshotRead: snapshotRead,
+    );
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.getProfilesBatch failed: $e');
     return {'success': false, 'error': e.toString()};
@@ -143,7 +172,7 @@ Future<Map<String, dynamic>> _backendApiGetPresenceBatchImpl(
     return {
       'success': false,
       'status': response.statusCode,
-      'body': response.body
+      'body': response.body,
     };
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.getPresenceBatch failed: $e');
@@ -171,16 +200,12 @@ Future<Map<String, dynamic>> _backendApiRecordPresenceVisitImpl(
     }
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return {
-        'success': true,
-        'stored': true,
-        'data': data['data'] ?? data,
-      };
+      return {'success': true, 'stored': true, 'data': data['data'] ?? data};
     }
     return {
       'success': false,
       'status': response.statusCode,
-      'body': response.body
+      'body': response.body,
     };
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.recordPresenceVisit failed: $e');
@@ -210,7 +235,7 @@ Future<Map<String, dynamic>> _backendApiPingPresenceImpl(
     return {
       'success': false,
       'status': response.statusCode,
-      'body': response.body
+      'body': response.body,
     };
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.pingPresence failed: $e');
@@ -226,7 +251,11 @@ Future<Map<String, dynamic>?> _backendApiFindProfileByUsernameImpl(
   if (sanitized.isEmpty) return null;
   try {
     final response = await service.search(
-        query: sanitized, type: 'profiles', limit: 10, page: 1);
+      query: sanitized,
+      type: 'profiles',
+      limit: 10,
+      page: 1,
+    );
     if (response['success'] != true) return null;
     final normalizedTarget = sanitized.toLowerCase();
     final resultsPayload = response['results'];
@@ -282,7 +311,8 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
     attempt++;
     try {
       AppConfig.debugPrint(
-          'BackendApiService.saveProfile: POST /api/profiles attempt=$attempt keys=${profileData.keys.toList()}');
+        'BackendApiService.saveProfile: POST /api/profiles attempt=$attempt keys=${profileData.keys.toList()}',
+      );
       final uri = Uri.parse('${service.baseUrl}/api/profiles');
       final response = await service._post(
         uri,
@@ -297,7 +327,8 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
         if (data['token'] is String && (data['token'] as String).isNotEmpty) {
           await service.setAuthToken(data['token'] as String);
           AppConfig.debugPrint(
-              'BackendApiService.saveProfile: token received and stored from profile creation');
+            'BackendApiService.saveProfile: token received and stored from profile creation',
+          );
         }
 
         final payload = data['data'] ?? data;
@@ -315,12 +346,14 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
             int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
         if (attempt < maxRetries) {
           AppConfig.debugPrint(
-              'BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)');
+            'BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)',
+          );
           await Future.delayed(Duration(seconds: waitSeconds));
           continue;
         } else {
           throw Exception(
-              'Too many requests (429). Please wait and try again later.');
+            'Too many requests (429). Please wait and try again later.',
+          );
         }
       }
 
@@ -341,14 +374,16 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
       // If we've exhausted retries, rethrow
       if (attempt >= maxRetries) {
         AppConfig.debugPrint(
-            'BackendApiService.saveProfile failed (final): $e');
+          'BackendApiService.saveProfile failed (final): $e',
+        );
         rethrow;
       }
 
       // If this was a transient error, wait briefly and retry
       final backoff = 1 << (attempt - 1);
       AppConfig.debugPrint(
-          'BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e');
+        'BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e',
+      );
       await Future.delayed(Duration(seconds: backoff));
     }
   }
@@ -367,10 +402,14 @@ Future<List<Map<String, dynamic>>> _backendApiListArtistsImpl(
     };
     if (verified != null) queryParams['verified'] = verified.toString();
 
-    final uri = Uri.parse('${service.baseUrl}/api/profiles/artists/list')
-        .replace(queryParameters: queryParams);
-    final response = await service._get(uri,
-        includeAuth: false, headers: service._getHeaders(includeAuth: false));
+    final uri = Uri.parse(
+      '${service.baseUrl}/api/profiles/artists/list',
+    ).replace(queryParameters: queryParams);
+    final response = await service._get(
+      uri,
+      includeAuth: false,
+      headers: service._getHeaders(includeAuth: false),
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;

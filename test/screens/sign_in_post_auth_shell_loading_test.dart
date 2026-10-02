@@ -179,6 +179,7 @@ class _NoopPostAuthCoordinator extends PostAuthCoordinator {
     bool embedded = false,
     bool modalReauth = false,
     bool requiresWalletBackup = false,
+    bool requiresWalletSetup = false,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {

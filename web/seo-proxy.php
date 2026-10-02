@@ -114,7 +114,6 @@ function injectTakeoverShell(string $html, array $target): ?string
     }
 
     $bootstrap = '</div><div id="flutter-host" aria-hidden="true" inert data-entity-type="' . $type . '" data-entity-id="' . $id . '" data-entity-path="' . $path . '"></div>'
-        . '<script src="https://accounts.google.com/gsi/client" async defer></script>'
         . '<script src="/public_flutter_takeover.js" defer></script>'
         . '<script src="/flutter_bootstrap.js" defer></script>';
     $html = preg_replace('/<\/body>/i', $bootstrap . '</body>', $html, 1);

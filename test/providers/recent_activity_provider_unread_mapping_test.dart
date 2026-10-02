@@ -63,4 +63,53 @@ void main() {
     expect(provider.unreadActivities, isEmpty);
     expect(provider.activities.first.isRead, isTrue);
   });
+
+  test('generic reward amount is not presented as KUB8', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'in_app_notifications': <String>[
+        jsonEncode(<String, dynamic>{
+          'type': 'reward',
+          'title': 'Recognition recorded',
+          'data': <String, dynamic>{'amount': 5},
+          'timestamp': '2026-04-04T12:00:00.000Z',
+        }),
+      ],
+    });
+
+    final provider = RecentActivityProvider();
+    await provider.refresh(force: true);
+
+    expect(provider.activities.single.description, 'You have new recognition');
+    expect(provider.activities.single.description, isNot(contains('KUB8')));
+  });
+
+  test('explicit KUB8 reward and achievement remain correctly denominated',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'in_app_notifications': <String>[
+        jsonEncode(<String, dynamic>{
+          'type': 'reward',
+          'data': <String, dynamic>{'amount': 5, 'currency': 'KUB8'},
+          'timestamp': '2026-04-04T12:00:00.000Z',
+        }),
+        jsonEncode(<String, dynamic>{
+          'type': 'achievement',
+          'data': <String, dynamic>{'title': 'Archive work', 'rewardTokens': 7},
+          'timestamp': '2026-04-04T11:00:00.000Z',
+        }),
+        jsonEncode(<String, dynamic>{
+          'type': 'kub8',
+          'data': <String, dynamic>{'amount': 3},
+          'timestamp': '2026-04-04T10:00:00.000Z',
+        }),
+      ],
+    });
+
+    final provider = RecentActivityProvider();
+    await provider.refresh(force: true);
+
+    expect(provider.activities.first.description, '+5 KUB8');
+    expect(provider.activities[1].description, 'Archive work (+7 KUB8)');
+    expect(provider.activities.last.description, '+3 KUB8');
+  });
 }

@@ -18,7 +18,6 @@ import '../../../utils/wallet_utils.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/dao_action_state.dart';
 import '../../../config/config.dart';
-import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
@@ -27,6 +26,10 @@ import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import '../../../widgets/topbar_icon.dart';
 import '../../../features/web3/web3_capabilities.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
+import '../../../widgets/states/kubus_product_states.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../widgets/dao/dao_proposal_status.dart';
 
 class GovernanceHub extends StatelessWidget {
   final ValueNotifier<int>? selectedIndexNotifier;
@@ -81,7 +84,6 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
   ];
 
   int _selectedIndex = 0;
-  int? _hoveredTabIndex;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   final DaoActionState _daoActionState = DaoActionState();
@@ -237,9 +239,6 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              flexibleSpace: const KubusGlassAppBarBackdrop(
-                showBottomDivider: true,
-              ),
               title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -342,9 +341,11 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     }
   }
 
+  /// Wallet gating appears only where signing is needed: this explains why
+  /// the viewer cannot vote/propose yet and offers the one recovery that
+  /// applies (connect a wallet, or restore signing for a read-only one).
   Widget _buildParticipationState(Web3Capabilities capabilities) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final authority = context.watch<WalletProvider>().authority;
     final message = !capabilities.hasWalletIdentity
         ? l10n.walletActionAccountShellNeedsWalletToast
@@ -362,30 +363,33 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
         KubusSpacing.md,
         0,
       ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: Row(
-          children: [
-            Icon(Icons.lock_outline, color: _daoAccent),
-            const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              child: Text(
-                message,
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.78),
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          KubusNoticeBanner(
+            margin: EdgeInsets.zero,
+            icon: Icons.lock_outline,
+            title: !capabilities.hasWalletIdentity
+                ? l10n.stateWalletTitle
+                : l10n.walletReadOnlyStatus,
+            message: message,
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: KubusButton(
+              onPressed: () => WalletActionGuard.ensureSignerAccess(
+                context: context,
+                profileProvider: context.read<ProfileProvider>(),
+                walletProvider: context.read<WalletProvider>(),
+                returnRoute: '/governance',
               ),
+              label: actionLabel,
+              variant: KubusButtonVariant.secondary,
             ),
-            const SizedBox(width: KubusSpacing.md),
-            TextButton(
-              onPressed: () => Navigator.of(context).pushNamed(
-                capabilities.hasWalletIdentity ? '/wallet' : '/connect-wallet',
-              ),
-              child: Text(actionLabel),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -395,184 +399,77 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       builder: (context, daoProvider, web3Provider, child) {
         final l10n = AppLocalizations.of(context)!;
         final capabilities = _capabilities();
-        final kub8Balance = web3Provider.kub8Balance;
-        final votingPower = '${kub8Balance.toStringAsFixed(2)} KUB8';
+        // Voting power is the KUB8 the backend snapshots at vote time.
+        final votingPower = web3Provider.kub8Balance.toStringAsFixed(2);
         final activeProposals =
             daoProvider.getActiveProposals().length.toString();
         final totalMembers = daoProvider.delegates.length.toString();
-        final accent = KubusLabsFeature.dao.accent(_roles);
-        final panelStyle = KubusGlassStyle.resolve(
-          context,
-          surfaceType: KubusGlassSurfaceType.panelBackground,
-          tintBase: accent,
-        );
-        final radius = BorderRadius.circular(KubusRadius.lg + KubusRadius.xs);
 
-        return LiquidGlassCard(
-          margin: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md,
-            vertical: KubusSpacing.sm,
-          ),
-          padding: const EdgeInsets.all(KubusSpacing.lg - KubusSpacing.xs),
-          borderRadius: radius,
-          blurSigma: panelStyle.blurSigma,
-          fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-          showBorder: false,
-          backgroundColor: panelStyle.tintColor,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: accent.withValues(alpha: 0.24),
-                width: KubusSizes.hairline,
-              ),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  accent.withValues(alpha: 0.28),
-                  accent.withValues(alpha: 0.14),
-                ],
-              ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            KubusDashboardHeader(
+              notion: l10n.dashboardNotionInfrastructure,
+              title: l10n.daoHubAppBarTitle,
+              accent: KubusColorRoles.of(context).web3DaoAccent,
+              glyph: Icons.how_to_vote_outlined,
+              lede: l10n.daoHubHeaderSubtitle,
+              actions: const [
+                KubusLabsAdornment.inlinePill(
+                  feature: KubusLabsFeature.dao,
+                  emphasized: true,
+                ),
+              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg - KubusSpacing.xs),
-              child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.md,
+                0,
+                KubusSpacing.md,
+                KubusSpacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(KubusRadius.lg),
+                  if (capabilities.hasAccount) ...[
+                    Expanded(
+                      child: KubusStatCard(
+                        title: l10n.daoHubStatYourVotingPowerLabel,
+                        value: '$votingPower KUB8',
+                        semanticsLabel: l10n.walletBalanceAmountSemantic(
+                          l10n.daoHubStatYourVotingPowerLabel,
+                          votingPower,
+                          'KUB8',
                         ),
-                        child: Icon(
-                          KubusLabsFeature.dao.screenIcon,
-                          color: accent,
-                          size: 30,
-                        ),
+                        titleMaxLines: 2,
+                        minHeight: 64,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final titleStyle =
-                                KubusTextStyles.responsiveHeroTitle(
-                              context,
-                              availableWidth: constraints.maxWidth,
-                            ).copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            );
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Wrap(
-                                  spacing: KubusSpacing.sm,
-                                  runSpacing: KubusSpacing.xs,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    Text(
-                                      l10n.daoHubAppBarTitle,
-                                      style: titleStyle,
-                                      maxLines:
-                                          constraints.maxWidth < 280 ? 2 : 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const KubusLabsAdornment.inlinePill(
-                                      feature: KubusLabsFeature.dao,
-                                      emphasized: true,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  l10n.daoHubHeaderSubtitle,
-                                  style: KubusTextStyles.heroSubtitle.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.82),
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                  ],
+                  Expanded(
+                    child: KubusStatCard(
+                      title: l10n.daoHubStatActiveProposalsLabel,
+                      value: activeProposals,
+                      titleMaxLines: 2,
+                      minHeight: 64,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      if (capabilities.hasAccount) ...[
-                        Expanded(
-                          child: _buildStatCard(
-                            l10n.daoHubStatYourVotingPowerLabel,
-                            votingPower,
-                            Icons.how_to_vote_outlined,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.daoHubStatActiveProposalsLabel,
-                          activeProposals,
-                          Icons.pending_actions_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.daoHubStatTotalDelegatesLabel,
-                          totalMembers,
-                          Icons.people_outline,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: KubusSpacing.sm),
+                  Expanded(
+                    child: KubusStatCard(
+                      title: l10n.daoHubStatTotalDelegatesLabel,
+                      value: totalMembers,
+                      titleMaxLines: 2,
+                      minHeight: 64,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         );
       },
-    );
-  }
-
-  Widget _buildStatCard(
-    String label,
-    String value,
-    IconData icon, {
-    bool showIcon = true,
-  }) {
-    final statColor = _daoAccent;
-    const cardHeight = 104.0;
-    return SizedBox(
-      height: cardHeight,
-      child: KubusStatCard(
-        title: label,
-        value: value,
-        icon: icon,
-        showIcon: showIcon,
-        layout: KubusStatCardLayout.centered,
-        accent: statColor,
-        minHeight: cardHeight,
-        padding: const EdgeInsets.all(10),
-        titleMaxLines: 2,
-        iconBoxSize: KubusSizes.sidebarActionIconBox - KubusSpacing.md,
-        iconSize: KubusSizes.sidebarActionIcon - KubusSpacing.xs,
-        titleStyle: KubusTextStyles.statLabel.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-        valueStyle: KubusTextStyles.statValue.copyWith(
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
     );
   }
 
@@ -581,164 +478,79 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     int selectedIndex,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final panelStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.20),
-          width: KubusSizes.hairline,
+    // Section indices are fixed (0..4); only some are visible.
+    final visible = <(int, KubusDashboardTab)>[
+      (
+        0,
+        KubusDashboardTab(
+          label: l10n.daoHubTabActiveProposals,
+          icon: Icons.how_to_vote_outlined,
         ),
       ),
-      child: LiquidGlassCard(
-        margin: EdgeInsets.zero,
-        padding: const EdgeInsets.all(KubusSpacing.xs),
-        borderRadius: radius,
-        blurSigma: panelStyle.blurSigma,
-        fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: panelStyle.tintColor,
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildTabButton(
-                l10n.daoHubTabActiveProposals,
-                Icons.how_to_vote,
-                0,
-                selectedIndex,
-              ),
-            ),
-            if (capabilities.canViewOwnGovernanceHistory)
-              Expanded(
-                child: _buildTabButton(
-                  l10n.daoHubTabVotingHistory,
-                  Icons.history,
-                  1,
-                  selectedIndex,
-                ),
-              ),
-            if (capabilities.canCreateProposal)
-              Expanded(
-                child: _buildTabButton(
-                  l10n.daoHubTabCreateProposal,
-                  Icons.add_circle_outline,
-                  2,
-                  selectedIndex,
-                ),
-              ),
-            Expanded(
-              child: _buildTabButton(
-                l10n.daoHubTabTreasury,
-                Icons.account_balance,
-                3,
-                selectedIndex,
-              ),
-            ),
-            if (capabilities.hasAccount)
-              Expanded(
-                child: _buildTabButton(
-                  l10n.daoHubTabDelegation,
-                  Icons.people,
-                  4,
-                  selectedIndex,
-                ),
-              ),
-          ],
+      if (capabilities.canViewOwnGovernanceHistory)
+        (
+          1,
+          KubusDashboardTab(
+            label: l10n.daoHubTabVotingHistory,
+            icon: Icons.history,
+          ),
+        ),
+      if (capabilities.canCreateProposal)
+        (
+          2,
+          KubusDashboardTab(
+            label: l10n.daoHubTabCreateProposal,
+            icon: Icons.add_circle_outline,
+          ),
+        ),
+      (
+        3,
+        KubusDashboardTab(
+          label: l10n.daoHubTabTreasury,
+          icon: Icons.account_balance_outlined,
         ),
       ),
+      if (capabilities.hasAccount)
+        (
+          4,
+          KubusDashboardTab(
+            label: l10n.daoHubTabDelegation,
+            icon: Icons.people_outline,
+          ),
+        ),
+    ];
+    final position = visible.indexWhere((item) => item.$1 == selectedIndex);
+    return KubusDashboardTabs(
+      selectedIndex: position < 0 ? 0 : position,
+      onSelected: (i) => _setSelectedIndex(visible[i].$1),
+      tabs: [for (final item in visible) item.$2],
     );
   }
 
-  Widget _buildTabButton(
-      String label, IconData icon, int index, int selectedIndex) {
-    final isSelected = selectedIndex == index;
-    final isHovered = _hoveredTabIndex == index;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    final accent = _daoAccent;
-    final tintBase = (isSelected || isHovered) ? accent : scheme.surface;
-    final buttonStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: tintBase,
-    );
-
-    final background = isSelected
-        ? accent.withValues(alpha: isDark ? 0.30 : 0.20)
-        : isHovered
-            ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
-            : scheme.surface.withValues(alpha: isDark ? 0.06 : 0.04);
-    final foreground = isSelected
-        ? scheme.onSurface
-        : isHovered
-            ? accent.withValues(alpha: 0.90)
-            : scheme.onSurface.withValues(alpha: 0.72);
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hoveredTabIndex = index),
-      onExit: (_) {
-        if (_hoveredTabIndex == index) {
-          setState(() => _hoveredTabIndex = null);
-        }
-      },
-      child: LiquidGlassCard(
-        onTap: () => _setSelectedIndex(index),
-        padding: const EdgeInsets.symmetric(
-          vertical: KubusSpacing.md,
-          horizontal: KubusSpacing.sm,
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        blurSigma: buttonStyle.blurSigma,
-        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: background,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: foreground,
-              size: KubusSizes.sidebarActionIcon,
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Text(
-              label,
-              style: KubusTypography.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: foreground,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  /// Distinct states: loading, network failure (never shown as "no
+  /// proposals"), no proposals, and the proposal list with a not-eligible
+  /// note when the wallet can sign but holds no voting power.
   Widget _buildActiveProposals() {
-    return Consumer<DAOProvider>(
-      builder: (context, daoProvider, child) {
+    return Consumer2<DAOProvider, Web3Provider>(
+      builder: (context, daoProvider, web3Provider, child) {
         final l10n = AppLocalizations.of(context)!;
-        // Filter active proposals using DAOProvider method
         final activeProposals = daoProvider.getActiveProposals();
         final reviews = daoProvider.reviews;
+        final isEmpty = activeProposals.isEmpty && reviews.isEmpty;
 
-        // Show empty state if no proposals
-        if (activeProposals.isEmpty && reviews.isEmpty) {
+        if (daoProvider.isLoading && isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(KubusSpacing.md),
+            child: KubusSectionLoading(rows: 3, rowHeight: 160),
+          );
+        }
+        if (daoProvider.loadError != null && isEmpty) {
+          return KubusStateView.fromError(
+            daoProvider.loadError,
+            onRetry: () => daoProvider.refreshData(force: true),
+          );
+        }
+        if (isEmpty) {
           return Center(
             child: EmptyStateCard(
               icon: Icons.how_to_vote,
@@ -748,16 +560,27 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
           );
         }
 
-        return Container(
-          color: Colors.transparent,
-          child: ListView(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            children: [
-              if (reviews.isNotEmpty) _buildReviewQueue(reviews),
-              ...activeProposals
-                  .map((proposal) => _buildProposalCard(proposal)),
+        final capabilities = _capabilities();
+        final notEligible = capabilities.canVote &&
+            activeProposals.isNotEmpty &&
+            web3Provider.kub8Balance <= 0;
+
+        return ListView(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          children: [
+            if (notEligible) ...[
+              KubusNoticeBanner(
+                margin: EdgeInsets.zero,
+                icon: Icons.info_outline,
+                tone: KubusStatusTone.neutral,
+                title: l10n.daoNotEligibleTitle,
+                message: l10n.daoNotEligibleBody,
+              ),
+              const SizedBox(height: KubusSpacing.md),
             ],
-          ),
+            if (reviews.isNotEmpty) _buildReviewQueue(reviews),
+            ...activeProposals.map((proposal) => _buildProposalCard(proposal)),
+          ],
         );
       },
     );
@@ -1289,171 +1112,133 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     );
   }
 
+  /// Proposal hierarchy: title, status, summary, timeline, quorum
+  /// requirement, results, actions. The quorum line states the requirement
+  /// only: the backend sends no total voting power, so "reached/pending"
+  /// cannot be known client-side and is not shown.
   Widget _buildProposalCard(Proposal proposal) {
-    final color = AppColorUtils.indigoAccent;
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final material = MaterialLocalizations.of(context);
     final totalVotes = proposal.totalVotes;
     final supportPct = (proposal.supportPercentage * 100).clamp(0, 100);
-    final l10n = AppLocalizations.of(context)!;
-    final quorumText =
-        proposal.hasQuorum ? l10n.daoQuorumReached : l10n.daoQuorumPending;
     final capabilities = _capabilities(
       proposalAllowsVoting: proposal.isActive,
     );
+    final end = proposal.votingEndDate;
+    final timeline = end == null
+        ? null
+        : (end.isAfter(DateTime.now())
+            ? l10n.daoVotingEndsLabel(material.formatMediumDate(end.toLocal()))
+            : l10n
+                .daoVotingEndedLabel(material.formatMediumDate(end.toLocal())));
+    final quorumPercent = (proposal.quorumRequired * 100)
+        .toStringAsFixed(proposal.quorumRequired * 100 % 1 == 0 ? 0 : 1);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xxs),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
       padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-            color:
-                Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md,
-                  vertical: KubusSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(color: color.withValues(alpha: 0.6)),
-                ),
-                child: Text(
-                  _proposalTypeLabel(proposal.type, l10n),
-                  style: KubusTextStyles.compactBadge.copyWith(
-                    color: color,
-                  ),
-                ),
+          KubusNotionLabel(_proposalTypeLabel(proposal.type, l10n)),
+          const SizedBox(height: KubusSpacing.xs),
+          Semantics(
+            header: true,
+            child: Text(
+              proposal.title,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                color: roles.foreground,
               ),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Text(
-            proposal.title,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
             ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          KubusStatusText(
+            label: daoProposalStatusLabel(l10n, proposal.status),
+            tone: daoProposalStatusTone(proposal.status),
           ),
           const SizedBox(height: KubusSpacing.sm),
           Text(
             proposal.description,
-            style: KubusTextStyles.sectionSubtitle.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.78),
-              height: 1.4,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: KubusTextStyles.detailBody.copyWith(
+              color: roles.foregroundMuted,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          if (timeline != null)
+            Text(
+              timeline,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: roles.foreground,
+              ),
+            ),
+          Text(
+            l10n.daoQuorumRequirementLabel(quorumPercent),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: roles.foregroundMuted,
             ),
           ),
           const SizedBox(height: KubusSpacing.md),
-          Row(
+          KubusNotionLabel(l10n.daoResultsNotion),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.daoProposalVotesSupportSummaryLabel(
+              totalVotes,
+              supportPct.toStringAsFixed(1),
+            ),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: roles.foreground,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          ExcludeSemantics(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(KubusRadius.control),
+              child: SizedBox(
+                width: double.infinity,
+                child: KubusMeterBar(
+                  progress: supportPct / 100,
+                  height: 6,
+                  color: roles.active,
+                  trackColor: roles.surfaceRaised,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Wrap(
+            spacing: KubusSpacing.md,
+            runSpacing: KubusSpacing.xxs,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.daoProposalVotesSupportSummaryLabel(
-                      totalVotes,
-                      supportPct.toStringAsFixed(1),
-                    ),
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
+              for (final text in [
+                l10n.daoProposalVotesYesLabel(proposal.yesVotes.toString()),
+                l10n.daoProposalVotesNoLabel(proposal.noVotes.toString()),
+                l10n.daoProposalVotesAbstainLabel(
+                    proposal.abstainVotes.toString()),
+              ])
+                Text(
+                  text,
+                  style: KubusTextStyles.machineValue.copyWith(
+                    color: roles.foregroundMuted,
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: 180,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: KubusMeterBar(
-                          progress: supportPct / 100,
-                          height: 6,
-                          color: color,
-                          trackColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    quorumText,
-                    style: KubusTextStyles.compactBadge.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!
-                        .daoProposalVotesYesLabel(proposal.yesVotes.toString()),
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)!
-                        .daoProposalVotesNoLabel(proposal.noVotes.toString()),
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)!.daoProposalVotesAbstainLabel(
-                        proposal.abstainVotes.toString()),
-                    style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
           if (capabilities.canVote) ...[
-            const SizedBox(height: 16),
-            Row(
+            const SizedBox(height: KubusSpacing.md),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
               children: [
-                Expanded(
-                  child: _buildVoteButton(
-                    proposal: proposal,
-                    isYes: true,
-                    backgroundColor: color,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildVoteButton(
-                    proposal: proposal,
-                    isYes: false,
-                    backgroundColor:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    side: BorderSide(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.3),
-                    ),
-                  ),
-                ),
+                _buildVoteButton(proposal: proposal, isYes: true),
+                _buildVoteButton(proposal: proposal, isYes: false),
               ],
             ),
           ],
@@ -1736,37 +1521,20 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
   Widget _buildVoteButton({
     required Proposal proposal,
     required bool isYes,
-    required Color backgroundColor,
-    required Color foregroundColor,
-    BorderSide? side,
   }) {
     final actionId = DaoActionState.proposalVoteActionId(proposal.id, isYes);
     final isCurrentAction = _daoActionState.voteActionId == actionId;
     final isAnyVoteInFlight = _daoActionState.voteActionId != null;
+    final l10n = AppLocalizations.of(context)!;
 
-    return ElevatedButton(
+    return KubusButton(
       onPressed: isAnyVoteInFlight
           ? null
           : () => _submitProposalVote(proposal.id, isYes),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: foregroundColor,
-        side: side,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-        ),
-      ),
-      child: isCurrentAction
-          ? SizedBox(
-              width: 18,
-              height: 18,
-              child: InlineLoading(tileSize: 4, color: foregroundColor),
-            )
-          : Text(
-              isYes
-                  ? AppLocalizations.of(context)!.daoVoteYesButton
-                  : AppLocalizations.of(context)!.daoVoteNoButton,
-            ),
+      isLoading: isCurrentAction,
+      label: isYes ? l10n.daoVoteYesButton : l10n.daoVoteNoButton,
+      variant:
+          isYes ? KubusButtonVariant.primary : KubusButtonVariant.secondary,
     );
   }
 
@@ -1971,6 +1739,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;
@@ -2103,19 +1872,14 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
         final outflow = transactions
             .where((tx) => tx.amount < 0)
             .fold<double>(0, (sum, tx) => sum + tx.amount.abs());
-        const treasuryColor = AppColorUtils.amberAccent;
+        final isOnChain = daoProvider.treasuryOnChainBalance != null;
+        final roles = KubusColorRoles.of(context);
         return Container(
           padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                treasuryColor.withValues(alpha: 0.85),
-                treasuryColor,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            color: roles.surface,
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
+            border: Border.all(color: roles.rule),
           ),
           child: Column(
             children: [
@@ -2129,7 +1893,9 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.daoTreasuryTotalValueLabel,
+                          isOnChain
+                              ? l10n.daoTreasuryOnChainLabel
+                              : l10n.daoTreasuryLedgerLabel,
                           style: KubusTextStyles.statLabel.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
@@ -2178,11 +1944,12 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
   }
 
   Widget _buildTreasuryStatCard(String label, String value, IconData icon) {
+    final roles = KubusColorRoles.of(context);
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
+        color: roles.surfaceRaised,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
       ),
       child: Column(
         children: [
@@ -2859,6 +2626,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) return;
 
@@ -2914,6 +2682,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       context: context,
       profileProvider: profileProvider,
       walletProvider: walletProvider,
+      returnRoute: '/governance',
     );
     if (!mounted || !canProceed) {
       return;

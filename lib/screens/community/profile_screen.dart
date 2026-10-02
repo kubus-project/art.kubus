@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/profile/profile_cover_field.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -80,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
+
   /// Captured in `didChangeDependencies` so `dispose` never has to look the
   /// provider up through a deactivated `BuildContext`.
   ProfileProvider? _listenedProfileProvider;
@@ -341,7 +345,23 @@ class _ProfileScreenState extends State<ProfileScreen>
           final hasCoverImage = coverImageUrl != null &&
               coverImageUrl.isNotEmpty &&
               !coverUrlIsKnownBad;
-          final coverHeight = hasCoverImage ? 220.0 : 150.0;
+          // Without an image the band must still hold the title row above
+          // the avatar; a fixed 150 px let the avatar ride over the title.
+          final coverEdge = isSmallScreen ? 12.0 : 16.0;
+          final titleRow = math.max(
+            KubusHeaderMetrics.actionHitArea,
+            MediaQuery.textScalerOf(context)
+                    .scale(KubusChromeMetrics.heroTitle + KubusSpacing.sm) *
+                1.3,
+          );
+          final stackedCoverHeight = coverEdge +
+              titleRow +
+              KubusSpacing.sm +
+              (avatarRadius + avatarRingPadding) * 2 +
+              coverEdge;
+          final coverHeight = hasCoverImage
+              ? math.max(220.0, stackedCoverHeight)
+              : stackedCoverHeight;
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final cacheWidth = (constraints.maxWidth * dpr).round();
           final cacheHeight = (coverHeight * dpr).round();
@@ -393,24 +413,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Base background (always present)
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            gradient: !hasCoverImage
-                                ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.3),
-                                      themeProvider.accentColor
-                                          .withValues(alpha: 0.1),
-                                    ],
-                                  )
-                                : null,
+                        // Base: the role field without an image (role colour,
+                        // not the personal accent); plain surface under one.
+                        if (hasCoverImage)
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                            ),
+                          )
+                        else
+                          // The resolved roles (approved DAO review
+                          // included), as the rest of the profile uses.
+                          ProfileCoverField(
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
                           ),
-                        ),
 
                         // Cover image layer (explicit Image widget so we can downscale/catch errors)
                         if (hasCoverImage)
@@ -906,7 +923,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisCount: isSmallScreen ? 2 : 3,
               mainAxisSpacing: KubusSpacing.md,
               crossAxisSpacing: KubusSpacing.md,
-              childAspectRatio: isSmallScreen ? 1.14 : 1.26,
+              // Measured, not an aspect ratio: the label may wrap and the
+              // text scale may be raised.
+              mainAxisExtent: KubusStatCard.centeredExtent(
+                context,
+                valueStyle: _statValueStyle(isSmallScreen),
+                titleStyle: _statTitleStyle(isSmallScreen),
+                padding: _statPadding(isSmallScreen),
+              ),
               children: [
                 _buildStatCard(
                   AppLocalizations.of(context)!.userProfilePostsStatLabel,
@@ -959,38 +983,35 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  TextStyle _statTitleStyle(bool isSmallScreen) =>
+      KubusTextStyles.detailCaption.copyWith(
+        fontSize: isSmallScreen ? 11 : 12,
+      );
+
+  TextStyle _statValueStyle(bool isSmallScreen) =>
+      KubusTextStyles.detailCardTitle.copyWith(
+        fontSize: isSmallScreen ? 14 : 15,
+        fontWeight: FontWeight.w700,
+      );
+
+  EdgeInsets _statPadding(bool isSmallScreen) => EdgeInsets.all(
+        isSmallScreen ? KubusSpacing.sm : KubusChromeMetrics.compactCardPadding,
+      );
+
   Widget _buildStatCard(String title, String value, IconData icon,
       {bool isSmallScreen = false, VoidCallback? onTap}) {
-    final accent = _profileStatAccentForIcon(icon);
     return KubusStatCard(
       title: title,
       value: value,
       icon: icon,
       layout: KubusStatCardLayout.centered,
-      accent: accent,
+      accent: _profileStatAccentForIcon(icon),
       onTap: onTap,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: isSmallScreen ? 0.82 : 0.86,
-      minHeight: isSmallScreen ? 88 : 96,
-      padding: EdgeInsets.all(
-        isSmallScreen ? KubusSpacing.sm : KubusChromeMetrics.compactCardPadding,
-      ),
+      minHeight: 0,
+      padding: _statPadding(isSmallScreen),
       titleMaxLines: 2,
-      iconBoxSize: isSmallScreen
-          ? KubusSizes.sidebarActionIconBox - KubusSpacing.md
-          : KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
-      iconSize: isSmallScreen
-          ? KubusSizes.sidebarActionIcon - KubusSpacing.xs
-          : KubusSizes.sidebarActionIcon - KubusSpacing.xxs,
-      titleStyle: KubusTextStyles.detailCaption.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
-        fontSize: isSmallScreen ? 11 : 12,
-      ),
-      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: isSmallScreen ? 14 : 15,
-        fontWeight: FontWeight.w700,
-      ),
+      titleStyle: _statTitleStyle(isSmallScreen),
+      valueStyle: _statValueStyle(isSmallScreen),
     );
   }
 
@@ -1833,38 +1854,21 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPerformanceCard(
       String title, String value, IconData icon, String? change) {
-    final mediaQuery = MediaQuery.of(context);
-    final compact = mediaQuery.size.width < 375;
-    final highDensity = mediaQuery.devicePixelRatio >= 3.0;
-    final accent = _profileStatAccentForIcon(icon);
-    final valueFontSize = compact ? 15.5 : 16.5;
-    final titleFontSize = compact ? 10.5 : 11.5;
-    final tunedIconBoxSize = compact
-        ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
-        : KubusChromeMetrics.heroIconBox;
-    final tunedIconSize = highDensity
-        ? KubusHeaderMetrics.actionIcon - KubusSpacing.xs
-        : KubusHeaderMetrics.actionIcon;
+    final compact = MediaQuery.sizeOf(context).width < 375;
     Widget cardContent = KubusStatCard(
       title: title,
       value: value,
       icon: icon,
       layout: KubusStatCardLayout.centered,
-      accent: accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: compact ? 0.82 : 0.86,
+      accent: _profileStatAccentForIcon(icon),
       minHeight: 80,
       padding: const EdgeInsets.all(KubusSpacing.md),
-      titleMaxLines: 1,
-      iconBoxSize: tunedIconBoxSize,
-      iconSize: tunedIconSize,
+      titleMaxLines: 2,
       titleStyle: KubusTextStyles.detailCaption.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
-        fontSize: titleFontSize,
+        fontSize: compact ? 10.5 : 11.5,
       ),
       valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: valueFontSize,
+        fontSize: compact ? 15.5 : 16.5,
         fontWeight: FontWeight.w700,
       ),
       change: change,

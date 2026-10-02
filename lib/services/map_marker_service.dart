@@ -55,6 +55,16 @@ class MapMarkerService {
   final BackendApiService _backendApi;
   final TelemetryService _telemetry;
   final List<ArtMarker> _cachedMarkers = [];
+
+  /// Markers already fetched in this session.
+  ///
+  /// Read-only, and never a substitute for a fetch: surfaces that need a
+  /// specific marker resolve it here first so an offline device can still
+  /// label a link, then fall back to showing the reference as unavailable
+  /// rather than guessing.
+  List<ArtMarker> get cachedMarkers => List<ArtMarker>.unmodifiable(
+        _cachedMarkers,
+      );
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
   final StreamController<String> _markerDeletedController =

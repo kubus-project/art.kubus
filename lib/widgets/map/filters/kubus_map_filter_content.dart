@@ -17,23 +17,15 @@ class KubusMapFilterContent extends StatelessWidget {
     super.key,
     required this.state,
     required this.onChanged,
-    this.travelScopeEnabled = false,
     this.nearMeRadiusEnabled = true,
     this.minNearMeRadiusKm = KubusMapFilterState.minNearMeRadiusKm,
     this.maxNearMeRadiusKm = KubusMapFilterState.maxNearMeRadiusKm,
   })  : assert(minNearMeRadiusKm < maxNearMeRadiusKm),
-        assert(
-          minNearMeRadiusKm >= KubusMapFilterState.minNearMeRadiusKm,
-        ),
-        assert(
-          maxNearMeRadiusKm <= KubusMapFilterState.maxNearMeRadiusKm,
-        );
+        assert(minNearMeRadiusKm >= KubusMapFilterState.minNearMeRadiusKm),
+        assert(maxNearMeRadiusKm <= KubusMapFilterState.maxNearMeRadiusKm);
 
   final KubusMapFilterState state;
   final ValueChanged<KubusMapFilterState> onChanged;
-
-  /// Whether the feature-gated travel scope is available to the caller.
-  final bool travelScopeEnabled;
 
   /// Whether users may adjust the near-me radius.
   final bool nearMeRadiusEnabled;
@@ -108,13 +100,6 @@ class KubusMapFilterContent extends StatelessWidget {
                   label: l10n.mapFilterScopeNearMe,
                   icon: Icons.near_me_outlined,
                 ),
-                if (travelScopeEnabled)
-                  _ScopeRadioTile(
-                    value: KubusMapScope.travel,
-                    selected: state.scope == KubusMapScope.travel,
-                    label: l10n.mapFilterScopeTravel,
-                    icon: Icons.travel_explore,
-                  ),
               ],
             ),
           ),
@@ -217,10 +202,7 @@ class KubusMapFilterContent extends StatelessWidget {
                   type: state.visibleContentLayers.contains(type),
               },
               onToggle: (type, visible) => _emit(
-                state.withContentLayerVisibility(
-                  type,
-                  visible: visible,
-                ),
+                state.withContentLayerVisibility(type, visible: visible),
               ),
             ),
           ),
@@ -348,9 +330,7 @@ class _NearMeRadiusControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final resolvedValue = value.clamp(min, max).toDouble();
-    final label = l10n.mapFilterNearMeRadiusLabel(
-      _formatRadius(resolvedValue),
-    );
+    final label = l10n.mapFilterNearMeRadiusLabel(_formatRadius(resolvedValue));
     final divisions = ((max - min) * 2).round();
 
     return Semantics(

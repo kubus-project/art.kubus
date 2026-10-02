@@ -48,6 +48,8 @@ class PostAuthRedirectResult {
     this.removeAuthStack = true,
     this.arguments,
     this.onboardingStepId,
+    this.requiresWalletSetup = false,
+    this.completionRoute,
     this.error,
   });
 
@@ -56,20 +58,10 @@ class PostAuthRedirectResult {
   final bool removeAuthStack;
   final Object? arguments;
   final String? onboardingStepId;
+  final bool requiresWalletSetup;
+  final String? completionRoute;
   final String? error;
 }
-
-/// Account-branch steps a minimal account may postpone.
-///
-/// Deliberately excludes `verifyEmail` (identity), `walletBackupIntro` and
-/// `walletBackup` (fund safety), which are never skipped for growth.
-const Set<String> _deferrableAccountSteps = <String>{
-  'role',
-  'profile',
-  'walletConnect',
-  'daoReview',
-  'accountPermissions',
-};
 
 class AuthRedirectController {
   const AuthRedirectController();
@@ -88,7 +80,6 @@ class AuthRedirectController {
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
     bool requiresWalletSetup = false,
-    bool minimalAccount = false,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -96,44 +87,10 @@ class AuthRedirectController {
       userId: userId,
     );
 
-    // Minimal-account mode: the visitor created this account only to finish a
-    // small action they already started. Role, profile, wallet setup, DAO and
-    // permission steps are everything *except* what identity needs, so they
-    // become progressive onboarding the visitor can complete later instead of
-    // a wall between them and the thing they came to do.
-    //
-    // Wallet *backup* is not one of those steps. It protects funds that
-    // already exist, so it is never skipped for growth: a session that still
-    // owes a backup falls through to the normal resume below.
-    //
-    // Note: unlike the rest of this method, this branch writes — it clears the
-    // pending-onboarding marker so a later cold start does not re-impose the
-    // flow we just deliberately skipped.
-    final owesWalletBackup = requiresWalletBackup && targetWallet.isNotEmpty;
-    if (minimalAccount && !owesWalletBackup) {
-      // Record the skipped steps as *deferred* rather than dropping them, so
-      // "finish setting up your profile" surfaces can still find them. Clearing
-      // the pending marker on its own would lose them permanently.
-      await OnboardingStateService.saveFlowProgress(
-        prefs: prefs,
-        onboardingVersion: AuthOnboardingService.onboardingFlowVersion,
-        completedSteps: const <String>{'account'},
-        deferredSteps: _deferrableAccountSteps,
-        flowScopeKey: flowScopeKey,
-      );
-      await OnboardingStateService.clearPendingAuthOnboarding(
-        prefs: prefs,
-        scopeKey: flowScopeKey,
-      );
-      return PostAuthRedirectResult(
-        state: PostAuthRouteState.ready,
-        routeName: (redirectRoute ?? '').trim().isEmpty
-            ? '/main'
-            : redirectRoute!.trim(),
-        removeAuthStack: removeAuthStack,
-        arguments: redirectArguments,
-      );
-    }
+    final effectiveRequiresWalletSetup =
+        (requiresWalletSetup || _payloadRequiresWalletSetup(payload)) &&
+            targetWallet.isEmpty &&
+            origin != AuthOrigin.wallet;
 
     final resumeState =
         await AuthOnboardingService.resolveStructuredOnboardingResume(
@@ -148,16 +105,10 @@ class AuthRedirectController {
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
       requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
-      // Wallet setup applies to all Google/email account sessions without a
-      // wallet — standalone sign-in/registration and onboarding alike. Wallet
-      // origin sessions already proved a wallet, so they are exempt.
-      requiresWalletSetup:
-          (requiresWalletSetup || _payloadRequiresWalletSetup(payload)) &&
-              targetWallet.isEmpty &&
-              (origin == AuthOrigin.google ||
-                  origin == AuthOrigin.googleOnboarding ||
-                  origin == AuthOrigin.emailPassword ||
-                  origin == AuthOrigin.passkey),
+      // Wallet setup is requested only by the protected action or a trusted
+      // backend requirement. A wallet-authenticated session already has the
+      // wallet identity it needs and must not be asked to connect again.
+      requiresWalletSetup: effectiveRequiresWalletSetup,
       heuristicNextStepId: heuristicNextStepId,
       persona: persona,
       payload: payload,
@@ -174,6 +125,10 @@ class AuthRedirectController {
         removeAuthStack: removeAuthStack,
         arguments: redirectArguments,
         onboardingStepId: nextStepId,
+        requiresWalletSetup: effectiveRequiresWalletSetup,
+        completionRoute: (redirectRoute ?? '').trim().isEmpty
+            ? '/main'
+            : redirectRoute!.trim(),
       );
     }
 
@@ -184,6 +139,9 @@ class AuthRedirectController {
           : redirectRoute!.trim(),
       removeAuthStack: removeAuthStack,
       arguments: redirectArguments,
+      completionRoute: (redirectRoute ?? '').trim().isEmpty
+          ? '/main'
+          : redirectRoute!.trim(),
     );
   }
 
@@ -259,6 +217,9 @@ class AuthRedirectController {
         builder: (_) => OnboardingFlowScreen(
           forceDesktop: isDesktop,
           initialStepId: result.onboardingStepId,
+          completionRoute: result.completionRoute,
+          completionArguments: result.arguments,
+          requiresWalletSetup: result.requiresWalletSetup,
         ),
         settings: const RouteSettings(name: '/onboarding'),
       );

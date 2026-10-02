@@ -32,6 +32,7 @@ class _Harness {
   _Harness({
     this.markerById,
     this.markersByArtwork = const <ArtMarker>[],
+    this.markersFromTarget = const <ArtMarker>[],
     this.throwDuringFetch = false,
     this.throwDuringMove = false,
   }) {
@@ -49,6 +50,11 @@ class _Harness {
       },
       loadMarkersAround: (position) async {
         events.add('load-around');
+        targetLoadPosition = position;
+        for (final marker in markersFromTarget) {
+          markers.removeWhere((item) => item.id == marker.id);
+          markers.add(marker);
+        }
       },
       mergeMarkers: (items) {
         events.add('merge');
@@ -82,6 +88,7 @@ class _Harness {
 
   final ArtMarker? markerById;
   final List<ArtMarker> markersByArtwork;
+  final List<ArtMarker> markersFromTarget;
   final bool throwDuringFetch;
   final bool throwDuringMove;
   final List<ArtMarker> markers = <ArtMarker>[];
@@ -89,6 +96,7 @@ class _Harness {
   Completer<ArtMarker?>? markerFetchCompleter;
   late final MapTargetCoordinator coordinator;
   ArtMarker? selectedMarker;
+  LatLng? targetLoadPosition;
   LatLng? movedPosition;
   double? movedZoom;
   String? pinnedMarkerId;
@@ -229,6 +237,42 @@ void main() {
     expect(harness.movedPosition, position);
     expect(harness.selectedMarker, isNull);
     expect(harness.events, contains('fallback:coordinatesOnly'));
+  });
+
+  test('loads and resolves an outside-viewport target around its coordinates',
+      () async {
+    const targetPosition = LatLng(48.8566, 2.3522);
+    final targetMarker = _marker(
+      id: 'target-marker',
+      subjectId: 'target-subject',
+      subjectType: 'place',
+      position: targetPosition,
+    );
+    final harness = _Harness(markersFromTarget: <ArtMarker>[targetMarker]);
+    harness.coordinator.setMapControllerReady(true);
+    harness.coordinator.setStyleReady(true);
+
+    final future = harness.coordinator.submit(
+      const MapTargetIntent(
+        subjectId: 'target-subject',
+        subjectType: 'place',
+        preferredPosition: targetPosition,
+      ),
+    );
+    await harness.settle();
+
+    expect(harness.targetLoadPosition, targetPosition);
+    expect(harness.selectedMarker?.id, 'target-marker');
+    expect(
+        harness.events,
+        containsAllInOrder(<String>[
+          'load-around',
+          'pin:target-marker',
+          'move',
+          'select:target-marker',
+        ]));
+    harness.coordinator.acknowledgeOverlay('target-marker');
+    expect(await future, MapTargetResult.overlayOpened);
   });
 
   test('missing target without coordinates reports not found without moving',

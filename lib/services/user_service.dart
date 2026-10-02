@@ -1120,12 +1120,21 @@ class UserService {
   static Future<List<String>> _loadFollowingUsersFromPrefs({
     String? walletAddress,
   }) async {
+    return (await _readFollowingCache(walletAddress: walletAddress)) ??
+        <String>[];
+  }
+
+  /// The cached following list, or null when none was ever stored (or it
+  /// is unreadable), so "not known" is distinguishable from "follows nobody".
+  static Future<List<String>?> _readFollowingCache({
+    String? walletAddress,
+  }) async {
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
-    if (activeWallet.isEmpty) return <String>[];
+    if (activeWallet.isEmpty) return null;
     final prefs = await SharedPreferences.getInstance();
     final followingJson = prefs.getString(_followingKeyForWallet(activeWallet));
-    if (followingJson == null || followingJson.isEmpty) return <String>[];
+    if (followingJson == null || followingJson.isEmpty) return null;
     try {
       return List<String>.from(json.decode(followingJson))
           .map(WalletUtils.canonical)
@@ -1133,17 +1142,30 @@ class UserService {
           .toSet()
           .toList(growable: false);
     } catch (_) {
-      return <String>[];
+      return null;
     }
   }
 
+  /// Followed wallets, falling back to an empty list when unknown. Callers
+  /// that render follow state must use [getKnownFollowingUsers] instead.
   static Future<List<String>> getFollowingUsers({
     String? walletAddress,
     bool forceRefresh = false,
   }) async {
+    return (await getKnownFollowingUsers(walletAddress: walletAddress)) ??
+        <String>[];
+  }
+
+  /// Followed wallets only when they are actually known: the backend list,
+  /// or, if the backend request fails, a previously cached list. Null when
+  /// the backend fails and nothing was cached, or there is no active wallet;
+  /// an unavailable relationship state never masquerades as an empty set.
+  static Future<List<String>?> getKnownFollowingUsers({
+    String? walletAddress,
+  }) async {
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
-    if (activeWallet.isEmpty) return <String>[];
+    if (activeWallet.isEmpty) return null;
 
     try {
       final rows = await BackendApiService().getFollowing(
@@ -1167,7 +1189,7 @@ class UserService {
       if (kDebugMode) {
         debugPrint('UserService.getFollowingUsers: backend refresh failed: $e');
       }
-      return _loadFollowingUsersFromPrefs(walletAddress: activeWallet);
+      return _readFollowingCache(walletAddress: activeWallet);
     }
   }
 

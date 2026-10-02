@@ -138,3 +138,7 @@ COMPLETE_AUDIT.md
 
 # Playwright MCP session artifacts
 /.playwright-mcp/
+
+# Local and CI build outputs staged for upload (release APKs, signed device
+# test builds). Large binaries never belong in the repository.
+/artifacts/

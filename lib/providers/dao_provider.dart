@@ -18,6 +18,7 @@ class DAOProvider extends ChangeNotifier {
   List<DAOTransaction> _transactions = [];
   List<DAOReview> _reviews = [];
   bool _isLoading = false;
+  Object? _loadError;
   double? _treasuryOnChainBalance;
   bool _canModerateReviews = false;
   WalletProvider? _walletProvider;
@@ -76,6 +77,10 @@ class DAOProvider extends ChangeNotifier {
   }
 
   bool get isLoading => _isLoading;
+
+  /// The last load failure, or null. Screens use it to tell a network
+  /// failure apart from "no proposals" (the lists are emptied on failure).
+  Object? get loadError => _loadError;
   bool get canModerateReviews => _canModerateReviews;
 
   double? get treasuryOnChainBalance {
@@ -98,6 +103,7 @@ class DAOProvider extends ChangeNotifier {
   }
 
   Future<void> _loadFromBackend() async {
+    _loadError = null;
     try {
       final api = BackendApiService();
       try {
@@ -135,6 +141,7 @@ class DAOProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('DAOProvider _loadFromBackend error: $e');
+      _loadError = e;
       _proposals = [];
       _votes = [];
       _delegates = [];

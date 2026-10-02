@@ -8,7 +8,6 @@ import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/promotion/promotion_builder_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -336,7 +335,7 @@ void main() {
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BackdropGlassSheet), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
 
     final launchError = tester.takeException();
     if (launchError != null) {
@@ -545,5 +544,30 @@ void main() {
 
     // Fiat still works; the KUB8 segment is present but disabled by the quote.
     expect(submitEnabled(tester), isTrue);
+  });
+
+  testWidgets(
+      'a near-miss balance is never displayed as enough: the shown balance '
+      'comes from the same raw units that gate submission', (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+    );
+    // 70 KUB8 required; 69.9996 held. Rounding to 2 places would say 70.00.
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 69.9996),
+    ]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await selectKub8(tester);
+    await scrollSheetUntilVisible(
+      tester,
+      find.byKey(const Key('promotionBuilderKub8Status')),
+    );
+
+    expect(find.textContaining('69.9996 KUB8'), findsWidgets);
+    expect(find.textContaining(RegExp(r'Available: 70')), findsNothing);
+    await scrollToSubmitButton(tester);
+    expect(submitEnabled(tester), isFalse);
   });
 }

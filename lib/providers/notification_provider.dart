@@ -857,15 +857,18 @@ class NotificationProvider extends ChangeNotifier {
           case 'reward':
             await _pushService.showRewardNotification(
                 title: l10n.notificationRecognitionRecordedTitle,
-                amount: payload['amount'] ?? 0,
-                reason: payload['reason'] ?? '');
+                amount: payload['amount'] is num
+                    ? (payload['amount'] as num).toInt()
+                    : int.tryParse(payload['amount']?.toString() ?? '') ?? 0,
+                reason: payload['reason']?.toString() ?? '',
+                currency: (payload['currency'] ?? payload['rewardCurrency'])
+                    ?.toString());
             break;
           case 'artwork_discovery':
             await _pushService.showArtworkDiscoveryNotification(
                 artworkId: payload['artworkId']?.toString() ?? '',
                 title: payload['title'] ?? '',
-                artist: payload['artist'] ?? '',
-                rewards: payload['rewards'] ?? 0);
+                artist: payload['artist'] ?? '');
             break;
           case 'nft_minting':
             await _pushService.showNFTMintingNotification(

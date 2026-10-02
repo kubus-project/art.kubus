@@ -4,7 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../models/promotion.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../glass_components.dart';
+import '../common/kubus_flat_panel.dart';
 
 /// A visual card for selecting a promotion tier (Premium, Featured, Boost)
 class TierSelectionCard extends StatelessWidget {
@@ -28,46 +28,22 @@ class TierSelectionCard extends StatelessWidget {
     final tier = rateCard.placementTier;
 
     final tierIcon = _iconForTier(tier);
-    final tierColor = _colorForTier(tier, colors, roles);
+    // Tiers are identified by name and icon, not by per-tier accent colours.
+    final tierColor = roles.foreground;
 
-    return LiquidGlassCard(
+    return KubusFlatSelectable(
       onTap: onTap,
+      selected: isSelected,
       padding: EdgeInsets.zero,
-      backgroundColor: isSelected
-          ? tierColor.withValues(alpha: 0.16)
-          : colors.surfaceContainerHighest.withValues(alpha: 0.22),
-      showBorder: false,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
+      child: Padding(
         padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? tierColor.withValues(alpha: 0.15)
-              : colors.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color:
-                isSelected ? tierColor : colors.outline.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(KubusSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: tierColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  ),
-                  child: Icon(
-                    tierIcon,
-                    color: tierColor,
-                    size: 24,
-                  ),
+                ExcludeSemantics(
+                  child: Icon(tierIcon, color: roles.foregroundMuted, size: 24),
                 ),
                 const SizedBox(width: KubusSpacing.md),
                 Expanded(
@@ -138,21 +114,6 @@ class TierSelectionCard extends StatelessWidget {
         return Icons.star;
       case PromotionPlacementTier.boost:
         return Icons.rocket_launch;
-    }
-  }
-
-  Color _colorForTier(
-    PromotionPlacementTier tier,
-    ColorScheme colors,
-    KubusColorRoles roles,
-  ) {
-    switch (tier) {
-      case PromotionPlacementTier.premium:
-        return roles.achievementGold;
-      case PromotionPlacementTier.featured:
-        return roles.negativeAction; // Red for Featured tier
-      case PromotionPlacementTier.boost:
-        return colors.primary;
     }
   }
 

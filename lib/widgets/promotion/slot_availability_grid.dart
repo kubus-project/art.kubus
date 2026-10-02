@@ -4,7 +4,7 @@ import 'package:art_kubus/utils/kubus_color_roles.dart';
 
 import '../../models/promotion.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
+import '../common/kubus_flat_panel.dart';
 
 /// A visual grid showing slot availability for premium tier promotions
 class SlotAvailabilityGrid extends StatelessWidget {
@@ -109,31 +109,13 @@ class _SlotCard extends StatelessWidget {
     final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    final borderColor = isSelected
-        ? (isAvailable ? roles.statTeal : colors.error)
-        : colors.outline.withValues(alpha: 0.3);
-
-    final backgroundColor = isAvailable
-        ? (isSelected
-            ? roles.statTeal.withValues(alpha: 0.18)
-            : colors.surfaceContainerHighest.withValues(alpha: 0.5))
-        : colors.errorContainer.withValues(alpha: 0.3);
-
-    return FrostedContainer(
+    return KubusFlatSelectable(
       onTap: onTap,
+      selected: isSelected,
+      invalid: !isAvailable,
       padding: EdgeInsets.zero,
-      backgroundColor: backgroundColor,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
         child: Column(
           children: [
             Icon(
@@ -194,8 +176,7 @@ class _AlternativeDatesSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     if (alternatives.alternatives.isEmpty) {
-      return FrostedContainer(
-        backgroundColor: colors.errorContainer.withValues(alpha: 0.3),
+      return KubusFlatPanel(
         child: Row(
           children: [
             Icon(Icons.info_outline, color: colors.error, size: 20),
@@ -272,13 +253,12 @@ class _AlternativeDateChip extends StatelessWidget {
         ? l10n.promotionBuilderStartImmediately
         : l10n.promotionBuilderDurationDays(alternative.daysUntilStart);
 
-    return FrostedContainer(
+    return KubusFlatSelectable(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.sm + KubusSpacing.xxs,
       ),
-      backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.65),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -286,7 +266,7 @@ class _AlternativeDateChip extends StatelessWidget {
             _formatDate(context, alternative.startDate),
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: roles.statBlue,
+              color: roles.foreground,
             ),
           ),
           const SizedBox(height: 2),

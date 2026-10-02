@@ -13,7 +13,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     required this.titleKey,
     required this.artworkCount,
     required this.discoveryProgress,
-    required this.travelModeEnabled,
+    required this.viewportScope,
     required this.radiusKm,
     required this.useGrid,
     required this.sort,
@@ -29,7 +29,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
   final Key? titleKey;
   final int artworkCount;
   final double? discoveryProgress;
-  final bool travelModeEnabled;
+  final bool viewportScope;
   final double radiusKm;
   final bool useGrid;
   final KubusNearbyArtSort sort;
@@ -49,11 +49,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
         isMobile ? l10n.mapNearbyArtTitle : l10n.arNearbyArtworksTitle;
 
     final subtitle = (() {
-      if (travelModeEnabled) {
-        return isMobile
-            ? '${l10n.mapResultsDiscoveredLabel(artworkCount, ((discoveryProgress ?? 0) * 100).round())} ${l10n.mapTravelModeStatusTravelling}'
-            : l10n.mapTravelModeStatusTravelling;
-      }
+      if (viewportScope) return l10n.mapFilterScopeCurrentViewport;
 
       if (isMobile && discoveryProgress != null) {
         return l10n.mapResultsDiscoveredLabel(
@@ -102,10 +98,10 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
           _glassIconButton(
             context,
             icon: Icons.radar,
-            tooltip: travelModeEnabled
-                ? l10n.mapTravelModeStatusTravellingTooltip
+            tooltip: viewportScope
+                ? l10n.mapFilterScopeCurrentViewport
                 : l10n.mapNearbyRadiusTooltip(radiusKm.toInt()),
-            onTap: travelModeEnabled ? null : onRadiusTap,
+            onTap: viewportScope ? null : onRadiusTap,
           ),
           const SizedBox(width: KubusSpacing.sm),
           _glassIconButton(

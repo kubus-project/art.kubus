@@ -27,11 +27,16 @@ class CollaborationPanel extends StatefulWidget {
   /// Used to gate role-management controls.
   final String? myRole;
 
+  /// Inside a section that already names it (a creator management rail):
+  /// no card and no own title, only the refresh control and the content.
+  final bool embedded;
+
   const CollaborationPanel({
     super.key,
     required this.entityType,
     required this.entityId,
     this.myRole,
+    this.embedded = false,
   });
 
   @override
@@ -298,7 +303,12 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                         s['secondaryText'] ??
                         s['secondary_text'])
                     .toString(),
-            avatarUrl: (s['avatarUrl'] ?? s['avatar_url'] ?? s['imageUrl'] ?? s['image_url'] ?? s['icon'] ?? '')
+            avatarUrl: (s['avatarUrl'] ??
+                        s['avatar_url'] ??
+                        s['imageUrl'] ??
+                        s['image_url'] ??
+                        s['icon'] ??
+                        '')
                     .toString()
                     .trim()
                     .isEmpty
@@ -462,10 +472,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         role: newRole,
       );
       if (!mounted) return;
-      messenger
-          .showKubusSnackBar(SnackBar(content: Text(l10n.collabPanelRoleUpdated)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.collabPanelRoleUpdated)));
     } catch (_) {
-        messenger.showKubusSnackBar(
+      messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.collabPanelRoleUpdateFailed)));
     }
   }
@@ -487,12 +497,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         final l10n = AppLocalizations.of(ctx)!;
         return KubusAlertDialog(
           title: Text(l10n.collabPanelRemoveConfirmTitle),
-          content: Text(
-              l10n.collabPanelRemoveConfirmBody(
-                member.user?.displayName ??
-                    member.user?.username ??
-                    l10n.collabPanelGenericUser,
-              )),
+          content: Text(l10n.collabPanelRemoveConfirmBody(
+            member.user?.displayName ??
+                member.user?.username ??
+                l10n.collabPanelGenericUser,
+          )),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -513,7 +522,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         entityId: widget.entityId,
         memberUserId: member.userId,
       );
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.collabPanelRemoved)));
+      messenger
+          .showKubusSnackBar(SnackBar(content: Text(l10n.collabPanelRemoved)));
     } catch (_) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.collabPanelRemoveFailed)));
@@ -539,78 +549,89 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     // Keep member identities fresh (e.g. username/displayName changes).
     _queueMemberProfileResolution(members, forceRefresh: false);
 
+    final emptyText = Text(
+      l10n.collabPanelNoCollaborators,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.65),
+          ),
+    );
+    // Embedded, the enclosing section names the panel, so the refresh
+    // control shares a line with the membership status instead of a title.
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: widget.embedded
+                  ? (members.isEmpty ? emptyText : const SizedBox.shrink())
+                  : Text(
+                      l10n.collectionSettingsCollaboration,
+                      style: KubusTextStyles.detailSectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+            ),
+            if (collab.isLoading)
+              SizedBox(
+                width: KubusSizes.trailingChevron + KubusSpacing.xxs,
+                height: KubusSizes.trailingChevron + KubusSpacing.xxs,
+                child: InlineLoading(tileSize: 4, color: scheme.primary),
+              )
+            else
+              IconButton(
+                tooltip: AppLocalizations.of(context)!.commonRefresh,
+                onPressed: _loadMembers,
+                icon: Icon(
+                  Icons.refresh,
+                  color: scheme.onSurface.withValues(alpha: 0.75),
+                ),
+              ),
+          ],
+        ),
+        if ((collab.error ?? '').isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+            child: Text(
+              l10n.collabPanelLoadFailed,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.error,
+                  ),
+            ),
+          ),
+        if (canManageMembers) ...[
+          _buildInviteSection(scheme, myRole: myRole),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+        ],
+        if (members.isEmpty)
+          widget.embedded
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+                  child: emptyText,
+                )
+        else
+          Column(
+            children: members
+                .map((m) => _buildMemberRow(
+                      m,
+                      scheme,
+                      canManageMembers: canManageMembers,
+                      myRole: myRole,
+                    ))
+                .toList(growable: false),
+          ),
+      ],
+    );
+
+    if (widget.embedded) return content;
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       margin: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(KubusRadius.lg),
       showBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.collectionSettingsCollaboration,
-                  style: KubusTextStyles.detailSectionTitle.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              if (collab.isLoading)
-                SizedBox(
-                  width: KubusSizes.trailingChevron + KubusSpacing.xxs,
-                  height: KubusSizes.trailingChevron + KubusSpacing.xxs,
-                  child: InlineLoading(tileSize: 4, color: scheme.primary),
-                )
-              else
-                IconButton(
-                  tooltip: AppLocalizations.of(context)!.commonRefresh,
-                  onPressed: _loadMembers,
-                  icon: Icon(
-                    Icons.refresh,
-                    color: scheme.onSurface.withValues(alpha: 0.75),
-                  ),
-                ),
-            ],
-          ),
-          if ((collab.error ?? '').isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-              child: Text(
-                l10n.collabPanelLoadFailed,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.error,
-                    ),
-              ),
-            ),
-          if (canManageMembers) ...[
-            _buildInviteSection(scheme, myRole: myRole),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          ],
-          if (members.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-              child: Text(
-                l10n.collabPanelNoCollaborators,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.65),
-                    ),
-              ),
-            )
-          else
-            Column(
-              children: members
-                  .map((m) => _buildMemberRow(
-                        m,
-                        scheme,
-                        canManageMembers: canManageMembers,
-                        myRole: myRole,
-                      ))
-                  .toList(growable: false),
-            ),
-        ],
-      ),
+      child: content,
     );
   }
 
@@ -649,7 +670,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                                     KubusSpacing.xxs,
                                 height: KubusSizes.trailingChevron -
                                     KubusSpacing.xxs,
-                                child: InlineLoading(tileSize: 4, color: scheme.primary),
+                                child: InlineLoading(
+                                    tileSize: 4, color: scheme.primary),
                               ),
                             )
                           : (_inviteController.text.isNotEmpty
@@ -752,14 +774,19 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       initialValue: _inviteRole,
                       items: [
                         DropdownMenuItem(
-                          value: 'viewer', child: Text(l10n.collabRoleViewer)),
+                            value: 'viewer',
+                            child: Text(l10n.collabRoleViewer)),
                         DropdownMenuItem(
-                          value: 'curator', child: Text(l10n.collabRoleCurator)),
+                            value: 'curator',
+                            child: Text(l10n.collabRoleCurator)),
                         DropdownMenuItem(
-                          value: 'editor', child: Text(l10n.collabRoleEditor)),
+                            value: 'editor',
+                            child: Text(l10n.collabRoleEditor)),
                         DropdownMenuItem(
-                          value: 'publisher', child: Text(l10n.collabRolePublisher)),
-                        DropdownMenuItem(value: 'admin', child: Text(l10n.collabRoleAdmin)),
+                            value: 'publisher',
+                            child: Text(l10n.collabRolePublisher)),
+                        DropdownMenuItem(
+                            value: 'admin', child: Text(l10n.collabRoleAdmin)),
                       ],
                       onChanged: (v) {
                         if (v == null) return;
@@ -916,16 +943,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                 initialValue: member.role,
                 items: [
                   DropdownMenuItem(
-                    value: 'viewer', child: Text(l10n.collabRoleViewer)),
+                      value: 'viewer', child: Text(l10n.collabRoleViewer)),
                   DropdownMenuItem(
-                    value: 'curator', child: Text(l10n.collabRoleCurator)),
+                      value: 'curator', child: Text(l10n.collabRoleCurator)),
                   DropdownMenuItem(
-                    value: 'editor', child: Text(l10n.collabRoleEditor)),
+                      value: 'editor', child: Text(l10n.collabRoleEditor)),
                   DropdownMenuItem(
-                    value: 'publisher',
-                    child: Text(l10n.collabRolePublisher)),
+                      value: 'publisher',
+                      child: Text(l10n.collabRolePublisher)),
                   DropdownMenuItem(
-                    value: 'admin', child: Text(l10n.collabRoleAdmin)),
+                      value: 'admin', child: Text(l10n.collabRoleAdmin)),
                 ],
                 onChanged: (v) {
                   if (v == null) return;

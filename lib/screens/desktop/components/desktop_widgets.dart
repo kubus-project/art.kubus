@@ -5,12 +5,18 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
 
-/// Desktop content card with hover effects and animations
+/// Desktop content card.
+///
+/// PRODUCT v5: flat by default (surface + hairline rule); hover strengthens
+/// the rule instead of lifting the card with a shadow. Glass remains an
+/// explicit `isGlass: true` option for overlays on media or the map.
 class DesktopCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -36,7 +42,7 @@ class DesktopCard extends StatefulWidget {
     this.borderRadius,
     this.backgroundColor,
     this.showBorder = true,
-    this.isGlass = true,
+    this.isGlass = false,
   });
 
   @override
@@ -51,14 +57,15 @@ class _DesktopCardState extends State<DesktopCard> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final animationTheme = context.animationTheme;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: widget.backgroundColor ?? scheme.surface,
     );
 
-    final radius = widget.borderRadius ?? BorderRadius.circular(KubusRadius.lg);
+    final roles = KubusColorRoles.of(context);
+    final radius =
+        widget.borderRadius ?? BorderRadius.circular(KubusRadius.surface);
     final glassTint = widget.backgroundColor ?? glassStyle.tintColor;
 
     Widget content = AnimatedContainer(
@@ -67,26 +74,15 @@ class _DesktopCardState extends State<DesktopCard> {
       width: widget.width,
       height: widget.height,
       margin: widget.margin,
-      transform:
-          _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
       decoration: BoxDecoration(
         borderRadius: radius,
         border: widget.showBorder
             ? Border.all(
-                color: _isHovered
-                    ? themeProvider.accentColor.withValues(alpha: 0.22)
-                    : scheme.outline.withValues(alpha: 0.14),
-                width: _isHovered ? 1.25 : 1,
+                color: _isHovered && widget.onTap != null
+                    ? roles.ruleStrong
+                    : roles.rule,
+                width: KubusSizes.hairline,
               )
-            : null,
-        boxShadow: _isHovered
-            ? [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.10),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ]
             : null,
       ),
       child: widget.isGlass
@@ -103,7 +99,7 @@ class _DesktopCardState extends State<DesktopCard> {
               child: widget.child,
             )
           : Material(
-              color: scheme.primaryContainer,
+              color: widget.backgroundColor ?? roles.surface,
               borderRadius: radius,
               child: InkWell(
                 onTap: widget.onTap,
@@ -127,7 +123,10 @@ class _DesktopCardState extends State<DesktopCard> {
   }
 }
 
-/// Desktop section header with optional actions
+/// Desktop section header: optional contextual icon tile, title, subtitle
+/// and a trailing action. [iconColor] is the section's contextual accent and
+/// stays inside the icon tile; it defaults to the family active colour, never
+/// to the personal accent.
 class DesktopSectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -148,8 +147,7 @@ class DesktopSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final effectiveColor = iconColor ?? themeProvider.accentColor;
+    final accent = iconColor ?? KubusColorRoles.of(context).active;
 
     return Padding(
       padding: padding ??
@@ -159,21 +157,7 @@ class DesktopSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            Container(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              decoration: BoxDecoration(
-                color: effectiveColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: effectiveColor,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-              ),
-            ),
+            KubusContextIcon(icon: icon!, accent: accent),
             const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           ],
           Expanded(
@@ -197,6 +181,10 @@ class DesktopGrid extends StatelessWidget {
   final int maxCrossAxisCount;
   final double spacing;
   final double childAspectRatio;
+
+  /// Fixed tile height. Prefer it for text-bearing tiles: an aspect ratio
+  /// shrinks the height with the column width and clips wrapped labels.
+  final double? mainAxisExtent;
   final double breakpointWidth;
 
   const DesktopGrid({
@@ -206,6 +194,7 @@ class DesktopGrid extends StatelessWidget {
     this.maxCrossAxisCount = 4,
     this.spacing = 16,
     this.childAspectRatio = 1.0,
+    this.mainAxisExtent,
     this.breakpointWidth = 300,
   });
 
@@ -225,6 +214,7 @@ class DesktopGrid extends StatelessWidget {
             crossAxisSpacing: spacing,
             mainAxisSpacing: spacing,
             childAspectRatio: childAspectRatio,
+            mainAxisExtent: mainAxisExtent,
           ),
           itemCount: children.length,
           itemBuilder: (context, index) => children[index],
@@ -234,8 +224,11 @@ class DesktopGrid extends StatelessWidget {
   }
 }
 
-/// Desktop stat card for displaying metrics
-class DesktopStatCard extends StatefulWidget {
+/// Desktop stat card for displaying metrics.
+///
+/// PRODUCT v5: a flat metric (no hover lift, scale, shadow or watermark).
+/// [color] is the metric's contextual accent and paints its icon tile.
+class DesktopStatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -243,8 +236,6 @@ class DesktopStatCard extends StatefulWidget {
   final String? change;
   final bool isPositive;
   final VoidCallback? onTap;
-  final Alignment? centeredWatermarkAlignment;
-  final double centeredWatermarkScale;
 
   const DesktopStatCard({
     super.key,
@@ -255,79 +246,34 @@ class DesktopStatCard extends StatefulWidget {
     this.change,
     this.isPositive = true,
     this.onTap,
-    this.centeredWatermarkAlignment,
-    this.centeredWatermarkScale = 1.0,
   });
 
-  @override
-  State<DesktopStatCard> createState() => _DesktopStatCardState();
-}
+  /// The `mainAxisExtent` for a grid of these tiles: icon tile, number and a
+  /// two-line label, measured at the ambient text scale.
+  static double extentOf(BuildContext context) => KubusStatCard.centeredExtent(
+        context,
+        valueStyle: _valueStyle,
+        titleStyle: _titleStyle,
+      );
 
-class _DesktopStatCardState extends State<DesktopStatCard> {
-  bool _isHovered = false;
+  static TextStyle get _valueStyle => KubusTextStyles.statValue;
+  static TextStyle get _titleStyle => KubusTextStyles.detailCaption;
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final color = widget.color ?? themeProvider.accentColor;
-    final animationTheme = context.animationTheme;
-
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: _isHovered ? 1.0 : 0.0),
-        duration: animationTheme.medium,
-        curve: animationTheme.emphasisCurve,
-        builder: (context, hoverValue, child) {
-          return Transform.translate(
-            offset: Offset(0, -4 * hoverValue),
-            child: Transform.scale(
-              scale: 1 + (0.012 * hoverValue),
-              alignment: Alignment.center,
-              child: AnimatedContainer(
-                duration: animationTheme.medium,
-                curve: animationTheme.emphasisCurve,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          color.withValues(alpha: 0.05 + (0.14 * hoverValue)),
-                      blurRadius: 10 + (10 * hoverValue),
-                      spreadRadius: 0.5 * hoverValue,
-                      offset: Offset(0, 3 + (3 * hoverValue)),
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: KubusStatCard(
-          title: widget.label,
-          value: widget.value,
-          icon: widget.icon,
-          layout: KubusStatCardLayout.centered,
-          accent: color,
-          centeredWatermarkAlignment: widget.centeredWatermarkAlignment,
-          centeredWatermarkScale: widget.centeredWatermarkScale,
-          centeredWatermarkHovered: _isHovered,
-          change: widget.change,
-          isPositiveChange: widget.isPositive,
-          minHeight: 136,
-          titleMaxLines: 2,
-          valueStyle: KubusTextStyles.statValue,
-          titleStyle: KubusTextStyles.actionTileTitle,
-          borderColor: _isHovered
-              ? color.withValues(alpha: 0.3)
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          onTap: widget.onTap,
-        ),
-      ),
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: color,
+      layout: KubusStatCardLayout.centered,
+      change: change,
+      isPositiveChange: isPositive,
+      minHeight: 88,
+      titleMaxLines: 2,
+      valueStyle: _valueStyle,
+      titleStyle: _titleStyle,
+      onTap: onTap,
     );
   }
 }
@@ -418,9 +364,11 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
                   ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: InlineLoading(tileSize: 4, color: widget.isPrimary
-                            ? Colors.white
-                            : themeProvider.accentColor),
+                      child: InlineLoading(
+                          tileSize: 4,
+                          color: widget.isPrimary
+                              ? Colors.white
+                              : themeProvider.accentColor),
                     )
                   : Icon(widget.icon, size: KubusHeaderMetrics.actionIcon),
               label: Text(

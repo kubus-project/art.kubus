@@ -1,0 +1,4685 @@
+{
+  "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+  "previewOrigin": "http://127.0.0.1:4184",
+  "fixtureScope": "local public-only demo entities; no production data",
+  "apiEvidencePolicy": "api.kubus.site requests are proxied to the local public-only preview",
+  "generatedAt": "2026-09-24T08:12:56.524Z",
+  "results": [
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-390-light-ssr-chromium.png",
+        "artwork-en-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-light-loading-chromium.png",
+        "artwork-en-390-light-flutter-chromium.png",
+        "artwork-en-390-light-flutter-keyboard-focused-chromium.png"
+      ],
+      "keyboard": {
+        "ssrBecameInert": true,
+        "accessibilityEntry": {
+          "label": "Enable accessibility",
+          "outlineWidth": 3,
+          "outlineStyle": "auto"
+        },
+        "semanticControl": {
+          "label": "Back",
+          "x": 8,
+          "y": 8,
+          "width": 40,
+          "height": 40,
+          "outlineWidth": 1,
+          "outlineStyle": "auto"
+        }
+      },
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-390-dark-ssr-chromium.png",
+        "artwork-en-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-dark-loading-chromium.png",
+        "artwork-en-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1440-light-ssr-chromium.png",
+        "artwork-en-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1440-light-loading-chromium.png",
+        "artwork-en-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1440-dark-ssr-chromium.png",
+        "artwork-en-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1440-dark-loading-chromium.png",
+        "artwork-en-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-390-light-ssr-chromium.png",
+        "artwork-sl-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-390-light-loading-chromium.png",
+        "artwork-sl-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-390-dark-ssr-chromium.png",
+        "artwork-sl-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-390-dark-loading-chromium.png",
+        "artwork-sl-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-1440-light-ssr-chromium.png",
+        "artwork-sl-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-1440-light-loading-chromium.png",
+        "artwork-sl-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-1440-dark-ssr-chromium.png",
+        "artwork-sl-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-1440-dark-loading-chromium.png",
+        "artwork-sl-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-390-light-ssr-chromium.png",
+        "artist-profile-en-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-390-light-loading-chromium.png",
+        "artist-profile-en-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-390-dark-ssr-chromium.png",
+        "artist-profile-en-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-390-dark-loading-chromium.png",
+        "artist-profile-en-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-1440-light-ssr-chromium.png",
+        "artist-profile-en-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-1440-light-loading-chromium.png",
+        "artist-profile-en-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-1440-dark-ssr-chromium.png",
+        "artist-profile-en-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-1440-dark-loading-chromium.png",
+        "artist-profile-en-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-390-light-ssr-chromium.png",
+        "artist-profile-sl-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-390-light-loading-chromium.png",
+        "artist-profile-sl-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-390-dark-ssr-chromium.png",
+        "artist-profile-sl-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-390-dark-loading-chromium.png",
+        "artist-profile-sl-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-1440-light-ssr-chromium.png",
+        "artist-profile-sl-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-1440-light-loading-chromium.png",
+        "artist-profile-sl-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-1440-dark-ssr-chromium.png",
+        "artist-profile-sl-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-1440-dark-loading-chromium.png",
+        "artist-profile-sl-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-390-light-ssr-chromium.png",
+        "institution-profile-en-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-390-light-loading-chromium.png",
+        "institution-profile-en-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-390-dark-ssr-chromium.png",
+        "institution-profile-en-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-390-dark-loading-chromium.png",
+        "institution-profile-en-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-1440-light-ssr-chromium.png",
+        "institution-profile-en-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-1440-light-loading-chromium.png",
+        "institution-profile-en-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-1440-dark-ssr-chromium.png",
+        "institution-profile-en-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-1440-dark-loading-chromium.png",
+        "institution-profile-en-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-390-light-ssr-chromium.png",
+        "institution-profile-sl-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-390-light-loading-chromium.png",
+        "institution-profile-sl-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-390-dark-ssr-chromium.png",
+        "institution-profile-sl-390-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-390-dark-loading-chromium.png",
+        "institution-profile-sl-390-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-1440-light-ssr-chromium.png",
+        "institution-profile-sl-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-1440-light-loading-chromium.png",
+        "institution-profile-sl-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-1440-dark-ssr-chromium.png",
+        "institution-profile-sl-1440-dark-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-1440-dark-loading-chromium.png",
+        "institution-profile-sl-1440-dark-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "event-en-390-light-ssr-chromium.png",
+        "event-en-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "event-en-390-light-loading-chromium.png",
+        "event-en-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "event-en-1440-light-ssr-chromium.png",
+        "event-en-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "event-en-1440-light-loading-chromium.png",
+        "event-en-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "exhibition-en-390-light-ssr-chromium.png",
+        "exhibition-en-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "exhibition-en-390-light-loading-chromium.png",
+        "exhibition-en-390-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "exhibition-en-1440-light-ssr-chromium.png",
+        "exhibition-en-1440-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "exhibition-en-1440-light-loading-chromium.png",
+        "exhibition-en-1440-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/collections/77777777-7777-4777-8777-777777777777",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/collections/77777777-7777-4777-8777-777777777777",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "collection-route-smoke-390-light-ssr-chromium.png",
+        "collection-route-smoke-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "collection",
+      "entityId": "77777777-7777-4777-8777-777777777777",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/posts/66666666-6666-4666-8666-666666666666",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/posts/66666666-6666-4666-8666-666666666666",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "post-route-smoke-390-light-ssr-chromium.png",
+        "post-route-smoke-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "post",
+      "entityId": "66666666-6666-4666-8666-666666666666",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/map/88888888-8888-4888-8888-888888888888",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/map/88888888-8888-4888-8888-888888888888",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "marker-route-smoke-390-light-ssr-chromium.png",
+        "marker-route-smoke-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "marker",
+      "entityId": "88888888-8888-4888-8888-888888888888",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/collectibles/55555555-5555-4555-8555-555555555555",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/collectibles/55555555-5555-4555-8555-555555555555",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "collectible-route-smoke-390-light-ssr-chromium.png",
+        "collectible-route-smoke-390-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "collectible",
+      "entityId": "55555555-5555-4555-8555-555555555555",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-900-light-ssr-chromium.png",
+        "artwork-en-900-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 900,
+        "documentWidth": 900,
+        "bodyWidth": 900,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 900,
+        "documentWidth": 900,
+        "bodyWidth": 900,
+        "flutterLeft": 0,
+        "flutterRight": 900,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-900-light-loading-chromium.png",
+        "artwork-en-900-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1024-light-ssr-chromium.png",
+        "artwork-en-1024-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1024,
+        "documentWidth": 1024,
+        "bodyWidth": 1024,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1024,
+        "documentWidth": 1024,
+        "bodyWidth": 1024,
+        "flutterLeft": 0,
+        "flutterRight": 1024,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1024-light-loading-chromium.png",
+        "artwork-en-1024-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1280-light-ssr-chromium.png",
+        "artwork-en-1280-light-ssr-keyboard-focused-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1280,
+        "documentWidth": 1280,
+        "bodyWidth": 1280,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1280,
+        "documentWidth": 1280,
+        "bodyWidth": 1280,
+        "flutterLeft": 0,
+        "flutterRight": 1280,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1280-light-loading-chromium.png",
+        "artwork-en-1280-light-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "en",
+      "title": "A Long Public Artwork Title for Responsive Layout Verification",
+      "artist": "Maja Novak and collaborators from the public art archive",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ],
+      "screenshotFiles": [
+        "artwork-en-long-text-390-ssr-chromium.png",
+        "artwork-en-long-text-320-flutter-chromium.png",
+        "artwork-en-long-text-360-flutter-chromium.png",
+        "artwork-en-long-text-390-flutter-chromium.png",
+        "artwork-en-long-text-430-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "sl",
+      "title": "Dolgo slovensko ime javnega umetniškega dela za preverjanje postavitve",
+      "artist": "Maja Novak in sodelavci iz lokalnega umetniškega arhiva",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ],
+      "screenshotFiles": [
+        "artwork-sl-long-text-390-ssr-chromium.png",
+        "artwork-sl-long-text-320-flutter-chromium.png",
+        "artwork-sl-long-text-360-flutter-chromium.png",
+        "artwork-sl-long-text-390-flutter-chromium.png",
+        "artwork-sl-long-text-430-flutter-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "state": "failure-states",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "slowFlutter": "SSR remained accessible before exact takeover",
+      "bundleFailure": "SSR remained visible and host stayed hidden",
+      "screenshotFiles": [
+        "artwork-sl-390-slow-loading-ssr-chromium.png",
+        "artwork-sl-390-slow-loading-flutter-chromium.png",
+        "artwork-en-1440-bundle-failure-ssr-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled; bundle delayed or blocked",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "chromium",
+      "state": "narrow-css-viewport-simulation-not-browser-zoom",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "zoomMode": "viewport-simulation-not-browser-zoom",
+      "viewport": {
+        "width": 195,
+        "height": 422,
+        "deviceScaleFactor": 2
+      },
+      "metrics": {
+        "innerWidth": 195,
+        "documentWidth": 195,
+        "bodyWidth": 195,
+        "flutterLeft": 0,
+        "flutterRight": 195,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-narrow-viewport-simulation-not-zoom-chromium.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce"
+    },
+    {
+      "browser": "chromium",
+      "state": "real-browser-zoom-unverified",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "zoomMode": "keyboard-shortcut-attempted",
+      "reason": "Browser did not report a 200% page zoom after Ctrl+Plus attempts.",
+      "before": {
+        "innerWidth": 1440,
+        "devicePixelRatio": 1,
+        "visualViewportScale": 1
+      },
+      "after": {
+        "innerWidth": 1440,
+        "devicePixelRatio": 1,
+        "visualViewportScale": 1
+      },
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "screenshotFiles": []
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-390-light-ssr-firefox.png",
+        "artwork-en-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-light-loading-firefox.png",
+        "artwork-en-390-light-flutter-firefox.png",
+        "artwork-en-390-light-flutter-keyboard-focused-firefox.png"
+      ],
+      "keyboard": {
+        "ssrBecameInert": true,
+        "accessibilityEntry": {
+          "label": "Enable accessibility",
+          "outlineWidth": 1,
+          "outlineStyle": "auto"
+        },
+        "semanticControl": {
+          "label": "Share",
+          "x": 310,
+          "y": 8,
+          "width": 40,
+          "height": 40,
+          "outlineWidth": 1,
+          "outlineStyle": "auto"
+        }
+      },
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-390-dark-ssr-firefox.png",
+        "artwork-en-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-dark-loading-firefox.png",
+        "artwork-en-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1440-light-ssr-firefox.png",
+        "artwork-en-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1440-light-loading-firefox.png",
+        "artwork-en-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1440-dark-ssr-firefox.png",
+        "artwork-en-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1440-dark-loading-firefox.png",
+        "artwork-en-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-390-light-ssr-firefox.png",
+        "artwork-sl-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-390-light-loading-firefox.png",
+        "artwork-sl-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-390-dark-ssr-firefox.png",
+        "artwork-sl-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-390-dark-loading-firefox.png",
+        "artwork-sl-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-1440-light-ssr-firefox.png",
+        "artwork-sl-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-1440-light-loading-firefox.png",
+        "artwork-sl-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-sl-1440-dark-ssr-firefox.png",
+        "artwork-sl-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-sl-1440-dark-loading-firefox.png",
+        "artwork-sl-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-390-light-ssr-firefox.png",
+        "artist-profile-en-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-390-light-loading-firefox.png",
+        "artist-profile-en-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-390-dark-ssr-firefox.png",
+        "artist-profile-en-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-390-dark-loading-firefox.png",
+        "artist-profile-en-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-1440-light-ssr-firefox.png",
+        "artist-profile-en-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-1440-light-loading-firefox.png",
+        "artist-profile-en-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-en-1440-dark-ssr-firefox.png",
+        "artist-profile-en-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-en-1440-dark-loading-firefox.png",
+        "artist-profile-en-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-390-light-ssr-firefox.png",
+        "artist-profile-sl-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-390-light-loading-firefox.png",
+        "artist-profile-sl-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-390-dark-ssr-firefox.png",
+        "artist-profile-sl-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-390-dark-loading-firefox.png",
+        "artist-profile-sl-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-1440-light-ssr-firefox.png",
+        "artist-profile-sl-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-1440-light-loading-firefox.png",
+        "artist-profile-sl-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/22222222-2222-4222-8222-222222222222",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artist-profile-sl-1440-dark-ssr-firefox.png",
+        "artist-profile-sl-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/22222222-2222-4222-8222-222222222222",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artist-profile-sl-1440-dark-loading-firefox.png",
+        "artist-profile-sl-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "22222222-2222-4222-8222-222222222222",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-390-light-ssr-firefox.png",
+        "institution-profile-en-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-390-light-loading-firefox.png",
+        "institution-profile-en-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-390-dark-ssr-firefox.png",
+        "institution-profile-en-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-390-dark-loading-firefox.png",
+        "institution-profile-en-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-1440-light-ssr-firefox.png",
+        "institution-profile-en-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-1440-light-loading-firefox.png",
+        "institution-profile-en-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/en/profiles/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-en-1440-dark-ssr-firefox.png",
+        "institution-profile-en-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/profiles/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-en-1440-dark-loading-firefox.png",
+        "institution-profile-en-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-390-light-ssr-firefox.png",
+        "institution-profile-sl-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-390-light-loading-firefox.png",
+        "institution-profile-sl-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-390-dark-ssr-firefox.png",
+        "institution-profile-sl-390-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-390-dark-loading-firefox.png",
+        "institution-profile-sl-390-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-1440-light-ssr-firefox.png",
+        "institution-profile-sl-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-1440-light-loading-firefox.png",
+        "institution-profile-sl-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "canonical": "http://127.0.0.1:4184/sl/profili/99999999-9999-4999-8999-999999999999",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "institution-profile-sl-1440-dark-ssr-firefox.png",
+        "institution-profile-sl-1440-dark-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/profili/99999999-9999-4999-8999-999999999999",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "institution-profile-sl-1440-dark-loading-firefox.png",
+        "institution-profile-sl-1440-dark-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "sl",
+      "entityType": "profile",
+      "entityId": "99999999-9999-4999-8999-999999999999",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "event-en-390-light-ssr-firefox.png",
+        "event-en-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "event-en-390-light-loading-firefox.png",
+        "event-en-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/events/33333333-3333-4333-8333-333333333333",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "event-en-1440-light-ssr-firefox.png",
+        "event-en-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/events/33333333-3333-4333-8333-333333333333",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "event-en-1440-light-loading-firefox.png",
+        "event-en-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "event",
+      "entityId": "33333333-3333-4333-8333-333333333333",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "exhibition-en-390-light-ssr-firefox.png",
+        "exhibition-en-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390,
+        "flutterLeft": 0,
+        "flutterRight": 390,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "exhibition-en-390-light-loading-firefox.png",
+        "exhibition-en-390-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "exhibition-en-1440-light-ssr-firefox.png",
+        "exhibition-en-1440-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/exhibitions/44444444-4444-4444-8444-444444444444",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1440,
+        "documentWidth": 1440,
+        "bodyWidth": 1440,
+        "flutterLeft": 0,
+        "flutterRight": 1440,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "exhibition-en-1440-light-loading-firefox.png",
+        "exhibition-en-1440-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "exhibition",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/collections/77777777-7777-4777-8777-777777777777",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/collections/77777777-7777-4777-8777-777777777777",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "collection-route-smoke-390-light-ssr-firefox.png",
+        "collection-route-smoke-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "collection",
+      "entityId": "77777777-7777-4777-8777-777777777777",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/posts/66666666-6666-4666-8666-666666666666",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/posts/66666666-6666-4666-8666-666666666666",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "post-route-smoke-390-light-ssr-firefox.png",
+        "post-route-smoke-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "post",
+      "entityId": "66666666-6666-4666-8666-666666666666",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/map/88888888-8888-4888-8888-888888888888",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/map/88888888-8888-4888-8888-888888888888",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "marker-route-smoke-390-light-ssr-firefox.png",
+        "marker-route-smoke-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "marker",
+      "entityId": "88888888-8888-4888-8888-888888888888",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/collectibles/55555555-5555-4555-8555-555555555555",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/collectibles/55555555-5555-4555-8555-555555555555",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "collectible-route-smoke-390-light-ssr-firefox.png",
+        "collectible-route-smoke-390-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "collectible",
+      "entityId": "55555555-5555-4555-8555-555555555555",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-900-light-ssr-firefox.png",
+        "artwork-en-900-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 900,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 900,
+        "documentWidth": 900,
+        "bodyWidth": 900,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 900,
+        "documentWidth": 900,
+        "bodyWidth": 900,
+        "flutterLeft": 0,
+        "flutterRight": 900,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-900-light-loading-firefox.png",
+        "artwork-en-900-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1024-light-ssr-firefox.png",
+        "artwork-en-1024-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1024,
+        "documentWidth": 1024,
+        "bodyWidth": 1024,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1024,
+        "documentWidth": 1024,
+        "bodyWidth": 1024,
+        "flutterLeft": 0,
+        "flutterRight": 1024,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1024-light-loading-firefox.png",
+        "artwork-en-1024-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "ssr-no-js",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "canonical": "http://127.0.0.1:4184/en/artworks/11111111-1111-4111-8111-111111111111",
+      "keyboardFocus": true,
+      "screenshotFiles": [
+        "artwork-en-1280-light-ssr-firefox.png",
+        "artwork-en-1280-light-ssr-keyboard-focused-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "disabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "flutter-takeover",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "initial": {
+        "innerWidth": 1280,
+        "documentWidth": 1280,
+        "bodyWidth": 1280,
+        "flutterLeft": null,
+        "flutterRight": null,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "metrics": {
+        "innerWidth": 1280,
+        "documentWidth": 1280,
+        "bodyWidth": 1280,
+        "flutterLeft": 0,
+        "flutterRight": 1280,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-1280-light-loading-firefox.png",
+        "artwork-en-1280-light-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "en",
+      "title": "A Long Public Artwork Title for Responsive Layout Verification",
+      "artist": "Maja Novak and collaborators from the public art archive",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ],
+      "screenshotFiles": [
+        "artwork-en-long-text-390-ssr-firefox.png",
+        "artwork-en-long-text-320-flutter-firefox.png",
+        "artwork-en-long-text-360-flutter-firefox.png",
+        "artwork-en-long-text-390-flutter-firefox.png",
+        "artwork-en-long-text-430-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "route": "/sl/umetnine/11111111-1111-4111-8111-111111111111",
+      "state": "long-text-responsive",
+      "locale": "sl",
+      "title": "Dolgo slovensko ime javnega umetniškega dela za preverjanje postavitve",
+      "artist": "Maja Novak in sodelavci iz lokalnega umetniškega arhiva",
+      "viewports": [
+        {
+          "width": 320,
+          "metrics": {
+            "innerWidth": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "flutterLeft": 0,
+            "flutterRight": 320,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 360,
+          "metrics": {
+            "innerWidth": 360,
+            "documentWidth": 360,
+            "bodyWidth": 360,
+            "flutterLeft": 0,
+            "flutterRight": 360,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 390,
+          "metrics": {
+            "innerWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "flutterLeft": 0,
+            "flutterRight": 390,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        },
+        {
+          "width": 430,
+          "metrics": {
+            "innerWidth": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "flutterLeft": 0,
+            "flutterRight": 430,
+            "reducedMotion": true,
+            "overflowOffenders": []
+          }
+        }
+      ],
+      "screenshotFiles": [
+        "artwork-sl-long-text-390-ssr-firefox.png",
+        "artwork-sl-long-text-320-flutter-firefox.png",
+        "artwork-sl-long-text-360-flutter-firefox.png",
+        "artwork-sl-long-text-390-flutter-firefox.png",
+        "artwork-sl-long-text-430-flutter-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "state": "failure-states",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "slowFlutter": "SSR remained accessible before exact takeover",
+      "bundleFailure": "SSR remained visible and host stayed hidden",
+      "screenshotFiles": [
+        "artwork-sl-390-slow-loading-ssr-firefox.png",
+        "artwork-sl-390-slow-loading-flutter-firefox.png",
+        "artwork-en-1440-bundle-failure-ssr-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled; bundle delayed or blocked",
+      "reducedMotion": "reduce",
+      "zoomMode": "browser-default-100-percent"
+    },
+    {
+      "browser": "firefox",
+      "state": "narrow-css-viewport-simulation-not-browser-zoom",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "zoomMode": "viewport-simulation-not-browser-zoom",
+      "viewport": {
+        "width": 195,
+        "height": 422,
+        "deviceScaleFactor": 2
+      },
+      "metrics": {
+        "innerWidth": 195,
+        "documentWidth": 195,
+        "bodyWidth": 195,
+        "flutterLeft": 0,
+        "flutterRight": 195,
+        "reducedMotion": true,
+        "overflowOffenders": []
+      },
+      "screenshotFiles": [
+        "artwork-en-390-narrow-viewport-simulation-not-zoom-firefox.png"
+      ],
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce"
+    },
+    {
+      "browser": "firefox",
+      "state": "real-browser-zoom-unverified",
+      "route": "/en/artworks/11111111-1111-4111-8111-111111111111",
+      "zoomMode": "keyboard-shortcut-attempted",
+      "reason": "Browser did not report a 200% page zoom after Ctrl+Plus attempts.",
+      "before": {
+        "innerWidth": 1440,
+        "devicePixelRatio": 1,
+        "visualViewportScale": 1
+      },
+      "after": {
+        "innerWidth": 1440,
+        "devicePixelRatio": 1,
+        "visualViewportScale": 1
+      },
+      "sourceSha": "c23c776b748627e81bb6c0d0e8d40d09612deefe",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "locale": "en",
+      "entityType": "artwork",
+      "entityId": "11111111-1111-4111-8111-111111111111",
+      "fixtureIdentity": "synthetic public-only local preview fixture",
+      "javascriptState": "enabled",
+      "reducedMotion": "reduce",
+      "screenshotFiles": []
+    }
+  ]
+}

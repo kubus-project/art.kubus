@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../models/kubus_node_models.dart';
 import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
@@ -25,6 +26,10 @@ class ArtworkProvider extends ChangeNotifier {
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
+  final BackendApiService? _spatialApi;
+  final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
+  final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
+  final Map<String, String> _spatialHistoryErrors = {};
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
   // Individual detail requests may return artwork outside the first page used
@@ -39,10 +44,76 @@ class ArtworkProvider extends ChangeNotifier {
   bool _historyLoaded = false;
 
   ArtworkProvider({ArtworkBackendApi? backendApi})
-      : _backendApi = backendApi ?? BackendApiService();
+      : _backendApi = backendApi ?? BackendApiService(),
+        _spatialApi = backendApi == null
+            ? BackendApiService()
+            : (backendApi is BackendApiService ? backendApi : null);
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
+
+  ArtworkSpatialHistory? spatialHistoryFor(String artworkId) =>
+      _spatialHistory[artworkId];
+
+  String? spatialHistoryErrorFor(String artworkId) =>
+      _spatialHistoryErrors[artworkId];
+
+  bool isSpatialHistoryLoading(String artworkId) =>
+      _spatialHistoryLoads.containsKey(artworkId);
+
+  /// Replaces the in-memory artwork list, order included.
+  ///
+  /// Exists so a test can reproduce the ordering churn that used to decide
+  /// which artwork a spatial capture was filed under: surfaces must resolve
+  /// each record by its own id, so reordering this list changes nothing they
+  /// display.
+  @visibleForTesting
+  void seedArtworksForTesting(List<Artwork> artworks) {
+    _artworks
+      ..clear()
+      ..addAll(artworks);
+    _artworkById
+      ..clear()
+      ..addEntries(artworks.map((artwork) => MapEntry(artwork.id, artwork)));
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void seedSpatialHistoryForTesting(
+    String artworkId,
+    ArtworkSpatialHistory history,
+  ) {
+    _spatialHistory[artworkId] = history;
+  }
+
+  Future<ArtworkSpatialHistory> loadSpatialHistory(
+    String artworkId, {
+    bool refresh = false,
+  }) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return const ArtworkSpatialHistory(history: []);
+    final cached = _spatialHistory[id];
+    if (!refresh && cached != null) return cached;
+    final pending = _spatialHistoryLoads[id];
+    if (pending != null) return pending;
+    final api = _spatialApi;
+    if (api == null) return const ArtworkSpatialHistory(history: []);
+    final future = api.getArtworkSpatialHistory(id);
+    _spatialHistoryLoads[id] = future;
+    _spatialHistoryErrors.remove(id);
+    notifyListeners();
+    try {
+      final history = await future;
+      _spatialHistory[id] = history;
+      return history;
+    } catch (error) {
+      _spatialHistoryErrors[id] = error.toString();
+      rethrow;
+    } finally {
+      _spatialHistoryLoads.remove(id);
+      notifyListeners();
+    }
+  }
 
   bool isLoading(String operation) => _loadingStates[operation] ?? false;
 
@@ -55,6 +126,72 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Get artwork by ID
   Artwork? getArtworkById(String id) => _artworkById[id];
+
+  /// Seeds the normal detail cache from the server's public presentation.
+  /// The caller revalidates this value in the background; private/account
+  /// fields are intentionally not part of this conversion.
+  void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final media = presentation['primaryMedia'];
+    final primaryMedia = media is Map
+        ? Map<String, dynamic>.from(media)
+        : const <String, dynamic>{};
+    final authorship = presentation['authorship'];
+    final artist =
+        authorship is Map ? (authorship['name']?.toString() ?? '') : '';
+    final place = presentation['place'];
+    final placeData = place is Map
+        ? Map<String, dynamic>.from(place)
+        : const <String, dynamic>{};
+    final provenance = presentation['provenance'];
+    final provenanceData = provenance is Map
+        ? Map<String, dynamic>.from(provenance)
+        : const <String, dynamic>{};
+    final isLegacyPresentation = presentation['version'] == 1;
+    final legacyImageCredit = provenanceData['imageCredit'];
+    final legacyImageCreditData = legacyImageCredit is Map
+        ? Map<String, dynamic>.from(legacyImageCredit)
+        : const <String, dynamic>{};
+    final source = provenanceData['recordSource'] ??
+        (isLegacyPresentation ? provenanceData['source'] : null);
+    final sourceData = source is Map
+        ? Map<String, dynamic>.from(source)
+        : const <String, dynamic>{};
+    final imageCreator = primaryMedia['creator'] ??
+        (isLegacyPresentation ? legacyImageCreditData['credit'] : null);
+    final imageCreditText = primaryMedia['creditText'];
+    final imageLicense = primaryMedia['license'] ??
+        (isLegacyPresentation ? legacyImageCreditData['license'] : null);
+    final imageSourceUrl = primaryMedia['sourceUrl'] ??
+        (isLegacyPresentation ? legacyImageCreditData['sourceUrl'] : null);
+    final latitude = placeData['latitude'];
+    final longitude = placeData['longitude'];
+    final artwork = Artwork.fromMap(<String, dynamic>{
+      'id': presentation['id']?.toString() ?? '',
+      'title': presentation['title']?.toString() ?? '',
+      'artist': artist,
+      'description': presentation['description']?.toString() ?? '',
+      'imageUrl': primaryMedia['url'],
+      'latitude': latitude is num ? latitude.toDouble() : 0.0,
+      'longitude': longitude is num ? longitude.toDouble() : 0.0,
+      'isPublic': true,
+      'isActive': true,
+      'isNft': false,
+      'category': 'Public artwork',
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'metadata': <String, dynamic>{
+        if (imageCreator != null) 'imageAuthor': imageCreator,
+        if (imageCreditText != null) 'imageAttribution': imageCreditText,
+        if (imageLicense != null) 'imageLicense': imageLicense,
+        if (imageSourceUrl != null) 'imageSourceUrl': imageSourceUrl,
+        if (sourceData['name'] != null) 'sourceName': sourceData['name'],
+        if (sourceData['id'] != null) 'sourceId': sourceData['id'],
+        if (sourceData['url'] != null) 'sourceUrl': sourceData['url'],
+      },
+    });
+    if (artwork.id.trim().isNotEmpty && artwork.title.trim().isNotEmpty) {
+      addOrUpdateArtwork(artwork, retainWhenListRefresh: true);
+    }
+  }
 
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
@@ -100,8 +237,9 @@ class ArtworkProvider extends ChangeNotifier {
     if (wanted.isEmpty) return const <String>{};
 
     try {
-      final fetched =
-          await _backendApi.getArtworks(ids: wanted.toList(growable: false));
+      final fetched = await _backendApi.getArtworks(
+        ids: wanted.toList(growable: false),
+      );
       var updated = false;
       for (final artwork in fetched) {
         if (!wanted.contains(artwork.id)) continue;
@@ -159,7 +297,8 @@ class ArtworkProvider extends ChangeNotifier {
   List<Artwork> get favoriteArtworks {
     return _artworks
         .where(
-            (artwork) => artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+          (artwork) => artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+        )
         .toList();
   }
 
@@ -252,10 +391,7 @@ class ArtworkProvider extends ChangeNotifier {
       final coverUrl = await ArtContentService.uploadMedia(
         coverImageBytes,
         coverImageFilename,
-        metadata: {
-          'type': 'artwork_cover',
-          'title': title,
-        },
+        metadata: {'type': 'artwork_cover', 'title': title},
       );
 
       String? modelCid;
@@ -264,11 +400,7 @@ class ArtworkProvider extends ChangeNotifier {
         final uploadResult = await ARContentService.uploadContent(
           modelBytes!,
           modelFilename!,
-          metadata: {
-            'type': 'ar_model',
-            'title': title,
-            'artist': artistName,
-          },
+          metadata: {'type': 'ar_model', 'title': title, 'artist': artistName},
         );
         modelCid = uploadResult['cid'];
         modelUrl = uploadResult['url'];
@@ -401,7 +533,9 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   Future<Artwork?> updateArtwork(
-      String artworkId, Map<String, dynamic> updates) async {
+    String artworkId,
+    Map<String, dynamic> updates,
+  ) async {
     final id = artworkId.trim();
     if (id.isEmpty) return null;
     final operation = 'update_artwork_$id';
@@ -534,11 +668,7 @@ class ArtworkProvider extends ChangeNotifier {
       }
 
       if (artwork != null) {
-        addOrUpdateArtwork(
-          artwork.copyWith(
-            isFavoriteByCurrentUser: saved,
-          ),
-        );
+        addOrUpdateArtwork(artwork.copyWith(isFavoriteByCurrentUser: saved));
       }
 
       if (saved) {
@@ -590,8 +720,9 @@ class ArtworkProvider extends ChangeNotifier {
 
         // Sync with backend and reconcile server discovery count.
         try {
-          final serverCount =
-              await _backendApi.discoverArtworkWithCount(artworkId);
+          final serverCount = await _backendApi.discoverArtworkWithCount(
+            artworkId,
+          );
           if (serverCount != null) {
             final latest = getArtworkById(artworkId);
             if (latest != null) {
@@ -647,7 +778,10 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtworkComments(
-          artworkId: artworkId, page: 1, limit: 100);
+        artworkId: artworkId,
+        page: 1,
+        limit: 100,
+      );
       // Keep ordering consistent with Community comments: oldest-first so threads read naturally.
       // Backend provides an ORDER BY, but sort defensively to keep behavior stable.
       final sorted = [...fetched]
@@ -768,7 +902,9 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       await _backendApi.editArtworkComment(
-          commentId: commentId, content: content);
+        commentId: commentId,
+        content: content,
+      );
       await loadComments(artworkId, force: true);
     } catch (e) {
       _commentSubmitErrors[artworkId] = 'Failed to edit comment: $e';
@@ -932,15 +1068,17 @@ class ArtworkProvider extends ChangeNotifier {
       final raw = prefs.getStringList(_viewHistoryPrefsKey) ?? <String>[];
       _viewHistory
         ..clear()
-        ..addAll(raw.map((item) {
-          try {
-            final map = jsonDecode(item);
-            if (map is Map<String, dynamic>) {
-              return ViewHistoryEntry.fromJson(map);
-            }
-          } catch (_) {}
-          return null;
-        }).whereType<ViewHistoryEntry>());
+        ..addAll(
+          raw.map((item) {
+            try {
+              final map = jsonDecode(item);
+              if (map is Map<String, dynamic>) {
+                return ViewHistoryEntry.fromJson(map);
+              }
+            } catch (_) {}
+            return null;
+          }).whereType<ViewHistoryEntry>(),
+        );
       _historyLoaded = true;
       notifyListeners();
     } catch (e) {
@@ -1055,7 +1193,9 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   ArtworkComment? _findArtworkCommentById(
-      List<ArtworkComment> roots, String commentId) {
+    List<ArtworkComment> roots,
+    String commentId,
+  ) {
     for (final c in roots) {
       if (c.id == commentId) return c;
       final hit = _findArtworkCommentById(c.replies, commentId);

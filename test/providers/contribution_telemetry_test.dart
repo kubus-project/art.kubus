@@ -545,7 +545,7 @@ void main() {
       );
     });
 
-    test('a legacy install-scoped flag does not suppress account milestones',
+    test('a legacy install flag cannot suppress any account milestone',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'app_telemetry_first_contribution_v1': true,
@@ -573,8 +573,7 @@ void main() {
       expect(
         milestones.map((e) => e.actorUserId).toList(),
         <String>[first, second],
-        reason:
-            'an unscoped legacy flag cannot be safely assigned to either account',
+        reason: 'an ownerless install flag cannot be assigned to either user',
       );
     });
   });

@@ -14,7 +14,6 @@ import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/app_color_utils.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';
@@ -721,7 +720,6 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     );
 
     if (widget.embedded) {
-      final accent = KubusColorRoles.of(context).web3InstitutionAccent;
       return DesktopCreatorShell(
         title: l10n.exhibitionCreatorAppBarTitle,
         subtitle: _createdExhibition == null
@@ -735,7 +733,6 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           contextType: DesktopCreatorContextType.exhibition,
           semantic: DesktopCreatorSectionSemantic.status,
         ),
-        sidebarAccentColor: accent,
         mainContent: formBody,
         sidebar: _buildDesktopSidebar(l10n, scheme),
       );

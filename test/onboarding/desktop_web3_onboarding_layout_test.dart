@@ -2,8 +2,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/onboarding/desktop_web3_onboarding.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
-import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,9 +74,9 @@ void main() {
     // The content column runs from its icon card (first child) to the
     // key-features panel (last child); that span's midpoint must sit near the
     // centre of the area below the app bar, not pinned to the top.
-    final iconTop = tester.getRect(find.byType(GradientIconCard).first).top;
-    final panelBottom =
-        tester.getRect(find.byType(LiquidGlassPanel).first).bottom;
+    final iconTop =
+        tester.getRect(find.byIcon(Icons.account_balance_wallet).first).top;
+    final panelBottom = tester.getRect(find.text('Feature 0d').first).bottom;
     final contentCentre = (iconTop + panelBottom) / 2;
 
     final bodyCentre = kToolbarHeight + (size.height - kToolbarHeight) / 2;
@@ -135,7 +133,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 900));
 
     final skipBottom = tester.getRect(find.text('Skip').first).bottom;
-    final iconTop = tester.getRect(find.byType(GradientIconCard).first).top;
+    final iconTop =
+        tester.getRect(find.byIcon(Icons.account_balance_wallet).first).top;
     expect(iconTop, greaterThan(skipBottom));
   });
 

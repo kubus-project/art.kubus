@@ -14,7 +14,8 @@ void main() {
     bool profileIsArtist = false,
     bool profileIsInstitution = false,
     bool isAdmin = false,
-    bool analyticsEnabled = true,
+    bool analyticsBuildAvailable = true,
+    bool analyticsPreferenceEnabled = true,
   }) {
     return AnalyticsViewerContext(
       viewerWallet: viewerWallet,
@@ -24,7 +25,8 @@ void main() {
       profileIsArtist: profileIsArtist,
       profileIsInstitution: profileIsInstitution,
       isAdmin: isAdmin,
-      analyticsEnabled: analyticsEnabled,
+      analyticsBuildAvailable: analyticsBuildAvailable,
+      analyticsPreferenceEnabled: analyticsPreferenceEnabled,
     );
   }
 
@@ -56,6 +58,26 @@ void main() {
     expect(capabilities.canView, isFalse);
     expect(capabilities.canViewPrivate, isFalse);
     expect(capabilities.blockedReason, AnalyticsBlockedReason.ownerRequired);
+  });
+
+  test('distinguishes a user opt-out from an unavailable build', () {
+    final preferenceDisabled = AnalyticsCapabilityResolver.resolve(
+      preset: AnalyticsPresets.profile,
+      viewer: viewer(analyticsPreferenceEnabled: false),
+    );
+    final buildUnavailable = AnalyticsCapabilityResolver.resolve(
+      preset: AnalyticsPresets.profile,
+      viewer: viewer(analyticsBuildAvailable: false),
+    );
+
+    expect(
+      preferenceDisabled.blockedReason,
+      AnalyticsBlockedReason.analyticsDisabledByPreference,
+    );
+    expect(
+      buildUnavailable.blockedReason,
+      AnalyticsBlockedReason.analyticsUnavailable,
+    );
   });
 
   test('dao analytics are public and use governance metrics', () {

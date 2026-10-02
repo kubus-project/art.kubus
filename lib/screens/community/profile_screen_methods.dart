@@ -5,13 +5,11 @@ import '../../widgets/inline_loading.dart';
 import '../../config/config.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
-import '../../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/artwork.dart';
 import '../../models/profile_identity_data.dart';
 import '../../providers/artwork_provider.dart';
-import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/platform_provider.dart';
@@ -28,6 +26,7 @@ import '../../utils/wallet_utils.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/profile/profile_people_list.dart';
 
 class _ProfileListCacheEntry {
   final List<Map<String, dynamic>> entries;
@@ -46,6 +45,114 @@ ProfileIdentityData _profileListIdentityFromPayload(
   return ProfileIdentityData.fromIdentityPayload(
     {'author': user},
     fallbackLabel: fallbackLabel,
+  );
+}
+
+String? _peopleStringOrNull(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString().trim();
+  return s.isEmpty ? null : s;
+}
+
+bool _peopleBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final s = value?.toString().trim().toLowerCase();
+  return s == 'true' || s == '1' || s == 'yes';
+}
+
+/// Maps a followers/following payload row (plus any cached profile) to a
+/// list entry. Role context is shown only when a payload or cached profile
+/// actually states it.
+ProfilePersonEntry _personEntryFromPayload(
+  Map<String, dynamic> row,
+  AppLocalizations l10n,
+) {
+  final rawUsername = _peopleStringOrNull(row['username']) ?? '';
+  final username = rawUsername.startsWith('@')
+      ? rawUsername.substring(1).trim()
+      : rawUsername;
+  final wallet = _peopleStringOrNull(
+          row['walletAddress'] ?? row['wallet_address'] ?? row['id']) ??
+      '';
+  final cachedUser =
+      wallet.isNotEmpty ? UserService.getCachedUser(wallet) : null;
+  final displayName = _peopleStringOrNull(
+          row['displayName'] ?? row['display_name'] ?? row['name']) ??
+      cachedUser?.name;
+  final avatarUrl = _peopleStringOrNull(row['profileImageUrl'] ??
+          row['avatar'] ??
+          row['avatarUrl'] ??
+          row['avatar_url']) ??
+      cachedUser?.profileImageUrl;
+  final resolvedUsername =
+      username.isNotEmpty ? username : (cachedUser?.username ?? '').trim();
+  final fallback =
+      wallet.isNotEmpty ? maskWallet(wallet) : l10n.commonUnknownArtist;
+  final formatted = CreatorDisplayFormat.format(
+    fallbackLabel: fallback,
+    displayName: displayName,
+    username: resolvedUsername,
+    wallet: wallet,
+  );
+  final isInstitution =
+      _peopleBool(row['isInstitution'] ?? row['is_institution']) ||
+          (cachedUser?.isInstitution ?? false);
+  final isArtist = _peopleBool(row['isArtist'] ?? row['is_artist']) ||
+      (cachedUser?.isArtist ?? false);
+  return ProfilePersonEntry(
+    wallet: wallet,
+    primary: formatted.primary,
+    secondary:
+        formatted.secondary ?? (wallet.isNotEmpty ? maskWallet(wallet) : null),
+    avatarUrl: avatarUrl,
+    username: resolvedUsername.isEmpty ? null : resolvedUsername,
+    isVerified: _peopleBool(row['isVerified'] ?? row['is_verified']) ||
+        (cachedUser?.isVerified ?? false),
+    role: isInstitution
+        ? ProfilePersonRole.institution
+        : (isArtist ? ProfilePersonRole.artist : null),
+  );
+}
+
+Widget _buildPeopleList(
+  BuildContext context, {
+  required List<Map<String, dynamic>>? rows,
+  required bool isLoading,
+  required Object? loadError,
+  required String? errorMessage,
+  required VoidCallback onRetry,
+  required String emptyTitle,
+  required String emptyDescription,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  final safeRows = rows ?? const <Map<String, dynamic>>[];
+  final entries = <ProfilePersonEntry>[];
+  final rowByWallet = <String, Map<String, dynamic>>{};
+  for (final row in safeRows) {
+    final entry = _personEntryFromPayload(row, l10n);
+    entries.add(entry);
+    rowByWallet[entry.wallet] = row;
+  }
+  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+  return ProfilePeopleList(
+    entries: isLoading && safeRows.isEmpty ? null : entries,
+    isLoading: isLoading,
+    error: errorMessage == null ? null : (loadError ?? errorMessage),
+    onRetry: onRetry,
+    emptyTitle: emptyTitle,
+    emptyDescription: emptyDescription,
+    viewerWallet: profileProvider.currentWalletAddress,
+    onOpen: (entry) {
+      final row = rowByWallet[entry.wallet];
+      if (row == null) return;
+      final identity = _profileListIdentityFromPayload(
+        row,
+        fallbackLabel: entry.primary,
+      );
+      Navigator.pop(context);
+      openProfileIdentity(context, identity);
+    },
   );
 }
 
@@ -527,20 +634,13 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   List<Map<String, dynamic>>? _followers;
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
   bool _didWarmProfileCache = false;
 
   String? _stringOrNull(dynamic value) {
     if (value == null) return null;
     final s = value.toString().trim();
     return s.isEmpty ? null : s;
-  }
-
-  bool _boolOrFalse(dynamic value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final s = value?.toString().trim().toLowerCase();
-    if (s == 'true' || s == '1' || s == 'yes') return true;
-    return false;
   }
 
   String? _resolveWalletAddress() {
@@ -649,6 +749,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
       final l10n = AppLocalizations.of(context)!;
       setState(() {
         _error = l10n.userProfileFollowersLoadFailedMessage;
+        _loadError = e;
         _isLoading = false;
         _followers = _followers ?? [];
       });
@@ -676,7 +777,6 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
@@ -708,217 +808,15 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
             ),
             SizedBox(
               height: contentHeight,
-              child: _isLoading
-                  ? const AppLoading()
-                  : _error != null
-                      ? _buildErrorState(theme, _error!)
-                      : _followers!.isEmpty
-                          ? _buildEmptyState(
-                              theme,
-                              l10n.userProfileNoFollowersTitle,
-                              l10n.userProfileNoFollowersDescription,
-                            )
-                          : _buildFollowersList(theme, themeProvider),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFollowersList(ThemeData theme, ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    // Keep modal list cards on the opaque path for reliability across
-    // mobile/desktop/web scrolling compositors.
-    const enableCardBlur = false;
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _followers!.length,
-      itemBuilder: (context, index) {
-        final follower = _followers![index];
-        final rawUsername = _stringOrNull(follower['username']) ?? '';
-        final username = rawUsername.startsWith('@')
-            ? rawUsername.substring(1).trim()
-            : rawUsername;
-        final mapDisplayName = _stringOrNull(
-          follower['displayName'] ??
-              follower['display_name'] ??
-              follower['name'],
-        );
-        final walletAddress = _stringOrNull(
-              follower['walletAddress'] ??
-                  follower['wallet_address'] ??
-                  follower['id'],
-            ) ??
-            '';
-        final cachedUser = walletAddress.isNotEmpty
-            ? UserService.getCachedUser(walletAddress)
-            : null;
-
-        final mapIsVerified =
-            _boolOrFalse(follower['isVerified'] ?? follower['is_verified']);
-        final isVerified = mapIsVerified || (cachedUser?.isVerified ?? false);
-
-        final mapAvatarUrl = _stringOrNull(
-          follower['profileImageUrl'] ??
-              follower['avatar'] ??
-              follower['avatarUrl'] ??
-              follower['avatar_url'],
-        );
-
-        final displayName = mapDisplayName ?? cachedUser?.name;
-        final avatarUrl = mapAvatarUrl ?? cachedUser?.profileImageUrl;
-        final cachedUsername = (cachedUser?.username ?? '').trim();
-        final resolvedUsername =
-            username.isNotEmpty ? username : cachedUsername;
-
-        final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty
-              ? maskWallet(walletAddress)
-              : l10n.commonUnknownArtist,
-          displayName: displayName,
-          username: resolvedUsername,
-          wallet: walletAddress,
-        );
-        final subtitle = formatted.secondary ??
-            (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
-        final identity = _profileListIdentityFromPayload(
-          follower,
-          fallbackLabel: walletAddress.isNotEmpty
-              ? maskWallet(walletAddress)
-              : l10n.commonUnknownArtist,
-        );
-
-        final canNavigate = walletAddress.isNotEmpty;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-          child: LiquidGlassCard(
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            enableBlur: enableCardBlur,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md,
-              vertical: KubusSpacing.xs,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: ListTile(
-                onTap: !canNavigate
-                    ? null
-                    : () {
-                        Navigator.pop(context);
-                        openProfileIdentity(context, identity);
-                      },
-                contentPadding: EdgeInsets.zero,
-                leading: AvatarWidget(
-                  wallet: walletAddress,
-                  avatarUrl: avatarUrl,
-                  radius: 28,
-                  enableProfileNavigation: false,
-                ),
-                title: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        formatted.primary,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.verified,
-                        size: 16,
-                        color: themeProvider.accentColor,
-                      ),
-                    ],
-                  ],
-                ),
-                subtitle: subtitle == null
-                    ? null
-                    : Text(
-                        subtitle,
-                        style: KubusTypography.inter(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6),
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline,
-                size: 64,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: KubusTypography.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: KubusTypography.inter(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(ThemeData theme, String error) {
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(
-              error,
-              style: KubusTypography.inter(
-                fontSize: 16,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => _loadFollowers(showLoader: true, force: true),
-              child: Text(
-                l10n.commonRetry,
-                style: KubusTypography.inter(
-                  color: Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
-                ),
+              child: _buildPeopleList(
+                context,
+                rows: _followers,
+                isLoading: _isLoading,
+                loadError: _loadError,
+                errorMessage: _error,
+                onRetry: () => _loadFollowers(showLoader: true, force: true),
+                emptyTitle: l10n.userProfileNoFollowersTitle,
+                emptyDescription: l10n.userProfileNoFollowersDescription,
               ),
             ),
           ],
@@ -946,20 +844,13 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   List<Map<String, dynamic>>? _following;
   bool _isLoading = true;
   String? _error;
+  Object? _loadError;
   bool _didWarmProfileCache = false;
 
   String? _stringOrNull(dynamic value) {
     if (value == null) return null;
     final s = value.toString().trim();
     return s.isEmpty ? null : s;
-  }
-
-  bool _boolOrFalse(dynamic value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final s = value?.toString().trim().toLowerCase();
-    if (s == 'true' || s == '1' || s == 'yes') return true;
-    return false;
   }
 
   String? _resolveWalletAddress() {
@@ -1066,6 +957,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
       final l10n = AppLocalizations.of(context)!;
       setState(() {
         _error = l10n.userProfileFollowingLoadFailedMessage;
+        _loadError = e;
         _isLoading = false;
         _following = _following ?? [];
       });
@@ -1093,7 +985,6 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
@@ -1125,211 +1016,15 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
             ),
             SizedBox(
               height: contentHeight,
-              child: _isLoading
-                  ? const AppLoading()
-                  : _error != null
-                      ? _buildErrorState(theme, _error!)
-                      : _following!.isEmpty
-                          ? _buildEmptyState(
-                              theme,
-                              l10n.userProfileNoFollowingTitle,
-                              l10n.userProfileNoFollowingDescription,
-                            )
-                          : _buildFollowingList(theme, themeProvider),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFollowingList(ThemeData theme, ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    const enableCardBlur = false;
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _following!.length,
-      itemBuilder: (context, index) {
-        final user = _following![index];
-        final rawUsername = _stringOrNull(user['username']) ?? '';
-        final username = rawUsername.startsWith('@')
-            ? rawUsername.substring(1).trim()
-            : rawUsername;
-        final mapDisplayName = _stringOrNull(
-          user['displayName'] ?? user['display_name'] ?? user['name'],
-        );
-        final walletAddress = _stringOrNull(
-              user['walletAddress'] ?? user['wallet_address'] ?? user['id'],
-            ) ??
-            '';
-        final cachedUser = walletAddress.isNotEmpty
-            ? UserService.getCachedUser(walletAddress)
-            : null;
-
-        final mapIsVerified =
-            _boolOrFalse(user['isVerified'] ?? user['is_verified']);
-        final isVerified = mapIsVerified || (cachedUser?.isVerified ?? false);
-
-        final mapAvatarUrl = _stringOrNull(
-          user['profileImageUrl'] ??
-              user['avatar'] ??
-              user['avatarUrl'] ??
-              user['avatar_url'],
-        );
-
-        final displayName = mapDisplayName ?? cachedUser?.name;
-        final avatarUrl = mapAvatarUrl ?? cachedUser?.profileImageUrl;
-        final cachedUsername = (cachedUser?.username ?? '').trim();
-        final resolvedUsername =
-            username.isNotEmpty ? username : cachedUsername;
-
-        final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty
-              ? maskWallet(walletAddress)
-              : l10n.commonUnknownArtist,
-          displayName: displayName,
-          username: resolvedUsername,
-          wallet: walletAddress,
-        );
-        final subtitle = formatted.secondary ??
-            (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
-        final identity = _profileListIdentityFromPayload(
-          user,
-          fallbackLabel: walletAddress.isNotEmpty
-              ? maskWallet(walletAddress)
-              : l10n.commonUnknownArtist,
-        );
-
-        final canNavigate = walletAddress.isNotEmpty;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-          child: LiquidGlassCard(
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            enableBlur: enableCardBlur,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md,
-              vertical: KubusSpacing.xs,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: ListTile(
-                onTap: !canNavigate
-                    ? null
-                    : () {
-                        Navigator.pop(context);
-                        openProfileIdentity(context, identity);
-                      },
-                contentPadding: EdgeInsets.zero,
-                leading: AvatarWidget(
-                  wallet: walletAddress,
-                  avatarUrl: avatarUrl,
-                  radius: 28,
-                  enableProfileNavigation: false,
-                ),
-                title: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        formatted.primary,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.verified,
-                        size: 16,
-                        color: themeProvider.accentColor,
-                      ),
-                    ],
-                  ],
-                ),
-                subtitle: subtitle == null
-                    ? null
-                    : Text(
-                        subtitle,
-                        style: KubusTypography.inter(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6),
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline,
-                size: 64,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: KubusTypography.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: KubusTypography.inter(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(ThemeData theme, String error) {
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(
-              error,
-              style: KubusTypography.inter(
-                fontSize: 16,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => _loadFollowing(showLoader: true, force: true),
-              child: Text(
-                l10n.commonRetry,
-                style: KubusTypography.inter(
-                  color: Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
-                ),
+              child: _buildPeopleList(
+                context,
+                rows: _following,
+                isLoading: _isLoading,
+                loadError: _loadError,
+                errorMessage: _error,
+                onRetry: () => _loadFollowing(showLoader: true, force: true),
+                emptyTitle: l10n.userProfileNoFollowingTitle,
+                emptyDescription: l10n.userProfileNoFollowingDescription,
               ),
             ),
           ],
@@ -1387,7 +1082,8 @@ class _ArtworksBottomSheet extends StatelessWidget {
                         child: SizedBox(
                           width: 22,
                           height: 22,
-                          child: InlineLoading(tileSize: 4, color: theme.colorScheme.primary),
+                          child: InlineLoading(
+                              tileSize: 4, color: theme.colorScheme.primary),
                         ),
                       ),
                     ],

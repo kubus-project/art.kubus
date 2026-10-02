@@ -111,7 +111,17 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                     onPressed: () async {
                       final navigator = Navigator.of(context);
                       await provider.accept();
-                      await navigator.pushNamed('/register');
+                      // This is proactive account acquisition, not a legacy
+                      // standalone registration detour. Map browsing remains
+                      // public; accepting the invitation starts the shared
+                      // account step and returns here when complete.
+                      await navigator.pushNamed(
+                        '/onboarding',
+                        arguments: const <String, Object?>{
+                          'initialStepId': 'account',
+                          'completionRoute': '/map',
+                        },
+                      );
                     },
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(44),

@@ -13,11 +13,14 @@ class _FakeCollabApi implements CollabApi {
   String? getAuthToken() => 'token';
 
   List<CollabInvite> inbox = <CollabInvite>[];
+  Object? listFailure;
   Completer<void>? acceptCompleter;
   Completer<void>? declineCompleter;
 
   @override
   Future<List<CollabInvite>> listMyCollabInvites() async {
+    final failure = listFailure;
+    if (failure != null) throw failure;
     return List<CollabInvite>.from(inbox);
   }
 
@@ -79,6 +82,39 @@ class _FakeCollabApi implements CollabApi {
 }
 
 void main() {
+  test('CollabProvider keeps the typed invite load failure, then clears it',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    const unauthorized = BackendApiRequestException(
+      statusCode: 401,
+      path: '/api/collab/invites',
+      body: 'jwt expired',
+    );
+    final api = _FakeCollabApi()..listFailure = unauthorized;
+    final provider = CollabProvider(api: api);
+    addTearDown(provider.dispose);
+
+    await provider.initialize(refresh: true);
+    // The caught object survives (status intact) for classification.
+    expect(provider.invitesError, same(unauthorized));
+
+    api.listFailure = const BackendApiRequestException(
+      statusCode: 503,
+      path: '/api/collab/invites',
+    );
+    await provider.refreshInvites();
+    expect(
+      provider.invitesError,
+      isA<BackendApiRequestException>()
+          .having((error) => error.statusCode, 'statusCode', 503),
+    );
+
+    api.listFailure = null;
+    await provider.refreshInvites();
+    expect(provider.invitesError, isNull);
+    expect(provider.error, isNull);
+  });
+
   test('CollabProvider acceptInvite removes invite before API completes',
       () async {
     SharedPreferences.setMockInitialValues({});

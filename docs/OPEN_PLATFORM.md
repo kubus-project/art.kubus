@@ -4,7 +4,7 @@ art.kubus is an open platform for artist discovery, map-based exploration, and c
 
 ## What is open
 
-- Open-source client code in this repository (Apache-2.0).
+- Open-source client code in this repository (MPL-2.0).
 - Public platform API interfaces and documentation explicitly published as open.
 
 ## What is not open by default

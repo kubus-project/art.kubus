@@ -94,9 +94,22 @@
   },
   "recentActivityRecognitionRecordedTitle": "Recognition recorded",
   "recentActivityArchiveObjectUpdateTitle": "Digital edition update",
-  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",
+  "recentActivityRecognitionAmountDescription": "+{amount} recognition",
   "@recentActivityRecognitionAmountDescription": {
     "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityKub8AmountDescription": "+{amount} KUB8",
+  "@recentActivityKub8AmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityAchievementKub8Description": "{title} (+{amount} KUB8)",
+  "@recentActivityAchievementKub8Description": {
+    "placeholders": {
+      "title": {},
       "amount": {}
     }
   },
@@ -112,6 +125,20 @@
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
   "notificationRecognitionRecordedTitle": "Recognition recorded",
+  "notificationArtworkDiscoveredTitle": "Artwork discovered",
+  "notificationArtworkDiscoveredBody": "Discovered “{title}” by {artist}",
+  "@notificationArtworkDiscoveredBody": {
+    "placeholders": {
+      "title": {},
+      "artist": {}
+    }
+  },
+  "notificationArtworkDiscoveredTitleOnlyBody": "Discovered “{title}”",
+  "@notificationArtworkDiscoveredTitleOnlyBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "pushArchiveObjectCreatingTitle": "Creating digital edition...",
   "pushArchiveObjectCreatingBody": "Creating a digital edition of \"{artworkTitle}\"",
   "@pushArchiveObjectCreatingBody": {
@@ -139,8 +166,8 @@
   "pushRecognitionChannelDescription": "Notifications for contribution recognition",
   "analyticsMetricArchiveObjectsCreatedLabel": "Digital editions created",
   "analyticsMetricArchiveObjectsCreatedDescription": "Digital editions connected to artworks.",
-  "analyticsMetricKub8RecognitionLabel": "KUB8 recognition",
-  "analyticsMetricKub8RecognitionDescription": "KUB8 recorded through contribution recognition.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 from achievements",
+  "analyticsMetricKub8RecognitionDescription": "Sum of the KUB8 rewards defined on achievements this profile has unlocked. Not income or sales.",
   "analyticsPresetArtistSubtitle": "Artwork reach, community response, AR activity, and recognition.",
   "analyticsPresetInstitutionSubtitle": "Visitor reach, hosted programs, exhibitions, and recognition.",
   "analyticsExportNoDataToast": "No analytics data available to export.",
@@ -179,6 +206,7 @@
   "activationGateSaveArtworkTitle": "Save this artwork to your collection",
   "activationGateSaveEventTitle": "Save this event to your collection",
   "activationGateSaveExhibitionTitle": "Add this place to your collection",
+  "activationGateSaveCollectionTitle": "Save this collection for later",
   "activationGateSavePostTitle": "Save this post to your collection",
   "activationGateLikeArtworkTitle": "Like this artwork",
   "activationGateFollowTitle": "Follow this artist",
@@ -187,7 +215,9 @@
   "activationGateGenericTitle": "Create a free account to {action}",
   "@activationGateGenericTitle": {
     "placeholders": {
-      "action": {"type": "String"}
+      "action": {
+        "type": "String"
+      }
     }
   },
   "activationGateBody": "Create a free account to save artworks, follow artists and return to places you want to visit.",
@@ -200,6 +230,7 @@
   "activationConfirmSaveArtwork": "Save this artwork?",
   "activationConfirmSaveEvent": "Save this event?",
   "activationConfirmSaveExhibition": "Save this place?",
+  "activationConfirmSaveCollection": "Save this collection?",
   "activationConfirmSavePost": "Save this post?",
   "activationConfirmLikeArtwork": "Like this artwork?",
   "activationConfirmFollow": "Follow this artist?",
@@ -800,7 +831,8 @@
   "desktopSettingsAchievementsStatArtworksDiscovered": "Artworks discovered",
   "desktopSettingsAchievementsStatArViews": "AR views",
   "desktopSettingsAchievementsStatEventsAttended": "Events attended",
-  "desktopSettingsAchievementsStatKub8PointsEarned": "Contribution recognition",
+  "achievementsStatKub8Earned": "KUB8 earned from achievements",
+  "achievementUnlockedLabel": "Unlocked",
   "desktopSettingsAchievementFirstDiscoveryTitle": "First discovery",
   "desktopSettingsAchievementFirstDiscoveryDescription": "Discover your first public artwork",
   "desktopSettingsAchievementArtCollectorTitle": "Art explorer",
@@ -834,6 +866,9 @@
   "desktopSettingsLegalSectionTitle": "Legal",
   "settingsNoWalletConnected": "No wallet connected",
   "settingsAppearanceSectionTitle": "Appearance",
+  "settingsReduceEffectsTitle": "Reduce effects",
+  "settingsReduceEffectsSubtitle": "Disable blur, animations and other effects",
+  "settingsReduceEffectsAutoSubtitle": "Automatically enabled for this device",
   "settingsThemeModeTitle": "Theme mode",
   "settingsThemeModeLight": "Light",
   "settingsThemeModeDark": "Dark",
@@ -993,6 +1028,9 @@
   "settingsResetPermissionFlagsTileTitle": "Reset permission flags",
   "settingsResetPermissionFlagsTileSubtitle": "Clear saved permission/service prompts",
   "settingsAboutSectionTitle": "About",
+  "settingsGroupAccount": "Account",
+  "settingsGroupExperience": "Experience",
+  "settingsGroupInfrastructure": "Infrastructure",
   "settingsAboutVersionTileTitle": "Version",
   "settingsAboutTermsTileTitle": "Terms of service",
   "settingsAboutTermsTileSubtitle": "Read our terms",
@@ -1229,6 +1267,12 @@
   "settingsEmailPreferencesCriticalWalletSecuritySubtitle": "Wallet and custody security alerts (always on)",
   "settingsEmailPreferencesTransactionalTitle": "Account emails",
   "settingsEmailPreferencesTransactionalSubtitle": "Transactional emails (verification, reset, and recovery) are always enabled",
+  "settingsEmailGroupMarketing": "Marketing",
+  "settingsEmailGroupActivity": "Activity",
+  "settingsEmailGroupEssential": "Essential",
+  "settingsEmailGroupEssentialNote": "Always on. These emails protect your account and wallet and confirm what you do, so they cannot be turned off.",
+  "settingsAppNotificationsSectionTitle": "App notifications",
+  "settingsAppNotificationsSectionSubtitle": "Push and in-app alerts on this device",
   "settingsEmailPreferencesUpdateFailedToast": "Could not update email preferences. Please try again.",
   "settingsInAppNotificationsMasterTitle": "All app notifications",
   "settingsInAppNotificationsMasterSubtitle": "Master switch for in-app and push notification categories.",
@@ -1543,22 +1587,6 @@
       "radiusKm": {}
     }
   },
-  "mapNearbyRadiusTooltipWorld": "Nearby radius (World)",
-  "@mapNearbyRadiusTooltipWorld": {
-    "description": "Tooltip for nearby radius when travel mode is enabled (worldwide)."
-  },
-  "mapNearbyRadiusWorldShort": "Radius: World",
-  "@mapNearbyRadiusWorldShort": {
-    "description": "Short label shown in Nearby Art when travel mode is enabled."
-  },
-  "mapTravelModeStatusTravelling": "You are travelling",
-  "@mapTravelModeStatusTravelling": {
-    "description": "Short status label shown when Travel mode is enabled (instead of a numeric radius)."
-  },
-  "mapTravelModeStatusTravellingTooltip": "Travel mode is on - showing markers in view",
-  "@mapTravelModeStatusTravellingTooltip": {
-    "description": "Tooltip shown near the Nearby Art radius control when Travel mode is enabled."
-  },
   "mapArArtworkNearbyTitle": "Artwork nearby",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters}m away",
   "@mapArArtworkNearbySubtitle": {
@@ -1722,10 +1750,9 @@
   "mapFilterUndiscovered": "Undiscovered",
   "mapFilterArEnabled": "AR ready",
   "mapFilterFavorites": "Favorites",
-  "mapFilterScopeTitle": "Scope",
-  "mapFilterScopeCurrentViewport": "Current viewport",
+  "mapFilterScopeTitle": "Area",
+  "mapFilterScopeCurrentViewport": "Map area",
   "mapFilterScopeNearMe": "Near me",
-  "mapFilterScopeTravel": "Travel",
   "mapFilterDiscoveryStatusTitle": "Discovery status",
   "mapFilterAttributesTitle": "Attributes",
   "mapFilterContentLayersTitle": "Content layers",
@@ -1769,15 +1796,6 @@
   "mapToolsTitle": "Map tools",
   "mapAttributionsTitle": "Map attributions",
   "mapZoomInTooltip": "Zoom in",
-  "mapTravelModeTooltip": "Travel mode",
-  "mapTravelModeEnableTooltip": "Enable travel mode",
-  "@mapTravelModeEnableTooltip": {
-    "description": "Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode)."
-  },
-  "mapTravelModeDisableTooltip": "Disable travel mode",
-  "@mapTravelModeDisableTooltip": {
-    "description": "Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode)."
-  },
   "mapIsometricViewEnableTooltip": "Enable isometric view",
   "@mapIsometricViewEnableTooltip": {
     "description": "Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view)."
@@ -1850,14 +1868,6 @@
   "@mapTutorialStepFiltersDesktopBody": {
     "description": "Body text for the filters step of the interactive map tutorial (desktop)."
   },
-  "mapTutorialStepTravelTitle": "Travel mode",
-  "@mapTutorialStepTravelTitle": {
-    "description": "Title for the travel mode step of the interactive map tutorial."
-  },
-  "mapTutorialStepTravelBody": "Travel mode loads markers for the visible map area so you can explore anywhere.",
-  "@mapTutorialStepTravelBody": {
-    "description": "Body text for the travel mode step of the interactive map tutorial."
-  },
   "mapTutorialStepRecenterTitle": "Recenter",
   "@mapTutorialStepRecenterTitle": {
     "description": "Title for the recenter step of the interactive map tutorial (mobile)."
@@ -1874,11 +1884,6 @@
   "@mapTutorialStepSearchBody": {
     "description": "Body text for the search step of the interactive map tutorial (desktop)."
   },
-  "mapTravelModeTutorialTitle": "Explore beyond nearby",
-  "mapTravelModeTutorialBody": "Travel mode lets you browse markers anywhere. The map loads what's currently in view.",
-  "mapTravelModeTutorialHint": "Tip: Pan and zoom - markers refresh to match the viewport.",
-  "mapTravelModeTutorialGotIt": "Got it",
-  "mapTravelModeTutorialEnable": "Enable travel mode",
   "mapNearbyArtTitle": "Nearby art and places",
   "mapResultsDiscoveredLabel": "{count} results · {percent}% discovered",
   "@mapResultsDiscoveredLabel": {
@@ -1924,22 +1929,22 @@
   "mapMarkerTypeStreetArt": "Street Art",
   "mapSortNearest": "Nearest",
   "mapSortNewest": "Newest",
-  "mapSortRarity": "Rarity",
   "mapSortHighestRewards": "Most recognition",
+  "mapSortRarity": "Rarity",
   "mapSortMostViewed": "Most viewed",
   "mapArReadyChipLabel": "AR ready",
   "mapAlreadyDiscoveredTooltip": "Already discovered",
   "mapMarkAsDiscoveredTooltip": "Mark as discovered",
   "arWebFallbackFeature": "AR experience",
   "arWebFallbackDescription": "Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone's camera.",
-  "arModeScanName": "Scan",
+  "arModeScanName": "Discover",
   "arModePlaceName": "Place",
-  "arModeViewName": "View",
-  "arModeCreateName": "Create",
-  "arModeScanDescription": "Scan AR markers to discover artworks around you.",
+  "arModeViewName": "Archive",
+  "arModeCreateName": "Capture",
+  "arModeScanDescription": "Identify and discover nearby physical art.",
   "arModePlaceDescription": "Place digital artworks into your space.",
-  "arModeViewDescription": "View your placed artworks and revisit them.",
-  "arModeCreateDescription": "Create and experiment with AR placements.",
+  "arModeViewDescription": "Explore an existing spatial or 3D archive.",
+  "arModeCreateDescription": "Document a physical artwork spatially on your device.",
   "arMarkerNearbyToast": "Marker nearby: {name}",
   "@arMarkerNearbyToast": {
     "placeholders": {
@@ -1967,10 +1972,10 @@
     }
   },
   "arPlaceArtworkFailedToast": "Failed to place artwork. Please try again.",
-  "arActionScan": "Scan for artwork",
+  "arActionScan": "Discover artwork",
   "arActionPlace": "Place artwork here",
-  "arActionView": "View details",
-  "arActionCreate": "Create AR artwork",
+  "arActionView": "Explore spatial archive",
+  "arActionCreate": "Capture tracked view",
   "arArtworkPlacedToast": "Artwork placed successfully!",
   "arNearbyArtworksTitle": "Nearby artworks",
   "arSelectedArtworkToast": "Selected: {title}",
@@ -2007,6 +2012,15 @@
   "arShareSuccessToast": "Artwork shared successfully!",
   "arShareFailedToast": "Share failed. Please try again.",
   "commonActions": "Actions",
+  "subjectActionsSocialHeading": "Social",
+  "subjectActionsSpatialHeading": "Place and movement",
+  "subjectActionsMoreHeading": "More actions",
+  "subjectActionsProvenanceHeading": "Provenance",
+  "subjectSpatialArchiveEmpty": "No spatial record yet.",
+  "artworkProvenanceImageCreator": "Image creator",
+  "artworkProvenanceLicense": "Image license",
+  "artworkProvenanceCredit": "Image credit",
+  "artworkProvenanceSource": "Image source",
   "commonCurrentlyOn": "Currently ON",
   "commonCurrentlyOff": "Currently OFF",
   "commonOk": "OK",
@@ -2053,8 +2067,11 @@
   "savedItemsMarkerLabel": "markers",
   "savedItemsLoadMoreButton": "Load more",
   "messagesTitle": "Messages",
+  "messagesAttachTooltip": "Attach a file",
+  "messagesPrivateNotion": "Private",
+  "messagesUnreadSemantic": "unread",
   "messagesEmptyNoConversationsTitle": "No conversations",
-  "messagesEmptyNoConversationsDescription": "Start a conversation using the chat button below.",
+  "messagesEmptyNoConversationsDescription": "Your private conversations with artists, institutions and other members appear here.",
   "messagesEmptyStartChatAction": "Start a chat",
   "messagesListHeaderTitle": "Conversations",
   "messagesListHeaderDescription": "Pick up direct chats and group threads with artists, collectors, and institutions.",
@@ -2372,13 +2389,6 @@
   "collectionCreatorLoadArtworkLibraryLabel": "Load artwork library",
   "collectionCreatorArtworkSelectedLabel": "Selected",
   "collectionCreatorArtworkAddLabel": "Add",
-  "collectionCreatorConnectWalletToLoad": "Connect a wallet to load and curate your artwork library in this creator.",
-  "collectionCreatorLoadingLibrary": "Loading library…",
-  "collectionCreatorLoadArtworkLibrary": "Load artwork library",
-  "collectionCreatorLibraryStillLoading": "Your artwork library is still loading. You can continue with the collection details and return here later.",
-  "collectionCreatorLoadBeforeSave": "Load your artwork library to select pieces for this collection.",
-  "collectionCreatorArtworkSelected": "Selected",
-  "collectionCreatorArtworkAdd": "Add",
   "collectionCreatorNoArtworksAvailable": "No artworks available matching your search.",
   "collectionCreatorSearchArtworksLabel": "Search",
   "collectionCreatorSearchArtworksHint": "Find artworks by title or description...",
@@ -2723,10 +2733,130 @@
   "walletHomeDesktopNftsSubtitle": "Open digital editions and account-linked pieces",
   "walletHomeDesktopRailSubtitle": "Wallet status, activity, and balances stay visible while you work.",
   "walletHomeSecureWalletAction": "Secure wallet",
-  "availabilityNodeTitle": "Availability Node",
-  "availabilityNodeNavTitle": "Availability Node",
-  "availabilityNodeNavSubtitle": "Create and manage scoped node operator tokens.",
-  "availabilityNodeSubtitle": "Create and manage scoped node operator tokens.",
+  "availabilityNodeTitle": "kubus Node",
+  "availabilityNodeNavTitle": "kubus Node",
+  "availabilityNodeNavSubtitle": "Public archive, local processing and verified contribution.",
+  "availabilityNodeSubtitle": "Run part of the art.kubus network on hardware you control.",
+  "kubusNodeHeroTitle": "Run part of the art.kubus network on hardware you control.",
+  "kubusNodeHeroBody": "kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.",
+  "kubusNodePrivacyBody": "Your source capture stays local. Only the spatial archive you choose to publish is added to the public network.",
+  "kubusNodeOverview": "Overview",
+  "kubusNodeArchive": "Archive",
+  "kubusNodeSpatial": "Spatial",
+  "kubusNodeRewards": "Contribution",
+  "kubusNodeSecuritySetup": "Security / Setup",
+  "kubusNodeOnline": "Online",
+  "kubusNodeOffline": "Offline",
+  "kubusNodeNotPaired": "No local kubus Node paired",
+  "kubusNodeUnavailable": "Node unavailable",
+  "kubusNodeAvailable": "Available",
+  "kubusNodeArchiveTitle": "Keep public art available",
+  "kubusNodeArchiveBody": "Store verified public archive records and help other people retrieve them when they explore art.kubus.",
+  "kubusNodeBytesStored": "Stored",
+  "kubusNodeRecords": "Public records",
+  "kubusNodeRetrievalHealth": "Retrieval health",
+  "kubusNodeSpatialTitle": "Process spatial archives locally",
+  "kubusNodeSpatialBody": "Turn a capture into an optimized spatial record without uploading the source material to a processing server.",
+  "kubusNodeWorker": "Spatial worker",
+  "kubusNodeGpu": "GPU capability",
+  "kubusNodeRunningJobs": "Running jobs",
+  "kubusNodeLocalCaptures": "Local captures",
+  "kubusNodeRewardsTitle": "Verified contribution",
+  "kubusNodeRewardsBody": "KUB8 contribution records are calculated from verified archive availability, uptime and successful retrieval — not simply from running the software.",
+  "kubusNodeSettledKub8": "Settled KUB8",
+  "kubusNodePendingBody": "Calculated from verified archive availability. Settlement is not yet active.",
+  "kubusNodePairTitle": "Pair this device",
+  "kubusNodePairBody": "Open Devices in your kubus Node interface and scan the code it shows. This device receives only a limited local credential.",
+  "kubusNodePairingPayload": "Pairing payload",
+  "kubusNodePairAction": "Pair kubus Node",
+  "kubusNodeUnpairAction": "Forget paired node",
+  "kubusNodePairedToast": "kubus Node paired",
+  "kubusNodePairFailed": "Pairing failed",
+  "kubusNodeStateContributing": "Contributing",
+  "kubusNodeStateContributingBody": "Archive participation is active.",
+  "kubusNodeStateJoining": "Joining network",
+  "kubusNodeStateJoiningBody": "kubus Node is synchronising and verifying its public archive contribution.",
+  "kubusNodeStateDegraded": "Connection interrupted",
+  "kubusNodeStateDegradedBody": "This previously verified node is in a temporary grace period. Processing locks if archive participation is not restored before grace expires.",
+  "kubusNodeStateLocked": "Network participation required",
+  "kubusNodeStateLockedBody": "Spatial processing becomes available when this kubus Node is actively contributing to the public archive.",
+  "kubusNodeStateUnconfigured": "Setup required",
+  "kubusNodeStateUnconfiguredBody": "Connect this node to your art.kubus operator account to begin.",
+  "kubusNodeStateOffline": "Node unavailable",
+  "kubusNodeStateOfflineBody": "The app cannot reach this kubus Node right now. It stays paired and reconnects automatically.",
+  "kubusNodeReciprocity": "kubus Node gives you local spatial processing while your node contributes storage and availability to the shared public archive.",
+  "kubusNodeCheckStatusAction": "Check node status",
+  "kubusNodeWorkerReady": "Ready",
+  "kubusNodeWorkerReadyBody": "Gaussian reconstruction available.",
+  "kubusNodeWorkerNoGpu": "Unavailable",
+  "kubusNodeWorkerNoGpuBody": "No compatible NVIDIA GPU detected.",
+  "kubusNodeWorkerDown": "Worker unavailable",
+  "kubusNodeWorkerDownBody": "GPU detected, but the spatial worker is not responding.",
+  "kubusNodeEntryTitle": "kubus Node",
+  "kubusNodeEntrySubtitle": "Run part of the art.kubus network on hardware you control.",
+  "kubusNodeEntryFeatureArchive": "Keep the public archive available",
+  "kubusNodeEntryFeatureSpatial": "Process spatial captures locally",
+  "kubusNodeEntryFeatureNetwork": "Use network GPU capacity when needed",
+  "kubusNodeEntryFeatureContribution": "Receive verified KUB8 contribution records",
+  "kubusNodeEntryConnectCta": "Connect or set up a kubus Node",
+  "kubusNodeEntryOpenCta": "Open kubus Node",
+  "kubusNodeEntryAttention": "Node needs attention",
+  "kubusNodeScanTitle": "Scan the pairing code",
+  "kubusNodeScanBody": "Open Devices in your kubus Node interface and scan the code it shows.",
+  "kubusNodeScanManualAction": "Enter code manually",
+  "kubusNodeScanPermission": "Camera access is needed to scan the pairing code.",
+  "kubusNodeScanInvalid": "That is not a kubus Node pairing code.",
+  "kubusNodeConfirmTitle": "Connect to this node?",
+  "kubusNodeConfirmBody": "This device will be allowed to use the node for spatial processing. You can disconnect it at any time from the node.",
+  "kubusNodeConfirmAction": "Connect",
+  "kubusNodeConnectedTitle": "Connected",
+  "kubusNodeConnectedBody": "This device can now use {label} for spatial processing.",
+  "kubusNodeFingerprintLabel": "Fingerprint",
+  "kubusNodeEmptyCapturesTitle": "No spatial captures yet",
+  "kubusNodeEmptyCapturesBody": "Document an artwork spatially to create its first 3D archive.",
+  "kubusNodeEmptyContributionTitle": "No verified contribution yet",
+  "kubusNodeEmptyContributionBody": "Contribution appears after the network verifies archive availability or completed compute jobs.",
+  "kubusNodeEmptyProvidersTitle": "No compatible network GPUs are available right now",
+  "kubusNodeEmptyProvidersBody": "Keep the capture locally or process it later.",
+  "kubusNodeNoNodeTitle": "No kubus Node connected",
+  "kubusNodeStoredLabel": "Stored",
+  "kubusNodeCoverageLabel": "Coverage",
+  "kubusNodePublicRecordsLabel": "Public records",
+  "kubusNodeContribution": "Contribution",
+  "kubusNodeHowCalculated": "How contribution is calculated",
+  "kubusNodeAdvancedDetails": "Technical details",
+  "kubusNodeCopiedToast": "Copied",
+  "spatialStagePreparing": "Preparing",
+  "spatialStageProcessingLocally": "Processing locally",
+  "spatialStageOptimising": "Optimising",
+  "spatialStageCreatingPreview": "Creating preview",
+  "spatialStageComplete": "Complete",
+  "spatialStageEncrypting": "Encrypting",
+  "spatialStageSending": "Sending to node",
+  "spatialStageWaitingForGpu": "Waiting for GPU",
+  "spatialStageProcessing": "Processing",
+  "spatialStagePreparingArchive": "Preparing spatial archive",
+  "spatialStageReceiving": "Receiving result",
+  "spatialStageVerifying": "Verifying",
+  "spatialProgressLocalBody": "Processing on your kubus Node.",
+  "spatialProgressRemoteBody": "Processing on the Kubus network.",
+  "spatialProgressLeaveHint": "You can leave this screen. Processing continues on your kubus Node.",
+  "spatialFailedTitle": "Processing stopped",
+  "spatialFailedRemoteBody": "The provider node became unavailable before reconstruction finished. Your original capture is still available.",
+  "spatialFailedLocalBody": "Processing did not finish. Your original capture is still available on your kubus Node.",
+  "spatialFailedTryAnother": "Try another node",
+  "spatialFailedProcessLocally": "Process locally",
+  "spatialFailedKeepForLater": "Keep for later",
+  "spatialErrorParticipation": "Network participation required",
+  "spatialErrorNoProvider": "No compatible network GPU is currently available.",
+  "spatialErrorExpired": "This processing request expired before a node accepted it.",
+  "spatialErrorRetrieval": "The processing node could not retrieve the encrypted capture.",
+  "spatialErrorSignIn": "Sign in to art.kubus to use network processing.",
+  "spatialErrorGeneric": "Something went wrong while processing this capture.",
+  "spatialProcessLocallyAction": "Process locally",
+  "spatialProcessNetworkAction": "Use network GPU",
+  "kubusNodeAdvancedOperatorSetup": "Advanced operator setup",
+  "kubusNodeAdvancedOperatorSetupBody": "Optional network identity, operator token and environment configuration.",
   "availabilityNodeWhatIsTitle": "What this does",
   "availabilityNodeIntro": "This token lets your node register, send heartbeats, commit to CIDs, and read recognition status. It does not control your wallet or spend funds.",
   "availabilityNodeDescription": "Availability nodes let trusted operators report backend availability from their own infrastructure.",
@@ -2789,7 +2919,6 @@
   "walletHomeDesktopTabStaking": "Staking",
   "walletHomeNftLoadFailedTitle": "Could not load digital editions",
   "walletHomeNoCollectiblesDescription": "Digital editions will appear here when they are linked to this wallet.",
-  "walletHomeNoCollectiblesTitle": "No digital editions yet",
   "walletHomeCollectibleByline": "by {creator}",
   "@walletHomeCollectibleByline": {
     "placeholders": {
@@ -3085,8 +3214,12 @@
   "walkingNavigationRemaining": "{distance} · {minutes}",
   "@walkingNavigationRemaining": {
     "placeholders": {
-      "distance": {"type": "String"},
-      "minutes": {"type": "String"}
+      "distance": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
     }
   },
   "walkingNavigationRouteAttribution": "Route data © OpenStreetMap contributors",
@@ -3673,6 +3806,10 @@
   "marketplaceNftArtworkStatusArEnabled": "Digital edition artwork - AR enabled",
   "marketplaceMintUnavailableLabel": "Edition creation unavailable",
   "marketplaceSoldOutLabel": "Sold out",
+  "marketplacePrimarySoldOutLabel": "Primary sold out",
+  "@marketplacePrimarySoldOutLabel": {
+    "description": "Primary edition supply is fully issued, shown beside an active resale listing so the listing is not called sold out."
+  },
   "marketplaceMintNftButtonLabel": "Create digital edition",
   "marketplaceArRequiredTitle": "Location visit required",
   "marketplaceArRequiredDescription": "This digital edition requires interaction with the artwork’s location. Visit the artwork and use the AR scanner if the artist enabled it.",
@@ -3962,6 +4099,18 @@
       "count": {}
     }
   },
+  "communityPostLikesCount": "{count, plural, =1{1 like} other{{count} likes}}",
+  "@communityPostLikesCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "communityPostRepostsCount": "{count, plural, =1{1 repost} other{{count} reposts}}",
+  "@communityPostRepostsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "commonDistanceKmAway": "{value} km away",
   "@commonDistanceKmAway": {
     "placeholders": {
@@ -4112,6 +4261,10 @@
   "communitySearchTypeInstitutions": "Institutions",
   "communitySearchTypeScreens": "Screens",
   "communitySearchTypePosts": "Posts",
+  "communitySearchTypeEvents": "Events",
+  "communitySearchTypeExhibitions": "Exhibitions",
+  "communitySearchTypePlaces": "Places",
+  "searchResultsSemanticLabel": "Search results",
   "communitySearchHintProfiles": "Search people…",
   "communitySearchHintArtworks": "Search artworks…",
   "communitySearchHintInstitutions": "Search institutions…",
@@ -4295,6 +4448,13 @@
   "downloadAppScanQrSubtitle": "Open this page on your phone to download the app.",
   "downloadAppContinueBrowsingButton": "Continue browsing",
   "homeDefaultDisplayName": "there",
+  "activityUnreadSemanticLabel": "Unread",
+  "homeIntroNotion": "Discover",
+  "homeIntroTitle": "Public art, places and culture around you",
+  "homeIntroLede": "Find artworks on the map, follow artists and institutions, and see what the community is adding to the archive.",
+  "homeIntroExploreMapAction": "Explore the map",
+  "homeIntroCommunityAction": "See community",
+  "homeGuestHeaderTitle": "Welcome",
   "homeWelcomeSubtitle": "Open art platform for discovery, artists, institutions, and community.",
   "homeExploreWeb3Button": "Wallet and Web3 access",
   "homeQuickActionsTitle": "Start Here",
@@ -4888,6 +5048,14 @@
   "navigationScreenDaoHub": "Community Governance",
   "navigationScreenArtistStudio": "Artist Studio",
   "navigationScreenInstitutionHub": "Institution Hub",
+  "mobileNavMap": "Map",
+  "mobileNavAr": "AR",
+  "mobileNavCommunity": "Community",
+  "mobileNavHome": "Home",
+  "mobileNavProfile": "Profile",
+  "mobileNavAccount": "Account",
+  "mobileNavSemanticLabel": "Main navigation",
+  "desktopNavWalletEntry": "Wallet",
   "daoHubAppBarTitle": "Community governance",
   "labsDaoSemanticLabel": "Community Governance",
   "labsMarketplaceSemanticLabel": "Digital Editions",
@@ -5119,6 +5287,10 @@
   "communityRepostWithCommentAction": "Repost with comment",
   "communityRepostWithCommentHint": "Add your thoughts (optional)",
   "communityRepostButtonLabel": "Repost",
+  "communityComposeAuthAction": "write a post",
+  "communityCreateGroupAuthAction": "create a group",
+  "communityPostActionLike": "Like",
+  "communityPostActionComment": "Comment",
   "communityRepostedToast": "Reposted",
   "communityRepostedWithCommentToast": "Reposted with comment",
   "desktopCommunityActiveCommunitiesTitle": "Active communities",
@@ -5294,6 +5466,8 @@
   "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
   "profileMenuSavedItemsTitle": "Saved items",
   "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
+  "savedItemsEmptyLibraryTitle": "Nothing saved yet",
+  "savedItemsLibraryNotion": "Your library",
   "savedItemsSummarySubtitleLastSaved": "Last saved {timestamp}",
   "@savedItemsSummarySubtitleLastSaved": {
     "placeholders": {
@@ -5875,26 +6049,28 @@
   "exhibitionCreatorRelationTypeLabel": "Relation type",
   "selectEventsDialogTitle": "Select events",
   "selectExhibitionsDialogTitle": "Select exhibitions",
-
   "authVerifyEmailSuccessTitle": "Email confirmed",
   "authVerifyEmailSuccessBodyAutoContinue": "Opening your art.kubus workspace…",
   "authVerifyEmailSuccessBodyAutoContinueWithEmail": "{email} is verified. Opening your art.kubus workspace…",
   "@authVerifyEmailSuccessBodyAutoContinueWithEmail": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailSuccessBodyManual": "Your email address is verified. Continue to finish your art.kubus setup.",
   "authVerifyEmailSuccessBodyManualWithEmail": "{email} is verified. Continue to finish your art.kubus setup.",
   "@authVerifyEmailSuccessBodyManualWithEmail": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "authVerifyEmailContinueNow": "Continue now",
   "authVerifyEmailContinue": "Continue",
   "authVerifyEmailSessionFailed": "Could not continue from verification. Try again.",
-
   "walletSetupTitle": "Secure your art.kubus identity",
   "walletSetupSubtitle": "Create your wallet. You stay in control.",
   "walletSetupAccountNote": "You keep signing in with your account — the wallet becomes your public identity.",
@@ -5905,7 +6081,9 @@
   "walletSetupSignedInAs": "Signed in as {name}",
   "@walletSetupSignedInAs": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "walletSetupImportTitle": "Import existing wallet",
@@ -5920,12 +6098,13 @@
   "walletSetupDisabledError": "Wallet connection is disabled right now.",
   "walletSetupSessionMissingError": "Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.",
   "walletSetupGenericLinkError": "Wallet linking failed. Try again.",
-
   "walletSetupStatusLoginAccount": "Login account",
   "walletSetupStatusAccountId": "Account ID {id}",
   "@walletSetupStatusAccountId": {
     "placeholders": {
-      "id": { "type": "String" }
+      "id": {
+        "type": "String"
+      }
     }
   },
   "walletSetupStatusAuthenticatedAccount": "Authenticated account",
@@ -5935,7 +6114,9 @@
   "walletSetupStatusVerifiedLinked": "Verified linked wallet {wallet}",
   "@walletSetupStatusVerifiedLinked": {
     "placeholders": {
-      "wallet": { "type": "String" }
+      "wallet": {
+        "type": "String"
+      }
     }
   },
   "walletSetupPhaseReady": "Choose a wallet action to continue.",
@@ -5944,7 +6125,6 @@
   "walletSetupPhaseLinking": "Linking wallet to your account and verifying…",
   "walletSetupPhaseLinked": "Wallet linked to this account.",
   "walletSetupPhaseFailed": "Wallet link failed. Your account was not changed.",
-
   "onboardingStageWelcome": "Welcome",
   "onboardingStageAccount": "Account",
   "onboardingStageProfile": "Profile",
@@ -5954,8 +6134,12 @@
   "onboardingStageProgress": "Step {current} of {total}",
   "@onboardingStageProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "analyticsMetricFollowersLabel": "Followers",
@@ -6050,6 +6234,9 @@
   "analyticsBlockedWalletRequiredDescription": "Analytics are available after a wallet is connected.",
   "analyticsBlockedDisabledTitle": "Analytics disabled",
   "analyticsBlockedDisabledDescription": "Enable analytics in Settings to view charts and insights.",
+  "analyticsBlockedOpenSettings": "Open Settings",
+  "analyticsBlockedUnavailableTitle": "Analytics unavailable",
+  "analyticsBlockedUnavailableDescription": "Analytics are not available in this app build.",
   "analyticsBlockedAdminRequiredTitle": "Admin analytics",
   "analyticsBlockedAdminRequiredDescription": "Platform analytics require an admin session.",
   "analyticsBlockedOwnerRequiredTitle": "Private analytics",
@@ -6177,6 +6364,392 @@
   "commonNotNow": "Not now",
   "commonDismiss": "Dismiss",
   "authSecureAccountBannerCta": "Secure",
+  "spatialProcessTitle": "Process spatial capture",
+  "spatialProcessLocalTitle": "This kubus Node",
+  "spatialProcessLocalPrivacy": "Source capture stays on hardware you control.",
+  "spatialProcessNetworkTitle": "Kubus network",
+  "spatialProcessNetworkAvailable": "{count} compatible nodes available",
+  "@spatialProcessNetworkAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialProcessNetworkPrivacy": "The capture is encrypted in transit and processed temporarily by the selected provider node.",
+  "spatialProcessMaximumPrivacy": "For maximum privacy, process locally.",
+  "spatialProcessNoLocalGpu": "No compatible local GPU was found.",
+  "spatialProcessKeepLocal": "Keep capture locally",
+  "spatialProcessStart": "Start processing",
+  "spatialProcessAutoSelect": "Auto-select best node",
+  "spatialProcessAdvanced": "Choose a node",
+  "spatialProcessReady": "Ready",
+  "spatialProcessJobsAhead": "{count} jobs ahead",
+  "@spatialProcessJobsAhead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialProcessSuccessRate": "{rate}% successful jobs",
+  "@spatialProcessSuccessRate": {
+    "placeholders": {
+      "rate": {}
+    }
+  },
+  "spatialRemotePrivacyTitle": "Use a Kubus network GPU?",
+  "spatialRemotePrivacyBody": "The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.",
+  "spatialRemotePrivacyConfirm": "Continue with network GPU",
+  "spatialResultReviewTitle": "Spatial result is ready",
+  "spatialResultReviewBody": "Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus Node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.",
+  "spatialResultKeepPrivate": "Keep unpublished",
+  "spatialResultReject": "Reject result",
+  "spatialResultPublish": "Publish spatial archive",
+  "kubusNodeCompute": "Compute",
+  "kubusNodeComputeTitle": "Compute network",
+  "kubusNodeComputeBody": "Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.",
+  "kubusNodeOfferGpu": "Offer GPU to Kubus network",
+  "kubusNodeOfferGpuBody": "Accept new compatible spatial jobs from other art.kubus users.",
+  "kubusNodePauseRemoteJobs": "Pause accepting new remote jobs",
+  "kubusNodeMaxRemoteJobs": "Maximum concurrent remote jobs",
+  "kubusNodeArchiveContribution": "Archive contribution",
+  "kubusNodeComputeContribution": "Compute contribution",
+  "kubusNodePendingTotal": "Pending total",
+  "kubusNodeSettlementPending": "Rewards are currently recorded by the network. Settlement is not yet active.",
+  "kubusNodeVerifiedArchiveCopy": "KUB8 contribution records are calculated from verified public archive availability, healthy participation and successful retrieval.",
+  "kubusNodeVerifiedComputeCopy": "When you choose to offer spare GPU capacity, successfully completed and verified network compute jobs can contribute to your KUB8 reward record.",
+  "kubusNodeParticipationContributing": "Contributing",
+  "kubusNodeParticipationDegraded": "Connection interrupted",
+  "kubusNodeParticipationLocked": "Network participation required",
+  "kubusNodeRemoteJobsCompleted": "Remote jobs completed",
+  "spatialArchiveTitle": "Spatial archive",
+  "spatialViewIn3d": "View in 3D",
+  "spatialCaptureCount": "{count, plural, =1{1 spatial capture} other{{count} spatial captures}}",
+  "@spatialCaptureCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialCapturedOn": "Captured {date}",
+  "@spatialCapturedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialHistoryTitle": "Spatial history",
+  "spatialLoadArchiveQuality": "Load archival quality",
+  "spatialQualityMobile": "Optimised",
+  "spatialQualityPreview": "Preview",
+  "spatialQualityArchive": "Archival",
+  "spatialViewerReset": "Reset view",
+  "spatialViewerFullscreen": "Fullscreen",
+  "spatialViewerRetry": "Try again",
+  "spatialViewerUnavailable": "This spatial archive is currently unavailable.",
+  "spatialViewerFallback": "Trying another archive route…",
+  "spatialViewerWebSafety": "Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.",
+  "spatialCaptureFinish": "Finish capture",
+  "spatialCaptureGuideStart": "Move slowly around the artwork.",
+  "spatialCaptureGuideOverlap": "Keep the artwork in view and maintain overlap.",
+  "spatialCaptureGuideDetails": "Capture the sides and details you have not covered.",
+  "spatialCaptureGuideReady": "Coverage is ready. You can finish or add a few more angles.",
+  "spatialCaptureDepthAvailable": "depth available",
+  "spatialCaptureRgbPose": "RGB and pose",
+  "spatialCaptureTrackedViews": "{count} tracked views · {detail}",
+  "@spatialCaptureTrackedViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "mapSpatialAvailable": "Spatial archive available",
+  "arErrorCameraUnavailable": "The camera is currently unavailable. Try again.",
+  "arErrorArcoreInstallRequired": "AR needs Google Play Services for AR. Install it to continue.",
+  "arErrorArcoreUpdateRequired": "Google Play Services for AR needs an update to continue.",
+  "arErrorAppUpdateRequired": "This app needs an update to use AR.",
+  "arErrorArcoreUnsupportedDevice": "This device does not support AR.",
+  "arErrorArcoreInstallDeclined": "AR needs Google Play Services for AR. You can install it and try again.",
+  "arErrorSessionUnavailable": "AR is unavailable right now. Try again.",
+  "arErrorCameraPermissionRequired": "AR needs camera access. Allow it to continue.",
+  "arTrackingInitializing": "AR is still locating itself. Move your phone slowly.",
+  "arTrackingInsufficientLight": "More light will help AR understand the space.",
+  "arTrackingExcessiveMotion": "Move your phone more slowly.",
+  "arTrackingInsufficientFeatures": "Point the camera toward an area with more visible detail.",
+  "arTrackingBadState": "AR is recovering.",
+  "arPlacementSelectArtwork": "Choose an artwork to place.",
+  "arPlacementFindingSurface": "Move your phone slowly to find a surface.",
+  "arPlacementTapToPlace": "Tap a surface to place the artwork.",
+  "arPlacementAdjustOrConfirm": "Drag to move, rotate to adjust, then confirm.",
+  "arPlacementRotate": "Rotate",
+  "spatialCaptureGuideIdle": "Point your phone at the artwork to begin.",
+  "spatialCaptureGuidePaused": "Capture is paused. Resume when you are ready.",
+  "spatialCaptureGuideTrackingLost": "AR lost track of the space. Move your phone slowly to continue.",
+  "spatialCaptureGuideFull": "Capture is full. Finish to process what you have.",
+  "spatialCaptureResume": "Resume capture",
+  "spatialCaptureStart": "Start capture",
+  "spatialCaptureContributorOnly": "Spatial capture is available to approved contributors, artists and institutions.",
+  "spatialCaptureChooseArtwork": "Choose an artwork before starting a spatial capture.",
+  "spatialCaptureNotReadyToast": "Capture a few more angles before finishing.",
+  "spatialCaptureNodeRequired": "Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.",
+  "spatialCaptureNodeOutdated": "This kubus Node cannot receive a streamed capture. Update the node and try again.",
+  "spatialCaptureTransferFailed": "The capture could not be transferred. It is still on this device, so you can try again.",
+  "spatialCaptureRetryTransfer": "Retry transfer",
+  "spatialTransferPreparing": "Preparing capture…",
+  "spatialTransferCommitting": "Finalising on your node…",
+  "spatialTransferUploading": "Uploading {done} of {total} files",
+  "@spatialTransferUploading": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialArchiveEmptyTitle": "Spatial archive",
+  "spatialArchiveEmptyBody": "Published and locally processed spatial records will appear here over time.",
+  "spatialArchiveRecord": "Spatial record",
+  "spatialRecoveryTitle": "Unfinished capture",
+  "spatialRecoveryBody": "{count} tracked views from an interrupted capture are still on this device.",
+  "@spatialRecoveryBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialRecoveryResume": "Resume capture",
+  "spatialRecoveryDiscard": "Discard capture",
+  "spatialRecoveryKeep": "Keep for later",
+  "arPlacementScaleUp": "Larger",
+  "arPlacementScaleDown": "Smaller",
+  "arPlacementReposition": "Move",
+  "arPlacementConfirm": "Confirm placement",
+  "arPlacementRepositionHint": "Tap another surface to move the artwork.",
+  "arPlacementAdjustHint": "Pinch to resize, drag to rotate, then confirm.",
+  "arPlacementTrackingLost": "AR lost track of the space. Your placement is kept — move slowly to continue.",
+  "arPlacementPreviewFailed": "The artwork preview could not be shown. Try choosing the surface again.",
+  "arCameraSwitching": "Switching camera…",
+  "spatialCaptureDiscardAndRestart": "Discard and start over",
+  "spatialCaptureGuideFullUnusable": "Capture reached its limit before covering enough of the artwork. Start over and move around it more.",
+  "arCaptureFrameFailed": "Could not capture a frame. Try again.",
+  "spatialCaptureSaved": "Captured privately on this phone. Process it now or later from Spatial Library.",
+  "spatialLibraryTitle": "Spatial Library",
+  "spatialLibraryOpen": "Open library",
+  "spatialLibraryEmpty": "Your private spatial captures will appear here.",
+  "spatialLibraryFilterAll": "All",
+  "spatialLibraryFilterCaptured": "Captured",
+  "spatialLibraryFilterProcessing": "Processing",
+  "spatialLibraryFilterReady": "Ready",
+  "spatialLibraryFilterPublished": "Published",
+  "spatialLibraryStatusCaptured": "Captured",
+  "spatialLibraryStatusWaiting": "Waiting for Node",
+  "spatialLibraryStatusUploading": "Uploading",
+  "spatialLibraryStatusQueued": "Queued",
+  "spatialLibraryStatusProcessing": "Processing",
+  "spatialLibraryStatusDownloading": "Downloading",
+  "spatialLibraryStatusReady": "Ready",
+  "spatialLibraryStatusPublished": "Published",
+  "spatialLibraryStatusFailed": "Failed",
+  "spatialLibraryPrivate": "Private",
+  "spatialLibraryPublic": "Public",
+  "spatialLibraryRawStorage": "Raw source",
+  "spatialLibraryProcessedStorage": "Processed",
+  "spatialLibraryTotalStorage": "Total",
+  "spatialLibraryNodeConnected": "Node connected",
+  "spatialLibraryNodeConnect": "Connect Node",
+  "spatialLibraryProcess": "Process",
+  "spatialLibraryRetryUpload": "Retry upload",
+  "spatialLibraryRetryProcessing": "Retry processing",
+  "spatialLibraryView": "View",
+  "spatialLibraryPublish": "Publish",
+  "spatialLibraryShare": "Share",
+  "spatialLibraryDeleteRaw": "Delete raw capture",
+  "spatialLibraryDeleteProcessed": "Delete local processed result",
+  "spatialLibraryDeleteRecord": "Delete local record",
+  "spatialLibraryDeleteRecordWarning": "This removes the local record only. A published public archive will stay published.",
+  "spatialLibraryProcessorUnavailable": "No processor is available. Your private capture remains safely stored.",
+  "spatialLibraryOperationFailed": "That action could not be completed. Your private source remains intact.",
+  "arStatusTracking": "Tracking",
+  "arStatusFindingSurface": "Finding surface",
+  "arStatusCapturing": "Capturing",
+  "arStatusPaused": "Paused",
+  "arStatusError": "Error",
+  "arStatusSwitching": "Switching",
+  "arMoreActions": "More actions",
+  "arToggleFlash": "Flash",
+  "arOpenArSettings": "AR settings",
+  "spatialTargetPickerTitle": "Choose the artwork",
+  "spatialTargetPickerSubtitle": "Every spatial capture is filed under one artwork.",
+  "spatialTargetSearchHint": "Search artworks",
+  "spatialTargetNoArtworksTitle": "No artworks yet",
+  "spatialTargetNoArtworksBody": "Add an artwork before capturing spatial data for it.",
+  "spatialTargetNoResultsTitle": "No matches",
+  "spatialTargetNoResultsBody": "No artwork matches that search.",
+  "spatialTargetMarkerTitle": "Choose a marker",
+  "spatialTargetMarkerSubtitle": "Optional. Links this capture to a specific location or AR marker.",
+  "spatialTargetNoMarker": "No specific marker",
+  "spatialTargetChangeArtwork": "Change artwork",
+  "spatialMarkerKindLocation": "Map location",
+  "spatialMarkerKindConfiguration": "AR marker",
+  "spatialLibraryStatusReprocessNeeded": "Reprocessing required",
+  "spatialLibraryStatusPublishing": "Publishing",
+  "spatialNetworkStateRequested": "Requested",
+  "spatialNetworkStateSearching": "Finding a processor",
+  "spatialNetworkStateOffered": "Provider offered",
+  "spatialNetworkStateAccepted": "Provider accepted",
+  "spatialNetworkStateVerifying": "Verifying",
+  "spatialNetworkStateExpired": "Request expired",
+  "spatialNetworkStateCancelled": "Request cancelled",
+  "spatialLibraryVersionLabel": "v{version}",
+  "@spatialLibraryVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialLibraryArtworkUnavailable": "Artwork unavailable",
+  "spatialLibraryMarkerUnavailable": "Marker unavailable",
+  "spatialLibraryLinkedTo": "Linked to",
+  "spatialLibraryArtworkLabel": "Artwork",
+  "spatialLibraryMarkerLabel": "Marker",
+  "spatialLibrarySectionCapture": "Capture",
+  "spatialLibrarySectionProcessing": "Processing",
+  "spatialLibrarySectionArchive": "Archive",
+  "spatialLibraryCoverage": "Coverage",
+  "spatialLibraryCoveragePercent": "{percent}% coverage",
+  "@spatialLibraryCoveragePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialLibraryTrackedViews": "{count, plural, =1{1 tracked view} other{{count} tracked views}}",
+  "@spatialLibraryTrackedViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialLibraryDepthAvailable": "Depth available",
+  "spatialLibraryDepthUnavailable": "No depth data",
+  "spatialLibraryRawSource": "Raw source",
+  "spatialLibraryRawSourceDeleted": "Raw source deleted",
+  "spatialLibraryContinueCapture": "Continue capture",
+  "spatialLibraryEditAssociation": "Edit association",
+  "spatialLibraryEditMetadata": "Rename or add a note",
+  "spatialLibraryProcessScene": "Process scene",
+  "spatialLibraryNotProcessed": "Not processed",
+  "spatialLibraryViewResult": "View result",
+  "spatialLibraryViewPublicArchive": "View public archive",
+  "spatialLibraryNewRevision": "Add spatial update",
+  "spatialLibraryMoreActions": "More",
+  "spatialLibraryCancelRequest": "Cancel request",
+  "spatialLibraryChangeProcessor": "Change processor",
+  "spatialLibraryVersionsTitle": "Versions",
+  "spatialLibraryCurrentPublicVersion": "Current public version",
+  "spatialLibraryLocalDraft": "Local draft",
+  "spatialLibraryRevisionOf": "Revision {revision}",
+  "@spatialLibraryRevisionOf": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialLibraryStaleResultWarning": "More capture data was added after this result. Process it again to refresh the scene.",
+  "spatialLibraryStorageTitle": "Storage",
+  "spatialLibraryCapturedOnLabel": "Captured",
+  "spatialEditMetadataTitle": "Capture details",
+  "spatialEditDisplayNameLabel": "Name",
+  "spatialEditDisplayNameHint": "For example: North facade, evening capture",
+  "spatialEditNoteLabel": "Note",
+  "spatialEditAssociationTitle": "Change association",
+  "spatialEditAssociationProcessedWarning": "This capture already has a processed result. Changing the artwork changes the metadata it would be published with.",
+  "spatialEditAssociationPublishedWarning": "This capture is published. Changing it starts a new draft revision; the published version stays exactly as it is.",
+  "spatialEditAssociationConfirm": "Change association",
+  "spatialProcessOwnNodeSubtitle": "Use your paired kubus Node.",
+  "spatialProcessOwnNodeRemote": "Connected remotely",
+  "spatialProcessOwnNodeLocal": "On your network",
+  "spatialProcessOwnNodeUnpaired": "Not connected — tap to pair",
+  "spatialProcessConnectOwnNode": "Connect my Node",
+  "spatialProcessNetworkSubtitle": "Request processing from an available GPU provider.",
+  "spatialProcessRequestNetwork": "Request network processing",
+  "spatialProcessNoProviderNow": "No provider is available right now. The request stays open until one is.",
+  "spatialProviderQueueAhead": "{count, plural, =0{No jobs ahead} =1{1 job ahead} other{{count} jobs ahead}}",
+  "@spatialProviderQueueAhead": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialProviderEstimatedDuration": "About {minutes} min",
+  "@spatialProviderEstimatedDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialProviderEstimatedCost": "About {amount} KUB8",
+  "@spatialProviderEstimatedCost": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialProviderNoEstimate": "Not offered",
+  "spatialProviderLabel": "Provider",
+  "spatialFailureNodeUnavailable": "Node unavailable",
+  "spatialFailureUploadInterrupted": "Upload interrupted",
+  "spatialFailureProcessorDeclined": "The processor declined the job",
+  "spatialFailureProcessingFailed": "Processing failed",
+  "spatialFailureResultDownload": "Result download failed",
+  "spatialFailureResultVerification": "Result verification failed",
+  "spatialFailureRequestExpired": "The request expired before a processor took it",
+  "spatialFailureGeneric": "Something went wrong",
+  "spatialFailureRawIntact": "Your raw capture is untouched.",
+  "spatialCaptureSavedTitle": "Saved to Spatial Library",
+  "spatialCaptureContinueLater": "Continue later",
+  "spatialCaptureTargetRequired": "Choose an artwork before starting a capture.",
+  "spatialCaptureTargetLabel": "Capturing for {title}",
+  "@spatialCaptureTargetLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialCaptureSourceUnavailable": "The raw capture for this record is no longer on this device.",
+  "spatialCaptureContinueFailed": "That capture could not be reopened.",
+  "spatialArtworkDraftsTitle": "Your spatial drafts",
+  "spatialArtworkDraftsSubtitle": "Private to this device until you publish.",
+  "spatialArtworkAddUpdate": "Add spatial update",
+  "spatialArtworkCaptureCta": "Capture spatial data",
+  "spatialViewOnMap": "View on map",
+  "spatialCaptureAnotherOpen": "A capture for another artwork is still open. Finish or discard it before starting a new one.",
+  "collectionCreatorConnectWalletToLoad": "Connect a wallet to load and curate your artwork library in this creator.",
+  "collectionCreatorLoadingLibrary": "Loading library…",
+  "collectionCreatorLoadArtworkLibrary": "Load artwork library",
+  "collectionCreatorLibraryStillLoading": "Your artwork library is still loading. You can continue with the collection details and return here later.",
+  "collectionCreatorLoadBeforeSave": "Load your artwork library to select pieces for this collection.",
+  "collectionCreatorArtworkSelected": "Selected",
+  "collectionCreatorArtworkAdd": "Add",
+  "walletHomeNoCollectiblesTitle": "No digital editions yet",
   "artworkCreatorOptionalExtensionsDescription": "Publish the artwork first, then add AR or spatial layers, attendance records, or digital editions when they support the work.",
   "artworkCreatorCreateDigitalEdition": "Create digital edition",
   "artworkCreatorDigitalEditionUnavailable": "Digital edition creation is currently unavailable.",
@@ -6244,8 +6817,345 @@
   "walletGalleryStatusListed": "Listed",
   "walletGalleryStatusSold": "Sold",
   "walletGalleryStatusTransferred": "Transferred",
+  "kubusMyNodesTitle": "My Nodes",
+  "kubusConnectionNearby": "Connected nearby",
+  "kubusConnectionRemote": "Connected remotely",
+  "kubusComputeAuthorizationRequired": "Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.",
+  "kubusConnectionIdentityMismatch": "Node identity verification failed. The connection was refused and your saved identity was preserved.",
+  "kubusNetworkStagingExplanation": "Network processing currently uses your kubus Node to securely stage the encrypted capture.",
+  "kubusMyNodesDiscoveryFailed": "Could not load your Nodes. Check your connection and sign in, then retry.",
+  "kubusMyNodesEmpty": "This account has no registered Nodes. Set up a kubus Node to continue.",
+  "kubusMyNodesAvailable": "Available to connect remotely",
+  "kubusMyNodesUnavailable": "Remote connection is unavailable. Start your Node and check that it has current software and signaling permissions.",
+  "kubusMyNodesAttaching": "Connecting securely…",
+  "kubusMyNodesAttachFailed": "Could not connect securely. Your saved pairing has been preserved.",
+  "kubusMyNodesLocalPairing": "Pair locally with a QR code",
   "walletGalleryStatusBurned": "Retired",
   "artworkCreatorFeeEstimateTitle": "Estimated network fees",
   "artworkCreatorFeeEstimateUnavailable": "Unavailable",
-  "artworkCreatorAttendanceImageTooSmall": "The attendance record image must be at least 256 px on its shortest side."
+  "artworkCreatorAttendanceImageTooSmall": "The attendance record image must be at least 256 px on its shortest side.",
+  "kubusAddNodeTitle": "Add a Node",
+  "kubusAddNodeIntro": "Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.",
+  "kubusAddNodeCodeLabel": "Setup code",
+  "kubusAddNodeLookup": "Find Node",
+  "kubusAddNodeNotFound": "No Node is waiting for that code. Check the code on the setup page, or start setup again.",
+  "kubusAddNodeReview": "Authorize this Node?",
+  "kubusAddNodeFingerprint": "Node fingerprint",
+  "kubusAddNodeGrants": "Authorizing issues this Node a credential for archive availability, connection signaling and network compute. Your captures stay on the Node.",
+  "kubusAddNodeAuthorize": "Authorize",
+  "kubusAddNodeDecline": "Decline",
+  "kubusAddNodeAuthorized": "Authorized. Your Node is finishing setup and will appear in My Nodes shortly.",
+  "kubusAddNodeDeclined": "Declined. No credential was issued.",
+  "kubusAddNodeFailed": "Could not complete authorization. Nothing was issued; try again.",
+  "kubusPermissionUpdateTitle": "Update permissions",
+  "kubusPermissionUpdateBody": "This Node was set up before the current permissions. Authorize an updated credential to use network compute. Its identity, pairings, captures and archive stay exactly as they are.",
+  "kubusPermissionUpdateAction": "Update permissions",
+  "kubusPermissionUpdateWorking": "Updating this Node's permissions…",
+  "kubusPermissionUpdateDone": "Permissions updated. Your Node is restarting to use them.",
+  "kubusPermissionUpdateDeclined": "Update declined. This Node keeps its current permissions.",
+  "kubusPermissionUpdateFailed": "Could not update permissions. This Node kept its existing credential.",
+  "spatialTransferValidating": "Checking the upload on your node…",
+  "spatialTransferRepairing": "Completing the upload…",
+  "spatialTransferWaiting": "Waiting for your node…",
+  "spatialTransferBytes": "{done} / {total}",
+  "@spatialTransferBytes": {
+    "description": "Transferred bytes over total, both already formatted.",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferThroughput": "{rate}/s",
+  "@spatialTransferThroughput": {
+    "description": "Measured transfer speed, already formatted.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferEta": "About {duration} remaining",
+  "@spatialTransferEta": {
+    "description": "Evidence-based estimate of time left.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialTransferFiles": "{done} / {total} files",
+  "@spatialTransferFiles": {
+    "description": "Files delivered over total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialTransferRouteLocal": "Local network",
+  "spatialTransferRouteRemote": "Secure internet connection",
+  "spatialTransferRouteDirect": "Direct connection",
+  "spatialTransferRouteRelay": "Relayed connection",
+  "spatialDurationSeconds": "{seconds} sec",
+  "@spatialDurationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationMinutes": "{minutes} min",
+  "@spatialDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialDurationHours": "{hours} h {minutes} min",
+  "@spatialDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialFailureSourceIncomplete": "This capture is missing files on this device",
+  "spatialFailureSourceUnrepairable": "This capture cannot be processed",
+  "spatialFailureNodeCaptureIncomplete": "The upload did not finish",
+  "spatialFailureNodeValidation": "Your node could not accept this capture",
+  "spatialUploadIncompleteTitle": "Capture upload incomplete",
+  "spatialUploadIncompleteBody": "Your node is missing {count, plural, =1{1 file} other{{count} files}} from this capture.",
+  "@spatialUploadIncompleteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadAvailableFiles": "{available} / {expected} files available",
+  "@spatialUploadAvailableFiles": {
+    "placeholders": {
+      "available": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialUploadResume": "Resume upload",
+  "formShowPassword": "Show password",
+  "formHidePassword": "Hide password",
+  "formSelectDate": "Select a date",
+  "formSelectTime": "Select a time",
+  "formNoValueSelected": "Not set",
+  "formAddImage": "Add image",
+  "formFixHighlightedFields": "Some fields need attention. Check the messages below them.",
+  "stateNetworkTitle": "Couldn't reach art.kubus",
+  "stateNetworkDescription": "The request didn't finish. Check your connection and try again.",
+  "stateOfflineTitle": "You're offline",
+  "stateOfflineDescription": "This needs an internet connection. Reconnect, then try again.",
+  "stateServerTitle": "art.kubus is having trouble",
+  "stateServerDescription": "The service didn't respond properly. Nothing is wrong on your side; try again in a moment.",
+  "stateAuthTitle": "Sign in to continue",
+  "stateAuthDescription": "Your session has ended or you haven't signed in yet.",
+  "statePermissionTitle": "You don't have access",
+  "statePermissionDescription": "This is limited to its owner or to approved roles. Ask the owner if you need access.",
+  "stateNotFoundTitle": "Not found",
+  "stateNotFoundDescription": "It may have been removed or made private.",
+  "stateValidationTitle": "Some details need changes",
+  "stateValidationDescription": "The request wasn't accepted as sent. Review the details and try again.",
+  "stateRateLimitTitle": "Too many attempts",
+  "stateRateLimitDescription": "Wait a minute before trying again.",
+  "stateWalletTitle": "Wallet not ready",
+  "stateWalletDescription": "Reconnect your wallet or unlock it, then try again.",
+  "stateUnsupportedTitle": "Not available here",
+  "stateUnsupportedDescription": "This feature isn't supported on this device or in this version.",
+  "stateUnknownTitle": "Something went wrong",
+  "stateUnknownDescription": "We couldn't complete this. Try again.",
+  "stateLoadingMore": "Loading more",
+  "peopleRoleArtist": "Artist",
+  "peopleRoleInstitution": "Institution",
+  "peopleVerifiedLabel": "Verified",
+  "peopleFollowToggleSemantic": "Follow {name}",
+  "@peopleFollowToggleSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInboxIntro": "Accept an invitation to help manage an event, exhibition, artwork or collection.",
+  "collabInviteNotion": "Invitation",
+  "collabEntityEvent": "Event",
+  "collabEntityExhibition": "Exhibition",
+  "collabEntityArtwork": "Artwork",
+  "collabEntityCollection": "Collection",
+  "collabEntityItem": "Item",
+  "collabInviteFrom": "From {name}",
+  "@collabInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteRole": "Your role: {role}",
+  "@collabInviteRole": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteReceived": "Received {date}",
+  "@collabInviteReceived": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabInviteExpires": "Expires {date}",
+  "@collabInviteExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collabUnknownSender": "Someone",
+  "collabAccept": "Accept",
+  "collabDecline": "Decline",
+  "collabAcceptedToast": "Invitation accepted. You can now help manage it.",
+  "collabDeclinedToast": "Invitation declined.",
+  "collabAcceptFailedToast": "Couldn't accept the invitation. Try again.",
+  "collabDeclineFailedToast": "Couldn't decline the invitation. Try again.",
+  "collabCannotOpenItemToast": "This invitation doesn't point to an item that can be opened here.",
+  "collabEmptyTitle": "No invitations right now",
+  "collabEmptyDescription": "When someone invites you to collaborate, it appears here.",
+  "collabInviteSemantic": "Invitation to {entity} as {role}, from {name}",
+  "@collabInviteSemantic": {
+    "placeholders": {
+      "entity": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "studioNotionPractice": "Practice",
+  "institutionNotionProgramme": "Programme",
+  "dashboardNotionNumbers": "Numbers",
+  "dashboardNotionInfrastructure": "Infrastructure",
+  "dashboardNumbersCaption": "Counts from art.kubus activity on your public profile.",
+  "institutionStatProgrammeViews": "Programme page views",
+  "walletNetworkLabel": "Network",
+  "walletAddressHeading": "Address",
+  "walletAddressSemantic": "Wallet address {address}",
+  "@walletAddressSemantic": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "walletCopyAddressTooltip": "Copy address",
+  "walletReadOnlyStatus": "Read-only session",
+  "walletKub8BalanceLabel": "KUB8 balance",
+  "walletSolBalanceLabel": "SOL balance",
+  "walletBalanceAmountSemantic": "{label}: {amount} {unit}",
+  "@walletBalanceAmountSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "walletActionsTitle": "Actions",
+  "walletTechnicalTitle": "Technical",
+  "marketplaceListingValueSemantic": "{source}: {amount} {currency}. {state}",
+  "@marketplaceListingValueSemantic": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionBuilderSwitchNetwork": "Switch your wallet to the {cluster} network required by this quote, then try again.",
+  "@promotionBuilderSwitchNetwork": {
+    "placeholders": {
+      "cluster": {
+        "type": "String"
+      }
+    }
+  },
+  "promotionStatusPendingReview": "Pending review",
+  "promotionStatusApproved": "Approved",
+  "promotionStatusActive": "Active",
+  "daoProposalStatusDraft": "Draft",
+  "daoProposalStatusActive": "Active",
+  "daoProposalStatusVoting": "Voting open",
+  "daoProposalStatusPassed": "Passed",
+  "daoProposalStatusFailed": "Not passed",
+  "daoProposalStatusExecuted": "Executed",
+  "daoVotingEndsLabel": "Voting ends {date}",
+  "@daoVotingEndsLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoVotingEndedLabel": "Voting ended {date}",
+  "@daoVotingEndedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daoQuorumRequirementLabel": "Quorum required: {percent}% of voting power",
+  "@daoQuorumRequirementLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "daoResultsNotion": "Results",
+  "daoNotEligibleTitle": "No voting power in this wallet",
+  "daoNotEligibleBody": "Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.",
+  "daoTreasuryOnChainLabel": "On-chain treasury balance",
+  "daoTreasuryLedgerLabel": "Recorded treasury movements"
 }

@@ -70,22 +70,21 @@ List<String> _ids(List<Artwork> artworks) =>
 void main() {
   group('MapArtworkFiltering.filter', () {
     final near = _artwork('near');
-    final far = _artwork(
-      'far',
-      position: const LatLng(47.0569, 15.5058),
-    );
+    final far = _artwork('far', position: const LatLng(47.0569, 15.5058));
     final invalid = _artwork('invalid', position: const LatLng(0, 0));
 
-    test('defaults keep valid artworks when marker metadata is unavailable',
-        () {
-      final result = MapArtworkFiltering.filter(
-        artworks: <Artwork>[near, far, invalid],
-        markers: const <ArtMarker>[],
-        context: _context(),
-      );
+    test(
+      'defaults keep valid artworks when marker metadata is unavailable',
+      () {
+        final result = MapArtworkFiltering.filter(
+          artworks: <Artwork>[near, far, invalid],
+          markers: const <ArtMarker>[],
+          context: _context(),
+        );
 
-      expect(_ids(result), <String>['far', 'near']);
-    });
+        expect(_ids(result), <String>['far', 'near']);
+      },
+    );
 
     test('content layers use valid linked markers when markers are loaded', () {
       final eventArtwork = _artwork('event');
@@ -105,23 +104,25 @@ void main() {
       expect(_ids(result), <String>['event']);
     });
 
-    test('an artwork remains visible when any linked marker layer is visible',
-        () {
-      final result = MapArtworkFiltering.filter(
-        artworks: <Artwork>[near],
-        markers: <ArtMarker>[
-          _linkedMarker(near.id),
-          _linkedMarker(near.id, type: ArtMarkerType.event),
-        ],
-        context: _context(
-          state: KubusMapFilterState(
-            visibleContentLayers: const <ArtMarkerType>{ArtMarkerType.event},
+    test(
+      'an artwork remains visible when any linked marker layer is visible',
+      () {
+        final result = MapArtworkFiltering.filter(
+          artworks: <Artwork>[near],
+          markers: <ArtMarker>[
+            _linkedMarker(near.id),
+            _linkedMarker(near.id, type: ArtMarkerType.event),
+          ],
+          context: _context(
+            state: KubusMapFilterState(
+              visibleContentLayers: const <ArtMarkerType>{ArtMarkerType.event},
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(_ids(result), <String>['near']);
-    });
+        expect(_ids(result), <String>['near']);
+      },
+    );
 
     test('query composes across title, artist, category, and tags', () {
       final titled = _artwork('titled', title: 'Copper wave');
@@ -138,19 +139,13 @@ void main() {
       expect(_ids(result), _ids([titled, artist, category, tagged]));
     });
 
-    test('current viewport and travel ignore the near-me radius', () {
-      for (final scope in <KubusMapScope>[
-        KubusMapScope.currentViewport,
-        KubusMapScope.travel,
-      ]) {
+    test('current viewport ignores the near-me radius', () {
+      for (final scope in <KubusMapScope>[KubusMapScope.currentViewport]) {
         final result = MapArtworkFiltering.filter(
           artworks: <Artwork>[near, far],
           markers: const <ArtMarker>[],
           context: _context(
-            state: KubusMapFilterState(
-              scope: scope,
-              nearMeRadiusKm: 1,
-            ),
+            state: KubusMapFilterState(scope: scope, nearMeRadiusKm: 1),
             basePosition: near.position,
           ),
         );
@@ -223,10 +218,7 @@ void main() {
         isFavoriteByCurrentUser: true,
       );
       final arOnly = _artwork('ar', arEnabled: true);
-      final favoriteOnly = _artwork(
-        'favorite',
-        isFavoriteByCurrentUser: true,
-      );
+      final favoriteOnly = _artwork('favorite', isFavoriteByCurrentUser: true);
       final favoriteStatus = _artwork(
         'favorite-status',
         arEnabled: true,
@@ -321,9 +313,7 @@ void main() {
             discoveryStatus: KubusMapDiscoveryStatus.discovered,
             arOnly: true,
             favoritesOnly: true,
-            visibleContentLayers: const <ArtMarkerType>{
-              ArtMarkerType.artwork,
-            },
+            visibleContentLayers: const <ArtMarkerType>{ArtMarkerType.artwork},
           ),
           query: 'blue',
           basePosition: match.position,

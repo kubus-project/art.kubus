@@ -55,8 +55,7 @@ void main() {
     expect(definitions.single.eventType, 'post_created');
   });
 
-  test('getAllAchievements uses static definitions only as fallback',
-      () async {
+  test('getAllAchievements uses static definitions only as fallback', () async {
     BackendApiService().setHttpClient(
       MockClient((request) async => http.Response('{}', 503)),
     );
@@ -66,10 +65,13 @@ void main() {
     expect(definitions, isNotEmpty);
     expect(definitions.any((definition) => definition.code == 'first_post'),
         isTrue);
+    // Offline fallbacks never invent a KUB8 reward (Wave 4C); the reward
+    // is a backend fact and is unknown here.
     expect(
-      definitions.firstWhere((definition) => definition.code == 'first_post')
+      definitions
+          .firstWhere((definition) => definition.code == 'first_post')
           .kub8Reward,
-      5,
+      0,
     );
   });
 }

@@ -87,6 +87,7 @@ import '../services/map_style_service.dart';
 import '../config/config.dart';
 import '../features/map/controller/map_view_preferences_controller.dart';
 import '../features/map/shared/map_screen_constants.dart';
+import '../features/map/shared/map_initial_viewport.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
 import '../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../features/map/map_layers_manager.dart';
@@ -319,9 +320,7 @@ class _MapScreenState extends State<MapScreen>
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
   final MapMarkerService _mapMarkerService = MapMarkerService();
   late final KubusMapMarkerCreationCoordinator _markerCreationCoordinator =
-      KubusMapMarkerCreationCoordinator(
-    mapMarkerService: _mapMarkerService,
-  );
+      KubusMapMarkerCreationCoordinator(mapMarkerService: _mapMarkerService);
   final PushNotificationService _pushNotificationService =
       PushNotificationService();
   List<ArtMarker> _artMarkers = [];
@@ -362,8 +361,9 @@ class _MapScreenState extends State<MapScreen>
   int _mapTutorialStartAttempts = 0;
   Timer? _mapTutorialStartRetryTimer;
   static const int _maxMapTutorialStartAttempts = 20;
-  static const Duration _mapTutorialStartRetryDelay =
-      Duration(milliseconds: 100);
+  static const Duration _mapTutorialStartRetryDelay = Duration(
+    milliseconds: 100,
+  );
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
@@ -412,7 +412,6 @@ class _MapScreenState extends State<MapScreen>
   // Only block map gestures in the sheet area when the sheet is expanded.
   // The default collapsed extent should not disable map interactions.
   bool _isSheetBlocking = false;
-  bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
 
   static const double _nearbySheetMin = 0.12;
@@ -421,14 +420,12 @@ class _MapScreenState extends State<MapScreen>
   static const double _nearbySheetBlockingOffThreshold =
       _nearbySheetMin + 0.008;
 
-  // Travel mode is viewport-based (bounds query), not huge-radius.
   double get _effectiveMarkerRadiusKm => _filterState.nearMeRadiusKm;
 
   // Interactive onboarding tutorial (coach marks)
   final GlobalKey _tutorialMapKey = GlobalKey();
   final GlobalKey _tutorialFilterButtonKey = GlobalKey();
   final GlobalKey _tutorialNearbyTitleKey = GlobalKey();
-  final GlobalKey _tutorialTravelButtonKey = GlobalKey();
   final GlobalKey _tutorialCenterButtonKey = GlobalKey();
   final GlobalKey _tutorialAddMarkerButtonKey = GlobalKey();
 
@@ -436,6 +433,7 @@ class _MapScreenState extends State<MapScreen>
   final GlobalKey _searchSurfaceKey = GlobalKey();
   final GlobalKey _discoveryCardKey = GlobalKey();
   final GlobalKey _primaryControlsKey = GlobalKey();
+  final GlobalKey _tutorialMapToolsButtonKey = GlobalKey();
   final GlobalKey _nearbyPeekKey = GlobalKey();
   final ValueNotifier<MapMarkerChromeOcclusionPlan>
       _markerChromeOcclusionNotifier =
@@ -481,7 +479,9 @@ class _MapScreenState extends State<MapScreen>
   double markerPixelRatio() => _markerPixelRatio();
   @override
   Color resolveArtMarkerBaseColor(
-          ArtMarker marker, ThemeProvider themeProvider) =>
+    ArtMarker marker,
+    ThemeProvider themeProvider,
+  ) =>
       _resolveArtMarkerColor(marker, themeProvider);
   @override
   void onMarkerSourceWrite() => _debugMarkerSourceWriteCount += 1;
@@ -507,14 +507,18 @@ class _MapScreenState extends State<MapScreen>
   bool _lastClusterEnabled = false;
 
   // Camera helpers
-  LatLng _cameraCenter = const LatLng(46.056946, 14.505751);
-  double _lastZoom = 16.0;
+  late LatLng _cameraCenter;
+  late double _lastZoom;
 
   final Distance _distanceCalculator = const Distance();
   LatLng? _lastMarkerFetchCenter;
   DateTime? _lastMarkerFetchTime;
-  GeoBounds? _loadedTravelBounds;
-  int? _loadedTravelZoomBucket;
+  GeoBounds? _loadedViewportBounds;
+  int? _loadedViewportZoomBucket;
+  bool _initialLocaleViewportApplied = false;
+  bool _initialLocaleResolved = false;
+  LatLng? _pendingTargetMarkerLoad;
+  Completer<void>? _pendingTargetMarkerLoadCompleter;
   static const double _markerRefreshDistanceMeters =
       MapScreenConstants.markerRefreshDistanceMeters;
   static const Duration _markerRefreshInterval =
@@ -592,6 +596,8 @@ class _MapScreenState extends State<MapScreen>
         await _renderCoordinator.updateRenderMode();
         // Start the ambient dot-pulse / floating-badge bob ticker.
         _renderCoordinator.updateAmbientTicker();
+        await _applyInitialLocaleViewportIfNeeded();
+        await _loadMarkersForCurrentView(force: true);
       },
     );
     if (mounted) {
@@ -599,9 +605,34 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  Future<void> _applyInitialLocaleViewportIfNeeded() async {
+    if (_initialLocaleViewportApplied ||
+        !MapInitialViewport.shouldApplyLocaleFallback(
+          hasExplicitTarget: widget.initialCenter != null ||
+              widget.initialZoom != null ||
+              _hasInitialDirectTarget,
+          hasWalkingIntent: widget.walkingNavigationIntent != null,
+          autoFollowHasLiveLocation: _autoFollow && _currentPosition != null,
+        )) {
+      return;
+    }
+    _initialLocaleViewportApplied = true;
+    final viewport = MapInitialViewport.forLocale(
+      Localizations.localeOf(context),
+    );
+    _perf.logEvent('initialViewportResolved');
+    await _kubusMapController.fitBounds(
+      viewport.fitBounds.southWest,
+      viewport.fitBounds.northEast,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _cameraCenter =
+        widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
+    _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
         widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
     StartupTrace.mark('map screen init');
@@ -779,8 +810,7 @@ class _MapScreenState extends State<MapScreen>
       loadedMarkers: () => _artMarkers,
       fetchMarkerById: MapDataController().getArtMarkerById,
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
-      loadMarkersAround: (position) =>
-          _loadArtMarkers(center: position, force: true),
+      loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
       moveCamera: (position, zoom) => _animateMapTo(position, zoom: zoom),
       selectMarker: _showArtMarkerDialog,
@@ -813,27 +843,24 @@ class _MapScreenState extends State<MapScreen>
 
     _mapDataCoordinator = MapDataCoordinator(
       pollingEnabled: () => _pollingEnabled,
-      mapReady: () => mounted && _mapController != null,
+      mapReady: () => mounted && _mapController != null && _styleInitialized,
+      scope: () => _filterState.scope,
       cameraCenter: () => _cameraCenter,
       cameraZoom: () => _lastZoom,
-      travelModeEnabled: () => _travelModeEnabled,
       hasMarkers: () => _artMarkers.isNotEmpty,
       lastFetchCenter: () => _lastMarkerFetchCenter,
       lastFetchTime: () => _lastMarkerFetchTime,
-      loadedTravelBounds: () => _loadedTravelBounds,
-      loadedTravelZoomBucket: () => _loadedTravelZoomBucket,
+      loadedViewportBounds: () => _loadedViewportBounds,
+      loadedViewportZoomBucket: () => _loadedViewportZoomBucket,
       distance: _distanceCalculator,
       refreshInterval: _markerRefreshInterval,
       refreshDistanceMeters: _markerRefreshDistanceMeters,
       getVisibleBounds: _getVisibleGeoBounds,
-      refreshRadiusMode: ({required center}) async {
-        await _maybeRefreshMarkers(center, force: false);
+      refreshNearMe: ({required center}) async {
+        await _loadArtMarkers(center: center, force: false);
       },
-      refreshTravelMode: ({
-        required center,
-        required bounds,
-        required zoomBucket,
-      }) async {
+      refreshViewport: (
+          {required center, required bounds, required zoomBucket}) async {
         await _loadArtMarkers(
           center: center,
           bounds: bounds,
@@ -925,8 +952,10 @@ class _MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Track this screen visit for quick actions
       if (mounted) {
-        Provider.of<NavigationProvider>(context, listen: false)
-            .trackScreenVisit('map');
+        Provider.of<NavigationProvider>(
+          context,
+          listen: false,
+        ).trackScreenVisit('map');
       }
 
       if (!mounted) return;
@@ -960,13 +989,16 @@ class _MapScreenState extends State<MapScreen>
       if (walletProvider.currentWalletAddress != null &&
           walletProvider.currentWalletAddress!.isNotEmpty) {
         AppConfig.debugPrint(
-            'MapScreen: loading progress from backend for wallet: ${walletProvider.currentWalletAddress}');
+          'MapScreen: loading progress from backend for wallet: ${walletProvider.currentWalletAddress}',
+        );
         _perf.recordFetch('task:progress');
-        await taskProvider
-            .loadProgressFromBackend(walletProvider.currentWalletAddress!);
+        await taskProvider.loadProgressFromBackend(
+          walletProvider.currentWalletAddress!,
+        );
       } else {
         AppConfig.debugPrint(
-            'MapScreen: no wallet connected; using default empty progress');
+          'MapScreen: no wallet connected; using default empty progress',
+        );
       }
 
       if (!mounted) return;
@@ -1159,6 +1191,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _resolveInitialLocaleViewport();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
       if (!_walkingLocationPromptScheduled) {
@@ -1230,11 +1263,22 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  void _resolveInitialLocaleViewport() {
+    if (_initialLocaleResolved) return;
+    _initialLocaleResolved = true;
+
+    final viewport =
+        MapInitialViewport.forLocale(Localizations.localeOf(context));
+    _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
+    _lastZoom = widget.initialZoom ?? viewport.initialZoom;
+  }
+
   void _syncRootTutorialBinding() {
     final controller = _tutorialOverlayController;
     if (controller == null) {
       _debugMapTutorialBindingLog(
-          'skip bind: TutorialOverlayScope unavailable');
+        'skip bind: TutorialOverlayScope unavailable',
+      );
       return;
     }
 
@@ -1328,7 +1372,9 @@ class _MapScreenState extends State<MapScreen>
       if (!second.ready ||
           second.signature != first.signature ||
           !_isMapTutorialFirstRectStable(
-              first.firstTargetRect, second.firstTargetRect)) {
+            first.firstTargetRect,
+            second.firstTargetRect,
+          )) {
         _scheduleMapTutorialStartRetry(reason: second.reason);
         return;
       }
@@ -1573,9 +1619,7 @@ class _MapScreenState extends State<MapScreen>
     _safeSetState(() => _webResizeRecoveryToken += 1);
     _perf.logEvent(
       'webResizeRecovery',
-      extra: <String, Object?>{
-        'reason': reason,
-      },
+      extra: <String, Object?>{'reason': reason},
     );
   }
 
@@ -1747,20 +1791,76 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_loadMarkersForCurrentView(force: shouldForce));
   }
 
+  /// Explicit target resolution must query around [position], never around the
+  /// current camera viewport. This keeps deep links and search selections
+  /// reliable when their marker is outside the loaded viewport snapshot.
+  Future<void> _loadMarkersAroundTarget(LatLng position) async {
+    if (!_pollingEnabled) return;
+    if (_isLoadingMarkers) {
+      _pendingTargetMarkerLoad = position;
+      return (_pendingTargetMarkerLoadCompleter ??= Completer<void>()).future;
+    }
+
+    await _loadMarkersAroundTargetNow(position);
+  }
+
+  Future<void> _loadMarkersAroundTargetNow(LatLng position) async {
+    if (!_pollingEnabled || _isLoadingMarkers) return;
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    final themeProvider = context.read<ThemeProvider>();
+    final requestId = ++_markerRequestId;
+    _isLoadingMarkers = true;
+
+    try {
+      _perf.recordFetch('markers:target-radius');
+      final result = await MapMarkerHelper.loadAndHydrateMarkers(
+        artworkProvider: artworkProvider,
+        mapMarkerService: _mapMarkerService,
+        center: position,
+        radiusKm: math.max(_effectiveMarkerRadiusKm, 5),
+        forceRefresh: true,
+        filtersKey: _markerQueryFiltersKey(),
+      );
+      if (!mounted || requestId != _markerRequestId) return;
+
+      _mergeDirectTargetMarkers(result.markers);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+    } catch (error) {
+      AppConfig.debugPrint('MapScreen: error loading target markers: $error');
+    } finally {
+      if (requestId == _markerRequestId) {
+        _isLoadingMarkers = false;
+      }
+      _flushPendingTargetMarkerLoad();
+      if (_pendingMarkerRefresh && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _flushPendingMarkerRefresh();
+        });
+      }
+    }
+  }
+
+  void _flushPendingTargetMarkerLoad() {
+    if (_isLoadingMarkers || !_pollingEnabled) return;
+    final position = _pendingTargetMarkerLoad;
+    final completer = _pendingTargetMarkerLoadCompleter;
+    if (position == null || completer == null) return;
+
+    _pendingTargetMarkerLoad = null;
+    _pendingTargetMarkerLoadCompleter = null;
+    unawaited(_loadMarkersAroundTargetNow(position).whenComplete(() {
+      if (!completer.isCompleted) completer.complete();
+    }));
+  }
+
   void _handleMapViewPreferencesChanged() {
     if (!mounted) return;
     final next = _mapViewPreferencesController.value;
-    if (_travelModeEnabled == next.travelModeEnabled &&
-        _isometricViewEnabled == next.isometricViewEnabled) {
+    if (_isometricViewEnabled == next.isometricViewEnabled) {
       return;
     }
     _safeSetState(() {
-      _travelModeEnabled = next.travelModeEnabled;
-      if (next.travelModeEnabled) {
-        _filterState = _filterState.withScope(KubusMapScope.travel);
-      } else if (_filterState.scope == KubusMapScope.travel) {
-        _filterState = _filterState.withScope(KubusMapScope.currentViewport);
-      }
       _isometricViewEnabled = widget.walkingNavigationIntent != null
           ? true
           : next.isometricViewEnabled;
@@ -1771,55 +1871,14 @@ class _MapScreenState extends State<MapScreen>
     final prefs = await _mapViewPreferencesController.load();
     if (!mounted) return;
     setState(() {
-      _travelModeEnabled = prefs.travelModeEnabled;
-      if (prefs.travelModeEnabled) {
-        _filterState = _filterState.withScope(KubusMapScope.travel);
-      }
       _isometricViewEnabled = widget.walkingNavigationIntent != null
           ? true
           : prefs.isometricViewEnabled;
     });
   }
 
-  Future<void> _setTravelModeEnabled(
-    bool enabled, {
-    KubusMapScope scopeWhenDisabled = KubusMapScope.currentViewport,
-  }) async {
-    if (!mounted) return;
-
-    setState(() {
-      _travelModeEnabled = enabled;
-      _filterState = _filterState.withScope(
-        enabled ? KubusMapScope.travel : scopeWhenDisabled,
-      );
-      if (enabled) {
-        _autoFollow = false;
-      }
-    });
-    if (enabled) {
-      _kubusMapController.setAutoFollow(false);
-      _kubusMapController.dismissSelection();
-    }
-
-    // Switching query strategy (radius vs bounds) should invalidate caches.
-    _mapMarkerService.clearCache();
-    _loadedTravelBounds = null;
-    _loadedTravelZoomBucket = null;
-
-    try {
-      await _mapViewPreferencesController.setTravelMode(enabled);
-    } catch (_) {
-      // Best-effort.
-    }
-
-    // In travel mode we want an immediate viewport refresh (bounds-based).
-    unawaited(_loadMarkersForCurrentView(force: true));
-  }
-
   void _handleFilterStateChanged(KubusMapFilterState next) {
     final previous = _filterState;
-    final travelChanged =
-        (next.scope == KubusMapScope.travel) != _travelModeEnabled;
     final requiresDataReload = previous.scope != next.scope ||
         (next.scope == KubusMapScope.nearMe &&
             previous.nearMeRadiusKm != next.nearMeRadiusKm);
@@ -1827,6 +1886,10 @@ class _MapScreenState extends State<MapScreen>
       previous.visibleContentLayers,
       next.visibleContentLayers,
     );
+    if (previous.scope != next.scope) {
+      _loadedViewportBounds = null;
+      _loadedViewportZoomBucket = null;
+    }
     setState(() => _filterState = next);
     if (layersChanged) {
       _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
@@ -1834,26 +1897,23 @@ class _MapScreenState extends State<MapScreen>
     }
     _applyVisibleMarkers();
     _requestMarkerVisualSync(force: true);
-    if (travelChanged) {
-      unawaited(
-        _setTravelModeEnabled(
-          next.scope == KubusMapScope.travel,
-          scopeWhenDisabled: next.scope,
-        ),
-      );
+    if (next.scope == KubusMapScope.nearMe && _currentPosition == null) {
+      unawaited(_getLocation(promptForPermission: true));
     }
-    if (requiresDataReload && !travelChanged) {
+    if (requiresDataReload) {
       _radiusChangeDebouncer(
         const Duration(
           milliseconds: MapMarkerCollisionConfig.nearbyRadiusDebounceMs,
         ),
         () {
           if (!mounted) return;
-          unawaited(_loadMarkersForCurrentView(force: true).then((_) {
-            if (!mounted) return;
-            _applyVisibleMarkers();
-            _requestMarkerVisualSync(force: true);
-          }));
+          unawaited(
+            _loadMarkersForCurrentView(force: true).then((_) {
+              if (!mounted) return;
+              _applyVisibleMarkers();
+              _requestMarkerVisualSync(force: true);
+            }),
+          );
         },
       );
     }
@@ -1872,7 +1932,8 @@ class _MapScreenState extends State<MapScreen>
     }
 
     unawaited(
-        _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
+      _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true),
+    );
   }
 
   List<MapTutorialStepBinding> _buildMapTutorialStepBindings(
@@ -1971,25 +2032,6 @@ class _MapScreenState extends State<MapScreen>
       ),
     ];
 
-    if (AppConfig.isFeatureEnabled('mapTravelMode')) {
-      bindings.insert(
-        5,
-        MapTutorialStepBinding(
-          id: 'travel_mode',
-          isAnchorAvailable: () =>
-              _tutorialTravelButtonKey.currentContext != null,
-          step: TutorialStepDefinition(
-            targetKey: _tutorialTravelButtonKey,
-            icon: Icons.travel_explore,
-            title: l10n.mapTutorialStepTravelTitle,
-            body: l10n.mapTutorialStepTravelBody,
-            advanceOnTargetTap: false,
-            onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
-          ),
-        ),
-      );
-    }
-
     return bindings;
   }
 
@@ -2041,8 +2083,9 @@ class _MapScreenState extends State<MapScreen>
     _mapDeepLinkProvider = null;
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
-    _mapViewPreferencesController
-        .removeListener(_handleMapViewPreferencesChanged);
+    _mapViewPreferencesController.removeListener(
+      _handleMapViewPreferencesChanged,
+    );
     _mapViewPreferencesController.dispose();
     _deactivateRootTutorialOwner(reason: 'mobile-map-dispose');
     _tutorialOverlayController = null;
@@ -2069,14 +2112,20 @@ class _MapScreenState extends State<MapScreen>
     _compassSubscription = null;
     if (compassSubscription != null) {
       _perf.subscriptionStopped('compass');
-      unawaited(compassSubscription.cancel().catchError((_) {/* ignore */}));
+      unawaited(
+        compassSubscription.cancel().catchError((_) {
+          /* ignore */
+        }),
+      );
     }
     final mobileLocationSubscription = _mobileLocationSubscription;
     _mobileLocationSubscription = null;
     if (mobileLocationSubscription != null) {
       _perf.subscriptionStopped('mobile_location_stream');
       unawaited(
-        mobileLocationSubscription.cancel().catchError((_) {/* ignore */}),
+        mobileLocationSubscription.cancel().catchError((_) {
+          /* ignore */
+        }),
       );
     }
     final webPositionSubscription = _webPositionSubscription;
@@ -2084,7 +2133,10 @@ class _MapScreenState extends State<MapScreen>
     if (webPositionSubscription != null) {
       _perf.subscriptionStopped('web_location_stream');
       unawaited(
-          webPositionSubscription.cancel().catchError((_) {/* ignore */}));
+        webPositionSubscription.cancel().catchError((_) {
+          /* ignore */
+        }),
+      );
     }
     _proximityCheckTimer?.cancel();
     _perf.timerStopped('proximity_timer');
@@ -2096,7 +2148,9 @@ class _MapScreenState extends State<MapScreen>
     if (markerSocketSubscription != null) {
       _perf.subscriptionStopped('marker_socket_created');
       unawaited(
-        markerSocketSubscription.cancel().catchError((_) {/* ignore */}),
+        markerSocketSubscription.cancel().catchError((_) {
+          /* ignore */
+        }),
       );
     }
     final markerDeletedSubscription = _markerDeletedSubscription;
@@ -2104,7 +2158,9 @@ class _MapScreenState extends State<MapScreen>
     if (markerDeletedSubscription != null) {
       _perf.subscriptionStopped('marker_socket_deleted');
       unawaited(
-        markerDeletedSubscription.cancel().catchError((_) {/* ignore */}),
+        markerDeletedSubscription.cancel().catchError((_) {
+          /* ignore */
+        }),
       );
     }
     _radiusChangeDebouncer.dispose();
@@ -2189,13 +2245,15 @@ class _MapScreenState extends State<MapScreen>
   void _initializeMarkerSocketListeners() {
     // Avoid duplicate subscriptions if called multiple times.
     if (_markerSocketSubscription == null) {
-      _markerSocketSubscription =
-          _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+      _markerSocketSubscription = _mapMarkerService.onMarkerCreated.listen(
+        _handleMarkerCreated,
+      );
       _perf.subscriptionStarted('marker_socket_created');
     }
     if (_markerDeletedSubscription == null) {
-      _markerDeletedSubscription =
-          _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
+      _markerDeletedSubscription = _mapMarkerService.onMarkerDeleted.listen(
+        _handleMarkerDeleted,
+      );
       _perf.subscriptionStarted('marker_socket_deleted');
     }
   }
@@ -2220,7 +2278,8 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       _proximityChecksEnabled = false;
       AppConfig.debugPrint(
-          'MapScreen: failed to initialize AR integration: $e');
+        'MapScreen: failed to initialize AR integration: $e',
+      );
     }
   }
 
@@ -2229,23 +2288,23 @@ class _MapScreenState extends State<MapScreen>
       _queuePendingMarkerRefresh(force: force);
       return;
     }
-    LatLng? center;
+    if (_filterState.scope == KubusMapScope.nearMe &&
+        _currentPosition == null) {
+      return;
+    }
+    final useBoundsQuery = _filterState.scope == KubusMapScope.currentViewport;
+    if (useBoundsQuery && !_styleInitialized) return;
+    final center = useBoundsQuery ? _cameraCenter : _currentPosition!;
     GeoBounds? bounds;
     int? zoomBucket;
-
-    final useBoundsQuery = _filterState.scope != KubusMapScope.nearMe;
-    center = _filterState.scope == KubusMapScope.nearMe
-        ? (_currentPosition ?? _cameraCenter)
-        : _cameraCenter;
     if (useBoundsQuery) {
       zoomBucket = MapViewportUtils.zoomBucket(_lastZoom);
       final visible = await _getVisibleGeoBounds();
-      if (visible != null) {
-        bounds = MapViewportUtils.expandBounds(
-          visible,
-          MapViewportUtils.paddingFractionForZoomBucket(zoomBucket),
-        );
-      }
+      if (visible == null) return;
+      bounds = MapViewportUtils.expandBounds(
+        visible,
+        MapViewportUtils.paddingFractionForZoomBucket(zoomBucket),
+      );
     }
 
     await _loadArtMarkers(
@@ -2309,10 +2368,7 @@ class _MapScreenState extends State<MapScreen>
     _mapTargetCoordinator.notifyMarkersChanged();
   }
 
-  void _showMapTargetFallback(
-    MapTargetIntent intent,
-    MapTargetResult result,
-  ) {
+  void _showMapTargetFallback(MapTargetIntent intent, MapTargetResult result) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final l10n = AppLocalizations.of(context);
@@ -2320,9 +2376,7 @@ class _MapScreenState extends State<MapScreen>
     final message = result == MapTargetResult.coordinatesOnly
         ? l10n.mapTargetMarkerUnavailableToast
         : l10n.mapTargetNotFoundToast;
-    messenger.showKubusSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    messenger.showKubusSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleMapTargetTerminal(
@@ -2363,11 +2417,12 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  Future<void> _loadArtMarkers(
-      {LatLng? center,
-      GeoBounds? bounds,
-      bool force = false,
-      int? zoomBucket}) async {
+  Future<void> _loadArtMarkers({
+    LatLng? center,
+    GeoBounds? bounds,
+    bool force = false,
+    int? zoomBucket,
+  }) async {
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
       return;
@@ -2378,12 +2433,14 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    final queryCenter = center ?? _currentPosition ?? _cameraCenter;
+    final useBoundsQuery = _filterState.scope == KubusMapScope.currentViewport;
+    if (!useBoundsQuery && _currentPosition == null) return;
+    final queryCenter =
+        center ?? (useBoundsQuery ? _cameraCenter : _currentPosition!);
     final artworkProvider = context.read<ArtworkProvider>();
     final themeProvider = context.read<ThemeProvider>();
 
     int? bucket = zoomBucket;
-    final useBoundsQuery = _filterState.scope != KubusMapScope.nearMe;
     if (useBoundsQuery && bucket == null) {
       bucket = MapViewportUtils.zoomBucket(_lastZoom);
     }
@@ -2391,15 +2448,13 @@ class _MapScreenState extends State<MapScreen>
     GeoBounds? queryBounds = bounds;
     if (useBoundsQuery && queryBounds == null) {
       final visible = await _getVisibleGeoBounds();
-      if (visible != null) {
-        final effectiveBucket =
-            bucket ?? MapViewportUtils.zoomBucket(_lastZoom);
-        queryBounds = MapViewportUtils.expandBounds(
-          visible,
-          MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
-        );
-        bucket = effectiveBucket;
-      }
+      if (visible == null) return;
+      final effectiveBucket = bucket ?? MapViewportUtils.zoomBucket(_lastZoom);
+      queryBounds = MapViewportUtils.expandBounds(
+        visible,
+        MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
+      );
+      bucket = effectiveBucket;
     }
 
     final requestId = ++_markerRequestId;
@@ -2409,7 +2464,7 @@ class _MapScreenState extends State<MapScreen>
         : null;
 
     try {
-      final int? travelLimit = bucket == null
+      final int? viewportLimit = bucket == null
           ? null
           : MapViewportUtils.markerLimitForZoomBucket(bucket);
 
@@ -2424,7 +2479,7 @@ class _MapScreenState extends State<MapScreen>
               mapMarkerService: _mapMarkerService,
               center: queryCenter,
               bounds: queryBounds,
-              limit: travelLimit,
+              limit: viewportLimit,
               forceRefresh: force,
               zoomBucket: bucket,
               filtersKey: _markerQueryFiltersKey(),
@@ -2434,7 +2489,7 @@ class _MapScreenState extends State<MapScreen>
               mapMarkerService: _mapMarkerService,
               center: queryCenter,
               radiusKm: _effectiveMarkerRadiusKm,
-              limit: useBoundsQuery ? travelLimit : null,
+              limit: useBoundsQuery ? viewportLimit : null,
               forceRefresh: force,
               zoomBucket: bucket,
               filtersKey: _markerQueryFiltersKey(),
@@ -2443,10 +2498,19 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       if (requestId != _markerRequestId) return;
 
-      final merged = ArtMarkerListDiff.mergeById(
-        current: _artMarkers,
-        next: result.markers,
-      );
+      final merged = useBoundsQuery
+          ? ArtMarkerListDiff.upsertById(
+              current: result.markers,
+              updates: _artMarkers.where(
+                (marker) =>
+                    marker.id == _directTargetMarkerId ||
+                    marker.id.startsWith('search_temp_'),
+              ),
+            )
+          : ArtMarkerListDiff.mergeById(
+              current: _artMarkers,
+              next: result.markers,
+            );
 
       final markersChanged = !_markersEquivalent(_artMarkers, merged);
 
@@ -2481,12 +2545,12 @@ class _MapScreenState extends State<MapScreen>
 
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
-      if (_travelModeEnabled && queryBounds != null && bucket != null) {
-        _loadedTravelBounds = queryBounds;
-        _loadedTravelZoomBucket = bucket;
+      if (useBoundsQuery && queryBounds != null && bucket != null) {
+        _loadedViewportBounds = queryBounds;
+        _loadedViewportZoomBucket = bucket;
       } else {
-        _loadedTravelBounds = null;
-        _loadedTravelZoomBucket = null;
+        _loadedViewportBounds = null;
+        _loadedViewportZoomBucket = null;
       }
     } catch (e) {
       AppConfig.debugPrint('MapScreen: error loading markers: $e');
@@ -2495,6 +2559,7 @@ class _MapScreenState extends State<MapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
+      _flushPendingTargetMarkerLoad();
       // Schedule flush for next frame to avoid tight retry loop on repeated errors.
       if (_pendingMarkerRefresh && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2515,7 +2580,9 @@ class _MapScreenState extends State<MapScreen>
       if (existingIndex >= 0 &&
           scope != _MarkerSocketScope.outOfScope &&
           _markersHaveEquivalentVisibleState(
-              _artMarkers[existingIndex], marker)) {
+            _artMarkers[existingIndex],
+            marker,
+          )) {
         return;
       }
 
@@ -2548,8 +2615,8 @@ class _MapScreenState extends State<MapScreen>
   }
 
   _MarkerSocketScope _resolveMarkerScope(ArtMarker marker) {
-    if (_travelModeEnabled) {
-      final bounds = _loadedTravelBounds;
+    if (_filterState.scope == KubusMapScope.currentViewport) {
+      final bounds = _loadedViewportBounds;
       if (bounds == null) {
         return _MarkerSocketScope.unknown;
       }
@@ -2558,9 +2625,7 @@ class _MapScreenState extends State<MapScreen>
           : _MarkerSocketScope.outOfScope;
     }
 
-    if (_currentPosition == null) {
-      return _MarkerSocketScope.inScope;
-    }
+    if (_currentPosition == null) return _MarkerSocketScope.unknown;
 
     final distanceKm = _distanceCalculator.as(
       LengthUnit.Kilometer,
@@ -2616,24 +2681,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _maybeRefreshMarkers(LatLng center, {bool force = false}) async {
-    if (!_pollingEnabled) {
-      _queuePendingMarkerRefresh(force: force);
-      return;
-    }
-    final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
-      newCenter: center,
-      lastCenter: _lastMarkerFetchCenter,
-      lastFetchTime: _lastMarkerFetchTime,
-      distance: _distanceCalculator,
-      refreshInterval: _markerRefreshInterval,
-      refreshDistanceMeters: _markerRefreshDistanceMeters,
-      hasMarkers: _artMarkers.isNotEmpty,
-      force: force,
-    );
-
-    if (shouldRefresh) {
-      await _loadArtMarkers(center: center, force: force);
-    }
+    _mapDataCoordinator.refreshNearMeForLocation(center, force: force);
   }
 
   void _checkProximityNotifications() {
@@ -2764,13 +2812,11 @@ class _MapScreenState extends State<MapScreen>
     // On web the push channel requires a service worker; skip if unsupported to avoid console spam.
     if (!kIsWeb) {
       _pushNotificationService
-          .showARProximityNotification(
-        marker: marker,
-        distance: distance,
-      )
+          .showARProximityNotification(marker: marker, distance: distance)
           .catchError((e) {
         AppConfig.debugPrint(
-            'MapScreen: showARProximityNotification failed: $e');
+          'MapScreen: showARProximityNotification failed: $e',
+        );
       });
     }
 
@@ -2811,8 +2857,10 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  void _handleMarkerTap(ArtMarker marker,
-      {List<ArtMarker> stackedMarkers = const []}) {
+  void _handleMarkerTap(
+    ArtMarker marker, {
+    List<ArtMarker> stackedMarkers = const [],
+  }) {
     _markerInteractionController.handleMarkerTap(
       marker,
       stackedMarkers: stackedMarkers,
@@ -2895,10 +2943,7 @@ class _MapScreenState extends State<MapScreen>
     final safeBottom = MapOverlaySizing.bottomSafeInset(media);
     final sheetHeight = viewportHeight * sheetExtent;
     final bottomMargin = math
-        .max(
-          sheetHeight + 12.0,
-          safeBottom + 12.0,
-        )
+        .max(sheetHeight + 12.0, safeBottom + 12.0)
         .clamp(12.0, math.max(12.0, viewportHeight - 12.0))
         .toDouble();
     if ((_lastWebAttributionBottomPx - bottomMargin).abs() <= 1.0) return;
@@ -2970,11 +3015,13 @@ class _MapScreenState extends State<MapScreen>
         animationTheme: context.animationTheme,
         mediaQuery: MediaQuery.of(context),
       ).overlayReposition;
-      unawaited(_markerStackPageController.animateToPage(
-        next,
-        duration: motion.duration,
-        curve: motion.curve,
-      ));
+      unawaited(
+        _markerStackPageController.animateToPage(
+          next,
+          duration: motion.duration,
+          curve: motion.curve,
+        ),
+      );
       return;
     }
     _handleMarkerStackPageChanged(next);
@@ -2991,11 +3038,13 @@ class _MapScreenState extends State<MapScreen>
         animationTheme: context.animationTheme,
         mediaQuery: MediaQuery.of(context),
       ).overlayReposition;
-      unawaited(_markerStackPageController.animateToPage(
-        prev,
-        duration: motion.duration,
-        curve: motion.curve,
-      ));
+      unawaited(
+        _markerStackPageController.animateToPage(
+          prev,
+          duration: motion.duration,
+          curve: motion.curve,
+        ),
+      );
       return;
     }
     _handleMarkerStackPageChanged(prev);
@@ -3012,8 +3061,10 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null) return;
     if (!_styleInitialized) return;
 
-    final baseColor =
-        _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
+    final baseColor = _resolveArtMarkerColor(
+      marker,
+      context.read<ThemeProvider>(),
+    );
 
     final double dpr = MediaQuery.of(context).devicePixelRatio;
     final Size viewport = _mapViewportSize() ?? MediaQuery.sizeOf(context);
@@ -3055,9 +3106,10 @@ class _MapScreenState extends State<MapScreen>
     }
 
     try {
-      context
-          .read<PresenceProvider>()
-          .recordVisit(type: visit.type, id: visit.id);
+      context.read<PresenceProvider>().recordVisit(
+            type: visit.type,
+            id: visit.id,
+          );
     } catch (_) {}
   }
 
@@ -3078,7 +3130,8 @@ class _MapScreenState extends State<MapScreen>
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'MapScreen: failed to load linked artwork $artworkId for marker ${marker.id}: $e');
+        'MapScreen: failed to load linked artwork $artworkId for marker ${marker.id}: $e',
+      );
     }
   }
 
@@ -3268,7 +3321,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<bool> _createMarkerAtPosition(
-      LatLng position, MapMarkerFormResult form) async {
+    LatLng position,
+    MapMarkerFormResult form,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final artworkProvider = context.read<ArtworkProvider>();
@@ -3317,8 +3372,10 @@ class _MapScreenState extends State<MapScreen>
   /// shared boolean, so a still-starting stream is never raced against an
   /// immediate `locationUnavailable` transition, and a precise permission or
   /// service failure is never downgraded to a generic one.
-  Future<WalkingLocationAccessStatus?> _getLocation(
-      {bool fromTimer = false, bool promptForPermission = true}) async {
+  Future<WalkingLocationAccessStatus?> _getLocation({
+    bool fromTimer = false,
+    bool promptForPermission = true,
+  }) async {
     final navigation = _walkingNavigationProvider;
     if (promptForPermission && navigation?.isVisible == true) {
       _hasLiveLocationFix = false;
@@ -3344,6 +3401,16 @@ class _MapScreenState extends State<MapScreen>
         if (fallback != null && mounted) {
           _updateCurrentPosition(fallback, isLiveFix: false);
         }
+      }
+      if (promptForPermission &&
+          _filterState.scope == KubusMapScope.nearMe &&
+          mounted) {
+        setState(() {
+          _filterState = _filterState.withScope(KubusMapScope.currentViewport);
+          _loadedViewportBounds = null;
+          _loadedViewportZoomBucket = null;
+        });
+        unawaited(_loadMarkersForCurrentView(force: true));
       }
       return result.status;
     }
@@ -3424,7 +3491,9 @@ class _MapScreenState extends State<MapScreen>
             if (failedSubscription != null) {
               _perf.subscriptionStopped('mobile_location_stream');
               unawaited(
-                failedSubscription.cancel().catchError((_) {/* ignore */}),
+                failedSubscription.cancel().catchError((_) {
+                  /* ignore */
+                }),
               );
             }
           } catch (_) {}
@@ -3437,7 +3506,8 @@ class _MapScreenState extends State<MapScreen>
       _perf.timerStopped('location_timer');
     } catch (e) {
       AppConfig.debugPrint(
-          'MapScreen: failed to subscribe to mobile location stream: $e');
+        'MapScreen: failed to subscribe to mobile location stream: $e',
+      );
     }
   }
 
@@ -3459,9 +3529,7 @@ class _MapScreenState extends State<MapScreen>
           );
         },
         onError: (Object error, StackTrace stack) {
-          AppConfig.debugPrint(
-            'MapScreen: web location stream error: $error',
-          );
+          AppConfig.debugPrint('MapScreen: web location stream error: $error');
           _hasLiveLocationFix = false;
           _walkingNavigationProvider?.reportLocationUnavailable(
             lease: _walkingNavigationLease,
@@ -3471,7 +3539,9 @@ class _MapScreenState extends State<MapScreen>
           if (failedSubscription != null) {
             _perf.subscriptionStopped('web_location_stream');
             unawaited(
-              failedSubscription.cancel().catchError((_) {/* ignore */}),
+              failedSubscription.cancel().catchError((_) {
+                /* ignore */
+              }),
             );
           }
           _startLocationTimer();
@@ -3483,7 +3553,8 @@ class _MapScreenState extends State<MapScreen>
       _perf.timerStopped('location_timer');
     } catch (e) {
       AppConfig.debugPrint(
-          'MapScreen: unable to start web location stream: $e');
+        'MapScreen: unable to start web location stream: $e',
+      );
       _webPositionSubscription = null;
       _startLocationTimer();
     }
@@ -3541,9 +3612,7 @@ class _MapScreenState extends State<MapScreen>
     _kubusMapController.resetMarkerOverlayComposition();
     _scheduledChromeMeasurementRevision = null;
     _latestMarkerCardRect = null;
-    final visible = MapMarkerChromeOcclusionPlan.visible(
-      revision: 0,
-    );
+    final visible = MapMarkerChromeOcclusionPlan.visible(revision: 0);
     if (_markerChromeOcclusionNotifier.value != visible) {
       _markerChromeOcclusionNotifier.value = visible;
     }
@@ -3710,10 +3779,7 @@ class _MapScreenState extends State<MapScreen>
         raw.dy < -viewport.height * 0.2;
     if (!looksLikePhysicalPixels) return raw;
 
-    final scaled = Offset(
-      raw.dx / devicePixelRatio,
-      raw.dy / devicePixelRatio,
-    );
+    final scaled = Offset(raw.dx / devicePixelRatio, raw.dy / devicePixelRatio);
     final bool scaledLooksReasonable = scaled.dx <= viewport.width * 1.2 &&
         scaled.dy <= viewport.height * 1.2 &&
         scaled.dx >= -viewport.width * 0.2 &&
@@ -3788,10 +3854,7 @@ class _MapScreenState extends State<MapScreen>
     _kubusMapController.setAutoFollow(enable);
     if (enable) {
       unawaited(
-        _animateMapTo(
-          _currentPosition!,
-          zoom: math.max(_lastZoom, 16),
-        ),
+        _animateMapTo(_currentPosition!, zoom: math.max(_lastZoom, 16)),
       );
     }
   }
@@ -3820,6 +3883,9 @@ class _MapScreenState extends State<MapScreen>
       if (isLiveFix) _hasLiveLocationFix = true;
     });
     unawaited(_syncUserLocation());
+    if (isLiveFix) {
+      _mapDataCoordinator.refreshNearMeForLocation(position);
+    }
     final walkingNavigation = _walkingNavigationProvider;
     if (isLiveFix && walkingNavigation != null && walkingNavigation.isVisible) {
       unawaited(
@@ -3835,12 +3901,6 @@ class _MapScreenState extends State<MapScreen>
       final double targetZoom = isInitial ? 18.0 : _lastZoom;
       final double? rotation = _autoFollow ? _direction : null;
       unawaited(_animateMapTo(position, zoom: targetZoom, rotation: rotation));
-    }
-
-    // Only load markers on initial position, not every update
-    // Subsequent refreshes are handled by _queueMarkerRefresh
-    if (isInitial && _artMarkers.isEmpty && !_isLoadingMarkers) {
-      _loadArtMarkers();
     }
   }
 
@@ -3865,19 +3925,11 @@ class _MapScreenState extends State<MapScreen>
 
       if (_autoFollow && _currentPosition != null) {
         unawaited(
-          _animateMapTo(
-            _currentPosition!,
-            zoom: _lastZoom,
-            rotation: heading,
-          ),
+          _animateMapTo(_currentPosition!, zoom: _lastZoom, rotation: heading),
         );
       } else if (_autoFollow) {
         unawaited(
-          _animateMapTo(
-            _cameraCenter,
-            zoom: _lastZoom,
-            rotation: heading,
-          ),
+          _animateMapTo(_cameraCenter, zoom: _lastZoom, rotation: heading),
         );
       }
     } else if (mounted && heading == null) {
@@ -3906,10 +3958,7 @@ class _MapScreenState extends State<MapScreen>
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
     final l10n = AppLocalizations.of(context)!;
     final tutorialBindings = _buildMapTutorialStepBindings(l10n);
-    _scheduleMapTutorialConfigure(
-      reason: 'build',
-      bindings: tutorialBindings,
-    );
+    _scheduleMapTutorialConfigure(reason: 'build', bindings: tutorialBindings);
     _scheduleMapTutorialStartIfEligible(reason: 'build');
     final stack = ValueListenableBuilder<MapUiStateSnapshot>(
       valueListenable: _mapUiStateCoordinator.state,
@@ -3921,10 +3970,7 @@ class _MapScreenState extends State<MapScreen>
             final sheetHeight = constraints.maxHeight * sheetExtent;
             final safeBottom = MapOverlaySizing.bottomSafeInset(media);
             final double attributionBottomMargin = math
-                .max(
-                  sheetHeight + 12.0,
-                  safeBottom + 12.0,
-                )
+                .max(sheetHeight + 12.0, safeBottom + 12.0)
                 .clamp(12.0, math.max(12.0, constraints.maxHeight - 12.0))
                 .toDouble();
             _syncWebAttributionBottomForSheet(sheetExtent);
@@ -4113,41 +4159,19 @@ class _MapScreenState extends State<MapScreen>
           );
           _perf.logEvent(
             'mapCreated',
-            extra: <String, Object?>{
-              'dark': isDark,
-            },
+            extra: <String, Object?>{'dark': isDark},
           );
         },
         onStyleLoaded: () {
           AppConfig.debugPrint('MapScreen: onStyleLoadedCallback');
           _perf.logEvent('styleLoadedCallback');
-          unawaited(_handleMapStyleLoaded(themeProvider).catchError((e) {
-            if (kDebugMode) {
-              debugPrint('MapScreen: style loaded error: $e');
-            }
-          }));
-
-          // Travel mode must start with a bounds query once the map is ready,
-          // otherwise the first load may be anchored to the default center.
-          if (_travelModeEnabled) {
-            unawaited(
-              _loadMarkersForCurrentView(force: true).catchError((e) {
-                if (kDebugMode) {
-                  debugPrint('MapScreen: initial marker load error: $e');
-                }
-              }),
-            );
-          } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
-            unawaited(
-              _loadMarkersForCurrentView(force: true).catchError((e) {
-                if (kDebugMode) {
-                  debugPrint('MapScreen: initial marker load error: $e');
-                }
-              }),
-            );
-          } else {
-            _mapTargetCoordinator.notifyMarkersChanged();
-          }
+          unawaited(
+            _handleMapStyleLoaded(themeProvider).catchError((e) {
+              if (kDebugMode) {
+                debugPrint('MapScreen: style loaded error: $e');
+              }
+            }),
+          );
         },
       ),
     );
@@ -4161,8 +4185,10 @@ class _MapScreenState extends State<MapScreen>
     return dpr.clamp(1.0, 2.5);
   }
 
-  Future<void> _applyIsometricCamera(
-      {required bool enabled, bool adjustZoomForScale = false}) async {
+  Future<void> _applyIsometricCamera({
+    required bool enabled,
+    bool adjustZoomForScale = false,
+  }) async {
     final cameraMotion = KubusMapMotion.fromMediaQuery(
       animationTheme: context.animationTheme,
       mediaQuery: MediaQuery.of(context),
@@ -4274,8 +4300,9 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _syncMapMarkersSafe({required ThemeProvider themeProvider}) =>
       _markerSyncEngine.syncMarkersSafe(themeProvider: themeProvider);
 
-  Future<void> _applyThemeToMapStyle(
-      {required ThemeProvider themeProvider}) async {
+  Future<void> _applyThemeToMapStyle({
+    required ThemeProvider themeProvider,
+  }) async {
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
@@ -4316,9 +4343,7 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  Future<void> _handleMapTap(
-    Object? point,
-  ) async {
+  Future<void> _handleMapTap(Object? point) async {
     await _markerInteractionController.handleMapClick(point);
   }
 
@@ -4375,21 +4400,15 @@ class _MapScreenState extends State<MapScreen>
               navigation: navigation,
               onEnd: () => _endWalkingNavigation(navigation),
               onResume: () => _resumeWalkingNavigation(navigation),
-              onRetry: () => unawaited(
-                _retryWalkingNavigation(navigation),
-              ),
-              onAllowLocation: () => unawaited(
-                _requestWalkingLocation(navigation),
-              ),
-              onOpenAppSettings: () => unawaited(
-                _openWalkingAppSettings(navigation),
-              ),
-              onOpenLocationSettings: () => unawaited(
-                _openWalkingLocationSettings(navigation),
-              ),
-              onUseExternalMaps: () => unawaited(
-                _openExternalWalking(navigation),
-              ),
+              onRetry: () => unawaited(_retryWalkingNavigation(navigation)),
+              onAllowLocation: () =>
+                  unawaited(_requestWalkingLocation(navigation)),
+              onOpenAppSettings: () =>
+                  unawaited(_openWalkingAppSettings(navigation)),
+              onOpenLocationSettings: () =>
+                  unawaited(_openWalkingLocationSettings(navigation)),
+              onUseExternalMaps: () =>
+                  unawaited(_openExternalWalking(navigation)),
               onViewDestination: () => _viewWalkingDestination(navigation),
             ),
           ),
@@ -4560,7 +4579,8 @@ class _MapScreenState extends State<MapScreen>
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
         : ValueKey<String>(
-            'marker_overlay:selection:${selection.selectionToken}');
+            'marker_overlay:selection:${selection.selectionToken}',
+          );
     final media = MediaQuery.of(context);
     final mapMotion = KubusMapMotion.fromMediaQuery(
       animationTheme: context.animationTheme,
@@ -4634,8 +4654,9 @@ class _MapScreenState extends State<MapScreen>
           marker: selectedMarker,
           events: context.read<EventsProvider>().events,
         );
-        final linkedSubjects =
-            _linkedSubjectCoordinator.resolveCached(selectedMarker);
+        final linkedSubjects = _linkedSubjectCoordinator.resolveCached(
+          selectedMarker,
+        );
         final resolvedEvent = linkedSubjects.event ?? linkedEvent;
         final resolvedExhibition = linkedSubjects.exhibition;
         final cardWidth = MapOverlaySizing.resolveMarkerOverlayCardLayout(
@@ -4688,12 +4709,11 @@ class _MapScreenState extends State<MapScreen>
       fallbackAnchorResolver: (constraints) {
         final safeTop = MapOverlaySizing.topSafeInset(media);
         final safeBottom = MapOverlaySizing.bottomSafeInset(media);
-        final usableHeight =
-            math.max(1.0, constraints.maxHeight - safeTop - safeBottom);
-        return Offset(
-          constraints.maxWidth / 2,
-          safeTop + usableHeight * 2 / 3,
+        final usableHeight = math.max(
+          1.0,
+          constraints.maxHeight - safeTop - safeBottom,
         );
+        return Offset(constraints.maxWidth / 2, safeTop + usableHeight * 2 / 3);
       },
       markerOffset: sizing.markerOffset,
       horizontalPadding: sizing.horizontalPadding,
@@ -4779,8 +4799,10 @@ class _MapScreenState extends State<MapScreen>
     final stack = selection.stackedMarkers.isNotEmpty
         ? selection.stackedMarkers
         : <ArtMarker>[marker];
-    final int stackIndex =
-        selection.stackIndex.clamp(0, math.max(0, stack.length - 1));
+    final int stackIndex = selection.stackIndex.clamp(
+      0,
+      math.max(0, stack.length - 1),
+    );
 
     void goToStackIndex(int index) {
       if (index < 0 || index >= stack.length) return;
@@ -4793,13 +4815,14 @@ class _MapScreenState extends State<MapScreen>
     }) {
       final pageArtwork = pageMarker.isExhibitionMarker
           ? null
-          : context
-              .read<ArtworkProvider>()
-              .getArtworkById(pageMarker.artworkId ?? '');
+          : context.read<ArtworkProvider>().getArtworkById(
+                pageMarker.artworkId ?? '',
+              );
 
       final pagePrimaryExhibition = pageMarker.resolvedExhibitionSummary;
-      final linkedSubjects =
-          _linkedSubjectCoordinator.resolveCached(pageMarker);
+      final linkedSubjects = _linkedSubjectCoordinator.resolveCached(
+        pageMarker,
+      );
       final pageEvent = linkedSubjects.event ??
           KubusMarkerOverlayHelpers.resolveLinkedEvent(
             marker: pageMarker,
@@ -4886,9 +4909,7 @@ class _MapScreenState extends State<MapScreen>
     final visibleMarker = stack[stackIndex];
 
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: layout.maxCardHeight,
-      ),
+      constraints: BoxConstraints(maxHeight: layout.maxCardHeight),
       child: RepaintBoundary(
         child: buildCardForMarker(
           visibleMarker,
@@ -5102,11 +5123,7 @@ class _MapScreenState extends State<MapScreen>
         );
         return;
       case MapMarkerOverlayPrimaryTarget.event:
-        await _openEventFromMarker(
-          marker,
-          resolvedEvent,
-          requestId: requestId,
-        );
+        await _openEventFromMarker(marker, resolvedEvent, requestId: requestId);
         return;
       case MapMarkerOverlayPrimaryTarget.institution:
         await _openInstitutionFromMarker(
@@ -5166,9 +5183,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     navigator.push(
-      MaterialPageRoute(
-        builder: (_) => EventDetailScreen(eventId: fetched.id),
-      ),
+      MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: fetched.id)),
     );
   }
 
@@ -5298,7 +5313,8 @@ class _MapScreenState extends State<MapScreen>
         resolvedArtwork = artworkProvider.getArtworkById(artworkId);
       } catch (e) {
         AppConfig.debugPrint(
-            'MapScreen: failed to fetch artwork $artworkId for marker ${marker.id}: $e');
+          'MapScreen: failed to fetch artwork $artworkId for marker ${marker.id}: $e',
+        );
       }
     }
 
@@ -5363,8 +5379,9 @@ class _MapScreenState extends State<MapScreen>
             event: event,
             exhibition: exhibition,
             distanceLabel: distanceText,
-            linkedSubjectUnavailable:
-                isMarkerOverlayLinkedSubjectUnavailable(marker),
+            linkedSubjectUnavailable: isMarkerOverlayLinkedSubjectUnavailable(
+              marker,
+            ),
           ),
         ),
       );
@@ -5774,7 +5791,6 @@ class _MapScreenState extends State<MapScreen>
       child: KubusMapFilterContent(
         state: _filterState,
         onChanged: _handleFilterStateChanged,
-        travelScopeEnabled: AppConfig.isFeatureEnabled('mapTravelMode'),
       ),
     );
   }
@@ -5874,16 +5890,8 @@ class _MapScreenState extends State<MapScreen>
                 showZoomControls: false,
                 showSecondaryTools: hasSecondaryTools,
                 onOpenSecondaryTools: _openMobileMapTools,
-                secondaryToolsKey: _tutorialTravelButtonKey,
+                secondaryToolsKey: _tutorialMapToolsButtonKey,
                 secondaryToolsTooltip: l10n.mapToolsTitle,
-                showTravelModeToggle: false,
-                travelModeKey: _tutorialTravelButtonKey,
-                travelModeActive: _travelModeEnabled,
-                onToggleTravelMode: () {
-                  unawaited(_setTravelModeEnabled(!_travelModeEnabled));
-                },
-                travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
-                travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
                 showIsometricViewToggle: false,
                 isometricViewActive: _isometricViewEnabled,
                 onToggleIsometricView: () {
@@ -5904,7 +5912,6 @@ class _MapScreenState extends State<MapScreen>
   void _openMobileMapTools() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final showTravel = AppConfig.isFeatureEnabled('mapTravelMode');
     final showIsometric = AppConfig.isFeatureEnabled('mapIsometricView');
 
     showModalBottomSheet<void>(
@@ -5939,16 +5946,6 @@ class _MapScreenState extends State<MapScreen>
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
-                  if (showTravel)
-                    SwitchListTile.adaptive(
-                      secondary: const Icon(Icons.travel_explore),
-                      title: Text(l10n.mapTravelModeTooltip),
-                      value: _travelModeEnabled,
-                      onChanged: (enabled) {
-                        unawaited(_setTravelModeEnabled(enabled));
-                        Navigator.of(sheetContext).pop();
-                      },
-                    ),
                   if (showIsometric)
                     SwitchListTile.adaptive(
                       secondary: const Icon(Icons.view_in_ar_outlined),
@@ -6024,7 +6021,8 @@ class _MapScreenState extends State<MapScreen>
                   markers: _artMarkers,
                   basePosition: base,
                   isLoading: isLoading,
-                  travelModeEnabled: _travelModeEnabled,
+                  viewportScope:
+                      _filterState.scope == KubusMapScope.currentViewport,
                   radiusKm: _effectiveMarkerRadiusKm,
                   titleKey: _tutorialNearbyTitleKey,
                   discoveryProgress: discoveryProgress,
