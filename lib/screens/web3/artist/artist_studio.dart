@@ -270,14 +270,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              title: Text(
-                l10n.artistStudioTitle,
-                style: KubusTextStyles.responsiveMobileAppBarTitle(context)
-                    .copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              // No title: the dashboard header below is the page title
+              // (and carries any Lab marker). The bar holds actions only.
               actions: [
                 TopBarIcon(
                   tooltip: l10n.artistCreatorHelpTitle,
@@ -367,7 +361,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
               )
             : isApprovedArtist
                 ? pages[_selectedIndex]
-                : _buildLockedContent(),
+                : _buildLockedContent(
+                    reviewPending:
+                        verification.isPendingFor(DaoRoleType.artist),
+                  ),
       ),
     );
   }
@@ -550,14 +547,18 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 
-  Widget _buildLockedContent() {
+  Widget _buildLockedContent({required bool reviewPending}) {
     final l10n = AppLocalizations.of(context)!;
     return _buildStateSlot(
       EmptyStateCard(
         icon: Icons.lock_outline,
         title: l10n.artistStudioLockedTitle,
         description: l10n.artistStudioLockedDescription,
-        showAction: true,
+        // The application panel above owns the review CTA (and knows when
+        // it is pending or rejected); this surface only explains the lock.
+        // Without that panel (the desktop shell) it carries the action,
+        // except while a review is already pending.
+        showAction: !widget.showVerificationCard && !reviewPending,
         actionLabel: l10n.artistStudioCtaApplyForDaoReview,
         onAction: _showArtistApplicationModal,
       ),

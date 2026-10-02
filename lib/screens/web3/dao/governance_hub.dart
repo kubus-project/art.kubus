@@ -239,27 +239,8 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.daoHubAppBarTitle,
-                      style:
-                          KubusTextStyles.responsiveMobileAppBarTitle(context)
-                              .copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  const KubusLabsAdornment.inlinePill(
-                    feature: KubusLabsFeature.dao,
-                    emphasized: true,
-                  ),
-                ],
-              ),
+              // No title: the dashboard header below is the page title
+              // (and carries any Lab marker). The bar holds actions only.
               actions: [
                 TopBarIcon(
                   tooltip: l10n.profileHelpSupportTitle,

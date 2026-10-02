@@ -267,14 +267,20 @@ class _DesktopWeb3OnboardingScreenState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  widget.featureTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: KubusColorRoles.of(context).foreground,
-                      ),
-                ),
-                const SizedBox(height: KubusSpacing.xl),
+                // The flow name heads the step list only when no step
+                // already carries it; otherwise the first step and the page
+                // heading would say it a second and third time.
+                if (!widget.pages
+                    .any((p) => p.title == widget.featureTitle)) ...[
+                  Text(
+                    widget.featureTitle,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: KubusColorRoles.of(context).foreground,
+                        ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xl),
+                ],
                 ...widget.pages.asMap().entries.map((entry) {
                   final index = entry.key;
                   final page = entry.value;

@@ -761,11 +761,15 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                             style: DetailTypography.sectionTitle(context),
                           ),
                         ),
-                        IconButton(
-                          onPressed: _isSaving ? null : _pickCover,
-                          icon: const Icon(Icons.image_outlined),
-                          tooltip: l10n.commonEdit,
-                        ),
+                        // Replace action only once there is a cover: an
+                        // empty slot already offers its one upload button.
+                        if (_nextCoverBytes != null ||
+                            (coverUrl != null && coverUrl.isNotEmpty))
+                          IconButton(
+                            onPressed: _isSaving ? null : _pickCover,
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: l10n.commonEdit,
+                          ),
                       ],
                     ),
                     const SizedBox(height: DetailSpacing.md),

@@ -109,27 +109,8 @@ class _MarketplaceState extends State<Marketplace>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                l10n.navigationScreenMarketplace,
-                style: KubusTypography.content(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-            const KubusLabsAdornment.inlinePill(
-              feature: KubusLabsFeature.marketplace,
-              emphasized: true,
-            ),
-          ],
-        ),
+        // No title: the dashboard header below is the page title and
+        // carries the Lab marker. The bar holds actions only.
         actions: [
           IconButton(
             tooltip: l10n.marketplaceHelpTooltip,

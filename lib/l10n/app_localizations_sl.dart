@@ -4001,7 +4001,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationContactLabel =>
-      'Spletna stran ali kontaktni e-postni naslov';
+      'Spletna stran ali kontaktni e-poštni naslov';
 
   @override
   String get institutionHubApplicationFocusLabel => 'Kuratorski fokus';
@@ -4015,15 +4015,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationContactRequired =>
-      'Deli spletno stran ali kontaktni e-postni naslov.';
+      'Deli spletno stran ali kontaktni e-poštni naslov.';
 
   @override
   String get institutionHubApplicationFocusRequired =>
-      'Opisi programski fokus.';
+      'Opiši programski fokus.';
 
   @override
   String get institutionHubApplicationMissionRequired =>
-      'Opisi poslanstvo z vsaj 20 znaki.';
+      'Opiši poslanstvo z vsaj 20 znaki.';
 
   @override
   String get institutionHubApplicationWalletRequired =>
@@ -4035,7 +4035,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationSubmitUnavailableToast =>
-      'Prijave trenutno ni mogoce oddati.';
+      'Prijave trenutno ni mogoče oddati.';
 
   @override
   String institutionHubApplicationSubmitFailedToast(Object error) {
@@ -4104,7 +4104,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubRejectedResubmitMessage =>
-      'Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddas s popravki.';
+      'Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddaš s popravki.';
 
   @override
   String get web3MarketplaceP1Title => 'Digitalne izdaje';
@@ -8898,6 +8898,14 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prijavi se v pregled upravljanja, da odkleneš studijska orodja za objavljanje, predstavitev in spremljanje svojega dela.';
 
   @override
+  String get institutionHubLockedTitle =>
+      'Središče za institucije je zaklenjeno';
+
+  @override
+  String get institutionHubLockedDescription =>
+      'Prijavi se v pregled upravljanja, da odkleneš orodja institucije za dogodke, razstave in analitiko programa.';
+
+  @override
   String get artistStudioSettingsTitle => 'Nastavitve studia';
 
   @override
@@ -9402,7 +9410,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Denarnico Solana poveži, če želiš videti digitalne izdaje, vezane na račun.';
 
   @override
-  String get marketplaceSettingsShowArOnlyTitle => 'Prikazi samo AR zbirke';
+  String get marketplaceSettingsShowArOnlyTitle => 'Prikaži samo AR zbirke';
 
   @override
   String get marketplaceSettingsShowArOnlyDescription =>
@@ -10907,7 +10915,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityGroupPickerJoinFirstToast =>
-      'Pridruzi se skupini, da usmeris objavo.';
+      'Pridruži se skupini, da usmeriš objavo.';
 
   @override
   String get communityComposerPostCreatedToast => 'Objava ustvarjena';
@@ -11328,11 +11336,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeCreatorFallbackName => 'Ustvarjalec';
 
   @override
-  String get homeRailsUnavailableTitle => 'Domace tirnice niso na voljo';
+  String get homeRailsUnavailableTitle => 'Domače tirnice niso na voljo';
 
   @override
   String get homeRailsUnavailableDescription =>
-      'Razvrscenih domacih tirnic trenutno ni mogoce naloziti.';
+      'Razvrščenih domačih tirnic trenutno ni mogoče naložiti.';
 
   @override
   String get homeRailsWarmingTitle => 'Odkritja se pripravljajo';
@@ -12653,7 +12661,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoHubHeaderSubtitle =>
-      'Skupnostno upravljanje za umetnike, institucije in kulturno sodelovanje';
+      'Eksperimentalno odločanje za umetnike, institucije in kulturno sodelovanje';
 
   @override
   String get daoHubInfoDialogTitle => 'Kako deluje skupnostno upravljanje';

@@ -243,14 +243,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
-              title: Text(
-                l10n.navigationScreenInstitutionHub,
-                style: KubusTextStyles.responsiveMobileAppBarTitle(context)
-                    .copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              // No title: the dashboard header below is the page title
+              // (and carries any Lab marker). The bar holds actions only.
               actions: [
                 TopBarIcon(
                   tooltip: l10n.institutionHubHelpTooltip,
@@ -355,7 +349,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
               )
             : isApprovedInstitution
                 ? pages[_selectedIndex]
-                : _buildLockedContent(),
+                : _buildLockedContent(
+                    reviewPending:
+                        verification.isPendingFor(DaoRoleType.institution),
+                  ),
       ),
     );
   }
@@ -802,14 +799,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildLockedContent() {
+  Widget _buildLockedContent({required bool reviewPending}) {
     final l10n = AppLocalizations.of(context)!;
     return _buildStateSlot(
       EmptyStateCard(
         icon: Icons.lock_outline,
-        title: l10n.desktopInstitutionVerificationNotAppliedTitle,
-        description: l10n.desktopInstitutionVerificationApplyHint,
-        showAction: true,
+        // Names the lock, not the review status: the status panel (or the
+        // desktop rail) already says "Not applied" and why.
+        title: l10n.institutionHubLockedTitle,
+        description: l10n.institutionHubLockedDescription,
+        // The application panel above owns the review CTA; without it (the
+        // desktop shell) this surface carries the action, except while a
+        // review is already pending.
+        showAction: !widget.showVerificationCard && !reviewPending,
         actionLabel: l10n.institutionHubApplyForReviewAction,
         onAction: _showInstitutionApplicationModal,
       ),
