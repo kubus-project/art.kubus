@@ -94,13 +94,15 @@ class ProfileIdentitySummary extends StatelessWidget {
           children: [
             AvatarWidget(
               avatarUrl: identity.avatarUrl,
-              wallet: identity.walletSeed,
+              wallet: identity.navigationIdentifier ??
+                  identity.username ??
+                  identity.walletSeed,
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar:
-                  fetchMissingAvatar && identity.navigationIdentifier != null,
-              enableProfileNavigation: enableProfileNavigation,
+              fetchMissingAvatar: fetchMissingAvatar && identity.canOpenProfile,
+              enableProfileNavigation:
+                  enableProfileNavigation && identity.canOpenProfile,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -124,13 +126,15 @@ class ProfileIdentitySummary extends StatelessWidget {
           children: [
             AvatarWidget(
               avatarUrl: identity.avatarUrl,
-              wallet: identity.walletSeed,
+              wallet: identity.navigationIdentifier ??
+                  identity.username ??
+                  identity.walletSeed,
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar:
-                  fetchMissingAvatar && identity.navigationIdentifier != null,
-              enableProfileNavigation: enableProfileNavigation,
+              fetchMissingAvatar: fetchMissingAvatar && identity.canOpenProfile,
+              enableProfileNavigation:
+                  enableProfileNavigation && identity.canOpenProfile,
             ),
             const SizedBox(height: 10),
             _IdentityTextBlock(
