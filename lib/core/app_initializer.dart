@@ -1165,4 +1165,3 @@ class WalletPromptScreen extends StatelessWidget {
     );
   }
 }
-

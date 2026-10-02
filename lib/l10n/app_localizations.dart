@@ -2865,7 +2865,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create your profile first'**
+  /// **'Create your account'**
   String get onboardingFlowAccountTitle;
 
   /// No description provided for @onboardingFlowAccountBody.

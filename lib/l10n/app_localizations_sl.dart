@@ -1592,7 +1592,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Večina uporabnikov to dokonča v približno 2 minutah.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Najprej ustvari profil';
+  String get onboardingFlowAccountTitle => 'Ustvari svoj račun';
 
   @override
   String get onboardingFlowAccountBody =>

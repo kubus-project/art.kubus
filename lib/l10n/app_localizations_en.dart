@@ -1583,7 +1583,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Most people finish this in about 2 minutes.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Create your profile first';
+  String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
   String get onboardingFlowAccountBody =>

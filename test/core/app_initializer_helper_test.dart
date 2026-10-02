@@ -85,7 +85,8 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test('a fresh anonymous visitor with no journey in flight is never onboarding',
+  test(
+      'a fresh anonymous visitor with no journey in flight is never onboarding',
       () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: false,

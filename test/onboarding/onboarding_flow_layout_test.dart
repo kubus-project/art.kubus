@@ -310,7 +310,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Should show account step with auth panel
-    expect(find.text('Create your profile first'), findsOneWidget);
+    expect(find.text('Create your account'), findsOneWidget);
   });
 
   testWidgets(

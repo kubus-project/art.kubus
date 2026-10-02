@@ -31,7 +31,8 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('new Google user stops at the account: no role picker, no password setup',
+  test(
+      'new Google user stops at the account: no role picker, no password setup',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -84,7 +85,8 @@ void main() {
     expect(result.onboardingStepId, 'role');
   });
 
-  test('Google onboarding that signalled wallet setup still ends at the account',
+  test(
+      'Google onboarding that signalled wallet setup still ends at the account',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -107,7 +109,8 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('a wallet-scoped action routes a walletless Google account to wallet setup',
+  test(
+      'a wallet-scoped action routes a walletless Google account to wallet setup',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(

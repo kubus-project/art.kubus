@@ -598,7 +598,7 @@
   "onboardingFlowWelcomeInfoCreate": "Share artworks, add cultural context, or keep exploring the open art map.",
   "onboardingFlowWelcomeInfoFollow": "Follow artists, institutions, exhibitions, and public-space art.",
   "onboardingFlowWelcomeInfoTime": "Most people finish this in about 2 minutes.",
-  "onboardingFlowAccountTitle": "Create your profile first",
+  "onboardingFlowAccountTitle": "Create your account",
   "onboardingFlowAccountBody": "Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.",
   "onboardingFlowAccountVerifyHint": "If you registered with email, verify your email before signing in.",
   "onboardingFlowCreateAccount": "Create account",
