@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../common/kubus_context_icon.dart';
 
 class SharedSettingsRowTile extends StatelessWidget {
   final String title;
@@ -293,8 +292,8 @@ class SharedSettingsSectionHeader extends StatelessWidget {
           header: true,
           child: Text(
             title,
-            style:
-                KubusTextStyles.detailCardTitle.copyWith(color: roles.foreground),
+            style: KubusTextStyles.detailCardTitle
+                .copyWith(color: roles.foreground),
           ),
         ),
         if (subtitle != null) ...[

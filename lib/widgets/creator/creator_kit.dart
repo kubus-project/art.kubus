@@ -8,7 +8,6 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
-import '../common/kubus_context_icon.dart';
 import '../common/subject_options_sheet.dart';
 import '../forms/kubus_form.dart';
 

@@ -49,8 +49,8 @@ void main() {
   });
 
   testWidgets(
-      'DesktopStatCard: compact context tile, cropped ghost glyph, no lift or '
-      'shadow on the tile itself', (tester) async {
+      'DesktopStatCard: one identity layer (cropped ghost glyph, no '
+      'foreground tile), no lift or shadow on the tile itself', (tester) async {
     await pumpDesktopStatCard(
       tester,
       child: const SizedBox(
@@ -64,12 +64,10 @@ void main() {
       ),
     );
 
-    final tileIcon = find.descendant(
-      of: find.byType(KubusContextIcon),
-      matching: find.byIcon(Icons.group_outlined),
-    );
-    expect(tester.getSize(tileIcon).height, lessThanOrEqualTo(16));
-    // The large symbol is the decorative ghost layer, clipped by the tile.
+    // The symbol appears once, as the decorative ghost layer clipped by the
+    // tile; there is no small foreground copy beside the number.
+    expect(find.byType(KubusContextIcon), findsNothing);
+    expect(find.byIcon(Icons.group_outlined), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(KubusGhostGlyph),

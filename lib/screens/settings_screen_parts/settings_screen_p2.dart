@@ -8,7 +8,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     final configProvider = context.watch<ConfigProvider>();
     return _buildSection(
       l10n.settingsDataAnalyticsSectionTitle,
-      Icons.analytics,
       [
         // Mock Data toggle removed - backend controls via USE_MOCK_DATA env variable
         _buildSettingsTile(
@@ -65,7 +64,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
   Widget _buildAboutSection(AppLocalizations l10n) {
     return _buildSection(
       l10n.settingsAboutSectionTitle,
-      Icons.info,
       [
         _buildSettingsTile(
           l10n.settingsAboutVersionTileTitle,
@@ -110,7 +108,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
   Widget _buildDangerZone(AppLocalizations l10n) {
     return _buildSection(
       l10n.settingsDangerZoneSectionTitle,
-      Icons.warning,
       [
         _buildSettingsTile(
           l10n.settingsLogoutTileTitle,
@@ -137,8 +134,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     );
   }
 
-  Widget _buildSection(String title, IconData icon, List<Widget> children,
-      {Color? sectionColor}) {
+  Widget _buildSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

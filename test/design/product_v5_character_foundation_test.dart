@@ -2,6 +2,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_widgets.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
 import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:flutter/material.dart';
@@ -163,7 +164,8 @@ void main() {
   });
 
   group('stat tiles', () {
-    testWidgets('centered tile renders the icon in its contextual accent',
+    testWidgets(
+        'centered tile expresses its accent once, through the ghost glyph',
         (tester) async {
       const accent = Color(0xFFE07A5F);
       await pumpThemed(
@@ -181,13 +183,22 @@ void main() {
           ),
         ),
       );
-      final icon = tester.widget<Icon>(find.descendant(
-        of: find.byType(KubusContextIcon),
-        matching: find.byIcon(Icons.people_outline),
+      // One identity layer: no foreground context tile beside the number.
+      expect(
+        find.descendant(
+          of: find.byType(KubusStatCard),
+          matching: find.byType(KubusContextIcon),
+        ),
+        findsNothing,
+      );
+      final ghost = tester.widget<KubusGhostGlyph>(find.descendant(
+        of: find.byType(KubusStatCard),
+        matching: find.byType(KubusGhostGlyph),
       ));
-      expect(icon.color, accent);
+      expect(ghost.icon, Icons.people_outline);
+      expect(ghost.color, accent);
       // Under the text the card surface is neutral; the accent lives in the
-      // icon tile, the ghost glyph, the corner field and the edge light.
+      // ghost glyph, the corner field and the edge light.
       final context = tester.element(find.byType(KubusStatCard));
       final material = tester.widget<Material>(find.descendant(
         of: find.byType(KubusStatCard),
@@ -243,7 +254,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('DesktopStatCard passes its colour to the icon tile',
+    testWidgets('DesktopStatCard passes its colour to the ghost glyph',
         (tester) async {
       const accent = Color(0xFF70C58B);
       await pumpThemed(
@@ -263,14 +274,12 @@ void main() {
           ),
         ),
       );
-      expect(
-          tester
-              .widget<Icon>(find.descendant(
-                of: find.byType(KubusContextIcon),
-                matching: find.byIcon(Icons.create_outlined),
-              ))
-              .color,
-          accent);
+      final ghost = tester.widget<KubusGhostGlyph>(find.descendant(
+        of: find.byType(DesktopStatCard),
+        matching: find.byType(KubusGhostGlyph),
+      ));
+      expect(ghost.icon, Icons.create_outlined);
+      expect(ghost.color, accent);
     });
 
     testWidgets('tappable tile keeps button semantics and a 44 px target',

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../utils/design_tokens.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../empty_state_card.dart';
 import '../glass_components.dart';

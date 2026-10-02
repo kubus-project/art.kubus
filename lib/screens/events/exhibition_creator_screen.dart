@@ -13,7 +13,6 @@ import '../../models/exhibition.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
-import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';

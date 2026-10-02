@@ -52,8 +52,9 @@ void main() {
   });
 
   testWidgets(
-      'expressive tiles: neutral surface and rule under the text, a compact '
-      'context tile, and a cropped decorative ghost glyph', (tester) async {
+      'expressive tiles: neutral surface and rule under the text, one '
+      'identity layer (the cropped decorative ghost glyph), no foreground '
+      'icon', (tester) async {
     for (final brightness in Brightness.values) {
       await tester.pumpWidget(_wrap(
         const KubusStatCard(
@@ -68,15 +69,12 @@ void main() {
       final roles =
           KubusColorRoles.of(tester.element(find.byType(KubusStatCard)));
       expect(find.byType(LiquidGlassCard), findsNothing);
-      final tileGlyph = find.descendant(
-        of: find.byType(KubusContextIcon),
-        matching: find.byIcon(Icons.people_outline),
-      );
-      expect(tester.getSize(tileGlyph), const Size.square(16));
-      expect(tester.widget<Icon>(tileGlyph).color, Colors.cyan);
+      // The metric's symbol appears exactly once: no foreground copy.
+      expect(find.byType(KubusContextIcon), findsNothing);
+      expect(find.byIcon(Icons.people_outline), findsOneWidget);
 
-      // The ghost glyph is composition: larger than the tile glyph, in the
-      // accent at low opacity, cropped by the card, never announced.
+      // The ghost glyph is the identity layer: large, in the accent at low
+      // opacity, cropped by the card, never announced.
       final ghost = find.descendant(
         of: find.byType(KubusGhostGlyph),
         matching: find.byIcon(Icons.people_outline),
@@ -84,6 +82,7 @@ void main() {
       expect(ghost, findsOneWidget);
       final ghostIcon = tester.widget<Icon>(ghost);
       expect(ghostIcon.size, greaterThanOrEqualTo(56));
+      expect(ghostIcon.color!.r, closeTo(Colors.cyan.r, 0.01));
       expect(ghostIcon.color!.a, lessThan(0.25));
       final card = tester.getRect(find.byType(KubusStatCard));
       final ghostRect = tester.getRect(ghost);
