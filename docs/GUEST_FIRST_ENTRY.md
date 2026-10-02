@@ -73,6 +73,25 @@ guest attempts Save/Follow/Like/Comment
   -> mutation exactly once, then the intent is cleared
 ```
 
+An *interrupted* account journey (for example a pending email verification)
+that is still armed when the visitor taps a protected action is resumed **after**
+the gate has captured the action and its return route, never before. The journey
+opens above the entity they are viewing, keeps the wider of its own scope and the
+action's, and completing it returns to that exact entity for the explicit
+confirmation. (Resuming first used to replace the entity and lose the action.)
+
+**One usable-profile rule.** "This account already has the profile the action
+needs" means a hydrated profile with a display name
+(`isUsablePublicProfile`, `ProfileProvider.hasUsablePublicProfile`). The gate,
+the post-auth resolver, interrupted-journey recovery and pending-action return
+all use it, so a hydrated profile with an empty display name cannot bypass a
+participant or creator action; an account-only action never asks for it.
+
+**Degraded startup** (initialisation failure or the 20s watchdog) looks for an
+interrupted journey under the unscoped key and every user/wallet scope
+(`OnboardingStateService.hasAnyPendingAuthOnboardingSync`); stale markers fall
+through to public discovery.
+
 Wallet transactions, DAO votes/proposals, claims, financial and privileged
 mutations capture **no** replayable intent (`privileged actions capture no
 replayable intent`). Dismissing the gate runs no mutation.

@@ -154,21 +154,7 @@ class _AppInitializerState extends State<AppInitializer> {
     );
     if (!mounted || _didNavigate) return;
     if (prefs != null) {
-      final decision = decideStartupRoute(
-        hasPendingAuthOnboarding:
-            OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
-        hasValidSession: false,
-        hasPendingVerificationEmailFlag:
-            prefs.getBool('onboarding_pending_email_verification_v1') ?? false,
-        pendingVerificationEmail:
-            prefs.getString('onboarding_verification_email_v3'),
-        hasActiveGoogleOnboardingGuard: OnboardingStateService
-            .hasActiveGoogleOnboardingRegistrationGuardSync(
-          prefs,
-        ),
-        hasActiveAccountLinkGuard:
-            OnboardingStateService.hasActiveAccountLinkGuardSync(prefs),
-      );
+      final decision = decideDegradedStartup(prefs);
       if (decision.route == StartupRouteType.onboarding) {
         _didNavigate = true;
         navigator.pushReplacement(
@@ -524,6 +510,7 @@ class _AppInitializerState extends State<AppInitializer> {
               hasPendingAuthOnboarding: hasPendingAuthOnboarding,
               hasAuthenticatedSession: hasValidSession,
               hasHydratedProfile: profileProvider.hasHydratedProfile,
+              hasUsableProfile: profileProvider.hasUsablePublicProfile,
               requiresWalletBackup: requiresWalletBackup,
               heuristicNextStepId:
                   profileProvider.nextStructuredOnboardingStepId,

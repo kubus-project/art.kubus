@@ -89,13 +89,6 @@ class ContextualAuthGate {
       ),
     );
 
-    // A cold-start visitor with a specifically persisted incomplete account
-    // (not an ordinary map browser) resumes the verified step exactly once.
-    if (!BackendApiService().hasAuthSession &&
-        _maybeResumeIncompleteOnboarding(context)) {
-      return false;
-    }
-
     final intent = _buildIntent(
       actionType: actionType,
       targetType: targetType,
@@ -122,6 +115,22 @@ class ContextualAuthGate {
       }
     }
     if (!context.mounted) return false;
+
+    // An interrupted account journey is resumed only now, after the attempted
+    // action and its return route are captured: the visitor stays on the entity
+    // they were viewing, the journey opens above it, and completing it returns
+    // there for the explicit confirmation. Resuming first replaced the entity
+    // and lost the mutation.
+    if (!BackendApiService().hasAuthSession &&
+        _maybeResumeIncompleteOnboarding(
+          context,
+          returnRoute: _safeReturnRoute(returnRoute),
+          returnArguments: returnArguments,
+          requirements: requirements,
+          onAuthJourneyStarted: onAuthJourneyStarted,
+        )) {
+      return false;
+    }
 
     // An authenticated account that still lacks role/profile/wallet capability
     // resumes exactly that structured step. It is not an acquisition case, so
@@ -257,11 +266,24 @@ class ContextualAuthGate {
     );
   }
 
-  bool _maybeResumeIncompleteOnboarding(BuildContext context) {
+  bool _maybeResumeIncompleteOnboarding(
+    BuildContext context, {
+    required String returnRoute,
+    required Map<String, String> returnArguments,
+    required ProtectedActionRequirements requirements,
+    VoidCallback? onAuthJourneyStarted,
+  }) {
     try {
-      return context
+      final resumed = context
           .read<DeferredOnboardingProvider>()
-          .maybeShowOnboardingForProtectedAction(context);
+          .maybeShowOnboardingForProtectedAction(
+            context,
+            returnRoute: returnRoute,
+            returnArguments: returnArguments,
+            requirements: requirements,
+          );
+      if (resumed) onAuthJourneyStarted?.call();
+      return resumed;
     } catch (_) {
       return false;
     }
@@ -286,14 +308,8 @@ class ContextualAuthGate {
         return 'role';
       }
       if (requirements.requiresProfile) {
-        // A usable identity, not a finished one: a hydrated profile with a
-        // display name. Bio, avatar and the like stay voluntary.
-        final user = profile.currentUser;
-        if (!profile.hasHydratedProfile ||
-            user == null ||
-            user.displayName.trim().isEmpty) {
-          return 'profile';
-        }
+        // The same rule the post-auth resolver uses (`isUsablePublicProfile`).
+        if (!profile.hasUsablePublicProfile) return 'profile';
       }
       if (requirements.requiresWallet &&
           !context.read<WalletProvider>().hasWalletIdentity) {

@@ -184,6 +184,7 @@ class _EmailVerificationSuccessScreenState
               hasPendingAuthOnboarding: true,
               hasAuthenticatedSession: true,
               hasHydratedProfile: profileProvider.hasHydratedProfile,
+              hasUsableProfile: profileProvider.hasUsablePublicProfile,
               requiresWalletBackup: requiresWalletBackup,
               heuristicNextStepId:
                   profileProvider.nextStructuredOnboardingStepId,

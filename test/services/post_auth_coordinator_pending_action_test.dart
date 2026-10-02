@@ -27,6 +27,7 @@ class _SpyAuthRedirectController extends AuthRedirectController {
     required SharedPreferences prefs,
     required Map<String, dynamic> payload,
     required bool hasHydratedProfile,
+    required bool hasUsableProfile,
     required bool requiresWalletBackup,
     String? walletAddress,
     String? userId,

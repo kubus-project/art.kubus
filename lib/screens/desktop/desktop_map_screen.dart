@@ -625,6 +625,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         });
         _mapTargetCoordinator.selectionChanged(state.selectedMarkerId);
       },
+      onUserMarkerInteraction: _mapEngagement.markerOpened,
       onBackgroundTap: () {
         if (!mounted) return;
         _perf.recordSetState('backgroundTap');
@@ -727,7 +728,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerInteractionController = MapMarkerInteractionController(
       mapController: _kubusMapController,
       isWeb: kIsWeb,
-      onMarkerOpenedByTap: _mapEngagement.markerOpened,
     );
 
     _nearbyArtController = NearbyArtController(

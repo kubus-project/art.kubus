@@ -1,3 +1,7 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/onboarding_state_service.dart';
+
 enum StartupRouteType { onboarding, none }
 
 class StartupDecision {
@@ -133,6 +137,30 @@ StartupDecision decideStartupRoute({
   // Pending verification flag true but empty email -> use account, not verifyEmail
   // (This is a defensive check; normally both flags are set together)
   return const StartupDecision(route: StartupRouteType.none);
+}
+
+/// The degraded-startup decision (initialisation threw, or the watchdog fired).
+///
+/// There is no session to derive an account scope from, so a recorded interrupted
+/// journey is looked up under the unscoped key *and* every user/wallet scope
+/// (`OnboardingStateService.hasAnyPendingAuthOnboardingSync`). No journey, or
+/// only stale markers, means public discovery.
+StartupDecision decideDegradedStartup(SharedPreferences prefs) {
+  return decideStartupRoute(
+    hasPendingAuthOnboarding:
+        OnboardingStateService.hasAnyPendingAuthOnboardingSync(prefs),
+    hasValidSession: false,
+    hasPendingVerificationEmailFlag:
+        prefs.getBool('onboarding_pending_email_verification_v1') ?? false,
+    pendingVerificationEmail:
+        prefs.getString('onboarding_verification_email_v3'),
+    hasActiveGoogleOnboardingGuard:
+        OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
+      prefs,
+    ),
+    hasActiveAccountLinkGuard:
+        OnboardingStateService.hasActiveAccountLinkGuardSync(prefs),
+  );
 }
 
 /// Whether the synchronous, pre-shell profile load in `AppInitializer` can be

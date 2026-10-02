@@ -13,6 +13,7 @@ import '../services/user_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
+import '../utils/usable_public_profile.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/profile_media_ref_utils.dart';
 import '../utils/wallet_utils.dart';
@@ -318,6 +319,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       (_walletProvider?.currentWalletAddress?.trim().isNotEmpty ?? false);
   bool get isLoading => _isLoading;
   bool get hasHydratedProfile => _hasHydratedProfile;
+
+  /// See [isUsablePublicProfile]: hydrated, with a display name.
+  bool get hasUsablePublicProfile => isUsablePublicProfile(
+        hydrated: _hasHydratedProfile,
+        displayName: _currentUser?.displayName,
+      );
   String? get error => _error;
   bool get hasProfile => _currentUser != null;
   ProfilePreferences get preferences =>

@@ -15,28 +15,18 @@ class MapMarkerInteractionController {
   const MapMarkerInteractionController({
     required KubusMapController mapController,
     required bool isWeb,
-    VoidCallback? onMarkerOpenedByTap,
   })  : _mapController = mapController,
-        _isWeb = isWeb,
-        _onMarkerOpenedByTap = onMarkerOpenedByTap;
+        _isWeb = isWeb;
 
   final KubusMapController _mapController;
   final bool _isWeb;
 
-  /// Called when a tap on the map opened a marker that was not already open.
-  /// Programmatic selections (deep-link targets, search) never go through
-  /// [handleMapClick], so this is a deliberate-interaction signal.
-  final VoidCallback? _onMarkerOpenedByTap;
-
-  Future<void> handleMapClick(Object? rawPoint) async {
+  Future<void> handleMapClick(Object? rawPoint) {
     final point = _coercePoint(rawPoint);
-    if (point == null) return;
-    final before = _mapController.selectedMarkerId;
-    await _mapController.handleMapClick(point, isWeb: _isWeb);
-    final after = _mapController.selectedMarkerId;
-    if (after != null && after != before) {
-      _onMarkerOpenedByTap?.call();
+    if (point == null) {
+      return Future<void>.value();
     }
+    return _mapController.handleMapClick(point, isWeb: _isWeb);
   }
 
   void handleMarkerTap(

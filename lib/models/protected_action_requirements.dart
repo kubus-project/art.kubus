@@ -44,6 +44,19 @@ class ProtectedActionRequirements {
   /// by this UX-only gate.
   static const dao = ProtectedActionRequirements(requiresWallet: true);
 
+  /// The narrowest scope that satisfies both: a resumed journey must never
+  /// drop a capability the action in front of the visitor needs.
+  static ProtectedActionRequirements merge(
+    ProtectedActionRequirements a,
+    ProtectedActionRequirements b,
+  ) =>
+      ProtectedActionRequirements(
+        requiresAccount: a.requiresAccount || b.requiresAccount,
+        requiresProfile: a.requiresProfile || b.requiresProfile,
+        requiresRole: a.requiresRole || b.requiresRole,
+        requiresWallet: a.requiresWallet || b.requiresWallet,
+      );
+
   final bool requiresAccount;
   final bool requiresProfile;
   final bool requiresRole;

@@ -85,7 +85,7 @@ The first *deliberate* map interaction of a session, once per session, never a
 pan/zoom stream. It is distinct from `map_opened`, which only says the map
 rendered. Qualifying (first one wins):
 
-- `marker_open`: a tap on the map opened a marker;
+- `marker_open`: the visitor tapped a marker, cluster or same-location group on the map (web feature tap and native hit test, both owned by `KubusMapController`; a web click suppressed after a feature tap does not count twice);
 - `search_select`: the visitor chose a map search result;
 - `camera_gesture`: a user-caused pan or zoom of at least
   `MapEngagementTracker.zoomThresholdLevels` (0.5 level) or a quarter of a 512px

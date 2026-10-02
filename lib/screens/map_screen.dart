@@ -795,6 +795,7 @@ class _MapScreenState extends State<MapScreen>
           selectionToken: state.selectionToken,
         );
       },
+      onUserMarkerInteraction: _mapEngagement.markerOpened,
       onBackgroundTap: () {
         _dismissMapContext();
       },
@@ -882,7 +883,6 @@ class _MapScreenState extends State<MapScreen>
     _markerInteractionController = MapMarkerInteractionController(
       mapController: _kubusMapController,
       isWeb: kIsWeb,
-      onMarkerOpenedByTap: _mapEngagement.markerOpened,
     );
     _selectedMarkerAnchorNotifier = _kubusMapController.selectedMarkerAnchor;
     _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);

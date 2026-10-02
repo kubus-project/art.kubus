@@ -75,6 +75,7 @@ class AuthRedirectController {
     required SharedPreferences prefs,
     required Map<String, dynamic> payload,
     required bool hasHydratedProfile,
+    required bool hasUsableProfile,
     required bool requiresWalletBackup,
     String? walletAddress,
     String? userId,
@@ -111,6 +112,7 @@ class AuthRedirectController {
                 ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
+      hasUsableProfile: hasUsableProfile,
       requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
       // Wallet setup is requested only by the protected action or a trusted
       // backend requirement. A wallet-authenticated session already has the
@@ -204,6 +206,7 @@ class AuthRedirectController {
       prefs: prefs,
       payload: payload,
       hasHydratedProfile: profileProvider.profile != null,
+      hasUsableProfile: profileProvider.hasUsablePublicProfile,
       requiresWalletBackup: requiresWalletBackup,
       walletAddress: targetWallet,
       userId: userId,

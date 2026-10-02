@@ -74,6 +74,11 @@ class AuthOnboardingService {
     required bool hasPendingAuthOnboarding,
     required bool hasAuthenticatedSession,
     required bool hasHydratedProfile,
+
+    /// `ProfileProvider.hasUsablePublicProfile` (see `isUsablePublicProfile`).
+    /// Required whenever [requirements] is given: hydration alone is not a
+    /// usable identity, and a scoped resolution must not treat it as one.
+    bool? hasUsableProfile,
     required bool requiresWalletBackup,
     bool requiresWalletSetup = false,
     required String? heuristicNextStepId,
@@ -82,6 +87,10 @@ class AuthOnboardingService {
     Map<String, dynamic>? payload,
     ProtectedActionRequirements? requirements,
   }) async {
+    assert(
+      requirements == null || hasUsableProfile != null,
+      'A scoped resolution needs the canonical usable-profile result.',
+    );
     // A named capability request is the whole of what this authentication was
     // for. Account creation alone never implies the structured journey: only
     // the role, profile or wallet step that capability needs can resume.
@@ -89,7 +98,7 @@ class AuthOnboardingService {
       return _resolveScopedResume(
         requirements: requirements,
         hasAuthenticatedSession: hasAuthenticatedSession,
-        hasHydratedProfile: hasHydratedProfile,
+        hasUsableProfile: hasUsableProfile ?? false,
         requiresWalletSetup: requiresWalletSetup,
         persona: persona,
       );
@@ -212,7 +221,7 @@ class AuthOnboardingService {
   static StructuredOnboardingResumeState _resolveScopedResume({
     required ProtectedActionRequirements requirements,
     required bool hasAuthenticatedSession,
-    required bool hasHydratedProfile,
+    required bool hasUsableProfile,
     required bool requiresWalletSetup,
     required String? persona,
   }) {
@@ -225,7 +234,7 @@ class AuthOnboardingService {
     String? step;
     if (requirements.requiresRole && (persona ?? '').trim().isEmpty) {
       step = 'role';
-    } else if (requirements.requiresProfile && !hasHydratedProfile) {
+    } else if (requirements.requiresProfile && !hasUsableProfile) {
       step = 'profile';
     } else if (requirements.requiresWallet && requiresWalletSetup) {
       step = 'walletConnect';

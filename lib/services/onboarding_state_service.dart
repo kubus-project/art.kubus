@@ -193,17 +193,30 @@ class OnboardingStateService {
   static String? capabilityScopeSync(SharedPreferences prefs) {
     final scope = (prefs.getString(capabilityScopeKey) ?? '').trim();
     if (scope.isEmpty) return null;
-    final base = PreferenceKeys.pendingAuthOnboarding;
     final hasPendingJourney =
         (prefs.getBool(_pendingEmailVerificationKey) ?? false) ||
-            prefs.getKeys().any(
-                  (key) =>
-                      (key == base || key.startsWith('$base:')) &&
-                      (prefs.getBool(key) ?? false),
-                ) ||
+            hasAnyPendingAuthOnboardingSync(prefs) ||
             hasActiveGoogleOnboardingRegistrationGuardSync(prefs) ||
             hasActiveAccountLinkGuardSync(prefs);
     return hasPendingJourney ? scope : null;
+  }
+
+  /// Whether *any* pending structured journey is recorded, under the unscoped
+  /// key or under any user/wallet scope.
+  ///
+  /// `markAuthOnboardingPending` writes the scoped key and removes the unscoped
+  /// one whenever a user or wallet is known, so a caller that has no session
+  /// to derive a scope from (degraded startup, the watchdog) must look at all
+  /// of them. Only a stored `true` counts; a cleared, false or non-boolean
+  /// value is a stale marker and is ignored.
+  static bool hasAnyPendingAuthOnboardingSync(SharedPreferences prefs) {
+    final base = PreferenceKeys.pendingAuthOnboarding;
+    for (final key in prefs.getKeys()) {
+      if (key != base && !key.startsWith('$base:')) continue;
+      final value = prefs.get(key);
+      if (value == true) return true;
+    }
+    return false;
   }
 
   static Future<OnboardingFlowProgress> loadFlowProgress({

@@ -73,7 +73,10 @@ void main() {
         MaterialApp(
           home: Builder(
             builder: (context) {
-              shown = provider.maybeShowOnboardingForProtectedAction(context);
+              shown = provider.maybeShowOnboardingForProtectedAction(
+                context,
+                returnRoute: '/map',
+              );
               return const Scaffold(body: Text('public discovery'));
             },
           ),

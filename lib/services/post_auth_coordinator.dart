@@ -383,6 +383,7 @@ class PostAuthCoordinator {
         prefs: prefs,
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
+        hasUsableProfile: profileProvider.hasUsablePublicProfile,
         requiresWalletBackup: requiresWalletBackup,
         // Wallet setup is requested by the originating action or a trusted
         // backend requirement; generic account authentication stays Web3-free.

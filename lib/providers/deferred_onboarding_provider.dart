@@ -1,6 +1,7 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:flutter/material.dart';
 
+import '../models/onboarding_completion_navigation.dart';
 import '../models/protected_action_requirements.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 
@@ -13,7 +14,43 @@ import '../screens/onboarding/onboarding_flow_screen.dart';
 /// appears only when the visitor has genuinely begun one (for example an email
 /// verification that was left pending) and then tries something that needs an
 /// identity.
+/// Builds the resumed journey. Injectable so tests can observe exactly what the
+/// visitor is sent to without constructing the whole onboarding screen.
+typedef ResumedOnboardingBuilder = Widget Function({
+  required bool forceDesktop,
+  required String initialStepId,
+  required String completionRoute,
+  required Object? completionArguments,
+  required ProtectedActionRequirements requirements,
+  required bool requiresWalletSetup,
+  required OnboardingCompletionNavigation completionNavigation,
+});
+
+Widget _defaultResumedOnboarding({
+  required bool forceDesktop,
+  required String initialStepId,
+  required String completionRoute,
+  required Object? completionArguments,
+  required ProtectedActionRequirements requirements,
+  required bool requiresWalletSetup,
+  required OnboardingCompletionNavigation completionNavigation,
+}) =>
+    OnboardingFlowScreen(
+      forceDesktop: forceDesktop,
+      initialStepId: initialStepId,
+      completionRoute: completionRoute,
+      completionArguments: completionArguments,
+      requirements: requirements,
+      requiresWalletSetup: requiresWalletSetup,
+      completionNavigation: completionNavigation,
+    );
+
 class DeferredOnboardingProvider extends ChangeNotifier {
+  DeferredOnboardingProvider({
+    ResumedOnboardingBuilder onboardingBuilder = _defaultResumedOnboarding,
+  }) : _onboardingBuilder = onboardingBuilder;
+
+  final ResumedOnboardingBuilder _onboardingBuilder;
   bool _enabledForSession = false;
   bool _presentedThisSession = false;
   String? _initialStepId;
@@ -63,27 +100,43 @@ class DeferredOnboardingProvider extends ChangeNotifier {
   /// Resumes the armed journey exactly once, when an anonymous visitor first
   /// attempts an identity-required action.
   ///
+  /// The caller has already captured the attempted action, so the journey is
+  /// pushed *above* the screen the visitor is on and completes back to
+  /// [returnRoute]/[returnArguments] (the exact origin), never to the shell
+  /// route stored when it was armed and never by replacing the current route.
+  /// The resumed scope is the wider of the interrupted journey's and the
+  /// attempted action's [requirements], so neither is dropped.
+  ///
   /// Returns true if onboarding navigation was triggered and the caller should
   /// stop (the action is resumed from inside the journey).
-  bool maybeShowOnboardingForProtectedAction(BuildContext context) {
+  bool maybeShowOnboardingForProtectedAction(
+    BuildContext context, {
+    required String returnRoute,
+    Map<String, String> returnArguments = const <String, String>{},
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
+  }) {
     if (!_enabledForSession || _presentedThisSession) return false;
 
     final isDesktop = DesktopBreakpoints.isDesktop(context);
     final navigator = Navigator.of(context);
     final initialStepId = _initialStepId ?? 'account';
-    final completionRoute = _completionRoute ?? '/map';
-    final requirements = _requirements;
+    final scope =
+        ProtectedActionRequirements.merge(_requirements, requirements);
 
     _presentedThisSession = true;
     reset(keepPresentedFlag: true);
 
-    navigator.pushReplacement(
+    navigator.push(
       MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(
+        builder: (_) => _onboardingBuilder(
           forceDesktop: isDesktop,
           initialStepId: initialStepId,
-          completionRoute: completionRoute,
-          requirements: requirements,
+          completionRoute: returnRoute,
+          completionArguments: returnArguments.isEmpty ? null : returnArguments,
+          requirements: scope,
+          requiresWalletSetup: scope.requiresWallet,
+          completionNavigation: OnboardingCompletionNavigation.returnToOrigin,
         ),
         settings: const RouteSettings(name: '/onboarding'),
       ),
