@@ -3217,6 +3217,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapAddMapMarkerTooltip.toLowerCase(),
       returnRoute: '/map',
@@ -4936,6 +4937,7 @@ class _MapScreenState extends State<MapScreen>
 
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapMarkerClaimButton.toLowerCase(),
       returnRoute: '/map',

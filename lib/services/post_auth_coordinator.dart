@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
 import '../models/pending_action_intent.dart';
+import '../models/protected_action_requirements.dart';
 import '../providers/pending_action_provider.dart';
 import '../services/meta/meta_conversion_adapter.dart';
 import '../models/user_persona.dart';
@@ -44,6 +45,7 @@ class PostAuthResult {
     this.onboardingStepId,
     this.requiresWalletSetup = false,
     this.completionRoute,
+    this.requirements,
   });
 
   final bool completed;
@@ -54,6 +56,7 @@ class PostAuthResult {
   final String? onboardingStepId;
   final bool requiresWalletSetup;
   final String? completionRoute;
+  final ProtectedActionRequirements? requirements;
 
   static const failed = PostAuthResult(completed: false);
 }
@@ -80,6 +83,8 @@ class PostAuthCoordinator {
     bool modalReauth = false,
     bool requiresWalletBackup = false,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {
@@ -399,6 +404,7 @@ class PostAuthCoordinator {
         heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
         persona: profileProvider.userPersona?.storageValue,
         origin: origin,
+        requirements: requirements,
       );
 
       setStage(PostAuthStage.openingWorkspace);
@@ -410,6 +416,7 @@ class PostAuthCoordinator {
         onboardingStepId: routeResult.onboardingStepId,
         requiresWalletSetup: routeResult.requiresWalletSetup,
         completionRoute: routeResult.completionRoute,
+        requirements: routeResult.requirements,
       );
     } catch (e) {
       AppConfig.debugPrint('PostAuthCoordinator: failed: $e');

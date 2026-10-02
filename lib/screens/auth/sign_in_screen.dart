@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
@@ -48,6 +49,7 @@ class SignInScreen extends StatefulWidget {
     this.onVerificationRequired,
     this.onSwitchToRegister,
     this.requiresWalletSetup = false,
+    this.requirements = ProtectedActionRequirements.accountOnly,
     this.postAuthCoordinator = const PostAuthCoordinator(),
   });
 
@@ -60,6 +62,9 @@ class SignInScreen extends StatefulWidget {
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
   final bool requiresWalletSetup;
+
+  /// The capability the originating action needs; an account alone by default.
+  final ProtectedActionRequirements requirements;
   final PostAuthCoordinator postAuthCoordinator;
 
   @override
@@ -723,6 +728,7 @@ class _SignInScreenState extends State<SignInScreen> {
       modalReauth: false,
       requiresWalletBackup: false,
       requiresWalletSetup: widget.requiresWalletSetup,
+      requirements: widget.requirements,
       presentation: presentation,
       onBeforeSavedItemsSync:
           (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)

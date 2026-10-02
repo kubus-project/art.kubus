@@ -249,6 +249,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             ),
             TextButton(
               onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+                requirements: ProtectedActionRequirements.participant,
                 context,
                 actionLabel: l10n.commonCreate,
                 returnRoute: '/community',

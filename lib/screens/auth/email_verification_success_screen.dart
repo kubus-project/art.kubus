@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/core/shell_routes.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -157,6 +158,15 @@ class _EmailVerificationSuccessScreenState
       );
 
       if (guardActive || hasPendingAuthOnboarding) {
+        // The journey resumes inside the scope it was started for; with none
+        // recorded it is an account-only one, so verifying an email never
+        // walks the visitor on into role, profile or wallet setup.
+        final scope = accountLinkGuardActive && hasSession
+            ? ProtectedActionRequirements.wallet
+            : (ProtectedActionRequirements.fromStorage(
+                  OnboardingStateService.capabilityScopeSync(prefs),
+                ) ??
+                ProtectedActionRequirements.accountOnly);
         String initialStepId = 'account';
         if (hasSession) {
           if (accountLinkGuardActive && walletAddress.isEmpty) {
@@ -179,8 +189,20 @@ class _EmailVerificationSuccessScreenState
                   profileProvider.nextStructuredOnboardingStepId,
               persona: profileProvider.userPersona?.storageValue,
               flowScopeKey: scopeKey,
+              requirements: scope,
             );
-            initialStepId = resume.nextStepId ?? 'role';
+            if (!resume.requiresStructuredOnboarding) {
+              // The account is verified and nothing else was asked for.
+              await OnboardingStateService.clearPendingAuthOnboarding(
+                prefs: prefs,
+                scopeKey: scopeKey,
+              );
+              await OnboardingStateService.clearCapabilityScope(prefs: prefs);
+              if (!mounted) return;
+              navigator.pushNamedAndRemoveUntil(ShellRoutes.main, (_) => false);
+              return;
+            }
+            initialStepId = resume.nextStepId ?? 'account';
           }
         }
         if (!mounted) return;
@@ -191,6 +213,7 @@ class _EmailVerificationSuccessScreenState
               initialStepId: initialStepId,
               requiresWalletSetup:
                   accountLinkGuardActive && walletAddress.isEmpty,
+              requirements: scope,
             ),
             settings: const RouteSettings(name: '/onboarding'),
           ),

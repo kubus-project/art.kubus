@@ -1,57 +1,43 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:flutter/material.dart';
 
+import '../models/protected_action_requirements.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 
-enum DeferredOnboardingTrigger { navigation, protectedAction }
-
-/// Session-scoped onboarding deferral.
+/// Holds one specific, already-started account journey so it can be resumed
+/// the next time an anonymous visitor attempts an identity-required action.
 ///
-/// When a signed-out user opens the app via a deep link on a first launch,
-/// we let them view the deep-linked content first and defer onboarding until
-/// a later user-driven navigation. Direct public `/map` entries use a separate
-/// protected-action trigger so ordinary map browsing and navigation remain
-/// anonymous until an identity-required action is attempted.
+/// This is the only thing it does. Ordinary navigation never opens onboarding:
+/// a visitor can browse, open public entities, switch tabs and come back to the
+/// map without any account surface replacing the app. The structured journey
+/// appears only when the visitor has genuinely begun one (for example an email
+/// verification that was left pending) and then tries something that needs an
+/// identity.
 class DeferredOnboardingProvider extends ChangeNotifier {
   bool _enabledForSession = false;
-  bool _initialDeepLinkHandled = false;
   bool _presentedThisSession = false;
   String? _initialStepId;
   String? _completionRoute;
-  DeferredOnboardingTrigger? _trigger;
+  ProtectedActionRequirements _requirements =
+      ProtectedActionRequirements.accountOnly;
 
   bool get enabledForSession => _enabledForSession;
-  bool get initialDeepLinkHandled => _initialDeepLinkHandled;
   String? get initialStepId => _initialStepId;
   String? get completionRoute => _completionRoute;
-  DeferredOnboardingTrigger? get trigger => _trigger;
 
-  void enableForDeepLinkColdStart({String? initialStepId}) {
-    final normalizedStep = (initialStepId ?? '').trim();
-    if (_enabledForSession) {
-      if (_initialStepId == null && normalizedStep.isNotEmpty) {
-        _initialStepId = normalizedStep;
-        notifyListeners();
-      }
-      return;
-    }
-    _enabledForSession = true;
-    _initialDeepLinkHandled = false;
-    _presentedThisSession = false;
-    _initialStepId = normalizedStep.isEmpty ? null : normalizedStep;
-    _completionRoute = null;
-    _trigger = DeferredOnboardingTrigger.navigation;
-    notifyListeners();
-  }
-
+  /// Arms the resume for [initialStepId]. Idempotent for the session.
+  ///
+  /// [requirements] is the scope the interrupted journey was started for; the
+  /// resumed flow stays inside it (an account journey ends at the account).
   void enableForProtectedAction({
     String initialStepId = 'account',
     String completionRoute = '/map',
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
   }) {
     final normalizedStep = initialStepId.trim();
     final normalizedRoute = completionRoute.trim();
-    if (_enabledForSession &&
-        _trigger == DeferredOnboardingTrigger.protectedAction) {
+    if (_enabledForSession) {
       var changed = false;
       if (_initialStepId == null && normalizedStep.isNotEmpty) {
         _initialStepId = normalizedStep;
@@ -66,75 +52,26 @@ class DeferredOnboardingProvider extends ChangeNotifier {
     }
 
     _enabledForSession = true;
-    _initialDeepLinkHandled = true;
     _presentedThisSession = false;
     _initialStepId = normalizedStep.isEmpty ? 'account' : normalizedStep;
     _completionRoute = normalizedRoute.isEmpty ? '/map' : normalizedRoute;
-    _trigger = DeferredOnboardingTrigger.protectedAction;
+    _requirements = requirements;
     notifyListeners();
   }
 
-  void markInitialDeepLinkHandled() {
-    if (!_enabledForSession ||
-        _trigger != DeferredOnboardingTrigger.navigation) {
-      return;
-    }
-    if (_initialDeepLinkHandled) return;
-    _initialDeepLinkHandled = true;
-    notifyListeners();
-  }
-
-  /// If onboarding was deferred due to a deep-link cold start, this opens the
-  /// onboarding flow exactly once per session.
+  /// Resumes the armed journey exactly once, when an anonymous visitor first
+  /// attempts an identity-required action.
   ///
   /// Returns true if onboarding navigation was triggered and the caller should
-  /// stop any further navigation (e.g. tab switching).
-  bool maybeShowOnboarding(BuildContext context) {
-    if (!_enabledForSession ||
-        _trigger != DeferredOnboardingTrigger.navigation) {
-      return false;
-    }
-
-    // Only prompt after the initial deep-linked content has been opened.
-    if (!_initialDeepLinkHandled) return false;
-
-    // Guard against repeated prompts due to rebuilds or multiple navigation attempts.
-    if (_presentedThisSession) return false;
-
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
-    final navigator = Navigator.of(context);
-    final initialStepId = _initialStepId;
-
-    _presentedThisSession = true;
-    // Clear the deferral state immediately so subsequent attempts won't re-trigger.
-    // (Onboarding completion persists via OnboardingStateService, not this provider.)
-    reset(keepPresentedFlag: true);
-
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(
-          forceDesktop: isDesktop,
-          initialStepId: initialStepId,
-        ),
-        settings: const RouteSettings(name: '/onboarding'),
-      ),
-    );
-    return true;
-  }
-
-  /// Opens onboarding exactly once when an anonymous public-map visitor first
-  /// attempts an identity-required action.
+  /// stop (the action is resumed from inside the journey).
   bool maybeShowOnboardingForProtectedAction(BuildContext context) {
-    if (!_enabledForSession ||
-        _trigger != DeferredOnboardingTrigger.protectedAction ||
-        _presentedThisSession) {
-      return false;
-    }
+    if (!_enabledForSession || _presentedThisSession) return false;
 
     final isDesktop = DesktopBreakpoints.isDesktop(context);
     final navigator = Navigator.of(context);
     final initialStepId = _initialStepId ?? 'account';
     final completionRoute = _completionRoute ?? '/map';
+    final requirements = _requirements;
 
     _presentedThisSession = true;
     reset(keepPresentedFlag: true);
@@ -145,6 +82,7 @@ class DeferredOnboardingProvider extends ChangeNotifier {
           forceDesktop: isDesktop,
           initialStepId: initialStepId,
           completionRoute: completionRoute,
+          requirements: requirements,
         ),
         settings: const RouteSettings(name: '/onboarding'),
       ),
@@ -154,12 +92,11 @@ class DeferredOnboardingProvider extends ChangeNotifier {
 
   /// Clears the deferral state for the current session.
   void reset({bool keepPresentedFlag = false}) {
-    if (!_enabledForSession && !_initialDeepLinkHandled) return;
+    if (!_enabledForSession) return;
     _enabledForSession = false;
-    _initialDeepLinkHandled = false;
     _initialStepId = null;
     _completionRoute = null;
-    _trigger = null;
+    _requirements = ProtectedActionRequirements.accountOnly;
     if (!keepPresentedFlag) {
       _presentedThisSession = false;
     }

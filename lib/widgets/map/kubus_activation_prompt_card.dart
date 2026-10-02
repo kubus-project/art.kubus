@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/onboarding_completion_navigation.dart';
+import '../../models/protected_action_requirements.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
@@ -113,13 +115,19 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                       await provider.accept();
                       // This is proactive account acquisition, not a legacy
                       // standalone registration detour. Map browsing remains
-                      // public; accepting the invitation starts the shared
-                      // account step and returns here when complete.
+                      // public; accepting the invitation creates an account
+                      // (and verifies its email) and nothing else: no role,
+                      // profile, wallet or permissions. Completion pops back to
+                      // the map the visitor was exploring.
                       await navigator.pushNamed(
                         '/onboarding',
-                        arguments: const <String, Object?>{
+                        arguments: <String, Object?>{
                           'initialStepId': 'account',
                           'completionRoute': '/map',
+                          'requirements': ProtectedActionRequirements
+                              .accountOnly.storageValue,
+                          'completionNavigation': OnboardingCompletionNavigation
+                              .returnToOrigin.storageValue,
                         },
                       );
                     },

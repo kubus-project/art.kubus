@@ -15,6 +15,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     final l10n = AppLocalizations.of(context)!;
     final hub = context.read<CommunityHubProvider>();
     return const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
       returnRoute: '/community',

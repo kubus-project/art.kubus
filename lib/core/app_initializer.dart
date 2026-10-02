@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/protected_action_requirements.dart';
 import '../models/user_persona.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
@@ -60,13 +61,6 @@ class _AppInitializerState extends State<AppInitializer> {
   bool _didNavigate = false;
   String? _serverVersion;
 
-  String get _resolvedShellRoute {
-    return ShellRoutes.resolvePreferredShellRoute(widget.preferredShellRoute);
-  }
-
-  bool get _isDirectPublicMapEntry =>
-      (widget.preferredShellRoute ?? '').trim() == ShellRoutes.map;
-
   Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
     final fetched = await BackendApiService().fetchServerVersion(
       timeout: const Duration(seconds: 3),
@@ -79,10 +73,6 @@ class _AppInitializerState extends State<AppInitializer> {
     setState(() {
       _serverVersion = nextVersion;
     });
-  }
-
-  Map<String, String>? get _signInRedirectArguments {
-    return ShellRoutes.signInRedirectArguments(widget.preferredShellRoute);
   }
 
   ShareDeepLinkTarget? get _pendingShareTarget {
@@ -119,25 +109,89 @@ class _AppInitializerState extends State<AppInitializer> {
     return true;
   }
 
-  Future<bool> _openPreferredPublicMap(NavigatorState navigator) async {
-    if (!_isDirectPublicMapEntry) return false;
-    // Mirror the normal direct-map entry: both map screens suppress automatic
-    // coach marks by reading the guest flag, so it has to be persisted before
-    // the map mounts. Awaited, not fired off, to keep that ordering.
-    //
-    // Bounded, because this helper is itself a fallback: a hung preferences
-    // plugin is one of the reasons the watchdog fires, and the same plugin
-    // backs guest mode. On timeout the visitor may see coach marks, which is
-    // far better than never leaving the loading screen.
-    await _safeStep(
-      'activate guest mode for direct map entry',
-      GuestSessionService.activateGuestMode,
+  /// Opens public discovery for a visitor with no valid session.
+  ///
+  /// Both map screens suppress automatic coach marks by reading the guest flag,
+  /// so for a visitor with no account it has to be persisted before the shell
+  /// mounts. Awaited, not fired off, to keep that ordering, but bounded: this
+  /// is also the degraded-startup fallback, a hung preferences plugin is one of
+  /// the reasons the watchdog fires, and the same plugin backs guest mode. On
+  /// timeout the visitor may see coach marks, which is far better than never
+  /// leaving the loading screen.
+  Future<void> _openPublicDiscovery(
+    NavigatorState navigator, {
+    required bool hasLocalAccount,
+  }) async {
+    final entry = resolveColdStartEntry(
+      preferredShellRoute: widget.preferredShellRoute,
+      hasValidSession: false,
+      hasLocalAccount: hasLocalAccount,
+    );
+    if (entry.activateGuestMode) {
+      await _safeStep(
+        'activate guest mode for public discovery',
+        GuestSessionService.activateGuestMode,
+        timeout: const Duration(seconds: 2),
+      );
+    }
+    if (!mounted || _didNavigate) return;
+    _didNavigate = true;
+    navigator.pushReplacementNamed(entry.shellRoute);
+  }
+
+  /// The safe fallback when startup is already degraded (initialisation threw
+  /// or the watchdog fired). It must never turn a failure into a new wall: an
+  /// anonymous visitor lands in public discovery. The one thing it still
+  /// honours is an account journey the visitor genuinely began (a pending
+  /// email verification, a pending structured journey, an active registration
+  /// or account-link guard), which is read back from preferences, bounded.
+  Future<void> _openDegradedEntry(NavigatorState navigator) async {
+    if (_openPendingPublicTarget(navigator)) return;
+    final prefs = await _safeStep<SharedPreferences>(
+      'SharedPreferences.getInstance (degraded entry)',
+      SharedPreferences.getInstance,
       timeout: const Duration(seconds: 2),
     );
-    if (!mounted || _didNavigate) return true;
-    _didNavigate = true;
-    navigator.pushReplacementNamed(ShellRoutes.map);
-    return true;
+    if (!mounted || _didNavigate) return;
+    if (prefs != null) {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding:
+            OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
+        hasValidSession: false,
+        hasPendingVerificationEmailFlag:
+            prefs.getBool('onboarding_pending_email_verification_v1') ?? false,
+        pendingVerificationEmail:
+            prefs.getString('onboarding_verification_email_v3'),
+        hasActiveGoogleOnboardingGuard: OnboardingStateService
+            .hasActiveGoogleOnboardingRegistrationGuardSync(
+          prefs,
+        ),
+        hasActiveAccountLinkGuard:
+            OnboardingStateService.hasActiveAccountLinkGuardSync(prefs),
+      );
+      if (decision.route == StartupRouteType.onboarding) {
+        _didNavigate = true;
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => OnboardingFlowScreen(
+              forceDesktop: DesktopBreakpoints.isDesktop(navigator.context),
+              initialStepId: decision.onboardingInitialStepId,
+              requirements: ProtectedActionRequirements.fromStorage(
+                    OnboardingStateService.capabilityScopeSync(prefs),
+                  ) ??
+                  ProtectedActionRequirements.accountOnly,
+            ),
+            settings: const RouteSettings(name: '/onboarding'),
+          ),
+        );
+        return;
+      }
+    }
+    await _openPublicDiscovery(
+      navigator,
+      hasLocalAccount:
+          prefs != null && AuthGatingService.hasLocalAccountSync(prefs: prefs),
+    );
   }
 
   @override
@@ -159,17 +213,7 @@ class _AppInitializerState extends State<AppInitializer> {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
     try {
-      if (_openPendingPublicTarget(navigator)) return;
-      if (await _openPreferredPublicMap(navigator)) return;
-      if (!mounted || _didNavigate) return;
-      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
-      _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-          settings: const RouteSettings(name: '/onboarding'),
-        ),
-      );
+      await _openDegradedEntry(navigator);
     } finally {
       AppStartupGate.markReady();
     }
@@ -400,21 +444,14 @@ class _AppInitializerState extends State<AppInitializer> {
           ) ??
           (throw Exception('SharedPreferences unavailable'));
 
-      final onboardingState = await _safeStep<OnboardingState>(
-            'OnboardingStateService.load',
-            () => OnboardingStateService.load(prefs: prefs),
-            timeout: const Duration(seconds: 5),
+      // An interrupted account journey resumes with the narrow scope it was
+      // started for, so recovering it can never widen it into the full
+      // structured flow. A journey with no recorded scope is an account-only
+      // one: role, profile and wallet are only ever requested by an action.
+      final resumeScope = ProtectedActionRequirements.fromStorage(
+            OnboardingStateService.capabilityScopeSync(prefs),
           ) ??
-          (throw Exception('OnboardingState unavailable'));
-
-      // Check user preference for skipping onboarding (defaults to config setting)
-      final userSkipOnboarding =
-          prefs.getBool('skipOnboardingForReturningUsers') ??
-              AppConfig.skipOnboardingForReturningUsers;
-
-      // Check wallet connection status
-      final hasWallet = prefs.getBool('has_wallet') ?? false;
-      final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
+          ProtectedActionRequirements.accountOnly;
       final inMemoryToken = BackendApiService().getAuthToken();
       final sessionStatus = (inMemoryToken != null &&
               inMemoryToken.trim().isNotEmpty &&
@@ -453,29 +490,15 @@ class _AppInitializerState extends State<AppInitializer> {
       }
       final hasLocalAccount =
           AuthGatingService.hasLocalAccountSync(prefs: prefs);
-      final shouldShowFirstRunOnboarding =
-          await AuthGatingService.shouldShowFirstRunOnboarding(
-        prefs: prefs,
-        onboardingState: onboardingState,
-      );
 
-      // Guest-first entry from the marketing funnel (e.g.
-      // app.kubus.site/?mode=guest&intent=discover). Cold visitors who clicked
-      // an ad are not ready for the account/wallet/tutorial onboarding flow, so
-      // we capture their campaign attribution and send them straight to the
-      // map/discovery shell. Only the new guest-entry case is affected; all
-      // existing returning-user / sign-in / onboarding flows are untouched.
+      // Campaign attribution (`?mode=guest&intent=discover`, utm_*) is captured
+      // for every entry. It no longer decides whether the visitor sees
+      // onboarding: guest-first is the default for anyone without a session.
       await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
       final guestEntry = GuestSessionService.isGuestActiveSync(prefs);
       if (guestEntry) {
         unawaited(TelemetryService().trackGuestAppLoaded());
       }
-      final shouldShowSignIn = !hasValidSession &&
-          hasLocalAccount &&
-          AppConfig.enableMultiAuthEntry &&
-          (AppConfig.enableEmailAuth ||
-              AppConfig.enableGoogleAuth ||
-              AppConfig.enableWalletConnect);
       final hasPendingAuthOnboarding =
           OnboardingStateService.hasPendingAuthOnboardingSync(
         prefs,
@@ -506,6 +529,7 @@ class _AppInitializerState extends State<AppInitializer> {
                   profileProvider.nextStructuredOnboardingStepId,
               persona: profileProvider.userPersona?.storageValue,
               flowScopeKey: authOnboardingScopeKey,
+              requirements: resumeScope,
             )
           : const StructuredOnboardingResumeState(
               requiresStructuredOnboarding: false,
@@ -525,34 +549,16 @@ class _AppInitializerState extends State<AppInitializer> {
 
       if (kDebugMode) {
         debugPrint('AppInitializer: flags');
-        debugPrint('  isFirstLaunch: ${onboardingState.isFirstLaunch}');
-        debugPrint('  hasSeenWelcome: ${onboardingState.hasSeenWelcome}');
-        debugPrint('  userSkipOnboarding: $userSkipOnboarding');
-        debugPrint('  hasWallet: $hasWallet');
-        debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
         debugPrint('  hasLocalAccount: $hasLocalAccount');
         debugPrint('  sessionStatus: $sessionStatus');
         debugPrint('  hasPendingAuthOnboarding: $hasPendingAuthOnboarding');
         debugPrint(
             '  pendingAuthOnboardingStepId: ${pendingAuthOnboardingStepId ?? 'none'}');
-        debugPrint(
-            '  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
-        debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
-        debugPrint(
-            '  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
       }
 
       if (!mounted) return;
 
       StartupTrace.mark('route decision ready');
-
-      // Navigate based on user state and configuration
-      final shouldSkipOnboarding = userSkipOnboarding && hasCompletedOnboarding;
-
-      if (kDebugMode) {
-        debugPrint(
-            'AppInitializer: shouldSkipOnboarding=$shouldSkipOnboarding');
-      }
 
       // Detect desktop layout for responsive onboarding
       final isDesktop = DesktopBreakpoints.isDesktop(context);
@@ -572,10 +578,7 @@ class _AppInitializerState extends State<AppInitializer> {
             walletAddress: walletAddress,
           );
       Future<void> maybeStartWarmUp({bool publicRead = false}) {
-        if ((shouldShowSignIn && !publicRead) ||
-            (publicRead && !hasValidSession)) {
-          return Future<void>.value();
-        }
+        if (publicRead && !hasValidSession) return Future<void>.value();
         return startWarmUp();
       }
 
@@ -619,18 +622,26 @@ class _AppInitializerState extends State<AppInitializer> {
       // AppInitializer's navigator context does not have DesktopShellScope.
       final pendingDeepLink = _pendingShareTarget;
       if (pendingDeepLink != null) {
-        // For first-run deep-link cold starts, defer onboarding until users
-        // leave the deep-linked destination (handled in shell navigation).
-        try {
-          if (shouldShowFirstRunOnboarding ||
-              hasPendingAuthOnboarding ||
-              hasActiveOnboardingGuard) {
+        // A public deep link opens its target and stays public: the visitor
+        // can go back, change tab, search and open another entity without any
+        // onboarding replacing the app. Only an account journey they already
+        // started is kept resumable, and only for their next identity-required
+        // action.
+        if (hasPendingAuthOnboarding || hasActiveOnboardingGuard) {
+          try {
             Provider.of<DeferredOnboardingProvider>(context, listen: false)
-                .enableForDeepLinkColdStart(
-              initialStepId: pendingAuthOnboardingStepId,
+                .enableForProtectedAction(
+              initialStepId:
+                  (pendingAuthOnboardingStepId ?? '').trim().isNotEmpty
+                      ? pendingAuthOnboardingStepId!.trim()
+                      : 'account',
+              completionRoute: ShellRoutes.resolvePreferredShellRoute(
+                widget.preferredShellRoute,
+              ),
+              requirements: resumeScope,
             );
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
 
         final decision = const DeepLinkStartupRouting().decide(
           pending: pendingDeepLink,
@@ -709,6 +720,7 @@ class _AppInitializerState extends State<AppInitializer> {
           deferredOnboarding.enableForProtectedAction(
             initialStepId: resumeStep,
             completionRoute: ShellRoutes.map,
+            requirements: resumeScope,
           );
         }
         _didNavigate = true;
@@ -742,6 +754,7 @@ class _AppInitializerState extends State<AppInitializer> {
                   forceDesktop: isDesktop,
                   initialStepId: 'walletConnect',
                   requiresWalletSetup: true,
+                  requirements: ProtectedActionRequirements.wallet,
                 ),
                 settings: const RouteSettings(name: '/onboarding'),
               ),
@@ -755,9 +768,6 @@ class _AppInitializerState extends State<AppInitializer> {
           hasValidSession: hasValidSession,
           hasPendingVerificationEmailFlag: hasPendingVerificationEmail,
           pendingVerificationEmail: pendingVerificationEmail,
-          shouldSkipOnboarding:
-              false, // This branch runs before shouldSkipOnboarding
-          shouldShowSignIn: false,
         );
 
         if (startupDecision.route == StartupRouteType.onboarding) {
@@ -772,6 +782,7 @@ class _AppInitializerState extends State<AppInitializer> {
               builder: (context) => OnboardingFlowScreen(
                 forceDesktop: isDesktop,
                 initialStepId: startupDecision.onboardingInitialStepId,
+                requirements: resumeScope,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
@@ -799,6 +810,7 @@ class _AppInitializerState extends State<AppInitializer> {
               builder: (context) => OnboardingFlowScreen(
                 forceDesktop: isDesktop,
                 initialStepId: pendingAuthOnboardingStepId,
+                requirements: resumeScope,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
@@ -828,6 +840,9 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: initialStepId,
                 requiresWalletSetup:
                     hasActiveAccountLinkGuard && hasValidSession,
+                requirements: hasActiveAccountLinkGuard && hasValidSession
+                    ? ProtectedActionRequirements.wallet
+                    : resumeScope,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
@@ -849,6 +864,7 @@ class _AppInitializerState extends State<AppInitializer> {
               builder: (context) => OnboardingFlowScreen(
                 forceDesktop: isDesktop,
                 initialStepId: pendingAuthOnboardingStepId,
+                requirements: resumeScope,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
@@ -857,67 +873,45 @@ class _AppInitializerState extends State<AppInitializer> {
         }
       }
 
-      if (shouldSkipOnboarding) {
-        // Returning user - skip onboarding and go directly to main app
+      // No explicit intent and no account journey to recover: this is an
+      // ordinary entry. Anonymous visitors (and visitors whose server session
+      // lapsed) land in public discovery; a signed-in visitor keeps the shell
+      // they entered on. Never onboarding, never an alpha notice, never a
+      // sign-in wall.
+      final entry = resolveColdStartEntry(
+        preferredShellRoute: widget.preferredShellRoute,
+        hasValidSession: hasValidSession,
+        hasLocalAccount: hasLocalAccount,
+      );
+      if (!hasValidSession) {
+        if (entry.activateGuestMode) {
+          await GuestSessionService.activateGuestMode(prefs: prefs);
+          // Entry attribution is snapshotted once at telemetry init, so the
+          // guest flag set here would otherwise be missing from later events.
+          unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
+        }
         if (kDebugMode) {
-          debugPrint('AppInitializer: route -> MainApp (skip onboarding)');
+          debugPrint(
+              'AppInitializer: route -> ${entry.shellRoute} (discovery)');
         }
-        // Ensure welcome/first-launch flags are consistent for returning users.
-        await OnboardingStateService.markWelcomeSeen(prefs: prefs);
-
-        unawaited(maybeStartWarmUp());
-        if (!mounted) return;
-        if (shouldShowSignIn) {
-          _didNavigate = true;
-          navigator.pushReplacementNamed(
-            '/sign-in',
-            arguments: _signInRedirectArguments,
-          );
-        } else {
-          _didNavigate = true;
-          navigator.pushReplacementNamed(_resolvedShellRoute);
-        }
-      } else if (shouldShowFirstRunOnboarding && !guestEntry) {
-        // First-time user - show onboarding (no wallet required)
-        await OnboardingStateService.markWelcomeSeen(prefs: prefs);
-        if (kDebugMode) {
-          debugPrint('AppInitializer: route -> OnboardingFlowScreen');
-        }
-        _didNavigate = true;
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => OnboardingFlowScreen(forceDesktop: isDesktop),
-            settings: const RouteSettings(name: '/onboarding'),
-          ),
-        );
-      } else {
-        // Returning user who completed onboarding - go to main app (wallet optional)
-        if (kDebugMode) {
-          debugPrint('AppInitializer: route -> MainApp');
-        }
-        unawaited(maybeStartWarmUp());
         if (!mounted) return;
         _didNavigate = true;
-        navigator.pushReplacementNamed(
-          shouldShowSignIn ? '/sign-in' : _resolvedShellRoute,
-          arguments: shouldShowSignIn ? _signInRedirectArguments : null,
-        );
+        navigator.pushReplacementNamed(entry.shellRoute);
+        return;
       }
+
+      if (kDebugMode) {
+        debugPrint('AppInitializer: route -> ${entry.shellRoute}');
+      }
+      unawaited(maybeStartWarmUp());
+      if (!mounted) return;
+      _didNavigate = true;
+      navigator.pushReplacementNamed(entry.shellRoute);
     } catch (e, st) {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
-      if (_openPendingPublicTarget(navigator)) return;
-      if (await _openPreferredPublicMap(navigator)) return;
-      if (!mounted) return;
-      final isDesktop = DesktopBreakpoints.isDesktop(context);
-      _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-          settings: const RouteSettings(name: '/onboarding'),
-        ),
-      );
+      await _openDegradedEntry(navigator);
     } finally {
       StartupTrace.mark('critical bootstrap end (shell route pushed)');
       _startupWatchdog?.cancel();

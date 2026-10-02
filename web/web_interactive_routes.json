@@ -12,7 +12,6 @@
     { "path": "/map", "group": "finite", "classification": "interactive", "testUrl": "/map?mode=guest&intent=discover&utm_source=meta&utm_medium=paid_social&utm_campaign=map_discovery_test&utm_content=creative_1" },
     { "path": "/community", "group": "finite", "classification": "interactive", "testUrl": "/community" },
     { "path": "/onboarding", "group": "finite", "classification": "interactive", "testUrl": "/onboarding" },
-    { "path": "/onboarding/alpha-notice", "group": "finite", "classification": "interactive", "testUrl": "/onboarding/alpha-notice" },
     { "path": "/post-auth-loading", "group": "finite", "classification": "interactive", "testUrl": "/post-auth-loading" },
 
     { "path": "/home", "group": "finite", "classification": "alias", "testUrl": "/home" },

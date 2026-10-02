@@ -5637,6 +5637,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapMarkerClaimButton.toLowerCase(),
       returnRoute: '/map',
@@ -6183,6 +6184,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapCreateMarkerHereTooltip.toLowerCase(),
       returnRoute: '/map',

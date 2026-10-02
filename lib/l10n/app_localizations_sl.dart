@@ -1961,19 +1961,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus povezuje skupnostni umetniški zemljevid z infrastrukturo javnega kulturnega arhiva.';
 
   @override
-  String get alphaNoticeTitle => 'Vstopaš v art.kubus alpha';
-
-  @override
-  String get alphaNoticeBody =>
-      'Platforma je aktivna, vendar se še razvija. Funkcije, postavitve in interakcije se lahko med razvojem spremenijo. Podatke računov nameravamo ohraniti skozi razvoj platforme, občasne spremembe pa so še vedno mogoče.\n\nV alpha različici ne vnašaj občutljivih ali zasebnih informacij.';
-
-  @override
-  String get alphaNoticeContinue => 'Nadaljuj na uvod';
-
-  @override
-  String get alphaNoticeBackToWebsite => 'Nazaj na spletno stran';
-
-  @override
   String get onboardingExploreTitle => 'Raziskuj odprti zemljevid umetnosti';
 
   @override

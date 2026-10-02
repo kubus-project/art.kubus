@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
+import '../models/protected_action_requirements.dart';
 import 'onboarding_state_service.dart';
 
 class StructuredOnboardingResumeState {
@@ -79,7 +80,21 @@ class AuthOnboardingService {
     required String? persona,
     String? flowScopeKey,
     Map<String, dynamic>? payload,
+    ProtectedActionRequirements? requirements,
   }) async {
+    // A named capability request is the whole of what this authentication was
+    // for. Account creation alone never implies the structured journey: only
+    // the role, profile or wallet step that capability needs can resume.
+    if (requirements != null) {
+      return _resolveScopedResume(
+        requirements: requirements,
+        hasAuthenticatedSession: hasAuthenticatedSession,
+        hasHydratedProfile: hasHydratedProfile,
+        requiresWalletSetup: requiresWalletSetup,
+        persona: persona,
+      );
+    }
+
     final payloadIsNewAccount =
         payload != null && payloadIndicatesNewAccount(payload);
 
@@ -188,6 +203,36 @@ class AuthOnboardingService {
     return StructuredOnboardingResumeState(
       requiresStructuredOnboarding: true,
       nextStepId: hasAuthenticatedSession ? 'role' : 'account',
+    );
+  }
+
+  /// The only step a scoped authentication can still owe: the first of
+  /// role, profile and wallet that the requested capability names and the
+  /// account does not yet have. Null scope or an account-only scope owes none.
+  static StructuredOnboardingResumeState _resolveScopedResume({
+    required ProtectedActionRequirements requirements,
+    required bool hasAuthenticatedSession,
+    required bool hasHydratedProfile,
+    required bool requiresWalletSetup,
+    required String? persona,
+  }) {
+    if (!hasAuthenticatedSession) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: true,
+        nextStepId: 'account',
+      );
+    }
+    String? step;
+    if (requirements.requiresRole && (persona ?? '').trim().isEmpty) {
+      step = 'role';
+    } else if (requirements.requiresProfile && !hasHydratedProfile) {
+      step = 'profile';
+    } else if (requirements.requiresWallet && requiresWalletSetup) {
+      step = 'walletConnect';
+    }
+    return StructuredOnboardingResumeState(
+      requiresStructuredOnboarding: step != null,
+      nextStepId: step,
     );
   }
 

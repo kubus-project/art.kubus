@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -379,15 +380,13 @@ class _AppLauncherState extends State<AppLauncher> {
   Future<void> _initPushNotifications() async {
     const initTimeout = Duration(seconds: 6);
     try {
-      // Initialize push notification service and (optionally) request permission
-      // early so the preference is persisted for subsequent launches.
-      final service = PushNotificationService();
-      await service.initialize().timeout(initTimeout);
-      // On web, requesting Notification permission must be triggered by a user
-      // gesture. Asking during startup produces a browser warning and is ignored.
-      if (!kIsWeb) {
-        await service.requestPermission().timeout(initTimeout);
-      }
+      // Initialise the notification infrastructure only. Startup never asks
+      // for the notification permission: a first-time visitor has not yet seen
+      // anything that notifications would be about. The permission follows
+      // intent: the settings toggle, or the onboarding permissions step a
+      // visitor opts into. (`initialize` reads the current status; it does not
+      // prompt, and on iOS the plugin's own alert/badge/sound requests are off.)
+      await PushNotificationService().initialize().timeout(initTimeout);
       AppConfig.debugPrint('AppLauncher: PushNotificationService initialized.');
     } on TimeoutException catch (e) {
       AppConfig.debugPrint(
@@ -1048,6 +1047,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               redirectArguments: redirectArguments,
               initialEmail: email,
               requiresWalletSetup: args['requiresWalletSetup'] == true,
+              requirements: ProtectedActionRequirements.fromStorage(
+                    args['requirements']?.toString(),
+                  ) ??
+                  ProtectedActionRequirements.accountOnly,
             );
           }
           return const SignInScreen();
@@ -1081,6 +1084,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                 args['completionArguments'],
               ),
               requiresWalletSetup: args['requiresWalletSetup'] == true,
+              requirements: ProtectedActionRequirements.fromStorage(
+                args['requirements']?.toString(),
+              ),
               preferredAuthMethod: PreferredAuthMethod.fromStorage(
                 args['preferredAuthMethod']?.toString(),
               ),

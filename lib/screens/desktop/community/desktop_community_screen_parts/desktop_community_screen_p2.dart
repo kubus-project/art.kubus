@@ -968,6 +968,7 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   Future<void> _requestCreateGroup(ThemeProvider themeProvider) async {
     final hub = context.read<CommunityHubProvider>();
     final allowed = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: AppLocalizations.of(context)!.communityCreateGroupAuthAction,
       returnRoute: '/community',
