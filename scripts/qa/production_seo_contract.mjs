@@ -19,6 +19,8 @@
 //
 // Exits non-zero on any FAIL so it can gate CI and post-deploy verification.
 
+import { artworkLocaleOwner } from './seo_locale_contract.mjs';
+
 const ORIGIN = (process.env.KUBUS_ORIGIN ?? 'https://app.kubus.site').replace(/\/+$/, '');
 const ARTWORK_ID = process.env.KUBUS_ARTWORK_ID ?? '';
 const MISSING_ID = '00000000-0000-0000-0000-000000000000';
@@ -195,8 +197,10 @@ async function main() {
       `/en/artworks/${ARTWORK_ID}`,
       200,
     );
+    let enHtml = '';
     if (entityRes && entityRes.status === 200) {
       const html = await entityRes.text();
+      enHtml = html;
       const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
       record(
         'entity canonical is self-referential',
@@ -216,8 +220,8 @@ async function main() {
       record('entity emits JSON-LD', jsonLd, `json_ld=${jsonLd}`);
     }
 
-    // The Slovenian canonical is a distinct document, not a redirect back to
-    // English, and must point at itself.
+    // The SL route remains a localized 200 document. Under index ownership
+    // policy v1, untranslated artwork content consolidates at its EN owner.
     const slRes = await checkStatus(
       'Slovenian canonical entity renders',
       `/sl/umetnine/${ARTWORK_ID}`,
@@ -226,11 +230,16 @@ async function main() {
     if (slRes && slRes.status === 200) {
       const html = await slRes.text();
       const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
+      const owner = artworkLocaleOwner(enHtml, html,
+        `${ORIGIN}/en/artworks/${ARTWORK_ID}`, `${ORIGIN}/sl/umetnine/${ARTWORK_ID}`);
+      record('artwork locale alternates are reciprocal or untranslated', owner.valid,
+        `translated=${owner.translated}`);
       record(
-        'SL entity canonical is self-referential',
-        canonical === `${ORIGIN}/sl/umetnine/${ARTWORK_ID}`,
+        'SL artwork canonical follows its declared locale owner',
+        canonical === owner.canonical,
         `canonical=${canonical ?? '<absent>'}`,
       );
+      record('SL entity document language', /<html\b[^>]*\blang="sl"/i.test(html));
       const altEn = html.includes(`${ORIGIN}/en/artworks/${ARTWORK_ID}`);
       record('SL entity links EN alternate', altEn, `en_alternate=${altEn}`);
     }
