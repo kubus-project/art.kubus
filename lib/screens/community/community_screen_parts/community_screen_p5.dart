@@ -312,7 +312,8 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                 future: BackendApiService().getPostReposts(postId: post.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: InlineLoading(width: 40, height: 40));
+                    return const Center(
+                        child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -357,7 +358,10 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                            wallet: identity.walletSeed,
+                            wallet: identity.navigationIdentifier ??
+                                identity.username ??
+                                identity.walletSeed,
+                            fetchMissingAvatar: identity.canOpenProfile,
                             avatarUrl: identity.avatarUrl,
                             radius: 20,
                             allowFabricatedFallback: false,

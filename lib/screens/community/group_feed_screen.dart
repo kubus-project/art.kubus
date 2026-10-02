@@ -1154,7 +1154,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         return ListTile(
                           onTap: () => openProfileIdentity(context, identity),
                           leading: AvatarWidget(
-                            wallet: identity.walletSeed,
+                            wallet: identity.navigationIdentifier ??
+                                identity.username ??
+                                identity.walletSeed,
+                            fetchMissingAvatar: identity.canOpenProfile,
                             avatarUrl: identity.avatarUrl,
                             radius: 20,
                             allowFabricatedFallback: true,
@@ -1290,7 +1293,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                          wallet: identity.walletSeed,
+                          wallet: identity.navigationIdentifier ??
+                              identity.username ??
+                              identity.walletSeed,
+                          fetchMissingAvatar: identity.canOpenProfile,
                           avatarUrl: identity.avatarUrl,
                           radius: 20,
                           allowFabricatedFallback: false,
