@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/common/kubus_atmosphere.dart';
 import '../analytics_metric_colors.dart';
 import '../analytics_view_models.dart';
 
@@ -37,18 +38,6 @@ class AnalyticsOverviewGrid extends StatelessWidget {
         if (i != resolvedLeadIndex) cards[i],
     ];
 
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width >= 1200
-        ? 3
-        : width >= 760
-            ? 2
-            : 1;
-    final aspectRatio = width >= 1200
-        ? 3.1
-        : width >= 760
-            ? 3.2
-            : 4.1;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -59,21 +48,44 @@ class AnalyticsOverviewGrid extends StatelessWidget {
         ),
         if (supporting.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.md),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: supporting.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: KubusSpacing.md,
-              mainAxisSpacing: KubusSpacing.md,
-              childAspectRatio: aspectRatio,
-            ),
-            itemBuilder: (context, index) {
-              return _AnalyticsSupportingCard(
-                data: supporting[index],
-                isLoading: isLoading,
-                onTap: () => onMetricSelected(supporting[index].metricId),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = columnsFor(constraints.maxWidth);
+              // Rows are measured, not aspect-ratio cells: each row is as
+              // tall as its tallest tile at the ambient text scale, so 200 %
+              // text grows the row instead of clipping the value.
+              return Column(
+                key: const ValueKey<String>('analytics_supporting_metrics'),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var row = 0;
+                      row * columns < supporting.length;
+                      row++) ...[
+                    if (row > 0) const SizedBox(height: KubusSpacing.md),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var col = 0; col < columns; col++) ...[
+                            if (col > 0) const SizedBox(width: KubusSpacing.md),
+                            Expanded(
+                              child: row * columns + col < supporting.length
+                                  ? _AnalyticsSupportingCard(
+                                      data: supporting[row * columns + col],
+                                      isLoading: isLoading,
+                                      onTap: () => onMetricSelected(
+                                        supporting[row * columns + col]
+                                            .metricId,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               );
             },
           ),
@@ -81,8 +93,87 @@ class AnalyticsOverviewGrid extends StatelessWidget {
       ],
     );
   }
+
+  /// Supporting columns for the space the overview actually gets (not the
+  /// window): three on a wide workspace, two on a medium one, one on a phone.
+  static int columnsFor(double width) => width >= 840
+      ? 3
+      : width >= 520
+          ? 2
+          : 1;
 }
 
+/// Trend direction and period, shared by the lead and supporting cards. The
+/// arrow is the direction (state), the label the magnitude: neither repeats
+/// the metric's identity.
+class _AnalyticsTrend extends StatelessWidget {
+  const _AnalyticsTrend({
+    required this.data,
+    required this.fontSize,
+    this.showSubtitle = false,
+  });
+
+  final AnalyticsOverviewCardData data;
+  final double fontSize;
+  final bool showSubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final trendColor = data.isPositive == null
+        ? scheme.onSurface.withValues(alpha: 0.62)
+        : data.isPositive!
+            ? roles.positiveAction
+            : roles.negativeAction;
+    return Wrap(
+      spacing: KubusSpacing.sm,
+      runSpacing: KubusSpacing.xxs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (data.changeLabel != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (data.isPositive != null) ...[
+                Icon(
+                  data.isPositive!
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
+                  // Tracks the label it qualifies at any text scale.
+                  size: MediaQuery.textScalerOf(context).scale(fontSize + 1),
+                  color: trendColor,
+                ),
+                const SizedBox(width: KubusSpacing.xxs),
+              ],
+              Text(
+                data.changeLabel!,
+                style: KubusTypography.inter(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  color: trendColor,
+                ),
+              ),
+            ],
+          ),
+        if (showSubtitle && data.subtitle != null)
+          Text(
+            data.subtitle!,
+            style: KubusTypography.inter(
+              fontSize: fontSize - 1,
+              color: scheme.onSurface.withValues(alpha: 0.62),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The selected metric. Its identity is expressed once, as the metric's
+/// glyph cropped into the trailing corner; the accent border marks the
+/// selection. Label, value and trend stack in normal flow, clear of the
+/// glyph corner, so a long label or 200 % text grows the card instead of
+/// pushing the value out.
 class _AnalyticsLeadCard extends StatelessWidget {
   const _AnalyticsLeadCard({
     required this.data,
@@ -97,13 +188,36 @@ class _AnalyticsLeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
     final accent = AnalyticsMetricColors.resolve(context, data.metricId);
-    final trendColor = data.isPositive == null
-        ? scheme.onSurface.withValues(alpha: 0.62)
-        : data.isPositive!
-            ? roles.positiveAction
-            : roles.negativeAction;
+    final hasTrend = data.changeLabel != null || data.subtitle != null;
+
+    final label = Text(
+      data.title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: KubusTypography.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurface.withValues(alpha: 0.72),
+      ),
+    );
+    // A number is never ellipsised: wider than the card, it scales down.
+    final value = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: Text(
+        isLoading ? '…' : data.value,
+        maxLines: 1,
+        style: KubusTypography.inter(
+          fontSize: 34,
+          fontWeight: FontWeight.w800,
+          color: scheme.onSurface,
+        ),
+      ),
+    );
+    final trend = hasTrend
+        ? _AnalyticsTrend(data: data, fontSize: 13, showSubtitle: true)
+        : null;
 
     return Semantics(
       button: true,
@@ -112,102 +226,44 @@ class _AnalyticsLeadCard extends StatelessWidget {
         data.title,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.66),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          side: BorderSide(color: accent.withValues(alpha: 0.45)),
+        ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          child: Container(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.66),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(color: accent.withValues(alpha: 0.45)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.30),
-                    ),
-                  ),
-                  child: Icon(data.icon, color: accent, size: 26),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: KubusGhostGlyph(
+                  key: const ValueKey<String>('analytics_lead_glyph'),
+                  icon: data.icon,
+                  color: accent,
+                  alignment: Alignment.bottomRight,
+                  extent: 120,
+                  bleed: 0.34,
                 ),
-                const SizedBox(width: KubusSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface.withValues(alpha: 0.72),
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        isLoading ? '…' : data.value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTypography.inter(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurface,
-                        ),
-                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                // One reading order at every width: label, value, trend.
+                // The trailing corner belongs to the glyph.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    label,
+                    const SizedBox(height: KubusSpacing.xs),
+                    value,
+                    if (trend != null) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      trend,
                     ],
-                  ),
+                  ],
                 ),
-                if (data.changeLabel != null || data.subtitle != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (data.changeLabel != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (data.isPositive != null)
-                              Icon(
-                                data.isPositive!
-                                    ? Icons.arrow_upward_rounded
-                                    : Icons.arrow_downward_rounded,
-                                size: 14,
-                                color: trendColor,
-                              ),
-                            const SizedBox(width: KubusSpacing.xxs),
-                            Text(
-                              data.changeLabel!,
-                              style: KubusTypography.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: trendColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      if (data.subtitle != null) ...[
-                        const SizedBox(height: KubusSpacing.xxs),
-                        Text(
-                          data.subtitle!,
-                          style: KubusTypography.inter(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.62),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -215,6 +271,9 @@ class _AnalyticsLeadCard extends StatelessWidget {
   }
 }
 
+/// A metric that can be promoted to the lead. Its colour appears once, as
+/// the legend key before the label (the colour of its chart series); there
+/// is no icon tile. Hover answers with the border only.
 class _AnalyticsSupportingCard extends StatefulWidget {
   const _AnalyticsSupportingCard({
     required this.data,
@@ -234,16 +293,15 @@ class _AnalyticsSupportingCard extends StatefulWidget {
 class _AnalyticsSupportingCardState extends State<_AnalyticsSupportingCard> {
   bool _hovered = false;
 
+  static const double _labelSize = 12;
+  static const double _labelHeight = 1.3;
+  static const double _keySize = 8;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final trendColor = widget.data.isPositive == null
-        ? scheme.onSurface.withValues(alpha: 0.62)
-        : widget.data.isPositive!
-            ? roles.positiveAction
-            : roles.negativeAction;
     final accent = AnalyticsMetricColors.resolve(context, widget.data.metricId);
+    final scaler = MediaQuery.textScalerOf(context);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -262,6 +320,7 @@ class _AnalyticsSupportingCardState extends State<_AnalyticsSupportingCard> {
             borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
+              constraints: const BoxConstraints(minHeight: 44),
               padding: const EdgeInsets.symmetric(
                 horizontal: KubusSpacing.md,
                 vertical: KubusSpacing.sm + KubusSpacing.xs,
@@ -277,57 +336,70 @@ class _AnalyticsSupportingCardState extends State<_AnalyticsSupportingCard> {
                       : scheme.outline.withValues(alpha: 0.12),
                 ),
               ),
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                    child: Icon(widget.data.icon, color: accent, size: 18),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Centred on the label's first line at any text scale.
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: (scaler.scale(_labelSize) * _labelHeight -
+                                  _keySize) /
+                              2,
+                        ),
+                        child: Container(
+                          key: const ValueKey<String>('analytics_metric_key'),
+                          width: _keySize,
+                          height: _keySize,
+                          decoration: BoxDecoration(
+                            color: accent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Expanded(
+                        child: Text(
                           widget.data.title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: KubusTypography.inter(
-                            fontSize: 12,
+                            fontSize: _labelSize,
+                            height: _labelHeight,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurface.withValues(alpha: 0.72),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.isLoading ? '…' : widget.data.value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTypography.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: KubusSpacing.xs),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            widget.isLoading ? '…' : widget.data.value,
+                            maxLines: 1,
+                            style: KubusTypography.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  if (widget.data.changeLabel != null)
-                    Text(
-                      widget.data.changeLabel!,
-                      maxLines: 1,
-                      style: KubusTypography.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: trendColor,
                       ),
-                    ),
+                      if (widget.data.changeLabel != null) ...[
+                        const SizedBox(width: KubusSpacing.sm),
+                        _AnalyticsTrend(data: widget.data, fontSize: 11),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -93,7 +93,9 @@ void main() {
     final leadWidth = tester.getSize(find.text('7')).width +
         tester.getTopLeft(find.text('7')).dx;
     expect(leadWidth, lessThanOrEqualTo(900));
-    final gridFinder = find.byType(GridView);
-    expect(gridFinder, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('analytics_supporting_metrics')),
+      findsOneWidget,
+    );
   });
 }
