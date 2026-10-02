@@ -24,6 +24,7 @@ class DeferredOnboardingProvider extends ChangeNotifier {
   bool get enabledForSession => _enabledForSession;
   String? get initialStepId => _initialStepId;
   String? get completionRoute => _completionRoute;
+  ProtectedActionRequirements get requirements => _requirements;
 
   /// Arms the resume for [initialStepId]. Idempotent for the session.
   ///

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
-import 'onboarding_state_service.dart';
 
 enum StoredSessionStatus {
   valid,
@@ -123,20 +122,5 @@ class AuthGatingService {
     }
 
     return StoredSessionStatus.invalid;
-  }
-
-  static Future<bool> shouldShowFirstRunOnboarding({
-    SharedPreferences? prefs,
-    OnboardingState? onboardingState,
-  }) async {
-    final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
-    final localAccount = hasLocalAccountSync(prefs: resolvedPrefs);
-    if (localAccount) return false;
-
-    final state = onboardingState ??
-        await OnboardingStateService.load(prefs: resolvedPrefs);
-    return state.isFirstLaunch &&
-        !state.hasSeenWelcome &&
-        !state.hasCompletedOnboarding;
   }
 }

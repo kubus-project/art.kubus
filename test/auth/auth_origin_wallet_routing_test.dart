@@ -31,7 +31,7 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('new wallet user routes to onboarding with wallet origin', () async {
+  test('new wallet user stops at the account with wallet origin', () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
       prefs: prefs,
@@ -45,9 +45,9 @@ void main() {
       userId: 'user-wallet-2',
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'role');
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+    expect(result.onboardingStepId, isNull);
   });
 
   test('wallet auth with redirect route honored', () async {

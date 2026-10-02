@@ -1,49 +1,87 @@
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/providers/deferred_onboarding_provider.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('deep-link deferral retains the onboarding continuation step', () {
-    final provider = DeferredOnboardingProvider();
+  group('DeferredOnboardingProvider (protected-action resume only)', () {
+    test('is idle until a journey is explicitly armed', () {
+      final provider = DeferredOnboardingProvider();
 
-    provider.enableForDeepLinkColdStart(initialStepId: 'walletConnect');
-    provider.markInitialDeepLinkHandled();
+      expect(provider.enabledForSession, isFalse);
+      expect(provider.initialStepId, isNull);
+      expect(provider.completionRoute, isNull);
+    });
 
-    expect(provider.enabledForSession, isTrue);
-    expect(provider.initialDeepLinkHandled, isTrue);
-    expect(provider.initialStepId, 'walletConnect');
-  });
+    test('arming records the step, return route and account-only scope', () {
+      final provider = DeferredOnboardingProvider();
 
-  test('later onboarding context can enrich an existing deferral', () {
-    final provider = DeferredOnboardingProvider();
+      provider.enableForProtectedAction(
+        initialStepId: 'account',
+        completionRoute: '/map',
+      );
 
-    provider.enableForDeepLinkColdStart();
-    provider.enableForDeepLinkColdStart(initialStepId: 'account');
+      expect(provider.enabledForSession, isTrue);
+      expect(provider.initialStepId, 'account');
+      expect(provider.completionRoute, '/map');
+      expect(provider.requirements, ProtectedActionRequirements.accountOnly);
+    });
 
-    expect(provider.initialStepId, 'account');
-  });
+    test('keeps the capability scope the journey was started for', () {
+      final provider = DeferredOnboardingProvider();
 
-  test('public map defers onboarding until a protected action', () {
-    final provider = DeferredOnboardingProvider();
+      provider.enableForProtectedAction(
+        initialStepId: 'walletConnect',
+        requirements: ProtectedActionRequirements.wallet,
+      );
 
-    provider.enableForProtectedAction(
-      initialStepId: 'account',
-      completionRoute: '/map',
-    );
+      expect(provider.initialStepId, 'walletConnect');
+      expect(provider.requirements, ProtectedActionRequirements.wallet);
+    });
 
-    expect(provider.enabledForSession, isTrue);
-    expect(provider.initialDeepLinkHandled, isTrue);
-    expect(provider.trigger, DeferredOnboardingTrigger.protectedAction);
-    expect(provider.initialStepId, 'account');
-    expect(provider.completionRoute, '/map');
-  });
+    test('arming twice is idempotent and never widens the scope', () {
+      final provider = DeferredOnboardingProvider();
 
-  test('deep-link navigation does not override public map action deferral', () {
-    final provider = DeferredOnboardingProvider();
+      provider.enableForProtectedAction(initialStepId: 'verifyEmail');
+      provider.enableForProtectedAction(
+        initialStepId: 'account',
+        requirements: ProtectedActionRequirements.wallet,
+      );
 
-    provider.enableForProtectedAction();
-    provider.markInitialDeepLinkHandled();
+      expect(provider.initialStepId, 'verifyEmail');
+      expect(provider.requirements, ProtectedActionRequirements.accountOnly);
+    });
 
-    expect(provider.trigger, DeferredOnboardingTrigger.protectedAction);
-    expect(provider.completionRoute, '/map');
+    test('reset clears the armed journey', () {
+      final provider = DeferredOnboardingProvider();
+
+      provider.enableForProtectedAction();
+      provider.reset();
+
+      expect(provider.enabledForSession, isFalse);
+      expect(provider.initialStepId, isNull);
+      expect(provider.completionRoute, isNull);
+      expect(provider.requirements, ProtectedActionRequirements.accountOnly);
+    });
+
+    testWidgets('an idle provider never navigates on ordinary use',
+        (tester) async {
+      final provider = DeferredOnboardingProvider();
+      var shown = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              shown = provider.maybeShowOnboardingForProtectedAction(context);
+              return const Scaffold(body: Text('public discovery'));
+            },
+          ),
+        ),
+      );
+
+      expect(shown, isFalse);
+      expect(find.text('public discovery'), findsOneWidget);
+    });
   });
 }

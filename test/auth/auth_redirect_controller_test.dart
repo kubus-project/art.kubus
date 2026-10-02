@@ -1,4 +1,5 @@
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
@@ -30,7 +31,7 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('new Google user routes to structured onboarding, not password setup',
+  test('new Google user stops at the account: no role picker, no password setup',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -45,13 +46,45 @@ void main() {
       userId: 'user-2',
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'role');
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+    expect(result.onboardingStepId, isNull);
     expect(result.routeName, isNot(contains('password')));
   });
 
-  test('Google onboarding requiring wallet setup routes to wallet security',
+  test('a profile-scoped action owes only the profile step', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{'isNewUser': true},
+      hasHydratedProfile: false,
+      requiresWalletBackup: false,
+      userId: 'user-3',
+      requirements: ProtectedActionRequirements.participant,
+    );
+
+    expect(result.state, PostAuthRouteState.onboardingRequired);
+    expect(result.routeName, '/onboarding');
+    expect(result.onboardingStepId, 'profile');
+    expect(result.requirements, ProtectedActionRequirements.participant);
+  });
+
+  test('a creator-scoped action owes the role before anything else', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{'isNewUser': true},
+      hasHydratedProfile: false,
+      requiresWalletBackup: false,
+      userId: 'user-4',
+      requirements: ProtectedActionRequirements.creator,
+    );
+
+    expect(result.state, PostAuthRouteState.onboardingRequired);
+    expect(result.onboardingStepId, 'role');
+  });
+
+  test('Google onboarding that signalled wallet setup still ends at the account',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -70,12 +103,37 @@ void main() {
       origin: AuthOrigin.googleOnboarding,
     );
 
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.onboardingStepId, isNull);
+  });
+
+  test('a wallet-scoped action routes a walletless Google account to wallet setup',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{
+        'data': <String, dynamic>{
+          'requiresWalletSetup': true,
+          'isNewUser': true,
+          'user': <String, dynamic>{'id': 'google-user-no-wallet'},
+        },
+      },
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      walletAddress: null,
+      userId: 'google-user-no-wallet',
+      origin: AuthOrigin.googleOnboarding,
+      requirements: ProtectedActionRequirements.wallet,
+    );
+
     expect(result.state, PostAuthRouteState.onboardingRequired);
     expect(result.routeName, '/onboarding');
     expect(result.onboardingStepId, 'walletConnect');
+    expect(result.requirements, ProtectedActionRequirements.wallet);
   });
 
-  test('standalone Google sign-in without wallet routes to wallet setup',
+  test('standalone Google sign-in without a wallet is not asked for one',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -93,12 +151,11 @@ void main() {
       origin: AuthOrigin.google,
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'walletConnect');
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
   });
 
-  test('standalone email sign-in without wallet routes to wallet setup',
+  test('standalone email sign-in without a wallet is not asked for one',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -112,8 +169,26 @@ void main() {
       origin: AuthOrigin.emailPassword,
     );
 
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+  });
+
+  test('a wallet-scoped email sign-in without a wallet routes to wallet setup',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: const <String, dynamic>{},
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      requiresWalletSetup: true,
+      walletAddress: null,
+      userId: 'email-user-no-wallet',
+      origin: AuthOrigin.emailPassword,
+      requirements: ProtectedActionRequirements.wallet,
+    );
+
     expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.routeName, '/onboarding');
     expect(result.onboardingStepId, 'walletConnect');
   });
 
@@ -239,7 +314,8 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('new creator wallet user can enter dao review onboarding', () async {
+  test('a new creator wallet user is not sent to dao review by authentication',
+      () async {
     final prefs = await SharedPreferences.getInstance();
 
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -253,11 +329,12 @@ void main() {
       origin: AuthOrigin.wallet,
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.onboardingStepId, 'daoReview');
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.onboardingStepId, isNull);
   });
 
-  test('pending scoped dao review still resumes for matching wallet', () async {
+  test('an interrupted journey resumes only the capability it was scoped to',
+      () async {
     final prefs = await SharedPreferences.getInstance();
     const wallet = 'wallet-pending';
     final scope = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -288,8 +365,10 @@ void main() {
       origin: AuthOrigin.wallet,
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.onboardingStepId, 'daoReview');
+    // The account-only scope owes nothing past the account: a leftover DAO
+    // review heuristic must not resurface as an unrequested step.
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.onboardingStepId, isNull);
   });
 
   test('pending onboarding for wallet A does not affect wallet B', () async {

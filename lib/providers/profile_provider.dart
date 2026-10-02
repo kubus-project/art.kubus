@@ -390,9 +390,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return prefs.getBool(_personaOnboardedKeyForWallet(wallet)) ?? false;
   }
 
-  /// Whether we should prompt the user to choose a UX persona.
+  /// Whether this wallet has neither a persona nor a recorded reconciliation.
   ///
-  /// This is shown once per wallet/profile and is not an access control gate.
+  /// Nothing prompts on this any more: a role is requested only by an action
+  /// that needs one, or chosen voluntarily from settings. It remains the
+  /// condition under which an established account's persona is inferred silently
+  /// from an approved DAO review.
   bool get needsPersonaOnboarding {
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return false;
