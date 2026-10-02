@@ -163,8 +163,7 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('inline: title and arrow, no destination icon',
-        (tester) async {
+    testWidgets('inline: title and arrow, no destination icon', (tester) async {
       await tester.pumpWidget(_app(Align(
         alignment: Alignment.topLeft,
         child: _tile('Map'),
