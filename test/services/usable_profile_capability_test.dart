@@ -1,5 +1,4 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';

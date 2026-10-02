@@ -231,6 +231,11 @@ function known(record, name, ok, detail = '') {
   record.known.push({ name, ok: Boolean(ok), detail });
 }
 
+/** Slovene is reached the way a visitor reaches it: the locale-prefixed launch URL. */
+const isSl = (record) => record.locale.startsWith('sl');
+const entityPathFor = (record) =>
+  isSl(record) ? `/sl/umetnine/${artworkId}` : `/en/artworks/${artworkId}`;
+
 const pathOf = (page) => new URL(page.url()).pathname;
 const trace = async (page, record, step) => {
   record.trace = record.trace || [];
@@ -276,8 +281,8 @@ async function freshEntry(page, route, tag, record) {
 }
 
 async function scenarioFresh(page, tag, record) {
-  for (const route of ['/', '/main', '/map']) {
-    const slug = route === '/' ? 'root' : route.slice(1);
+  for (const route of isSl(record) ? ['/sl', '/map'] : ['/', '/main', '/map']) {
+    const slug = route === '/' ? 'root' : route.replace(/^[/]/, '').replace(/[/]/g, '-');
     await page.context().clearCookies();
     await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch {} }).catch(() => {});
     await freshEntry(page, route, `${tag}-fresh-${slug}`, record);
@@ -285,7 +290,7 @@ async function scenarioFresh(page, tag, record) {
 }
 
 async function scenarioEntity(page, tag, record) {
-  const entityPath = `/en/artworks/${artworkId}`;
+  const entityPath = entityPathFor(record);
   await freshEntry(page, entityPath, `${tag}-entity`, record);
   const entered = pathOf(page);
   check(record, `${tag}: public entity URL is kept exactly`, entered === entityPath, entered);
@@ -375,8 +380,12 @@ async function clickByName(page, name) {
 }
 
 async function scenarioAction(page, tag, record) {
-  const entityPath = `/en/artworks/${artworkId}`;
+  const entityPath = entityPathFor(record);
   await freshEntry(page, entityPath, `${tag}-action`, record);
+  if (isSl(record)) {
+    const slText = textOf(await semantics(page));
+    check(record, `${tag}: the entity renders in Slovene`, /(shrani|všeč|komentar|prikaži na zemljevidu)/i.test(slText), slText.slice(0, 160));
+  }
 
   const found = await scrollToControl(page, SAVE_RX);
   const clicked = found && (await clickByName(page, SAVE_RX));
