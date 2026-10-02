@@ -216,8 +216,8 @@ async function main() {
       record('entity emits JSON-LD', jsonLd, `json_ld=${jsonLd}`);
     }
 
-    // The Slovenian canonical is a distinct document, not a redirect back to
-    // English, and must point at itself.
+    // The SL route remains a localized 200 document. Under index ownership
+    // policy v1, untranslated artwork content consolidates at its EN owner.
     const slRes = await checkStatus(
       'Slovenian canonical entity renders',
       `/sl/umetnine/${ARTWORK_ID}`,
@@ -227,10 +227,11 @@ async function main() {
       const html = await slRes.text();
       const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
       record(
-        'SL entity canonical is self-referential',
-        canonical === `${ORIGIN}/sl/umetnine/${ARTWORK_ID}`,
+        'SL artwork canonical follows the EN index owner',
+        canonical === `${ORIGIN}/en/artworks/${ARTWORK_ID}`,
         `canonical=${canonical ?? '<absent>'}`,
       );
+      record('SL entity document language', /<html\b[^>]*\blang="sl"/i.test(html));
       const altEn = html.includes(`${ORIGIN}/en/artworks/${ARTWORK_ID}`);
       record('SL entity links EN alternate', altEn, `en_alternate=${altEn}`);
     }
