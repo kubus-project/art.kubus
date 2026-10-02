@@ -134,10 +134,14 @@ identifiers all return the same safe 404 and disclose no existence information.
 
 ## Localization and discovery
 
-Each localized document sets `html[lang]`, a same-language canonical, reciprocal
-English/Slovenian alternates, and English `x-default`. Stored localized fields
-are used when present. Missing translations fall back to the existing public
-source text without claiming machine translation.
+Each localized document sets `html[lang]`. Under the backend's index ownership
+policy v1, genuinely translated content uses same-language canonicals,
+reciprocal English/Slovenian alternates, and English `x-default`. Untranslated
+Slovenian entity routes remain usable with HTTP 200 and canonicalize to the
+English owner without locale alternates. Missing translations use the existing
+public source text without claiming machine translation. The production smoke
+derives the expected owner from the renderer's reciprocal alternate declarations
+and rejects partial or mismatched declarations.
 
 Public collection hubs use real links, paginated canonical URLs, and become
 `noindex, follow` when empty. Supported artist, institution, artwork, event,
