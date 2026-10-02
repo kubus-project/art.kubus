@@ -28,9 +28,17 @@ class ArtistBadge extends StatelessWidget {
     final textColor =
         useOnPrimary ? colorScheme.onPrimary : colorScheme.onSurface;
 
-    // Icon-only mode: just show the icon without text or background container
+    final label = AppLocalizations.of(context)!.badgeArtistLabel;
+
+    // Icon-only mode (dense headers): the glyph is the role's only
+    // expression, so it carries the role name for screen readers.
     if (iconOnly) {
-      return Icon(Icons.brush_rounded, size: fontSize + 4, color: accent);
+      return Semantics(
+        label: label,
+        child: ExcludeSemantics(
+          child: Icon(Icons.brush_rounded, size: fontSize + 4, color: accent),
+        ),
+      );
     }
 
     return Container(
@@ -40,21 +48,16 @@ class ArtistBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(color: accent.withValues(alpha: 0.6)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.brush_rounded, size: fontSize + 4, color: accent),
-          const SizedBox(width: KubusSpacing.xs),
-          Text(
-            AppLocalizations.of(context)!.badgeArtistLabel.toUpperCase(),
-            style: KubusTextStyles.compactBadge.copyWith(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
+      // The role word and its colour are the badge; a glyph beside the word
+      // would only say the role twice.
+      child: Text(
+        label.toUpperCase(),
+        style: KubusTextStyles.compactBadge.copyWith(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }

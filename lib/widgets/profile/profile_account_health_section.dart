@@ -76,23 +76,15 @@ class _ProfileAccountHealthSectionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (anyVisible) ...[
-          Row(
-            children: [
-              Icon(
-                Icons.health_and_safety_outlined,
-                size: 16,
-                color: scheme.onSurface.withValues(alpha: 0.62),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Text(
-                l10n.profileAccountHealthTitle,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface.withValues(alpha: 0.72),
-                ),
-              ),
-            ],
+          // A typographic label: each notice below carries its own state
+          // icon, so a shield here would only repeat "security".
+          Text(
+            l10n.profileAccountHealthTitle,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface.withValues(alpha: 0.72),
+            ),
           ),
           const SizedBox(height: KubusSpacing.sm),
         ],

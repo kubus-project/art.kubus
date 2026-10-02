@@ -1324,12 +1324,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           )
         else if (_artistArtworks.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.image_outlined,
-              title: l10n.userProfileNoCreatorContentTitle,
-              description: l10n.userProfileNoArtistContentDescription,
-            ),
+          EmptyStateCard(
+            icon: Icons.image_outlined,
+            title: l10n.userProfileNoCreatorContentTitle,
+            description: l10n.userProfileNoArtistContentDescription,
           )
         else
           SizedBox(
@@ -1368,12 +1366,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           )
         else if (_artistCollections.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.collections_outlined,
-              title: l10n.userProfileNoCollectionsTitle,
-              description: l10n.userProfileNoCollectionsYetLabel(labelName),
-            ),
+          EmptyStateCard(
+            icon: Icons.collections_outlined,
+            title: l10n.userProfileNoCollectionsTitle,
+            description: l10n.userProfileNoCollectionsYetLabel(labelName),
           )
         else
           SizedBox(
@@ -1409,12 +1405,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           )
         else if (_artistArtworks.isEmpty && _artistCollections.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.museum_outlined,
-              title: l10n.userProfileNoCreatorContentTitle,
-              description: l10n.userProfileNoInstitutionContentDescription,
-            ),
+          EmptyStateCard(
+            icon: Icons.museum_outlined,
+            title: l10n.userProfileNoCreatorContentTitle,
+            description: l10n.userProfileNoInstitutionContentDescription,
           )
         else
           Column(
@@ -1581,23 +1575,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           )
         else if (_postsError != null)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.cloud_off,
-              title: l10n.userProfilePostsLoadFailedTitle,
-              description: _postsError!,
-              showAction: true,
-              actionLabel: l10n.commonRetry,
-              onAction: _loadPosts,
-            ),
+          EmptyStateCard(
+            icon: Icons.cloud_off,
+            title: l10n.userProfilePostsLoadFailedTitle,
+            description: _postsError!,
+            showAction: true,
+            actionLabel: l10n.commonRetry,
+            onAction: _loadPosts,
           )
         else if (_posts.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              title: l10n.userProfileNoPostsTitle,
-              description: l10n.userProfileNoPostsDescription(user!.name),
-              icon: Icons.article,
-            ),
+          EmptyStateCard(
+            title: l10n.userProfileNoPostsTitle,
+            description: l10n.userProfileNoPostsDescription(user!.name),
+            icon: Icons.article,
           )
         else
           Column(
