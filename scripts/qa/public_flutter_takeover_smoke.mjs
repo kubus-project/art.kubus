@@ -205,6 +205,12 @@ async function verifyBrowser(
     });
   }
   const consoleErrors = [];
+  const httpFailures = [];
+  page.on('response', (response) => {
+    if (response.status() < 400) return;
+    const url = new URL(response.url());
+    httpFailures.push({ status: response.status(), url: url.origin + url.pathname });
+  });
   const externalBeaconCspErrors = [];
   const failedRequests = [];
   page.on('console', (message) => {
@@ -280,7 +286,7 @@ async function verifyBrowser(
       failedRequests,
       optionalStandbyProbeUrl,
     });
-    ensure(failures.criticalConsoleErrors.length === 0, `${browserLabel} console errors: ${failures.criticalConsoleErrors.join(' | ')}`);
+    ensure(failures.criticalConsoleErrors.length === 0, `${browserLabel} console errors: ${failures.criticalConsoleErrors.join(' | ')}; HTTP failures: ${JSON.stringify(httpFailures)}`);
     ensure(failures.criticalFailedRequests.length === 0, `${browserLabel} failed requests: ${JSON.stringify(failures.criticalFailedRequests)}`);
     return {
       browser: browserName,
