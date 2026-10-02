@@ -1583,7 +1583,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Most people finish this in about 2 minutes.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Create your profile first';
+  String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
   String get onboardingFlowAccountBody =>
@@ -1949,19 +1949,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingWelcomeDescription =>
       'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.';
-
-  @override
-  String get alphaNoticeTitle => 'You are entering the art.kubus alpha';
-
-  @override
-  String get alphaNoticeBody =>
-      'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.';
-
-  @override
-  String get alphaNoticeContinue => 'Continue to onboarding';
-
-  @override
-  String get alphaNoticeBackToWebsite => 'Back to website';
 
   @override
   String get onboardingExploreTitle => 'Explore the open art map';

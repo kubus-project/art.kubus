@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/post_auth_coordinator.dart';
@@ -23,6 +24,8 @@ class _FailingPostAuthCoordinator extends PostAuthCoordinator {
     bool modalReauth = false,
     bool requiresWalletBackup = false,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {
@@ -57,6 +60,8 @@ class _BlockingPostAuthCoordinator extends PostAuthCoordinator {
     bool modalReauth = false,
     bool requiresWalletBackup = false,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {

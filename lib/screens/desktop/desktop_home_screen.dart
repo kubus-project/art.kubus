@@ -517,11 +517,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         return CommunityLocation(lat: 46.05, lng: 14.50);
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
+      // Only use the visitor's position when they have already granted it.
+      // Opening Home must never raise an OS location prompt: location is asked
+      // for when the visitor taps my location / nearby, not by a feed loading.
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
         return CommunityLocation(lat: 46.05, lng: 14.50);

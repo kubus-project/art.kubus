@@ -194,6 +194,7 @@ class KubusMapController {
     this.onSelectionChanged,
     this.onAutoFollowChanged,
     this.onBackgroundTap,
+    this.onUserMarkerInteraction,
     this.onRequestMarkerLayerStyleUpdate,
     this.onRequestMarkerDataSync,
     this.onMarkerOverlayAcknowledged,
@@ -226,6 +227,13 @@ class KubusMapController {
   /// Screens can use this to close side panels / overlays that are not owned
   /// by this controller.
   final VoidCallback? onBackgroundTap;
+
+  /// Called when the *user* tapped a marker, cluster or same-location group on
+  /// the map: the web feature-tap path and the native hit-test path. Never
+  /// called for programmatic selection (deep-link targets, search) or for a
+  /// click that web suppresses because its feature tap already handled it, so
+  /// it is a deliberate-interaction signal and cannot double-count.
+  final VoidCallback? onUserMarkerInteraction;
 
   /// Called when pressed/hover/selection changes and the screen should restyle marker layers.
   final VoidCallback? onRequestMarkerLayerStyleUpdate;
@@ -954,6 +962,15 @@ class KubusMapController {
   bool _isFiniteScreenPoint(math.Point<double> point) =>
       point.x.isFinite && point.y.isFinite;
 
+  /// Test seam for the web-only MapLibre feature-tap callback.
+  @visibleForTesting
+  void debugHandleMapFeatureTapped(
+    dynamic point,
+    dynamic coordinates,
+    dynamic id,
+  ) =>
+      _handleMapFeatureTapped(point, coordinates, id, null, null);
+
   /// Web only: invoked via MapLibre's onFeatureTapped.
   void _handleMapFeatureTapped(
     dynamic point,
@@ -975,6 +992,7 @@ class KubusMapController {
     _lastFeatureTapAt = DateTime.now();
     _lastFeatureTapPoint = tapPoint;
     _debugFeatureTapCount += 1;
+    onUserMarkerInteraction?.call();
 
     if (featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
       final coordinateKey =
@@ -1084,10 +1102,10 @@ class KubusMapController {
     math.Point<double> point, {
     required bool isWeb,
   }) async {
-    final controller = _mapController;
-    if (controller == null) return;
     if (!_isFiniteScreenPoint(point)) return;
 
+    // The suppressed click after a web feature tap, and the web background
+    // tap, need no native map controller: neither is a marker interaction.
     if (MapTapGating.shouldIgnoreMapClickAfterFeatureTap(
       lastFeatureTapAt: _lastFeatureTapAt,
       lastFeatureTapPoint: _lastFeatureTapPoint,
@@ -1105,10 +1123,14 @@ class KubusMapController {
       return;
     }
 
+    final controller = _mapController;
+    if (controller == null) return;
+
     // If style isn't ready, try a best-effort fallback pick.
     if (_styleInitializationInProgress || !_styleInitialized) {
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback != null) {
+        onUserMarkerInteraction?.call();
         final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
         selectMarker(stack.first, stackedMarkers: stack);
       }
@@ -1118,6 +1140,7 @@ class KubusMapController {
     if (!await _canQueryMarkerHitbox(forceRefresh: true)) {
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback != null) {
+        onUserMarkerInteraction?.call();
         final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
         selectMarker(stack.first, stackedMarkers: stack);
       }
@@ -1149,6 +1172,7 @@ class KubusMapController {
       final propsRaw = first is Map ? first['properties'] : null;
       final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
       final kind = props['kind']?.toString();
+      onUserMarkerInteraction?.call();
 
       if (kind == 'cluster') {
         final coordinateKey = props['sameCoordinateKey']?.toString();
@@ -1194,6 +1218,7 @@ class KubusMapController {
 
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback == null) return;
+      onUserMarkerInteraction?.call();
       final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
       selectMarker(stack.first, stackedMarkers: stack);
     }

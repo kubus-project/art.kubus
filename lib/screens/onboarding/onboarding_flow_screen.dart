@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/onboarding_completion_navigation.dart';
 import 'package:art_kubus/models/preferred_auth_method.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
@@ -15,7 +16,6 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
-import 'package:art_kubus/services/alpha_notice_service.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -41,7 +41,6 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import 'package:art_kubus/widgets/onboarding/alpha_notice_dialog.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
@@ -179,6 +178,7 @@ class OnboardingFlowScreen extends StatefulWidget {
     this.completionArguments,
     this.requiresWalletSetup = false,
     this.preferredAuthMethod,
+    this.requirements,
     this.completionNavigation =
         OnboardingCompletionNavigation.replaceWithDestination,
   });
@@ -191,6 +191,18 @@ class OnboardingFlowScreen extends StatefulWidget {
   /// Wallet capability is requested by the originating protected action.
   /// Account creation itself must not silently turn this on.
   final bool requiresWalletSetup;
+
+  /// The capability the originating action actually needs. When set, the
+  /// account journey presents only the steps that capability requires and
+  /// returns to the origin the moment they are done: an account-only action
+  /// stops after the account (and its email verification), and never walks on
+  /// into role, profile, wallet, DAO review or permissions.
+  ///
+  /// When null the flow is the complete structured journey, which remains
+  /// available as an explicit, voluntary entry (`/onboarding`). An interrupted
+  /// scoped journey is recovered from storage, so resuming it cannot silently
+  /// widen it into the full flow.
+  final ProtectedActionRequirements? requirements;
 
   /// Auth method the visitor already chose on the contextual activation
   /// sheet. When set, the embedded account step enters that method's state
@@ -229,9 +241,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   _OnboardingBranch _branch = _OnboardingBranch.none;
   bool _isFinishingOnboarding = false;
 
+  /// Capability scope of this journey (see [OnboardingFlowScreen.requirements]),
+  /// resolved in [_bootstrap]. Null means the full structured journey.
+  ProtectedActionRequirements? _scope;
+
   int _currentIndex = 0;
   bool _isInitializing = true;
-  bool _alphaNoticeCheckStarted = false;
   bool _locationEnabled = false;
   bool _notificationEnabled = false;
   bool _cameraEnabled = false;
@@ -323,7 +338,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final explicitlyRequested =
         AuthOnboardingService.normalizeStepId(widget.initialStepId) ==
             'walletConnect';
-    if (!widget.requiresWalletSetup && !explicitlyRequested) return false;
+    if (!widget.requiresWalletSetup &&
+        !explicitlyRequested &&
+        _scope?.requiresWallet != true) {
+      return false;
+    }
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     if (!profileProvider.isSignedIn) return false;
@@ -563,6 +582,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       final prefs = await SharedPreferences.getInstance();
       _hydrateLocalDrafts(prefs);
+      await _resolveCapabilityScope(prefs);
       await _syncWalletBackupRequirement();
 
       // Infer branch from initialStepId so that tests and deep-links can jump
@@ -641,7 +661,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       await _loadPermissionStatuses();
       _syncStepSideEffects();
-      _queueAlphaNoticeIfNeeded();
+      _finishScopedFlowIfSatisfied();
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint(
@@ -657,30 +677,25 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _currentIndex = _nextIncompleteIndex();
       });
       _syncStepSideEffects();
-      _queueAlphaNoticeIfNeeded();
     }
   }
 
-  void _queueAlphaNoticeIfNeeded() {
-    if (_alphaNoticeCheckStarted) return;
-    _alphaNoticeCheckStarted = true;
-    unawaited(_showAlphaNoticeIfNeeded());
-  }
-
-  Future<void> _showAlphaNoticeIfNeeded() async {
-    final acknowledged = await AlphaNoticeService.isAcknowledged();
-    if (!mounted || acknowledged) return;
-
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
-
-    await showKubusDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      routeSettings: const RouteSettings(name: '/onboarding/alpha-notice'),
-      builder: (_) => AlphaNoticeDialog(
-        onContinue: () => AlphaNoticeService.acknowledge(),
-      ),
+  /// Settles the capability scope: the caller's explicit requirement wins and
+  /// is remembered with the journey; otherwise a scope persisted by an
+  /// interrupted journey is recovered. A journey with neither is the full
+  /// structured flow.
+  Future<void> _resolveCapabilityScope(SharedPreferences prefs) async {
+    final explicit = widget.requirements;
+    if (explicit != null) {
+      _scope = explicit;
+      await OnboardingStateService.saveCapabilityScope(
+        explicit.storageValue,
+        prefs: prefs,
+      );
+      return;
+    }
+    _scope = ProtectedActionRequirements.fromStorage(
+      OnboardingStateService.capabilityScopeSync(prefs),
     );
   }
 
@@ -1147,6 +1162,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           _OnboardingStep.done,
         ];
       case _OnboardingBranch.account:
+        final scope = _scope;
+        if (scope != null) return _buildScopedAccountSteps(scope);
         return <_OnboardingStep>[
           _OnboardingStep.account,
           if (_verificationRequired) _OnboardingStep.verifyEmail,
@@ -1173,6 +1190,55 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           _OnboardingStep.done,
         ];
     }
+  }
+
+  /// The account journey for one named capability: the account (and its email
+  /// verification) plus only what the originating action needs. Capabilities
+  /// the account already has are omitted, and there is no permissions or
+  /// celebratory "done" step: the journey ends, and the visitor returns to the
+  /// origin, as soon as the last required step is complete.
+  List<_OnboardingStep> _buildScopedAccountSteps(
+    ProtectedActionRequirements scope,
+  ) {
+    ProfileProvider? profile;
+    try {
+      profile = Provider.of<ProfileProvider>(context, listen: false);
+    } catch (_) {
+      profile = null;
+    }
+    final roleMissing = profile == null ||
+        !profile.isSignedIn ||
+        !profile.hasHydratedProfile ||
+        profile.needsStructuredRoleSelection;
+    final user = profile?.currentUser;
+    final profileMissing = profile == null ||
+        !profile.isSignedIn ||
+        !profile.hasHydratedProfile ||
+        user == null ||
+        user.displayName.trim().isEmpty;
+    return <_OnboardingStep>[
+      _OnboardingStep.account,
+      if (_verificationRequired) _OnboardingStep.verifyEmail,
+      if (scope.requiresRole && roleMissing) _OnboardingStep.role,
+      if (scope.requiresProfile && profileMissing) _OnboardingStep.profile,
+      if (_accountRequiresWalletSetup) _OnboardingStep.walletConnect,
+      if (scope.requiresWallet && _shouldOfferWalletBackupIntro)
+        _OnboardingStep.walletBackupIntro,
+    ];
+  }
+
+  /// A scoped journey is over once the visitor has an account and every step
+  /// it asked for is complete or deliberately put off. The structured journey
+  /// (no scope) keeps its explicit finish step.
+  void _finishScopedFlowIfSatisfied() {
+    if (!mounted || _scope == null || _isFinishingOnboarding) return;
+    if (_isInitializing || _steps.isEmpty || !_isSignedIn) return;
+    if (_verificationRequired) return;
+    final satisfied = _steps.every(
+      (step) => _completed.contains(step) || _deferred.contains(step),
+    );
+    if (!satisfied) return;
+    unawaited(_finishOnboarding(reason: 'capability_scope_complete'));
   }
 
   bool get _verificationRequired =>
@@ -1787,6 +1853,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _currentIndex = _nextIncompleteIndex();
       });
       _syncStepSideEffects();
+      _finishScopedFlowIfSatisfied();
     }
   }
 
@@ -1817,6 +1884,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _currentIndex = next == -1 ? _steps.length - 1 : next;
     });
     _syncStepSideEffects();
+    _finishScopedFlowIfSatisfied();
   }
 
   void _syncStepSideEffects() {
@@ -2413,6 +2481,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _currentIndex = _nextIncompleteIndex();
       });
       _syncStepSideEffects();
+      _finishScopedFlowIfSatisfied();
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint(
@@ -2769,7 +2838,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return true;
   }
 
-  Future<void> _finishOnboarding() async {
+  Future<void> _finishOnboarding({String reason = 'step_flow_complete'}) async {
     if (_isFinishingOnboarding) return;
     setState(() => _isFinishingOnboarding = true);
 
@@ -2828,8 +2897,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         authOnboardingScopeKey: _flowScopeKey,
       );
       await _persistProgress();
-      unawaited(TelemetryService()
-          .trackOnboardingComplete(reason: 'step_flow_complete'));
+      unawaited(TelemetryService().trackOnboardingComplete(reason: reason));
 
       if (!mounted) return;
       _navigateToCompletion();

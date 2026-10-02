@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
+import '../models/protected_action_requirements.dart';
 import '../models/user_persona.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -50,6 +51,7 @@ class PostAuthRedirectResult {
     this.onboardingStepId,
     this.requiresWalletSetup = false,
     this.completionRoute,
+    this.requirements,
     this.error,
   });
 
@@ -60,6 +62,9 @@ class PostAuthRedirectResult {
   final String? onboardingStepId;
   final bool requiresWalletSetup;
   final String? completionRoute;
+
+  /// The capability scope the onboarding step (if any) belongs to.
+  final ProtectedActionRequirements? requirements;
   final String? error;
 }
 
@@ -70,6 +75,7 @@ class AuthRedirectController {
     required SharedPreferences prefs,
     required Map<String, dynamic> payload,
     required bool hasHydratedProfile,
+    required bool hasUsableProfile,
     required bool requiresWalletBackup,
     String? walletAddress,
     String? userId,
@@ -80,6 +86,8 @@ class AuthRedirectController {
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -104,6 +112,7 @@ class AuthRedirectController {
                 ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
+      hasUsableProfile: hasUsableProfile,
       requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
       // Wallet setup is requested only by the protected action or a trusted
       // backend requirement. A wallet-authenticated session already has the
@@ -113,6 +122,7 @@ class AuthRedirectController {
       persona: persona,
       payload: payload,
       flowScopeKey: flowScopeKey,
+      requirements: requirements,
     );
 
     final nextStepId = resumeState.nextStepId;
@@ -126,6 +136,7 @@ class AuthRedirectController {
         arguments: redirectArguments,
         onboardingStepId: nextStepId,
         requiresWalletSetup: effectiveRequiresWalletSetup,
+        requirements: requirements,
         completionRoute: (redirectRoute ?? '').trim().isEmpty
             ? '/main'
             : redirectRoute!.trim(),
@@ -195,6 +206,7 @@ class AuthRedirectController {
       prefs: prefs,
       payload: payload,
       hasHydratedProfile: profileProvider.profile != null,
+      hasUsableProfile: profileProvider.hasUsablePublicProfile,
       requiresWalletBackup: requiresWalletBackup,
       walletAddress: targetWallet,
       userId: userId,
@@ -220,6 +232,7 @@ class AuthRedirectController {
           completionRoute: result.completionRoute,
           completionArguments: result.arguments,
           requiresWalletSetup: result.requiresWalletSetup,
+          requirements: result.requirements,
         ),
         settings: const RouteSettings(name: '/onboarding'),
       );

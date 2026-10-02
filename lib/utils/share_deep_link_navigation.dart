@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 
 import '../core/app_navigator.dart';
 import '../core/shell_routes.dart';
-import '../providers/deferred_onboarding_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/map_deep_link_provider.dart';
 import '../screens/desktop/desktop_map_screen.dart';
@@ -21,13 +20,6 @@ import 'user_profile_navigation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 class ShareDeepLinkNavigation {
-  static void _maybePromptDeferredOnboarding(BuildContext context) {
-    if (!context.mounted) return;
-    try {
-      context.read<DeferredOnboardingProvider>().maybeShowOnboarding(context);
-    } catch (_) {}
-  }
-
   static Future<void> open(
     BuildContext context,
     ShareDeepLinkTarget target, {
@@ -96,27 +88,19 @@ class ShareDeepLinkNavigation {
       case ShareEntityType.post:
         tabs?.setIndex(2);
         await PostDetailScreen.openById(context, target.id);
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.artwork:
         tabs?.setIndex(3);
         await openArtwork(context, target.id, source: 'share_deep_link');
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.profile:
         tabs?.setIndex(2);
         await UserProfileNavigation.open(context, userId: target.id);
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.event:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => EventDetailScreen(eventId: target.id)));
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.exhibition:
         tabs?.setIndex(3);
@@ -129,15 +113,11 @@ class ShareDeepLinkNavigation {
                   handoffToken: target.handoffToken,
                   proofSource: target.proofSource,
                 )));
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.collection:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => CollectionDetailScreen(collectionId: target.id)));
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.marker:
         tabs?.setIndex(0);
@@ -159,8 +139,6 @@ class ShareDeepLinkNavigation {
             ),
           ),
         );
-        if (!context.mounted) return;
-        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.nft:
         return;

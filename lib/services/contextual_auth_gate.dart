@@ -46,6 +46,13 @@ class ContextualAuthGate {
   /// for accessibility. Supply [actionType], [targetType] and [targetId]
   /// together to capture a replayable intent; omit them for privileged actions.
   ///
+  /// [requirements] names the capability the action actually needs and defaults
+  /// to [ProtectedActionRequirements.accountOnly]: a visitor who only wants to
+  /// save, like, follow or comment is asked for an account and for nothing
+  /// else, and returns to the screen they came from the moment it exists.
+  /// Actions that need more (a public identity, a creator role, a wallet) pass
+  /// the matching named requirement and acquire exactly that.
+  ///
   /// [onAuthJourneyStarted] runs only when the visitor actually continues into
   /// sign-in or onboarding (never when they dismiss the surface), so a caller
   /// can remember a non-replayable surface, such as a composer, to reopen
@@ -62,7 +69,7 @@ class ContextualAuthGate {
     String? sourceScreen,
     Map<String, String> returnArguments = const <String, String>{},
     ProtectedActionRequirements requirements =
-        ProtectedActionRequirements.participant,
+        ProtectedActionRequirements.accountOnly,
     VoidCallback? onAuthJourneyStarted,
   }) async {
     final missingStep = _missingCapabilityStep(context, requirements);
@@ -81,13 +88,6 @@ class ContextualAuthGate {
         sourceScreen: screen,
       ),
     );
-
-    // A cold-start visitor with a specifically persisted incomplete account
-    // (not an ordinary map browser) resumes the verified step exactly once.
-    if (!BackendApiService().hasAuthSession &&
-        _maybeResumeIncompleteOnboarding(context)) {
-      return false;
-    }
 
     final intent = _buildIntent(
       actionType: actionType,
@@ -116,6 +116,22 @@ class ContextualAuthGate {
     }
     if (!context.mounted) return false;
 
+    // An interrupted account journey is resumed only now, after the attempted
+    // action and its return route are captured: the visitor stays on the entity
+    // they were viewing, the journey opens above it, and completing it returns
+    // there for the explicit confirmation. Resuming first replaced the entity
+    // and lost the mutation.
+    if (!BackendApiService().hasAuthSession &&
+        _maybeResumeIncompleteOnboarding(
+          context,
+          returnRoute: _safeReturnRoute(returnRoute),
+          returnArguments: returnArguments,
+          requirements: requirements,
+          onAuthJourneyStarted: onAuthJourneyStarted,
+        )) {
+      return false;
+    }
+
     // An authenticated account that still lacks role/profile/wallet capability
     // resumes exactly that structured step. It is not an acquisition case, so
     // never show Google/email/wallet choices again.
@@ -127,6 +143,7 @@ class ContextualAuthGate {
         returnRoute: returnRoute,
         returnArguments: returnArguments,
         requiresWalletSetup: requirements.requiresWallet,
+        requirements: requirements,
       );
       return false;
     }
@@ -185,6 +202,7 @@ class ContextualAuthGate {
         arguments: <String, Object?>{
           'redirectRoute': safeReturnRoute,
           'requiresWalletSetup': requirements.requiresWallet,
+          'requirements': requirements.storageValue,
           if (returnArguments.isNotEmpty)
             'redirectArguments': Map<String, String>.from(returnArguments),
         },
@@ -204,6 +222,7 @@ class ContextualAuthGate {
       returnRoute: safeReturnRoute,
       returnArguments: returnArguments,
       requiresWalletSetup: requirements.requiresWallet,
+      requirements: requirements,
       preferredAuthMethod: switch (choice) {
         ActivationGateChoice.google => PreferredAuthMethod.google,
         ActivationGateChoice.email => PreferredAuthMethod.email,
@@ -223,6 +242,7 @@ class ContextualAuthGate {
     required String returnRoute,
     required Map<String, String> returnArguments,
     required bool requiresWalletSetup,
+    required ProtectedActionRequirements requirements,
     PreferredAuthMethod? preferredAuthMethod,
   }) {
     // Always a push, never a replace: the entity/screen the visitor was on
@@ -237,6 +257,7 @@ class ContextualAuthGate {
         if (returnArguments.isNotEmpty)
           'completionArguments': Map<String, String>.from(returnArguments),
         'requiresWalletSetup': requiresWalletSetup,
+        'requirements': requirements.storageValue,
         if (preferredAuthMethod != null)
           'preferredAuthMethod': preferredAuthMethod.storageValue,
         'completionNavigation':
@@ -245,17 +266,33 @@ class ContextualAuthGate {
     );
   }
 
-  bool _maybeResumeIncompleteOnboarding(BuildContext context) {
+  bool _maybeResumeIncompleteOnboarding(
+    BuildContext context, {
+    required String returnRoute,
+    required Map<String, String> returnArguments,
+    required ProtectedActionRequirements requirements,
+    VoidCallback? onAuthJourneyStarted,
+  }) {
     try {
-      return context
+      final resumed = context
           .read<DeferredOnboardingProvider>()
-          .maybeShowOnboardingForProtectedAction(context);
+          .maybeShowOnboardingForProtectedAction(
+            context,
+            returnRoute: returnRoute,
+            returnArguments: returnArguments,
+            requirements: requirements,
+          );
+      if (resumed) onAuthJourneyStarted?.call();
+      return resumed;
     } catch (_) {
       return false;
     }
   }
 
-  /// Resolves the first missing capability. Provider access is intentionally
+  /// Resolves the first missing capability, in the order a visitor would
+  /// acquire them: account, role, profile, wallet. Only what [requirements]
+  /// names is ever considered, so an account-only action can never resolve to
+  /// a role, profile or wallet step. Provider access is intentionally
   /// best-effort so isolated widgets retain the anonymous account flow.
   String? _missingCapabilityStep(
     BuildContext context,
@@ -267,22 +304,15 @@ class ContextualAuthGate {
 
     try {
       final profile = context.read<ProfileProvider>();
+      if (requirements.requiresRole && profile.needsStructuredRoleSelection) {
+        return 'role';
+      }
       if (requirements.requiresProfile) {
-        final hinted = profile.nextStructuredOnboardingStepId;
-        if (hinted == 'verifyEmail' ||
-            hinted == 'role' ||
-            hinted == 'profile') {
-          return hinted;
-        }
-        if (!profile.hasHydratedProfile || profile.currentUser == null) {
-          return 'profile';
-        }
+        // The same rule the post-auth resolver uses (`isUsablePublicProfile`).
+        if (!profile.hasUsablePublicProfile) return 'profile';
       }
       if (requirements.requiresWallet &&
           !context.read<WalletProvider>().hasWalletIdentity) {
-        // Role/profile checks above win when they are incomplete. Otherwise
-        // resume directly at wallet setup so a complete account is not made to
-        // repeat onboarding it already finished.
         return 'walletConnect';
       }
     } catch (_) {

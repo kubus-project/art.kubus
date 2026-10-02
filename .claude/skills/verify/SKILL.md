@@ -30,9 +30,12 @@ Run it in the background and grep the log for `is being served at`.
 
 ## Useful flows (no backend needed)
 
-- Boot -> `/onboarding/alpha-notice` dialog -> "Nadaljuj na uvod" (~215,571).
-- `/onboarding` welcome: "Odkrij umetnost" = guest mode -> `/main` map;
-  "Prijava" (~215,667) -> `/sign-in`.
+- Boot -> public discovery (the map). There is no alpha notice, welcome or
+  onboarding on a fresh entry: a visitor without a session lands on the map and
+  is asked for an account only when they attempt a protected action.
+- `/onboarding` is an explicit, voluntary entry only: its welcome step offers
+  "Odkrij umetnost" (guest mode -> `/main` map) and "Prijava" (~215,667) ->
+  `/sign-in`. Open it by URL; nothing routes a fresh visitor there.
 - `/sign-in`: "Nadaljuj z e-pošto" (~215,483) opens the email form; click a
   field to see the focus border.
 - Theme toggle: top-right dropdown ("Temna") ~ (355,36); menu items

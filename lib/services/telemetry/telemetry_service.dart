@@ -338,6 +338,16 @@ class TelemetryService {
     await _trackOncePerSession(AppTelemetryEventTypes.mapOpened);
   }
 
+  /// First deliberate map interaction of the session (see
+  /// [AppTelemetryEventTypes.mapEngaged]). Callers decide what counts as
+  /// deliberate; this only guarantees the once-per-session bound.
+  Future<void> trackMapEngaged({required String kind}) async {
+    await _trackOncePerSession(
+      AppTelemetryEventTypes.mapEngaged,
+      extra: {'kind': _clampText(kind, 32)},
+    );
+  }
+
   Future<void> trackNearbyDiscoveryUsed() async {
     await trackEvent(AppTelemetryEventTypes.nearbyDiscoveryUsed);
   }

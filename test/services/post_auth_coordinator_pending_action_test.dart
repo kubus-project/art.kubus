@@ -1,3 +1,4 @@
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/pending_action_provider.dart';
@@ -26,6 +27,7 @@ class _SpyAuthRedirectController extends AuthRedirectController {
     required SharedPreferences prefs,
     required Map<String, dynamic> payload,
     required bool hasHydratedProfile,
+    required bool hasUsableProfile,
     required bool requiresWalletBackup,
     String? walletAddress,
     String? userId,
@@ -36,6 +38,8 @@ class _SpyAuthRedirectController extends AuthRedirectController {
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
   }) async {
     onResolve(
       redirectRoute: redirectRoute,

@@ -17,6 +17,7 @@ import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_filtering.dart';
 import '../features/map/shared/map_marker_collision_config.dart';
 import '../features/map/filters/map_filter_state.dart';
+import '../features/map/telemetry/map_engagement_tracker.dart';
 import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_marker_chrome_occlusion_plan.dart';
 import '../features/map/shared/map_marker_overlay_presentation.dart';
@@ -272,6 +273,11 @@ class _MapScreenState extends State<MapScreen>
   MapLayersManager? _layersManager;
   late final KubusMapController _kubusMapController;
   late final MapMarkerInteractionController _markerInteractionController;
+  late final MapEngagementTracker _mapEngagement = MapEngagementTracker(
+    onEngaged: (kind) => unawaited(
+      TelemetryService().trackMapEngaged(kind: kind).catchError((_) {}),
+    ),
+  );
   late final MapCameraController _mapCameraController;
   late final MarkerVisualSyncCoordinator _markerVisualSyncCoordinator;
   late final NearbyArtController _nearbyArtController;
@@ -789,6 +795,7 @@ class _MapScreenState extends State<MapScreen>
           selectionToken: state.selectionToken,
         );
       },
+      onUserMarkerInteraction: _mapEngagement.markerOpened,
       onBackgroundTap: () {
         _dismissMapContext();
       },
@@ -3217,6 +3224,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapAddMapMarkerTooltip.toLowerCase(),
       returnRoute: '/map',
@@ -4221,6 +4229,13 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted || _mapController == null) return;
     _kubusMapController.handleCameraMove(position);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;
+    if (!_kubusMapController.programmaticCameraMove) {
+      _mapEngagement.cameraGesture(
+        latitude: position.target.latitude,
+        longitude: position.target.longitude,
+        zoom: position.zoom,
+      );
+    }
 
     final now = DateTime.now();
     if (now.difference(_lastCameraUpdateTime) < _cameraUpdateThrottle) return;
@@ -4254,6 +4269,7 @@ class _MapScreenState extends State<MapScreen>
   void _handleCameraIdle() {
     if (!mounted || _mapController == null) return;
     final wasProgrammatic = _kubusMapController.programmaticCameraMove;
+    if (wasProgrammatic) _mapEngagement.resetBaseline();
     _kubusMapController.handleCameraIdle(fromProgrammaticMove: wasProgrammatic);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;
 
@@ -4936,6 +4952,7 @@ class _MapScreenState extends State<MapScreen>
 
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.mapMarkerClaimButton.toLowerCase(),
       returnRoute: '/map',
@@ -5482,6 +5499,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
+    _mapEngagement.searchResultSelected();
     _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 

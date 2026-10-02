@@ -1,5 +1,6 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/auth_gating_service.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
@@ -31,6 +32,7 @@ class PostAuthLoadingScreen extends StatefulWidget {
     this.modalReauth = false,
     this.requiresWalletBackup = false,
     this.requiresWalletSetup = false,
+    this.requirements = ProtectedActionRequirements.accountOnly,
     this.presentation = PostAuthLoadingPresentation.fullScreen,
     this.onBeforeSavedItemsSync,
     this.onAuthSuccess,
@@ -47,6 +49,11 @@ class PostAuthLoadingScreen extends StatefulWidget {
   final bool modalReauth;
   final bool requiresWalletBackup;
   final bool requiresWalletSetup;
+
+  /// What the originating action needs. Defaults to an account alone, so
+  /// authenticating never leads on into role, profile or wallet setup unless
+  /// the action asked for it.
+  final ProtectedActionRequirements requirements;
   final PostAuthLoadingPresentation presentation;
   final Future<void> Function()? onBeforeSavedItemsSync;
   final Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
@@ -86,6 +93,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       modalReauth: widget.modalReauth,
       requiresWalletBackup: widget.requiresWalletBackup,
       requiresWalletSetup: widget.requiresWalletSetup,
+      requirements: widget.requirements,
       onBeforeSavedItemsSync: widget.onBeforeSavedItemsSync,
       onStageChanged: (stage) {
         if (!mounted) return;
@@ -127,6 +135,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
             completionRoute: result.completionRoute,
             completionArguments: result.arguments,
             requiresWalletSetup: result.requiresWalletSetup,
+            requirements: result.requirements,
           ),
           settings: const RouteSettings(name: '/onboarding'),
         ),
