@@ -98,8 +98,8 @@ class ProfileIdentitySummary extends StatelessWidget {
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar: fetchMissingAvatar &&
-                  identity.navigationIdentifier != null,
+              fetchMissingAvatar:
+                  fetchMissingAvatar && identity.navigationIdentifier != null,
               enableProfileNavigation: enableProfileNavigation,
             ),
             const SizedBox(width: 12),
@@ -128,8 +128,8 @@ class ProfileIdentitySummary extends StatelessWidget {
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar: fetchMissingAvatar &&
-                  identity.navigationIdentifier != null,
+              fetchMissingAvatar:
+                  fetchMissingAvatar && identity.navigationIdentifier != null,
               enableProfileNavigation: enableProfileNavigation,
             ),
             const SizedBox(height: 10),

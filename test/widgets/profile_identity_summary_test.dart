@@ -486,7 +486,8 @@ void main() {
                     loader: () async => <CommunityLikeUser>[
                       CommunityLikeUser(
                         userId: 'user_like_1',
-                        walletAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+                        walletAddress:
+                            '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
                         displayName: 'Like Actor',
                         username: 'like-actor',
                         likedAt: likedAt,
