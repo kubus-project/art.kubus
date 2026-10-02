@@ -76,6 +76,8 @@ void main() {
   for (final identifier in [
     '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     '11111111-1111-4111-8111-111111111111',
+    'Creator',
+    'mina.artist',
   ]) {
     testWidgets('AvatarWidget still fetches a public identifier ($identifier)',
         (tester) async {
@@ -103,7 +105,12 @@ void main() {
         return http.Response('Unexpected profile fetch', 404);
       }));
       await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: AvatarWidget(wallet: seed)),
+        home: Scaffold(
+            body: AvatarWidget(
+          wallet: seed,
+          fetchMissingAvatar: false,
+          enableProfileNavigation: false,
+        )),
       ));
       await tester.pump();
       expect(requests, isEmpty);
@@ -130,12 +137,15 @@ void main() {
                 fallbackLabel: 'Creator',
               ),
               layout: layout,
+              enableProfileNavigation: true,
             ),
           ),
         ),
       );
       await tester.pump();
       expect(find.text('Creator'), findsOneWidget);
+      final avatar = tester.widget<AvatarWidget>(find.byType(AvatarWidget));
+      expect(avatar.enableProfileNavigation, isFalse);
       expect(requests, isEmpty);
       expect(tester.takeException(), isNull);
     });

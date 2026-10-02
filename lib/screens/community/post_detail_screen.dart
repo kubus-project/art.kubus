@@ -498,7 +498,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                              wallet: identity.walletSeed,
+                              wallet: identity.navigationIdentifier ??
+                                  identity.username ??
+                                  identity.walletSeed,
+                              fetchMissingAvatar: identity.canOpenProfile,
                               avatarUrl: identity.avatarUrl,
                               radius: 20,
                               enableProfileNavigation: false),
@@ -646,7 +649,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                            wallet: identity.walletSeed,
+                            wallet: identity.navigationIdentifier ??
+                                identity.username ??
+                                identity.walletSeed,
+                            fetchMissingAvatar: identity.canOpenProfile,
                             avatarUrl: identity.avatarUrl,
                             radius: 20,
                             enableProfileNavigation: false,
@@ -788,7 +794,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                          wallet: identity.walletSeed,
+                          wallet: identity.navigationIdentifier ??
+                              identity.username ??
+                              identity.walletSeed,
+                          fetchMissingAvatar: identity.canOpenProfile,
                           avatarUrl: identity.avatarUrl,
                           radius: 20,
                           enableProfileNavigation: false,
