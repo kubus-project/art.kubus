@@ -42,7 +42,10 @@ class GuestSessionService {
   /// lifetime attribution.
   static const Duration attributionWindow = Duration(days: 7);
 
-  /// App-home landing surfaces: the same shell in different guises.
+  /// App-home landing surfaces: the same shell in different guises. Since
+  /// guest-first entry these are *discovery* entries (a fresh visitor opens the
+  /// public map); the name and the literals are kept because the backend cohort
+  /// and `campaign_contract_test.dart` mirror them.
   ///
   /// `/en` and `/sl` are the locale-prefixed roots. Neither this normaliser nor
   /// the backend's collapses a locale prefix, so they are stored verbatim and
@@ -57,8 +60,9 @@ class GuestSessionService {
     '/main',
   };
 
-  /// Landing surfaces that mean account intent, and therefore direct
-  /// acquisition: `/register` explicitly, app home implicitly.
+  /// Landing surfaces counted as direct acquisition by the backend cohort:
+  /// `/register` is explicit account intent; the app-home routes are discovery
+  /// entries kept in the set only so historical reporting stays continuous.
   static const Set<String> directAcquisitionEntryRoutes = <String>{
     '/register',
     ...appHomeEntryRoutes,

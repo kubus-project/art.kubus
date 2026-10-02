@@ -79,6 +79,13 @@ class AppTelemetryEventTypes {
   // (how visitors discover and engage with a programme). Payloads should carry
   // only ids/coarse context, never precise location history.
   static const String mapOpened = 'map_opened';
+
+  /// The first *deliberate* map interaction of a session: the visitor panned or
+  /// zoomed by hand, opened a marker, or chose a search result. Distinct from
+  /// [mapOpened], which only says the map rendered. Once per session; `kind`
+  /// names which interaction came first (`camera_gesture`, `marker_open`,
+  /// `search_select`). Never a pan/zoom stream.
+  static const String mapEngaged = 'map_engaged';
   static const String nearbyDiscoveryUsed = 'nearby_discovery_used';
   static const String artworkViewed = 'artwork_viewed';
   static const String eventViewed = 'event_viewed';
@@ -147,6 +154,7 @@ class AppTelemetryEventTypes {
     guestAppLoaded,
     guestMapLoaded,
     mapOpened,
+    mapEngaged,
     nearbyDiscoveryUsed,
     artworkViewed,
     eventViewed,

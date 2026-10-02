@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/onboarding_completion_navigation.dart';
 import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
@@ -389,6 +390,129 @@ void main() {
       (onboardingArguments as Map?)?['completionRoute'],
       '/wallet/availability-node',
     );
+  });
+
+  group('capability scope carried into the account journey', () {
+    Future<Map?> scopeFor(
+      WidgetTester tester, {
+      required String label,
+      PendingActionType? actionType,
+      PendingActionTargetType? targetType,
+      String? targetId,
+      ProtectedActionRequirements? requirements,
+    }) async {
+      Object? onboardingArguments;
+      await tester.pumpWidget(_harness(
+        routes: <String, WidgetBuilder>{
+          '/onboarding': (context) {
+            onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+            return const Scaffold(body: Text('onboarding route'));
+          },
+        },
+        child: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+              context,
+              actionLabel: label,
+              returnRoute: '/a/art-1',
+              actionType: actionType,
+              targetType: targetType,
+              targetId: targetId,
+              requirements:
+                  requirements ?? ProtectedActionRequirements.accountOnly,
+            ),
+            child: Text(label),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue with email'));
+      await tester.pumpAndSettle();
+      return onboardingArguments as Map?;
+    }
+
+    testWidgets('save asks for an account and nothing else', (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'save',
+        actionType: PendingActionType.save,
+        targetType: PendingActionTargetType.artwork,
+        targetId: 'art-1',
+      );
+
+      expect(args?['requirements'], 'accountOnly');
+      expect(args?['requiresWalletSetup'], isFalse);
+      expect(args?['initialStepId'], 'account');
+      expect(args?['completionRoute'], '/a/art-1');
+      expect(
+        args?['completionNavigation'],
+        OnboardingCompletionNavigation.returnToOrigin.storageValue,
+      );
+    });
+
+    testWidgets('follow asks for an account and nothing else', (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'follow',
+        actionType: PendingActionType.follow,
+        targetType: PendingActionTargetType.user,
+        targetId: 'profile-1',
+      );
+
+      expect(args?['requirements'], 'accountOnly');
+      expect(args?['requiresWalletSetup'], isFalse);
+    });
+
+    testWidgets('comment asks for an account and nothing else', (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'comment',
+        actionType: PendingActionType.comment,
+        targetType: PendingActionTargetType.artwork,
+        targetId: 'art-1',
+      );
+
+      expect(args?['requirements'], 'accountOnly');
+      expect(args?['requiresWalletSetup'], isFalse);
+    });
+
+    testWidgets('a public-identity action names the participant scope',
+        (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'message',
+        requirements: ProtectedActionRequirements.participant,
+      );
+
+      expect(args?['requirements'], 'participant');
+      expect(args?['requiresWalletSetup'], isFalse);
+    });
+
+    testWidgets('a creator action names the creator scope, without a wallet',
+        (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'create',
+        requirements: ProtectedActionRequirements.creator,
+      );
+
+      expect(args?['requirements'], 'creator');
+      expect(args?['requiresWalletSetup'], isFalse);
+    });
+
+    testWidgets('a wallet action is the only one that asks for wallet setup',
+        (tester) async {
+      final args = await scopeFor(
+        tester,
+        label: 'connect',
+        requirements: ProtectedActionRequirements.wallet,
+      );
+
+      expect(args?['requirements'], 'wallet');
+      expect(args?['requiresWalletSetup'], isTrue);
+    });
   });
 
   testWidgets('the attempted action is captured for later continuation',

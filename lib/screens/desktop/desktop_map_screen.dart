@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
+import '../../features/map/telemetry/map_engagement_tracker.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
@@ -242,6 +243,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   late final KubusMapController _kubusMapController;
   late final MapMarkerInteractionController _markerInteractionController;
+  late final MapEngagementTracker _mapEngagement = MapEngagementTracker(
+    onEngaged: (kind) => unawaited(
+      TelemetryService().trackMapEngaged(kind: kind).catchError((_) {}),
+    ),
+  );
   late final MapCameraController _mapCameraController;
   late final MarkerVisualSyncCoordinator _markerVisualSyncCoordinator;
   late final MapDataCoordinator _mapDataCoordinator;
@@ -721,6 +727,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerInteractionController = MapMarkerInteractionController(
       mapController: _kubusMapController,
       isWeb: kIsWeb,
+      onMarkerOpenedByTap: _mapEngagement.markerOpened,
     );
 
     _nearbyArtController = NearbyArtController(
@@ -2616,6 +2623,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onCameraMove: (position) {
             if (_mapController == null) return;
             _kubusMapController.handleCameraMove(position);
+            if (!_kubusMapController.programmaticCameraMove) {
+              _mapEngagement.cameraGesture(
+                latitude: position.target.latitude,
+                longitude: position.target.longitude,
+                zoom: position.zoom,
+              );
+            }
 
             final previousZoom = _cameraZoom;
             final nextBearing = position.bearing;
@@ -2650,6 +2664,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onCameraIdle: () {
             if (_mapController == null) return;
             final wasProgrammatic = _kubusMapController.programmaticCameraMove;
+            if (wasProgrammatic) _mapEngagement.resetBaseline();
             _kubusMapController.handleCameraIdle(
               fromProgrammaticMove: wasProgrammatic,
             );
@@ -4707,6 +4722,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
+    _mapEngagement.searchResultSelected();
     _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
