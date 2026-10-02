@@ -1,5 +1,9 @@
 # PRODUCT v5 art-direction restoration (Wave 5A-R)
 
+> **Amended by Wave 5A-S** (`PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md`): the
+> ghost glyph is the only identity layer where it appears (no foreground
+> icon tile beside it), and section headings are typographic.
+
 Wave 4 removed nested glass, fake gradients and generic dashboard cards.
 Wave 5A restored a teal-first colour system. Both were right, but together
 they flattened PRODUCT into one repeated pattern (small icon box, number,

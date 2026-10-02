@@ -30,6 +30,7 @@ import 'package:art_kubus/screens/web3/institution/institution_hub.dart';
 import 'package:art_kubus/screens/web3/marketplace/marketplace.dart';
 import 'package:art_kubus/screens/web3/wallet/wallet_home.dart';
 import 'package:art_kubus/screens/settings_screen.dart';
+import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
@@ -119,7 +120,9 @@ void main() {
     }
     final bytes = await _captureRoot(tester);
     File('${outputDir.path}/$name.png').writeAsBytesSync(bytes);
-    for (var i = 0; i < 10; i++) {
+    // Fake time only: outlasts the socket connect timeout (20 s) and the
+    // secure-storage reads so no timer survives the scene.
+    for (var i = 0; i < 25; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
     captures.add(<String, Object?>{
@@ -211,7 +214,13 @@ void main() {
 
   void scene(String name, WidgetTesterCallback body) {
     if (only.isNotEmpty && !only.any(name.startsWith)) return;
-    testWidgets(name, body, timeout: const Timeout(Duration(seconds: 150)));
+    testWidgets(name, (tester) async {
+      await body(tester);
+      // Public profiles open the realtime socket; close it (and let its
+      // connect timeout lapse in fake time) so no timer outlives the scene.
+      SocketService().disconnect();
+      await tester.pump(const Duration(seconds: 25));
+    }, timeout: const Timeout(Duration(seconds: 150)));
   }
 
   final owner = qaOwner();
@@ -232,7 +241,8 @@ void main() {
   for (final b in Brightness.values) {
     for (final scale in const [1.0, 2.0]) {
       scene('components-${b.name}-x${scale.toInt()}', (tester) async {
-        await surface(tester,
+        await surface(
+            tester,
             'components-sheet-1440-${b.name}-en-x${scale.toInt()}',
             () => const _ComponentSheet(),
             size: Size(1440, scale > 1 ? 1700 : 1000),
@@ -243,8 +253,8 @@ void main() {
     }
   }
   scene('components-320', (tester) async {
-    await surface(tester, 'components-sheet-320-dark-sl',
-        () => const _ComponentSheet(),
+    await surface(
+        tester, 'components-sheet-320-dark-sl', () => const _ComponentSheet(),
         size: const Size(320, 1700),
         locale: const Locale('sl'),
         signedIn: owner);
@@ -287,8 +297,8 @@ void main() {
         signedIn: owner);
   });
   scene('home-mobile-guest', (tester) async {
-    await surface(tester, 'home-mobile-390-light-sl-guest',
-        () => const HomeScreen(),
+    await surface(
+        tester, 'home-mobile-390-light-sl-guest', () => const HomeScreen(),
         size: const Size(390, 1500),
         brightness: Brightness.light,
         locale: const Locale('sl'));
@@ -357,7 +367,8 @@ void main() {
         size: desktop, signedIn: artist);
   });
   scene('studio-mobile', (tester) async {
-    await surface(tester, 'studio-mobile-390-light-sl', () => const ArtistStudio(),
+    await surface(
+        tester, 'studio-mobile-390-light-sl', () => const ArtistStudio(),
         size: const Size(390, 1300),
         brightness: Brightness.light,
         locale: const Locale('sl'),
@@ -383,8 +394,8 @@ void main() {
     });
   }
   scene('analytics-overview-390', (tester) async {
-    await surface(tester, 'analytics-overview-390-dark-sl',
-        () => const _AnalyticsSheet(),
+    await surface(
+        tester, 'analytics-overview-390-dark-sl', () => const _AnalyticsSheet(),
         size: const Size(390, 1100),
         locale: const Locale('sl'),
         signedIn: artist);
@@ -396,6 +407,27 @@ void main() {
         brightness: Brightness.light,
         textScale: 2,
         signedIn: artist);
+  });
+  scene('analytics-overview-320-text200', (tester) async {
+    await surface(tester, 'analytics-overview-320-dark-sl-text200',
+        () => const _AnalyticsSheet(),
+        size: const Size(320, 2400),
+        locale: const Locale('sl'),
+        textScale: 2,
+        signedIn: artist);
+  });
+  scene('analytics-overview-text130', (tester) async {
+    await surface(tester, 'analytics-overview-390-light-en-text130',
+        () => const _AnalyticsSheet(),
+        size: const Size(390, 1400),
+        brightness: Brightness.light,
+        textScale: 1.3,
+        signedIn: artist);
+  });
+  scene('analytics-overview-desktop-text200', (tester) async {
+    await surface(tester, 'analytics-overview-1440-dark-en-text200',
+        () => const _AnalyticsSheet(),
+        size: const Size(1440, 900), textScale: 2, signedIn: artist);
   });
   scene('analytics-screen-desktop', (tester) async {
     await surface(tester, 'analytics-screen-1440-dark-en-artist',
@@ -439,14 +471,14 @@ void main() {
     });
   }
   scene('wallet-mobile', (tester) async {
-    await surface(
-        tester, 'wallet-mobile-390-dark-en', () => const WalletHome(),
+    await surface(tester, 'wallet-mobile-390-dark-en', () => const WalletHome(),
         size: const Size(390, 1100),
         signedIn: owner,
         extraProviders: [qaWalletProvider()]);
   });
   scene('wallet-mobile-320', (tester) async {
-    await surface(tester, 'wallet-mobile-320-light-sl', () => const WalletHome(),
+    await surface(
+        tester, 'wallet-mobile-320-light-sl', () => const WalletHome(),
         size: const Size(320, 900),
         brightness: Brightness.light,
         locale: const Locale('sl'),
@@ -461,8 +493,8 @@ void main() {
         size: desktop, signedIn: owner, extraProviders: [qaEmailPreferences()]);
   });
   scene('utility-settings-mobile', (tester) async {
-    await surface(
-        tester, 'utility-settings-mobile-390-light-sl', () => const SettingsScreen(),
+    await surface(tester, 'utility-settings-mobile-390-light-sl',
+        () => const SettingsScreen(),
         size: const Size(390, 1400),
         brightness: Brightness.light,
         locale: const Locale('sl'),
@@ -534,14 +566,20 @@ class _ComponentSheet extends StatelessWidget {
     final tiles = <(String, IconData, Color)>[
       ('Map', Icons.map_outlined, roles.statTeal),
       ('Artist Studio', Icons.palette_outlined, roles.web3ArtistStudioAccent),
-      ('Institution Hub', Icons.account_balance_outlined,
-          roles.web3InstitutionAccent),
+      (
+        'Institution Hub',
+        Icons.account_balance_outlined,
+        roles.web3InstitutionAccent
+      ),
       ('Governance', Icons.how_to_vote_outlined, roles.web3DaoAccent),
-      ('Marketplace and collectible editions', Icons.storefront_outlined,
-          roles.web3MarketplaceAccent),
+      (
+        'Marketplace and collectible editions',
+        Icons.storefront_outlined,
+        roles.web3MarketplaceAccent
+      ),
     ];
-    Widget stacked((String, IconData, Color) t) => KubusActionTile(
-        title: t.$1, icon: t.$2, accent: t.$3, onTap: () {});
+    Widget stacked((String, IconData, Color) t) =>
+        KubusActionTile(title: t.$1, icon: t.$2, accent: t.$3, onTap: () {});
     Widget inline((String, IconData, Color) t) => KubusActionTile(
         title: t.$1,
         icon: t.$2,
@@ -552,8 +590,12 @@ class _ComponentSheet extends StatelessWidget {
       ('Followers', '1,284', Icons.people_outline, roles.statBlue),
       ('Artworks', '42', Icons.image_outlined, roles.statTeal),
       ('Votes cast', '17', Icons.how_to_vote_outlined, roles.web3DaoAccent),
-      ('Achievements unlocked', '9', Icons.emoji_events_outlined,
-          roles.statAmber),
+      (
+        'Achievements unlocked',
+        '9',
+        Icons.emoji_events_outlined,
+        roles.statAmber
+      ),
     ];
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -610,8 +652,7 @@ class _ComponentSheet extends StatelessWidget {
           }),
           const SizedBox(height: KubusSpacing.lg),
           for (final s in stats.take(2)) ...[
-            KubusStatCard(
-                title: s.$1, value: s.$2, icon: s.$3, accent: s.$4),
+            KubusStatCard(title: s.$1, value: s.$2, icon: s.$3, accent: s.$4),
             const SizedBox(height: KubusSpacing.sm),
           ],
         ],
