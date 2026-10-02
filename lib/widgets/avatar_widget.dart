@@ -112,10 +112,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
 
     // 3. Fetch authoritative profile
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
-    final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
-    if (walletId.isEmpty ||
-        invalidWalletPlaceholders.contains(walletId) ||
-        !widget.fetchMissingAvatar) {
+    final isPublicProfileId = WalletUtils.looksLikeWallet(walletId) ||
+        RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+            .hasMatch(walletId);
+    if (!isPublicProfileId || !widget.fetchMissingAvatar) {
       if (widget.allowFabricatedFallback) {
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
           setState(() {

@@ -73,6 +73,44 @@ void main() {
     );
   }
 
+  for (final identifier in [
+    '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    '11111111-1111-4111-8111-111111111111',
+  ]) {
+    testWidgets('AvatarWidget still fetches a public identifier ($identifier)',
+        (tester) async {
+      final requests = <String>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        requests.add(request.url.path);
+        return http.Response('{"success":true,"data":{}}', 200);
+      }));
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: AvatarWidget(wallet: identifier)),
+      ));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      expect(requests, contains('/api/profiles/$identifier'));
+    });
+  }
+
+  for (final seed in ['Creator', 'Display Name', 'anonymous']) {
+    testWidgets('AvatarWidget does not fetch a display-only seed ($seed)',
+        (tester) async {
+      final requests = <String>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        requests.add(request.url.path);
+        return http.Response('Unexpected profile fetch', 404);
+      }));
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: AvatarWidget(wallet: seed)),
+      ));
+      await tester.pump();
+      expect(requests, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final layout in ProfileIdentityLayout.values) {
     testWidgets('display-only identity does not fetch a profile ($layout)', (
       tester,
