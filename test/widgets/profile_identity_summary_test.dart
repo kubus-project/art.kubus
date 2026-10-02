@@ -73,6 +73,36 @@ void main() {
     );
   }
 
+  for (final layout in ProfileIdentityLayout.values) {
+    testWidgets('display-only identity does not fetch a profile ($layout)', (
+      tester,
+    ) async {
+      final requests = <String>[];
+      BackendApiService().setHttpClient(
+        MockClient((request) async {
+          requests.add(request.url.path);
+          return http.Response('Unexpected profile fetch', 404);
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProfileIdentitySummary(
+              identity: ProfileIdentityData.fromValues(
+                fallbackLabel: 'Creator',
+              ),
+              layout: layout,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Creator'), findsOneWidget);
+      expect(requests, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   test('fromProfileMap prefers explicit avatar fields and sanitized handle',
       () {
     final identity = ProfileIdentityData.fromProfileMap(
@@ -456,7 +486,8 @@ void main() {
                     loader: () async => <CommunityLikeUser>[
                       CommunityLikeUser(
                         userId: 'user_like_1',
-                        walletAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+                        walletAddress:
+                            '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
                         displayName: 'Like Actor',
                         username: 'like-actor',
                         likedAt: likedAt,
