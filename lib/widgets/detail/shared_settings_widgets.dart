@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../common/kubus_context_icon.dart';
 
 class SharedSettingsRowTile extends StatelessWidget {
   final String title;
@@ -270,55 +269,41 @@ class SharedSettingsToggleRow extends StatelessWidget {
   }
 }
 
-/// Section identity for a settings surface: a contextual icon tile, the
-/// section title and an optional one-line explanation.
+/// Section title for a settings surface and an optional one-line
+/// explanation. Settings are a utility surface: neutral type, no icon tile
+/// and no contextual colour.
 class SharedSettingsSectionHeader extends StatelessWidget {
   const SharedSettingsSectionHeader({
     super.key,
-    required this.icon,
-    required this.accent,
     required this.title,
     this.subtitle,
   });
 
-  final IconData icon;
-
-  /// Contextual accent from [KubusColorRoles].
-  final Color accent;
   final String title;
   final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        KubusContextIcon(icon: icon, accent: accent),
-        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  title,
-                  style: KubusTextStyles.detailCardTitle
-                      .copyWith(color: roles.foreground),
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: KubusSpacing.xxs),
-                Text(
-                  subtitle!,
-                  style: KubusTextStyles.detailCaption
-                      .copyWith(color: roles.foregroundMuted),
-                ),
-              ],
-            ],
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: KubusTextStyles.detailCardTitle
+                .copyWith(color: roles.foreground),
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: KubusSpacing.xxs),
+          Text(
+            subtitle!,
+            style: KubusTextStyles.detailCaption
+                .copyWith(color: roles.foregroundMuted),
+          ),
+        ],
       ],
     );
   }

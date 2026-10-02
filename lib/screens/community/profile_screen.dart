@@ -743,26 +743,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     SizedBox(height: isSmallScreen ? 12 : 16),
                     if (profileProvider.currentUser?.bio != null &&
                         profileProvider.currentUser!.bio.isNotEmpty)
-                      Container(
+                      // The bio is content inside the identity card: plain
+                      // text, not a second framed box inside the card.
+                      SizedBox(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 12 : 14,
-                          vertical: isSmallScreen ? 10 : 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.24),
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                          border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withValues(alpha: 0.12),
-                            width: KubusSizes.hairline,
-                          ),
-                        ),
                         child: Text(
                           profileProvider.currentUser!.bio,
                           textAlign: TextAlign.center,
@@ -796,28 +780,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                           onAction: _editProfile,
                         ),
                       ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.sm,
-                        vertical: KubusSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
-                          width: KubusSizes.hairline,
-                        ),
-                      ),
-                      child: ProfileArtistInfoFields(
+                    // Artist facts render only when there are some: an
+                    // empty framed strip says nothing.
+                    if ((profileProvider.currentUser?.artistInfo?.specialty
+                                .any((v) => v.trim().isNotEmpty) ??
+                            false) ||
+                        (profileProvider.currentUser?.artistInfo?.yearsActive ??
+                                0) >
+                            0) ...[
+                      const SizedBox(height: 12),
+                      ProfileArtistInfoFields(
                         fieldOfWork: profileProvider
                                 .currentUser?.artistInfo?.specialty ??
                             const <String>[],
@@ -825,7 +797,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 .currentUser?.artistInfo?.yearsActive ??
                             0,
                       ),
-                    ),
+                    ],
                     if (profileProvider.currentUser?.social.isNotEmpty ==
                         true) ...[
                       const SizedBox(height: KubusSpacing.sm),
@@ -1263,9 +1235,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               KubusHeaderText(
                 title: l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
+                // Empty: the empty state below says what to do, once.
                 subtitle: savedIds.isEmpty
-                    ? l10n.savedItemsEmptySectionDescription(
-                        l10n.savedItemsArtworkLabel)
+                    ? null
                     : l10n.savedItemsSummaryCount(savedIds.length),
                 kind: KubusHeaderKind.section,
               ),
@@ -1313,15 +1285,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                   emptyIcon: Icons.bookmark_border,
                   listHeight: 210,
                 ),
-              const SizedBox(height: KubusSpacing.sm),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _navigateToSavedItems,
-                  icon: const Icon(Icons.bookmarks_outlined),
-                  label: Text(l10n.commonViewAll),
+              // The empty state carries its own action to saved items.
+              if (savedIds.isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _navigateToSavedItems,
+                    icon: const Icon(Icons.bookmarks_outlined),
+                    label: Text(l10n.commonViewAll),
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },

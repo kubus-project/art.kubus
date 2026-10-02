@@ -335,7 +335,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
                   completedCount,
                   definitions.length,
                 ),
-                icon: Icons.emoji_events_outlined,
                 padding: EdgeInsets.zero,
               ),
               const SizedBox(height: KubusSpacing.lg),

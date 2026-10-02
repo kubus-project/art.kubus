@@ -13,7 +13,6 @@ import '../../models/exhibition.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
-import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';
@@ -815,11 +814,6 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           subtitle: created == null
               ? l10n.exhibitionCreatorStatusDraftSubtitle
               : l10n.exhibitionCreatorStatusSavedSubtitle,
-          icon: created == null
-              ? Icons.edit_outlined
-              : AppColorUtils.exhibitionIcon,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -858,9 +852,6 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: l10n.exhibitionCreatorReadinessTitle,
           subtitle: l10n.exhibitionCreatorReadinessSubtitle,
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
             contextType: contextType,
@@ -870,9 +861,6 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         DesktopCreatorSidebarSection(
           title: l10n.exhibitionCreatorQuickActionsTitle,
           subtitle: l10n.exhibitionCreatorQuickActionsSubtitle,
-          icon: Icons.flash_on_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -7,7 +7,6 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
-import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
@@ -123,32 +122,27 @@ class _DesktopCardState extends State<DesktopCard> {
   }
 }
 
-/// Desktop section header: optional contextual icon tile, title, subtitle
-/// and a trailing action. [iconColor] is the section's contextual accent and
-/// stays inside the icon tile; it defaults to the family active colour, never
-/// to the personal accent.
+/// Desktop section header: title, subtitle and a trailing action.
+///
+/// Typographic only. A section title already names its content, so an icon
+/// tile beside it would repeat the title; hierarchy comes from the type
+/// scale and the spacing around the header.
 class DesktopSectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? action;
-  final IconData? icon;
   final EdgeInsetsGeometry? padding;
-  final Color? iconColor;
 
   const DesktopSectionHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.action,
-    this.icon,
     this.padding,
-    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = iconColor ?? KubusColorRoles.of(context).active;
-
     return Padding(
       padding: padding ??
           const EdgeInsets.symmetric(
@@ -156,10 +150,6 @@ class DesktopSectionHeader extends StatelessWidget {
           ),
       child: Row(
         children: [
-          if (icon != null) ...[
-            KubusContextIcon(icon: icon!, accent: accent),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
-          ],
           Expanded(
             child: KubusHeaderText(
               title: title,
@@ -226,8 +216,8 @@ class DesktopGrid extends StatelessWidget {
 
 /// Desktop stat card for displaying metrics.
 ///
-/// PRODUCT v5: a flat metric (no hover lift, scale, shadow or watermark).
-/// [color] is the metric's contextual accent and paints its icon tile.
+/// An expressive [KubusStatCard]: number, label and the metric's glyph as a
+/// cropped ghost glyph in [color], the metric's contextual accent.
 class DesktopStatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -248,12 +238,15 @@ class DesktopStatCard extends StatelessWidget {
     this.onTap,
   });
 
-  /// The `mainAxisExtent` for a grid of these tiles: icon tile, number and a
-  /// two-line label, measured at the ambient text scale.
-  static double extentOf(BuildContext context) => KubusStatCard.centeredExtent(
+  /// The `mainAxisExtent` for a grid of these tiles: number and a two-line
+  /// label, measured at the ambient text scale. Pass [hasChange] when any tile
+  /// in the grid sets [change], so the cell also fits the change chip.
+  static double extentOf(BuildContext context, {bool hasChange = false}) =>
+      KubusStatCard.centeredExtent(
         context,
         valueStyle: _valueStyle,
         titleStyle: _titleStyle,
+        reserveChange: hasChange,
       );
 
   static TextStyle get _valueStyle => KubusTextStyles.statValue;

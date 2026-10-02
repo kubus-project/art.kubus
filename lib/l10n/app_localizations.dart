@@ -15424,6 +15424,18 @@ abstract class AppLocalizations {
   /// **'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.'**
   String get artistStudioLockedDescription;
 
+  /// No description provided for @institutionHubLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution Hub is locked'**
+  String get institutionHubLockedTitle;
+
+  /// No description provided for @institutionHubLockedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.'**
+  String get institutionHubLockedDescription;
+
   /// No description provided for @artistStudioSettingsTitle.
   ///
   /// In en, this message translates to:
@@ -21892,7 +21904,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Experimental community governance for artists, institutions, and cultural participation'**
+  /// **'Experimental decision-making for artists, institutions, and cultural participation'**
   String get daoHubHeaderSubtitle;
 
   /// No description provided for @daoHubInfoDialogTitle.

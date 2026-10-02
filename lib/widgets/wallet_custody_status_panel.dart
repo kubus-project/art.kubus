@@ -30,56 +30,25 @@ class WalletCustodyStatusPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: compact
-                    ? KubusSizes.walletActionIconBox
-                    : KubusSizes.tokenAvatarLg,
-                height: compact
-                    ? KubusSizes.walletActionIconBox
-                    : KubusSizes.tokenAvatarLg,
-                decoration: BoxDecoration(
-                  color: stateColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: KubusBorders.accentTint(stateColor),
-                ),
-                child: Icon(
-                  _stateIcon(),
-                  color: stateColor,
-                  size: compact
-                      ? KubusSizes.walletActionIcon
-                      : KubusChromeMetrics.navIcon,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      l10n.walletSecurityStatusTitle,
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    // The state pill sits on its own line: it carries a full
-                    // sentence ("Wallet access ready on this device") and
-                    // must not be squeezed by the title beside it.
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: WalletStatusChip(
-                        label: _stateLabel(l10n),
-                        icon: _stateIcon(),
-                        color: stateColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // The state is said once, by the chip (icon + sentence). A state
+          // icon tile beside the title would repeat the same glyph.
+          Text(
+            l10n.walletSecurityStatusTitle,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          // The state pill sits on its own line: it carries a full sentence
+          // ("Wallet access ready on this device") and must not be squeezed
+          // by the title beside it.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: WalletStatusChip(
+              label: _stateLabel(l10n),
+              icon: _stateIcon(),
+              color: stateColor,
+            ),
           ),
           SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
           Divider(

@@ -8830,6 +8830,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
 
   @override
+  String get institutionHubLockedTitle => 'Institution Hub is locked';
+
+  @override
+  String get institutionHubLockedDescription =>
+      'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.';
+
+  @override
   String get artistStudioSettingsTitle => 'Studio Settings';
 
   @override
@@ -12527,7 +12534,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get daoHubHeaderSubtitle =>
-      'Experimental community governance for artists, institutions, and cultural participation';
+      'Experimental decision-making for artists, institutions, and cultural participation';
 
   @override
   String get daoHubInfoDialogTitle => 'How community governance works';

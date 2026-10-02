@@ -225,9 +225,10 @@ class _WalletHomeState extends State<WalletHome> {
                   const SizedBox(height: KubusSpacing.lg),
                   _buildBalancesCard(
                     wallet: wallet,
-                    tokens: tokens,
                     isCompact: isCompact,
                   ),
+                  const SizedBox(height: KubusSpacing.lg),
+                  _buildTokensCard(tokens: tokens),
                   const SizedBox(height: KubusSpacing.lg),
                   KubusWalletSectionCard(
                     title: l10n.walletActionsTitle,
@@ -494,7 +495,6 @@ class _WalletHomeState extends State<WalletHome> {
   /// source backs it (`hasFiatValuation`).
   Widget _buildBalancesCard({
     required Wallet? wallet,
-    required List<Token> tokens,
     required bool isCompact,
   }) {
     final l10n = AppLocalizations.of(context)!;
@@ -577,11 +577,13 @@ class _WalletHomeState extends State<WalletHome> {
       // The asset hero: wallet amber with the wallet symbol.
       accent: roles.statAmber,
       glyph: Icons.account_balance_wallet_outlined,
-      title: l10n.walletHomeTotalBalanceLabel,
-      subtitle: l10n.walletHomeYourTokensSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // Same notion label as the desktop hero: names the figure, adds no
+          // second sentence.
+          KubusNotionLabel(l10n.walletHomeTotalBalanceLabel),
+          const SizedBox(height: KubusSpacing.md),
           Wrap(
             spacing: KubusSpacing.xl,
             runSpacing: KubusSpacing.md,
@@ -601,16 +603,41 @@ class _WalletHomeState extends State<WalletHome> {
               ),
             ),
           ],
-          const SizedBox(height: KubusSpacing.lg),
-          KubusNotionLabel(l10n.walletHomeYourTokensTitle),
-          const SizedBox(height: KubusSpacing.xs),
-          if (tokens.isEmpty)
-            EmptyStateCard(
-              icon: Icons.token_outlined,
-              title: l10n.walletHomeNoTokensTitle,
-              description: l10n.walletHomeNoTokensDescription,
-            )
-          else
+        ],
+      ),
+    );
+  }
+
+  /// The wallet's holdings, every token including KUB8 and SOL. It is its
+  /// own section, not part of the balance hero: the hero summarises the
+  /// principal balances, this lists what the wallet holds.
+  Widget _buildTokensCard({required List<Token> tokens}) {
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    return KubusWalletSectionCard(
+      key: const ValueKey<String>('wallet_tokens_section'),
+      title: l10n.walletHomeYourTokensTitle,
+      subtitle: l10n.walletHomeYourTokensSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (tokens.isEmpty) ...<Widget>[
+            // Plain text inside the section: no card inside the card.
+            Text(
+              l10n.walletHomeNoTokensTitle,
+              style: KubusTextStyles.detailCardTitle.copyWith(
+                color: roles.foreground,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              l10n.walletHomeNoTokensDescription,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: roles.foregroundMuted,
+              ),
+            ),
+          ] else
             for (final token in tokens) _buildTokenRow(token, walletProvider),
         ],
       ),

@@ -20,6 +20,7 @@ import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/screens/community/profile_screen.dart'
     as mobile_owner;
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
@@ -75,6 +76,10 @@ Future<void> pumpProfileSurface(
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
   DAOProvider? daoProvider,
+
+  /// Paint the theme ground under the screen, as the app shell does, so a
+  /// screenshot of a transparent screen is not composited on white.
+  bool paintGround = false,
 }) async {
   final resolvedUser = user ?? ProfileFixtures.user();
 
@@ -153,7 +158,14 @@ Future<void> pumpProfileSurface(
             size: size,
             textScaler: TextScaler.linear(textScale),
           ),
-          child: child,
+          child: paintGround
+              ? Builder(
+                  builder: (context) => ColoredBox(
+                    color: KubusColorRoles.of(context).ground,
+                    child: child,
+                  ),
+                )
+              : child,
         ),
       ),
     ),

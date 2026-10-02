@@ -1,4 +1,6 @@
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
+import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
+import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,6 +121,66 @@ void main() {
       )));
       expect(tester.takeException(), isNull);
       expect(tester.getSize(find.byType(KubusActionTile)).width, 400);
+    });
+  });
+
+  group('KubusActionTile semantic identity (one idea, one expression)', () {
+    testWidgets(
+        'stacked: the destination glyph appears once, as decoration only',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_app(Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: 220,
+          height: 160,
+          child: _tile('Map', layout: KubusActionTileLayout.stacked),
+        ),
+      )));
+      expect(find.byType(KubusContextIcon), findsNothing);
+      expect(find.byIcon(Icons.map_outlined), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(KubusGhostGlyph),
+          matching: find.byIcon(Icons.map_outlined),
+        ),
+        findsOneWidget,
+      );
+      // The ghost glyph is never announced and never takes a tap; the tile
+      // speaks only its title, as a button.
+      expect(
+        find.descendant(
+          of: find.byType(KubusGhostGlyph),
+          matching: find.byType(IgnorePointer),
+        ),
+        findsWidgets,
+      );
+      final node = tester.getSemantics(find.byType(KubusActionTile));
+      final data = node.getSemanticsData();
+      expect(data.label, 'Map');
+      expect(data.flagsCollection.isButton, isTrue);
+      expect(data.hasAction(SemanticsAction.tap), isTrue);
+      handle.dispose();
+    });
+
+    testWidgets('inline: title and arrow, no destination icon', (tester) async {
+      await tester.pumpWidget(_app(Align(
+        alignment: Alignment.topLeft,
+        child: _tile('Map'),
+      )));
+      expect(find.byIcon(Icons.map_outlined), findsNothing);
+      expect(find.byType(KubusContextIcon), findsNothing);
+      expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
+      expect(find.text('Map'), findsOneWidget);
+    });
+
+    testWidgets('a narrow parent wins over the inline cap', (tester) async {
+      await tester.pumpWidget(_app(Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(width: 140, child: _tile(_longTitle)),
+      )));
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(KubusActionTile)).width, 140);
     });
   });
 }

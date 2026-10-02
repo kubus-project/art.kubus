@@ -401,9 +401,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       children: [
         DesktopCreatorSidebarSection(
           title: l10n.collectionCreatorReadinessTitle,
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readinessItems,
             contextType: contextType,
@@ -412,9 +409,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: l10n.commonActions,
-          icon: Icons.save_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -767,11 +761,15 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                             style: DetailTypography.sectionTitle(context),
                           ),
                         ),
-                        IconButton(
-                          onPressed: _isSaving ? null : _pickCover,
-                          icon: const Icon(Icons.image_outlined),
-                          tooltip: l10n.commonEdit,
-                        ),
+                        // Replace action only once there is a cover: an
+                        // empty slot already offers its one upload button.
+                        if (_nextCoverBytes != null ||
+                            (coverUrl != null && coverUrl.isNotEmpty))
+                          IconButton(
+                            onPressed: _isSaving ? null : _pickCover,
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: l10n.commonEdit,
+                          ),
                       ],
                     ),
                     const SizedBox(height: DetailSpacing.md),

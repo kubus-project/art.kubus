@@ -267,11 +267,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
 
                 final entries = _visibleEntries(provider, walletAddress);
                 if (entries.isEmpty) {
-                  return Center(
-                    child: EmptyStateCard(
-                      icon: Icons.collections_outlined,
-                      title: l10n.commonNoResultsFound,
-                      description: l10n.marketplaceNoMintedNftsDescription,
+                  // On the same axis as the results it stands in for: the
+                  // page gutter, starting where the first row would.
+                  return Padding(
+                    key: const ValueKey<String>('desktop-editions-empty'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.xl,
+                    ),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: EmptyStateCard(
+                        icon: Icons.collections_outlined,
+                        title: l10n.commonNoResultsFound,
+                        description: l10n.marketplaceNoMintedNftsDescription,
+                      ),
                     ),
                   );
                 }

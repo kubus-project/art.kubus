@@ -798,9 +798,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           DesktopCreatorSidebarSection(
             title: l10n.collectionCreatorReadinessTitle,
             subtitle: l10n.collectionCreatorReadinessSubtitle,
-            icon: Icons.checklist_outlined,
-            contextType: contextType,
-            semantic: DesktopCreatorSectionSemantic.readiness,
             child: DesktopCreatorReadinessChecklist(
               items: readinessItems,
               contextType: contextType,
@@ -856,9 +853,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           DesktopCreatorSidebarSection(
             title: l10n.collectionCreatorQuickActionsTitle,
             subtitle: l10n.collectionCreatorQuickActionsSubtitle,
-            icon: Icons.flash_on_outlined,
-            contextType: contextType,
-            semantic: DesktopCreatorSectionSemantic.actions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -883,9 +877,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           DesktopCreatorSidebarSection(
             title: l10n.collectionCreatorSummaryIdLabel,
             subtitle: l10n.collectionCreatorSummarySelectedArtworksLabel,
-            icon: Icons.info_outline,
-            contextType: contextType,
-            semantic: DesktopCreatorSectionSemantic.summary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -928,10 +919,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             DesktopCreatorSidebarSection(
               title: l10n.collectionSettingsCollaboration,
               subtitle: l10n.collectionCreatorCollaborationLockedSubtitle,
-              icon: Icons.group_off_outlined,
-              contextType: contextType,
-              semantic: DesktopCreatorSectionSemantic.collaboration,
-              sectionColors: collaborationColors,
               child: CreatorInfoBox(
                 text: l10n.collectionCreatorCollaborationLockedMessage,
                 icon: Icons.lock_outline,

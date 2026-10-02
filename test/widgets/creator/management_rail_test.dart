@@ -32,9 +32,6 @@ void main() {
         children: const [
           DesktopCreatorSidebarSection(
             title: 'Readiness',
-            icon: Icons.fact_check_outlined,
-            contextType: DesktopCreatorContextType.artwork,
-            semantic: DesktopCreatorSectionSemantic.readiness,
             child: DesktopCreatorReadinessChecklist(
               contextType: DesktopCreatorContextType.artwork,
               items: [
@@ -49,15 +46,12 @@ void main() {
           ),
           DesktopCreatorSidebarSection(
             title: 'Actions',
-            icon: Icons.save_outlined,
-            contextType: DesktopCreatorContextType.artwork,
-            semantic: DesktopCreatorSectionSemantic.actions,
             child: SizedBox(height: 44),
           ),
         ],
       );
 
-  testWidgets('rail sections are flat, one workspace, accents in tiles only',
+  testWidgets('rail sections are flat, one workspace, typographic headings',
       (tester) async {
     await pump(
       tester,
@@ -76,19 +70,16 @@ void main() {
     // One header title.
     expect(find.text('Riverside mural'), findsOneWidget);
 
-    // Each section carries a compact context tile; actions answer in teal.
-    final roles = KubusColorRoles.of(tester.element(find.text('Actions')));
-    final tiles = tester
-        .widgetList<KubusContextIcon>(find.byType(KubusContextIcon))
-        .toList();
-    expect(tiles, hasLength(2));
-    expect(tiles.every((t) => t.size == KubusContextIconSize.compact), isTrue);
-    final actionsTile = tiles.firstWhere((t) => t.icon == Icons.save_outlined);
+    // Section headings are typographic: no icon tile repeats the title.
     expect(
-      actionsTile.accent.toARGB32(),
-      isNot(roles.web3MarketplaceAccent.toARGB32()),
-      reason: 'save/publish is the primary teal action, not marketplace',
+      find.descendant(
+        of: find.byType(DesktopCreatorSidebarSection),
+        matching: find.byType(KubusContextIcon),
+      ),
+      findsNothing,
     );
+    expect(find.text('Readiness'), findsOneWidget);
+    expect(find.text('Actions'), findsOneWidget);
 
     // Sections are divided by a hairline, not boxed in tinted fills.
     final sectionBoxes = tester.widgetList<DecoratedBox>(find.descendant(
