@@ -104,12 +104,18 @@ class KubusStatCard extends StatelessWidget {
   /// with the same styles the tile paints. Grids of centred tiles pass it (or
   /// a larger floor) as `mainAxisExtent`, so 200 % text grows the tile
   /// instead of clipping the label.
+  ///
+  /// A centred tile with a non-null [change] stacks the change chip (and one
+  /// [KubusSpacing.xs] gap) under the label. Pass [reserveChange] when any
+  /// tile in the grid carries one so the cell fits the tallest valid tile; a
+  /// grid without chips leaves it off and gains no empty space.
   static double centeredExtent(
     BuildContext context, {
     int titleLines = 2,
     TextStyle? valueStyle,
     TextStyle? titleStyle,
     EdgeInsets padding = defaultPadding,
+    bool reserveChange = false,
   }) {
     final scaler = MediaQuery.textScalerOf(context);
     final lines = _labelLines(scaler, titleLines);
@@ -134,7 +140,16 @@ class KubusStatCard extends StatelessWidget {
 
     final valueLine = lineHeight(valueStyle ?? KubusTextStyles.statValue, 1);
     final label = lineHeight(titleStyle ?? KubusTextStyles.statLabel, lines);
-    return (padding.vertical + valueLine + KubusSpacing.xs + label)
+    // The chip row is as tall as its icon or its (scaled) label, whichever
+    // is larger; see [_KubusStatChangeChip].
+    final chip = reserveChange
+        ? KubusSpacing.xs +
+            math.max(
+              KubusHeaderMetrics.sectionSubtitle,
+              lineHeight(KubusTextStyles.statChange, 1),
+            )
+        : 0.0;
+    return (padding.vertical + valueLine + KubusSpacing.xs + label + chip)
         .ceilToDouble();
   }
 

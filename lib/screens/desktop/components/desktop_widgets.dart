@@ -239,11 +239,14 @@ class DesktopStatCard extends StatelessWidget {
   });
 
   /// The `mainAxisExtent` for a grid of these tiles: number and a two-line
-  /// label, measured at the ambient text scale.
-  static double extentOf(BuildContext context) => KubusStatCard.centeredExtent(
+  /// label, measured at the ambient text scale. Pass [hasChange] when any tile
+  /// in the grid sets [change], so the cell also fits the change chip.
+  static double extentOf(BuildContext context, {bool hasChange = false}) =>
+      KubusStatCard.centeredExtent(
         context,
         valueStyle: _valueStyle,
         titleStyle: _titleStyle,
+        reserveChange: hasChange,
       );
 
   static TextStyle get _valueStyle => KubusTextStyles.statValue;

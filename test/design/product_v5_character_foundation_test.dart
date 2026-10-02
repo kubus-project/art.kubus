@@ -379,6 +379,157 @@ void main() {
       });
     }
 
+    // A centred tile with a change chip stacks one more row under the label.
+    // The grid reserves it only when asked, and then fits the tallest tile of
+    // a mixed grid (chips of either sign next to tiles without one).
+    for (final scale in [1.0, 1.3, 2.0]) {
+      testWidgets(
+          'mixed change chips fit the reserved grid extent at ${scale}x text',
+          (tester) async {
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) => SizedBox(
+              width: 360,
+              child: DesktopGrid(
+                minCrossAxisCount: 2,
+                maxCrossAxisCount: 2,
+                spacing: 12,
+                mainAxisExtent:
+                    DesktopStatCard.extentOf(context, hasChange: true),
+                children: const [
+                  DesktopStatCard(
+                    label: 'Followers',
+                    value: '1,284',
+                    icon: Icons.people_outline,
+                    change: '+12%',
+                  ),
+                  DesktopStatCard(
+                    label: 'Digital editions held',
+                    value: '12.4K',
+                    icon: Icons.token_outlined,
+                    change: '-3.5%',
+                    isPositive: false,
+                  ),
+                  DesktopStatCard(
+                    label: 'Artworks viewed in the last thirty days',
+                    value: '905',
+                    icon: Icons.visibility_outlined,
+                    change: '+1,204',
+                  ),
+                  DesktopStatCard(
+                    label: 'Discoveries',
+                    value: '31',
+                    icon: Icons.explore_outlined,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          textScale: scale,
+        );
+        expect(tester.takeException(), isNull,
+            reason: 'no RenderFlex overflow at ${scale}x');
+        for (final change in ['+12%', '-3.5%', '+1,204']) {
+          final tile = tester.getRect(find.ancestor(
+            of: find.text(change),
+            matching: find.byType(KubusStatCard),
+          ));
+          expect(tester.getRect(find.text(change)).bottom,
+              lessThanOrEqualTo(tile.bottom),
+              reason: '$change chip is inside its tile at ${scale}x');
+        }
+      });
+    }
+
+    testWidgets('the chip reservation is opt-in and grows with text scale',
+        (tester) async {
+      final extents = <String, double>{};
+      for (final scale in [1.0, 2.0]) {
+        await pumpThemed(
+          tester,
+          Builder(builder: (context) {
+            extents['plain@$scale'] = DesktopStatCard.extentOf(context);
+            extents['chip@$scale'] =
+                DesktopStatCard.extentOf(context, hasChange: true);
+            extents['kubus@$scale'] = KubusStatCard.centeredExtent(context);
+            return const SizedBox();
+          }),
+          textScale: scale,
+        );
+      }
+      for (final scale in [1.0, 2.0]) {
+        expect(extents['chip@$scale']!, greaterThan(extents['plain@$scale']!),
+            reason: 'a chip row adds height at ${scale}x');
+      }
+      // A grid without chips acquires no empty space: the default extent is
+      // the explicit opt-out.
+      await pumpThemed(
+        tester,
+        Builder(builder: (context) {
+          expect(KubusStatCard.centeredExtent(context),
+              KubusStatCard.centeredExtent(context, reserveChange: false));
+          return const SizedBox();
+        }),
+      );
+      expect(extents['chip@2.0']! - extents['plain@2.0']!,
+          greaterThanOrEqualTo(extents['chip@1.0']! - extents['plain@1.0']!),
+          reason: 'the chip text scales, so the reservation never shrinks');
+    });
+
+    // The mobile profile grid sizes its centred tiles with
+    // KubusStatCard.centeredExtent directly.
+    for (final scale in [1.0, 1.3, 2.0]) {
+      testWidgets(
+          'KubusStatCard.centeredExtent(reserveChange) fits a positive and a '
+          'negative chip at ${scale}x text', (tester) async {
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              final extent =
+                  KubusStatCard.centeredExtent(context, reserveChange: true);
+              return SizedBox(
+                width: 340,
+                child: GridView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    mainAxisExtent: extent,
+                  ),
+                  children: const [
+                    KubusStatCard(
+                      title: 'Following the people you know best',
+                      value: '48',
+                      icon: Icons.person_add_alt_outlined,
+                      layout: KubusStatCardLayout.centered,
+                      titleMaxLines: 2,
+                      change: '+4',
+                    ),
+                    KubusStatCard(
+                      title: 'Posts',
+                      value: '7',
+                      icon: Icons.forum_outlined,
+                      layout: KubusStatCardLayout.centered,
+                      titleMaxLines: 2,
+                      change: '-1',
+                      isPositiveChange: false,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          textScale: scale,
+        );
+        expect(tester.takeException(), isNull,
+            reason: 'no RenderFlex overflow at ${scale}x');
+      });
+    }
+
     testWidgets('grid extent grows with the text scale', (tester) async {
       late double base;
       late double large;
