@@ -1296,14 +1296,16 @@ class _MapScreenState extends State<MapScreen>
     _sessionMemory = memory;
     final saved = memory?.camera;
     if (saved != null &&
-        widget.initialCenter == null &&
-        widget.initialZoom == null &&
-        !_hasInitialDirectTarget &&
-        widget.walkingNavigationIntent == null) {
+        memory!.canRestore(
+          hasExplicitCenterOrZoom:
+              widget.initialCenter != null || widget.initialZoom != null,
+          hasDirectTarget: _hasInitialDirectTarget,
+          hasWalkingIntent: widget.walkingNavigationIntent != null,
+        )) {
       _cameraCenter = saved.center;
       _lastZoom = saved.zoom;
       _initialLocaleViewportApplied = true;
-      _filterState = memory!.filters;
+      _filterState = memory.filters;
       _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
       _pendingRestoreMarker = memory.selectedMarker;
       final query = memory.query;

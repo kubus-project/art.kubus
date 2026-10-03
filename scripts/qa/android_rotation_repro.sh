@@ -11,8 +11,9 @@
 #
 # Env:
 #   QA_SETTLE=50        seconds to let the map open before driving it
-#   QA_STATE_TAPS="x,y x,y"  device-pixel taps applied once, in order, 3 s apart
-#                       (e.g. a cluster tap and a marker tap) to reach a fixed state
+#   QA_STATE_CMDS="input tap 540 210;sleep 2;input text Ljubljana;sleep 4;input tap 420 456;sleep 8"
+#                       semicolon-separated device commands (or `sleep N`) that drive the
+#                       app into a fixed state, e.g. a search followed by selecting its result
 #   QA_ROTATE_WAIT=3    seconds to rest after each rotation
 #   QA_OUT=output/playwright/spatial/android-rotation
 #
@@ -47,9 +48,15 @@ if [ -z "$start_pid" ]; then
   exit 1
 fi
 
-for tap in ${QA_STATE_TAPS:-}; do
-  adb shell input tap "${tap%,*}" "${tap#*,}"
-  sleep 3
+adb exec-out screencap -p > "$out/$label-opening.png"
+adb shell svc bluetooth disable >/dev/null 2>&1 || true   # keeps the emulator's own crash dialog off the map
+IFS=';' read -r -a state_cmds <<< "${QA_STATE_CMDS:-}"
+for cmd in "${state_cmds[@]}"; do
+  case "$cmd" in
+    "sleep "*) sleep "${cmd#sleep }" ;;
+    '') ;;
+    *) adb shell $cmd ;;
+  esac
 done
 adb exec-out screencap -p > "$out/$label-state.png"
 

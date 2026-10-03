@@ -41,6 +41,21 @@ class KubusMapSessionMemory {
   /// Whether a previous map screen left anything worth restoring.
   bool get hasState => _camera != null;
 
+  /// Whether an entry may adopt the remembered state.
+  ///
+  /// An explicit target (an initial centre or zoom, a deep or internal marker
+  /// target, a walking navigation intent) is more specific than anything the
+  /// visitor happened to leave behind, so it always wins over memory.
+  bool canRestore({
+    required bool hasExplicitCenterOrZoom,
+    required bool hasDirectTarget,
+    required bool hasWalkingIntent,
+  }) =>
+      hasState &&
+      !hasExplicitCenterOrZoom &&
+      !hasDirectTarget &&
+      !hasWalkingIntent;
+
   void rememberCamera(LatLng center, double zoom) {
     if (!center.latitude.isFinite ||
         !center.longitude.isFinite ||

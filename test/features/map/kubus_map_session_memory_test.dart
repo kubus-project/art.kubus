@@ -70,4 +70,64 @@ void main() {
     expect(memory.selectedMarker, isNull);
     expect(memory.filters.isDefault, isTrue);
   });
+
+  group('canRestore: an explicit target always wins over memory', () {
+    KubusMapSessionMemory remembered() =>
+        KubusMapSessionMemory()..rememberCamera(const LatLng(46.05, 14.5), 14);
+
+    test('nothing explicit: the remembered state is adopted', () {
+      expect(
+        remembered().canRestore(
+          hasExplicitCenterOrZoom: false,
+          hasDirectTarget: false,
+          hasWalkingIntent: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('an explicit initial centre or zoom wins', () {
+      expect(
+        remembered().canRestore(
+          hasExplicitCenterOrZoom: true,
+          hasDirectTarget: false,
+          hasWalkingIntent: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a deep or internal marker target wins', () {
+      expect(
+        remembered().canRestore(
+          hasExplicitCenterOrZoom: false,
+          hasDirectTarget: true,
+          hasWalkingIntent: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a walking navigation intent wins', () {
+      expect(
+        remembered().canRestore(
+          hasExplicitCenterOrZoom: false,
+          hasDirectTarget: false,
+          hasWalkingIntent: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('with nothing remembered there is nothing to adopt', () {
+      expect(
+        KubusMapSessionMemory().canRestore(
+          hasExplicitCenterOrZoom: false,
+          hasDirectTarget: false,
+          hasWalkingIntent: false,
+        ),
+        isFalse,
+      );
+    });
+  });
 }

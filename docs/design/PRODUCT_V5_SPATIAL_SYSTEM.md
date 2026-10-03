@@ -1,7 +1,7 @@
 # PRODUCT v5 — spatial map system (Wave 5B)
 
 Status: implemented reality of Wave 5B on `feat/product-v5-spatial-system`
-(base `dev@9109d65e`). Everything below is what the code does today; limits and
+(rebased onto `dev@d6810271`). Everything below is what the code does today; limits and
 unverified platforms are listed explicitly at the end. Nothing here is a
 roadmap item.
 
@@ -40,7 +40,7 @@ using the same plugin and the same Kubus styles, outside the repo) found:
 | Web, Firefox, MapLibre GL JS 5.24.0 | **Yes** | same results (software WebGL; allow longer settle) |
 | Web, any, MapLibre GL JS **4.7.1** (what the app vendored before 5B) | No | the `projection` key is silently ignored: flat |
 | Android emulator, MapLibre Native 13.3.0 | No | style accepted, renders flat Mercator (screenshot evidence) |
-| iOS, MapLibre Native 6.27.0 | Not testable here | no macOS host; treated as flat until someone verifies it |
+| iOS, MapLibre Native 6.27.0 | Not verified at runtime | no macOS host; the PR's `iOS release compile without codesigning` job is the only iOS evidence (it compiles); treated as flat |
 | Physical Android | Not available | none attached; no physical-device claim is made anywhere |
 
 Other measured facts that shaped the design:
@@ -153,6 +153,11 @@ Covers are the only per-record cost, so they are the only bounded set:
   not an eviction scheme.
 * Covers are re-planned when the camera settles at street scale and when a
   cover finishes loading; they are not recomputed per camera frame.
+* Cover work never competes with the camera (`KubusCoverWorkGate`): a cover is
+  fetched and rasterised only while the camera is idle, one at a time, and the
+  marker source is rebuilt once per batch of finished covers instead of once per
+  cover. A cover skipped because the camera moved is re-planned at the next idle.
+  The reason is measured in §10c.
 
 ## 6. Selection invariant
 
@@ -269,6 +274,154 @@ marker selected and the same search constraint. Android landscape/portrait
 swaps keep camera and search text. Only a *new* screen reads the memory; it is
 not a restore-after-process-death feature.
 
+## 10b. Contracts that did not move
+
+* **Guest-first entry** (frozen from 5A-E): a fresh install opens straight on the
+  map. No alpha notice, onboarding, account/wallet/profile wall, startup location
+  request or startup notification request was added; the Android emulator opening
+  frames in the evidence folder were taken on a fresh install of the branch build.
+  Location is asked for only by the explicit "Center on me" control.
+* **`map_engaged`** (frozen from 5A-E): first deliberate interaction, once per
+  session (user feature or marker tap, search-result selection, deliberate pan or
+  zoom). Initial globe framing, programmatic zoom, deep-link framing, style
+  reload, responsive restore and session-memory camera restore do not qualify;
+  the restore paths use the same programmatic-move flag as every other
+  `KubusMapController.animateTo`/`fitBounds` caller (§10).
+* **WebGL context loss**: the browser QA simulates a lost and restored context;
+  the app keeps one map instance, restores its layers and does not enter a
+  recreate loop. A style that cannot draw a globe falls back to flat; no state
+  blanks the app (offline tiles and a failed cover image are covered by the same
+  QA: the markers stay, the basemap degrades).
+* **Walking navigation**: untouched. The route lives in its own source and layers
+  and is restored by the style epoch like every other layer; the existing
+  walking/navigation widget and unit tests run unchanged in the full suite.
+
+## 10c. Performance (measured, and what is not)
+
+Three different kinds of evidence exist and are never mixed:
+
+### Network (browser, 5-run fixture replay)
+
+Marker covers used to be fetched at the size the media resolver returned for a
+detail view (960 px). They are now requested at the badge's own size (stored
+Wikimedia thumbnails are re-bucketed to the requested width, 120/250/330 px).
+
+| 390x844, same camera path | image requests | decoded bytes |
+| --- | --- | --- |
+| dev (before 5B) | 13 | **3 368 KB** (13 x 960 px class) |
+| Wave 5B | 13-27 (one per cover that lands) | **117-354 KB** |
+
+At 1440x900 dev fetched 2 images (16 KB) because it draws no covers; 5B draws
+up to 24 and fetches 13-16 of them (229-336 KB) on the same path.
+
+### Browser frame pacing (Chromium, 5 runs per cell, medians, ms)
+
+The experiment holds machine, browser, viewport, warm-up, camera path
+(zoom 3.5 -> 15 -> pan -> 6 over Ljubljana, 68 of 300 fixture markers), cache
+policy and measurement window constant. Marker reads are a pinned dataset and
+every external read is replayed from disk, so the configurations differ in the
+bundle only. Configurations: **A** = dev (MapLibre GL JS 4.7.1, flat),
+**A2** = the same dev code with the 5.24.0 runtime swapped in (isolates the
+runtime), **B/C** = Wave 5B flat / globe before the fix below, **Bf/Cf** = after.
+Harness: `scripts/qa/product_v5_spatial_perf_ab.mjs`; CPU profile:
+`scripts/qa/product_v5_spatial_cpu_profile.mjs`. Raw summaries are in the
+evidence folder.
+
+Real GPU (RTX 3080 Ti through ANGLE/D3D11), 1440x900:
+
+| | p50 | p95 | p99 | max | frames >33 | frames >50 | long tasks | readPixels |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A dev | 16.7 | 16.8 | 16.8 | 49.9 | 1 | 0 | 0 | 39 / 60 ms |
+| A2 dev + 5.24 | 16.7 | 16.8 | 33.3 | 33.4 | 1 | 0 | 0 | 39 / 50 ms |
+| B 5B flat, before fix | 16.7 | **49.9** | 66.6 | 116.6 | 20 | **9** | 12 / 844 ms | 59 / 166 ms |
+| C 5B globe, before fix | 16.7 | **50.0** | 83.4 | 233.3 | 20 | **9** | 13 / 1195 ms | 91 / 168 ms |
+| Bf 5B flat, fixed | 16.7 | 16.8 | 33.3 | 100.0 | 3 | 2 | 3 / 209 ms | 42 / 89 ms |
+| Cf 5B globe, fixed | 16.7 | 16.8 | 50.0 | 133.3 | 4 | 3 | 3 / 255 ms | 79 / 89 ms |
+
+Software GL (SwiftShader: the worst case, CPU rasterised), 1440x900:
+
+| | p50 | p95 | p99 | max | frames >50 | long tasks |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 16.7 | 66.6 | 183.4 | 249.9 | 15 | 14 / 1634 ms |
+| A2 | 16.7 | 66.7 | 216.6 | 266.6 | 19 | 14 / 1641 ms |
+| B before fix | 16.7 | **99.9** | 350.0 | 383.3 | **25** | 21 / 2491 ms |
+| C before fix | 16.7 | **100.0** | 333.3 | 350.0 | **28** | 19 / 2543 ms |
+| Bf fixed | 33.2 | 66.7 | 333.2 | 366.6 | 15 | 10 / 1441 ms |
+| Cf fixed | 33.3 | 66.8 | 333.3 | 366.6 | 18 | 13 / 1949 ms |
+
+At 390x844 the real GPU is flat across all six (p95 16.8 ms everywhere, 0-2
+frames >50 ms). On software GL the phone viewport shows p95 66.7 (A, A2, Bf),
+83.3 (Cf) and 100.1 (B, C), frames >50 ms 19 / 18 / 17 / 16 / 21 / 18; the
+spread between runs of one cell is as large as the Cf-versus-Bf difference
+(66.6-116.6 for Cf), so the globe's cost on a phone-size software canvas is not
+separable from noise.
+
+**What the experiment attributes the cost to**
+
+* MapLibre GL JS 5.24 runtime: **nothing** (A against A2: identical on both
+  GL modes).
+* Globe projection: **a small constant**, visible only as `Map._render` CPU
+  time (p50 1.4 -> 2.0 ms real GPU, 2.2 -> 3.5 ms software). It adds no
+  measurable dropped frames once the cover work is fixed (Bf against Cf).
+* The 5B marker / cover work **before the fix**: p95 16.8 -> 49.9 ms, nine
+  frames over 50 ms and twelve long tasks. A CPU profile showed the extra time is
+  `readPixels` (CanvasKit reads each rendered icon back from the GPU): one stall
+  per cover icon, started while the camera was still moving, and each finished
+  cover forced an immediate full marker-source rebuild.
+* Source serialisation (`setData`) is 1-2 ms per call in every configuration;
+  it is not a factor. Active features were identical across configurations
+  (80-92 at the street frame).
+
+**The fix** (`KubusCoverWorkGate`): new cover preparation starts only while the
+camera is idle, runs one cover at a time with a 24 ms breather, and collapses the
+resyncs of a batch into one trailing rebuild. Skipped covers are re-planned at
+the next camera idle (both screens already do this at street scale). The
+level-of-detail rules, the cover budget, the selected-marker invariant and the
+image budget are unchanged.
+
+Measurement integrity note: an earlier pass was taken while a stray Android
+emulator from a previous session consumed CPU; it inflated every configuration.
+All numbers above are from runs on a quiet machine (emulator stopped). The
+ordering (5B before the fix worse, after the fix equal to dev) held in both
+passes.
+
+Remaining browser cost, stated plainly: after the fix 5B still issues more
+`readPixels` calls than dev (42-79 against 39) because it renders cover icons,
+and the frames of 117-316 ms that remain on the real GPU (dev: 33-83 ms) all fall
+in the zoom-in segment of the 1440 path, the stretch that ends with the camera
+settling at street zoom, which is when the first cover is rasterised. That
+attribution is consistent with the timing but was not isolated further (the globe
+build also crosses MapLibre's own globe-to-Mercator projection change on this
+stretch, which may account for its larger spikes). This is
+browser evidence on one machine.
+
+### Android emulator (evidence only, not a device claim)
+
+`scripts/qa/android_emulator_map_perf.sh` derives frame intervals from the
+Flutter `SurfaceView` BLAST layer in `dumpsys SurfaceFlinger --latency` (the layer
+is discovered at run time; `dumpsys gfxinfo` reports no Flutter frames). One
+freshly booted API 34 x86_64 emulator with host GPU, signed release APKs built
+from current `dev` and from the final branch, the same scripted pans and cluster
+tap, run baseline / branch / baseline / branch:
+
+| run | frames | p50 | p90 | p95 | p99 | >33 ms | >50 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline r1 (first run after boot) | 840 | 17.2 | 44.6 | 57.4 | 130.9 | 139 | 62 |
+| branch r1 | 1114 | 16.7 | 18.3 | 19.0 | 33.9 | 17 | 3 |
+| baseline r2 | 1144 | 16.7 | 18.1 | 18.8 | 33.4 | 13 | 0 |
+| branch r2 | 1112 | 16.7 | 18.3 | 19.4 | 34.1 | 17 | 4 |
+
+The first baseline run is a cold-emulator outlier and is kept in the table; the
+warm baseline run and both branch runs are within about 1 ms at p95 and p99,
+with the branch showing 3-4 frames over 50 ms against 0 for the warm baseline.
+Read that as "no regression visible at emulator resolution", not as equality.
+
+### Physical Android: NOT VERIFIED
+
+No physical Android device was available. **Physical Android performance is not
+verified**; nothing in this document or the PR claims it. The emulator figures
+above say the Flutter surface keeps pace in a virtual device and nothing more.
+
 ## 11. Evidence
 
 See `docs/evidence/product-v5-spatial/README.md`.
@@ -285,14 +438,23 @@ See `docs/evidence/product-v5-spatial/README.md`.
   the app loads, and loading more is a backend/query decision outside 5B.
 * A remote (URL) map style does not get a globe: only bundled styles are
   stamped.
-* Android only: on the branch build one rotation-driven map-screen swap threw a
-  Java `NullPointerException` inside Flutter's `PlatformViewsController.resize`
+* Android only: during development one rotation-driven map-screen swap on an
+  earlier branch build threw a Java `NullPointerException` inside Flutter's
+  `PlatformViewsController.resize`
   (`SurfaceProducerPlatformViewRenderTarget.getWidth` on a released surface
-  producer) and closed the app. It did not reproduce in the later rotation runs
-  on either build (several single rotations and short stress loops on the
-  branch, and the same on the unchanged baseline); the emulator also dropped
-  its adb link under repeated rotation, so those runs are not conclusive either
-  way. The stack is entirely engine/plugin code and the screen swap itself is
-  not new, but this is an observation, not a proven pre-existing defect.
+  producer) and the app process was terminated. **Observed once; not reproduced
+  under controlled conditions; no proven Wave 5B attribution.** Controlled run on
+  the final build: a freshly booted emulator per run (API 34 x86_64, host GPU,
+  2 GB, 4 cores), signed release APKs built from current `dev` (`d6810271`) and
+  from the final branch, 20 portrait to landscape cycles per run with 3 s rest
+  after each rotation, in two states (idle map; search then selecting its result,
+  which opens the preview card), two runs per state per build: **80 cycles per
+  build, 0 process deaths, 0 `FATAL EXCEPTION`, 0 `PlatformViewsController`
+  or `SurfaceProducerPlatformViewRenderTarget` lines on either build**
+  (`scripts/qa/android_rotation_repro.sh`; summaries in the evidence folder).
+  The `NullPointerException` lines that appear in logcat belong to Google Play
+  services / system processes, not to the app. The stack of the original crash is
+  entirely engine/plugin code and the screen swap itself is not new, but this
+  remains an observation, not a proven pre-existing defect and not a fix.
 * The wide layout shows two attribution controls on native Android (the plugin's
   own button and the app's glass one); this predates 5B and was left alone.

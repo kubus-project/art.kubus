@@ -10,6 +10,7 @@
 //
 //   QA_WEB_ROOT=build/web QA_LABEL=after node scripts/qa/product_v5_spatial_browser_qa.mjs
 //
+// Flows (QA_FLOW): main (default), ui, responsive, zoom200 (real 200 % browser zoom).
 // Env: QA_BROWSERS=chromium,firefox  QA_VIEWPORTS=1440x900,390x844
 //      QA_SCHEMES=light,dark  QA_PATH=/map  QA_PORT=8097
 // Output: output/playwright/spatial/<label>/ (screenshots + report.json)
@@ -19,6 +20,7 @@
 // reaches production and nothing is created.
 import fs from 'node:fs/promises';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -1076,6 +1078,219 @@ async function responsiveScenario(browserName, viewport, scheme, report) {
   }
 }
 
+/** Every interactive semantics node as a viewport-space box. */
+const interactiveBoxes = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('flt-semantics[role="button"], flt-semantics[role="textbox"], flt-semantics[role="link"], flt-semantics[role="checkbox"]')]
+      .map((n) => {
+        const r = n.getBoundingClientRect();
+        return {
+          label: (n.getAttribute('aria-label') || n.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40),
+          x: r.left,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+        };
+      })
+      .filter((b) => b.w > 2 && b.h > 2),
+  );
+
+/** Boxes that overlap by more than a quarter of the smaller one (a collision). */
+function collidingPairs(boxes) {
+  const pairs = [];
+  for (let i = 0; i < boxes.length; i += 1) {
+    for (let j = i + 1; j < boxes.length; j += 1) {
+      const a = boxes[i];
+      const b = boxes[j];
+      const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      const nested = (outer, inner) =>
+        inner.x >= outer.x - 2 && inner.y >= outer.y - 2 && inner.x + inner.w <= outer.x + outer.w + 2 && inner.y + inner.h <= outer.y + outer.h + 2;
+      if (nested(a, b) || nested(b, a)) continue;
+      if (w > 0 && h > 0 && (w * h) / Math.min(a.w * a.h, b.w * b.h) > 0.25) pairs.push(`${a.label} x ${b.label}`);
+    }
+  }
+  return pairs;
+}
+
+async function openChromiumAtZoom200(scheme) {
+  // The browser's own zoom level (1.2^3.80 = 2.0) for this origin, set through
+  // the profile, in a headed window: real page zoom, not an emulated DPR.
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-zoom200-'));
+  await fs.mkdir(path.join(dir, 'Default'), { recursive: true });
+  const level = Math.log(2) / Math.log(1.2);
+  await fs.writeFile(
+    path.join(dir, 'Default', 'Preferences'),
+    JSON.stringify({
+      partition: {
+        default_zoom_level: { x: level },
+        per_host_zoom_levels: { x: { '127.0.0.1': { zoom_level: level } } },
+      },
+    }),
+  );
+  const context = await chromium.launchPersistentContext(dir, {
+    headless: false,
+    viewport: null,
+    colorScheme: scheme,
+    locale: 'en-US',
+    args: ['--window-size=1440,900', '--force-device-scale-factor=1', '--use-angle=d3d11', '--ignore-gpu-blocklist'],
+  });
+  return { context, close: () => context.close() };
+}
+
+/**
+ * Real 200 % zoom of a 1440x900 window. Chromium runs headed with the browser
+ * own zoom level. Playwright cannot set the page zoom of Firefox, so Firefox
+ * gets what 200 % produces for the page (a 720x450 CSS viewport at 2x density).
+ */
+async function zoomScenario(browserName, scheme, report) {
+  const tag = `${browserName}-zoom200-${scheme}`;
+  const run = { tag, checks: [], screenshots: [], console: [], failed: false };
+  report.runs.push(run);
+  let opened;
+  if (browserName === 'chromium') {
+    opened = await openChromiumAtZoom200(scheme);
+  } else {
+    const browser = await firefox.launch({ headless: true });
+    const context = await browser.newContext({
+      viewport: { width: 720, height: 450 },
+      deviceScaleFactor: 2,
+      colorScheme: scheme,
+      locale: 'en-US',
+    });
+    opened = { context, close: () => browser.close() };
+  }
+  const { context } = opened;
+  await context.addInitScript(HOOK);
+  run.network = await containNetwork(context);
+  const page = context.pages()[0] || (await context.newPage());
+  page.on('pageerror', (e) => run.console.push(`[pageerror] ${e.message.slice(0, 200)}`));
+  // Under real page zoom Playwright's screenshot crops to the top-left quarter;
+  // an unclipped CDP capture returns the whole viewport at device resolution.
+  const cdp = browserName === 'chromium' ? await context.newCDPSession(page) : null;
+  const shot = async (name) => {
+    if (!cdp) return snap(page, name, run);
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+    const file = path.join(outDir, `${name}.png`);
+    await fs.writeFile(file, Buffer.from(data, 'base64'));
+    run.screenshots.push(path.relative(rootDir, file).replaceAll(String.fromCharCode(92), '/'));
+  };
+  try {
+    await page.goto(`${appUrl}${startPath}`, { waitUntil: 'domcontentloaded' });
+    await waitForMap(page);
+    await settle(page, browserName === 'firefox' ? 9000 : 6000);
+    await enableSemantics(page);
+    const env = await page.evaluate(() => ({ innerWidth, innerHeight, dpr: devicePixelRatio }));
+    run.zoomEnvironment = {
+      ...env,
+      mode: browserName === 'chromium' ? 'browser zoom 200% (headed, profile zoom level)' : '720x450 CSS px at 2x (page zoom cannot be set through Playwright on Firefox)',
+    };
+    check(run, `${tag}: the page really is at 200% (about 720 CSS px wide, 2x density)`, env.innerWidth >= 650 && env.innerWidth <= 760 && env.dpr >= 2, JSON.stringify(env));
+    const viewport = { width: env.innerWidth, height: env.innerHeight, touch: false };
+    // Full-width rows are list items or cards that scroll under the chrome by design;
+    // the check is about controls.
+    const controlsOf = (list) => list.filter((b) => !(b.w > 0.8 * env.innerWidth));
+    const inside = (b) => b.x >= -1 && b.y >= -1 && b.x + b.w <= env.innerWidth + 1 && b.y + b.h <= env.innerHeight + 1;
+    const hits = (box, list) => list.filter((b) => collidingPairs([{ ...box, label: 'attribution' }, b]).length > 0);
+
+    await shot(`${tag}-01-opening`);
+    await noHorizontalOverflow(page, tag, run);
+    let boxes = controlsOf(await interactiveBoxes(page));
+    check(run, `${tag}: opening - every control sits inside the viewport`, boxes.every(inside), JSON.stringify(boxes.filter((b) => !inside(b)).slice(0, 4)));
+    check(run, `${tag}: opening - no two controls collide`, collidingPairs(boxes).length === 0, collidingPairs(boxes).slice(0, 4).join(' || '));
+    // The plugin's own attribution control is hidden by design (display:none,
+    // recorded above); attribution is reached through Map tools and checked there.
+
+    // Search -> constraint strip -> Reset all stays reachable.
+    await page.evaluate(() => {
+      window.__maps[window.__maps.length - 1].jumpTo({ zoom: 7, center: [14.99, 46.12] });
+    });
+    await settle(page, 3500);
+    const field = await page.getByRole('textbox').first().boundingBox();
+    check(run, `${tag}: the search field is reachable`, field && inside({ x: field.x, y: field.y, w: field.width, h: field.height }), JSON.stringify(field));
+    await page.mouse.click(field.x + field.width / 2, field.y + field.height / 2);
+    await page.waitForTimeout(800);
+    await page.keyboard.type('zzqq', { delay: 60 });
+    await settle(page, 3000);
+    await shot(`${tag}-02a-results-open`);
+    await page.mouse.click(env.innerWidth / 2, env.innerHeight * 0.55);
+    await settle(page, 2000);
+    boxes = controlsOf(await interactiveBoxes(page));
+    const reset = boxes.find((b) => /Reset all/i.test(b.label));
+    check(run, `${tag}: Reset all is present and inside the viewport`, reset && inside(reset), JSON.stringify(reset));
+    check(run, `${tag}: constraint - no two controls collide`, collidingPairs(boxes).length === 0, collidingPairs(boxes).slice(0, 4).join(' || '));
+    await shot(`${tag}-02-constraint-strip`);
+    await noHorizontalOverflow(page, tag, run);
+    if (reset) {
+      await clickSemantic(page, page.getByRole('button', { name: /Reset all/i }).first(), viewport);
+      await settle(page, 2500);
+      const text = await semanticsText(page);
+      check(run, `${tag}: Reset all clears the constraint`, !/Reset all/i.test(text) && !text.includes('Search: zzqq'), text.slice(0, 160));
+    }
+
+    // Selected marker + its preview card.
+    await page.evaluate(() => {
+      window.__maps[window.__maps.length - 1].jumpTo({ zoom: 15.5, center: [14.5058, 46.0569] });
+    });
+    await settle(page, 3500);
+    const target = await findMarkerTarget(page);
+    check(run, `${tag}: a marker is reachable for the preview`, Boolean(target), 'none rendered');
+    if (target) {
+      await tapAt(page, { x: target.x, y: target.y - 18 }, viewport);
+      await settle(page, 2500);
+      await shot(`${tag}-03-marker-preview`);
+      boxes = controlsOf(await interactiveBoxes(page));
+      check(run, `${tag}: preview - every control sits inside the viewport`, boxes.every(inside), JSON.stringify(boxes.filter((b) => !inside(b)).slice(0, 4)));
+      check(run, `${tag}: preview - no two controls collide`, collidingPairs(boxes).length === 0, collidingPairs(boxes).slice(0, 4).join(' || '));
+    }
+
+    // Map tools.
+    const tools = page.getByRole('button', { name: /Map tools/i }).first();
+    if ((await tools.count()) > 0) {
+      await clickSemantic(page, tools, viewport);
+      await settle(page, 1800);
+      await shot(`${tag}-04-map-tools`);
+      boxes = controlsOf(await interactiveBoxes(page));
+      check(run, `${tag}: map tools - every control sits inside the viewport`, boxes.every(inside), JSON.stringify(boxes.filter((b) => !inside(b)).slice(0, 4)));
+      const attribLink = page.getByRole('button', { name: /Map attributions/i }).first();
+      const attribBox = (await attribLink.count()) > 0 ? await attribLink.boundingBox() : null;
+      check(run, `${tag}: attribution is reachable from Map tools and on screen`, attribBox && inside({ x: attribBox.x, y: attribBox.y, w: attribBox.width, h: attribBox.height }), JSON.stringify(attribBox));
+      if (attribBox) {
+        await clickSemantic(page, attribLink, viewport);
+        await settle(page, 1800);
+        await shot(`${tag}-04b-attribution`);
+        const attribText = await semanticsText(page);
+        check(run, `${tag}: the attribution dialog names its sources`, /openstreetmap|maplibre|carto|©/i.test(attribText), attribText.slice(0, 200));
+        boxes = controlsOf(await interactiveBoxes(page));
+        check(run, `${tag}: attribution dialog - every control sits inside the viewport`, boxes.every(inside), JSON.stringify(boxes.filter((b) => !inside(b)).slice(0, 4)));
+      }
+    }
+
+    // Keyboard focus lands on a visible, on-screen control (dialog closed first).
+    await page.keyboard.press('Escape');
+    await settle(page, 1200);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    const focus = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const r = el.getBoundingClientRect();
+      return { tag: el.tagName, label: (el.getAttribute('aria-label') || '').slice(0, 40), x: r.left, y: r.top, w: r.width, h: r.height };
+    });
+    run.focus = focus;
+    check(run, `${tag}: keyboard focus is on an on-screen control`, focus && focus.w > 0 && inside(focus), JSON.stringify(focus));
+    await shot(`${tag}-05-focus`);
+    const errors = run.console.filter((l) => /pageerror/.test(l));
+    check(run, `${tag}: no uncaught page errors`, errors.length === 0, errors.slice(0, 2).join(' || '));
+  } catch (error) {
+    run.failed = true;
+    run.error = String(error).slice(0, 400);
+    await shot(`${tag}-error`).catch(() => {});
+  } finally {
+    await opened.close();
+  }
+}
+
 await fs.mkdir(outDir, { recursive: true });
 const server = await startServer();
 const report = { label, startedAt: new Date().toISOString(), runs: [], failed: false };
@@ -1091,6 +1306,12 @@ try {
         for (const scheme of schemes) {
           await responsiveScenario(browserName, viewport, scheme, report);
         }
+      }
+    }
+  } else if (process.env.QA_FLOW === 'zoom200') {
+    for (const browserName of browsers) {
+      for (const scheme of schemes) {
+        await zoomScenario(browserName, scheme, report);
       }
     }
   } else if (process.env.QA_FLOW === 'ui') {
