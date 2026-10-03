@@ -828,7 +828,10 @@ class _MapScreenState extends State<MapScreen>
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
       loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
-      moveCamera: (position, zoom) => _animateMapTo(position, zoom: zoom),
+      moveCamera: (position, zoom) {
+        _yieldFollowToDeliberateCamera();
+        return _animateMapTo(position, zoom: zoom);
+      },
       selectMarker: _showArtMarkerDialog,
       setPinnedMarker: (markerId) {
         if (_directTargetMarkerId == markerId) return;
@@ -3915,6 +3918,17 @@ class _MapScreenState extends State<MapScreen>
     return status;
   }
 
+  /// A deliberate camera move (a map link, a search result) outranks
+  /// follow-me. While following, every compass heading update re-aims the
+  /// camera at its current centre and zoom, and on a device with a heading
+  /// stream that cancels the move before it gets anywhere: a cold map link
+  /// selected the right marker but stayed at world scale.
+  void _yieldFollowToDeliberateCamera() {
+    if (!_autoFollow) return;
+    _kubusMapController.setAutoFollow(false);
+    _safeSetState(() => _autoFollow = false);
+  }
+
   Future<void> _handleCenterOnMeTap() async {
     if (_currentPosition == null) {
       await _promptForLocationThenCenter(reason: 'center_on_me');
@@ -5601,6 +5615,7 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
     _mapEngagement.searchResultSelected();
+    _yieldFollowToDeliberateCamera();
     _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 

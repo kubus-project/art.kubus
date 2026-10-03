@@ -234,8 +234,13 @@ without the change.
   release candidate.
 - The direct-release signer is proven and asserted; the Google Play App Signing
   certificate is unknown and may need an additional fingerprint entry.
-- On a cold map link the Android camera stays at the world-scale view while the
-  correct marker is selected. This is recorded for the release-hardening pass.
+- On a cold map link the Android camera used to stay at world scale while the
+  correct marker was selected. Cause: follow-me was on, and every compass
+  heading update re-aimed the camera at its current centre and zoom, cancelling
+  the move (107 `animateCamera` calls, one `true` result). A deliberate camera
+  move (map link, search result) now switches follow-me off first; verified on
+  the emulator, where the same link lands at street level. Web never showed it
+  because it has no heading stream.
 - No iOS Universal Links implementation.
 - No index, canonical, artwork/marker ownership, database, or public-page
   changes.
