@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/unavailable_entity_scaffold.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -89,6 +90,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return source.isNotEmpty ? source : 'system_camera_deeplink';
   }
 
+  /// True once the exhibition fetch has finished, successfully or not (see
+  /// the matching flag on the event screen).
+  bool _entityFetchSettled = false;
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +118,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       await provider.fetchExhibition(widget.exhibitionId, force: true);
     } catch (_) {
       // Provider handles errors.
+    }
+    if (mounted && !_entityFetchSettled) {
+      setState(() => _entityFetchSettled = true);
     }
     // Program events and POAP are optional sections; their failures stay
     // local to their cards and never block the page.
@@ -1192,6 +1200,17 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             ? widget.initialExhibition
             : null;
     final exactExhibition = loadedExhibition ?? initialExhibition;
+    if (_entityFetchSettled && exactExhibition == null && !widget.embedded) {
+      return UnavailableEntityScaffold(
+        entityLabel: l10n.commonExhibition,
+        canonicalPublicEntry: isCanonicalPublicEntry,
+        showAppBar: !isDesktopCanonicalPublicEntry,
+        onRetry: () {
+          setState(() => _entityFetchSettled = false);
+          unawaited(_load());
+        },
+      );
+    }
     final ex = exactExhibition ??
         Exhibition(id: widget.exhibitionId, title: l10n.commonExhibition);
 

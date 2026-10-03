@@ -474,6 +474,20 @@ async function scenarioExplicit(page, tag, record) {
       textOf(tree).slice(0, 140),
     );
   }
+
+  // These routes resolve straight to their screen without AppInitializer, so
+  // the launch language must be applied at provider creation: `?lang=sl` has
+  // to produce Slovene here, not English.
+  await page.goto(`${appUrl}/register?lang=sl`, { waitUntil: 'domcontentloaded' });
+  await waitForApp(page, 6000);
+  await enableSemantics(page);
+  const slText = textOf(await semantics(page));
+  check(
+    record,
+    `${tag}: /register?lang=sl renders Slovene, not English`,
+    /ustvari račun|nadaljuj|denarnic/i.test(slText) && !/create your account/i.test(slText),
+    slText.slice(0, 140),
+  );
 }
 
 const RUNNERS = { fresh: scenarioFresh, entity: scenarioEntity, action: scenarioAction, explicit: scenarioExplicit };

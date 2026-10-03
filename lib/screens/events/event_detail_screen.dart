@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/unavailable_entity_scaffold.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -54,6 +55,11 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
+  /// True once the event fetch has finished, successfully or not. Before that
+  /// the placeholder page is a loading state; after it, a missing event is
+  /// reported as unavailable instead of an empty page with live-looking actions.
+  bool _entityFetchSettled = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +80,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       await events.fetchEvent(widget.eventId, force: true);
     } catch (_) {
       // Provider handles errors.
+    }
+    if (mounted && !_entityFetchSettled) {
+      setState(() => _entityFetchSettled = true);
     }
     // The event's own POAP and linked exhibitions are independent sections;
     // their failures stay local and never block the page.
@@ -371,6 +380,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final initialEvent =
         widget.initialEvent?.id == widget.eventId ? widget.initialEvent : null;
     final exactEvent = loadedEvent ?? initialEvent;
+    if (_entityFetchSettled && exactEvent == null && !events.isDetailLoading) {
+      return UnavailableEntityScaffold(
+        entityLabel: l10n.mapMarkerSubjectTypeEvent,
+        canonicalPublicEntry: isCanonicalPublicEntry,
+        showAppBar: !isDesktopCanonicalPublicEntry,
+        onRetry: () {
+          setState(() => _entityFetchSettled = false);
+          unawaited(_load());
+        },
+      );
+    }
     final event = exactEvent ??
         KubusEvent(id: widget.eventId, title: l10n.mapMarkerSubjectTypeEvent);
 

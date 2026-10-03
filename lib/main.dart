@@ -413,7 +413,17 @@ class _AppLauncherState extends State<AppLauncher> {
         Provider<KubusMapSessionMemory>(
           create: (_) => KubusMapSessionMemory(),
         ),
-        ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
+        // The launch language is resolved here, not only in AppInitializer:
+        // /sign-in and /register resolve straight to their screens and never
+        // build AppInitializer, so they used to ignore the saved language and
+        // `?lang=` and always rendered English.
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) => LocaleProvider()
+            ..initialize(
+              overrideLanguageCode:
+                  LocaleProvider.localeCodeFromUri(_launchUriForLocale()),
+            ),
+        ),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),
         ),
@@ -1567,4 +1577,13 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       },
     );
   }
+}
+
+/// The URL the app was launched with: the address bar on web, the platform
+/// route elsewhere. Used only to resolve the launch language.
+Uri? _launchUriForLocale() {
+  if (kIsWeb) return Uri.base;
+  return Uri.tryParse(
+    WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+  );
 }
