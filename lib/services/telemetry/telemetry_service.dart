@@ -946,6 +946,7 @@ class TelemetryService {
     final key = '$_sessionId::$eventType';
     if (_onceKeys.contains(key)) return;
     _onceKeys.add(key);
+    unawaited(_persistOnceKeys());
     await trackEvent(eventType, extra: extra);
   }
 
@@ -967,6 +968,7 @@ class TelemetryService {
     final key = '$_sessionId::$eventType::$dedupeKey';
     if (_onceKeys.contains(key)) return;
     _onceKeys.add(key);
+    unawaited(_persistOnceKeys());
     await trackEvent(eventType, extra: extra);
   }
 
@@ -1100,6 +1102,7 @@ class TelemetryService {
     _onceKeys.clear();
     _syncClientContext();
     await _persistSession();
+    await _persistOnceKeys();
   }
 
   void _rotateSessionIfNeeded() {
@@ -1112,6 +1115,7 @@ class TelemetryService {
     _onceKeys.clear();
     _syncClientContext();
     unawaited(_persistSession());
+    unawaited(_persistOnceKeys());
   }
 
   /// Reuses the previous session when it is still inside the rotation window.
@@ -1141,7 +1145,30 @@ class TelemetryService {
     }
     _sessionId = storedId;
     _sessionStartUtc = startedAt;
+    // Keep the once-per-session guards of this very session, and only those.
+    final storedKeys =
+        prefs.getStringList(AppTelemetryConfig.onceKeysPrefsKey) ??
+            const <String>[];
+    _onceKeys
+      ..clear()
+      ..addAll(storedKeys.where((key) => key.startsWith('$storedId::')));
     unawaited(_persistSession());
+  }
+
+  Future<void> _persistOnceKeys() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefix = '$_sessionId::';
+      final keys = _onceKeys.where((key) => key.startsWith(prefix)).toList();
+      // A session only ever holds a handful of distinct guards; the cap keeps a
+      // runaway dedupe key from growing storage.
+      await prefs.setStringList(
+        AppTelemetryConfig.onceKeysPrefsKey,
+        keys.length > 200 ? keys.sublist(keys.length - 200) : keys,
+      );
+    } catch (_) {
+      // Dedupe persistence is best effort; in-memory guards still apply.
+    }
   }
 
   Future<void> _persistSession() async {

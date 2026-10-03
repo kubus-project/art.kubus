@@ -31,6 +31,10 @@ class AppTelemetryConfig {
   static const String sessionIdPrefsKey = 'app_telemetry_session_id_v1';
   static const String sessionStartPrefsKey = 'app_telemetry_session_start_v1';
 
+  /// Once-per-session guards, stored with the session they belong to so a page
+  /// reload inside the same session does not emit the event a second time.
+  static const String onceKeysPrefsKey = 'app_telemetry_once_keys_v1';
+
   static bool get enabledByBuildFlag => AppConfig.isFeatureEnabled('analytics');
   static String get env => AppConfig.isProduction ? 'prod' : 'dev';
 }
