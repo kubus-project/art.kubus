@@ -111,7 +111,7 @@ const isAnalytics = (u) => /\/api\/analytics\b/.test(u.pathname);
 
 /** Contain the network. Returns the log so the report can prove what left. */
 async function containNetwork(context) {
-  const log = { passthroughGets: 0, analyticsSwallowed: 0, writesBlocked: [], external: [], api: [] };
+  const log = { passthroughGets: 0, analyticsSwallowed: 0, writesBlocked: [], external: [], api: [], events: [] };
   await context.route('**/*', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -125,6 +125,16 @@ async function containNetwork(context) {
     if (isApi) {
       if (isAnalytics(url)) {
         log.analyticsSwallowed += 1;
+        // Record the event names the app would have sent, so the funnel can be
+        // asserted without any telemetry leaving the machine.
+        try {
+          const body = JSON.parse(request.postData() || '{}');
+          for (const event of body.events || []) {
+            log.events.push({ type: event.event_type, session: event.session_id, kind: event.metadata?.kind });
+          }
+        } catch {
+          // A malformed body is not part of the funnel.
+        }
         return route.fulfill({ status: 204, body: '' });
       }
       if (request.method() === 'GET') {
@@ -429,10 +439,10 @@ async function scenarioAction(page, tag, record) {
     const back = pathOf(page);
     await snap(page, `${tag}-action-back-to-entity`, record);
     record.notes = { ...(record.notes || {}), afterBack: { path: back, history: await historyLength(page) } };
-    // KNOWN (pre-existing): the gate pushes the named `/onboarding` route; on
-    // browser Back the address bar keeps that name although the entity is on
-    // screen. Reported, not failed; the visible screen below is what is asserted.
-    known(record, `${tag}: address bar returns to the entity after Back`, back === entityPath, back);
+    // The gate pushes the named `/onboarding` route and the entity beneath it
+    // is unnamed, so the address bar used to keep `/onboarding` after Back.
+    // UrlCoherenceObserver now restores the URL of the visible page.
+    check(record, `${tag}: address bar returns to the entity after Back`, back === entityPath, back);
     const treeAfterBack = textOf(await semantics(page));
     check(record, `${tag}: Back from the account step shows the entity, not onboarding`, !/create an account|sign in/i.test(treeAfterBack.slice(0, 200)) || /najemni/i.test(treeAfterBack), treeAfterBack.slice(0, 120));
     // The address bar must agree with what is on screen: a refresh here must
@@ -445,7 +455,7 @@ async function scenarioAction(page, tag, record) {
     // wall. It must now land in public discovery or on the entity.
     const reloadText = textOf(await semantics(page).catch(() => []));
     check(record, `${tag}: refresh after Back shows no welcome wall`, !/choose one path|get started/i.test(reloadText), afterReload);
-    known(record, `${tag}: refresh after Back returns to the entity`, afterReload === entityPath, afterReload);
+    check(record, `${tag}: refresh after Back returns to the entity`, afterReload === entityPath, afterReload);
   }
 }
 
@@ -474,6 +484,66 @@ async function scenarioExplicit(page, tag, record) {
       textOf(tree).slice(0, 140),
     );
   }
+
+  // These routes resolve straight to their screen without AppInitializer, so
+  // the launch language must be applied at provider creation: `?lang=sl` has
+  // to produce Slovene here, not English.
+  await page.goto(`${appUrl}/register?lang=sl`, { waitUntil: 'domcontentloaded' });
+  await waitForApp(page, 6000);
+  await enableSemantics(page);
+  const slText = textOf(await semantics(page));
+  check(
+    record,
+    `${tag}: /register?lang=sl renders Slovene, not English`,
+    /ustvari račun|nadaljuj|denarnic/i.test(slText) && !/create your account/i.test(slText),
+    slText.slice(0, 140),
+  );
+}
+
+/**
+ * The activation funnel as the app actually emits it. Event names are the
+ * production allowlist's; nothing here defines a second taxonomy.
+ */
+function funnelChecks(record, tag, events, ran) {
+  // Counted per session: a fresh-storage load starts a new session, so the
+  // same context can legitimately record several app_entry events.
+  const sessions = new Set(events.map((e) => e.session));
+  const maxPerSession = (type) => {
+    const per = new Map();
+    for (const e of events) if (e.type === type) per.set(e.session, (per.get(e.session) || 0) + 1);
+    return Math.max(0, ...per.values());
+  };
+  const count = (type) => maxPerSession(type);
+  const types = new Set(events.map((e) => e.type));
+  if (ran.includes('fresh')) {
+    check(record, `${tag}: funnel: app_entry is recorded once per session`, count('app_entry') === 1, `max app_entry per session ${count('app_entry')} across ${sessions.size} sessions`);
+  }
+  check(record, `${tag}: funnel: map_engaged is recorded at most once per session`, count('map_engaged') <= 1, `map_engaged x${count('map_engaged')}`);
+  if (ran.includes('action')) {
+    for (const expected of ['protected_action_clicked', 'auth_gate_viewed', 'auth_gate_dismissed', 'auth_method_selected']) {
+      check(record, `${tag}: funnel: ${expected} is recorded`, types.has(expected), [...types].join(','));
+    }
+    check(
+      record,
+      `${tag}: funnel: no account or pending-action completion without an account`,
+      !types.has('account_session_created') && !types.has('pending_action_completed'),
+      [...types].join(','),
+    );
+  }
+  const allowlist = new Set([
+    'app_entry', 'guest_app_loaded', 'guest_map_loaded', 'map_opened', 'map_engaged', 'nearby_discovery_used',
+    'artwork_viewed', 'event_viewed', 'exhibition_viewed', 'institution_viewed', 'screen_view', 'screen_duration',
+    'protected_action_clicked', 'auth_gate_viewed', 'auth_gate_dismissed', 'auth_method_selected',
+    'activation_prompt_viewed', 'activation_prompt_dismissed', 'activation_prompt_accepted',
+    'signin_view', 'signin_attempt', 'signin_success', 'signin_failure', 'signup_view', 'signup_attempt',
+    'signup_success', 'signup_failure', 'onboarding_enter', 'onboarding_complete', 'registration_submitted',
+    'email_verification_sent', 'email_verification_viewed', 'email_verified', 'account_session_created',
+    'pending_action_restored', 'pending_action_confirmation_viewed', 'pending_action_completed',
+    'pending_action_failed', 'first_save_completed', 'first_follow_completed', 'first_contribution_completed',
+    'contribution_started', 'contribution_submitted', 'web_vital', 'js_error',
+  ]);
+  const unknown = [...types].filter((type) => type && !allowlist.has(type));
+  check(record, `${tag}: funnel: every emitted event name is on the production allowlist`, unknown.length === 0, unknown.join(','));
 }
 
 const RUNNERS = { fresh: scenarioFresh, entity: scenarioEntity, action: scenarioAction, explicit: scenarioExplicit };
@@ -506,7 +576,9 @@ async function main() {
                   check(record, `${tag}: scenario ${name} completed`, false, String(e).slice(0, 240));
                 }
               }
+              funnelChecks(record, tag, network.events, scenarios);
               record.network = {
+                eventTypes: [...new Set(network.events.map((e) => e.type))],
                 passthroughGets: network.passthroughGets,
                 analyticsSwallowed: network.analyticsSwallowed,
                 writesBlocked: network.writesBlocked.slice(0, 10),

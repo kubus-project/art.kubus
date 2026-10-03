@@ -918,6 +918,12 @@ abstract class AppLocalizations {
   /// **'This is no longer available. It may have been removed or made private.'**
   String get activationActionTargetUnavailableToast;
 
+  /// Body of the state shown when a detail screen's entity could not be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'This could not be loaded right now. Check your connection and try again.'**
+  String get entityUnavailableBody;
+
   /// No description provided for @activationActionUnauthorizedToast.
   ///
   /// In en, this message translates to:

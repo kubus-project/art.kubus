@@ -669,7 +669,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
       loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
-      moveCamera: _moveCamera,
+      moveCamera: (position, zoom) {
+        _yieldFollowToDeliberateCamera();
+        return _moveCamera(position, zoom);
+      },
       selectMarker: _handleMarkerTap,
       setPinnedMarker: (markerId) {
         if (_directTargetMarkerId == markerId) return;
@@ -2077,6 +2080,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     unawaited(_applyIsometricCamera(enabled: true));
     unawaited(_moveCamera(position, math.max(_cameraZoom, 18)));
     WalkingNavigationDiagnostics.record('navigation_resumed');
+  }
+
+  /// A deliberate camera move (a map link, a search result) outranks
+  /// follow-me, whose location refreshes would otherwise re-centre the camera
+  /// and undo it (see the matching helper on the phone map).
+  void _yieldFollowToDeliberateCamera() {
+    if (!_autoFollow) return;
+    _kubusMapController.setAutoFollow(false);
+    _safeSetState(() => _autoFollow = false);
   }
 
   void _endWalkingNavigation(WalkingNavigationProvider navigation) {
@@ -4816,6 +4828,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     FocusScope.of(context).unfocus();
 
     if (result.position != null) {
+      _yieldFollowToDeliberateCamera();
       _moveCamera(result.position!, math.max(_effectiveZoom, 15.0));
     }
 

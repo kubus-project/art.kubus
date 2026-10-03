@@ -5,6 +5,39 @@ import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 
 void main() {
+  group('LocaleProvider launch initialisation', () {
+    setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{
+          PreferenceKeys.selectedLanguage: 'sl',
+        }));
+
+    test('a direct route starts in the saved language', () async {
+      final provider = LocaleProvider();
+      await provider.initialize();
+      expect(provider.languageCode, 'sl');
+    });
+
+    test('a launch URL locale beats the saved language', () async {
+      final provider = LocaleProvider();
+      await provider.initialize(overrideLanguageCode: 'en');
+      expect(provider.languageCode, 'en');
+    });
+
+    test('a later entry locale still wins after early initialisation',
+        () async {
+      // The provider is initialised at creation from the platform route; a
+      // native deep link delivers its URI to AppInitializer afterwards.
+      final provider = LocaleProvider();
+      await provider.initialize();
+      expect(provider.languageCode, 'sl');
+      await provider.initialize(overrideLanguageCode: 'en');
+      expect(provider.languageCode, 'en');
+      // An unsupported or absent locale never changes it.
+      await provider.initialize(overrideLanguageCode: 'de');
+      await provider.initialize();
+      expect(provider.languageCode, 'en');
+    });
+  });
+
   group('LocaleProvider.localeCodeFromUri', () {
     String? resolve(String url) =>
         LocaleProvider.localeCodeFromUri(Uri.parse(url));
