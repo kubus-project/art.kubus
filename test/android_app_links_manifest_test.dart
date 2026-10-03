@@ -39,7 +39,6 @@ void main() {
     '/exhibition/',
     '/exhibitions/',
     '/x/',
-    '/n/',
   };
 
   test(
@@ -96,6 +95,7 @@ void main() {
     expect(pathPrefixes, isNot(contains('/.well-known/')));
     // The app has no public collectible destination, so those links must stay
     // in the browser rather than open an app screen that cannot show them.
+    expect(pathPrefixes, isNot(contains('/n/')));
     expect(pathPrefixes, isNot(contains('/en/collectibles/')));
     expect(pathPrefixes, isNot(contains('/sl/zbirateljski-predmeti/')));
   });

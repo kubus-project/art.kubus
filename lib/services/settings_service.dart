@@ -5,6 +5,7 @@ import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
+import '../features/map/session/kubus_map_session_memory.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
@@ -154,6 +155,9 @@ class SettingsService {
     // Telemetry must stop attributing events to the account that just left.
     TelemetryService().setActorUserId(null);
     await TelemetryService().rotateSession();
+    // The map remembers camera, filters, search and selection across layout
+    // swaps only; none of it belongs to the next account.
+    KubusMapSessionMemory.clearAll();
 
     // Keep onboarding state intact on logout so returning users are not
     // forced through onboarding again unless they explicitly reset it.

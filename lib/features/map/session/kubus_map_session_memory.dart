@@ -28,6 +28,22 @@ class KubusMapSessionCamera {
 /// selection logic; selection is restored through the screen's own marker-tap
 /// path so there is still exactly one selection owner.
 class KubusMapSessionMemory {
+  KubusMapSessionMemory() {
+    _live.add(this);
+  }
+
+  static final Set<KubusMapSessionMemory> _live = <KubusMapSessionMemory>{};
+
+  /// Sign-out: nothing the previous account looked at (camera, filters, search,
+  /// a selected marker) may reopen for the next one on this device.
+  static void clearAll() {
+    for (final memory in _live) {
+      memory.clear();
+    }
+  }
+
+  void dispose() => _live.remove(this);
+
   KubusMapSessionCamera? _camera;
   KubusMapFilterState _filters = KubusMapFilterState.defaults();
   String _query = '';

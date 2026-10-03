@@ -15,6 +15,20 @@ ArtMarker _marker(String id) => ArtMarker(
     );
 
 void main() {
+  test('sign-out clears every live session memory', () {
+    final first = KubusMapSessionMemory();
+    final second = KubusMapSessionMemory();
+    addTearDown(first.dispose);
+    addTearDown(second.dispose);
+    first.rememberQuery('ljubljana');
+    second.rememberQuery('zagreb');
+
+    KubusMapSessionMemory.clearAll();
+
+    expect(first.query, isEmpty);
+    expect(second.query, isEmpty);
+  });
+
   test('starts empty, so a fresh app opens at the locale framing', () {
     final memory = KubusMapSessionMemory();
     expect(memory.hasState, isFalse);

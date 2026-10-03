@@ -338,14 +338,22 @@ promote() {
     # Carry host-owned files over, but never let a stale live copy replace a
     # file the artifact ships itself (for example assetlinks.json): the new
     # release must be able to change it.
-    (cd "$LIVE_DIR/.well-known" && find . -type d) | while IFS= read -r host_dir; do
+    # The lists are read from files so the loops run in this shell: a failed
+    # mkdir or cp must stop the promotion rather than ship a partial copy.
+    host_dirs="$candidate_dir.host-dirs"
+    host_files="$candidate_dir.host-files"
+    (cd "$LIVE_DIR/.well-known" && find . -type d) > "$host_dirs"
+    (cd "$LIVE_DIR/.well-known" && find . \( -type f -o -type l \)) > "$host_files"
+    while IFS= read -r host_dir; do
       mkdir -p "$candidate_dir/.well-known/$host_dir"
-    done
-    (cd "$LIVE_DIR/.well-known" && find . -type f) | while IFS= read -r host_file; do
-      if [ ! -e "$candidate_dir/.well-known/$host_file" ]; then
+    done < "$host_dirs"
+    while IFS= read -r host_file; do
+      if [ ! -e "$candidate_dir/.well-known/$host_file" ] \
+        && [ ! -L "$candidate_dir/.well-known/$host_file" ]; then
         cp -a "$LIVE_DIR/.well-known/$host_file" "$candidate_dir/.well-known/$host_file"
       fi
-    done
+    done < "$host_files"
+    rm -f "$host_dirs" "$host_files"
   fi
   find "$candidate_dir" -type d -exec chmod 755 {} +
   find "$candidate_dir" -type f -exec chmod 644 {} +
