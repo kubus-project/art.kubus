@@ -171,6 +171,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   mockito: ^5.6.4
+  xml: ^6.6.1
   # Kubus design-token enforcement (packages/kubus_lints).
   custom_lint: ^0.8.1
   kubus_lints:

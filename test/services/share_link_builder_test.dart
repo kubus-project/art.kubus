@@ -81,6 +81,66 @@ void main() {
     );
   });
 
+  test('ShareLinkBuilder keeps EN and SL HTTPS canonicals for every entity',
+      () {
+    final builder = ShareLinkBuilder(
+      baseUri: Uri.parse('https://app.kubus.site'),
+    );
+    final cases = <({ShareTarget target, String en, String sl})>[
+      (
+        target: ShareTarget.artwork(artworkId: 'art-1'),
+        en: '/en/artworks/art-1',
+        sl: '/sl/umetnine/art-1',
+      ),
+      (
+        target: ShareTarget.profile(walletAddress: 'profile-1'),
+        en: '/en/profiles/profile-1',
+        sl: '/sl/profili/profile-1',
+      ),
+      (
+        target: ShareTarget.event(eventId: 'event-1'),
+        en: '/en/events/event-1',
+        sl: '/sl/dogodki/event-1',
+      ),
+      (
+        target: ShareTarget.exhibition(exhibitionId: 'exhibition-1'),
+        en: '/en/exhibitions/exhibition-1',
+        sl: '/sl/razstave/exhibition-1',
+      ),
+      (
+        target: ShareTarget.post(postId: 'post-1'),
+        en: '/en/posts/post-1',
+        sl: '/sl/objave/post-1',
+      ),
+      (
+        target: ShareTarget.collection(collectionId: 'collection-1'),
+        en: '/en/collections/collection-1',
+        sl: '/sl/zbirke/collection-1',
+      ),
+      (
+        target: ShareTarget.nft(mintAddress: 'collectible-1'),
+        en: '/en/collectibles/collectible-1',
+        sl: '/sl/zbirateljski-predmeti/collectible-1',
+      ),
+      (
+        target: ShareTarget.marker(markerId: 'marker-1'),
+        en: '/en/map/marker-1',
+        sl: '/sl/zemljevid/marker-1',
+      ),
+    ];
+
+    for (final entry in cases) {
+      final english = builder.build(entry.target);
+      final slovenian = builder.build(entry.target, locale: 'sl');
+      expect(english.scheme, 'https');
+      expect(english.host, 'app.kubus.site');
+      expect(english.path, entry.en);
+      expect(slovenian.scheme, 'https');
+      expect(slovenian.host, 'app.kubus.site');
+      expect(slovenian.path, entry.sl);
+    }
+  });
+
   test('ShareLinkBuilder feature rollback keeps compact app links', () {
     final builder = ShareLinkBuilder(
       baseUri: Uri.parse('https://app.kubus.site'),
