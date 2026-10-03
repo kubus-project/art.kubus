@@ -3,78 +3,78 @@
   PASS chromium-zoom200-light: the page really is at 200% (about 720 CSS px wide, 2x density) ({"innerWidth":712,"innerHeight":402,"dpr":2})
   PASS chromium-zoom200-light: no horizontal page overflow ({"scrollWidth":712,"innerWidth":712})
   PASS chromium-zoom200-light: opening - every control sits inside the viewport ([])
-  PASS chromium-zoom200-light: opening - no two controls collide 
+  PASS chromium-zoom200-light: opening - no two controls collide
   PASS chromium-zoom200-light: the search field is reachable ({"x":8,"y":8,"width":428,"height":54})
   PASS chromium-zoom200-light: Reset all is present and inside the viewport ({"label":"Reset all","x":252.48654174804688,"y":70,"w":68.3515625,"h":28})
-  PASS chromium-zoom200-light: constraint - no two controls collide 
+  PASS chromium-zoom200-light: constraint - no two controls collide
   PASS chromium-zoom200-light: no horizontal page overflow ({"scrollWidth":712,"innerWidth":712})
   PASS chromium-zoom200-light: Reset all clears the constraint (Show filters FiltersMap tools Map toolsExpand Discovery path, 0/52 Discovery path · 0/52 ExpandCenter on me Center on meNearby art and places. Map area. Expand )
   PASS chromium-zoom200-light: a marker is reachable for the preview (none rendered)
   PASS chromium-zoom200-light: preview - every control sits inside the viewport ([])
-  PASS chromium-zoom200-light: preview - no two controls collide 
+  PASS chromium-zoom200-light: preview - no two controls collide
   PASS chromium-zoom200-light: map tools - every control sits inside the viewport ([])
   PASS chromium-zoom200-light: attribution is reachable from Map tools and on screen ({"x":60,"y":322.5,"width":592,"height":48})
   PASS chromium-zoom200-light: the attribution dialog names its sources (MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributorsClose | MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributors)
   PASS chromium-zoom200-light: attribution dialog - every control sits inside the viewport ([])
   PASS chromium-zoom200-light: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":208,"y":163.5,"w":71,"h":44})
-  PASS chromium-zoom200-light: no uncaught page errors 
+  PASS chromium-zoom200-light: no uncaught page errors
 
 == chromium-zoom200-dark ok
   PASS chromium-zoom200-dark: the page really is at 200% (about 720 CSS px wide, 2x density) ({"innerWidth":712,"innerHeight":402,"dpr":2})
   PASS chromium-zoom200-dark: no horizontal page overflow ({"scrollWidth":712,"innerWidth":712})
   PASS chromium-zoom200-dark: opening - every control sits inside the viewport ([])
-  PASS chromium-zoom200-dark: opening - no two controls collide 
+  PASS chromium-zoom200-dark: opening - no two controls collide
   PASS chromium-zoom200-dark: the search field is reachable ({"x":8,"y":8,"width":428,"height":54})
   PASS chromium-zoom200-dark: Reset all is present and inside the viewport ({"label":"Reset all","x":252.48654174804688,"y":70,"w":68.3515625,"h":28})
-  PASS chromium-zoom200-dark: constraint - no two controls collide 
+  PASS chromium-zoom200-dark: constraint - no two controls collide
   PASS chromium-zoom200-dark: no horizontal page overflow ({"scrollWidth":712,"innerWidth":712})
   PASS chromium-zoom200-dark: Reset all clears the constraint (Show filters FiltersMap tools Map toolsExpand Discovery path, 0/52 Discovery path · 0/52 ExpandCenter on me Center on meNearby art and places. Map area. Expand )
   PASS chromium-zoom200-dark: a marker is reachable for the preview (none rendered)
   PASS chromium-zoom200-dark: preview - every control sits inside the viewport ([])
-  PASS chromium-zoom200-dark: preview - no two controls collide 
+  PASS chromium-zoom200-dark: preview - no two controls collide
   PASS chromium-zoom200-dark: map tools - every control sits inside the viewport ([])
   PASS chromium-zoom200-dark: attribution is reachable from Map tools and on screen ({"x":60,"y":322.5,"width":592,"height":48})
   PASS chromium-zoom200-dark: the attribution dialog names its sources (MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributorsClose | MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributors)
   PASS chromium-zoom200-dark: attribution dialog - every control sits inside the viewport ([])
   PASS chromium-zoom200-dark: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":208,"y":163.5,"w":71,"h":44})
-  PASS chromium-zoom200-dark: no uncaught page errors 
+  PASS chromium-zoom200-dark: no uncaught page errors
 
 == firefox-zoom200-light ok
   PASS firefox-zoom200-light: the page really is at 200% (about 720 CSS px wide, 2x density) ({"innerWidth":720,"innerHeight":450,"dpr":2})
   PASS firefox-zoom200-light: no horizontal page overflow ({"scrollWidth":720,"innerWidth":720})
   PASS firefox-zoom200-light: opening - every control sits inside the viewport ([])
-  PASS firefox-zoom200-light: opening - no two controls collide 
+  PASS firefox-zoom200-light: opening - no two controls collide
   PASS firefox-zoom200-light: the search field is reachable ({"x":8,"y":8,"width":428,"height":54})
   PASS firefox-zoom200-light: Reset all is present and inside the viewport ({"label":"Reset all","x":252.48333740234375,"y":70,"w":68.34999084472656,"h":28})
-  PASS firefox-zoom200-light: constraint - no two controls collide 
+  PASS firefox-zoom200-light: constraint - no two controls collide
   PASS firefox-zoom200-light: no horizontal page overflow ({"scrollWidth":720,"innerWidth":720})
   PASS firefox-zoom200-light: Reset all clears the constraint (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meNearby art and places. Map area. Expand )
   PASS firefox-zoom200-light: a marker is reachable for the preview (none rendered)
   PASS firefox-zoom200-light: preview - every control sits inside the viewport ([])
-  PASS firefox-zoom200-light: preview - no two controls collide 
+  PASS firefox-zoom200-light: preview - no two controls collide
   PASS firefox-zoom200-light: map tools - every control sits inside the viewport ([])
   PASS firefox-zoom200-light: attribution is reachable from Map tools and on screen ({"x":64,"y":370,"width":592,"height":48})
   PASS firefox-zoom200-light: the attribution dialog names its sources (MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributorsClose | MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributors)
   PASS firefox-zoom200-light: attribution dialog - every control sits inside the viewport ([])
   PASS firefox-zoom200-light: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":200,"y":15.600006103515625,"w":320,"h":321.3999938964844})
-  PASS firefox-zoom200-light: no uncaught page errors 
+  PASS firefox-zoom200-light: no uncaught page errors
 
 == firefox-zoom200-dark ok
   PASS firefox-zoom200-dark: the page really is at 200% (about 720 CSS px wide, 2x density) ({"innerWidth":720,"innerHeight":450,"dpr":2})
   PASS firefox-zoom200-dark: no horizontal page overflow ({"scrollWidth":720,"innerWidth":720})
   PASS firefox-zoom200-dark: opening - every control sits inside the viewport ([])
-  PASS firefox-zoom200-dark: opening - no two controls collide 
+  PASS firefox-zoom200-dark: opening - no two controls collide
   PASS firefox-zoom200-dark: the search field is reachable ({"x":8,"y":8,"width":428,"height":54})
   PASS firefox-zoom200-dark: Reset all is present and inside the viewport ({"label":"Reset all","x":252.48333740234375,"y":70,"w":68.34999084472656,"h":28})
-  PASS firefox-zoom200-dark: constraint - no two controls collide 
+  PASS firefox-zoom200-dark: constraint - no two controls collide
   PASS firefox-zoom200-dark: no horizontal page overflow ({"scrollWidth":720,"innerWidth":720})
   PASS firefox-zoom200-dark: Reset all clears the constraint (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meNearby art and places. Map area. Expand )
   PASS firefox-zoom200-dark: a marker is reachable for the preview (none rendered)
   PASS firefox-zoom200-dark: preview - every control sits inside the viewport ([])
-  PASS firefox-zoom200-dark: preview - no two controls collide 
+  PASS firefox-zoom200-dark: preview - no two controls collide
   PASS firefox-zoom200-dark: map tools - every control sits inside the viewport ([])
   PASS firefox-zoom200-dark: attribution is reachable from Map tools and on screen ({"x":64,"y":370,"width":592,"height":48})
   PASS firefox-zoom200-dark: the attribution dialog names its sources (MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributorsClose | MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributors)
   PASS firefox-zoom200-dark: attribution dialog - every control sits inside the viewport ([])
   PASS firefox-zoom200-dark: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":200,"y":12,"w":320,"h":321.3999938964844})
-  PASS firefox-zoom200-dark: no uncaught page errors 
+  PASS firefox-zoom200-dark: no uncaught page errors

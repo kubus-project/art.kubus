@@ -20,7 +20,7 @@
   PASS chromium-1440x900-light: the selection pin survives the theme switch ({"inSource":0,"kind":null,"opacityPinsSelection":false,"hasMarkerLayer":true,"zoom":3.2})
   PASS chromium-1440x900-light: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
   PASS chromium-1440x900-light: map recovers from WebGL context loss without a recreate loop ({"supported":true,"mapsBefore":1,"mapsAfter":1,"kubusLayers":12,"loaded":true})
-  PASS chromium-1440x900-light: no MapLibre/WebGL errors in console 
+  PASS chromium-1440x900-light: no MapLibre/WebGL errors in console
 
 == chromium-1440x900-dark ok
   PASS chromium-1440x900-dark: maplibre 5.x (5.24.0)
@@ -43,11 +43,11 @@
   PASS chromium-1440x900-dark: the selection pin survives the theme switch ({"inSource":0,"kind":null,"opacityPinsSelection":false,"hasMarkerLayer":true,"zoom":3.2})
   PASS chromium-1440x900-dark: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
   PASS chromium-1440x900-dark: map recovers from WebGL context loss without a recreate loop ({"supported":true,"mapsBefore":1,"mapsAfter":1,"kubusLayers":12,"loaded":true})
-  PASS chromium-1440x900-dark: no MapLibre/WebGL errors in console 
+  PASS chromium-1440x900-dark: no MapLibre/WebGL errors in console
 
 == chromium-1440x900-light-offline-tiles ok
   PASS chromium-1440x900-light-offline-tiles: product layers install without basemap tiles (kubus_walking_route_casing_layer,kubus_walking_route_layer,kubus_walking_route_connector_layer,kubus_marker_cubes_layer,kubus_marker_pulse_layer,kubus_marker_dot_layer,kubus_marker_layer,kubus_marker_cubes_icon_layer,kubus_marker_hitbox_layer,kubus_user_location_layer,kubus_walking_location_symbol_layer,kubus_pending_marker_layer)
-  PASS chromium-1440x900-light-offline-tiles: no uncaught page error 
+  PASS chromium-1440x900-light-offline-tiles: no uncaught page error
 
 == chromium-390x844-light ok
   PASS chromium-390x844-light: maplibre 5.x (5.24.0)
@@ -67,13 +67,13 @@
   PASS chromium-390x844-light: markers and layers survive rapid zoom (kubus_walking_route_casing_layer,kubus_walking_route_layer,kubus_walking_route_connector_layer,kubus_marker_cubes_layer,kubus_marker_pulse_layer,kubus_marker_dot_layer,kubus_marker_layer,kubus_marker_cubes_icon_layer,kubus_marker_hitbox_layer,kubus_user_location_layer,kubus_walking_location_symbol_layer)
   PASS chromium-390x844-light: tapping a marker selects it (badge opacity pins its id) ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":15.5})
   PASS chromium-390x844-light: the selected marker stays an individual marker at every zoom ([[11,2,"marker"],[8,2,"marker"],[5,1,"marker"],[3.2,2,"marker"]])
-  PASS chromium-390x844-light: the badge stays pinned visible for the selection at far zoom 
+  PASS chromium-390x844-light: the badge stays pinned visible for the selection at far zoom
   PASS chromium-390x844-light: the selected badge is actually drawn at far zoom (pixels) ({"screen":{"x":194.99999999999994,"y":702.0000000000001},"saturated":431,"total":832})
   PASS chromium-390x844-light: all kubus layers are re-installed after the theme switch (kubus_walking_route_casing_layer,kubus_walking_route_layer,kubus_walking_route_connector_layer,kubus_marker_cubes_layer,kubus_marker_pulse_layer,kubus_marker_dot_layer,kubus_marker_layer,kubus_marker_cubes_icon_layer,kubus_marker_hitbox_layer,kubus_user_location_layer,kubus_walking_location_symbol_layer)
   PASS chromium-390x844-light: the selection pin survives the theme switch ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":3.2})
   PASS chromium-390x844-light: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
   PASS chromium-390x844-light: map recovers from WebGL context loss without a recreate loop ({"supported":true,"mapsBefore":1,"mapsAfter":1,"kubusLayers":11,"loaded":true})
-  PASS chromium-390x844-light: no MapLibre/WebGL errors in console 
+  PASS chromium-390x844-light: no MapLibre/WebGL errors in console
 
 == chromium-390x844-dark ok
   PASS chromium-390x844-dark: maplibre 5.x (5.24.0)
@@ -93,10 +93,10 @@
   PASS chromium-390x844-dark: markers and layers survive rapid zoom (kubus_walking_route_casing_layer,kubus_walking_route_layer,kubus_walking_route_connector_layer,kubus_marker_cubes_layer,kubus_marker_pulse_layer,kubus_marker_dot_layer,kubus_marker_layer,kubus_marker_cubes_icon_layer,kubus_marker_hitbox_layer,kubus_user_location_layer,kubus_walking_location_symbol_layer)
   PASS chromium-390x844-dark: tapping a marker selects it (badge opacity pins its id) ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":15.5})
   PASS chromium-390x844-dark: the selected marker stays an individual marker at every zoom ([[11,2,"marker"],[8,2,"marker"],[5,1,"marker"],[3.2,2,"marker"]])
-  PASS chromium-390x844-dark: the badge stays pinned visible for the selection at far zoom 
+  PASS chromium-390x844-dark: the badge stays pinned visible for the selection at far zoom
   PASS chromium-390x844-dark: the selected badge is actually drawn at far zoom (pixels) ({"screen":{"x":194.99999999999994,"y":702.0000000000001},"saturated":316,"total":832})
   PASS chromium-390x844-dark: all kubus layers are re-installed after the theme switch (kubus_walking_route_casing_layer,kubus_walking_route_layer,kubus_walking_route_connector_layer,kubus_marker_cubes_layer,kubus_marker_pulse_layer,kubus_marker_dot_layer,kubus_marker_layer,kubus_marker_cubes_icon_layer,kubus_marker_hitbox_layer,kubus_user_location_layer,kubus_walking_location_symbol_layer)
   PASS chromium-390x844-dark: the selection pin survives the theme switch ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":3.2})
   PASS chromium-390x844-dark: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
   PASS chromium-390x844-dark: map recovers from WebGL context loss without a recreate loop ({"supported":true,"mapsBefore":1,"mapsAfter":1,"kubusLayers":11,"loaded":true})
-  PASS chromium-390x844-dark: no MapLibre/WebGL errors in console 
+  PASS chromium-390x844-dark: no MapLibre/WebGL errors in console
