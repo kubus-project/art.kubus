@@ -8479,6 +8479,48 @@ abstract class AppLocalizations {
   /// **'{visible} of {total} visible'**
   String mapFilterVisibleLayerCountLabel(int visible, int total);
 
+  /// Semantics label for the strip that lists what is currently restricting the artworks shown on the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Active map restrictions'**
+  String get mapConstraintsLabel;
+
+  /// Map restriction chip: only artworks within the travel radius around the visitor are shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {radiusKm} km of you'**
+  String mapConstraintRadius(Object radiusKm);
+
+  /// Map restriction chip for a travel radius that cannot narrow anything yet because the visitor's location is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {radiusKm} km of you, location needed'**
+  String mapConstraintRadiusNoLocation(Object radiusKm);
+
+  /// Map restriction chip: only artworks matching this search text are shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Search: {query}'**
+  String mapConstraintQuery(Object query);
+
+  /// Map restriction chip: this many content types (artwork, event, ...) are hidden from the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden types: {count}'**
+  String mapConstraintHiddenLayers(int count);
+
+  /// Accessible label of the control that removes one map restriction; label is the restriction text.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {label}'**
+  String mapConstraintClear(Object label);
+
+  /// Control that removes every map restriction (search text and filters) at once.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all'**
+  String get mapConstraintResetAll;
+
   /// No description provided for @mapLayersTitle.
   ///
   /// In en, this message translates to:

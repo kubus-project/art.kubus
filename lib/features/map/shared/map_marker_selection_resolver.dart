@@ -119,3 +119,29 @@ class _MarkerCandidateRank implements Comparable<_MarkerCandidateRank> {
     return id.compareTo(other.id);
   }
 }
+
+/// Prefix of the temporary markers the map creates for a search result whose
+/// artwork has no loaded marker yet.
+const String kSearchTemporaryMarkerPrefix = 'search_temp_';
+
+/// The already-loaded markers a viewport (bounds) refresh must carry over.
+///
+/// A bounds query replaces the loaded set with whatever the new viewport
+/// holds. Three kinds of marker are not allowed to fall out of it: the
+/// **selected** marker (it is on screen as the selection, and a pan must not
+/// dismiss it just because the new bounds no longer contain it), the direct
+/// deep-link target, and the temporary markers created for a search result.
+Iterable<ArtMarker> markersPreservedAcrossViewportRefresh(
+  Iterable<ArtMarker> current, {
+  String? selectedMarkerId,
+  String? directTargetMarkerId,
+}) {
+  final selected = selectedMarkerId?.trim() ?? '';
+  final direct = directTargetMarkerId?.trim() ?? '';
+  return current.where(
+    (marker) =>
+        (selected.isNotEmpty && marker.id == selected) ||
+        (direct.isNotEmpty && marker.id == direct) ||
+        marker.id.startsWith(kSearchTemporaryMarkerPrefix),
+  );
+}

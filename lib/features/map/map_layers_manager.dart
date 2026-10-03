@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import 'shared/map_marker_collision_config.dart';
+import 'shared/map_marker_lod.dart';
 import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/map_marker_style_config.dart';
 
@@ -405,11 +406,16 @@ class KubusMarkerLayerStyler {
     );
     // Clusters carry entryScale/entryOpacity like markers, so both share the
     // same entry/regroup animation; features without the property stay opaque.
-    final iconOpacity = <Object>[
-      'coalesce',
-      <Object>['get', 'entryOpacity'],
-      1.0,
-    ];
+    // On top of that the canonical badge fades in across the far->mid band and
+    // stays fully visible for the selected marker at every zoom.
+    final iconOpacity = KubusMarkerLod.markerOpacityExpression(
+      entryOpacity: const <Object>[
+        'coalesce',
+        <Object>['get', 'entryOpacity'],
+        1.0,
+      ],
+      selectedId: state.selectedMarkerId,
+    );
 
     final markerVisible = !state.cubeLayerVisible;
     final cubeIconVisible = state.cubeLayerVisible;
@@ -1430,11 +1436,7 @@ class MapLayersManager {
             1.0,
           ],
         ),
-        iconOpacity: <Object>[
-          'coalesce',
-          <Object>['get', 'entryOpacity'],
-          1.0,
-        ],
+        iconOpacity: _lodMarkerOpacity(),
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
         iconAnchor: 'bottom',
@@ -1470,16 +1472,13 @@ class MapLayersManager {
       _ids.markerSourceId,
       _ids.markerDotLayerId,
       ml.CircleLayerProperties(
-        circleRadius: <Object>[
-          'case',
-          <Object>[
-            '==',
-            <Object>['get', 'kind'],
-            'cluster',
-          ],
-          MapMarkerStyleConfig.clusterDotRadiusPx,
-          MapMarkerStyleConfig.dotRadiusPx,
-        ],
+        // Far clusters grow with their member count so density stays legible
+        // without any marker artwork; from the mid level they are the plain
+        // coordinate dot under the badge.
+        circleRadius: KubusMarkerLod.dotRadiusExpression(
+          dotRadius: MapMarkerStyleConfig.dotRadiusPx,
+          clusterDotRadius: MapMarkerStyleConfig.clusterDotRadiusPx,
+        ),
         circleColor: const <Object>['get', 'color'],
         circleOpacity: <Object>[
           'coalesce',
@@ -1506,11 +1505,7 @@ class MapLayersManager {
             1.0,
           ],
         ),
-        iconOpacity: <Object>[
-          'coalesce',
-          <Object>['get', 'entryOpacity'],
-          1.0,
-        ],
+        iconOpacity: _lodMarkerOpacity(),
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
         // Floating badge: anchored at the icon bottom (float gap baked into
@@ -1537,11 +1532,7 @@ class MapLayersManager {
             1.0,
           ],
         ),
-        iconOpacity: <Object>[
-          'coalesce',
-          <Object>['get', 'entryOpacity'],
-          1.0,
-        ],
+        iconOpacity: _lodMarkerOpacity(),
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
         iconAnchor: 'bottom',
@@ -1618,10 +1609,11 @@ class MapLayersManager {
           iconOpacity: 0.0,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
-          // Match the floating badge anchor so the tap target covers the badge
-          // (which hovers above the coordinate point), keeping hitboxes generous
-          // and reliable.
-          iconAnchor: 'bottom',
+          // Far: the dot is the target. From the blend band on, match the
+          // floating badge anchor so the tap target covers the badge (which
+          // hovers above the coordinate point), keeping hitboxes generous and
+          // reliable.
+          iconAnchor: KubusMarkerLod.hitboxAnchorExpression(),
           iconPitchAlignment: 'viewport',
           iconRotationAlignment: 'viewport',
         ),
@@ -1781,6 +1773,16 @@ class MapLayersManager {
     await safeSetLayerVisibility(_ids.markerLayerId, true);
     await _applyWalkingNavigationVisibility(_walkingNavigationVisible);
   }
+
+  /// Opacity of the canonical marker layers before any selection exists:
+  /// entry animation, faded in across the far->mid band.
+  static Object _lodMarkerOpacity() => KubusMarkerLod.markerOpacityExpression(
+        entryOpacity: const <Object>[
+          'coalesce',
+          <Object>['get', 'entryOpacity'],
+          1.0,
+        ],
+      );
 
   Future<Set<String>> _fetchExistingLayerIds() async {
     final result = <String>{};

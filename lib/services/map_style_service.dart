@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../config/config.dart';
 
@@ -49,9 +51,31 @@ class MapStyleService {
   ///   [_toWebAssetKey] for the full explanation.
   /// - On **native**, prefer passing asset/file paths. Raw JSON is only
   ///   supported on Android in `maplibre_gl`.
-  static Future<String> resolveStyleString(String styleRef) {
+  static Future<String> resolveStyleString(
+    String styleRef, {
+    bool globe = false,
+  }) {
     final trimmed = styleRef.trimLeft();
     if (trimmed.isEmpty) return Future<String>.value(styleRef);
+
+    if (globe && kIsWeb) {
+      // Globe is a style-level property (the plugin has no projection API), so
+      // the bundled style is loaded and stamped here. Remote style URLs are
+      // left untouched: they keep whatever projection their owner defined.
+      if (trimmed.startsWith('{')) {
+        return Future<String>.value(withGlobeProjection(styleRef));
+      }
+      final lower = trimmed.toLowerCase();
+      final isRemote = lower.startsWith('http://') ||
+          lower.startsWith('https://') ||
+          lower.startsWith('mapbox://') ||
+          lower.startsWith('file://');
+      if (!isRemote && !trimmed.startsWith('[')) {
+        return rootBundle
+            .loadString(_toWebAssetKey(trimmed))
+            .then(withGlobeProjection);
+      }
+    }
 
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       // Raw JSON styles are only supported on Android by `maplibre_gl`.
@@ -132,6 +156,23 @@ class MapStyleService {
     }
 
     return normalized;
+  }
+
+  /// Stamps `projection: globe` onto a style document.
+  ///
+  /// A style that already declares a projection is left as its owner wrote it,
+  /// and anything that is not a JSON object is returned unchanged, so a bad
+  /// document still fails in MapLibre with its own error rather than here.
+  static String withGlobeProjection(String styleJson) {
+    try {
+      final decoded = jsonDecode(styleJson);
+      if (decoded is! Map<String, dynamic>) return styleJson;
+      if (decoded.containsKey('projection')) return styleJson;
+      decoded['projection'] = const <String, Object>{'type': 'globe'};
+      return jsonEncode(decoded);
+    } on FormatException {
+      return styleJson;
+    }
   }
 
   @visibleForTesting

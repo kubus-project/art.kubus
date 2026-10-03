@@ -78,3 +78,15 @@ Future<void> _loadRuntimeScript() async {
 
   await completer.future;
 }
+
+void setWebMapGroundColorImpl(int argb) {
+  final root = web.document.documentElement;
+  if (root == null) return;
+  final r = (argb >> 16) & 0xFF;
+  final g = (argb >> 8) & 0xFF;
+  final b = argb & 0xFF;
+  final style = (root as web.HTMLElement).style;
+  style.setProperty('--kubus-map-fallback', 'rgb($r, $g, $b)');
+  style.setProperty('--kubus-map-fallback-opaque', 'rgb($r, $g, $b)');
+  style.setProperty('--kubus-map-fallback-subtle', 'rgba($r, $g, $b, 0.92)');
+}

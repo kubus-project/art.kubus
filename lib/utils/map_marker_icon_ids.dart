@@ -44,4 +44,20 @@ class MapMarkerIconIds {
     final sig = categorySignature.isEmpty ? 'mixed' : categorySignature;
     return 'cl_${clusterRendererVersion}_${sig}_${label}_${isDark ? 'd' : 'l'}';
   }
+
+  /// Icon id for a marker whose artwork cover is drawn inside the canonical
+  /// badge. The URL hash makes a replaced cover a different image, so MapLibre
+  /// can never keep showing a stale one.
+  static String markerCover({
+    required String markerId,
+    required int coverHash,
+    required bool isDark,
+    required bool selected,
+  }) {
+    return 'mc_${markerId}_${coverHash.toRadixString(36)}'
+        '_${selected ? 'sel_' : ''}${isDark ? 'd' : 'l'}';
+  }
+
+  /// True for ids produced by [markerCover].
+  static bool isCover(String iconId) => iconId.startsWith('mc_');
 }

@@ -1780,6 +1780,51 @@
       }
     }
   },
+  "mapConstraintsLabel": "Active map restrictions",
+  "@mapConstraintsLabel": {
+    "description": "Semantics label for the strip that lists what is currently restricting the artworks shown on the map."
+  },
+  "mapConstraintRadius": "Within {radiusKm} km of you",
+  "@mapConstraintRadius": {
+    "description": "Map restriction chip: only artworks within the travel radius around the visitor are shown.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintRadiusNoLocation": "Within {radiusKm} km of you, location needed",
+  "@mapConstraintRadiusNoLocation": {
+    "description": "Map restriction chip for a travel radius that cannot narrow anything yet because the visitor's location is not available.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintQuery": "Search: {query}",
+  "@mapConstraintQuery": {
+    "description": "Map restriction chip: only artworks matching this search text are shown.",
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "mapConstraintHiddenLayers": "Hidden types: {count}",
+  "@mapConstraintHiddenLayers": {
+    "description": "Map restriction chip: this many content types (artwork, event, ...) are hidden from the map.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapConstraintClear": "Clear {label}",
+  "@mapConstraintClear": {
+    "description": "Accessible label of the control that removes one map restriction; label is the restriction text.",
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "mapConstraintResetAll": "Reset all",
+  "@mapConstraintResetAll": {
+    "description": "Control that removes every map restriction (search text and filters) at once."
+  },
   "mapLayersTitle": "Map layers",
   "mapDiscoveryPathTitle": "Discovery path",
   "mapDiscoveryPathIdleSubtitle": "Explore nearby art",

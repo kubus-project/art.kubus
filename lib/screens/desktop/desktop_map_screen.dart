@@ -101,6 +101,8 @@ import '../../features/map/controller/kubus_map_marker_creation_coordinator.dart
 import '../../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../../features/map/controller/map_target_coordinator.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
+import '../../features/map/shared/map_marker_lod.dart';
+import '../../features/map/shared/map_marker_regroup_gate.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_map_tokens.dart';
@@ -111,6 +113,7 @@ import '../../widgets/tutorial/tutorial_overlay_controller.dart';
 import '../../widgets/tutorial/tutorial_overlay_scope.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
+import '../../widgets/map/filters/kubus_map_constraint_strip.dart';
 import '../../widgets/map/filters/kubus_map_filter_content.dart';
 import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
     show KubusDiscoveryExpansionDirection;
@@ -439,6 +442,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _resolveArtMarkerColor(marker, themeProvider);
   @override
   void onMarkerSourceWrite() => _debugMarkerSourceWriteCount += 1;
+
+  @override
+  void requestMarkerResync() => _requestMarkerVisualSync(force: true);
   @override
   Future<void> afterMarkerSync(ThemeProvider themeProvider) async {}
   // -------------------------------------------------------------------------
@@ -465,8 +471,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
   static const int _markerVisualSyncThrottleMs =
       MapScreenConstants.markerVisualSyncThrottleMs;
-  int _lastClusterGridLevel = -1;
-  bool _lastClusterEnabled = false;
+  final KubusMarkerRegroupGate _regroupGate = KubusMarkerRegroupGate();
 
   String _selectedSort = 'distance';
   final ArtworkCommentsPanelController _mapCommentsPanelController =
@@ -1496,17 +1501,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.clusterGridLevelForZoom(zoom);
 
   void _queueMarkerVisualRefreshForZoom(double zoom) {
-    final shouldCluster = zoom < _clusterMaxZoom;
-    final gridLevel = shouldCluster ? _clusterGridLevelForZoom(zoom) : -1;
-    if (shouldCluster == _lastClusterEnabled &&
-        gridLevel == _lastClusterGridLevel) {
-      return;
-    }
-    _lastClusterEnabled = shouldCluster;
-    _lastClusterGridLevel = gridLevel;
+    final change = _regroupGate.update(
+      zoom: zoom,
+      clusterMaxZoom: _clusterMaxZoom,
+      gridLevelForZoom: _clusterGridLevelForZoom,
+    );
+    if (change == KubusMarkerRegroup.none) return;
     // The grouping changed: ease the new marker/cluster arrangement in with a
-    // soft scale/opacity pop instead of snapping between layouts.
-    _kubusMapController.animateMarkerRegroup();
+    // soft scale/opacity pop instead of snapping between layouts. A level of
+    // detail boundary only rewrites the artwork, so it does not regroup.
+    if (change == KubusMarkerRegroup.topology) {
+      _kubusMapController.animateMarkerRegroup();
+    }
     _requestMarkerVisualSync();
   }
 
@@ -2275,6 +2281,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
+    _markerSyncEngine.dispose();
     MapAttributionHelper.setDesktopMapEnabled(false);
     _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
@@ -2610,6 +2617,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
           webResizeRecoveryToken: _webResizeRecoveryToken,
           onMapCreated: _handleMapCreated,
+          onStyleReloading: () {
+            _styleInitialized = false;
+            _kubusMapController.markStyleReloading();
+          },
           onStyleLoaded: () {
             AppConfig.debugPrint(
               'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
@@ -2670,6 +2681,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             );
             if (_styleInitialized) {
               _queueMarkerVisualRefreshForZoom(_cameraZoom);
+              // Close-level covers are chosen from what the settled viewport
+              // holds, so a pan that ends at street scale re-plans them once.
+              if (KubusMarkerLod.allowsCovers(_cameraZoom)) {
+                _requestMarkerVisualSync();
+              }
               unawaited(_renderCoordinator.updateRenderMode());
             }
             if (_isNearbyPanelOpen && _userLocation == null) {
@@ -2950,6 +2966,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
           ),
         ),
+        // What is narrowing the map, with a clear for each. Hidden while the
+        // filters panel is open: it shows and resets the same state.
+        extraContent: _showFiltersPanel
+            ? null
+            : KubusMapConstraintStripBinding(
+                searchController: _mapSearchController,
+                filters: _filterState,
+                hasLocation: _userLocation != null,
+                onFiltersChanged: _handleFilterStateChanged,
+                accentColor: themeProvider.accentColor,
+              ),
         accentColor: themeProvider.accentColor,
         minCharsHint: l10n.mapSearchMinCharsHint,
         noResultsText: l10n.commonNoResultsFound,
@@ -5043,10 +5070,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final merged = useBoundsQuery
           ? ArtMarkerListDiff.upsertById(
               current: result.markers,
-              updates: _artMarkers.where(
-                (marker) =>
-                    marker.id == _directTargetMarkerId ||
-                    marker.id.startsWith('search_temp_'),
+              updates: markersPreservedAcrossViewportRefresh(
+                _artMarkers,
+                selectedMarkerId: _kubusMapController.selectedMarkerId,
+                directTargetMarkerId: _directTargetMarkerId,
               ),
             )
           : ArtMarkerListDiff.mergeById(

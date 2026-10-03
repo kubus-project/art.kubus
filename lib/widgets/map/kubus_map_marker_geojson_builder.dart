@@ -27,6 +27,7 @@ Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
       buildMarkerFeature,
   required Future<Map<String, dynamic>> Function(KubusClusterBucket cluster)
       buildClusterFeature,
+  Set<String> pinnedMarkerIds = const <String>{},
 }) async {
   if (markers.isEmpty) return const <Map<String, dynamic>>[];
 
@@ -34,10 +35,11 @@ Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
 
   if (useClustering) {
     final level = clusterGridLevelForZoom(zoom);
-    final clusters = kubusClusterMarkersByGridLevel(
+    final clusters = kubusClusterBucketsWithPinned(
       markers,
       level,
       sortBySizeDesc: sortClustersBySizeDesc,
+      pinnedMarkerIds: pinnedMarkerIds,
     );
 
     for (final cluster in clusters) {

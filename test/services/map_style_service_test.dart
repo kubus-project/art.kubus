@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:art_kubus/services/map_style_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -138,6 +141,80 @@ void main() {
         );
         expect(resolved.startsWith('assets/assets/'), isFalse);
       }
+    });
+  });
+  group('MapStyleService globe projection (Wave 5B)', () {
+    test('stamps a globe projection onto a style document', () {
+      final stamped = MapStyleService.withGlobeProjection(
+        '{"version":8,"sources":{},"layers":[]}',
+      );
+      final decoded = jsonDecode(stamped) as Map<String, dynamic>;
+      expect(decoded['projection'], <String, dynamic>{'type': 'globe'});
+      expect(decoded['version'], 8);
+    });
+
+    test('leaves a style that already declares a projection alone', () {
+      const own =
+          '{"version":8,"projection":{"type":"mercator"},"sources":{},"layers":[]}';
+      expect(MapStyleService.withGlobeProjection(own), own);
+    });
+
+    test('returns anything that is not a style object unchanged', () {
+      expect(MapStyleService.withGlobeProjection('not json'), 'not json');
+      expect(MapStyleService.withGlobeProjection('[1,2]'), '[1,2]');
+    });
+
+    test('native never receives a stamped style (globe is web-only)', () async {
+      // The host test platform is not web, so the globe request is ignored
+      // and the bundled asset reference passes through untouched.
+      expect(
+        await MapStyleService.resolveStyleString(
+          MapStyleService.bundledLightStyleAsset,
+          globe: true,
+        ),
+        'assets/map_styles/kubus_light.json',
+      );
+    });
+
+    test('both bundled styles are valid flat styles the globe can stamp', () {
+      for (final path in <String>[
+        'assets/map_styles/kubus_light.json',
+        'assets/map_styles/kubus_dark.json',
+      ]) {
+        final raw = File(path).readAsStringSync();
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        expect(decoded.containsKey('projection'), isFalse,
+            reason: '$path must stay flat; globe is stamped at load time');
+        final stamped = jsonDecode(MapStyleService.withGlobeProjection(raw))
+            as Map<String, dynamic>;
+        expect((stamped['layers'] as List).length,
+            (decoded['layers'] as List).length);
+      }
+    });
+  });
+
+  group('vendored web MapLibre runtime', () {
+    // The globe path needs MapLibre GL JS 5.x. 4.7.1 silently ignores the
+    // style projection and draws flat, so a downgrade must fail loudly.
+    test('is 5.x (globe-capable), not the 4.x line', () {
+      final header = File('web/local/maplibre-gl/maplibre-gl-csp.js')
+          .readAsStringSync()
+          .substring(0, 400);
+      final match = RegExp(r'maplibre-gl-js/blob/v(\d+)\.(\d+)\.(\d+)/')
+          .firstMatch(header);
+      expect(match, isNotNull, reason: 'version banner not found');
+      expect(int.parse(match!.group(1)!), greaterThanOrEqualTo(5));
+    });
+
+    test('worker and bundle come from the same release', () {
+      String banner(String file) {
+        final header = File('web/local/maplibre-gl/$file')
+            .readAsStringSync()
+            .substring(0, 400);
+        return RegExp(r'blob/(v\d+\.\d+\.\d+)/').firstMatch(header)!.group(1)!;
+      }
+
+      expect(banner('maplibre-gl-csp-worker.js'), banner('maplibre-gl-csp.js'));
     });
   });
 }

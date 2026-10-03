@@ -1741,6 +1741,51 @@
       }
     }
   },
+  "mapConstraintsLabel": "Aktivne omejitve zemljevida",
+  "@mapConstraintsLabel": {
+    "description": "Oznaka za bralnike zaslona za vrstico, ki našteje, kaj trenutno omejuje umetnine na zemljevidu."
+  },
+  "mapConstraintRadius": "Znotraj {radiusKm} km od vas",
+  "@mapConstraintRadius": {
+    "description": "Omejitev zemljevida: prikazane so le umetnine znotraj radija okoli obiskovalca.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintRadiusNoLocation": "Znotraj {radiusKm} km od vas, potrebna lokacija",
+  "@mapConstraintRadiusNoLocation": {
+    "description": "Omejitev radija, ki še ne more ničesar zožiti, ker lokacija obiskovalca ni na voljo.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintQuery": "Iskanje: {query}",
+  "@mapConstraintQuery": {
+    "description": "Omejitev zemljevida: prikazane so le umetnine, ki ustrezajo iskanemu besedilu.",
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "mapConstraintHiddenLayers": "Skriti tipi: {count}",
+  "@mapConstraintHiddenLayers": {
+    "description": "Omejitev zemljevida: toliko vsebinskih tipov (umetnina, dogodek, ...) je skritih.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapConstraintClear": "Počisti: {label}",
+  "@mapConstraintClear": {
+    "description": "Dostopna oznaka kontrolnika, ki odstrani eno omejitev zemljevida; label je besedilo omejitve.",
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "mapConstraintResetAll": "Ponastavi vse",
+  "@mapConstraintResetAll": {
+    "description": "Kontrolnik, ki naenkrat odstrani vse omejitve zemljevida (iskalno besedilo in filtre)."
+  },
   "mapLayersTitle": "Sloji zemljevida",
   "mapDiscoveryPathTitle": "Pot odkrivanja",
   "mapDiscoveryPathIdleSubtitle": "Razišči bližnjo umetnost",

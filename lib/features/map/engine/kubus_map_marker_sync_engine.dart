@@ -1,15 +1,22 @@
+import 'dart:async';
 import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
+import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
 import '../../../models/art_marker.dart';
+import '../../../providers/artwork_provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/map_marker_icon_ids.dart';
 import '../../../utils/map_performance_debug.dart';
+import '../../../utils/maplibre_style_utils.dart';
+import '../../../widgets/art_marker_cube.dart';
 import '../shared/map_screen_shared_helpers.dart';
 import '../../../widgets/map/kubus_map_marker_features.dart';
 import '../../../widgets/map/kubus_map_marker_geojson_builder.dart';
@@ -17,6 +24,8 @@ import '../../../widgets/map/kubus_map_marker_rendering.dart';
 import '../controller/kubus_map_controller.dart';
 import '../shared/map_cluster_transition.dart';
 import '../shared/map_marker_collision_config.dart';
+import '../shared/map_marker_lod.dart';
+import 'kubus_marker_cover_loader.dart';
 
 /// What the marker sync engine needs from its hosting map screen `State`.
 ///
@@ -57,6 +66,10 @@ abstract class KubusMapMarkerSyncHost {
   /// Called after each successful GeoJSON source write (debug counters).
   void onMarkerSourceWrite();
 
+  /// A cover image finished loading and was registered: the marker source
+  /// should be rebuilt so the cover appears.
+  void requestMarkerResync();
+
   /// Called after the 2D marker sync completes (3D cube sync, pending
   /// marker refresh, ...). May be a no-op.
   Future<void> afterMarkerSync(ThemeProvider themeProvider);
@@ -68,9 +81,26 @@ abstract class KubusMapMarkerSyncHost {
 /// `_preregisterMarkerIcons` / `_markerFeatureFor` / `_clusterFeatureFor`
 /// method families (see docs/superpowers/specs/2026-07-11-map-marker-engine-design.md).
 class KubusMapMarkerSyncEngine {
-  KubusMapMarkerSyncEngine(this.host);
+  KubusMapMarkerSyncEngine(this.host, {KubusMarkerCoverLoader? coverLoader})
+      : _coverLoader = coverLoader ?? KubusMarkerCoverLoader();
 
   final KubusMapMarkerSyncHost host;
+  final KubusMarkerCoverLoader _coverLoader;
+
+  // Cover icons registered per style epoch. MapLibre has no image removal (and
+  // the web plugin ignores a re-added name), so the total is capped instead:
+  // once the pool is spent, further markers simply keep their canonical badge
+  // until the next style reload clears the images.
+  int _coverImagesRegistered = 0;
+  int _coverEpoch = -1;
+  final Set<String> _pendingCoverKeys = <String>{};
+  final Map<String, String> _coverUrlByMarker = <String, String>{};
+
+  /// Cover images registered in the current style epoch (debug / evidence).
+  int get coverImagesRegistered => _coverImagesRegistered;
+
+  void dispose() => _coverLoader.dispose();
+
   List<KubusClusterTransitionNode> _lastRenderedTopology =
       const <KubusClusterTransitionNode>[];
   String _stableTopologySignature = '';
@@ -120,18 +150,53 @@ class KubusMapMarkerSyncEngine {
           .map((m) => m.marker.copyWith(position: m.position))
           .toList(growable: false);
 
+      // Level of detail. Far: data-coloured dots only, no marker artwork for
+      // anything but the selected marker. Mid/close: the canonical marker.
+      // Close: a bounded set of markers carry their artwork cover inside the
+      // canonical geometry. The selected marker is pinned out of clusters at
+      // every level so it can never be absorbed into a count badge.
+      final needsArtwork = KubusMarkerLod.needsMarkerArtwork(zoom);
+      final selectedId = host.kubusMapController.selectedMarkerId;
+      final pinned = <String>{
+        if (selectedId != null && selectedId.isNotEmpty) selectedId,
+      };
+      final styleEpoch = host.kubusMapController.styleEpoch;
+      if (_coverEpoch != styleEpoch) {
+        _coverEpoch = styleEpoch;
+        _coverImagesRegistered = 0;
+        _pendingCoverKeys.clear();
+      }
+
+      final coverPlan = _planCovers(
+        zoom: zoom,
+        rendered: renderedMarkers,
+        selectedId: selectedId,
+        isDark: isDark,
+        scheme: scheme,
+        roles: roles,
+        themeProvider: themeProvider,
+        styleEpoch: styleEpoch,
+      );
+
       // Pre-register all needed icons in parallel to avoid waterfall.
       await preregisterIcons(
-        markers: visibleMarkers,
+        markers: needsArtwork
+            ? visibleMarkers
+            : visibleMarkers
+                .where((marker) => pinned.contains(marker.id))
+                .toList(growable: false),
         themeProvider: themeProvider,
         scheme: scheme,
         roles: roles,
         isDark: isDark,
-        useClustering: useClustering,
+        useClustering: needsArtwork && useClustering,
         zoom: zoom,
+        pinnedMarkerIds: pinned,
       );
       if (!host.hostMounted) return;
 
+      final blankIconId =
+          host.kubusMapController.ids.layers.markerHitboxImageId;
       final features = await kubusBuildMarkerFeatureList(
         markers: geoMarkers,
         useClustering: useClustering,
@@ -139,21 +204,56 @@ class KubusMapMarkerSyncEngine {
         clusterGridLevelForZoom: host.clusterGridLevelForZoom,
         sortClustersBySizeDesc: host.sortClustersBySizeDesc,
         shouldAbort: () => !host.hostMounted,
-        buildMarkerFeature: (marker) => markerFeatureFor(
-          marker: marker,
-          renderMarker: renderById[marker.id],
-          themeProvider: themeProvider,
-          scheme: scheme,
-          roles: roles,
-          isDark: isDark,
-        ),
-        buildClusterFeature: (cluster) => clusterFeatureFor(
-          cluster: cluster,
-          scheme: scheme,
-          roles: roles,
-          isDark: isDark,
-          renderById: renderById,
-        ),
+        pinnedMarkerIds: pinned,
+        buildMarkerFeature: (marker) {
+          if (!needsArtwork && !pinned.contains(marker.id)) {
+            return Future<Map<String, dynamic>>.value(
+              kubusFarMarkerFeature(
+                marker: marker,
+                colorHex: MapLibreStyleUtils.hexRgb(
+                  host.resolveArtMarkerBaseColor(marker, themeProvider),
+                ),
+                blankIconId: blankIconId,
+                entryScale: renderById[marker.id]?.entryScale ?? 1.0,
+                entryOpacity: renderById[marker.id]?.entryOpacity ?? 1.0,
+                spiderfied: renderById[marker.id]?.isSpiderfied ?? false,
+                coordinateKey: renderById[marker.id]?.sameCoordinateKey,
+                entrySerial: renderById[marker.id]?.entrySerial ?? 0,
+              ),
+            );
+          }
+          return markerFeatureFor(
+            marker: marker,
+            renderMarker: renderById[marker.id],
+            themeProvider: themeProvider,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+            cover: coverPlan[marker.id],
+          );
+        },
+        buildClusterFeature: (cluster) {
+          if (!needsArtwork) {
+            final entry = kubusClusterEntryValues(cluster, renderById);
+            return kubusFarClusterFeature(
+              cluster: cluster,
+              isDark: isDark,
+              scheme: scheme,
+              roles: roles,
+              resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
+              blankIconId: blankIconId,
+              entryScale: entry.scale,
+              entryOpacity: entry.opacity,
+            );
+          }
+          return clusterFeatureFor(
+            cluster: cluster,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+            renderById: renderById,
+          );
+        },
       );
       if (!host.hostMounted) return;
 
@@ -295,11 +395,13 @@ class KubusMapMarkerSyncEngine {
     required bool isDark,
     required bool useClustering,
     required double zoom,
+    Set<String> pinnedMarkerIds = const <String>{},
   }) async {
     final controller = host.mapController;
     if (controller == null) return;
 
     await kubusPreregisterMarkerIcons(
+      pinnedMarkerIds: pinnedMarkerIds,
       controller: controller,
       registeredMapImages: host.registeredMapImages,
       markers: markers,
@@ -324,11 +426,12 @@ class KubusMapMarkerSyncEngine {
     required ColorScheme scheme,
     required KubusColorRoles roles,
     required bool isDark,
+    KubusMarkerCoverIcons? cover,
   }) async {
     final controller = host.mapController;
     if (controller == null) return const <String, dynamic>{};
 
-    return kubusMarkerFeatureFor(
+    final feature = await kubusMarkerFeatureFor(
       controller: controller,
       registeredMapImages: host.registeredMapImages,
       marker: marker,
@@ -346,6 +449,14 @@ class KubusMapMarkerSyncEngine {
       coordinateKey: renderMarker?.sameCoordinateKey,
       entrySerial: renderMarker?.entrySerial ?? 0,
     );
+    final properties = feature['properties'];
+    if (cover != null && properties is Map<String, dynamic>) {
+      // The cover lives inside the canonical badge geometry: only the image
+      // changes, never the layer, size, anchor or hitbox.
+      properties['icon'] = cover.base;
+      if (cover.selected != null) properties['iconSelected'] = cover.selected;
+    }
+    return feature;
   }
 
   Future<Map<String, dynamic>> clusterFeatureFor({
@@ -373,4 +484,219 @@ class KubusMapMarkerSyncEngine {
       entryOpacity: entry.opacity,
     );
   }
+
+  // -------------------------------------------------------------------------
+  // Close-level artwork covers
+  // -------------------------------------------------------------------------
+
+  /// Cover width requested from the media resolver and decoded, in logical px.
+  /// The badge face is 44 logical px, so a 2x decode is already generous; the
+  /// resolver clamps the download to this width, never archival media.
+  static const int _coverFetchWidthLogicalPx = 160;
+
+  String? _coverUrlFor(ArtMarker marker) {
+    final cached = _coverUrlByMarker[marker.id];
+    if (cached != null) return cached.isEmpty ? null : cached;
+    final artworkId = marker.artworkId;
+    final artwork = artworkId == null || artworkId.isEmpty
+        ? null
+        : Provider.of<ArtworkProvider>(host.hostContext, listen: false)
+            .getArtworkById(artworkId);
+    final url = ArtworkMediaResolver.resolveCover(
+      artwork: artwork,
+      metadata: marker.metadata,
+      maxWidth: _coverFetchWidthLogicalPx,
+    );
+    // An empty marker is remembered too: a marker with no cover is not
+    // re-resolved on every sync.
+    _coverUrlByMarker[marker.id] = url ?? '';
+    return url;
+  }
+
+  /// Chooses the bounded set of markers that should show a cover now and
+  /// returns the cover icon ids that are *already registered* for them.
+  ///
+  /// Covers that still need loading are started in the background and the host
+  /// is asked to resync when each one lands, so a slow image never delays the
+  /// canonical marker. Nothing here can remove a marker: no cover, a failed
+  /// cover, an exhausted image pool or an unmounted host all leave the
+  /// canonical badge in place.
+  Map<String, KubusMarkerCoverIcons> _planCovers({
+    required double zoom,
+    required List<KubusRenderedMarker> rendered,
+    required String? selectedId,
+    required bool isDark,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required ThemeProvider themeProvider,
+    required int styleEpoch,
+  }) {
+    if (!KubusMarkerLod.allowsCovers(zoom)) {
+      return const <String, KubusMarkerCoverIcons>{};
+    }
+    final visible = host.kubusMapController.visibleMarkerIds;
+    final countAt = <String, int>{};
+    for (final item in rendered) {
+      countAt.update(item.sameCoordinateKey, (v) => v + 1, ifAbsent: () => 1);
+    }
+    final candidates = <ArtMarker>[
+      for (final item in rendered)
+        if ((visible.contains(item.marker.id) ||
+                item.marker.id == selectedId) &&
+            // A same-coordinate stack is one cluster feature, not a marker.
+            ((countAt[item.sameCoordinateKey] ?? 1) == 1 || item.isSpiderfied))
+          item.marker,
+    ];
+    final failed = <String>{};
+    for (final marker in candidates) {
+      final url = _coverUrlFor(marker);
+      if (url != null && _coverLoader.hasFailed(url)) failed.add(marker.id);
+    }
+    final viewport = MediaQuery.maybeOf(host.hostContext)?.size ?? Size.zero;
+    final chosen = KubusMarkerLod.selectCoverMarkerIds(
+      candidates: candidates,
+      selectedId: selectedId,
+      center: host.kubusMapController.camera.center,
+      budget: KubusMarkerLod.coverBudget(viewport),
+      hasCover: (marker) => _coverUrlFor(marker) != null,
+      failedIds: failed,
+    );
+
+    final plan = <String, KubusMarkerCoverIcons>{};
+    final byId = <String, ArtMarker>{
+      for (final marker in candidates) marker.id: marker,
+    };
+    for (final id in chosen) {
+      final marker = byId[id];
+      final url = marker == null ? null : _coverUrlFor(marker);
+      if (marker == null || url == null) continue;
+      final hash = url.hashCode;
+      final base = MapMarkerIconIds.markerCover(
+        markerId: id,
+        coverHash: hash,
+        isDark: isDark,
+        selected: false,
+      );
+      final selected = MapMarkerIconIds.markerCover(
+        markerId: id,
+        coverHash: hash,
+        isDark: isDark,
+        selected: true,
+      );
+      final isSelected = id == selectedId;
+      final hasBase = host.registeredMapImages.contains(base);
+      final hasSelected = host.registeredMapImages.contains(selected);
+      if (hasBase && (!isSelected || hasSelected)) {
+        plan[id] = KubusMarkerCoverIcons(
+          base: base,
+          selected: hasSelected ? selected : null,
+        );
+        continue;
+      }
+      _prepareCover(
+        marker: marker,
+        url: url,
+        isDark: isDark,
+        scheme: scheme,
+        roles: roles,
+        themeProvider: themeProvider,
+        styleEpoch: styleEpoch,
+        needSelectedVariant: isSelected,
+      );
+    }
+    return plan;
+  }
+
+  void _prepareCover({
+    required ArtMarker marker,
+    required String url,
+    required bool isDark,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required ThemeProvider themeProvider,
+    required int styleEpoch,
+    required bool needSelectedVariant,
+  }) {
+    final key = '$styleEpoch|${marker.id}|${url.hashCode}|$isDark|'
+        '$needSelectedVariant';
+    if (!_pendingCoverKeys.add(key)) return;
+    final pixelRatio = host.markerPixelRatio();
+    final targetWidth = (_coverFetchWidthLogicalPx * pixelRatio).round();
+    unawaited(() async {
+      try {
+        final image = await _coverLoader.load(url, targetWidthPx: targetWidth);
+        if (image == null) {
+          // A failed cover leaves the canonical marker; resync so the failed
+          // marker frees its budget slot for the next candidate.
+          if (host.hostMounted) host.requestMarkerResync();
+          return;
+        }
+        final controller = host.mapController;
+        if (controller == null ||
+            !host.hostMounted ||
+            host.kubusMapController.styleEpoch != styleEpoch) {
+          return;
+        }
+        final baseColor = host.resolveArtMarkerBaseColor(marker, themeProvider);
+        final shape = ArtMapMarkerShape.forType(marker.type);
+        final hash = url.hashCode;
+
+        Future<void> register(bool selected) async {
+          final id = MapMarkerIconIds.markerCover(
+            markerId: marker.id,
+            coverHash: hash,
+            isDark: isDark,
+            selected: selected,
+          );
+          if (host.registeredMapImages.contains(id)) return;
+          if (_coverImagesRegistered >=
+              KubusMarkerLod.maxRegisteredCoverImages) {
+            return;
+          }
+          final bytes = await ArtMarkerCubeIconRenderer.renderCoverMarkerPng(
+            cover: image,
+            baseColor: baseColor,
+            tier: marker.signalTier,
+            shape: shape,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+            forceGlow: selected,
+            showPromotionStar: marker.isPromoted,
+            pixelRatio: pixelRatio,
+          );
+          if (!host.hostMounted ||
+              host.kubusMapController.styleEpoch != styleEpoch) {
+            return;
+          }
+          await controller.addImage(id, bytes);
+          host.registeredMapImages.add(id);
+          _coverImagesRegistered += 1;
+        }
+
+        await register(false);
+        if (needSelectedVariant) await register(true);
+        if (host.hostMounted) host.requestMarkerResync();
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+            '${host.debugLabel}: cover registration failed (${marker.id}): $e',
+          );
+        }
+      } finally {
+        _pendingCoverKeys.remove(key);
+      }
+    }());
+  }
+}
+
+/// Icon ids of a marker whose artwork cover is registered with the map.
+@immutable
+class KubusMarkerCoverIcons {
+  const KubusMarkerCoverIcons({required this.base, this.selected});
+
+  final String base;
+
+  /// Present only for the selected marker (the glow variant).
+  final String? selected;
 }
