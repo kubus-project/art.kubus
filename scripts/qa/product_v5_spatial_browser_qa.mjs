@@ -911,6 +911,38 @@ async function layoutSwap(page, viewport, tag, run, words) {
   check(run, `${tag}: the new map opens where the old one was`, Math.abs(after.zoom - before.zoom) < 1.2 && moved < 0.05, JSON.stringify({ before, after }));
   check(run, `${tag}: the search text follows the swap`, text.includes(words.queryChip('Ljubljana')), text.slice(0, 220));
   check(run, `${tag}: the selected marker follows the swap`, selectedAfter.opacityPinsSelection, JSON.stringify(selectedAfter));
+
+  // And back: phone -> wide, with a marker selected on the phone this time.
+  const phone = { ...viewport, width: 390, height: 844, touch: false };
+  const phoneTarget = await findMarkerTarget(page);
+  if (!phoneTarget) {
+    check(run, `${tag}: a marker is available for the return swap`, false, 'none rendered');
+    return;
+  }
+  await tapAt(page, { x: phoneTarget.x, y: phoneTarget.y - 18 }, phone);
+  await settle(page, 2500);
+  const phoneBefore = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    return { zoom: Number(map.getZoom().toFixed(2)), center: [Number(map.getCenter().lng.toFixed(3)), Number(map.getCenter().lat.toFixed(3))], maps: window.__maps.length };
+  });
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await settle(page, 9000);
+  await page.waitForFunction((n) => window.__maps.length > n, phoneBefore.maps, { timeout: 60000 }).catch(() => {});
+  await settle(page, 4000);
+  const wide = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    return { zoom: Number(map.getZoom().toFixed(2)), center: [Number(map.getCenter().lng.toFixed(3)), Number(map.getCenter().lat.toFixed(3))], maps: window.__maps.length };
+  });
+  await enableSemantics(page);
+  const selectedWide = await selectionState(page, phoneTarget.id);
+  const wideText = await semanticsText(page);
+  await snap(page, `${tag}-10-back-on-wide`, run);
+  run.layoutSwapReturn = { phoneBefore, wide, selectedWide: selectedWide.opacityPinsSelection };
+  const movedBack = Math.hypot(wide.center[0] - phoneBefore.center[0], wide.center[1] - phoneBefore.center[1]);
+  check(run, `${tag}: the return swap recreated the map`, wide.maps > phoneBefore.maps, JSON.stringify({ before: phoneBefore.maps, after: wide.maps }));
+  check(run, `${tag}: the wide map opens where the phone map was`, Math.abs(wide.zoom - phoneBefore.zoom) < 1.2 && movedBack < 0.05, JSON.stringify({ phoneBefore, wide }));
+  check(run, `${tag}: the search text follows the return swap`, wideText.includes(words.queryChip('Ljubljana')), wideText.slice(0, 220));
+  check(run, `${tag}: the selected marker follows the return swap`, selectedWide.opacityPinsSelection, JSON.stringify(selectedWide));
 }
 
 /** Flows that need the Flutter chrome: constraints, filters, entity and Back. */
