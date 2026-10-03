@@ -125,7 +125,33 @@ void main() {
           reason: 'empty ID: $familyPath/');
       expect(parser.parse(Uri.parse('$canonicalPath/extra')), isNull,
           reason: 'extra segment: $canonicalPath/extra');
+      expect(parser.parse(Uri.parse('$canonicalPath//')), isNull,
+          reason: 'double trailing slash: $canonicalPath//');
     }
+  });
+
+  test('a single trailing slash on a canonical path is the same document', () {
+    final artwork = parser.parse(Uri.parse('/sl/umetnine/art-2/'));
+    expect(artwork?.type, ShareEntityType.artwork);
+    expect(artwork?.id, 'art-2');
+    final marker = parser.parse(Uri.parse('/en/map/marker-1/'));
+    expect(marker?.type, ShareEntityType.marker);
+    expect(marker?.id, 'marker-1');
+  });
+
+  test('localized exhibitions keep the path-form claim-ready handoff', () {
+    final target = parser.parse(
+      Uri.parse('/sl/razstave/exhibition-9/claim-ready/marker-7'),
+    );
+    expect(target?.type, ShareEntityType.exhibition);
+    expect(target?.id, 'exhibition-9');
+    expect(target?.attendanceMarkerId, 'marker-7');
+    final withHandoff = parser.parse(Uri.parse(
+      '/sl/razstave/exhibition-9/claim-ready/marker-7?handoff=claim-ready',
+    ));
+    expect(withHandoff?.isClaimReadyExhibition, isTrue);
+    // The claim tail is exhibition-only.
+    expect(parser.parse(Uri.parse('/en/artworks/a/claim-ready/m')), isNull);
   });
 
   test('unrecognized entity IDs stay as exact targets for normal not-found UI',

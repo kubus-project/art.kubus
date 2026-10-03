@@ -169,8 +169,20 @@ class ShareDeepLinkCodec {
       final head = pathSegments[1].trim().toLowerCase();
       final canonicalType = _localizedCanonicalHeads['$locale/$head'];
       if (canonicalType != null) {
-        if (pathSegments.length != 3) return null;
-        final id = pathSegments[2].trim();
+        // A single trailing slash is the same document; anything else after
+        // the id is only valid as the exhibition claim-ready handoff tail.
+        final canonicalSegments =
+            pathSegments.length > 3 && pathSegments.last.isEmpty
+                ? pathSegments.sublist(0, pathSegments.length - 1)
+                : pathSegments;
+        final isClaimReadyTail =
+            canonicalType == AppRouteIntentType.exhibition &&
+                canonicalSegments.length >= 4 &&
+                canonicalSegments.length <= 5 &&
+                const <String>{'claim-ready', 'claim_ready'}
+                    .contains(canonicalSegments[3].trim().toLowerCase());
+        if (canonicalSegments.length != 3 && !isClaimReadyTail) return null;
+        final id = canonicalSegments[2].trim();
         if (id.isEmpty) return null;
         return _intentFromType(canonicalType, id, uri: uri, segmentIndex: 1);
       }

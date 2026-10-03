@@ -14,6 +14,9 @@ mkdir -p "$LIVE_DIR" "$RELEASE_ROOT"
 printf 'previous placeholder\n' > "$LIVE_DIR/index.html"
 mkdir -p "$LIVE_DIR/.well-known/acme-challenge"
 printf 'host-owned validation\n' > "$LIVE_DIR/.well-known/acme-challenge/token"
+# A previous release already published an association file; a new release that
+# ships a changed one must win over this stale live copy.
+printf 'stale live association\n' > "$LIVE_DIR/.well-known/assetlinks.json"
 
 build_archive() {
   payload="$1"
@@ -36,6 +39,8 @@ mkdir -p "$payload"
 printf '<html>development</html>\n' > "$payload/index.html"
 printf '%s\n' "$SOURCE_SHA" > "$payload/kubus-web-revision.txt"
 printf 'RewriteEngine On\nRewriteRule ^app$ index.html [L]\n' > "$payload/.htaccess"
+mkdir -p "$payload/.well-known"
+printf 'artifact association\n' > "$payload/.well-known/assetlinks.json"
 build_archive "$payload"
 
 if sh "$release_script" prepare >/dev/null 2>&1; then
@@ -72,6 +77,7 @@ sh "$release_script" rollback >/dev/null
 # Repeating a failed smoke on the same immutable SHA must always restore live.
 sh "$release_script" promote >/dev/null
 [ "$(cat "$LIVE_DIR/.well-known/acme-challenge/token")" = 'host-owned validation' ]
+[ "$(cat "$LIVE_DIR/.well-known/assetlinks.json")" = 'artifact association' ]
 sh "$release_script" rollback >/dev/null
 [ "$(cat "$LIVE_DIR/index.html")" = 'previous placeholder' ]
 [ -d "$RELEASE_ROOT/failed-$SOURCE_SHA.retry-1" ]

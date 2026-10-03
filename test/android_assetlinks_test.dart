@@ -47,6 +47,11 @@ void main() {
     final gradle = File('android/app/build.gradle.kts').existsSync()
         ? File('android/app/build.gradle.kts').readAsStringSync()
         : File('android/app/build.gradle').readAsStringSync();
-    expect(gradle, contains('applicationId = "com.art.kubus"'));
+    expect(
+      RegExp(r'^\s*applicationId\s*=\s*"com\.art\.kubus"', multiLine: true)
+          .hasMatch(gradle),
+      isTrue,
+      reason: 'applicationId must be declared on its own line',
+    );
   });
 }

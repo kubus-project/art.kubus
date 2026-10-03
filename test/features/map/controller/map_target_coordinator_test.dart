@@ -145,6 +145,30 @@ void main() {
     expect(await future, MapTargetResult.overlayOpened);
   });
 
+  test(
+      'an unknown exact marker with a preferred position falls back to '
+      'coordinates, not to an unrelated nearby marker', () async {
+    final harness = _Harness();
+    harness.markers.add(
+      _marker(id: '00-nearby', position: const LatLng(45.8051, 15.9268)),
+    );
+    harness.coordinator
+      ..setMapControllerReady(true)
+      ..setStyleReady(true);
+
+    final result = await harness.coordinator.submit(
+      const MapTargetIntent(
+        exactMarkerId: 'missing',
+        preferredPosition: LatLng(45.8050, 15.9267),
+        preferredLabel: '00-nearby',
+      ),
+    );
+
+    expect(result, MapTargetResult.coordinatesOnly);
+    expect(harness.events, isNot(contains('select:00-nearby')));
+    expect(harness.movedPosition, const LatLng(45.8050, 15.9267));
+  });
+
   test('an unknown exact marker with no position reports not found', () async {
     final harness = _Harness();
     harness.markers.add(_marker(id: '00-unrelated'));

@@ -17,8 +17,6 @@ void main() {
     '/sl/objave/',
     '/en/collections/',
     '/sl/zbirke/',
-    '/en/collectibles/',
-    '/sl/zbirateljski-predmeti/',
     '/en/map/',
     '/sl/zemljevid/',
   };
@@ -96,5 +94,9 @@ void main() {
     expect(pathPrefixes, isNot(contains('/en/')));
     expect(pathPrefixes, isNot(contains('/sl/')));
     expect(pathPrefixes, isNot(contains('/.well-known/')));
+    // The app has no public collectible destination, so those links must stay
+    // in the browser rather than open an app screen that cannot show them.
+    expect(pathPrefixes, isNot(contains('/en/collectibles/')));
+    expect(pathPrefixes, isNot(contains('/sl/zbirateljski-predmeti/')));
   });
 }

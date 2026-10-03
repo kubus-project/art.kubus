@@ -19,7 +19,7 @@ entity families on `app.kubus.site`:
 | Exhibition | `/en/exhibitions/` | `/sl/razstave/` |
 | Post | `/en/posts/` | `/sl/objave/` |
 | Collection | `/en/collections/` | `/sl/zbirke/` |
-| Collectible | `/en/collectibles/` | `/sl/zbirateljski-predmeti/` |
+| Collectible | not claimed (no public destination in the app) | not claimed |
 | Map record | `/en/map/` | `/sl/zemljevid/` |
 
 The filter remains limited to `https://app.kubus.site`, `VIEW`, `DEFAULT`, and
@@ -27,11 +27,13 @@ The filter remains limited to `https://app.kubus.site`, `VIEW`, `DEFAULT`, and
 internal endpoints. Previously declared compact and long-form compatibility
 prefixes are retained. The localized URL is the preferred sharing identity;
 `ShareLinkBuilder` continues to emit HTTPS URLs for both locales and all eight
-entity types.
+entity types. Collectible links remain parseable for in-app sharing but are
+deliberately not claimed, so they keep opening in the browser.
 
 `ShareDeepLinkParser` remains the sole URL interpreter. For the canonical
-localized families it requires exactly locale, entity family, and one nonempty
-ID segment. It takes locale from `/en/` or `/sl/` before considering a locale
+localized families it requires locale, entity family, and one nonempty ID
+segment, tolerates a single trailing slash, and accepts the path-form
+`claim-ready/<markerId>` tail on exhibitions only. It takes locale from `/en/` or `/sl/` before considering a locale
 query parameter, treats `Uri.pathSegments` as already decoded, and leaves query
 and fragment available to the existing startup route preservation. An
 unrecognized ID is still passed to the existing entity screen/provider, whose
@@ -87,7 +89,7 @@ The parser has a collectible/NFT route type, but the existing app navigation
 currently has no public collectible detail destination: its NFT navigation
 branch is a no-op and startup routing treats it as wallet-required. Wave 1
 reported no public production collectible records. This pass keeps the route
-declared and parser-testable, but does not invent a detail screen or change the
+parser-testable but unclaimed by the manifest, and does not invent a detail screen or change the
 wallet boundary without an existing public entity destination. Exact native
 collectible opening remains a separate product blocker if a public collectible
 is introduced.
@@ -107,10 +109,11 @@ owner and one camera owner.
   debug/test signing, not the production release signer. The old emulator app
   was uninstalled because there was insufficient free space for an in-place
   update; the new APK then installed successfully.
-- The current manifest regression test passes and covers all 16 localized
-  prefixes plus the retained compatibility prefixes. On the updated emulator
-  install, `cmd package query-activities` matched `MainActivity` for all 16
-  localized URL prefixes. This is resolver evidence only, not activity launch,
+- The current manifest regression test passes and covers the 14 claimed localized
+  prefixes plus the retained compatibility prefixes. (An earlier build of this
+  branch also claimed the two collectible prefixes; they were removed.) On that
+  emulator install, `cmd package query-activities` matched `MainActivity` for
+  the localized URL prefixes. This is resolver evidence only, not activity launch,
   ownership, or production signing evidence.
 - `pm verify-app-links --re-verify com.art.kubus` followed by
   `pm get-app-links com.art.kubus` reports `app.kubus.site: 1024` for this
@@ -145,6 +148,12 @@ top-left quarter under page zoom. Firefox page zoom cannot be driven by
 Playwright, so Firefox runs the equivalent 720x450 CSS viewport at 2x density
 and is labelled "viewport-equivalent, not real zoom".
 
+The run needs a headed Chromium and, for the institution case, live production,
+so it is opt-in: `WAVE2B_ZOOM200=1` for the full matrix, or
+`WAVE2B_ZOOM200_ONLY=1` for just this check (`ZOOM_ORIGIN=https://app.kubus.site`
+runs the production-data variant, which is the one that asserts the artwork
+actions).
+
 Run against this branch's web build served by the backend `seo:preview`
 fixtures (artwork, artist profile, event, exhibition) and against live
 production (institution profile, plus a real artwork and artist profile with
@@ -161,9 +170,10 @@ Per case the run asserts: no document or body horizontal overflow, the title
 is visible and inside the viewport, a sticky header does not cover the title,
 SSR keyboard focus shows an outline, and takeover keeps the canonical path. On
 production data, Like, Save, Comments (discussion) and Share on the artwork
-were each reachable by hit test inside the viewport with a visible focus ring
-(Chromium by scrolling the page, Firefox by Tab), and Follow and Message on
-profiles were reachable in Firefox. Chromium keyboard traversal of the profile
+were each reachable by hit test inside the viewport (Chromium by scrolling the
+page, and the script fails the run if any is missing, covered or off-screen;
+Firefox by Tab, where the focus ring was also measured), and Follow and Message
+on profiles were reachable in Firefox. Chromium keyboard traversal of the profile
 actions was not captured; the profile top and statistics render without
 overflow in the screenshots.
 

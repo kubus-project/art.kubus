@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { existsSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -659,7 +659,7 @@ async function validateNarrowViewport(browser, browserName) {
 // at 2x density) and is labelled as that equivalent, not as real zoom.
 const zoomProductionOrigin = process.env.ZOOM_ORIGIN || null;
 const zoomCases = zoomProductionOrigin ? [
-  { name: 'artwork', path: '/en/artworks/d3e5b3a5-d1f4-4213-85e7-c85dee331ce1', origin: zoomProductionOrigin },
+  { name: 'artwork', path: '/en/artworks/d3e5b3a5-d1f4-4213-85e7-c85dee331ce1', origin: zoomProductionOrigin, requireActions: ['like', 'save', 'comments', 'share'] },
   { name: 'artist-profile', path: '/en/profiles/067b604c-3e37-4eb6-b140-f189fe546d3e', origin: zoomProductionOrigin },
   { name: 'institution-profile', path: '/en/profiles/b5218a75-9066-4e20-9fd0-51c1d4ca93d2', origin: zoomProductionOrigin },
 ] : [
@@ -678,12 +678,15 @@ const zoomCases = zoomProductionOrigin ? [
 async function openZoom200Context(browserName, browserType) {
   if (browserName === 'chromium') {
     const dir = await mkdtemp(join(tmpdir(), 'wave2b-zoom200-'));
+    const zoomHosts = new Set(['127.0.0.1', 'localhost', new URL(baseUrl).hostname]);
+    if (zoomProductionOrigin) zoomHosts.add(new URL(zoomProductionOrigin).hostname);
+    zoomHosts.add('app.kubus.site');
     await mkdir(join(dir, 'Default'), { recursive: true });
     const level = Math.log(2) / Math.log(1.2);
     await writeFile(join(dir, 'Default', 'Preferences'), JSON.stringify({
       partition: {
         default_zoom_level: { x: level },
-        per_host_zoom_levels: { x: { '127.0.0.1': { zoom_level: level }, 'app.kubus.site': { zoom_level: level } } },
+        per_host_zoom_levels: { x: Object.fromEntries([...zoomHosts].map((host) => [host, { zoom_level: level }])) },
       },
     }));
     const executablePath = chromiumExecutable();
@@ -696,7 +699,14 @@ async function openZoom200Context(browserName, browserType) {
       ...(executablePath ? { executablePath } : {}),
       args: ['--window-size=1440,900', '--force-device-scale-factor=1'],
     });
-    return { context, mode: 'chromium-real-browser-zoom-200', close: () => context.close() };
+    return {
+      context,
+      mode: 'chromium-real-browser-zoom-200',
+      close: async () => {
+        await context.close().catch(() => {});
+        await rm(dir, { recursive: true, force: true }).catch(() => {});
+      },
+    };
   }
   const browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({
@@ -792,7 +802,7 @@ async function entityActions(page) {
     }, wanted);
     for (const item of visible) {
       const prior = seen.get(item.label);
-      if (!prior || (!prior.insideViewport && item.insideViewport)) seen.set(item.label, { ...item, focusRing: true, via: 'scroll' });
+      if (!prior || (!prior.insideViewport && item.insideViewport)) seen.set(item.label, { ...item, focusRing: null, via: 'scroll' });
     }
     await page.mouse.wheel(0, 450);
     await page.waitForTimeout(350);
@@ -875,7 +885,14 @@ async function validateEntityZoom200(browserName, browserType) {
       if (testCase.takeoverOptional) {
         takeoverState = await waitForExactTakeover(page, testCase, 20000).then(
           () => 'completed',
-          () => 'not-completed: entity API unavailable in fixtures and production',
+          (error) => {
+            // Only a timeout is the expected "entity API unavailable" outcome;
+            // a changed canonical path or a crash must still fail the run.
+            if (error?.name === 'TimeoutError') {
+              return 'not-completed: entity API unavailable in fixtures and production';
+            }
+            throw error;
+          },
         );
       } else {
         await waitForExactTakeover(page, testCase);
@@ -902,6 +919,11 @@ async function validateEntityZoom200(browserName, browserType) {
       const actions = takeoverState === 'completed' ? await entityActions(page) : { semantics: 'not-applicable', actions: [] };
       const flutterActionsShot = screenshotName(testCase.name, 'zoom200', 'flutter-actions', browserName);
       await captureZoomScreenshot(page, cdp, flutterActionsShot);
+      for (const required of testCase.requireActions || []) {
+        const action = actions.actions.find((item) => item.label.toLowerCase() === required);
+        ensure(action, `${required} was not found at 200% on ${testCase.path}`);
+        ensure(action.reachable && action.insideViewport, `${required} is covered or off-screen at 200%: ${JSON.stringify(action)}`);
+      }
       entries.push({
         browser: browserName,
         route: testCase.path,
@@ -972,7 +994,11 @@ async function runBrowser(browserName, browserType) {
     }
     results.push(await validateFailureStates(browser, browserName));
     results.push(await validateNarrowViewport(browser, browserName));
-    results.push(...await validateEntityZoom200(browserName, browserType));
+    // Real 200% zoom needs a headed Chromium and, for the institution case,
+    // live production, so it is opt-in: WAVE2B_ZOOM200=1 (or ZOOM200_ONLY).
+    if (process.env.WAVE2B_ZOOM200 === '1') {
+      results.push(...await validateEntityZoom200(browserName, browserType));
+    }
   } finally {
     await browser.close();
   }
