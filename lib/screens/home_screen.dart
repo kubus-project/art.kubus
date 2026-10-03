@@ -223,6 +223,12 @@ class HomeWeb3CardStrip extends StatelessWidget {
     // longer localised copy never leave a ragged strip.
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      // Room above and below for the 2 px lift and the accent shadow, which a
+      // horizontal scroller would otherwise clip at the tile edge.
+      padding: const EdgeInsets.only(
+        top: KubusSpacing.xs,
+        bottom: KubusSpacing.lg - KubusSpacing.xs,
+      ),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

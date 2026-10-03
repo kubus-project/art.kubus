@@ -209,6 +209,41 @@ void main() {
     });
   });
 
+  testWidgets('toggling loading keeps the same tile subtree (no remount)',
+      (tester) async {
+    Widget tile({required bool loading}) => MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 260,
+                child: KubusActionTile(
+                  title: 'Send',
+                  icon: Icons.arrow_upward,
+                  accent: _accent,
+                  layout: KubusActionTileLayout.compact,
+                  loading: loading,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+    await tester.pumpWidget(tile(loading: false));
+    final before = tester.element(find.byType(InkWell));
+    // InlineLoading animates forever, so pump frames instead of settling.
+    await tester.pumpWidget(tile(loading: true));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.element(find.byType(InkWell)), same(before));
+  });
+
+  testWidgets('an empty subtitle is no subtitle', (tester) async {
+    await tester.pumpWidget(_host(KubusActionTileLayout.compact, subtitle: ''));
+    final data =
+        tester.getSemantics(find.byType(KubusActionTile)).getSemanticsData();
+    expect(data.hint, isEmpty);
+  });
+
   group('KubusActionTile.compact', () {
     testWidgets(
         'fills the slot with title, subtitle and one arrow; the title owns '

@@ -310,11 +310,16 @@ class KubusHoverResponse extends StatefulWidget {
     required this.builder,
     this.lift = false,
     this.cursor = MouseCursor.defer,
+    this.enabled = true,
   });
 
   final Widget Function(BuildContext context, bool hovered) builder;
   final bool lift;
   final MouseCursor cursor;
+
+  /// A disabled response never reports hover and never lifts, but keeps the
+  /// same widget structure, so toggling it does not remount the child.
+  final bool enabled;
 
   /// Hover answer timing, shared by everything built on this primitive.
   static const Duration duration = Duration(milliseconds: 180);
@@ -331,18 +336,20 @@ class KubusHoverResponse extends StatefulWidget {
   ///
   /// A tinted drop (offset down, negative spread) rather than a glow: it
   /// grounds the 2 px lift in the destination's own colour and never blooms
-  /// around the tile. The resting state is the same shadow at zero alpha, so
-  /// the two states interpolate instead of popping. Dark grounds need more
-  /// alpha before a coloured shadow registers at all.
+  /// around the tile. Dark grounds need more alpha before a coloured shadow
+  /// registers at all.
   static List<BoxShadow> accentShadow(
     Color accent,
     Brightness brightness, {
     required bool hovered,
   }) {
+    // Nothing is painted at rest (no transparent blur to rasterise per frame);
+    // [BoxShadow.lerpList] fades a shadow in from, and out to, no shadow.
+    if (!hovered) return const <BoxShadow>[];
     final peak = brightness == Brightness.dark ? 0.34 : 0.24;
     return <BoxShadow>[
       BoxShadow(
-        color: accent.withValues(alpha: hovered ? peak : 0),
+        color: accent.withValues(alpha: peak),
         blurRadius: 18,
         spreadRadius: -5,
         offset: const Offset(0, 8),
@@ -365,7 +372,8 @@ class _KubusHoverResponseState extends State<KubusHoverResponse> {
   @override
   Widget build(BuildContext context) {
     final motion = KubusHoverResponse.motionAllowed(context);
-    final child = widget.builder(context, _hovered);
+    final hovered = _hovered && widget.enabled;
+    final child = widget.builder(context, hovered);
     return MouseRegion(
       cursor: widget.cursor,
       onEnter: (event) => _set(true),
@@ -374,7 +382,7 @@ class _KubusHoverResponseState extends State<KubusHoverResponse> {
           ? child
           : TweenAnimationBuilder<double>(
               tween: Tween<double>(
-                end: _hovered && motion ? -KubusHoverResponse.liftDistance : 0,
+                end: hovered && motion ? -KubusHoverResponse.liftDistance : 0,
               ),
               duration: motion ? KubusHoverResponse.duration : Duration.zero,
               curve: Curves.easeOutCubic,

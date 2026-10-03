@@ -182,6 +182,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     bool isDestructive = false,
     Key? tileKey,
   }) {
+    assert(
+      status == null || (onTap != null && trailing == null),
+      'A status belongs to a destination tile (onTap, no trailing control).',
+    );
     if (onTap != null && trailing == null) {
       return SharedSettingsDestinationTile(
         key: tileKey,
@@ -213,10 +217,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           showLeadingIcon: false,
           backgroundColor: tint,
           borderColor: Colors.transparent,
-          leadingBackgroundColor: Colors.transparent,
-          leadingBorderColor: Colors.transparent,
-          leadingIconColor:
-              isDestructive ? roles.destructive : roles.foregroundMuted,
           titleStyle: textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: isDestructive ? roles.destructive : roles.foreground,

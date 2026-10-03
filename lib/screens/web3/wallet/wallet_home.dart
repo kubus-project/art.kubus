@@ -238,7 +238,6 @@ class _WalletHomeState extends State<WalletHome> {
                       walletProvider: walletProvider,
                       authority: authority,
                       canTransact: canTransact,
-                      isCompact: isCompact,
                       roles: roles,
                       swapEnabled: swapEnabled,
                     ),
@@ -738,7 +737,6 @@ class _WalletHomeState extends State<WalletHome> {
     required WalletProvider walletProvider,
     required WalletAuthoritySnapshot authority,
     required bool canTransact,
-    required bool isCompact,
     required KubusColorRoles roles,
     required bool swapEnabled,
   }) {

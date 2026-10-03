@@ -121,8 +121,12 @@ class KubusActionTile extends StatelessWidget {
     final stacked = layout == KubusActionTileLayout.stacked;
     final compact = layout == KubusActionTileLayout.compact;
     final lifts = !compact;
-    final hasSubtitle =
-        subtitle != null && !(layout == KubusActionTileLayout.inline);
+    // The inline strip is too short for a subtitle, and an empty one is none.
+    final shownSubtitle =
+        layout == KubusActionTileLayout.inline || (subtitle ?? '').isEmpty
+            ? null
+            : subtitle;
+    final hasSubtitle = shownSubtitle != null;
     final radius = BorderRadius.circular(KubusRadius.md);
     final maxWidth = layout == KubusActionTileLayout.inline
         ? MediaQuery.textScalerOf(context).scale(inlineMaxWidth)
@@ -145,7 +149,7 @@ class KubusActionTile extends StatelessWidget {
     final subtitleText = hasSubtitle
         ? ExcludeSemantics(
             child: Text(
-              subtitle!,
+              shownSubtitle,
               maxLines: subtitleMaxLines,
               overflow: TextOverflow.ellipsis,
               style: KubusTextStyles.detailCaption.copyWith(
@@ -266,14 +270,14 @@ class KubusActionTile extends StatelessWidget {
       button: true,
       enabled: interactive,
       label: title,
-      hint: subtitle,
+      hint: shownSubtitle,
       onTap: interactive ? onTap : null,
       child: KubusHoverResponse(
-        lift: lifts && interactive,
+        lift: lifts,
+        enabled: interactive,
         cursor:
             interactive ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        builder: (context, rawHover) {
-          final hovered = rawHover && interactive;
+        builder: (context, hovered) {
           return ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: resolvedMinHeight,
