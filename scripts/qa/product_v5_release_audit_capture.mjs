@@ -180,13 +180,16 @@ async function seedPrefs(page, language) {
 }
 
 /** Bottom tabs on phones and tablets; the semantic rail labels on desktop. */
-async function navigateShell(page, nav, width, height) {
+async function navigateShell(page, nav, width, height, language) {
   if (width < 900) {
     const index = { map: 0, ar: 1, community: 2, home: 3, account: 4 }[nav];
     if (index === undefined) return;
     await page.mouse.click(Math.round((width / 5) * (index + 0.5)), height - 32);
   } else {
-    const text = { home: 'Home', community: 'Connect', account: 'Sign in', infrastructure: 'Infrastructure' }[nav];
+    const labels = language === 'sl'
+      ? { home: 'Domov', community: 'Poveži', account: 'Prijava', infrastructure: 'Infrastruktura' }
+      : { home: 'Home', community: 'Connect', account: 'Sign in', infrastructure: 'Infrastructure' };
+    const text = labels[nav];
     if (!text) return;
     await page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
     await page.waitForTimeout(800);
@@ -250,7 +253,7 @@ async function capture(browser, job) {
       { timeout: 60000 },
     );
     await page.waitForTimeout(settleMs);
-    if (surface.nav) await navigateShell(page, surface.nav, width, height);
+    if (surface.nav) await navigateShell(page, surface.nav, width, height, language);
     entry.finalUrl = new URL(page.url()).pathname + new URL(page.url()).search;
     entry.horizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
