@@ -75,8 +75,11 @@ days and the owner has approved it:
    de-duplicated against the URLs already handled, in batches of at most 1,000
    URLs, largest shared-description groups first.
 
-Every step is reversible by a single revert of the policy module, because
-routes, redirects and the database do not change.
+Steps 2 to 4 change indexing only and are reversible by a single revert of the
+policy module, because routes, redirects and the database do not change. Step 1
+is different: it edits artwork descriptions, which is a content change and is
+not undone by a policy revert. Take a snapshot of the affected descriptions
+before it and restore from that snapshot if it has to be undone.
 
 ## Rollback criteria
 
