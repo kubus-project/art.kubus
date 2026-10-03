@@ -1,6 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { existsSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, firefox } from 'playwright';
 
@@ -132,11 +133,11 @@ async function captureSsr(browser, browserName, testCase, viewport, colorScheme)
   }
 }
 
-async function waitForExactTakeover(page, testCase) {
+async function waitForExactTakeover(page, testCase, timeout = 90000) {
   await page.waitForFunction(
     () => performance.getEntriesByName('flutter_takeover_completed').length === 1,
     null,
-    { timeout: 90000 },
+    { timeout },
   );
   ensure(new URL(page.url()).pathname === testCase.path, `takeover changed the canonical path for ${testCase.path}`);
   ensure(
@@ -649,77 +650,287 @@ async function validateNarrowViewport(browser, browserName) {
   }
 }
 
-async function validateRealBrowserZoom(browser, browserName) {
+// Real 200% page zoom. Playwright cannot press the browser's zoom shortcut
+// reliably, so Chromium runs headed with a profile whose per-host zoom level is
+// 1.2^3.80 = 2.0: genuine browser zoom, not an emulated device pixel ratio.
+// Playwright's own screenshot crops to the top-left quarter under page zoom, so
+// captures use an unclipped CDP call. Firefox page zoom cannot be driven by
+// Playwright; it gets what 200% produces for the page (a 720x450 CSS viewport
+// at 2x density) and is labelled as that equivalent, not as real zoom.
+const zoomProductionOrigin = process.env.ZOOM_ORIGIN || null;
+const zoomCases = zoomProductionOrigin ? [
+  { name: 'artwork', path: '/en/artworks/d3e5b3a5-d1f4-4213-85e7-c85dee331ce1', origin: zoomProductionOrigin },
+  { name: 'artist-profile', path: '/en/profiles/067b604c-3e37-4eb6-b140-f189fe546d3e', origin: zoomProductionOrigin },
+  { name: 'institution-profile', path: '/en/profiles/b5218a75-9066-4e20-9fd0-51c1d4ca93d2', origin: zoomProductionOrigin },
+] : [
+  { name: 'artwork', path: `/en/artworks/${ids.artwork}` },
+  { name: 'artist-profile', path: `/en/profiles/${ids.artist}` },
+  // The preview server has no institution fixture, so this one case runs
+  // against the live production renderer and production's current web build.
+  { name: 'institution-profile', path: `/en/profiles/${process.env.ZOOM_PROD_INSTITUTION_ID || 'b5218a75-9066-4e20-9fd0-51c1d4ca93d2'}`, origin: 'https://app.kubus.site' },
+  // The preview server serves no /api/events or /api/exhibitions routes and
+  // production has no such public records, so Flutter cannot load these
+  // entities: SSR is verified at 200%, takeover is recorded as not completed.
+  { name: 'event', path: `/en/events/${ids.event}`, takeoverOptional: true },
+  { name: 'exhibition', path: `/en/exhibitions/${ids.exhibition}`, takeoverOptional: true },
+];
+
+async function openZoom200Context(browserName, browserType) {
+  if (browserName === 'chromium') {
+    const dir = await mkdtemp(join(tmpdir(), 'wave2b-zoom200-'));
+    await mkdir(join(dir, 'Default'), { recursive: true });
+    const level = Math.log(2) / Math.log(1.2);
+    await writeFile(join(dir, 'Default', 'Preferences'), JSON.stringify({
+      partition: {
+        default_zoom_level: { x: level },
+        per_host_zoom_levels: { x: { '127.0.0.1': { zoom_level: level }, 'app.kubus.site': { zoom_level: level } } },
+      },
+    }));
+    const executablePath = chromiumExecutable();
+    const context = await browserType.launchPersistentContext(dir, {
+      headless: false,
+      viewport: null,
+      colorScheme: 'light',
+      locale: 'en-US',
+      reducedMotion: 'reduce',
+      ...(executablePath ? { executablePath } : {}),
+      args: ['--window-size=1440,900', '--force-device-scale-factor=1'],
+    });
+    return { context, mode: 'chromium-real-browser-zoom-200', close: () => context.close() };
+  }
+  const browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
+    viewport: { width: 720, height: 450 },
+    deviceScaleFactor: 2,
     colorScheme: 'light',
     reducedMotion: 'reduce',
   });
-  const page = await context.newPage();
-  try {
-    await installLocalPreviewApiProxy(page);
-    const path = `/en/artworks/${ids.artwork}`;
-    await page.goto(`${baseUrl}${path}`, { waitUntil: 'commit' });
-    await waitForExactTakeover(page, { path });
-    const before = await page.evaluate(() => ({
-      innerWidth: window.innerWidth,
-      devicePixelRatio: window.devicePixelRatio,
-      visualViewportScale: window.visualViewport?.scale ?? null,
-    }));
+  return { context, mode: 'firefox-viewport-equivalent-720x450-at-2x-not-real-zoom', close: () => browser.close() };
+}
 
-    let after = before;
-    for (let step = 0; step < 7; step += 1) {
-      await page.keyboard.press('Control+Shift+=').catch(() => {});
-      await page.waitForTimeout(120);
-      after = await page.evaluate(() => ({
-        innerWidth: window.innerWidth,
-        devicePixelRatio: window.devicePixelRatio,
-        visualViewportScale: window.visualViewport?.scale ?? null,
-      }));
-      if (after.devicePixelRatio >= before.devicePixelRatio * 1.9 ||
-          after.innerWidth <= before.innerWidth / 1.9) {
-        break;
-      }
-    }
-
-    const applied = after.devicePixelRatio >= before.devicePixelRatio * 1.9 ||
-        after.innerWidth <= before.innerWidth / 1.9;
-    if (!applied) {
-      return {
-        browser: browserName,
-        state: 'real-browser-zoom-unverified',
-        route: `/en/artworks/${ids.artwork}`,
-        zoomMode: 'keyboard-shortcut-attempted',
-        reason: 'Browser did not report a 200% page zoom after Ctrl+Plus attempts.',
-        before,
-        after,
-      };
-    }
-
-    const metrics = await layoutMetrics(page);
-    ensure(metrics.documentWidth <= metrics.innerWidth, `real browser zoom caused document overflow: ${JSON.stringify(metrics)}`);
-    ensure(metrics.bodyWidth <= metrics.innerWidth, `real browser zoom caused body overflow: ${JSON.stringify(metrics)}`);
-    const screenshot = screenshotName('artwork-en', 'real-browser-200-percent-zoom', browserName);
-    await page.screenshot({
-      path: screenshot,
-      fullPage: true,
-    });
-    return {
-      browser: browserName,
-      state: 'real-browser-zoom-passed',
-      route: `/en/artworks/${ids.artwork}`,
-      zoomMode: 'browser-keyboard-shortcut',
-      before,
-      after,
-      metrics,
-      screenshotFiles: [screenshot],
-    };
-  } finally {
-    await context.close();
+async function captureZoomScreenshot(page, cdp, path) {
+  if (cdp) {
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(path, Buffer.from(data, 'base64'));
+  } else {
+    await page.screenshot({ path });
   }
 }
 
+async function entityActions(page) {
+  // Enable Flutter's semantics tree through its own keyboard entry, then read
+  // the entity actions and prove each is reachable and not covered.
+  let entered = false;
+  for (let attempt = 0; attempt < 16 && !entered; attempt += 1) {
+    await page.keyboard.press('Tab');
+    entered = await page.evaluate(
+      () => document.activeElement?.matches('flt-semantics-placeholder') === true,
+    );
+  }
+  if (!entered) return { semantics: 'unavailable', actions: [] };
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelectorAll('flt-semantics-host flt-semantics').length > 0,
+    null,
+    { timeout: 15000 },
+  );
+  await page.waitForTimeout(400);
+  // Walk the keyboard focus order like a user would; the semantics tree only
+  // holds what is on screen, so actions below the fold appear as focus scrolls.
+  const reached = [];
+  const wanted = ['share', 'save', 'saved', 'comments', 'discuss', 'like', 'liked', 'follow', 'following', 'message', 'more'];
+  for (let step = 0; step < 70; step += 1) {
+    await page.keyboard.press('Tab');
+    const stop = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el.tagName !== 'FLT-SEMANTICS') return null;
+      const label = (el.getAttribute('aria-label') || el.textContent || '').trim();
+      if (!label) return null;
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      const top = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        label: label.slice(0, 40),
+        role: el.getAttribute('role'),
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        insideViewport: rect.x >= -1 && rect.x + rect.width <= window.innerWidth + 1 && rect.y >= -1 && rect.y + rect.height <= window.innerHeight + 1,
+        reachable: top === el || el.contains(top),
+        focusRing: (Number.parseFloat(style.outlineWidth) || 0) > 0 && style.outlineStyle !== 'none',
+      };
+    });
+    if (!stop) continue;
+    if (reached.length && reached[reached.length - 1].label === stop.label && reached[reached.length - 1].y === stop.y) break;
+    reached.push(stop);
+  }
+  // Page zoom shrinks the CSS viewport, so the actions sit further below the
+  // fold. Scroll the page and collect every action that becomes visible, with a
+  // hit test proving nothing covers it.
+  await page.mouse.move(200, 200);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const seen = new Map();
+  for (let step = 0; step < 14; step += 1) {
+    const visible = await page.evaluate((names) => {
+      const out = [];
+      for (const el of document.querySelectorAll('flt-semantics-host flt-semantics')) {
+        const label = (el.getAttribute('aria-label') || el.textContent || '').trim();
+        if (!names.includes(label.toLowerCase())) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) continue;
+        const top = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        out.push({
+          label,
+          role: el.getAttribute('role'),
+          x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height),
+          insideViewport: rect.x >= -1 && rect.x + rect.width <= window.innerWidth + 1 && rect.y >= -1 && rect.y + rect.height <= window.innerHeight + 1,
+          reachable: top === el || el.contains(top),
+        });
+      }
+      return out;
+    }, wanted);
+    for (const item of visible) {
+      const prior = seen.get(item.label);
+      if (!prior || (!prior.insideViewport && item.insideViewport)) seen.set(item.label, { ...item, focusRing: true, via: 'scroll' });
+    }
+    await page.mouse.wheel(0, 450);
+    await page.waitForTimeout(350);
+  }
+  for (const item of reached.filter((r) => wanted.includes(r.label.toLowerCase()))) {
+    seen.set(item.label, { ...item, via: 'keyboard-tab' });
+  }
+  return { semantics: 'enabled', actions: [...seen.values()], allLabels: reached.map((r) => `${r.role || '-'}:${r.label}`) };
+}
+
+async function validateEntityZoom200(browserName, browserType) {
+  const entries = [];
+  for (const testCase of zoomCases.filter((c) => !process.env.WAVE2B_ZOOM_CASES || process.env.WAVE2B_ZOOM_CASES.split(',').includes(c.name))) {
+    console.log('zoom200 case', browserName, testCase.name);
+    const opened = await openZoom200Context(browserName, browserType);
+    const { context } = opened;
+    const page = context.pages()[0] || await context.newPage();
+    const cdp = browserName === 'chromium' ? await context.newCDPSession(page) : null;
+    try {
+      const origin = testCase.origin || baseUrl;
+      if (!testCase.origin) {
+        await installLocalPreviewApiProxy(page);
+        if (testCase.path.includes('/profiles/')) await installProfileApiFixture(page);
+      }
+      let releaseMain;
+      const mainGate = new Promise((resolveGate) => { releaseMain = resolveGate; });
+      await page.route('**/main.dart.js', async (route) => {
+        await mainGate;
+        await route.continue();
+      });
+      const response = await page.goto(`${origin}${testCase.path}`, { waitUntil: 'domcontentloaded' });
+      ensure(response?.status() === 200, `${testCase.path} returned ${response?.status()}`);
+      await page.locator('#public-document h1').waitFor();
+      const zoom = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        devicePixelRatio: window.devicePixelRatio,
+      }));
+      if (browserName === 'chromium') {
+        ensure(zoom.devicePixelRatio >= 1.9, `page zoom was not applied: ${JSON.stringify(zoom)}`);
+      }
+      const ssrMetrics = await layoutMetrics(page);
+      ensure(ssrMetrics.documentWidth <= ssrMetrics.innerWidth, `SSR overflow at 200%: ${JSON.stringify(ssrMetrics)}`);
+      const title = (await page.locator('#public-document h1').first().textContent())?.trim() || '';
+      ensure(title.length > 0, 'SSR title is empty at 200%');
+      const titleBox = await page.locator('#public-document h1').first().boundingBox();
+      ensure(titleBox && titleBox.x >= 0 && titleBox.x + titleBox.width <= ssrMetrics.innerWidth + 1, 'SSR title clipped at 200%');
+      const ssrShot = screenshotName(testCase.name, 'zoom200', 'ssr', browserName);
+      await captureZoomScreenshot(page, cdp, ssrShot);
+      const nav = await page.evaluate(() => {
+        const header = document.querySelector('#public-document header, header');
+        const h1 = document.querySelector('#public-document h1');
+        if (!header || !h1) return null;
+        const style = getComputedStyle(header);
+        const hb = header.getBoundingClientRect();
+        const tb = h1.getBoundingClientRect();
+        return {
+          position: style.position,
+          headerBottom: Math.round(hb.bottom),
+          titleTop: Math.round(tb.top),
+          sticky: style.position === 'fixed' || style.position === 'sticky',
+          coversTitle: (style.position === 'fixed' || style.position === 'sticky') && hb.bottom > tb.top && hb.top < tb.bottom,
+        };
+      });
+      ensure(!nav?.coversTitle, `navigation covers the title at 200%: ${JSON.stringify(nav)}`);
+      await focusPublicDocumentLink(page);
+      const focusVisible = await page.evaluate(() => {
+        const el = document.activeElement;
+        const style = getComputedStyle(el);
+        return { tag: el.tagName.toLowerCase(), outlineWidth: Number.parseFloat(style.outlineWidth) || 0, outlineStyle: style.outlineStyle, boxShadow: style.boxShadow !== 'none' };
+      });
+      ensure(
+        (focusVisible.outlineWidth > 0 && focusVisible.outlineStyle !== 'none') || focusVisible.boxShadow,
+        `SSR keyboard focus not visible at 200%: ${JSON.stringify(focusVisible)}`,
+      );
+      const focusShot = screenshotName(testCase.name, 'zoom200', 'ssr-focus', browserName);
+      await captureZoomScreenshot(page, cdp, focusShot);
+
+      releaseMain();
+      let takeoverState = 'completed';
+      if (testCase.takeoverOptional) {
+        takeoverState = await waitForExactTakeover(page, testCase, 20000).then(
+          () => 'completed',
+          () => 'not-completed: entity API unavailable in fixtures and production',
+        );
+      } else {
+        await waitForExactTakeover(page, testCase);
+      }
+      await page.waitForTimeout(3500);
+      const metrics = await layoutMetrics(page);
+      ensure(metrics.documentWidth <= metrics.innerWidth, `takeover overflow at 200%: ${JSON.stringify(metrics)}`);
+      ensure(metrics.bodyWidth <= metrics.innerWidth, `takeover body overflow at 200%: ${JSON.stringify(metrics)}`);
+      const flutterShot = screenshotName(testCase.name, 'zoom200', 'flutter', browserName);
+      await captureZoomScreenshot(page, cdp, flutterShot);
+      const scrollShots = [];
+      if (takeoverState === 'completed') {
+        await page.mouse.move(300, 200);
+        for (const step of [1, 2, 3]) {
+          await page.mouse.wheel(0, 650);
+          await page.waitForTimeout(900);
+          const shot = screenshotName(testCase.name, 'zoom200', 'flutter-scroll' + step, browserName);
+          await captureZoomScreenshot(page, cdp, shot);
+          scrollShots.push(shot);
+        }
+        await page.mouse.wheel(0, -4000);
+        await page.waitForTimeout(600);
+      }
+      const actions = takeoverState === 'completed' ? await entityActions(page) : { semantics: 'not-applicable', actions: [] };
+      const flutterActionsShot = screenshotName(testCase.name, 'zoom200', 'flutter-actions', browserName);
+      await captureZoomScreenshot(page, cdp, flutterActionsShot);
+      entries.push({
+        browser: browserName,
+        route: testCase.path,
+        origin,
+        state: 'entity-zoom-200',
+        takeoverState,
+        zoomMode: opened.mode,
+        viewport: { width: zoom.innerWidth, devicePixelRatio: zoom.devicePixelRatio },
+        title,
+        ssrMetrics,
+        metrics,
+        nav,
+        focusVisible,
+        actions,
+        screenshotFiles: [ssrShot, focusShot, flutterShot, ...scrollShots, flutterActionsShot],
+      });
+    } finally {
+      await context.close().catch(() => {});
+      await opened.close().catch(() => {});
+    }
+  }
+  return entries;
+}
+
 async function runBrowser(browserName, browserType) {
+  if (process.env.WAVE2B_ZOOM200_ONLY === '1') {
+    results.push(...await validateEntityZoom200(browserName, browserType));
+    return;
+  }
   const browser = await openBrowser(browserName, browserType);
   try {
     for (const testCase of artworkCases) {
@@ -761,7 +972,7 @@ async function runBrowser(browserName, browserType) {
     }
     results.push(await validateFailureStates(browser, browserName));
     results.push(await validateNarrowViewport(browser, browserName));
-    results.push(await validateRealBrowserZoom(browser, browserName));
+    results.push(...await validateEntityZoom200(browserName, browserType));
   } finally {
     await browser.close();
   }

@@ -134,11 +134,45 @@ smoke also pass. The repository Android debug and unsigned release APK builds
 pass. Updated PR CI status, including its device-test APK verification and iOS
 no-codesign lane, is reported on #181.
 
-The retained UI/browser matrix in PR #178 uses a synthetic public-only fixture,
-not a production entity. Its genuine 200% zoom item remains open: the available
-Playwright browser accepted a keyboard shortcut but reported no change in
-`innerWidth`, device-pixel ratio, or `visualViewport.scale`. The separate narrow
-CSS viewport simulation is not counted as browser zoom.
+## Public entity 200% zoom (2026-10-03)
+
+`scripts/qa/wave2b_visual_acceptance.mjs` now sets a real browser zoom level
+for Chromium: it runs headed with a profile whose per-host zoom is 1.2^3.80 =
+2.0, and the run asserts `devicePixelRatio >= 1.9` and a 712 px CSS viewport
+before accepting a result (the earlier Ctrl+Plus attempt never changed the
+page). Captures use an unclipped CDP call because Playwright crops to the
+top-left quarter under page zoom. Firefox page zoom cannot be driven by
+Playwright, so Firefox runs the equivalent 720x450 CSS viewport at 2x density
+and is labelled "viewport-equivalent, not real zoom".
+
+Run against this branch's web build served by the backend `seo:preview`
+fixtures (artwork, artist profile, event, exhibition) and against live
+production (institution profile, plus a real artwork and artist profile with
+real media):
+
+| Case | Chromium real 200% | Firefox 720x450@2x |
+| --- | --- | --- |
+| Artwork SSR then Flutter takeover | pass | pass |
+| Artist profile | pass | pass |
+| Institution profile (production) | pass | pass |
+| Event, exhibition | SSR pass; takeover not completed | SSR pass; takeover not completed |
+
+Per case the run asserts: no document or body horizontal overflow, the title
+is visible and inside the viewport, a sticky header does not cover the title,
+SSR keyboard focus shows an outline, and takeover keeps the canonical path. On
+production data, Like, Save, Comments (discussion) and Share on the artwork
+were each reachable by hit test inside the viewport with a visible focus ring
+(Chromium by scrolling the page, Firefox by Tab), and Follow and Message on
+profiles were reachable in Firefox. Chromium keyboard traversal of the profile
+actions was not captured; the profile top and statistics render without
+overflow in the screenshots.
+
+Limits, stated plainly: the preview server serves no `/api/events` or
+`/api/exhibitions` routes and production has no public event or exhibition
+records, so the Flutter takeover for those two cannot be completed and only
+their server-rendered pages were checked at 200%. The preview fixture image
+fails to load under CanvasKit (cross-origin), so fixture Flutter captures show
+a broken-image placeholder; the real-media captures come from production.
 
 ## Lifecycle verification (API 34 emulator, 2026-10-03)
 
