@@ -547,6 +547,53 @@ class ArtMarkerCubeIconRenderer {
     );
   }
 
+  /// Renders the canonical badge with an artwork [cover] inside its geometry.
+  ///
+  /// The silhouette (shape), category-colour rim, signal ring and promotion
+  /// star are exactly the mid-level marker's; only the face changes from glyph
+  /// to photograph, clipped to the shape inset by [coverRimWidth]. Covers are
+  /// per marker and per URL, so the result is not cached here: the map's cover
+  /// registry owns the bounded set of live cover images.
+  static Future<Uint8List> renderCoverMarkerPng({
+    required ui.Image cover,
+    required Color baseColor,
+    required ArtMarkerSignal tier,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+    ArtMapMarkerShape shape = ArtMapMarkerShape.roundedSquare,
+    bool forceGlow = false,
+    bool showPromotionStar = false,
+    double pixelRatio = 2.0,
+  }) {
+    final style = CubeMarkerStyle.fromScheme(
+      scheme: scheme,
+      isDark: isDark,
+      baseColor: baseColor,
+    );
+    final showGlow = forceGlow ||
+        tier == ArtMarkerSignal.featured ||
+        tier == ArtMarkerSignal.legendary;
+    return _renderFloatingBadgePng(
+      baseColor: baseColor,
+      icon: const IconData(0),
+      shape: shape,
+      tier: tier,
+      style: style,
+      roles: roles,
+      showGlow: showGlow,
+      forceGlow: forceGlow,
+      showPromotionStar: showPromotionStar,
+      isDark: isDark,
+      pixelRatio: pixelRatio,
+      cover: cover,
+    );
+  }
+
+  /// Width of the category-colour rim kept around a cover so photography never
+  /// erases the marker's identity.
+  static const double coverRimWidth = 2.5;
+
   /// Builds the body silhouette path for a badge [shape], centered on [center]
   /// with nominal extent [size].
   static Path _buildBadgePath(
@@ -683,6 +730,7 @@ class ArtMarkerCubeIconRenderer {
     required bool showPromotionStar,
     required bool isDark,
     double pixelRatio = 2.0,
+    ui.Image? cover,
   }) async {
     final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
@@ -722,6 +770,32 @@ class ArtMarkerCubeIconRenderer {
         final bodyPath = _buildBadgePath(shape, center, bodySize);
         canvas.drawPath(bodyPath, Paint()..color = baseColor);
 
+        if (cover != null) {
+          // Artwork cover inside the canonical geometry: clipped to the shape
+          // inset by the rim, scaled to fill (centre crop).
+          final inner = _buildBadgePath(
+            shape,
+            center,
+            bodySize - (coverRimWidth * 2),
+          );
+          final target = inner.getBounds();
+          final side = math.min(cover.width, cover.height).toDouble();
+          final source = Rect.fromCenter(
+            center: Offset(cover.width / 2, cover.height / 2),
+            width: side,
+            height: side,
+          );
+          canvas.save();
+          canvas.clipPath(inner);
+          canvas.drawImageRect(
+            cover,
+            source,
+            target,
+            Paint()..filterQuality = FilterQuality.medium,
+          );
+          canvas.restore();
+        }
+
         // Subtle outline for crispness on both light and dark maps.
         canvas.drawPath(
           bodyPath,
@@ -731,8 +805,8 @@ class ArtMarkerCubeIconRenderer {
             ..color = iconForeground.withValues(alpha: isDark ? 0.18 : 0.12),
         );
 
-        // Centered icon glyph (no inner background box).
-        if (icon.codePoint != 0) {
+        // Centered icon glyph (no inner background box). A cover replaces it.
+        if (cover == null && icon.codePoint != 0) {
           final fontFamily = icon.fontFamily ?? 'MaterialIcons';
           final glyphPainter = TextPainter(
             text: TextSpan(

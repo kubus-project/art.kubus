@@ -98,6 +98,9 @@ import '../features/map/controller/kubus_map_marker_creation_coordinator.dart';
 import '../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
+import '../features/map/session/kubus_map_session_memory.dart';
+import '../features/map/shared/map_marker_lod.dart';
+import '../features/map/shared/map_marker_regroup_gate.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
 import '../features/map/tutorial/map_tutorial_coordinator.dart';
 import 'events/event_detail_screen.dart';
@@ -115,6 +118,7 @@ import '../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../widgets/tutorial/tutorial_overlay_controller.dart';
 import '../widgets/tutorial/tutorial_overlay_scope.dart';
+import '../widgets/map/filters/kubus_map_constraint_strip.dart';
 import '../widgets/map/filters/kubus_map_filter_content.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
@@ -491,6 +495,9 @@ class _MapScreenState extends State<MapScreen>
       _resolveArtMarkerColor(marker, themeProvider);
   @override
   void onMarkerSourceWrite() => _debugMarkerSourceWriteCount += 1;
+
+  @override
+  void requestMarkerResync() => _requestMarkerVisualSync(force: true);
   @override
   Future<void> afterMarkerSync(ThemeProvider themeProvider) async {}
   // -------------------------------------------------------------------------
@@ -509,8 +516,7 @@ class _MapScreenState extends State<MapScreen>
   static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
   static const int _markerVisualSyncThrottleMs =
       MapScreenConstants.markerVisualSyncThrottleMs;
-  int _lastClusterGridLevel = -1;
-  bool _lastClusterEnabled = false;
+  final KubusMarkerRegroupGate _regroupGate = KubusMarkerRegroupGate();
 
   // Camera helpers
   late LatLng _cameraCenter;
@@ -522,6 +528,8 @@ class _MapScreenState extends State<MapScreen>
   GeoBounds? _loadedViewportBounds;
   int? _loadedViewportZoomBucket;
   bool _initialLocaleViewportApplied = false;
+  KubusMapSessionMemory? _sessionMemory;
+  ArtMarker? _pendingRestoreMarker;
   bool _initialLocaleResolved = false;
   LatLng? _pendingTargetMarkerLoad;
   Completer<void>? _pendingTargetMarkerLoadCompleter;
@@ -701,6 +709,7 @@ class _MapScreenState extends State<MapScreen>
       },
       onSelectionChanged: (state) {
         if (!mounted) return;
+        _sessionMemory?.rememberSelection(state.selectedMarker);
 
         // Marker taps must not interrupt the isolated create-marker context.
         // Keep the MapLibre/controller selection in sync with the coordinator's
@@ -1016,6 +1025,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMapSearchControllerChanged() {
     if (!mounted) return;
+    _sessionMemory?.rememberQuery(_mapSearchController.state.query);
     final searchState = _mapSearchController.state;
     final trimmedQuery = searchState.query.trim();
     final searchVisible = searchState.isOverlayVisible &&
@@ -1278,6 +1288,56 @@ class _MapScreenState extends State<MapScreen>
         MapInitialViewport.forLocale(Localizations.localeOf(context));
     _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
     _lastZoom = widget.initialZoom ?? viewport.initialZoom;
+
+    // A layout swap (rotation, resized window) recreates this screen. Open
+    // where the previous map was instead of at the locale opening, unless this
+    // entry carries an explicit target.
+    final memory = Provider.of<KubusMapSessionMemory?>(context, listen: false);
+    _sessionMemory = memory;
+    final saved = memory?.camera;
+    if (saved != null &&
+        memory!.canRestore(
+          hasExplicitCenterOrZoom:
+              widget.initialCenter != null || widget.initialZoom != null,
+          hasDirectTarget: _hasInitialDirectTarget,
+          hasWalkingIntent: widget.walkingNavigationIntent != null,
+        )) {
+      _cameraCenter = saved.center;
+      _lastZoom = saved.zoom;
+      _initialLocaleViewportApplied = true;
+      _filterState = memory.filters;
+      _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+      _pendingRestoreMarker = memory.selectedMarker;
+      final query = memory.query;
+      if (query.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _mapSearchController.commitSelection(query);
+        });
+      }
+    }
+  }
+
+  /// Restores the marker that was selected before a layout swap, once the
+  /// style is ready and markers have loaded. It goes through the screen's own
+  /// marker-tap path, so there is still exactly one selection owner.
+  void _restorePendingSelection() {
+    final marker = _pendingRestoreMarker;
+    if (marker == null || !_styleInitialized || !mounted) return;
+    _pendingRestoreMarker = null;
+    ArtMarker? loaded;
+    for (final candidate in _artMarkers) {
+      if (candidate.id == marker.id) {
+        loaded = candidate;
+        break;
+      }
+    }
+    if (loaded == null) {
+      loaded = marker;
+      setState(
+          () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker));
+      _applyVisibleMarkers();
+    }
+    _handleMarkerTap(loaded);
   }
 
   void _syncRootTutorialBinding() {
@@ -1885,6 +1945,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleFilterStateChanged(KubusMapFilterState next) {
+    _sessionMemory?.rememberFilters(next);
     final previous = _filterState;
     final requiresDataReload = previous.scope != next.scope ||
         (next.scope == KubusMapScope.nearMe &&
@@ -2078,6 +2139,7 @@ class _MapScreenState extends State<MapScreen>
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
+    _markerSyncEngine.dispose();
     _unsubscribeRouteObserver(source: 'dispose');
     MapAttributionHelper.setMobileMapEnabled(false);
     final mapDeepLinkProvider = _mapDeepLinkProvider;
@@ -2508,10 +2570,11 @@ class _MapScreenState extends State<MapScreen>
       final merged = useBoundsQuery
           ? ArtMarkerListDiff.upsertById(
               current: result.markers,
-              updates: _artMarkers.where(
-                (marker) =>
-                    marker.id == _directTargetMarkerId ||
-                    marker.id.startsWith('search_temp_'),
+              updates: markersPreservedAcrossViewportRefresh(
+                _artMarkers,
+                fetched: result.markers,
+                selectedMarkerId: _kubusMapController.selectedMarkerId,
+                directTargetMarkerId: _directTargetMarkerId,
               ),
             )
           : ArtMarkerListDiff.mergeById(
@@ -2549,6 +2612,7 @@ class _MapScreenState extends State<MapScreen>
         _applyVisibleMarkers();
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
+      _restorePendingSelection();
 
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
@@ -2752,7 +2816,7 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null) return null;
     try {
       final bounds = await controller.getVisibleRegion();
-      return GeoBounds.fromCorners(
+      return GeoBounds.fromVisibleCorners(
         LatLng(bounds.southwest.latitude, bounds.southwest.longitude),
         LatLng(bounds.northeast.latitude, bounds.northeast.longitude),
       );
@@ -4170,6 +4234,10 @@ class _MapScreenState extends State<MapScreen>
             extra: <String, Object?>{'dark': isDark},
           );
         },
+        onStyleReloading: () {
+          _styleInitialized = false;
+          _kubusMapController.markStyleReloading();
+        },
         onStyleLoaded: () {
           AppConfig.debugPrint('MapScreen: onStyleLoadedCallback');
           _perf.logEvent('styleLoadedCallback');
@@ -4270,12 +4338,31 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted || _mapController == null) return;
     final wasProgrammatic = _kubusMapController.programmaticCameraMove;
     if (wasProgrammatic) _mapEngagement.resetBaseline();
+    // The move handler throttles `_lastZoom`, so the final frame of a fast move
+    // (or a jump) can be skipped. Marker artwork depends on the zoom the camera
+    // actually settled at, so take it from the controller, which tracks every
+    // frame, before anything below decides what to draw.
+    final settled = _kubusMapController.camera.zoom;
+    if (_kubusMapController.hasCameraFrame &&
+        settled.isFinite &&
+        (settled - _lastZoom).abs() > 0.001) {
+      _lastZoom = settled;
+    }
+    if (_kubusMapController.hasCameraFrame) {
+      _sessionMemory?.rememberCamera(
+        _kubusMapController.camera.center,
+        _kubusMapController.camera.zoom,
+      );
+    }
     _kubusMapController.handleCameraIdle(fromProgrammaticMove: wasProgrammatic);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;
 
     _queueMarkerRefresh(fromGesture: !wasProgrammatic);
     if (_styleInitialized) {
       _queueMarkerVisualRefreshForZoom(_lastZoom);
+      // Close-level covers are chosen from what the settled viewport holds,
+      // so a pan that ends at street scale re-plans them once.
+      if (KubusMarkerLod.allowsCovers(_lastZoom)) _requestMarkerVisualSync();
       unawaited(_renderCoordinator.updateRenderMode());
     }
 
@@ -4295,17 +4382,18 @@ class _MapScreenState extends State<MapScreen>
       MapScreenConstants.clusterGridLevelForZoom(zoom);
 
   void _queueMarkerVisualRefreshForZoom(double zoom) {
-    final shouldCluster = zoom < _clusterMaxZoom;
-    final gridLevel = shouldCluster ? _clusterGridLevelForZoom(zoom) : -1;
-    if (shouldCluster == _lastClusterEnabled &&
-        gridLevel == _lastClusterGridLevel) {
-      return;
-    }
-    _lastClusterEnabled = shouldCluster;
-    _lastClusterGridLevel = gridLevel;
+    final change = _regroupGate.update(
+      zoom: zoom,
+      clusterMaxZoom: _clusterMaxZoom,
+      gridLevelForZoom: _clusterGridLevelForZoom,
+    );
+    if (change == KubusMarkerRegroup.none) return;
     // The grouping changed: ease the new marker/cluster arrangement in with a
-    // soft scale/opacity pop instead of snapping between layouts.
-    _kubusMapController.animateMarkerRegroup();
+    // soft scale/opacity pop instead of snapping between layouts. A level of
+    // detail boundary only rewrites the artwork, so it does not regroup.
+    if (change == KubusMarkerRegroup.topology) {
+      _kubusMapController.animateMarkerRegroup();
+    }
     _requestMarkerVisualSync();
   }
 
@@ -5095,6 +5183,19 @@ class _MapScreenState extends State<MapScreen>
       extraContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // What is narrowing the map, with a clear for each. Hidden while the
+          // filter panel is open (it already shows and resets the same state)
+          // and while a marker card is open (the card is anchored over this
+          // area and would cover the chips).
+          if (activeSurface != MapContextSurface.filters &&
+              activeSurface != MapContextSurface.markerPreview)
+            KubusMapConstraintStripBinding(
+              searchController: _mapSearchController,
+              filters: _filterState,
+              hasLocation: _currentPosition != null,
+              onFiltersChanged: _handleFilterStateChanged,
+              accentColor: themeProvider.accentColor,
+            ),
           _buildFilterPanel(theme),
           if (showDiscovery) ...[
             const SizedBox(height: KubusSpacing.sm),
@@ -5636,7 +5737,7 @@ class _MapScreenState extends State<MapScreen>
 
     // Create a temporary marker that will be replaced when real markers load
     final tempMarker = ArtMarker(
-      id: 'search_temp_$artworkId',
+      id: '$kSearchTemporaryMarkerPrefix$artworkId',
       artworkId: artworkId,
       position: position,
       name: artwork?.title ?? fallbackName ?? '',
@@ -6105,7 +6206,7 @@ class _MapScreenState extends State<MapScreen>
       if (selectedId != null) selectedId,
       if (_directTargetMarkerId != null) _directTargetMarkerId!,
       for (final marker in _artMarkers)
-        if (marker.id.startsWith('search_temp_')) marker.id,
+        if (marker.id.startsWith(kSearchTemporaryMarkerPrefix)) marker.id,
     };
     return filterVisibleMapMarkers(
       markers: _artMarkers,

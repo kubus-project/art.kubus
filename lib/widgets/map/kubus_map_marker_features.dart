@@ -80,8 +80,63 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
     }
   }
 
-  final position = positionOverride ?? marker.position;
+  return _composeMarkerFeature(
+    marker: marker,
+    iconId: iconId,
+    selectedIconId: selectedIconId,
+    colorHex: colorHex,
+    position: positionOverride ?? marker.position,
+    entryScale: entryScale,
+    entryOpacity: entryOpacity,
+    spiderfied: spiderfied,
+    coordinateKey: coordinateKey,
+    entrySerial: entrySerial,
+  );
+}
 
+/// Marker feature for the far level of detail: a data-coloured dot only.
+///
+/// Carries exactly the properties of [kubusMarkerFeatureFor] (so selection,
+/// taps, spiderfy and the cluster topology transition behave identically) but
+/// needs no marker artwork: [blankIconId] is an already-registered transparent
+/// image, so nothing is rendered, registered or downloaded for it.
+Map<String, dynamic> kubusFarMarkerFeature({
+  required ArtMarker marker,
+  required String colorHex,
+  required String blankIconId,
+  LatLng? positionOverride,
+  double entryScale = 1.0,
+  double entryOpacity = 1.0,
+  bool spiderfied = false,
+  String? coordinateKey,
+  int entrySerial = 0,
+}) {
+  return _composeMarkerFeature(
+    marker: marker,
+    iconId: blankIconId,
+    selectedIconId: blankIconId,
+    colorHex: colorHex,
+    position: positionOverride ?? marker.position,
+    entryScale: entryScale,
+    entryOpacity: entryOpacity,
+    spiderfied: spiderfied,
+    coordinateKey: coordinateKey,
+    entrySerial: entrySerial,
+  );
+}
+
+Map<String, dynamic> _composeMarkerFeature({
+  required ArtMarker marker,
+  required String iconId,
+  required String selectedIconId,
+  required String colorHex,
+  required LatLng position,
+  required double entryScale,
+  required double entryOpacity,
+  required bool spiderfied,
+  required String? coordinateKey,
+  required int entrySerial,
+}) {
   return <String, dynamic>{
     'type': 'Feature',
     'id': marker.id,
@@ -91,7 +146,7 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
       'kind': 'marker',
       'icon': iconId,
       'iconSelected': selectedIconId,
-      'markerType': typeName,
+      'markerType': marker.type.name,
       'color': colorHex,
       'entryScale': entryScale.clamp(
         MapMarkerCollisionConfig.entryStartScale,
@@ -197,6 +252,49 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
     }
   }
 
+  return _composeClusterFeature(
+    cluster: cluster,
+    iconId: iconId,
+    colorHex: colorHex,
+    entryScale: entryScale,
+    entryOpacity: entryOpacity,
+  );
+}
+
+/// Cluster feature for the far level of detail: a data-coloured dot sized by
+/// member count (see `KubusMarkerLod.dotRadiusExpression`), with no badge image.
+Future<Map<String, dynamic>> kubusFarClusterFeature({
+  required KubusClusterBucket cluster,
+  required bool isDark,
+  required ColorScheme scheme,
+  required KubusColorRoles roles,
+  required IconData Function(ArtMarkerType type) resolveMarkerIcon,
+  required String blankIconId,
+  double entryScale = 1.0,
+  double entryOpacity = 1.0,
+}) async {
+  final renderData = kubusClusterBadgeRenderData(
+    cluster.markers,
+    scheme: scheme,
+    roles: roles,
+    resolveIcon: resolveMarkerIcon,
+  );
+  return _composeClusterFeature(
+    cluster: cluster,
+    iconId: blankIconId,
+    colorHex: MapLibreStyleUtils.hexRgb(renderData.baseColor),
+    entryScale: entryScale,
+    entryOpacity: entryOpacity,
+  );
+}
+
+Map<String, dynamic> _composeClusterFeature({
+  required KubusClusterBucket cluster,
+  required String iconId,
+  required String colorHex,
+  required double entryScale,
+  required double entryOpacity,
+}) {
   final center = cluster.centroid;
   final isSameCoordinateCluster =
       cluster.sameCoordinateKey != null && cluster.markers.length > 1;

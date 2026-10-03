@@ -12,6 +12,11 @@ class ArtworkMediaResolver {
     Map<String, dynamic>? metadata,
     String? fallbackUrl,
     Iterable<String?> additionalUrls = const [],
+
+    /// Asks the media resolver for a size-clamped URL (thumbnail rewriting and
+    /// width query clamping) instead of the full display size. Map thumbnails
+    /// pass this so a marker never downloads archival media.
+    int? maxWidth,
   }) {
     final candidates = <String?>[
       artwork?.imageUrl,
@@ -22,7 +27,10 @@ class ArtworkMediaResolver {
     ];
 
     for (final raw in candidates) {
-      final resolved = MediaUrlResolver.resolveDisplayUrl(_asString(raw));
+      final resolved = MediaUrlResolver.resolveDisplayUrl(
+        _asString(raw),
+        maxWidth: maxWidth,
+      );
       if (resolved != null && resolved.isNotEmpty) {
         return resolved;
       }

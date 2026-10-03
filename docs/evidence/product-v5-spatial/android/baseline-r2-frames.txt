@@ -1,0 +1,1 @@
+baseline-r2: frames=1144 p50=16.7ms p90=18.1ms p95=18.8ms p99=33.4ms over16.7=571 over33=13 over50=0

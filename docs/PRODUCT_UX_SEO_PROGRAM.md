@@ -47,6 +47,8 @@ These SHAs are a dated evidence snapshot, not permanent branch pins. Re-fetch be
 | **11** Ljubljana field programme | Real sessions, verified reference dataset and capture maturity evidence | Core PRODUCT coherent → logged field records and several sessions before Field Mode design |
 | **12** Spatial delivery | Preview HOT, paged runtime WARM, archive PLY COLD; replication/retention from usage | Wave 11 usage + capacity/security review → measured streamed viewing and preservation tests |
 
+> **Product-v5 execution status:** Waves 5 and 6 were executed together as Wave 5B on `feat/product-v5-spatial-system`; the implemented reality, capability matrix and evidence are in [`design/PRODUCT_V5_SPATIAL_SYSTEM.md`](design/PRODUCT_V5_SPATIAL_SYSTEM.md).
+
 Some field verification can start operationally when PRODUCT supports it; **dedicated Field Mode waits for several real sessions**. Wave 12 architecture is recorded now, not implemented in this docs pass. Cross-wave stop conditions and exact package ownership are in `AGENT_EXECUTION_PLAN.md`.
 
 ## Domain contracts

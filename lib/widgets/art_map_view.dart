@@ -8,6 +8,8 @@ import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../config/config.dart';
+import '../features/map/capabilities/kubus_map_capabilities.dart';
+import '../features/map/shared/map_spatial_framing.dart';
 import '../services/map_style_service.dart';
 import '../services/webgl_context_helper.dart';
 import '../services/web_maplibre_runtime.dart';
@@ -51,6 +53,7 @@ class ArtMapView extends StatefulWidget {
     this.attributionButtonPosition,
     this.attributionButtonMargins,
     this.onStyleLoaded,
+    this.onStyleReloading,
     this.onCameraMove,
     this.onCameraIdle,
     this.onMapClick,
@@ -74,6 +77,11 @@ class ArtMapView extends StatefulWidget {
   final ml.AttributionButtonPosition? attributionButtonPosition;
   final math.Point<double>? attributionButtonMargins;
   final VoidCallback? onStyleLoaded;
+
+  /// Called right before this view swaps the style on a live map (theme
+  /// change, fallback). Everything the app installed on the old style is about
+  /// to vanish, so owners must stop addressing it until [onStyleLoaded].
+  final VoidCallback? onStyleReloading;
   final void Function(ml.CameraPosition position)? onCameraMove;
   final VoidCallback? onCameraIdle;
 
@@ -289,6 +297,17 @@ class _ArtMapViewState extends State<ArtMapView> {
       webGLContextHealthy.addListener(_handleWebGLHealthChanged);
     }
     _refreshStyleFuture();
+    _scheduleGroundColorSync();
+  }
+
+  /// A globe leaves space around the sphere; give it the theme's ground
+  /// instead of the static boot colour so light and dark both read as intended.
+  void _scheduleGroundColorSync() {
+    if (!kIsWeb || !KubusMapCapabilities.current.supportsGlobe) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _disposed) return;
+      setWebMapGroundColor(_mapLoadingBackdropColor().toARGB32());
+    });
   }
 
   @override
@@ -297,6 +316,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     if (oldWidget.styleAsset != widget.styleAsset ||
         oldWidget.isDarkMode != widget.isDarkMode) {
       _refreshStyleFuture();
+      _scheduleGroundColorSync();
       _pendingStyleApply = _controller != null && !_styleLoaded;
 
       if (_controller != null && _styleLoaded) {
@@ -491,7 +511,10 @@ class _ArtMapViewState extends State<ArtMapView> {
   }
 
   void _refreshStyleFuture() {
-    final future = MapStyleService.resolveStyleString(widget.styleAsset);
+    final future = MapStyleService.resolveStyleString(
+      widget.styleAsset,
+      globe: KubusMapCapabilities.current.supportsGlobe,
+    );
     _resolvedStyleFuture = future;
     future.then((resolved) {
       if (!mounted || _disposed) return;
@@ -559,9 +582,13 @@ class _ArtMapViewState extends State<ArtMapView> {
     );
 
     try {
-      final resolved = await MapStyleService.resolveStyleString(fallbackRef);
+      final resolved = await MapStyleService.resolveStyleString(
+        fallbackRef,
+        globe: KubusMapCapabilities.current.supportsGlobe,
+      );
       if (!mounted || _disposed) return;
       if (_controller == null) return;
+      widget.onStyleReloading?.call();
       await controller.setStyle(resolved);
     } catch (e, st) {
       AppConfig.debugPrint('ArtMapView: failed to apply fallback style: $e');
@@ -583,6 +610,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     if (_controller == null) return;
 
     try {
+      widget.onStyleReloading?.call();
       await controller.setStyle(styleString);
     } catch (e, st) {
       AppConfig.debugPrint(
@@ -700,6 +728,18 @@ class _ArtMapViewState extends State<ArtMapView> {
         // stale and ignored rather than overwriting state that now belongs
         // to the newer view.
         final viewEpoch = _mapViewEpoch;
+        // A globe must keep filling the view: below this zoom it would shrink
+        // into a small ball in an empty field. The flat map keeps its own
+        // minimum. Quantised so a resize does not rewrite the option per pixel.
+        final capabilities = KubusMapCapabilities.current;
+        final effectiveMinZoom = capabilities.supportsGlobe
+            ? (MapSpatialFraming.globeMinZoomFor(
+                          Size(constraints.maxWidth, constraints.maxHeight),
+                        ) *
+                        20)
+                    .roundToDouble() /
+                20
+            : widget.minZoom;
         return SizedBox.expand(
           child: Stack(
             children: [
@@ -738,7 +778,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 // during style swaps, which can cause platform errors.
                 annotationOrder: const <ml.AnnotationType>[],
                 minMaxZoomPreference: ml.MinMaxZoomPreference(
-                  widget.minZoom,
+                  effectiveMinZoom,
                   widget.maxZoom,
                 ),
                 rotateGesturesEnabled: widget.rotateGesturesEnabled,

@@ -4761,6 +4761,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mapConstraintsLabel => 'Active map restrictions';
+
+  @override
+  String mapConstraintRadius(Object radiusKm) {
+    return 'Within $radiusKm km of you';
+  }
+
+  @override
+  String mapConstraintRadiusNoLocation(Object radiusKm) {
+    return 'Within $radiusKm km of you, location needed';
+  }
+
+  @override
+  String mapConstraintQuery(Object query) {
+    return 'Search: $query';
+  }
+
+  @override
+  String mapConstraintHiddenLayers(int count) {
+    return 'Hidden types: $count';
+  }
+
+  @override
+  String mapConstraintClear(Object label) {
+    return 'Clear $label';
+  }
+
+  @override
+  String get mapConstraintResetAll => 'Reset all';
+
+  @override
   String get mapLayersTitle => 'Map layers';
 
   @override

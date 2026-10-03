@@ -4795,6 +4795,37 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get mapConstraintsLabel => 'Aktivne omejitve zemljevida';
+
+  @override
+  String mapConstraintRadius(Object radiusKm) {
+    return 'Znotraj $radiusKm km od vas';
+  }
+
+  @override
+  String mapConstraintRadiusNoLocation(Object radiusKm) {
+    return 'Znotraj $radiusKm km od vas, potrebna lokacija';
+  }
+
+  @override
+  String mapConstraintQuery(Object query) {
+    return 'Iskanje: $query';
+  }
+
+  @override
+  String mapConstraintHiddenLayers(int count) {
+    return 'Skriti tipi: $count';
+  }
+
+  @override
+  String mapConstraintClear(Object label) {
+    return 'Počisti: $label';
+  }
+
+  @override
+  String get mapConstraintResetAll => 'Ponastavi vse';
+
+  @override
   String get mapLayersTitle => 'Sloji zemljevida';
 
   @override

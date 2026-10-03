@@ -118,6 +118,65 @@ void main() {
       expect(resolved!, contains('width=1600'));
     });
 
+    group('rewriteWikimediaThumb re-buckets an existing thumb when asked', () {
+      const big =
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Ljubljana_%2852931091412%29.jpg/960px-Ljubljana_%2852931091412%29.jpg';
+
+      test('a stored 960px thumb is cut down to the requested bucket', () {
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(big, maxWidth: 160),
+          equals(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Ljubljana_%2852931091412%29.jpg/250px-Ljubljana_%2852931091412%29.jpg',
+          ),
+        );
+      });
+
+      test('without a requested width the thumb is left exactly as stored', () {
+        expect(MediaUrlResolver.rewriteWikimediaThumb(big), equals(big));
+      });
+
+      test('a thumb that is already small enough is never enlarged', () {
+        const small =
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Example.jpg/250px-Example.jpg';
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(small, maxWidth: 960),
+          equals(small),
+        );
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(small, maxWidth: 250),
+          equals(small),
+        );
+      });
+
+      test('the width follows the allowed bucket set, not the raw request', () {
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(big, maxWidth: 300),
+          contains('/330px-'),
+        );
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(big, maxWidth: 4096),
+          equals(big),
+        );
+      });
+
+      test('an unrecognised thumb file name is returned untouched', () {
+        const odd =
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Doc.pdf/page1-960px-Doc.pdf.jpg';
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(odd, maxWidth: 160),
+          equals(odd),
+        );
+      });
+
+      test('other hosts are never touched', () {
+        const other = 'https://example.com/thumb/a/b/File.jpg/960px-File.jpg';
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(other, maxWidth: 160),
+          equals(other),
+        );
+      });
+    });
+
     group('rewriteWikimediaThumb', () {
       test('rewrites commons original to width-limited thumb', () {
         expect(
@@ -130,8 +189,7 @@ void main() {
         );
       });
 
-      test('snaps maxWidth up to an allowed bucket and drops cache-buster',
-          () {
+      test('snaps maxWidth up to an allowed bucket and drops cache-buster', () {
         // Wikimedia only serves fixed thumb widths; 640 snaps up to 960.
         expect(
           MediaUrlResolver.rewriteWikimediaThumb(

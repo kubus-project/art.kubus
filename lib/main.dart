@@ -17,6 +17,7 @@ import 'providers/app_mode_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
+import 'features/map/session/kubus_map_session_memory.dart';
 import 'providers/tile_providers.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
@@ -406,6 +407,11 @@ class _AppLauncherState extends State<AppLauncher> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+        // Remembers the map's camera, search, filters and selection across
+        // a phone/wide layout swap (see KubusMapSessionMemory).
+        Provider<KubusMapSessionMemory>(
+          create: (_) => KubusMapSessionMemory(),
+        ),
         ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),

@@ -1,0 +1,58 @@
+
+== firefox-1440x900-light-en-ui ok
+  PASS firefox-1440x900-light-en-ui: markers are on the map before any restriction ({"dots":18,"clusters":14,"markers":4})
+  PASS firefox-1440x900-light-en-ui: no constraint strip while nothing restricts the map
+  PASS firefox-1440x900-light-en-ui: the search shows up as a constraint (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inDeleteFilters FiltersReset allDiscovery path Discovery path Explore nearby art Start a route from the mapEnable iso)
+  PASS firefox-1440x900-light-en-ui: the map-area baseline is listed with it
+  PASS firefox-1440x900-light-en-ui: the search really removed the markers it claims to ({"dots":0,"clusters":0,"markers":0})
+  PASS firefox-1440x900-light-en-ui: reset all leaves no constraint chip (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Discovery path Explore nearby art Start a rou)
+  PASS firefox-1440x900-light-en-ui: reset all brings the markers back ({"dots":18,"clusters":14,"markers":4})
+  PASS firefox-1440x900-light-en-ui: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
+  PASS firefox-1440x900-light-en-ui: Back does not recreate the map (maps=1)
+  PASS firefox-1440x900-light-en-ui: Back keeps the camera (not reset to the opening world) ({"opened":true,"pathBefore":"/map","pathInEntity":"/map","pathAfter":"/map","mapsAfter":1,"cameraBefore":{"zoom":15.5,"center":[14.506,46.057]},"cameraAfter":{"zoom":15.5,"center":[14.506,46.057]}})
+  PASS firefox-1440x900-light-en-ui: the swap recreated the map (a different screen) ({"before":1,"after":2})
+  PASS firefox-1440x900-light-en-ui: the new map opens where the old one was ({"before":{"zoom":15.5,"center":[14.506,46.057],"maps":1},"after":{"zoom":15.5,"center":[14.506,46.057],"maps":2}})
+  PASS firefox-1440x900-light-en-ui: the search text follows the swap (Clear search Clear searchReset allExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meNearby art and places. Map area. Expand Nearby art and places Map areaMap areaShow gri)
+  PASS firefox-1440x900-light-en-ui: the selected marker follows the swap ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":15.5})
+  PASS firefox-1440x900-light-en-ui: the return swap recreated the map ({"before":2,"after":3})
+  PASS firefox-1440x900-light-en-ui: the wide map opens where the phone map was ({"phoneBefore":{"zoom":15.5,"center":[14.506,46.057],"maps":2},"wide":{"zoom":15.5,"center":[14.506,46.057],"maps":3}})
+  PASS firefox-1440x900-light-en-ui: the search text follows the return swap (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inDeleteFilters FiltersReset allby kubus public artInvader Mosaics – LjubljanaClose CloseGeneral overview of the space invader mosaics in)
+  PASS firefox-1440x900-light-en-ui: the selected marker follows the return swap ({"inSource":2,"kind":"marker","opacityPinsSelection":true,"hasMarkerLayer":true,"zoom":15.5})
+  PASS firefox-1440x900-light-en-ui: no uncaught page errors
+
+== firefox-1440x900-light-sl-ui ok
+  PASS firefox-1440x900-light-sl-ui: markers are on the map before any restriction ({"dots":18,"clusters":14,"markers":4})
+  PASS firefox-1440x900-light-sl-ui: no constraint strip while nothing restricts the map
+  PASS firefox-1440x900-light-sl-ui: the search shows up as a constraint (art.kubusUmetniška platformaSkrči navigacijoDomovRaziskujPovežiInfrastrukturaDenarnicaPrijavaBrisanjeFiltri FiltriPonastavi vsePot odkrivanja Pot odkrivanja Razišči bližnjo umetnost Začni pot na zemlj)
+  PASS firefox-1440x900-light-sl-ui: the map-area baseline is listed with it
+  PASS firefox-1440x900-light-sl-ui: the search really removed the markers it claims to ({"dots":0,"clusters":0,"markers":0})
+  PASS firefox-1440x900-light-sl-ui: reset all leaves no constraint chip (art.kubusUmetniška platformaSkrči navigacijoDomovRaziskujPovežiInfrastrukturaDenarnicaPrijavaFiltri FiltriPot odkrivanja Pot odkrivanja Razišči bližnjo umetnost)
+  PASS firefox-1440x900-light-sl-ui: reset all brings the markers back ({"dots":18,"clusters":14,"markers":4})
+  PASS firefox-1440x900-light-sl-ui: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
+  PASS firefox-1440x900-light-sl-ui: no uncaught page errors
+
+== firefox-390x844-light-en-ui ok
+  PASS firefox-390x844-light-en-ui: markers are on the map before any restriction ({"dots":17,"clusters":14,"markers":3})
+  PASS firefox-390x844-light-en-ui: no constraint strip while nothing restricts the map
+  PASS firefox-390x844-light-en-ui: the search shows up as a constraint (Clear search Clear searchReset allExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meNearby art and places. Map area. Expand Nearby art and places Map )
+  PASS firefox-390x844-light-en-ui: the map-area baseline is listed with it
+  PASS firefox-390x844-light-en-ui: the search really removed the markers it claims to ({"dots":0,"clusters":0,"markers":0})
+  PASS firefox-390x844-light-en-ui: reset all leaves no constraint chip (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meNearby art and places. Map area. Expand )
+  PASS firefox-390x844-light-en-ui: reset all brings the markers back ({"dots":17,"clusters":14,"markers":3})
+  PASS firefox-390x844-light-en-ui: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
+  PASS firefox-390x844-light-en-ui: opening the entity leaves the map screen (Backart.kubusMOSAIC Invader Mosaics – Ljubljana by kubus public art 46.0569, 14.5058 2026-04-14 #mosaic #pixel #street artShareShow on mapNavigateDescription Ge)
+  PASS firefox-390x844-light-en-ui: Back returns to the map screen (by kubus public artInvader Mosaics – LjubljanaClose CloseGeneral overview of the space invader mosaics installed around Ljubljana; original artist: Invader. See)
+  PASS firefox-390x844-light-en-ui: Back does not recreate the map (maps=1)
+  PASS firefox-390x844-light-en-ui: Back keeps the camera (not reset to the opening world) ({"opened":true,"pathBefore":"/map","pathInEntity":"/map","pathAfter":"/map","mapsAfter":1,"cameraBefore":{"zoom":15.5,"center":[14.506,46.057]},"cameraAfter":{"zoom":15.5,"center":[14.506,46.057]}})
+  PASS firefox-390x844-light-en-ui: no uncaught page errors
+
+== firefox-390x844-light-sl-ui ok
+  PASS firefox-390x844-light-sl-ui: markers are on the map before any restriction ({"dots":19,"clusters":14,"markers":5})
+  PASS firefox-390x844-light-sl-ui: no constraint strip while nothing restricts the map
+  PASS firefox-390x844-light-sl-ui: the search shows up as a constraint (Počisti iskanje Počisti iskanjePonastavi vseRazširi Pot odkrivanja, 0/52 Pot odkrivanja · 0/52 RazširiOrodja zemljevida Orodja zemljevidaSredišči na meni Središči na meniUmetnost in kraji v bližini. O)
+  PASS firefox-390x844-light-sl-ui: the map-area baseline is listed with it
+  PASS firefox-390x844-light-sl-ui: the search really removed the markers it claims to ({"dots":0,"clusters":0,"markers":0})
+  PASS firefox-390x844-light-sl-ui: reset all leaves no constraint chip (Pokaži filtre FiltriRazširi Pot odkrivanja, 0/52 Pot odkrivanja · 0/52 RazširiOrodja zemljevida Orodja zemljevidaSredišči na meni Središči na meniUmetnost in kr)
+  PASS firefox-390x844-light-sl-ui: reset all brings the markers back ({"dots":19,"clusters":14,"markers":5})
+  PASS firefox-390x844-light-sl-ui: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
+  PASS firefox-390x844-light-sl-ui: no uncaught page errors
