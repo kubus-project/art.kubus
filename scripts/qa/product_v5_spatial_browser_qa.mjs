@@ -678,7 +678,20 @@ async function scenario(browserName, viewport, scheme, report) {
         check(run, `${tag}: zoom ${z} holds canonical markers, not far placeholders`, !keys.some((k) => k.endsWith(':blank')), JSON.stringify(mix));
       }
       if (z >= 15) {
-        check(run, `${tag}: street zoom ${z} carries artwork covers`, keys.some((k) => k.endsWith(':cover')), JSON.stringify(mix));
+        // Covers are fetched, rasterised and registered while the camera is idle
+        // and artwork hydration is asynchronous, so they arrive some seconds after
+        // the jump. Poll for them and record how long they took: a latency that
+        // is measured rather than a fixed wait that is guessed.
+        let coverMix = mix;
+        let waited = 2200;
+        const started = Date.now();
+        while (!Object.keys(coverMix).some((k) => k.endsWith(':cover')) && Date.now() - started < 12000) {
+          await page.waitForTimeout(500);
+          coverMix = await sourceIconMix(page);
+          waited = 2200 + (Date.now() - started);
+        }
+        run.timeToFirstCoverMs = { ...(run.timeToFirstCoverMs || {}), [z]: Object.keys(coverMix).some((k) => k.endsWith(':cover')) ? waited : null };
+        check(run, `${tag}: street zoom ${z} carries artwork covers (first cover after ~${waited} ms)`, Object.keys(coverMix).some((k) => k.endsWith(':cover')), JSON.stringify(coverMix));
       }
       await snap(page, `${tag}-z${String(z).replace('.', '_')}`, run);
     }
