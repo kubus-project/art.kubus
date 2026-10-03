@@ -25,6 +25,7 @@ import '../controller/kubus_map_controller.dart';
 import '../shared/map_cluster_transition.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_lod.dart';
+import 'kubus_cover_work_gate.dart';
 import 'kubus_marker_cover_loader.dart';
 
 /// What the marker sync engine needs from its hosting map screen `State`.
@@ -86,6 +87,7 @@ class KubusMapMarkerSyncEngine {
 
   final KubusMapMarkerSyncHost host;
   final KubusMarkerCoverLoader _coverLoader;
+  final KubusCoverWorkGate _coverGate = KubusCoverWorkGate();
 
   // Cover icons registered per style epoch. MapLibre has no image removal (and
   // the web plugin ignores a re-added name), so the total is capped instead:
@@ -99,7 +101,10 @@ class KubusMapMarkerSyncEngine {
   /// Cover images registered in the current style epoch (debug / evidence).
   int get coverImagesRegistered => _coverImagesRegistered;
 
-  void dispose() => _coverLoader.dispose();
+  void dispose() {
+    _coverGate.dispose();
+    _coverLoader.dispose();
+  }
 
   List<KubusClusterTransitionNode> _lastRenderedTopology =
       const <KubusClusterTransitionNode>[];
@@ -603,6 +608,9 @@ class KubusMapMarkerSyncEngine {
         );
         continue;
       }
+      // Rasterising a cover is a GPU readback: never start one mid-gesture. The
+      // screens re-plan covers when the camera idles at street scale.
+      if (host.kubusMapController.cameraIsMoving) continue;
       _prepareCover(
         marker: marker,
         url: url,
@@ -638,7 +646,8 @@ class KubusMapMarkerSyncEngine {
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.
-          if (host.hostMounted) host.requestMarkerResync();
+          if (host.hostMounted)
+            _coverGate.scheduleResync(host.requestMarkerResync);
           return;
         }
         final controller = host.mapController;
@@ -684,9 +693,23 @@ class KubusMapMarkerSyncEngine {
           _coverImagesRegistered += 1;
         }
 
-        await register(false);
-        if (needSelectedVariant) await register(true);
-        if (host.hostMounted) host.requestMarkerResync();
+        // One cover at a time, only while the camera is still: the readback
+        // behind each icon must not land on a frame the camera needs. A skipped
+        // cover is re-planned at the next camera idle.
+        final rendered = await _coverGate.runSerial<bool>(
+          () async {
+            await register(false);
+            if (needSelectedVariant) await register(true);
+            return true;
+          },
+          shouldRun: () =>
+              host.hostMounted &&
+              !host.kubusMapController.cameraIsMoving &&
+              host.kubusMapController.styleEpoch == styleEpoch,
+        );
+        if (rendered == true && host.hostMounted) {
+          _coverGate.scheduleResync(host.requestMarkerResync);
+        }
       } catch (e) {
         if (kDebugMode) {
           AppConfig.debugPrint(
