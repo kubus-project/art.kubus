@@ -1141,7 +1141,9 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
       child: EmptyStateCard(
         icon: Icons.error_outline,
         title: l10n.commonFailedToLoadLabel,
-        description: error,
+        // A backend message can be a whole body; keep the card compact.
+        description:
+            error.length > 240 ? '${error.substring(0, 237)}...' : error,
         showAction: true,
         actionLabel: l10n.commonRetry,
         onAction: onRetry,

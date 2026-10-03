@@ -219,15 +219,20 @@ class HomeWeb3CardStrip extends StatelessWidget {
       }
     }
 
+    // The cards share one height (the tallest), so Labs and lock states and
+    // longer localised copy never leave a ragged strip.
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        children: orderedCards.asMap().entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
-            child: buildWeb3CardEntry(entry.value),
-          );
-        }).toList(growable: false),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: orderedCards.asMap().entries.map((entry) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
+              child: buildWeb3CardEntry(entry.value),
+            );
+          }).toList(growable: false),
+        ),
       ),
     );
   }
@@ -271,7 +276,13 @@ class _HomeWeb3Card extends StatelessWidget {
                 ),
               if (showLabs && isLocked) const SizedBox(width: KubusSpacing.xs),
               if (isLocked)
-                Icon(Icons.lock_outline, size: 14, color: roles.lockedFeature),
+                Semantics(
+                  label: AppLocalizations.of(context)!.homeAccountRequiredLabel,
+                  child: ExcludeSemantics(
+                    child: Icon(Icons.lock_outline,
+                        size: 14, color: roles.lockedFeature),
+                  ),
+                ),
             ],
           )
         : null;

@@ -121,4 +121,30 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets('a status stays in the semantics tree beside the title',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_app(
+      SharedSettingsDestinationTile(
+        title: 'Secure your account',
+        subtitle: 'Add email and password',
+        icon: Icons.lock_outline,
+        status: const Text('Not verified'),
+        onTap: () {},
+      ),
+    ));
+    final data =
+        tester.getSemantics(find.byType(KubusActionTile)).getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(
+      '${data.label} ${data.hint}',
+      allOf(contains('Secure your account'), contains('Add email')),
+    );
+    expect(find.bySemanticsLabel(RegExp('Not verified')), findsOneWidget);
+    // The copy is spoken once, through the label and hint.
+    expect(find.bySemanticsLabel(RegExp('^Secure your account\$')),
+        findsOneWidget);
+    handle.dispose();
+  });
 }

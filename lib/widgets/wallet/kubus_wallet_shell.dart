@@ -435,6 +435,9 @@ class KubusWalletActionCard extends StatelessWidget {
       loading: loading,
       layout: KubusActionTileLayout.compact,
       minHeight: minHeight,
+      // The reason an action is unavailable is the only explanation, so it
+      // gets room; ordinary copy stays at two lines so a rail keeps one height.
+      subtitleMaxLines: !enabled && reason.isNotEmpty ? 3 : 2,
     );
   }
 }

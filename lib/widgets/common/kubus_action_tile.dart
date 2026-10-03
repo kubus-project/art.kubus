@@ -66,6 +66,7 @@ class KubusActionTile extends StatelessWidget {
     this.status,
     this.enabled = true,
     this.loading = false,
+    this.subtitleMaxLines = 2,
   });
 
   final String title;
@@ -97,6 +98,9 @@ class KubusActionTile extends StatelessWidget {
   /// the glyph corner (stacked), and the tile takes no further taps.
   final bool loading;
 
+  /// Lines the [subtitle] may take before it is ellipsised.
+  final int subtitleMaxLines;
+
   /// Widest an inline tile grows at 1x text, before the text scale.
   static const double inlineMaxWidth = 280;
 
@@ -124,23 +128,29 @@ class KubusActionTile extends StatelessWidget {
         ? MediaQuery.textScalerOf(context).scale(inlineMaxWidth)
         : double.infinity;
 
-    final titleText = Text(
-      title,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.start,
-      style: KubusTextStyles.detailCardTitle.copyWith(
-        color: enabled ? roles.foreground : roles.foregroundSubtle,
-        fontWeight: FontWeight.w600,
+    // The label and hint above speak the copy once; a [status] keeps its own
+    // semantics so a verified / locked / advanced state is still announced.
+    final titleText = ExcludeSemantics(
+      child: Text(
+        title,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.start,
+        style: KubusTextStyles.detailCardTitle.copyWith(
+          color: enabled ? roles.foreground : roles.foregroundSubtle,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
     final subtitleText = hasSubtitle
-        ? Text(
-            subtitle!,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: roles.foregroundMuted,
+        ? ExcludeSemantics(
+            child: Text(
+              subtitle!,
+              maxLines: subtitleMaxLines,
+              overflow: TextOverflow.ellipsis,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: roles.foregroundMuted,
+              ),
             ),
           )
         : null;
@@ -155,20 +165,25 @@ class KubusActionTile extends StatelessWidget {
               tileSize: 3,
             ),
           )
-        : ExcludeSemantics(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                end: hovered && motion && lifts
-                    ? KubusHoverResponse.arrowTravel
-                    : 0,
-              ),
-              duration: motion ? KubusHoverResponse.duration : Duration.zero,
-              curve: Curves.easeOutCubic,
-              builder: (context, dx, child) =>
-                  Transform.translate(offset: Offset(dx, 0), child: child),
-              child: Icon(Icons.arrow_forward, size: 16, color: accent),
-            ),
-          );
+        : !lifts
+            ? ExcludeSemantics(
+                child: Icon(Icons.arrow_forward, size: 16, color: accent),
+              )
+            : ExcludeSemantics(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    end: hovered && motion && lifts
+                        ? KubusHoverResponse.arrowTravel
+                        : 0,
+                  ),
+                  duration:
+                      motion ? KubusHoverResponse.duration : Duration.zero,
+                  curve: Curves.easeOutCubic,
+                  builder: (context, dx, child) =>
+                      Transform.translate(offset: Offset(dx, 0), child: child),
+                  child: Icon(Icons.arrow_forward, size: 16, color: accent),
+                ),
+              );
 
     Widget body(bool hovered) {
       if (stacked) {
@@ -252,7 +267,6 @@ class KubusActionTile extends StatelessWidget {
       enabled: interactive,
       label: title,
       hint: subtitle,
-      excludeSemantics: true,
       onTap: interactive ? onTap : null,
       child: KubusHoverResponse(
         lift: lifts && interactive,

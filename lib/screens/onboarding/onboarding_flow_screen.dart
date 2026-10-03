@@ -1,4 +1,3 @@
-import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -27,6 +26,7 @@ import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_accent_gradients.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
@@ -3569,7 +3569,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Widget _buildWelcomeScreen(AppLocalizations l10n, ColorScheme scheme) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final spotlight = _paletteForStep(_OnboardingStep.welcome);
     final compactMobileHeight =
         !_isDesktop && MediaQuery.sizeOf(context).height < 700;
 
@@ -3630,8 +3629,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                   l10n.onboardingFlowWelcomeInfoFollow,
                                   l10n.onboardingFlowWelcomeInfoTime,
                                 ],
-                                start: spotlight.start,
-                                end: spotlight.end,
                               ),
                             ),
                             const SizedBox(width: KubusSpacing.xl),
@@ -4190,15 +4187,11 @@ class _WelcomeHeroColumn extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.details,
-    required this.start,
-    required this.end,
   });
 
   final String title;
   final String subtitle;
   final List<String> details;
-  final Color start;
-  final Color end;
 
   @override
   Widget build(BuildContext context) {
