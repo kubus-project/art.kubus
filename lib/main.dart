@@ -412,6 +412,7 @@ class _AppLauncherState extends State<AppLauncher> {
         // a phone/wide layout swap (see KubusMapSessionMemory).
         Provider<KubusMapSessionMemory>(
           create: (_) => KubusMapSessionMemory(),
+          dispose: (_, memory) => memory.dispose(),
         ),
         // The launch language is resolved here, not only in AppInitializer:
         // /sign-in and /register resolve straight to their screens and never

@@ -19,6 +19,11 @@ import 'package:flutter/services.dart';
 /// detail screen inherits the page beneath it), and reports it when it differs
 /// from what the address bar was last told. It never changes navigation, only
 /// what the URL says.
+///
+/// Limit: an entity opened in-app is still an unnamed route, so after Back the
+/// address is the page it was opened from (for example `/map`), not the
+/// entity. An entity reached through its canonical link keeps that link,
+/// because the shell route beneath it carries the canonical name.
 class UrlCoherenceObserver extends NavigatorObserver {
   UrlCoherenceObserver({
     bool? enabled,

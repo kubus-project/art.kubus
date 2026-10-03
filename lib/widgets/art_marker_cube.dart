@@ -779,11 +779,22 @@ class ArtMarkerCubeIconRenderer {
             bodySize - (coverRimWidth * 2),
           );
           final target = inner.getBounds();
-          final side = math.min(cover.width, cover.height).toDouble();
+          // Centre crop to the target's own aspect: pill, arch, capsule and
+          // hexagon badges are not square, and a square crop drawn into them
+          // would stretch the cover.
+          final coverWidth = cover.width.toDouble();
+          final coverHeight = cover.height.toDouble();
+          final targetAspect =
+              target.height > 0 ? target.width / target.height : 1.0;
+          final coverAspect = coverHeight > 0 ? coverWidth / coverHeight : 1.0;
           final source = Rect.fromCenter(
-            center: Offset(cover.width / 2, cover.height / 2),
-            width: side,
-            height: side,
+            center: Offset(coverWidth / 2, coverHeight / 2),
+            width: coverAspect > targetAspect
+                ? coverHeight * targetAspect
+                : coverWidth,
+            height: coverAspect > targetAspect
+                ? coverHeight
+                : coverWidth / targetAspect,
           );
           canvas.save();
           canvas.clipPath(inner);
