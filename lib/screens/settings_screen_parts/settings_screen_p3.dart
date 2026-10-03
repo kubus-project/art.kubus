@@ -758,11 +758,13 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     bool enabled = true,
     Key? tileKey,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+      child: _buildSettingsPanel(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.xs,
+        ),
         child: _buildPreferenceRow(
           title,
           subtitle,
@@ -814,24 +816,25 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     Function(String?) onChanged, {
     String Function(String option)? optionLabelBuilder,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      color: scheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    final roles = KubusColorRoles.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+      child: _buildSettingsPanel(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.xs,
+        ),
         child: SharedSettingsRowTile(
           title: title,
           subtitle: subtitle,
           icon: Icons.tune,
           showChevron: false,
+          showLeadingIcon: false,
           trailing: DropdownButton<String>(
             value: value,
             underline: Container(),
-            dropdownColor: scheme.surface,
-            style: KubusTypography.inter(
-              color: scheme.onSurface,
-            ),
+            dropdownColor: roles.surfaceRaised,
+            style: KubusTypography.inter(color: roles.foreground),
             items: options.map((String option) {
               return DropdownMenuItem<String>(
                 value: option,
@@ -842,52 +845,38 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
           leadingBackgroundColor: Colors.transparent,
           leadingBorderColor: Colors.transparent,
-          leadingIconColor: scheme.onSurface.withValues(alpha: 0.7),
+          leadingIconColor: roles.foregroundMuted,
           titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w500,
-            color: scheme.onSurface,
+            color: roles.foreground,
           ),
           subtitleStyle: KubusTypography.inter(
             fontSize: 12,
-            color: scheme.onSurface.withValues(alpha: 0.7),
+            color: roles.foregroundMuted,
           ),
-          backgroundColor: scheme.primaryContainer,
-          borderColor: scheme.outline,
+          backgroundColor: Colors.transparent,
+          borderColor: Colors.transparent,
         ),
       ),
     );
   }
 
+  /// A dialog action that goes somewhere or does something: the dense
+  /// destination tile, never a bordered card with an icon box.
   Widget _buildActionTile(
-      String title, String subtitle, IconData icon, VoidCallback onTap) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      color: scheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: SharedSettingsRowTile(
-          title: title,
-          subtitle: subtitle,
-          icon: icon,
-          onTap: onTap,
-          showChevron: true,
-          leadingBackgroundColor: Colors.transparent,
-          leadingBorderColor: Colors.transparent,
-          leadingIconColor:
-              Provider.of<ThemeProvider>(context, listen: false).accentColor,
-          titleStyle: KubusTypography.inter(
-            fontWeight: FontWeight.w500,
-            color: scheme.onSurface,
-          ),
-          subtitleStyle: KubusTypography.inter(
-            fontSize: 12,
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-          backgroundColor: scheme.primaryContainer,
-          borderColor: scheme.outline,
-        ),
-      ),
+    String title,
+    String subtitle,
+    IconData icon,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
+    return SharedSettingsDestinationTile(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      onTap: onTap,
+      isDestructive: isDestructive,
+      bottomGap: KubusSpacing.xs,
     );
   }
 

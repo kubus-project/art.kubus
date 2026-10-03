@@ -231,6 +231,7 @@ class _WalletHomeState extends State<WalletHome> {
                   _buildTokensCard(tokens: tokens),
                   const SizedBox(height: KubusSpacing.lg),
                   KubusWalletSectionCard(
+                    framed: false,
                     title: l10n.walletActionsTitle,
                     subtitle: l10n.walletHomeQuickActionsSubtitle,
                     child: _buildQuickActionsGrid(
@@ -781,9 +782,6 @@ class _WalletHomeState extends State<WalletHome> {
                 key: Key('wallet_home_action_${config.type.name}'),
                 config: config,
                 minHeight: 88,
-                density: isCompact
-                    ? KubusWalletDensity.compact
-                    : KubusWalletDensity.regular,
               ),
             ),
           ),
@@ -795,9 +793,6 @@ class _WalletHomeState extends State<WalletHome> {
               icon: Icons.dns_outlined,
               color: roles.foregroundMuted,
               minHeight: 88,
-              density: isCompact
-                  ? KubusWalletDensity.compact
-                  : KubusWalletDensity.regular,
               onTap: () =>
                   Navigator.of(context).pushNamed('/wallet/availability-node'),
             ),

@@ -137,128 +137,133 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.settingsSecuritySettingsDialogTitle,
-            style: KubusTextStyles.screenTitle.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.settingsSecuritySettingsDialogTitle,
+              style: KubusTextStyles.screenTitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          DesktopCard(
-            child: Column(
-              children: [
-                _buildSettingsRow(
-                  l10n.authSecureAccountTitle,
-                  _secureAccountSubtitle(l10n),
-                  Icons.verified_user_outlined,
-                  trailing: const EmailVerificationStatusBadge(
-                    dense: true,
-                    alignment: Alignment.centerRight,
-                  ),
-                  onTap: () async {
-                    final shellScope = DesktopShellScope.of(context);
-                    if (shellScope != null) {
-                      shellScope.pushScreen(const SecureAccountScreen());
-                    } else {
-                      await Navigator.of(context).pushNamed('/secure-account');
-                    }
-                    if (!mounted) return;
-                    await _loadSecureAccountStatus();
-                  },
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  l10n.settingsChangePasswordTileTitle,
-                  l10n.settingsChangePasswordTileSubtitle,
-                  Icons.lock_outline,
-                  onTap: _showChangePasswordDialog,
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  l10n.settingsSetPinTileTitle,
-                  l10n.settingsSetPinTileSubtitle,
-                  Icons.pin,
-                  onTap: _showSetPinDialog,
-                ),
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsRequirePinTileTitle,
-                  l10n.settingsRequirePinTileSubtitle,
-                  _requirePin,
-                  saveAfterToggle: false,
-                  onChanged: (value) {
-                    _applyState(() => _requirePin = value);
-                    _toggleRequirePin(value);
-                  },
-                ),
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsTwoFactorTitle,
-                  l10n.settingsTwoFactorSubtitle,
-                  _twoFactorAuth,
-                  onChanged: (value) =>
-                      _applyState(() => _twoFactorAuth = value),
-                ),
-                const Divider(height: 32),
-                if (_hasPin && _biometricsSupported)
+            const SizedBox(height: 24),
+            // Destinations first, as their own tiles; the card below groups the
+            // switches, so no tile sits inside a card.
+            _buildSettingsRow(
+              l10n.authSecureAccountTitle,
+              _secureAccountSubtitle(l10n),
+              Icons.verified_user_outlined,
+              status: const EmailVerificationStatusBadge(
+                dense: true,
+                alignment: Alignment.centerRight,
+              ),
+              onTap: () async {
+                final shellScope = DesktopShellScope.of(context);
+                if (shellScope != null) {
+                  shellScope.pushScreen(const SecureAccountScreen());
+                } else {
+                  await Navigator.of(context).pushNamed('/secure-account');
+                }
+                if (!mounted) return;
+                await _loadSecureAccountStatus();
+              },
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            _buildSettingsRow(
+              l10n.settingsChangePasswordTileTitle,
+              l10n.settingsChangePasswordTileSubtitle,
+              Icons.lock_outline,
+              onTap: _showChangePasswordDialog,
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            _buildSettingsRow(
+              l10n.settingsSetPinTileTitle,
+              l10n.settingsSetPinTileSubtitle,
+              Icons.pin,
+              onTap: _showSetPinDialog,
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+            DesktopCard(
+              child: Column(
+                children: [
                   _buildToggleSetting(
-                    l10n.settingsBiometricTileTitle,
-                    l10n.settingsBiometricTileSubtitle,
-                    _biometricAuth,
+                    l10n.settingsRequirePinTileTitle,
+                    l10n.settingsRequirePinTileSubtitle,
+                    _requirePin,
                     saveAfterToggle: false,
                     onChanged: (value) {
-                      _applyState(() => _biometricAuth = value);
-                      _toggleBiometric(value);
+                      _applyState(() => _requirePin = value);
+                      _toggleRequirePin(value);
                     },
-                  )
-                else if (_hasPin && !_biometricsSupported)
-                  _buildSettingsRow(
-                    l10n.settingsBiometricTileTitle,
-                    l10n.settingsBiometricUnavailableToast,
-                    Icons.fingerprint,
                   ),
-                if (_biometricAuth && _hasPin && _biometricsSupported) ...[
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    l10n.settingsUseBiometricsOnUnlockTitle,
-                    l10n.settingsUseBiometricsOnUnlockSubtitle,
-                    _useBiometricsOnUnlock,
+                    l10n.settingsTwoFactorTitle,
+                    l10n.settingsTwoFactorSubtitle,
+                    _twoFactorAuth,
                     onChanged: (value) =>
-                        _applyState(() => _useBiometricsOnUnlock = value),
+                        _applyState(() => _twoFactorAuth = value),
+                  ),
+                  if (_hasPin) const Divider(height: 32),
+                  if (_hasPin && _biometricsSupported)
+                    _buildToggleSetting(
+                      l10n.settingsBiometricTileTitle,
+                      l10n.settingsBiometricTileSubtitle,
+                      _biometricAuth,
+                      saveAfterToggle: false,
+                      onChanged: (value) {
+                        _applyState(() => _biometricAuth = value);
+                        _toggleBiometric(value);
+                      },
+                    )
+                  else if (_hasPin && !_biometricsSupported)
+                    _buildSettingsRow(
+                      l10n.settingsBiometricTileTitle,
+                      l10n.settingsBiometricUnavailableToast,
+                      Icons.fingerprint,
+                    ),
+                  if (_biometricAuth && _hasPin && _biometricsSupported) ...[
+                    const Divider(height: 32),
+                    _buildToggleSetting(
+                      l10n.settingsUseBiometricsOnUnlockTitle,
+                      l10n.settingsUseBiometricsOnUnlockSubtitle,
+                      _useBiometricsOnUnlock,
+                      onChanged: (value) =>
+                          _applyState(() => _useBiometricsOnUnlock = value),
+                    ),
+                  ],
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsSessionTimeoutTitle,
+                    l10n.settingsSessionTimeoutSubtitle,
+                    _sessionTimeout,
+                    onChanged: (value) =>
+                        _applyState(() => _sessionTimeout = value),
+                  ),
+                  const Divider(height: 32),
+                  _buildAutoLockDropdown(),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsLoginNotificationsTitle,
+                    l10n.settingsLoginNotificationsSubtitle,
+                    _loginNotifications,
+                    onChanged: (value) =>
+                        _applyState(() => _loginNotifications = value),
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsPrivacyModeTileTitle,
+                    l10n.settingsPrivacyModeTileSubtitle,
+                    _privacyMode,
+                    onChanged: (value) =>
+                        _applyState(() => _privacyMode = value),
                   ),
                 ],
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsSessionTimeoutTitle,
-                  l10n.settingsSessionTimeoutSubtitle,
-                  _sessionTimeout,
-                  onChanged: (value) =>
-                      _applyState(() => _sessionTimeout = value),
-                ),
-                const Divider(height: 32),
-                _buildAutoLockDropdown(),
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsLoginNotificationsTitle,
-                  l10n.settingsLoginNotificationsSubtitle,
-                  _loginNotifications,
-                  onChanged: (value) =>
-                      _applyState(() => _loginNotifications = value),
-                ),
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsPrivacyModeTileTitle,
-                  l10n.settingsPrivacyModeTileSubtitle,
-                  _privacyMode,
-                  onChanged: (value) => _applyState(() => _privacyMode = value),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -695,6 +700,9 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     );
   }
 
+  /// One settings row. A row that goes somewhere or does something is a
+  /// destination ([SharedSettingsDestinationTile]); a row that states a fact
+  /// or carries its own control ([trailing]) is a flat information row.
   Widget _buildSettingsRow(
     String title,
     String subtitle,
@@ -702,8 +710,22 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     bool isDestructive = false,
     VoidCallback? onTap,
     Widget? trailing,
+    Widget? status,
     Key? tileKey,
   }) {
+    if (onTap != null && trailing == null) {
+      return SharedSettingsDestinationTile(
+        key: tileKey,
+        title: title,
+        subtitle: subtitle,
+        icon: icon,
+        onTap: onTap,
+        isDestructive: isDestructive,
+        status: status,
+        // Callers space desktop rows themselves.
+        bottomGap: 0,
+      );
+    }
     final scheme = Theme.of(context).colorScheme;
     final errorColor = scheme.error;
     return SharedSettingsRowTile(
@@ -714,7 +736,8 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
       onTap: onTap,
       trailing: trailing,
       isDestructive: isDestructive,
-      showChevron: trailing == null,
+      showChevron: false,
+      showLeadingIcon: false,
       padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
       borderRadius: BorderRadius.circular(KubusRadius.sm),
       leadingBoxSize: KubusHeaderMetrics.actionHitArea,
@@ -852,6 +875,7 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
       title: l10n.settingsAutoLockTimeTitle,
       subtitle: displayLabelForStored(_autoLockTime),
       showChevron: false,
+      showLeadingIcon: false,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       leadingBoxSize: KubusHeaderMetrics.actionHitArea,
       leadingIconSize: KubusHeaderMetrics.actionIcon,

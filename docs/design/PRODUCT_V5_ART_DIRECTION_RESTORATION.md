@@ -86,7 +86,9 @@ drive fields, ghost glyphs and edge lights:
 - Stat tiles: hover brightens the field and edge and drifts/scales the
   glyph 4 px / 6 % inside the clipped tile. The tile and its text never
   move.
-- Action tiles: 2 px paint-only lift, accent edge and soft accent shadow.
+- Action tiles: 2 px paint-only lift, accent edge and soft accent shadow
+  (see the hover contract in `PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md`; compact
+  rows answer quietly without lift or shadow).
 - Reduced motion (`MediaQuery.disableAnimations`, `prefers-reduced-motion`
   on web): no lift and no glyph drift; the brightening stays as a state
   change. Touch never hovers.

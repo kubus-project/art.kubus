@@ -588,7 +588,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   child: KubusWalletActionCard.fromConfig(
                     config: config,
                     minHeight: KubusSizes.walletActionCardMinHeightCompact,
-                    density: KubusWalletDensity.compact,
                   ),
                 ),
               )
@@ -1250,7 +1249,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   child: KubusWalletActionCard.fromConfig(
                     config: config,
                     minHeight: KubusSizes.walletActionCardMinHeightCompact,
-                    density: KubusWalletDensity.compact,
                   ),
                 ),
               )

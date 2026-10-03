@@ -5,7 +5,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_shell_navigation.dart';
-import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_action_tile.dart';
 
 class ArtistStudioCreateScreen extends StatelessWidget {
   final VoidCallback? onArtworkCreated;
@@ -41,7 +41,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _CreateOptionCard(
+        _CreateOptionTile(
           title: l10n.artistStudioCreateOptionArtworkTitle,
           subtitle: l10n.artistStudioCreateOptionArtworkSubtitle,
           icon: Icons.add_photo_alternate_outlined,
@@ -58,7 +58,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        _CreateOptionCard(
+        _CreateOptionTile(
           title: l10n.artistStudioCreateOptionCollectionTitle,
           subtitle: l10n.artistStudioCreateOptionCollectionSubtitle,
           icon: Icons.collections_bookmark_outlined,
@@ -88,7 +88,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        _CreateOptionCard(
+        _CreateOptionTile(
           title: l10n.exhibitionCreatorAppBarTitle,
           subtitle: l10n.exhibitionCreatorBasicsTitle,
           icon: AppColorUtils.exhibitionIcon,
@@ -103,7 +103,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        _CreateOptionCard(
+        _CreateOptionTile(
           title: l10n.manageMarkersTitle,
           subtitle: l10n.manageMarkersCardSubtitle,
           icon: Icons.place_outlined,
@@ -117,14 +117,16 @@ class ArtistStudioCreateScreen extends StatelessWidget {
   }
 }
 
-class _CreateOptionCard extends StatelessWidget {
+/// A creation destination: the studio's contextual colour, its glyph cropped
+/// behind the title, no icon box.
+class _CreateOptionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final Color accent;
   final VoidCallback onTap;
 
-  const _CreateOptionCard({
+  const _CreateOptionTile({
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -134,66 +136,13 @@ class _CreateOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return LiquidGlassCard(
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      backgroundColor: accent.withValues(alpha: 0.05),
-      showBorder: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          child: Container(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: Icon(icon, color: accent),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: KubusTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: KubusTypography.inter(
-                          fontSize: 12,
-                          height: 1.25,
-                          color: scheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: scheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return KubusActionTile(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      accent: accent,
+      onTap: onTap,
+      minHeight: 120,
     );
   }
 }

@@ -520,7 +520,7 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
         itemBuilder: (context, index) {
           if (AppConfig.isFeatureEnabled('season0') && index == 0) {
-            return _buildSeason0Banner(themeProvider);
+            return _buildSeason0Banner();
           }
           final postIndex =
               AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
@@ -530,13 +530,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     );
   }
 
-  Widget _buildSeason0Banner(ThemeProvider themeProvider) {
+  Widget _buildSeason0Banner() {
     final l10n = AppLocalizations.of(context)!;
     return CommunitySeason0Banner(
       title: l10n.season0BannerTitle,
       subtitle: l10n.season0BannerTap,
-      accentColor: themeProvider.accentColor,
-      variant: CommunitySeason0BannerVariant.desktop,
       onTap: () {
         final shellScope = DesktopShellScope.of(context);
         if (shellScope != null) {
@@ -1138,63 +1136,17 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
 
   Widget _buildErrorState(
       ThemeProvider themeProvider, String error, VoidCallback onRetry) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            child: Icon(
-              Icons.error_outline,
-              size: 36,
-              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            AppLocalizations.of(context)!.commonFailedToLoadLabel,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              error,
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) => ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: Text(AppLocalizations.of(context)!.commonRetry),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-          ),
-        ],
+      child: EmptyStateCard(
+        icon: Icons.error_outline,
+        title: l10n.commonFailedToLoadLabel,
+        // A backend message can be a whole body; keep the card compact.
+        description:
+            error.length > 240 ? '${error.substring(0, 237)}...' : error,
+        showAction: true,
+        actionLabel: l10n.commonRetry,
+        onAction: onRetry,
       ),
     );
   }
@@ -1202,49 +1154,10 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   Widget _buildEmptyState(ThemeProvider themeProvider, IconData icon,
       String title, String subtitle) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            child: Icon(
-              icon,
-              size: 36,
-              color: themeProvider.accentColor.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          Text(
-            title,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              subtitle,
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      child: EmptyStateCard(
+        icon: icon,
+        title: title,
+        description: subtitle,
       ),
     );
   }

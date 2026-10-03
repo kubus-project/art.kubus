@@ -219,15 +219,20 @@ class HomeWeb3CardStrip extends StatelessWidget {
       }
     }
 
+    // The cards share one height (the tallest), so Labs and lock states and
+    // longer localised copy never leave a ragged strip.
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        children: orderedCards.asMap().entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
-            child: buildWeb3CardEntry(entry.value),
-          );
-        }).toList(growable: false),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: orderedCards.asMap().entries.map((entry) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
+              child: buildWeb3CardEntry(entry.value),
+            );
+          }).toList(growable: false),
+        ),
       ),
     );
   }
@@ -256,184 +261,40 @@ class _HomeWeb3Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: cardKey,
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: isLocked ? 0.05 : 0.1),
-              color.withValues(alpha: isLocked ? 0.02 : 0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          border: Border.all(
-            color: color.withValues(alpha: isLocked ? 0.1 : 0.3),
-          ),
-        ),
-        child: Stack(
-          children: [
-            if (labsFeature?.showLabsMarker ?? false)
-              Positioned(
-                top: 0,
-                left: 0,
-                child: KubusLabsAdornment.inlinePill(
+    final roles = KubusColorRoles.of(context);
+    final showLabs = labsFeature?.showLabsMarker ?? false;
+    // Identity is the destination's colour and cropped glyph. Labs and the
+    // wallet lock are states that coexist with it, not a second identity.
+    final status = showLabs || isLocked
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showLabs)
+                KubusLabsAdornment.inlinePill(
                   feature: labsFeature!,
                   emphasized: !isLocked,
                 ),
-              ),
-            if (!isLocked)
-              Center(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final titleStyle = KubusTextStyles.responsiveTitleStyle(
-                      context,
-                      KubusTextStyles.navLabel.copyWith(
-                        fontSize: KubusChromeMetrics.navMetaLabel,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      availableWidth: constraints.maxWidth,
-                      compact: true,
-                    );
-                    final subtitleStyle = KubusTextStyles.responsiveTitleStyle(
-                      context,
-                      KubusTextStyles.compactBadge.copyWith(
-                        fontSize: KubusChromeMetrics.navBadgeLabel + 1,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                      availableWidth: constraints.maxWidth,
-                      compact: true,
-                    );
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(
-                              KubusRadius.sm + KubusRadius.xs,
-                            ),
-                          ),
-                          child: Icon(
-                            icon,
-                            color: color,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        Text(
-                          title,
-                          style: titleStyle,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: KubusSpacing.xxs),
-                        Text(
-                          subtitle,
-                          style: subtitleStyle,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            if (isLocked)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.sm),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(
-                            KubusRadius.sm + KubusRadius.xs,
-                          ),
-                        ),
-                        child: Icon(
-                          icon,
-                          color: color.withValues(alpha: 0.5),
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          title,
-                          style: KubusTextStyles.navLabel.copyWith(
-                            fontSize: KubusChromeMetrics.navMetaLabel,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.4),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Flexible(
-                        child: Text(
-                          subtitle,
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            fontSize: KubusChromeMetrics.navBadgeLabel + 1,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.3),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+              if (showLabs && isLocked) const SizedBox(width: KubusSpacing.xs),
+              if (isLocked)
+                Semantics(
+                  label: AppLocalizations.of(context)!.homeAccountRequiredLabel,
+                  child: ExcludeSemantics(
+                    child: Icon(Icons.lock_outline,
+                        size: 14, color: roles.lockedFeature),
                   ),
                 ),
-              ),
-            if (isLocked)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Builder(builder: (context) {
-                  final lockedAccent =
-                      KubusColorRoles.of(context).lockedFeature;
-                  return Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: lockedAccent.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                    child: Icon(
-                      Icons.lock,
-                      size: 10,
-                      color: AppColorUtils.onColor(lockedAccent),
-                    ),
-                  );
-                }),
-              ),
-          ],
-        ),
-      ),
+            ],
+          )
+        : null;
+    return KubusActionTile(
+      key: cardKey,
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      accent: color,
+      status: status,
+      minHeight: 132,
+      onTap: onTap,
     );
   }
 }
@@ -1625,10 +1486,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  l10n.homeWeb3SectionTitle,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                Flexible(
+                  child: Text(
+                    l10n.homeWeb3SectionTitle,
+                    style: KubusTextStyles.screenTitle.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 if (!hasWalletIdentity)

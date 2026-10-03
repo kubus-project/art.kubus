@@ -612,55 +612,47 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                 ),
               ),
               const SizedBox(height: 12),
-              DesktopCard(
-                child: Column(
-                  children: [
-                    _buildSettingsRow(
-                      l10n.settingsBackupSettingsTileTitle,
-                      _walletBackupSummary(l10n),
-                      Icons.backup_outlined,
-                      onTap: () {
-                        unawaited(_openWalletBackupProtection());
-                      },
-                    ),
-                    const Divider(height: 32),
-                    _buildSettingsRow(
-                      l10n.settingsExportRecoveryPhraseTileTitle,
-                      l10n.settingsExportRecoveryPhraseTileSubtitle,
-                      Icons.vpn_key,
-                      onTap: () => _showRecoveryWarning(),
-                    ),
-                    if (AppConfig.isFeatureEnabled('availabilityNodes')) ...[
-                      const Divider(height: 32),
-                      _buildSettingsRow(
-                        _availabilityNodeNavTitle(context),
-                        _availabilityNodeNavSubtitle(context),
-                        Icons.dns_outlined,
-                        onTap: () => Navigator.of(context)
-                            .pushNamed('/wallet/availability-node'),
-                      ),
-                    ],
-                    const Divider(height: 32),
-                    _buildSettingsRow(
-                      walletProvider.isReadOnlySession
-                          ? l10n.commonReconnect
-                          : l10n.desktopSettingsDisconnectWalletTileTitle,
-                      walletProvider.isReadOnlySession
-                          ? l10n.walletReconnectManualRequiredToast
-                          : l10n.desktopSettingsDisconnectWalletTileSubtitle,
-                      walletProvider.isReadOnlySession
-                          ? Icons.link
-                          : Icons.logout,
-                      isDestructive: !walletProvider.isReadOnlySession,
-                      tileKey: const Key('desktop_settings_wallet_disconnect'),
-                      onTap: walletProvider.isReadOnlySession
-                          ? () => unawaited(
-                                _handleReadOnlyWalletReconnect(walletProvider),
-                              )
-                          : () => _showDisconnectConfirmation(),
-                    ),
-                  ],
+              _buildSettingsRow(
+                l10n.settingsBackupSettingsTileTitle,
+                _walletBackupSummary(l10n),
+                Icons.backup_outlined,
+                onTap: () {
+                  unawaited(_openWalletBackupProtection());
+                },
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              _buildSettingsRow(
+                l10n.settingsExportRecoveryPhraseTileTitle,
+                l10n.settingsExportRecoveryPhraseTileSubtitle,
+                Icons.vpn_key,
+                onTap: () => _showRecoveryWarning(),
+              ),
+              if (AppConfig.isFeatureEnabled('availabilityNodes')) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                _buildSettingsRow(
+                  _availabilityNodeNavTitle(context),
+                  _availabilityNodeNavSubtitle(context),
+                  Icons.dns_outlined,
+                  onTap: () => Navigator.of(context)
+                      .pushNamed('/wallet/availability-node'),
                 ),
+              ],
+              const SizedBox(height: KubusSpacing.sm),
+              _buildSettingsRow(
+                walletProvider.isReadOnlySession
+                    ? l10n.commonReconnect
+                    : l10n.desktopSettingsDisconnectWalletTileTitle,
+                walletProvider.isReadOnlySession
+                    ? l10n.walletReconnectManualRequiredToast
+                    : l10n.desktopSettingsDisconnectWalletTileSubtitle,
+                walletProvider.isReadOnlySession ? Icons.link : Icons.logout,
+                isDestructive: !walletProvider.isReadOnlySession,
+                tileKey: const Key('desktop_settings_wallet_disconnect'),
+                onTap: walletProvider.isReadOnlySession
+                    ? () => unawaited(
+                          _handleReadOnlyWalletReconnect(walletProvider),
+                        )
+                    : () => _showDisconnectConfirmation(),
               ),
             ],
             const SizedBox(height: 24),

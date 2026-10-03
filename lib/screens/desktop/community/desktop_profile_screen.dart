@@ -43,6 +43,7 @@ import '../../../widgets/profile/profile_badges_verification_section.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/common/kubus_action_tile.dart';
 import '../../../utils/kubus_brand_colors.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -602,17 +603,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: DetailSpacing.md),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.person_outline, color: scheme.primary),
-                title: Text(
-                  l10n.profileAnalyticsProfileTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  l10n.desktopProfileAnalyticsProfileSubtitle,
-                  style: KubusTypography.inter(fontSize: 12),
-                ),
+              KubusActionTile(
+                title: l10n.profileAnalyticsProfileTitle,
+                subtitle: l10n.desktopProfileAnalyticsProfileSubtitle,
+                icon: Icons.person_outline,
+                accent: KubusColorRoles.of(dialogContext).statTeal,
+                layout: KubusActionTileLayout.compact,
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _openDesktopShellAwareScreen(
@@ -628,17 +624,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
               ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                title: Text(
-                  l10n.profileAnalyticsCommunityTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  l10n.desktopProfileAnalyticsCommunitySubtitle,
-                  style: KubusTypography.inter(fontSize: 12),
-                ),
+              const SizedBox(height: KubusSpacing.sm),
+              KubusActionTile(
+                title: l10n.profileAnalyticsCommunityTitle,
+                subtitle: l10n.desktopProfileAnalyticsCommunitySubtitle,
+                icon: Icons.forum_outlined,
+                accent: KubusColorRoles.of(dialogContext).statTeal,
+                layout: KubusActionTileLayout.compact,
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _openDesktopShellAwareScreen(

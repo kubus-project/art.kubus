@@ -17,7 +17,6 @@ Widget _card({
       color: color,
       onTap: () {},
       minHeight: KubusSizes.walletActionCardMinHeightCompact,
-      density: KubusWalletDensity.compact,
     ),
   );
 }
@@ -59,7 +58,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('titles never wrap', (tester) async {
+  testWidgets('a long title wraps to two lines inside the card', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -73,8 +74,34 @@ void main() {
     );
 
     final title = tester.widget<Text>(find.text('Connect an external wallet'));
-    expect(title.maxLines, 1);
+    expect(title.maxLines, 2);
     expect(title.overflow, TextOverflow.ellipsis);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a disabled card takes no tap and shows its reason', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KubusWalletActionCard(
+            title: 'Send',
+            subtitle: 'Move tokens',
+            icon: Icons.arrow_upward_rounded,
+            color: Colors.red,
+            enabled: false,
+            disabledReason: 'Restore wallet access to send',
+            onTap: () => taps++,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Restore wallet access to send'), findsOneWidget);
+    expect(find.text('Move tokens'), findsNothing);
+    await tester.tap(find.byType(KubusWalletActionCard));
+    expect(taps, 0);
   });
 }
