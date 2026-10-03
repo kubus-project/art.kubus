@@ -69,15 +69,29 @@ class ProtectedActionRequirements {
   /// Stable name carried through route arguments and persisted with an
   /// interrupted account journey. Unknown values never widen the scope: they
   /// resolve to `null` so the caller keeps its own default.
+  ///
+  /// The four named scopes keep their names. A scope that merged several
+  /// capabilities (an action that needs a profile and a wallet, say) is written
+  /// as a comma-separated list that always starts with `account`, for example
+  /// `account,profile,wallet`, so an interrupted journey restores exactly what
+  /// the action needed instead of the strongest single name. An account is
+  /// always required, so a scope without one is stored as if it had one.
   String get storageValue {
-    if (requiresWallet) return 'wallet';
-    if (requiresRole) return 'creator';
-    if (requiresProfile) return 'participant';
-    return 'accountOnly';
+    if (this == accountOnly) return 'accountOnly';
+    if (this == participant) return 'participant';
+    if (this == creator) return 'creator';
+    if (this == wallet) return 'wallet';
+    return <String>[
+      'account',
+      if (requiresProfile) 'profile',
+      if (requiresRole) 'role',
+      if (requiresWallet) 'wallet',
+    ].join(',');
   }
 
   static ProtectedActionRequirements? fromStorage(String? value) {
-    switch ((value ?? '').trim()) {
+    final text = (value ?? '').trim();
+    switch (text) {
       case 'accountOnly':
         return accountOnly;
       case 'participant':
@@ -88,7 +102,20 @@ class ProtectedActionRequirements {
       case 'dao':
         return wallet;
     }
-    return null;
+    // Strict on purpose: the list must start with `account`, use each known
+    // capability at most once, and contain nothing else. Anything looser could
+    // widen or narrow a scope by accident.
+    final parts = text.split(',');
+    const known = <String>{'profile', 'role', 'wallet'};
+    if (parts.length < 2 || parts.first != 'account') return null;
+    final rest = parts.skip(1).toList();
+    if (rest.any((part) => !known.contains(part))) return null;
+    if (rest.toSet().length != rest.length) return null;
+    return ProtectedActionRequirements(
+      requiresProfile: rest.contains('profile'),
+      requiresRole: rest.contains('role'),
+      requiresWallet: rest.contains('wallet'),
+    );
   }
 
   @override
