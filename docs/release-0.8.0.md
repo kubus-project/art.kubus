@@ -47,6 +47,12 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
   parity with English.
 - An event or exhibition that no longer exists now says so and offers Retry,
   instead of showing an empty page with working-looking Save and Share.
+- Destinations look and respond like the rest of the interface. Settings,
+  security, account, wallet actions, programme entries, share and support links
+  use the same authored tiles as Home instead of generic icon-and-chevron
+  cards. With a mouse, tiles lift slightly, strengthen their edge and cast a
+  soft shadow in their own colour; settings rows answer more quietly. With
+  reduced motion nothing moves, and touch never shows hover.
 
 ## Public pages open in the app
 
@@ -92,7 +98,8 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
   visitors.
 - When the service is unreachable the map shows no offline notice.
 - Signed-in, creator and institution screens were checked through the automated
-  test suites, not through a screenshot review.
+  test suites and, for the destination tiles and settings, through fixture
+  screenshots (`docs/evidence/product-v5-tile-system`), not on production data.
 
 ## Verification and deployment
 
