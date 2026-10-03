@@ -38,50 +38,48 @@ unrecognized ID is still passed to the existing entity screen/provider, whose
 normal missing-entity state owns the result; the parser does not fabricate
 content.
 
-## Ownership and live association probe
+## Ownership and association source
 
-The checked-in app-domain transport is `web/` in this repository. The reusable
-web artifact workflow builds Flutter into `build/web` and includes hidden
-files, so the repository-owned association path is
-`web/.well-known/assetlinks.json`. The production workflow deploys the complete
-immutable `build/web` artifact from protected `master`; it has no single-file
-association deployment path. No file is authored or deployed because the
-production certificate set is not fully proven and the safe deployment path
-would promote the full web artifact.
+The checked-in app-domain transport is `web/` in this repository. Flutter
+copies hidden files into `build/web`, so the repository-owned association path
+is `web/.well-known/assetlinks.json` (package `com.art.kubus`, relation
+`delegate_permission/common.handle_all_urls`). The production workflow deploys
+the complete immutable `build/web` artifact from protected `master`; there is no
+single-file association deployment path, and the atomic release script keeps any
+host-owned `.well-known` content while the artifact's own files are retained.
 
-Direct HTTPS probe of
-`https://app.kubus.site/.well-known/assetlinks.json` on 2026-09-25 returned:
+`web/.well-known/assetlinks.json` is guarded by
+`test/android_assetlinks_test.dart` (shape, package, fingerprint format, the
+Android application id) and by the Apache routing contract
+(`scripts/qa/web_routing_contract.mjs`), which requires the path to be a real
+static file served as `application/json` with no redirect, never the app shell
+or the 404 document.
 
-- HTTP `404 Not Found`
-- `Content-Type: text/html`
-- no redirect / no `Location` header
-- `Cache-Control: private`
-- LiteSpeed origin response
-
-The live host therefore does not currently publish a usable Digital Asset
-Links statement. No production file was changed. The current app source
-contains no `.well-known/assetlinks.json` file.
+Before this change `https://app.kubus.site/.well-known/assetlinks.json` returned
+`404 Not Found` as `text/html` (re-probed 2026-10-03). The file only becomes live
+when the web artifact containing it is deployed.
 
 ## Package and signing evidence
 
 The Android Gradle configuration declares namespace and application ID
 `com.art.kubus`, target SDK 36, and `MainActivity` is exported with
 `launchMode="singleTop"`. The protected `android-release` workflow signs its
-GitHub release APK and AAB artifacts. The public GitHub release APK
-`v0.7.4` (source `4bd9387b4b16daeb641d36f0a1dd32848a78fda3`) was downloaded,
-verified with Android `apksigner`, and its published SHA-256 checksum matched.
-Its APK signer certificate SHA-256 is
-`426842ad10cbaf2f45315bea6936253ec32d42b44d25f6935a1d2b9ce3b1c8a3`.
-This proves the direct GitHub APK release signer only.
+GitHub release APK and AAB artifacts. The public GitHub release APK `v0.7.4`
+(source `4bd9387b4b16daeb641d36f0a1dd32848a78fda3`) was downloaded and verified
+with Android `apksigner verify --print-certs` (re-verified 2026-10-03). Its
+signer certificate SHA-256 is
+`426842ad10cbaf2f45315bea6936253ec32d42b44d25f6935a1d2b9ce3b1c8a3`
+(`CN=art.kubus Alpha Release`). The 0.8.0 APK is produced by the same protected
+workflow and key, so this fingerprint is asserted in `assetlinks.json`. The final
+0.8.0 release candidate must be re-verified against it before deployment.
 
-**Google Play App Signing: UNVERIFIED.** The repository workflow does not
-establish whether the AAB was uploaded to a Play track or whether Play re-signs
-installed APKs. No Play Console evidence is available, so the direct-release
-fingerprint is not asserted as the complete production certificate set and is
-not copied into `assetlinks.json`. Human action required: Google Play Console
-→ Setup / App integrity → App signing → App signing key certificate → SHA-256
-certificate fingerprint (wording can vary). No private signing material was
-read or emitted.
+**Google Play App Signing: UNVERIFIED, not asserted.** The repository workflow
+does not establish whether the AAB is uploaded to a Play track or whether Play
+re-signs installed APKs. If Play uses a separate app-signing certificate, its
+SHA-256 must be added to `sha256_cert_fingerprints` as an additional entry
+(Play Console, Setup, App integrity, App signing key certificate). Until then
+verified App Links are guaranteed for the direct GitHub APK only. No private
+signing material was read or emitted.
 
 ## Native navigation boundary
 
@@ -97,8 +95,9 @@ is introduced.
 For artwork, profile, event, exhibition, post, collection, and map records, the
 existing `app_links` initial-link/runtime-link integration and existing entity
 navigation remain authoritative. This branch adds no parallel router and does
-not change the map implementation. Cold, warm, foreground, Android Back-stack,
-and OS domain-verification behavior are not verified in this run.
+not replace the map implementation: a map target feeds the existing
+`MapDeepLinkProvider` and `MapTargetCoordinator`, so there is one selection
+owner and one camera owner.
 
 ## Local Android verification
 
@@ -141,17 +140,58 @@ Playwright browser accepted a keyboard shortcut but reported no change in
 `innerWidth`, device-pixel ratio, or `visualViewport.scale`. The separate narrow
 CSS viewport simulation is not counted as browser zoom.
 
+## Lifecycle verification (API 34 emulator, 2026-10-03)
+
+Run on the `kubus_test_api34` emulator (Android 14, host GPU) with a release
+build of this branch signed with the local debug key, domain approval forced
+with `pm set-app-links --package com.art.kubus 2 app.kubus.site`. Links were
+launched with `am start -W -a android.intent.action.VIEW -c
+android.intent.category.BROWSABLE -d <https url>` (no explicit package, so the
+OS resolver chose the app) and the visible screen was read from the
+accessibility tree. Entities are real production records.
+
+| Scenario | Result |
+| --- | --- |
+| Cold: stopped app, `/en/artworks/<id>` | Exact artwork, no onboarding, one task |
+| Cold: `/en/profiles/<id>` | Exact profile |
+| Warm: Home pressed, `/en/artworks/<other id>` | `LaunchState: HOT`, exact new artwork |
+| Warm: Home pressed, `/sl/zbirke/<id>` | Exact collection, Slovenian UI |
+| Foreground: `/sl/umetnine/<id>` while an entity is open | Intent delivered to the running top instance; exact new artwork |
+| Repeated: same URL twice | Consumed once; same screen, no extra task or activity |
+| Sequential different URLs (three artworks) | Each exact entity; one task throughout |
+| Back from a link-opened entity | Returns to the discovery shell; further Back shows the exit hint; no onboarding, duplicate shell or loop |
+| Event, exhibition, post (EN and SL) | Route to the matching screen (no public event or exhibition records exist in production, so the screens show their unknown or unavailable states) |
+| `/en/map/<markerId>` cold, alternating two markers ×5 | The requested marker is selected each time |
+
+Resolver check, `pm query-activities` against the HTTPS URL, returns no match
+for `/`, `/api/...`, `/assets/...`, `/reset-password`, `/verify-email`, `/en/`
+and `/en/settings`: the app does not claim the site root, assets, internal
+endpoints or auth callbacks.
+
+Defect found and fixed by this run. A cold map link starts at a world-scale
+viewport that does not contain its target. `resolveBestMarkerCandidate` treats
+the exact marker id as a hint and falls back to the lowest-id loaded marker, so
+the coordinator selected an unrelated marker ("Stations of the Cross…", the
+lowest id in view) and never fetched the requested one. This reproduced on the
+merged Wave 5B build with the pre-existing `/m/<id>` link, so it was not caused
+by the new prefixes. `MapTargetCoordinator` now requires the exact marker when
+the intent carries no artwork or subject relation; two regression tests fail
+without the change.
+
 ## Completion level and remaining verification
 
-- Below Level A: manifest/parser/test code is present, but functional lifecycle
-  launch could not be tested because the environment blocked `adb shell am start`.
-- Direct GitHub APK signer is proven; Play App Signing certificate remains
-  unknown. No production `assetlinks.json` source was authored.
-- No live App Links verification or deployment; the endpoint still returns 404.
-- Cold/warm/foreground intent launches, Back-stack, and native launch captures
-  remain unverified because the activity launch command was blocked.
-- Genuine 200% browser zoom remains HUMAN VERIFICATION REQUIRED; CSS viewport
-  simulation is not counted.
+- Level reached: emulator lifecycle (cold, warm, foreground, repeated,
+  sequential, Back) verified with launched intents on API 34. This is
+  **emulator evidence, not a physical-device claim**.
+- A resolver match is not a verified App Link. `pm get-app-links` reports
+  `approved` only because approval was forced for this debug-signed install.
+  OS-level verification against the live host requires the deployed
+  `assetlinks.json` and the release-signed APK; that final check belongs to the
+  release candidate.
+- The direct-release signer is proven and asserted; the Google Play App Signing
+  certificate is unknown and may need an additional fingerprint entry.
+- On a cold map link the Android camera stays at the world-scale view while the
+  correct marker is selected. This is recorded for the release-hardening pass.
 - No iOS Universal Links implementation.
 - No index, canonical, artwork/marker ownership, database, or public-page
   changes.
