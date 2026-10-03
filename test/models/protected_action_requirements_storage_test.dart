@@ -55,13 +55,51 @@ void main() {
       }
     });
 
-    test('unknown values never widen a scope', () {
-      expect(ProtectedActionRequirements.fromStorage(null), isNull);
-      expect(ProtectedActionRequirements.fromStorage(''), isNull);
-      expect(ProtectedActionRequirements.fromStorage('admin'), isNull);
-      expect(ProtectedActionRequirements.fromStorage('account+admin'), isNull);
+    test('the stored form is a comma list that starts with account', () {
+      final merged = ProtectedActionRequirements.merge(
+        ProtectedActionRequirements.creator,
+        ProtectedActionRequirements.wallet,
+      );
+      expect(merged.storageValue, 'account,profile,role,wallet');
       expect(
-          ProtectedActionRequirements.fromStorage('profile+wallet+'), isNull);
+        const ProtectedActionRequirements(
+          requiresProfile: true,
+          requiresWallet: true,
+        ).storageValue,
+        'account,profile,wallet',
+      );
+    });
+
+    test('unknown or malformed values never widen a scope', () {
+      for (final bad in <String?>[
+        null,
+        '',
+        'admin',
+        'account,admin',
+        'account,profile,',
+        'account,wallet,wallet',
+        'profile,wallet',
+        'account',
+        'wallet,account',
+        'account+profile+wallet',
+      ]) {
+        expect(
+          ProtectedActionRequirements.fromStorage(bad),
+          isNull,
+          reason: bad ?? 'null',
+        );
+      }
+    });
+
+    test('a scope without an account is never restored as something else', () {
+      const noAccount = ProtectedActionRequirements(
+        requiresAccount: false,
+        requiresWallet: true,
+      );
+      final restored = ProtectedActionRequirements.fromStorage(
+        noAccount.storageValue,
+      );
+      expect(restored?.requiresAccount ?? true, isTrue);
     });
   });
 }
