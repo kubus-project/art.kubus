@@ -108,6 +108,58 @@ class _Harness {
 }
 
 void main() {
+  test(
+      'an exact marker target that is not loaded is fetched, never replaced by '
+      'an unrelated loaded marker', () async {
+    final target = _marker(
+      id: 'zz-target',
+      position: const LatLng(45.8050, 15.9267),
+    );
+    final harness = _Harness(markerById: target);
+    // Lower id than the target: the resolver's deterministic fallback would
+    // pick it, which is how a cold /map/<id> link selected the wrong marker.
+    harness.markers.add(
+      _marker(id: '00-unrelated', position: const LatLng(48.5, 15.7)),
+    );
+    harness.coordinator
+      ..setMapControllerReady(true)
+      ..setStyleReady(true);
+
+    final future = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'zz-target'),
+    );
+    await harness.settle();
+
+    expect(
+        harness.events,
+        containsAllInOrder(<String>[
+          'fetch-marker:zz-target',
+          'merge',
+          'pin:zz-target',
+          'move',
+          'select:zz-target',
+        ]));
+    expect(harness.events, isNot(contains('select:00-unrelated')));
+    expect(harness.movedPosition, const LatLng(45.8050, 15.9267));
+    harness.coordinator.acknowledgeOverlay('zz-target');
+    expect(await future, MapTargetResult.overlayOpened);
+  });
+
+  test('an unknown exact marker with no position reports not found', () async {
+    final harness = _Harness();
+    harness.markers.add(_marker(id: '00-unrelated'));
+    harness.coordinator
+      ..setMapControllerReady(true)
+      ..setStyleReady(true);
+
+    final result = await harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'missing'),
+    );
+
+    expect(result, MapTargetResult.notFound);
+    expect(harness.events, isNot(contains('select:00-unrelated')));
+  });
+
   test('waits for map and style, then completes only after overlay ack',
       () async {
     final marker = _marker(id: 'm1', artworkId: 'a1');
