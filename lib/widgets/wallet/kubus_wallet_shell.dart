@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../common/kubus_action_tile.dart';
 import '../common/kubus_atmosphere.dart';
-import '../inline_loading.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -186,7 +186,12 @@ class KubusWalletSectionCard extends StatelessWidget {
     this.borderRadius,
     this.accent,
     this.glyph,
+    this.framed = true,
   });
+
+  /// A section that holds destination tiles is a heading over them, not a
+  /// card around them (tiles are cards already): pass `false` for no surface.
+  final bool framed;
 
   /// Turns the section into an asset hero ([KubusAtmosphere]) in this
   /// colour. Only the balance section uses it; other sections stay flat.
@@ -218,6 +223,12 @@ class KubusWalletSectionCard extends StatelessWidget {
         child,
       ],
     );
+    if (!framed) {
+      return Padding(
+        padding: margin ?? EdgeInsets.zero,
+        child: content,
+      );
+    }
     if (accent != null) {
       return Padding(
         padding: margin ?? EdgeInsets.zero,
@@ -364,13 +375,8 @@ class KubusWalletMetaPill extends StatelessWidget {
   }
 }
 
-/// Visual density for shared wallet components.
-///
-/// - [compact] is tuned for desktop grids and sidebars: smaller icon, tighter
-///   spacing, clamped text so cards stay ~88-104 tall and visually stable.
-/// - [regular] is the default touch-friendly treatment used on mobile.
-enum KubusWalletDensity { compact, regular }
-
+/// A wallet action (send, receive, swap, secure…): a destination, so it is
+/// the dense [KubusActionTile] in the action's own colour.
 class KubusWalletActionCard extends StatelessWidget {
   const KubusWalletActionCard({
     super.key,
@@ -383,14 +389,12 @@ class KubusWalletActionCard extends StatelessWidget {
     this.loading = false,
     this.disabledReason,
     this.minHeight = KubusSizes.walletActionCardMinHeight,
-    this.density = KubusWalletDensity.regular,
   });
 
   factory KubusWalletActionCard.fromConfig({
     Key? key,
     required WalletActionConfig config,
     double minHeight = KubusSizes.walletActionCardMinHeight,
-    KubusWalletDensity density = KubusWalletDensity.regular,
   }) {
     return KubusWalletActionCard(
       key: key,
@@ -403,7 +407,6 @@ class KubusWalletActionCard extends StatelessWidget {
       loading: config.loading,
       disabledReason: config.disabledReason,
       minHeight: minHeight,
-      density: density,
     );
   }
 
@@ -416,86 +419,22 @@ class KubusWalletActionCard extends StatelessWidget {
   final bool loading;
   final String? disabledReason;
   final double minHeight;
-  final KubusWalletDensity density;
 
   @override
   Widget build(BuildContext context) {
-    final roles = KubusColorRoles.of(context);
-    final isCompact = density == KubusWalletDensity.compact;
-    final foreground = enabled ? roles.foreground : roles.foregroundSubtle;
-    final interactive = enabled && !loading;
-
-    // PRODUCT v5: flat action card. Neutral icon, surface fill, hairline
-    // rule; [color] is no longer painted as a gradient or a tinted icon
-    // tile. Disabled cards explain why in the subtitle.
-    return Semantics(
-      button: true,
-      enabled: interactive,
-      child: Material(
-        color: roles.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.surface),
-          side: BorderSide(color: roles.rule),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: interactive ? onTap : null,
-          focusColor: roles.focus.withValues(alpha: 0.12),
-          child: Container(
-            // Cards in one rail share [minHeight] so they align on both
-            // edges regardless of subtitle length.
-            constraints: BoxConstraints(minHeight: minHeight),
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: loading
-                      ? const InlineLoading(
-                          expand: true,
-                          shape: BoxShape.circle,
-                          tileSize: 3,
-                        )
-                      : ExcludeSemantics(
-                          child: Icon(icon, color: foreground, size: 22),
-                        ),
-                ),
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.detailCardTitle.copyWith(
-                          color: foreground,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Text(
-                        !enabled && (disabledReason ?? '').trim().isNotEmpty
-                            ? disabledReason!.trim()
-                            : subtitle,
-                        maxLines: isCompact ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: roles.foregroundMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    // A wallet action is a destination: the shared dense tile in the
+    // action's own colour. Disabled cards explain why in the subtitle.
+    final reason = (disabledReason ?? '').trim();
+    return KubusActionTile(
+      title: title,
+      subtitle: !enabled && reason.isNotEmpty ? reason : subtitle,
+      icon: icon,
+      accent: color,
+      onTap: onTap,
+      enabled: enabled,
+      loading: loading,
+      layout: KubusActionTileLayout.compact,
+      minHeight: minHeight,
     );
   }
 }

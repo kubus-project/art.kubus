@@ -29,6 +29,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_action_tile.dart';
+import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
@@ -2097,39 +2098,37 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ),
           )
         else
-          DesktopCard(
-            padding: const EdgeInsets.all(DetailSpacing.lg),
-            child: Column(
-              children: [
-                _buildPlatformStatRow(
-                  l10n.desktopHomePlatformStatsTotalArtworks,
-                  totalArtworks.toString(),
-                  Icons.view_in_ar,
-                  AppColorUtils.tealAccent,
-                ),
-                const Divider(height: DetailSpacing.xl),
-                _buildPlatformStatRow(
-                  l10n.desktopHomePlatformStatsArEnabled,
-                  arEnabled.toString(),
-                  Icons.visibility,
-                  AppColorUtils.purpleAccent,
-                ),
-                const Divider(height: DetailSpacing.xl),
-                _buildPlatformStatRow(
-                  l10n.desktopHomePlatformStatsCommunityPosts,
-                  posts.toString(),
-                  Icons.forum,
-                  AppColorUtils.coralAccent,
-                ),
-                const Divider(height: DetailSpacing.xl),
-                _buildPlatformStatRow(
-                  l10n.desktopHomePlatformStatsActiveGroups,
-                  groups.toString(),
-                  Icons.groups,
-                  themeProvider.accentColor,
-                ),
-              ],
-            ),
+          // Metrics, not a card of rows: each figure is its own stat tile.
+          Column(
+            children: [
+              _buildPlatformStatRow(
+                l10n.desktopHomePlatformStatsTotalArtworks,
+                totalArtworks.toString(),
+                Icons.view_in_ar,
+                AppColorUtils.tealAccent,
+              ),
+              const SizedBox(height: DetailSpacing.sm),
+              _buildPlatformStatRow(
+                l10n.desktopHomePlatformStatsArEnabled,
+                arEnabled.toString(),
+                Icons.visibility,
+                AppColorUtils.purpleAccent,
+              ),
+              const SizedBox(height: DetailSpacing.sm),
+              _buildPlatformStatRow(
+                l10n.desktopHomePlatformStatsCommunityPosts,
+                posts.toString(),
+                Icons.forum,
+                AppColorUtils.coralAccent,
+              ),
+              const SizedBox(height: DetailSpacing.sm),
+              _buildPlatformStatRow(
+                l10n.desktopHomePlatformStatsActiveGroups,
+                groups.toString(),
+                Icons.groups,
+                themeProvider.accentColor,
+              ),
+            ],
           ),
       ],
     );
@@ -2137,36 +2136,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildPlatformStatRow(
       String label, String value, IconData icon, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(DetailRadius.sm),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: DetailSpacing.md),
-        Expanded(
-          child: Text(
-            label,
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: KubusTextStyles.actionTileTitle.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: color,
     );
   }
 

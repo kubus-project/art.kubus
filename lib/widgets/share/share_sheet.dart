@@ -2,8 +2,10 @@ import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
 
+import '../common/kubus_action_tile.dart';
 import '../common/kubus_glass_icon_button.dart';
 import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
@@ -23,6 +25,7 @@ class ShareSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
+    // Each way to share is a destination: the dense tile, no icon box.
     Widget tile({
       required IconData icon,
       required String title,
@@ -35,36 +38,12 @@ class ShareSheet extends StatelessWidget {
           KubusSpacing.md,
           KubusSpacing.sm,
         ),
-        child: LiquidGlassCard(
+        child: KubusActionTile(
+          title: title,
+          icon: icon,
+          accent: KubusColorRoles.of(context).active,
+          layout: KubusActionTileLayout.compact,
           onTap: () => onActionSelected(action),
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md,
-            vertical: KubusSpacing.sm,
-          ),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          child: Row(
-            children: [
-              Container(
-                width: KubusHeaderMetrics.actionHitArea,
-                height: KubusHeaderMetrics.actionHitArea,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Icon(icon, color: scheme.primary),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Text(
-                  title,
-                  style: KubusTextStyles.navLabel.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }

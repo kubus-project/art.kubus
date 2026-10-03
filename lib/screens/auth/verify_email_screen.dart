@@ -8,7 +8,7 @@ import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/gradient_icon_card.dart';
+import '../../widgets/common/kubus_context_icon.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/kubus_snackbar.dart';
@@ -307,15 +307,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           l10n.authVerifyEmailHighlightSpam,
           l10n.authVerifyEmailHighlightSecure,
         ],
-        icon: GradientIconCard(
-          start: scheme.primary,
-          end: roles.positiveAction,
-          icon: Icons.mark_email_read_outlined,
-          iconSize: 52,
-          width: 100,
-          height: 100,
-          radius: 20,
-        ),
+        icon: KubusContextIcon(
+            icon: Icons.mark_email_read_outlined,
+            accent: KubusColorRoles.of(context).active,
+            size: KubusContextIconSize.hero),
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -392,15 +387,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (!compact) ...[
-                                    GradientIconCard(
-                                      start: scheme.primary,
-                                      end: roles.positiveAction,
-                                      icon: Icons.mark_email_read_outlined,
-                                      iconSize: 52,
-                                      width: 100,
-                                      height: 100,
-                                      radius: 20,
-                                    ),
+                                    KubusContextIcon(
+                                        icon: Icons.mark_email_read_outlined,
+                                        accent:
+                                            KubusColorRoles.of(context).active,
+                                        size: KubusContextIconSize.hero),
                                     const SizedBox(height: 12),
                                   ],
                                   Text(

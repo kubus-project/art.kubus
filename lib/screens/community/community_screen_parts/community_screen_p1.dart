@@ -1120,12 +1120,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
   Widget _buildSeason0Banner() {
     final l10n = AppLocalizations.of(context)!;
-    final accent = context.watch<ThemeProvider>().accentColor;
     return CommunitySeason0Banner(
       title: l10n.season0BannerTitle,
       subtitle: l10n.season0BannerTap,
-      accentColor: accent,
-      variant: CommunitySeason0BannerVariant.mobile,
       onTap: () {
         Navigator.push(
           context,

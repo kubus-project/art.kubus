@@ -1,3 +1,4 @@
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -38,7 +39,7 @@ import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
-import 'package:art_kubus/widgets/gradient_icon_card.dart';
+import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
@@ -4207,15 +4208,10 @@ class _WelcomeHeroColumn extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GradientIconCard(
-          start: start,
-          end: end,
-          icon: Icons.explore_outlined,
-          iconSize: 42,
-          width: 88,
-          height: 88,
-          radius: 24,
-        ),
+        KubusContextIcon(
+            icon: Icons.explore_outlined,
+            accent: KubusColorRoles.of(context).active,
+            size: KubusContextIconSize.hero),
         const SizedBox(height: KubusSpacing.xl),
         Text(
           title,

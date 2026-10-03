@@ -1,6 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/wallet/wallet_option_tile.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
@@ -164,94 +165,12 @@ class _WalletEntryOptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => Navigator.of(context).pop(option),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: 0.22),
-            ),
-          ),
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  option.icon,
-                  color: scheme.primary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            option.label(l10n),
-                            style: KubusTextStyles.sectionTitle.copyWith(
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (option.isAdvanced)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.sm,
-                              vertical: KubusSpacing.xs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.secondary.withValues(alpha: 0.14),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.xl),
-                            ),
-                            child: Text(
-                              l10n.connectWalletAdvancedBadge,
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: scheme.secondary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      option.description(l10n),
-                      style: KubusTextStyles.sectionSubtitle.copyWith(
-                        fontSize: KubusChromeMetrics.navMetaLabel + 1,
-                        height: 1.35,
-                        color: scheme.onSurface.withValues(alpha: 0.68),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: scheme.onSurface.withValues(alpha: 0.5),
-                size: 16,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return WalletOptionTile(
+      title: option.label(l10n),
+      description: option.description(l10n),
+      icon: option.icon,
+      isAdvanced: option.isAdvanced,
+      onTap: () => Navigator.of(context).pop(option),
     );
   }
 }

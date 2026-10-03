@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_action_tile.dart';
 
 class SharedSettingsRowTile extends StatelessWidget {
   final String title;
@@ -32,6 +33,10 @@ class SharedSettingsRowTile extends StatelessWidget {
   final int subtitleMaxLines;
   final bool useCardShadow;
   final Color? chevronColor;
+
+  /// `false` drops the leading icon (and its gap): a control row that sits
+  /// beside destination tiles aligns its text with theirs.
+  final bool showLeadingIcon;
 
   const SharedSettingsRowTile({
     super.key,
@@ -66,6 +71,7 @@ class SharedSettingsRowTile extends StatelessWidget {
     this.subtitleMaxLines = 2,
     this.useCardShadow = false,
     this.chevronColor,
+    this.showLeadingIcon = true,
   });
 
   @override
@@ -126,26 +132,28 @@ class SharedSettingsRowTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: leadingBoxSize,
-                height: leadingBoxSize,
-                decoration: BoxDecoration(
-                  color: resolvedLeadingBg,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: resolvedLeadingBorder == null
-                      ? null
-                      : Border.all(
-                          color: resolvedLeadingBorder,
-                          width: leadingBorderWidth,
-                        ),
+              if (showLeadingIcon) ...[
+                Container(
+                  width: leadingBoxSize,
+                  height: leadingBoxSize,
+                  decoration: BoxDecoration(
+                    color: resolvedLeadingBg,
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: resolvedLeadingBorder == null
+                        ? null
+                        : Border.all(
+                            color: resolvedLeadingBorder,
+                            width: leadingBorderWidth,
+                          ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: leadingIconSize,
+                    color: resolvedLeadingIconColor,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: leadingIconSize,
-                  color: resolvedLeadingIconColor,
-                ),
-              ),
-              SizedBox(width: horizontalGap),
+                SizedBox(width: horizontalGap),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,6 +192,55 @@ class SharedSettingsRowTile extends StatelessWidget {
     );
 
     return content;
+  }
+}
+
+/// A settings row that goes somewhere or does something (a dialog, a screen, a
+/// destructive action): the dense PRODUCT v5 destination tile.
+///
+/// Settings is a utility surface, so the destination carries the structural
+/// family colour ([KubusColorRoles.active]) rather than a contextual one, and
+/// a destructive action carries [KubusColorRoles.destructive]. A [status]
+/// (verification, connection) may sit before the arrow. Switches, dropdowns
+/// and read-only facts are not destinations: use [SharedSettingsToggleRow] or
+/// [SharedSettingsRowTile] for those.
+class SharedSettingsDestinationTile extends StatelessWidget {
+  const SharedSettingsDestinationTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    this.isDestructive = false,
+    this.status,
+    this.bottomGap = KubusSpacing.sm,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  final Widget? status;
+
+  /// Space below the tile, so consecutive destinations keep one rhythm.
+  final double bottomGap;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomGap),
+      child: KubusActionTile(
+        title: title,
+        subtitle: subtitle.isEmpty ? null : subtitle,
+        icon: icon,
+        accent: isDestructive ? roles.destructive : roles.active,
+        status: status,
+        onTap: onTap,
+        layout: KubusActionTileLayout.compact,
+      ),
+    );
   }
 }
 
