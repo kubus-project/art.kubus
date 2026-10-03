@@ -213,7 +213,11 @@ class MediaUrlResolver {
     if (pathStart == -1) return url;
     final parts = withoutQuery.substring(pathStart).split('/');
     // Expected: ['', 'wikipedia', '<project>', '<h1>', '<h2>', '<File.ext>'].
-    // Thumb URLs have more segments and are left untouched.
+    // Thumb URLs have more segments: they are left untouched unless the caller
+    // asked for a specific width (see [_rebucketWikimediaThumb]).
+    if (parts.length == 8 && maxWidth != null) {
+      return _rebucketWikimediaThumb(withoutQuery, pathStart, parts, maxWidth);
+    }
     if (parts.length != 6) return url;
 
     final fileName = parts.last;
@@ -231,6 +235,36 @@ class MediaUrlResolver {
         '/$fileName/${width}px-$fileName';
     // Cache-buster queries are dropped; thumbs are immutable per name+width.
     return '${withoutQuery.substring(0, pathStart)}$thumbPath';
+  }
+
+  /// Snaps an existing Wikimedia thumbnail URL
+  /// (`.../thumb/a/ab/File.jpg/960px-File.jpg`) down to the bucket for
+  /// [maxWidth].
+  ///
+  /// Records often store a thumb URL that is far larger than the surface that
+  /// shows it (a map marker face is ~44 logical px). A thumb is only ever
+  /// replaced by a *smaller* one; a URL that is not a plain `NNNpx-` thumb, or
+  /// is already small enough, is returned as it was given.
+  static String _rebucketWikimediaThumb(
+    String withoutQuery,
+    int pathStart,
+    List<String> parts,
+    int maxWidth,
+  ) {
+    // ['', 'wikipedia', project, 'thumb', h1, h2, File, 'NNNpx-File'].
+    if (parts[3] != 'thumb') return withoutQuery;
+    final thumbName = parts.last;
+    final match = RegExp(r'^(\d+)px-(.+)$').firstMatch(thumbName);
+    if (match == null) return withoutQuery;
+    final currentWidth = int.parse(match.group(1)!);
+    final width = _wikimediaThumbWidthBuckets.firstWhere(
+      (bucket) => bucket >= maxWidth,
+      orElse: () => _wikimediaThumbWidthBuckets.last,
+    );
+    if (width >= currentWidth) return withoutQuery;
+    final rebuilt = <String>[...parts]..[parts.length - 1] =
+        '${width}px-${match.group(2)}';
+    return '${withoutQuery.substring(0, pathStart)}${rebuilt.join('/')}';
   }
 
   static bool _looksLikeImageUrl(String url) {

@@ -291,6 +291,7 @@ class KubusMapController {
   );
 
   bool _programmaticCameraMove = false;
+  bool _hasCameraFrame = false;
   bool _cameraIsMoving = false;
 
   static const Duration _hoverUpdateThrottle = Duration(milliseconds: 16);
@@ -369,6 +370,10 @@ class KubusMapController {
   KubusMapCameraState get camera => _camera;
   bool get autoFollow => _autoFollow;
   bool get cameraIsMoving => _cameraIsMoving;
+
+  /// Whether at least one real camera frame has been received. Until then
+  /// [camera] is only the constructor default, not where the map is.
+  bool get hasCameraFrame => _hasCameraFrame;
 
   bool get styleInitialized => _styleInitialized;
   bool get styleInitializationInProgress => _styleInitializationInProgress;
@@ -864,6 +869,7 @@ class KubusMapController {
   void handleCameraMove(ml.CameraPosition position) {
     if (_mapController == null) return;
     _cameraIsMoving = true;
+    _hasCameraFrame = true;
 
     final bool hasGesture = !_programmaticCameraMove;
     if (hasGesture && _autoFollow) {

@@ -98,6 +98,7 @@ import '../features/map/controller/kubus_map_marker_creation_coordinator.dart';
 import '../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
+import '../features/map/session/kubus_map_session_memory.dart';
 import '../features/map/shared/map_marker_lod.dart';
 import '../features/map/shared/map_marker_regroup_gate.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
@@ -527,6 +528,8 @@ class _MapScreenState extends State<MapScreen>
   GeoBounds? _loadedViewportBounds;
   int? _loadedViewportZoomBucket;
   bool _initialLocaleViewportApplied = false;
+  KubusMapSessionMemory? _sessionMemory;
+  ArtMarker? _pendingRestoreMarker;
   bool _initialLocaleResolved = false;
   LatLng? _pendingTargetMarkerLoad;
   Completer<void>? _pendingTargetMarkerLoadCompleter;
@@ -706,6 +709,7 @@ class _MapScreenState extends State<MapScreen>
       },
       onSelectionChanged: (state) {
         if (!mounted) return;
+        _sessionMemory?.rememberSelection(state.selectedMarker);
 
         // Marker taps must not interrupt the isolated create-marker context.
         // Keep the MapLibre/controller selection in sync with the coordinator's
@@ -1021,6 +1025,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMapSearchControllerChanged() {
     if (!mounted) return;
+    _sessionMemory?.rememberQuery(_mapSearchController.state.query);
     final searchState = _mapSearchController.state;
     final trimmedQuery = searchState.query.trim();
     final searchVisible = searchState.isOverlayVisible &&
@@ -1283,6 +1288,54 @@ class _MapScreenState extends State<MapScreen>
         MapInitialViewport.forLocale(Localizations.localeOf(context));
     _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
     _lastZoom = widget.initialZoom ?? viewport.initialZoom;
+
+    // A layout swap (rotation, resized window) recreates this screen. Open
+    // where the previous map was instead of at the locale opening, unless this
+    // entry carries an explicit target.
+    final memory = Provider.of<KubusMapSessionMemory?>(context, listen: false);
+    _sessionMemory = memory;
+    final saved = memory?.camera;
+    if (saved != null &&
+        widget.initialCenter == null &&
+        widget.initialZoom == null &&
+        !_hasInitialDirectTarget &&
+        widget.walkingNavigationIntent == null) {
+      _cameraCenter = saved.center;
+      _lastZoom = saved.zoom;
+      _initialLocaleViewportApplied = true;
+      _filterState = memory!.filters;
+      _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+      _pendingRestoreMarker = memory.selectedMarker;
+      final query = memory.query;
+      if (query.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _mapSearchController.commitSelection(query);
+        });
+      }
+    }
+  }
+
+  /// Restores the marker that was selected before a layout swap, once the
+  /// style is ready and markers have loaded. It goes through the screen's own
+  /// marker-tap path, so there is still exactly one selection owner.
+  void _restorePendingSelection() {
+    final marker = _pendingRestoreMarker;
+    if (marker == null || !_styleInitialized || !mounted) return;
+    _pendingRestoreMarker = null;
+    ArtMarker? loaded;
+    for (final candidate in _artMarkers) {
+      if (candidate.id == marker.id) {
+        loaded = candidate;
+        break;
+      }
+    }
+    if (loaded == null) {
+      loaded = marker;
+      setState(
+          () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker));
+      _applyVisibleMarkers();
+    }
+    _handleMarkerTap(loaded);
   }
 
   void _syncRootTutorialBinding() {
@@ -1890,6 +1943,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleFilterStateChanged(KubusMapFilterState next) {
+    _sessionMemory?.rememberFilters(next);
     final previous = _filterState;
     final requiresDataReload = previous.scope != next.scope ||
         (next.scope == KubusMapScope.nearMe &&
@@ -2555,6 +2609,7 @@ class _MapScreenState extends State<MapScreen>
         _applyVisibleMarkers();
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
+      _restorePendingSelection();
 
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
@@ -4280,6 +4335,22 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted || _mapController == null) return;
     final wasProgrammatic = _kubusMapController.programmaticCameraMove;
     if (wasProgrammatic) _mapEngagement.resetBaseline();
+    // The move handler throttles `_lastZoom`, so the final frame of a fast move
+    // (or a jump) can be skipped. Marker artwork depends on the zoom the camera
+    // actually settled at, so take it from the controller, which tracks every
+    // frame, before anything below decides what to draw.
+    final settled = _kubusMapController.camera.zoom;
+    if (_kubusMapController.hasCameraFrame &&
+        settled.isFinite &&
+        (settled - _lastZoom).abs() > 0.001) {
+      _lastZoom = settled;
+    }
+    if (_kubusMapController.hasCameraFrame) {
+      _sessionMemory?.rememberCamera(
+        _kubusMapController.camera.center,
+        _kubusMapController.camera.zoom,
+      );
+    }
     _kubusMapController.handleCameraIdle(fromProgrammaticMove: wasProgrammatic);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;
 
@@ -5110,9 +5181,11 @@ class _MapScreenState extends State<MapScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // What is narrowing the map, with a clear for each. Hidden while the
-          // filter panel is open: the panel already shows and resets the same
-          // state, so the strip would only repeat it.
-          if (activeSurface != MapContextSurface.filters)
+          // filter panel is open (it already shows and resets the same state)
+          // and while a marker card is open (the card is anchored over this
+          // area and would cover the chips).
+          if (activeSurface != MapContextSurface.filters &&
+              activeSurface != MapContextSurface.markerPreview)
             KubusMapConstraintStripBinding(
               searchController: _mapSearchController,
               filters: _filterState,

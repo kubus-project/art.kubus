@@ -282,7 +282,7 @@ async function selectionState(page, id) {
 }
 
 async function tapAt(page, point, viewport) {
-  if (viewport.width <= 480) await page.touchscreen.tap(point.x, point.y);
+  if (viewport.touch) await page.touchscreen.tap(point.x, point.y);
   else await page.mouse.click(point.x, point.y);
 }
 
@@ -416,6 +416,20 @@ async function coverTraffic(page) {
       requests: entries.length,
       transferBytes: entries.reduce((sum, e) => sum + (e.transferSize || 0), 0),
       decodedBytes: entries.reduce((sum, e) => sum + (e.decodedBodySize || 0), 0),
+      // Wikimedia thumbs carry their width in the URL, so the map's covers
+      // (requested at 160 logical px) can be told apart from other surfaces.
+      byWidth: entries.reduce((acc, e) => {
+        const m = e.name.match(/\/(\d+)px-/);
+        const key = m ? `${m[1]}px` : 'other';
+        acc[key] = acc[key] || { requests: 0, kb: 0 };
+        acc[key].requests += 1;
+        acc[key].kb += Math.round((e.decodedBodySize || 0) / 1024);
+        return acc;
+      }, {}),
+      sample: entries
+        .map((e) => ({ url: e.name.slice(0, 110), kb: Math.round((e.decodedBodySize || 0) / 1024) }))
+        .sort((a, b) => b.kb - a.kb)
+        .slice(0, 8),
     };
   });
 }
@@ -528,6 +542,8 @@ async function sourceIconMix(page) {
 }
 
 async function scenario(browserName, viewport, scheme, report) {
+  // Only Chromium can emulate a touch device; Firefox phone widths use the mouse.
+  viewport = { ...viewport, touch: browserName === 'chromium' && viewport.width <= 480 };
   const browserType = browserName === 'firefox' ? firefox : chromium;
   const browser = await browserType.launch({
     headless: true,
@@ -540,11 +556,11 @@ async function scenario(browserName, viewport, scheme, report) {
   const run = { tag, checks: [], screenshots: [], console: [], failed: false };
   report.runs.push(run);
   const context = await browser.newContext({
-    viewport,
+    viewport: { width: viewport.width, height: viewport.height },
     deviceScaleFactor: 1,
     colorScheme: scheme,
     locale: 'en-US',
-    ...(browserName === 'chromium' && viewport.width <= 480 ? { isMobile: true, hasTouch: true } : {}),
+    ...(viewport.touch ? { isMobile: true, hasTouch: true } : {}),
   });
   await context.addInitScript(HOOK);
   run.network = await containNetwork(context);
@@ -585,7 +601,20 @@ async function scenario(browserName, viewport, scheme, report) {
       await settle(page, 2200);
       const s = await page.evaluate(mapState);
       const f = await renderedKubusFeatures(page);
-      run.zoomSteps.push({ z, ...s, ...f, mix: await sourceIconMix(page) });
+      const mix = await sourceIconMix(page);
+      run.zoomSteps.push({ z, ...s, ...f, mix });
+      // The level of detail is data the renderer actually holds, so assert it:
+      // far holds no marker artwork, mid and close hold no blank placeholders.
+      const keys = Object.keys(mix);
+      if (z <= 4) {
+        check(run, `${tag}: far zoom ${z} holds no marker artwork`, !keys.some((k) => /clusterIcon|:marker|:cover/.test(k)), JSON.stringify(mix));
+      }
+      if (z >= 7) {
+        check(run, `${tag}: zoom ${z} holds canonical markers, not far placeholders`, !keys.some((k) => k.endsWith(':blank')), JSON.stringify(mix));
+      }
+      if (z >= 15) {
+        check(run, `${tag}: street zoom ${z} carries artwork covers`, keys.some((k) => k.endsWith(':cover')), JSON.stringify(mix));
+      }
       await snap(page, `${tag}-z${String(z).replace('.', '_')}`, run);
     }
 
@@ -670,10 +699,342 @@ async function scenario(browserName, viewport, scheme, report) {
   }
 }
 
+
+async function enableSemantics(page) {
+  await page.evaluate(() => {
+    const el = document.querySelector('flt-semantics-placeholder');
+    if (el) el.click();
+  });
+  await page.waitForTimeout(1200);
+}
+
+
+/** Click what a visitor would click: the centre of a semantics node's painted box. */
+async function clickSemantic(page, locator, viewport) {
+  const box = await locator.boundingBox();
+  if (!box) {
+    await locator.dispatchEvent('click');
+    return;
+  }
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  if (viewport.touch) await page.touchscreen.tap(x, y);
+  else await page.mouse.click(x, y);
+}
+
+const semanticsText = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('flt-semantics')]
+      .map((n) => (n.getAttribute('aria-label') || n.textContent || '').trim().replace(/\s+/g, ' '))
+      .filter(Boolean)
+      .join(' | '),
+  );
+
+/** Open a marker's entity from the map, press Back, and compare the map state. */
+async function entityAndBack(page, viewport, tag, run) {
+  await page.evaluate(() => {
+    window.__maps[window.__maps.length - 1].jumpTo({ zoom: 15.5, center: [14.5058, 46.0569] });
+  });
+  await settle(page, 3500);
+  const target = await findMarkerTarget(page);
+  if (!target) {
+    check(run, `${tag}: a marker is available for the entity round trip`, false, 'none rendered');
+    return;
+  }
+  const cameraBefore = await page.evaluate(mapState);
+  const pathBefore = new URL(page.url()).pathname;
+  await tapAt(page, { x: target.x, y: target.y - 18 }, viewport);
+  await settle(page, 2500);
+  await snap(page, `${tag}-04-marker-open`, run);
+  const labels = await semanticsText(page);
+  const view = page.getByRole('button', { name: /View details|Poglej podrobnosti|Podrobnosti/i }).first();
+  if ((await view.count()) === 0) {
+    run.entityRoundTrip = { opened: false, labels: labels.slice(0, 200) };
+    check(run, `${tag}: the marker card offers its entity`, false, labels.slice(0, 200));
+    return;
+  }
+  await clickSemantic(page, view, viewport);
+  await settle(page, 4500);
+  const pathInEntity = new URL(page.url()).pathname;
+  // The entity is a pushed in-app route: the address bar may keep `/map`
+  // (route/history hardening is Wave 5C), so "left the map" is read from the
+  // map chrome being gone, not from the URL.
+  const entityText = await semanticsText(page);
+  const mapChrome = /Nearby art and places|Map area|Map tools/i;
+  const leftMap = !mapChrome.test(entityText);
+  await snap(page, `${tag}-05-entity`, run);
+  await page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => {});
+  await settle(page, 4500);
+  const pathAfter = new URL(page.url()).pathname;
+  await snap(page, `${tag}-06-back`, run);
+  const mapsAfter = await page.evaluate(() => window.__maps.length);
+  const backText = await semanticsText(page);
+  const cameraAfter = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    return { zoom: Number(map.getZoom().toFixed(2)), center: [Number(map.getCenter().lng.toFixed(3)), Number(map.getCenter().lat.toFixed(3))] };
+  });
+  run.entityRoundTrip = { opened: true, pathBefore, pathInEntity, pathAfter, mapsAfter, cameraBefore: { zoom: cameraBefore.zoom, center: cameraBefore.center }, cameraAfter };
+  if (viewport.width <= 480) {
+    // Phone pushes the entity as a full screen; desktop shows it in the side
+    // panel over the same map, so only the camera/instance checks apply there.
+    check(run, `${tag}: opening the entity leaves the map screen`, leftMap, entityText.slice(0, 160));
+    check(run, `${tag}: Back returns to the map screen`, mapChrome.test(backText), backText.slice(0, 160));
+  }
+  check(run, `${tag}: Back does not recreate the map`, mapsAfter === 1, `maps=${mapsAfter}`);
+  const moved = Math.hypot(cameraAfter.center[0] - cameraBefore.center[0], cameraAfter.center[1] - cameraBefore.center[1]);
+  check(
+    run,
+    `${tag}: Back keeps the camera (not reset to the opening world)`,
+    Math.abs(cameraAfter.zoom - cameraBefore.zoom) < 0.6 && moved < 0.02,
+    JSON.stringify(run.entityRoundTrip),
+  );
+}
+
+/** A layout swap (phone <-> wide) recreates the map screen: the state must follow. */
+async function layoutSwap(page, viewport, tag, run, words) {
+  await page.evaluate(() => {
+    window.__maps[window.__maps.length - 1].jumpTo({ zoom: 15.5, center: [14.5058, 46.0569] });
+  });
+  await settle(page, 3500);
+  // A search that still matches the area, so something is left to select.
+  const rect = await page.getByRole('textbox').first().boundingBox();
+  await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  await page.waitForTimeout(700);
+  await page.keyboard.type('Ljubljana', { delay: 50 });
+  await settle(page, 2500);
+  await page.mouse.click(viewport.width * 0.6, viewport.height * 0.55);
+  await settle(page, 2500);
+  const target = await findMarkerTarget(page);
+  if (!target) {
+    check(run, `${tag}: a marker is available for the layout swap`, false, 'none rendered');
+    return;
+  }
+  await tapAt(page, { x: target.x, y: target.y - 18 }, viewport);
+  await settle(page, 2500);
+  const before = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    return { zoom: Number(map.getZoom().toFixed(2)), center: [Number(map.getCenter().lng.toFixed(3)), Number(map.getCenter().lat.toFixed(3))], maps: window.__maps.length };
+  });
+  const selectedBefore = await selectionState(page, target.id);
+  await snap(page, `${tag}-07-before-swap`, run);
+
+  // Cross the breakpoint to the phone layout.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await settle(page, 9000);
+  await page.waitForFunction((n) => window.__maps.length > n, before.maps, { timeout: 60000 }).catch(() => {});
+  await settle(page, 4000);
+  const after = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    return { zoom: Number(map.getZoom().toFixed(2)), center: [Number(map.getCenter().lng.toFixed(3)), Number(map.getCenter().lat.toFixed(3))], maps: window.__maps.length };
+  });
+  await enableSemantics(page);
+  const selectedAfter = await selectionState(page, target.id);
+  await snap(page, `${tag}-08-after-swap`, run);
+  // The open marker card hides the constraint strip on the phone layout by
+  // design; close it (dismissing the selection) to read the strip.
+  await clickSemantic(page, page.getByRole('button', { name: /Close/i }).first(), { ...viewport, width: 390, touch: false });
+  await settle(page, 2500);
+  const text = await semanticsText(page);
+  await snap(page, `${tag}-09-after-swap-card-closed`, run);
+  run.layoutSwap = { before, after, selectedBefore: selectedBefore.opacityPinsSelection, selectedAfter: selectedAfter.opacityPinsSelection };
+  const moved = Math.hypot(after.center[0] - before.center[0], after.center[1] - before.center[1]);
+  check(run, `${tag}: the swap recreated the map (a different screen)`, after.maps > before.maps, JSON.stringify({ before: before.maps, after: after.maps }));
+  check(run, `${tag}: the new map opens where the old one was`, Math.abs(after.zoom - before.zoom) < 1.2 && moved < 0.05, JSON.stringify({ before, after }));
+  check(run, `${tag}: the search text follows the swap`, text.includes(words.queryChip('Ljubljana')), text.slice(0, 220));
+  check(run, `${tag}: the selected marker follows the swap`, selectedAfter.opacityPinsSelection, JSON.stringify(selectedAfter));
+}
+
+/** Flows that need the Flutter chrome: constraints, filters, entity and Back. */
+async function uiScenario(browserName, viewport, scheme, locale, report) {
+  viewport = { ...viewport, touch: browserName === 'chromium' && viewport.width <= 480 };
+  const browserType = browserName === 'firefox' ? firefox : chromium;
+  const browser = await browserType.launch({
+    headless: true,
+    args:
+      browserName === 'chromium'
+        ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
+        : [],
+  });
+  const sl = locale.startsWith('sl');
+  const tag = `${browserName}-${viewport.width}x${viewport.height}-${scheme}-${sl ? 'sl' : 'en'}-ui`;
+  const run = { tag, checks: [], screenshots: [], console: [], failed: false };
+  report.runs.push(run);
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: 1,
+    colorScheme: scheme,
+    locale,
+    ...(viewport.touch ? { isMobile: true, hasTouch: true } : {}),
+  });
+  await context.addInitScript(HOOK);
+  run.network = await containNetwork(context);
+  const page = await context.newPage();
+  page.on('pageerror', (e) => run.console.push(`[pageerror] ${e.message.slice(0, 200)}`));
+  const words = sl
+    ? { search: 'Iskanje: zzqq', reset: /Ponastavi vse/i, area: /Območje zemljevida/i }
+    : { search: 'Search: zzqq', reset: /Reset all/i, area: /Map area/i };
+  try {
+    await page.goto(`${appUrl}${sl ? '/sl' : startPath}`, { waitUntil: 'domcontentloaded' });
+    if (sl) {
+      // The Slovene launch URL opens the app; go to the map the way a visitor does.
+      await page.waitForTimeout(6000);
+      await page.goto(`${appUrl}/map`, { waitUntil: 'domcontentloaded' });
+    }
+    await waitForMap(page);
+    await settle(page, browserName === 'firefox' ? 9000 : 6000);
+    await enableSemantics(page);
+    await page.evaluate(() => {
+      window.__maps[window.__maps.length - 1].jumpTo({ zoom: 7, center: [14.99, 46.12] });
+    });
+    await settle(page, 3500);
+    const before = await renderedKubusFeatures(page);
+    run.markersBefore = before;
+    check(run, `${tag}: markers are on the map before any restriction`, before.dots > 0, JSON.stringify(before));
+    check(run, `${tag}: no constraint strip while nothing restricts the map`, !/Reset all|Ponastavi vse/i.test(await semanticsText(page)));
+    await snap(page, `${tag}-01-unrestricted`, run);
+
+    // A search restricts the map and says so.
+    // Flutter exposes the field as a disabled semantics input; the visitor
+    // clicks the painted field, so the script does the same and then types.
+    const rect = await page.getByRole('textbox').first().boundingBox();
+    if (viewport.touch) await page.touchscreen.tap(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    else await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    await page.waitForTimeout(800);
+    await page.keyboard.type('zzqq', { delay: 60 });
+    await settle(page, 3000);
+    // The results dropdown floats over the strip while it is open, as it does
+    // for a visitor; tap the map to dismiss it (the query stays active).
+    await snap(page, `${tag}-02a-results-open`, run);
+    const tapX = viewport.width <= 480 ? viewport.width / 2 : viewport.width * 0.6;
+    const tapY = viewport.height * 0.55;
+    if (viewport.touch) await page.touchscreen.tap(tapX, tapY);
+    else await page.mouse.click(tapX, tapY);
+    await settle(page, 2000);
+    const text = await semanticsText(page);
+    check(run, `${tag}: the search shows up as a constraint`, text.includes(words.search), text.slice(0, 200));
+    check(run, `${tag}: the map-area baseline is listed with it`, words.area.test(text));
+    const after = await renderedKubusFeatures(page);
+    check(run, `${tag}: the search really removed the markers it claims to`, after.dots === 0, JSON.stringify(after));
+    await snap(page, `${tag}-02-search-constraint`, run);
+
+    // Reset all removes every restriction, with no ghost chip.
+    await clickSemantic(page, page.getByRole('button', { name: words.reset }).first(), viewport);
+    await settle(page, 3000);
+    const reset = await semanticsText(page);
+    check(run, `${tag}: reset all leaves no constraint chip`, !reset.includes(words.search) && !words.reset.test(reset), reset.slice(0, 160));
+    const restored = await renderedKubusFeatures(page);
+    check(run, `${tag}: reset all brings the markers back`, restored.dots > 0, JSON.stringify(restored));
+    await snap(page, `${tag}-03-after-reset`, run);
+    await noHorizontalOverflow(page, tag, run);
+
+    // Map -> entity -> Back: the same map, camera and selection come back.
+    if (!sl) await entityAndBack(page, viewport, tag, run);
+    if (!sl && viewport.width >= 1024) {
+      await layoutSwap(page, viewport, tag, run, { queryChip: (q) => `Search: ${q}` });
+    }
+
+    const errors = run.console.filter((l) => /pageerror/.test(l));
+    check(run, `${tag}: no uncaught page errors`, errors.length === 0, errors.slice(0, 2).join(' || '));
+  } catch (error) {
+    run.failed = true;
+    run.error = String(error).slice(0, 400);
+    await snap(page, `${tag}-error`, run).catch(() => {});
+  } finally {
+    await browser.close();
+  }
+}
+
+/** Opening frame at one viewport: renders, nothing overflows, controls reachable. */
+async function responsiveScenario(browserName, viewport, scheme, report) {
+  const browserType = browserName === 'firefox' ? firefox : chromium;
+  const browser = await browserType.launch({
+    headless: true,
+    args:
+      browserName === 'chromium'
+        ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
+        : [],
+  });
+  const dpr = viewport.dpr || 1;
+  const tag = `${browserName}-${viewport.width}x${viewport.height}${dpr > 1 ? `@${dpr}x` : ''}-${scheme}-responsive`;
+  const run = { tag, checks: [], screenshots: [], console: [], failed: false };
+  report.runs.push(run);
+  const touch = browserName === 'chromium' && viewport.width <= 480;
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: dpr,
+    colorScheme: scheme,
+    locale: 'en-US',
+    ...(touch ? { isMobile: true, hasTouch: true } : {}),
+  });
+  await context.addInitScript(HOOK);
+  run.network = await containNetwork(context);
+  const page = await context.newPage();
+  page.on('pageerror', (e) => run.console.push(`[pageerror] ${e.message.slice(0, 200)}`));
+  try {
+    await page.goto(`${appUrl}${startPath}`, { waitUntil: 'domcontentloaded' });
+    await waitForMap(page);
+    await settle(page, browserName === 'firefox' ? 9000 : 6000);
+    await enableSemantics(page);
+    const state = await page.evaluate(mapState);
+    run.opening = state;
+    check(run, `${tag}: globe fills the shorter side at its minimum zoom`, state.minZoom >= 1 && state.minZoom <= 3.2, `min ${state.minZoom}`);
+    await snap(page, `${tag}-01-opening`, run);
+    await noHorizontalOverflow(page, tag, run);
+    // The primary controls must be on screen and reachable.
+    const labels = await semanticsText(page);
+    // The compact layout is touch first (pinch zoom, a "Map tools" rail); the
+    // zoom buttons belong to the wide layout.
+    const controls = [
+      ...(viewport.width >= 1024 ? [/Zoom in|Povečaj/i, /Zoom out|Pomanjšaj/i] : []),
+      /Center on me|Središči/i,
+      /Show filters|Filtri|Filters/i,
+    ];
+    for (const rx of controls) {
+      check(run, `${tag}: control ${rx} is exposed`, rx.test(labels), labels.slice(0, 120));
+    }
+    // The globe at its minimum zoom (the "world" frame).
+    await page.evaluate(() => {
+      const map = window.__maps[window.__maps.length - 1];
+      map.jumpTo({ zoom: map.getMinZoom(), center: [14.5, 20] });
+    });
+    await settle(page, 3000);
+    await snap(page, `${tag}-02-world`, run);
+    check(run, `${tag}: no uncaught page errors`, run.console.length === 0, run.console.slice(0, 2).join(' || '));
+  } catch (error) {
+    run.failed = true;
+    run.error = String(error).slice(0, 400);
+    await snap(page, `${tag}-error`, run).catch(() => {});
+  } finally {
+    await browser.close();
+  }
+}
+
 await fs.mkdir(outDir, { recursive: true });
 const server = await startServer();
 const report = { label, startedAt: new Date().toISOString(), runs: [], failed: false };
 try {
+  if (process.env.QA_FLOW === 'responsive') {
+    // 200 % browser zoom at 1440x900 is a 720x450 CSS viewport at 2x density.
+    const sizes = [
+      ...viewports,
+      ...(process.env.QA_ZOOM200 === '0' ? [] : [{ width: 720, height: 450, dpr: 2 }]),
+    ];
+    for (const browserName of browsers) {
+      for (const viewport of sizes) {
+        for (const scheme of schemes) {
+          await responsiveScenario(browserName, viewport, scheme, report);
+        }
+      }
+    }
+  } else if (process.env.QA_FLOW === 'ui') {
+    for (const browserName of browsers) {
+      for (const viewport of viewports) {
+        for (const locale of list('QA_LOCALES', 'en-US')) {
+          await uiScenario(browserName, viewport, schemes[0], locale, report);
+        }
+      }
+    }
+  } else
   for (const browserName of browsers) {
     for (const viewport of viewports) {
       for (const scheme of schemes) {

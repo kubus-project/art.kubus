@@ -277,6 +277,16 @@ class KubusMapMarkerSyncEngine {
       }
 
       await host.afterMarkerSync(themeProvider);
+
+      // Marker artwork depends on the zoom this pass was built for. If the
+      // camera moved across a level-of-detail boundary meanwhile, the source
+      // now holds the wrong artwork, so rebuild once for the current zoom.
+      final settledZoom = host.syncZoom;
+      if (KubusMarkerLod.needsMarkerArtwork(settledZoom) != needsArtwork ||
+          KubusMarkerLod.allowsCovers(settledZoom) !=
+              KubusMarkerLod.allowsCovers(zoom)) {
+        host.requestMarkerResync();
+      }
     } finally {
       timeline?.finish();
     }

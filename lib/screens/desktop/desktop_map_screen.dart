@@ -101,6 +101,7 @@ import '../../features/map/controller/kubus_map_marker_creation_coordinator.dart
 import '../../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../../features/map/controller/map_target_coordinator.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
+import '../../features/map/session/kubus_map_session_memory.dart';
 import '../../features/map/shared/map_marker_lod.dart';
 import '../../features/map/shared/map_marker_regroup_gate.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
@@ -351,6 +352,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   GeoBounds? _loadedViewportBounds;
   int? _loadedViewportZoomBucket;
   bool _initialLocaleViewportApplied = false;
+  KubusMapSessionMemory? _sessionMemory;
+  ArtMarker? _pendingRestoreMarker;
   bool _initialLocaleResolved = false;
   LatLng? _pendingTargetMarkerLoad;
   Completer<void>? _pendingTargetMarkerLoadCompleter;
@@ -548,6 +551,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       },
       onSelectionChanged: (state) {
         if (!mounted) return;
+        _sessionMemory?.rememberSelection(state.selectedMarker);
         final prevSelection = _mapUiStateCoordinator.value.markerSelection;
         final prevToken = prevSelection.selectionToken;
         final tokenChanged = state.selectionToken != prevToken;
@@ -902,6 +906,54 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
     _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
     _cameraZoom = widget.initialZoom ?? viewport.initialZoom;
+
+    // A layout swap (rotation, resized window) recreates this screen. Open
+    // where the previous map was instead of at the locale opening, unless this
+    // entry carries an explicit target.
+    final memory = Provider.of<KubusMapSessionMemory?>(context, listen: false);
+    _sessionMemory = memory;
+    final saved = memory?.camera;
+    if (saved != null &&
+        widget.initialCenter == null &&
+        widget.initialZoom == null &&
+        !_hasInitialDirectTarget &&
+        widget.walkingNavigationIntent == null) {
+      _cameraCenter = saved.center;
+      _cameraZoom = saved.zoom;
+      _initialLocaleViewportApplied = true;
+      _filterState = memory!.filters;
+      _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+      _pendingRestoreMarker = memory.selectedMarker;
+      final query = memory.query;
+      if (query.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _mapSearchController.commitSelection(query);
+        });
+      }
+    }
+  }
+
+  /// Restores the marker that was selected before a layout swap, once the
+  /// style is ready and markers have loaded. It goes through the screen's own
+  /// marker-tap path, so there is still exactly one selection owner.
+  void _restorePendingSelection() {
+    final marker = _pendingRestoreMarker;
+    if (marker == null || !_styleInitialized || !mounted) return;
+    _pendingRestoreMarker = null;
+    ArtMarker? loaded;
+    for (final candidate in _artMarkers) {
+      if (candidate.id == marker.id) {
+        loaded = candidate;
+        break;
+      }
+    }
+    if (loaded == null) {
+      loaded = marker;
+      setState(
+          () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker));
+      _applyVisibleMarkers();
+    }
+    _handleMarkerTap(loaded);
   }
 
   void _unsubscribeRouteObserver({required String source}) {
@@ -1231,6 +1283,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _handleFilterStateChanged(KubusMapFilterState next) {
+    _sessionMemory?.rememberFilters(next);
     final previous = _filterState;
     final requiresDataReload = previous.scope != next.scope ||
         (next.scope == KubusMapScope.nearMe &&
@@ -2679,6 +2732,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _kubusMapController.handleCameraIdle(
               fromProgrammaticMove: wasProgrammatic,
             );
+            if (_kubusMapController.hasCameraFrame) {
+              _sessionMemory?.rememberCamera(
+                _kubusMapController.camera.center,
+                _kubusMapController.camera.zoom,
+              );
+            }
             if (_styleInitialized) {
               _queueMarkerVisualRefreshForZoom(_cameraZoom);
               // Close-level covers are chosen from what the settled viewport
@@ -4699,6 +4758,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMapSearchControllerChanged() {
     if (!mounted) return;
+    _sessionMemory?.rememberQuery(_mapSearchController.state.query);
     final searchVisible = _mapSearchController.state.isOverlayVisible;
     final surface = _mapUiStateCoordinator.value.contextSurface;
     if (searchVisible && surface != MapContextSurface.searchResults) {
@@ -5098,6 +5158,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (markersChanged) {
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
+      _restorePendingSelection();
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
       if (useBoundsQuery && queryBounds != null && bucket != null) {
