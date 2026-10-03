@@ -85,6 +85,9 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
 - Android behaviour was verified on an emulator, not on a physical device.
 - Only Map and Community have their own addresses. Other tabs return to the map
   when the page is refreshed.
+- A page opened from inside the app keeps the address of the page it was opened
+  from, so a refresh returns there. Opening a page by its own link keeps that
+  link.
 - Settings, Wallet and Marketplace addresses open the map for signed-out
   visitors.
 - When the service is unreachable the map shows no offline notice.
