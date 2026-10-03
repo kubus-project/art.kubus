@@ -8,7 +8,7 @@ import '../../utils/auth_password_policy.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/gradient_icon_card.dart';
+import '../../widgets/common/kubus_context_icon.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/kubus_snackbar.dart';
@@ -223,15 +223,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           l10n.authResetPasswordHighlightOne,
           l10n.authResetPasswordHighlightTwo,
         ],
-        icon: GradientIconCard(
-          start: scheme.primary,
-          end: roles.positiveAction,
-          icon: Icons.lock_reset_rounded,
-          iconSize: 52,
-          width: 100,
-          height: 100,
-          radius: 20,
-        ),
+        icon: KubusContextIcon(
+            icon: Icons.lock_reset_rounded,
+            accent: KubusColorRoles.of(context).active,
+            size: KubusContextIconSize.hero),
         form: form,
       );
     }
@@ -276,15 +271,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       children: [
                         Column(
                           children: [
-                            GradientIconCard(
-                              start: scheme.primary,
-                              end: roles.positiveAction,
-                              icon: Icons.lock_reset_rounded,
-                              iconSize: 52,
-                              width: 100,
-                              height: 100,
-                              radius: 20,
-                            ),
+                            KubusContextIcon(
+                                icon: Icons.lock_reset_rounded,
+                                accent: KubusColorRoles.of(context).active,
+                                size: KubusContextIconSize.hero),
                             const SizedBox(height: 12),
                             Text(
                               l10n.authResetPasswordTitle,

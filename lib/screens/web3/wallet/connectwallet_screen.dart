@@ -24,7 +24,8 @@ import '../../../services/wallet_session_sync_dependencies.dart';
 import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/auth_wallet_entry_menu.dart';
-import '../../../widgets/gradient_icon_card.dart';
+import '../../../widgets/wallet/wallet_option_tile.dart';
+import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../utils/kubus_accent_gradients.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -1605,15 +1606,10 @@ class _ConnectWalletState extends State<ConnectWallet>
                   borderRadius: BorderRadius.circular(KubusRadius.lg),
                   child: Column(
                     children: [
-                      GradientIconCard(
-                        start: KubusAccentGradients.emerald.start,
-                        end: KubusAccentGradients.emerald.end,
-                        icon: Icons.account_balance_wallet_outlined,
-                        iconSize: isSmallScreen ? 44 : 52,
-                        width: isSmallScreen ? 84 : 100,
-                        height: isSmallScreen ? 84 : 100,
-                        radius: 16,
-                      ),
+                      KubusContextIcon(
+                          icon: Icons.account_balance_wallet_outlined,
+                          accent: KubusColorRoles.of(context).active,
+                          size: KubusContextIconSize.hero),
                       const SizedBox(
                           height: KubusSpacing.sm + KubusSpacing.xxs),
                       Text(
@@ -1705,139 +1701,16 @@ class _ConnectWalletState extends State<ConnectWallet>
     required bool isSmallScreen,
     bool isAdvanced = false,
   }) {
-    final accent = _accentColor(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    final iconColor =
-        icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined
-            ? colorScheme.secondary
-            : icon == Icons.add_circle_outline_rounded
-                ? colorScheme.primary
-                : icon == Icons.link_rounded
-                    ? colorScheme.tertiary
-                    : accent;
-    return _buildOptionCard(
-      label,
-      description,
-      icon,
-      iconColor,
-      onTap,
-      isSubdued: isAdvanced,
-    );
-  }
-
-  Widget _buildOptionCard(
-    String title,
-    String description,
-    IconData icon,
-    Color color,
-    VoidCallback onTap, {
-    bool isSubdued = false,
-  }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
-    Color startColor;
-    Color endColor;
-    if (icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined) {
-      startColor = KubusAccentGradients.cyanBlue.start;
-      endColor = KubusAccentGradients.cyanBlue.end;
-    } else if (icon == Icons.add_circle_outline_rounded) {
-      startColor = KubusAccentGradients.tealBlue.start;
-      endColor = KubusAccentGradients.tealBlue.end;
-    } else {
-      startColor = KubusAccentGradients.sunset.start;
-      endColor = KubusAccentGradients.sunset.end;
-    }
-
     return Padding(
       padding: EdgeInsets.only(
-          bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
-      child: LiquidGlassPanel(
+        bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
+      ),
+      child: WalletOptionTile(
+        title: label,
+        description: description,
+        icon: icon,
+        isAdvanced: isAdvanced,
         onTap: onTap,
-        padding:
-            EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(
-          isSmallScreen ? KubusRadius.lg : KubusRadius.xl,
-        ),
-        blurSigma: KubusGlassEffects.blurSigmaLight,
-        backgroundColor: cardTint,
-        child: Row(
-          children: [
-            SizedBox(
-              width: isSmallScreen ? 48 : 58,
-              height: isSmallScreen ? 48 : 58,
-              child: GradientIconCard(
-                start: startColor,
-                end: endColor,
-                icon: icon,
-                iconSize: isSmallScreen ? 24 : 28,
-                width: isSmallScreen ? 48 : 58,
-                height: isSmallScreen ? 48 : 58,
-                radius: isSmallScreen ? KubusRadius.sm : KubusRadius.md,
-              ),
-            ),
-            SizedBox(width: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style:
-                              KubusTypography.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      if (isSubdued)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.sm,
-                            vertical: KubusSpacing.xxs * 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: scheme.secondary.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            l10n.connectWalletAdvancedBadge,
-                            style:
-                                KubusTypography.textTheme.labelSmall?.copyWith(
-                              color: scheme.secondary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: KubusSpacing.xxs + KubusSpacing.xxs),
-                  Text(
-                    description,
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.65),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: color,
-              size: isSmallScreen ? 16 : 18,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1866,15 +1739,10 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    GradientIconCard(
-                      start: KubusAccentGradients.skyCyan.start,
-                      end: KubusAccentGradients.skyCyan.end,
-                      icon: Icons.vpn_key_rounded,
-                      iconSize: isSmallScreen ? 44 : 52,
-                      width: isSmallScreen ? 88 : 100,
-                      height: isSmallScreen ? 88 : 100,
-                      radius: KubusRadius.lg,
-                    ),
+                    KubusContextIcon(
+                        icon: Icons.vpn_key_rounded,
+                        accent: KubusColorRoles.of(context).active,
+                        size: KubusContextIconSize.hero),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2190,15 +2058,10 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    GradientIconCard(
-                      start: KubusAccentGradients.emerald.start,
-                      end: KubusAccentGradients.emerald.end,
-                      icon: Icons.add_circle_outline_rounded,
-                      iconSize: isSmallScreen ? 44 : 52,
-                      width: isSmallScreen ? 88 : 100,
-                      height: isSmallScreen ? 88 : 100,
-                      radius: KubusRadius.lg,
-                    ),
+                    KubusContextIcon(
+                        icon: Icons.add_circle_outline_rounded,
+                        accent: KubusColorRoles.of(context).active,
+                        size: KubusContextIconSize.hero),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2409,15 +2272,10 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    GradientIconCard(
-                      start: KubusAccentGradients.cyanBlue.start,
-                      end: KubusAccentGradients.cyanBlue.end,
-                      icon: Icons.qr_code_scanner_rounded,
-                      iconSize: isSmallScreen ? 44 : 52,
-                      width: isSmallScreen ? 88 : 100,
-                      height: isSmallScreen ? 88 : 100,
-                      radius: KubusRadius.lg,
-                    ),
+                    KubusContextIcon(
+                        icon: Icons.qr_code_scanner_rounded,
+                        accent: KubusColorRoles.of(context).active,
+                        size: KubusContextIconSize.hero),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2826,15 +2684,10 @@ class _ConnectWalletState extends State<ConnectWallet>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            GradientIconCard(
-              start: KubusAccentGradients.emerald.start,
-              end: KubusAccentGradients.emerald.end,
-              icon: Icons.check_circle_rounded,
-              iconSize: isSmallScreen ? 56 : 68,
-              width: isSmallScreen ? 100 : 120,
-              height: isSmallScreen ? 100 : 120,
-              radius: KubusRadius.xl,
-            ),
+            KubusContextIcon(
+                icon: Icons.check_circle_rounded,
+                accent: KubusColorRoles.of(context).active,
+                size: KubusContextIconSize.hero),
             SizedBox(height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
             Text(
               l10n.connectWalletConnectedTitle,

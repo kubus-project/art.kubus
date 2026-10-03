@@ -60,16 +60,62 @@ same thing are a duplicate: keep the stronger one and remove the other.
 
 ### `KubusActionTile` (destination shortcut)
 
-| Layout | Composition |
-| --- | --- |
-| Stacked (phone grid) | title at the bottom-start, destination ghost glyph top-end, destination field; no foreground icon box |
-| Inline (desktop strip) | title + arrow; no destination icon |
+| Layout | Used for | Composition |
+| --- | --- | --- |
+| Stacked | home and hub grids, creation destinations, programme entries | title (and optional subtitle) at the bottom-start, destination ghost glyph top-end, destination field; no foreground icon box |
+| Inline | desktop quick-action strip | title + arrow; no destination icon |
+| Compact | settings, security, account, sheets, wallet actions, support links | full-width row: title, optional one-line subtitle, optional `status`, arrow; small cropped glyph; quiet hover |
 
-- No coloured hover glow; hover answers inside the tile only.
+One identity layer per tile: the destination's contextual colour (field and
+edge) plus, where there is room, its cropped glyph. A `status` (verified,
+locked, labs, advanced) may coexist because it says something else. The
+Material "icon square + title + subtitle + chevron" row is not a destination
+tile and the tile-system guard (`test/design/product_v5_tile_system_guard_test.dart`)
+rejects it.
+
+**Hover contract** (pointer only, 180 ms ease-out, never layout):
+
+| Layout | Answer |
+| --- | --- |
+| Stacked | 2 px paint-only lift, stronger field and edge, soft contextual accent shadow (`KubusHoverResponse.accentShadow`: a tinted drop, y offset 8, negative spread, alpha 0.24 light / 0.34 dark, not a glow), ghost glyph drifts 3 px and scales 1.03 inside the clip |
+| Inline | 2 px lift, stronger edge, accent shadow, arrow travels 2 px |
+| Compact | stronger field and edge plus a 3 px leading indicator; no lift, no shadow, no drift (a list of rows must not bob) |
+
+Reduced motion (`MediaQuery.disableAnimations`): no lift, glyph drift or arrow
+travel; field, edge and shadow state still change. Touch never hovers.
+`KubusStatCard` is a metric, not navigation, and keeps a different motion:
+the tile and number stay put while the ghost glyph drifts and scales.
+
+States: `enabled: false` mutes the tile and takes no tap (say why in the
+subtitle); `loading` swaps the arrow for a spinner.
+
 - Inline width: content-sized up to `KubusActionTile.inlineMaxWidth`
   (280 px x text scale); a narrower parent always wins; long titles wrap to
-  two lines inside the cap. Stacked tiles ignore the cap.
-- Speaks its title as a button.
+  two lines inside the cap. Stacked and compact tiles fill their slot.
+- The title owns the button semantics (the subtitle is its hint); the glyph
+  and arrow are excluded from the tree. 44 px minimum target.
+- Settings destinations use `SharedSettingsDestinationTile` (compact, the
+  structural family colour, destructive actions in the destructive colour).
+
+#### Surface classification
+
+| Role | Primitive |
+| --- | --- |
+| destination / primary shortcut | `KubusActionTile` |
+| dense management destination | compact `KubusActionTile` / `KubusActionSidebarTile` |
+| metric | `KubusStatCard` |
+| ordinary grouped content | `KubusCard` |
+| long-form or analytical content | `KubusReadingSurface` |
+| empty or error state | `EmptyStateCard` |
+| wallet or asset group | `KubusWalletSectionCard` (`framed: false` over tiles) |
+| page identity | `KubusDashboardHeader` / `KubusAtmosphere`; `KubusContextIcon.hero` on auth |
+| status | badge / pill |
+| utility control | compact icon or button; never a tile |
+
+Switch, dropdown and read-only rows in a settings list are form controls and
+stay flat rows; entity, search-result and picker rows keep their own row
+shapes. A card with no unique grouping, identity, status, action or
+atmosphere is removed rather than re-wrapped.
 
 ### `KubusStatCard` (metric tile)
 

@@ -324,6 +324,32 @@ class KubusHoverResponse extends StatefulWidget {
   static bool motionAllowed(BuildContext context) =>
       !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
 
+  /// Distance a navigation arrow travels toward its destination on hover.
+  static const double arrowTravel = 2;
+
+  /// Soft contextual shadow under a hovered, lifted surface.
+  ///
+  /// A tinted drop (offset down, negative spread) rather than a glow: it
+  /// grounds the 2 px lift in the destination's own colour and never blooms
+  /// around the tile. The resting state is the same shadow at zero alpha, so
+  /// the two states interpolate instead of popping. Dark grounds need more
+  /// alpha before a coloured shadow registers at all.
+  static List<BoxShadow> accentShadow(
+    Color accent,
+    Brightness brightness, {
+    required bool hovered,
+  }) {
+    final peak = brightness == Brightness.dark ? 0.34 : 0.24;
+    return <BoxShadow>[
+      BoxShadow(
+        color: accent.withValues(alpha: hovered ? peak : 0),
+        blurRadius: 18,
+        spreadRadius: -5,
+        offset: const Offset(0, 8),
+      ),
+    ];
+  }
+
   @override
   State<KubusHoverResponse> createState() => _KubusHoverResponseState();
 }

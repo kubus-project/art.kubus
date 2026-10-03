@@ -59,6 +59,7 @@ import '../../widgets/profile/profile_badges_verification_section.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../widgets/common/kubus_action_tile.dart';
 import '../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -2022,46 +2023,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// A profile menu destination: the dense tile, no icon box.
   Widget _buildOptionItem(IconData icon, String title, VoidCallback onTap) {
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-      child: LiquidGlassCard(
+      child: KubusActionTile(
+        title: title,
+        icon: icon,
+        accent: KubusColorRoles.of(context).active,
+        layout: KubusActionTileLayout.compact,
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md,
-          vertical: KubusSpacing.sm,
-        ),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: Row(
-          children: [
-            Container(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Icon(icon, color: accent),
-            ),
-            const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              child: Text(
-                title,
-                style: KubusTextStyles.navLabel.copyWith(
-                  fontSize: 16,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: KubusSizes.trailingChevron,
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ],
-        ),
       ),
     );
   }
