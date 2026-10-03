@@ -646,8 +646,9 @@ class KubusMapMarkerSyncEngine {
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.
-          if (host.hostMounted)
+          if (host.hostMounted) {
             _coverGate.scheduleResync(host.requestMarkerResync);
+          }
           return;
         }
         final controller = host.mapController;
