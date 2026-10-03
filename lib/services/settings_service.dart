@@ -113,6 +113,9 @@ class SettingsService {
     ProfileProvider? profileProvider,
     SavedItemsProvider? savedItemsProvider,
   }) async {
+    // First, and synchronous: nothing below may fail before the map's memory of
+    // this account (camera, filters, search, selection) is gone.
+    KubusMapSessionMemory.clearAll();
     await backendApi.clearAuth();
     notificationProvider?.reset();
     profileProvider?.signOut();
@@ -155,9 +158,6 @@ class SettingsService {
     // Telemetry must stop attributing events to the account that just left.
     TelemetryService().setActorUserId(null);
     await TelemetryService().rotateSession();
-    // The map remembers camera, filters, search and selection across layout
-    // swaps only; none of it belongs to the next account.
-    KubusMapSessionMemory.clearAll();
 
     // Keep onboarding state intact on logout so returning users are not
     // forced through onboarding again unless they explicitly reset it.

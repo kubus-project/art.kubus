@@ -340,8 +340,8 @@ promote() {
     # release must be able to change it.
     # The lists are read from files so the loops run in this shell: a failed
     # mkdir or cp must stop the promotion rather than ship a partial copy.
-    host_dirs="$candidate_dir.host-dirs"
-    host_files="$candidate_dir.host-files"
+    host_dirs="$(mktemp)"
+    host_files="$(mktemp)"
     (cd "$LIVE_DIR/.well-known" && find . -type d) > "$host_dirs"
     (cd "$LIVE_DIR/.well-known" && find . \( -type f -o -type l \)) > "$host_files"
     while IFS= read -r host_dir; do
