@@ -56,7 +56,7 @@
   PASS firefox-zoom200-light: attribution is reachable from Map tools and on screen ({"x":64,"y":370,"width":592,"height":48})
   PASS firefox-zoom200-light: the attribution dialog names its sources (MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributorsClose | MapLibreMap rendering engineCARTOBasemap style and cartographyOpenStreetMapMap data contributors)
   PASS firefox-zoom200-light: attribution dialog - every control sits inside the viewport ([])
-  PASS firefox-zoom200-light: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":200,"y":15.600006103515625,"w":320,"h":321.3999938964844})
+  PASS firefox-zoom200-light: keyboard focus is on an on-screen control ({"tag":"FLT-SEMANTICS","label":"","x":200,"y":12,"w":320,"h":321.3999938964844})
   PASS firefox-zoom200-light: no uncaught page errors
 
 == firefox-zoom200-dark ok

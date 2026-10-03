@@ -456,5 +456,11 @@ See `docs/evidence/product-v5-spatial/README.md`.
   services / system processes, not to the app. The stack of the original crash is
   entirely engine/plugin code and the screen swap itself is not new, but this
   remains an observation, not a proven pre-existing defect and not a fix.
+* The first request for a thumbnail size the media host has not generated yet can
+  take seconds, so a street-level cover can arrive late (the canonical marker is
+  always there meanwhile). Browser QA saw this as intermittent "no covers yet"
+  failures right after the 120/250/330 px sizes were first requested, none once
+  they were cached; the QA now polls up to 12 s and records the first-cover
+  latency instead of guessing a fixed wait.
 * The wide layout shows two attribution controls on native Android (the plugin's
   own button and the app's glass one); this predates 5B and was left alone.
