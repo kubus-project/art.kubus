@@ -499,7 +499,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get entityUnavailableBody =>
-      'This could not be loaded. It may have been removed or made private, or your connection may have dropped.';
+      'This could not be loaded right now. Check your connection and try again.';
 
   @override
   String get activationActionUnauthorizedToast =>

@@ -93,6 +93,26 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  testWidgets('an authoritative not-found says removed, a failure does not',
+      (tester) async {
+    Widget scaffold(UnavailableEntityReason reason) => MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: UnavailableEntityScaffold(
+            entityLabel: 'Event',
+            reason: reason,
+            onRetry: () {},
+          ),
+        );
+
+    await tester.pumpWidget(scaffold(UnavailableEntityReason.notFound));
+    expect(find.textContaining('removed or made private'), findsOneWidget);
+
+    await tester.pumpWidget(scaffold(UnavailableEntityReason.loadFailed));
+    expect(find.textContaining('could not be loaded'), findsOneWidget);
+    expect(find.textContaining('removed'), findsNothing);
+  });
+
   testWidgets(
       'a missing event is reported as unavailable, not as an empty page',
       (tester) async {
@@ -106,6 +126,10 @@ void main() {
 
     expect(find.byType(UnavailableEntityScaffold), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+    // A failed request is not proof the event is gone: it must not be reported
+    // as removed or made private.
+    expect(find.textContaining('could not be loaded'), findsOneWidget);
+    expect(find.textContaining('removed'), findsNothing);
     // The live-looking actions of a real event must not be offered.
     expect(find.text('Save'), findsNothing);
     expect(find.text('Share'), findsNothing);

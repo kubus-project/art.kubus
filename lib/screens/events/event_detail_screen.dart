@@ -55,10 +55,10 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
-  /// True once the event fetch has finished, successfully or not. Before that
-  /// the placeholder page is a loading state; after it, a missing event is
-  /// reported as unavailable instead of an empty page with live-looking actions.
-  bool _entityFetchSettled = false;
+  /// Set once the event fetch has settled without an event. Only a 404 or 410
+  /// is reported as removed; any other failure, and an empty result, is a
+  /// retryable load failure (an outage must never read as "removed").
+  UnavailableEntityReason? _unavailableReason;
 
   @override
   void initState() {
@@ -76,13 +76,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _load() async {
     final events = context.read<EventsProvider>();
     final exhibitions = context.read<ExhibitionsProvider>();
+    UnavailableEntityReason? reason;
     try {
-      await events.fetchEvent(widget.eventId, force: true);
+      final event = await events.fetchEvent(widget.eventId, force: true);
+      if (event == null) reason = UnavailableEntityReason.loadFailed;
+    } on BackendApiRequestException catch (e) {
+      reason = e.statusCode == 404 || e.statusCode == 410
+          ? UnavailableEntityReason.notFound
+          : UnavailableEntityReason.loadFailed;
     } catch (_) {
       // Provider handles errors.
+      reason = UnavailableEntityReason.loadFailed;
     }
-    if (mounted && !_entityFetchSettled) {
-      setState(() => _entityFetchSettled = true);
+    if (mounted && _unavailableReason != reason) {
+      setState(() => _unavailableReason = reason);
     }
     // The event's own POAP and linked exhibitions are independent sections;
     // their failures stay local and never block the page.
@@ -380,13 +387,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final initialEvent =
         widget.initialEvent?.id == widget.eventId ? widget.initialEvent : null;
     final exactEvent = loadedEvent ?? initialEvent;
-    if (_entityFetchSettled && exactEvent == null && !events.isDetailLoading) {
+    if (_unavailableReason != null &&
+        exactEvent == null &&
+        !events.isDetailLoading) {
       return UnavailableEntityScaffold(
         entityLabel: l10n.mapMarkerSubjectTypeEvent,
+        reason: _unavailableReason!,
         canonicalPublicEntry: isCanonicalPublicEntry,
         showAppBar: !isDesktopCanonicalPublicEntry,
         onRetry: () {
-          setState(() => _entityFetchSettled = false);
+          setState(() => _unavailableReason = null);
           unawaited(_load());
         },
       );

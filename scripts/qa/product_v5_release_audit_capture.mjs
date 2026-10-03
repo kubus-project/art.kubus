@@ -352,4 +352,13 @@ async function main() {
   console.log(JSON.stringify({ captures: manifest.length, failed: failed.length, overflow: overflow.length, outDir }, null, 2));
 }
 
+// A context closing while a route is still being fulfilled is a harness race,
+// not a product failure: ignore exactly those, surface everything else.
+process.on('unhandledRejection', (error) => {
+  const message = String(error?.message || error);
+  if (/already handled|has been closed|Target page, context or browser/i.test(message)) return;
+  console.error(error);
+  process.exit(1);
+});
+
 await main();

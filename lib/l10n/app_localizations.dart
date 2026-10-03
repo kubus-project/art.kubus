@@ -921,7 +921,7 @@ abstract class AppLocalizations {
   /// Body of the state shown when a detail screen's entity could not be loaded.
   ///
   /// In en, this message translates to:
-  /// **'This could not be loaded. It may have been removed or made private, or your connection may have dropped.'**
+  /// **'This could not be loaded right now. Check your connection and try again.'**
   String get entityUnavailableBody;
 
   /// No description provided for @activationActionUnauthorizedToast.

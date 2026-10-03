@@ -90,9 +90,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return source.isNotEmpty ? source : 'system_camera_deeplink';
   }
 
-  /// True once the exhibition fetch has finished, successfully or not (see
-  /// the matching flag on the event screen).
-  bool _entityFetchSettled = false;
+  /// Set once the exhibition fetch has settled without an exhibition (see the
+  /// matching field on the event screen).
+  UnavailableEntityReason? _unavailableReason;
 
   @override
   void initState() {
@@ -114,13 +114,21 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
   Future<void> _load() async {
     final provider = context.read<ExhibitionsProvider>();
+    UnavailableEntityReason? reason;
     try {
-      await provider.fetchExhibition(widget.exhibitionId, force: true);
+      final exhibition =
+          await provider.fetchExhibition(widget.exhibitionId, force: true);
+      if (exhibition == null) reason = UnavailableEntityReason.loadFailed;
+    } on BackendApiRequestException catch (e) {
+      reason = e.statusCode == 404 || e.statusCode == 410
+          ? UnavailableEntityReason.notFound
+          : UnavailableEntityReason.loadFailed;
     } catch (_) {
       // Provider handles errors.
+      reason = UnavailableEntityReason.loadFailed;
     }
-    if (mounted && !_entityFetchSettled) {
-      setState(() => _entityFetchSettled = true);
+    if (mounted && _unavailableReason != reason) {
+      setState(() => _unavailableReason = reason);
     }
     // Program events and POAP are optional sections; their failures stay
     // local to their cards and never block the page.
@@ -1200,13 +1208,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             ? widget.initialExhibition
             : null;
     final exactExhibition = loadedExhibition ?? initialExhibition;
-    if (_entityFetchSettled && exactExhibition == null && !widget.embedded) {
+    if (_unavailableReason != null &&
+        exactExhibition == null &&
+        !widget.embedded) {
       return UnavailableEntityScaffold(
         entityLabel: l10n.commonExhibition,
+        reason: _unavailableReason!,
         canonicalPublicEntry: isCanonicalPublicEntry,
         showAppBar: !isDesktopCanonicalPublicEntry,
         onRetry: () {
-          setState(() => _entityFetchSettled = false);
+          setState(() => _unavailableReason = null);
           unawaited(_load());
         },
       );
