@@ -56,10 +56,10 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
 - On Android, localized links such as `/en/artworks/…` or `/sl/umetnine/…` open
   the installed app on the exact page. Collectible links stay in the browser,
   because the app has no public collectible page yet.
-- Android verifies these links against a signed association file. It covers the
-  signing certificate of the APK published on GitHub. Builds distributed through
-  Google Play may be signed with a different certificate and need it added
-  before their links verify automatically.
+- Android verifies these links against an association file published with the
+  web app. It lists the signing certificate of the APK published on GitHub.
+  Builds distributed through Google Play may be signed with a different
+  certificate and need it added before their links verify automatically.
 
 ## Spatial memory
 
@@ -91,11 +91,16 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
 - Signed-in, creator and institution screens were checked through the automated
   test suites, not through a screenshot review.
 
-## Verification
+## Verification and deployment
 
-The release was promoted through the repository's protected matrix: Flutter
-analysis and tests, release web build with Chromium and Firefox smoke, unsigned
-Android and iOS release compilation, backend compatibility, routing,
-documentation, provenance and security checks. The mobile release is created
-only from the production branch after the documented `dev`-to-`master`
-promotion.
+Promotion goes through the repository's protected matrix: Flutter analysis and
+tests, release web build with Chromium and Firefox smoke, unsigned Android and
+iOS release compilation, backend compatibility, routing, documentation,
+provenance and security checks. The mobile release is created only from the
+production branch after the documented `dev`-to-`master` promotion.
+
+The backend that accepts the new first-map-interaction event
+(art.kubus-backend `30a20b83`) is deployed before the web and mobile builds
+that send it; an unknown event name would otherwise be rejected with its whole
+batch. Mobile build numbers are derived by CI from the build date and run
+number, so the Android versionCode is above the v0.7.4 value of 262220006.

@@ -23,10 +23,19 @@ evidence in `docs/audits/index-ownership-2026-09/`) is deployed:
 - Profiles, posts, collections, events and exhibitions are indexed only when
   they carry their own substance (policy sections 5 to 8).
 
-The earlier audit counted about 18,114 public entities, of which 18,111 passed
-the index gate, and 9,049 artwork and marker pairs that could both have been
-eligible. Policy v1 is what resolved those pairs; the counts above are the
-pre-policy picture, not a current index count.
+Verified live on 2026-10-03: `/en/map/<markerId>` answers 200 with
+`rel=canonical` set to `/en/artworks/<artworkId>`; `/sl/umetnine/<id>` for an
+untranslated artwork canonicalizes to the English URL; and the sitemap index
+lists only artwork, profile and collection sitemaps.
+
+`organic-baseline-2026-10.md` quotes the earlier audit (about 18,114 public
+entities, 18,111 passing the index gate, 9,049 artwork and marker pairs that
+could both have been eligible). Those are the pre-policy counts: policy v1 is
+what resolved those pairs, and that page's warning against re-canonicalizing
+them describes a change that has already been made and observed. The numbers
+below come from the same audit (art.kubus-backend repository,
+`docs/audits/index-ownership-2026-09/output/metrics.csv`, measured
+2026-09-27) and are not a current index count.
 
 ## What 0.8.0 does not do
 
@@ -48,9 +57,12 @@ Candidates come from the audit cohorts (artworks by metadata richness):
 | C3 | title, image, artist, no description | 654 |
 | C4 | title and image only | 470 |
 
-and from the 1,649 artworks whose description is shared by five or more
-artworks (templated text). The question is whether thin, near-duplicate artwork
-pages dilute the site, not whether any page should be removed.
+The cohorts partition the 9,048 public, active, non-collectible artworks (the
+9,049 above counts markers, one of which belongs to a hidden artwork). The 1,649
+artworks whose description is shared by five or more artworks (templated text)
+are a second, overlapping view: they sit inside C1 and C2, because those
+cohorts require a description. The question is whether thin, near-duplicate
+artwork pages dilute the site, not whether any page should be removed.
 
 Proposed order, each step only after the previous one has been observed for 28
 days and the owner has approved it:
@@ -58,8 +70,10 @@ days and the owner has approved it:
 1. Enrich first: add substance to the templated-description artworks (policy
    follow-up 5). No indexing change.
 2. C4 (470 URLs): `noindex, follow` and removal from the sitemap, in one change.
-3. C3 (654 URLs), then the templated-description set, in batches of at most
-   1,000 URLs.
+3. C3 (654 URLs).
+4. Whatever of the templated-description set is still templated after step 1,
+   de-duplicated against the URLs already handled, in batches of at most 1,000
+   URLs, largest shared-description groups first.
 
 Every step is reversible by a single revert of the policy module, because
 routes, redirects and the database do not change.
@@ -71,17 +85,25 @@ before the change. The baseline at release is 32 clicks and 3,039 impressions
 over 28 days (CTR about 1.05%, average position about 9.9); that is small, so
 no criterion is read from a single week and none is read from clicks alone.
 
-Revert the step if any of these holds 14 days after it:
+Two checks per step: a provisional one at 14 days and the decisive one at 28
+days, which is also the end of the observation window before the next step.
+Because the baseline is small, a trigger only counts when it is larger than
+noise: it must exceed both the percentage below and a volume floor of at least
+10 clicks or 400 impressions in absolute terms, and it must still hold at the
+following weekly reading.
 
-- clicks or impressions for the pages **not** in the cohort fall by more than
-  25% against the baseline (the change is hurting what it should not touch);
-- the site's total clicks fall by more than 25% and the cohort cannot explain
-  more than half of the fall;
-- "Crawled, currently not indexed" or "Duplicate, Google chose different
-  canonical" has not fallen for the cohort after 28 days (the change did not do
-  what it was for);
-- the 404 rate or the sitemap submitted-versus-indexed ratio moves outside what
-  the change should cause.
+Revert the step if any of these holds:
+
+- at 14 or 28 days, clicks or impressions for the pages **not** in the cohort
+  have fallen by more than 25% against the baseline (the change is hurting what
+  it should not touch);
+- at 28 days, the site's total clicks have fallen by more than 25% and the
+  cohort cannot explain more than half of the fall;
+- at 28 days, "Crawled, currently not indexed" or "Duplicate, Google chose
+  different canonical" has not fallen for the cohort (the change did not do what
+  it was for);
+- at 14 or 28 days, the 404 rate or the sitemap submitted-versus-indexed ratio
+  has moved outside what the change should cause.
 
 Do not call this finished by chasing Search Console: it is a bounded experiment
 with a stop rule, not a release requirement.

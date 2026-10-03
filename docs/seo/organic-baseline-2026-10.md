@@ -58,6 +58,11 @@ have no visible query). Visible queries (for example "art galleries in celje",
 clicks. This work does not record search queries in the app and does not
 reconstruct the suppressed ones.
 
+> Update 2026-10-03: the ownership policy this page treats as pending (marker
+> canonical to artwork, untranslated Slovenian canonical to English) is already
+> live and was verified in production. The counts below are the pre-policy
+> audit. See [`index-quality-decision-0.8.md`](index-quality-decision-0.8.md).
+
 ## What not to do from this data
 
 - Do not create more indexed URLs because conversion is low. The index is already
