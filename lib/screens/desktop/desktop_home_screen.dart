@@ -2707,66 +2707,81 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   List<Map<String, dynamic>> _buildTopCreatorSummaries(
       List<CommunityPost> communityPosts, ArtworkProvider artworkProvider) {
-    final creatorsMap = <String, _CreatorStats>{};
-    final posts = communityPosts.take(50);
+    return buildDesktopTopCreatorSummaries(
+      communityPosts: communityPosts,
+      artworks: artworkProvider.artworks,
+      resolvedIdentities: _resolvedCreatorIdentityByWallet,
+      fallbackLabel:
+          AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+    );
+  }
+}
 
-    for (final post in posts) {
-      final key = post.authorWallet ?? post.authorId;
-      if (key.isEmpty) continue;
+/// Aggregate display labels without turning fallback labels into profile IDs.
+List<Map<String, dynamic>> buildDesktopTopCreatorSummaries({
+  required List<CommunityPost> communityPosts,
+  required List<Artwork> artworks,
+  required Map<String, ({String displayName, String? username})>
+      resolvedIdentities,
+  required String fallbackLabel,
+}) {
+  final creatorsMap = <String, _CreatorStats>{};
+  final posts = communityPosts.take(50);
+
+  for (final post in posts) {
+    final key = post.authorWallet ?? post.authorId;
+    if (key.isEmpty) continue;
+    final stats = creatorsMap.putIfAbsent(
+      key,
+      () => _CreatorStats(
+        id: post.authorId,
+        wallet: post.authorWallet,
+        name: post.authorName,
+        avatar: post.authorAvatar,
+        username: post.authorUsername,
+      ),
+    );
+    stats.postCount += 1;
+    stats.likeCount += post.likeCount;
+    stats.shareCount += post.shareCount;
+  }
+
+  // Fallback when no community posts: derive creators from artworks
+  if (creatorsMap.isEmpty) {
+    for (final art in artworks) {
+      final walletFromField = WalletUtils.canonical(art.walletAddress);
+      final wallet = walletFromField.isNotEmpty
+          ? walletFromField
+          : (WalletUtils.looksLikeWallet(art.artist)
+              ? WalletUtils.canonical(art.artist)
+              : '');
+      final resolved = wallet.isNotEmpty ? resolvedIdentities[wallet] : null;
+      final formatted = CreatorDisplayFormat.format(
+        fallbackLabel: fallbackLabel,
+        displayName: resolved?.displayName ?? art.artist,
+        username: resolved?.username,
+        wallet: wallet,
+      );
+
+      final key = wallet.isNotEmpty ? wallet : formatted.primary;
       final stats = creatorsMap.putIfAbsent(
         key,
         () => _CreatorStats(
-          id: post.authorId,
-          wallet: post.authorWallet,
-          name: post.authorName,
-          avatar: post.authorAvatar,
-          username: post.authorUsername,
+          id: wallet,
+          wallet: wallet.isEmpty ? null : wallet,
+          name: formatted.primary,
+          username: resolved?.username,
         ),
       );
       stats.postCount += 1;
-      stats.likeCount += post.likeCount;
-      stats.shareCount += post.shareCount;
+      stats.likeCount += art.likesCount;
+      stats.shareCount += art.viewsCount;
     }
-
-    // Fallback when no community posts: derive creators from artworks
-    if (creatorsMap.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      for (final art in artworkProvider.artworks) {
-        final walletFromField = WalletUtils.canonical(art.walletAddress);
-        final wallet = walletFromField.isNotEmpty
-            ? walletFromField
-            : (WalletUtils.looksLikeWallet(art.artist)
-                ? WalletUtils.canonical(art.artist)
-                : '');
-        final resolved =
-            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
-        final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: l10n.desktopHomeCreatorFallbackName,
-          displayName: resolved?.displayName ?? art.artist,
-          username: resolved?.username,
-          wallet: wallet,
-        );
-
-        final key = wallet.isNotEmpty ? wallet : formatted.primary;
-        final stats = creatorsMap.putIfAbsent(
-          key,
-          () => _CreatorStats(
-            id: wallet.isNotEmpty ? wallet : key,
-            wallet: wallet.isEmpty ? null : wallet,
-            name: formatted.primary,
-            username: resolved?.username,
-          ),
-        );
-        stats.postCount += 1;
-        stats.likeCount += art.likesCount;
-        stats.shareCount += art.viewsCount;
-      }
-    }
-
-    final creators = creatorsMap.values.toList()
-      ..sort((a, b) => b.score.compareTo(a.score));
-    return creators.take(5).map((c) => c.toMap()).toList();
   }
+
+  final creators = creatorsMap.values.toList()
+    ..sort((a, b) => b.score.compareTo(a.score));
+  return creators.take(5).map((c) => c.toMap()).toList();
 }
 
 class _TrendingArtEntry {
