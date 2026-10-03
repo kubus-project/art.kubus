@@ -247,6 +247,28 @@ it by clearing the flag when the animation future completes would let the
 programmatic move itself be counted as a gesture, which would break the frozen
 `map_engaged` semantics, so it was deliberately left alone.
 
+## 10a. Session continuity across layout swaps
+
+The phone and wide layouts are two map screens, each with its own controller.
+A rotation, a resizable window or a foldable crossing the breakpoint swaps one
+for the other, which used to reopen the map at the locale framing and drop the
+search text, filters and selection. `KubusMapSessionMemory` (one `Provider`,
+in-memory, no persistence) is written by both screens (camera on idle, filters,
+search text, selection) and read by the next screen before its first render:
+
+* camera: the new map opens at the previous centre and zoom, and the locale
+  fit-bounds is skipped (an explicit target, a deep link or walking navigation
+  still wins);
+* search text and filters are restored, so the constraint strip is the same;
+* the selected marker is restored through the screen's own marker-tap path once
+  the style is ready and markers have loaded (still one selection owner).
+
+Browser evidence: selecting a marker on desktop with an active search, then
+resizing to 390 px, opens the phone map at the same camera with the same
+marker selected and the same search constraint. Android landscape/portrait
+swaps keep camera and search text. Only a *new* screen reads the memory; it is
+not a restore-after-process-death feature.
+
 ## 11. Evidence
 
 See `docs/evidence/product-v5-spatial/README.md`.
@@ -263,3 +285,14 @@ See `docs/evidence/product-v5-spatial/README.md`.
   the app loads, and loading more is a backend/query decision outside 5B.
 * A remote (URL) map style does not get a globe: only bundled styles are
   stamped.
+* Android only: on the branch build one rotation-driven map-screen swap threw a
+  Java `NullPointerException` inside Flutter's `PlatformViewsController.resize`
+  (`SurfaceProducerPlatformViewRenderTarget.getWidth` on a released surface
+  producer) and closed the app. It did not reproduce in the later rotation runs
+  on either build (several single rotations and short stress loops on the
+  branch, and the same on the unchanged baseline); the emulator also dropped
+  its adb link under repeated rotation, so those runs are not conclusive either
+  way. The stack is entirely engine/plugin code and the screen swap itself is
+  not new, but this is an observation, not a proven pre-existing defect.
+* The wide layout shows two attribution controls on native Android (the plugin's
+  own button and the app's glass one); this predates 5B and was left alone.

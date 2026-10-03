@@ -286,6 +286,58 @@ async function tapAt(page, point, viewport) {
   else await page.mouse.click(point.x, point.y);
 }
 
+
+/**
+ * Pixel proof that the selected marker's badge is drawn at far zoom.
+ *
+ * The camera is padded so the marker sits below the open card, then a clip
+ * above its point is read back and its saturated-colour pixels are counted. A
+ * far marker is only a ~5 px dot, so a badge shows as hundreds of pixels.
+ */
+async function selectedBadgePixels(page, markerId) {
+  const point = await page.evaluate(
+    ({ id, top }) => {
+      const map = window.__maps[window.__maps.length - 1];
+      const f = map.querySourceFeatures('kubus_markers').find((x) => String(x.properties?.id) === id);
+      if (!f) return null;
+      const [lng, lat] = f.geometry.coordinates;
+      map.jumpTo({ center: [lng, lat], zoom: 3.2, padding: { top, bottom: 0, left: 0, right: 0 } });
+      return { lng, lat };
+    },
+    { id: markerId, top: 560 },
+  );
+  if (!point) return null;
+  await page.waitForTimeout(2500);
+  const screen = await page.evaluate(({ lng, lat }) => {
+    const map = window.__maps[window.__maps.length - 1];
+    const rect = map.getCanvas().getBoundingClientRect();
+    const p = map.project([lng, lat]);
+    return { x: rect.left + p.x, y: rect.top + p.y };
+  }, point);
+  // Inside the badge (it floats above its point) and below the card's edge.
+  const clip = { x: Math.max(0, screen.x - 16), y: Math.max(0, screen.y - 32), width: 32, height: 26 };
+  const png = await page.screenshot({ clip });
+  const count = await page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let saturated = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const max = Math.max(data[i], data[i + 1], data[i + 2]);
+      const min = Math.min(data[i], data[i + 1], data[i + 2]);
+      if (max - min > 90 && max > 150) saturated += 1;
+    }
+    return { saturated, total: canvas.width * canvas.height };
+  }, png.toString('base64'));
+  return { screen, ...count };
+}
+
 /** Select a marker, then prove it stays a visible marker at every zoom level. */
 async function selectionContinuity(page, viewport, tag, run) {
   await page.evaluate(() => {
@@ -342,6 +394,17 @@ async function selectionContinuity(page, viewport, tag, run) {
       `${tag}: the badge stays pinned visible for the selection at far zoom`,
       levels.every((l) => l.opacityPinsSelection),
       '',
+    );
+    const badge = await selectedBadgePixels(page, target.id);
+    run.selectedBadgePixels = badge;
+    await snap(page, `${tag}-sel-far-padded`, run);
+    check(
+      run,
+      `${tag}: the selected badge is actually drawn at far zoom (pixels)`,
+      // A lone far dot is ~3 % of this clip; a badge is 35-55 % depending on
+      // the browser's colour handling, so 30 % separates the two.
+      badge && badge.saturated > 0.3 * badge.total,
+      JSON.stringify(badge),
     );
   }
   return target;
@@ -686,8 +749,12 @@ async function scenario(browserName, viewport, scheme, report) {
 
     const errors = run.console.filter((l) => /^\[(error|pageerror)\]/.test(l));
     // Third-party resource failures are not map faults.
+    // Match the message only: the line also carries the QA step tag (which can
+    // itself contain words such as "webgl").
     const mapErrors = errors.filter((l) =>
-      /maplibre|webgl|gl context|Cannot read|is not a function|style (is|was) not|image .* could not be loaded/i.test(l),
+      /maplibre|webgl|gl context|Cannot read|is not a function|style (is|was) not|image .* could not be loaded/i.test(
+        l.replace(/^\[\w+\] @\S+ /, ''),
+      ),
     );
     check(run, `${tag}: no MapLibre/WebGL errors in console`, mapErrors.length === 0, mapErrors.slice(0, 3).join(' || '));
   } catch (error) {
