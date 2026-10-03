@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.art.kubus",
+      "sha256_cert_fingerprints": [
+        "42:68:42:AD:10:CB:AF:2F:45:31:5B:EA:69:36:25:3E:C3:2D:42:B4:4D:25:F6:93:5A:1D:2B:9C:E3:B1:C8:A3"
+      ]
+    }
+  }
+]
