@@ -50,26 +50,34 @@ class UrlCoherenceObserver extends NavigatorObserver {
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    // Dialogs, sheets and popups are not pages: they cannot change the URL and
+    // must not force a frame on a hot path.
+    if (route is! PageRoute<dynamic>) return;
     _stack.add(route);
     _schedule();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) return;
     _stack.remove(route);
     _schedule();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) return;
     _stack.remove(route);
     _schedule();
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (newRoute is! PageRoute<dynamic> && oldRoute is! PageRoute<dynamic>) {
+      return;
+    }
     final index = oldRoute == null ? -1 : _stack.indexOf(oldRoute);
-    if (newRoute != null) {
+    if (newRoute != null && newRoute is PageRoute<dynamic>) {
       if (index >= 0) {
         _stack[index] = newRoute;
       } else {

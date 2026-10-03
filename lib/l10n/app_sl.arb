@@ -242,6 +242,7 @@
   "activationActionLikedToast": "Všečkano",
   "activationActionFollowedToast": "Spremljaš",
   "activationActionTargetUnavailableToast": "To ni več na voljo. Morda je bilo odstranjeno ali skrito.",
+  "entityUnavailableBody": "Tega ni bilo mogoče naložiti. Morda je bilo odstranjeno ali skrito, ali pa je povezava prekinjena.",
   "activationActionUnauthorizedToast": "Za to nimaš dovoljenja.",
   "activationActionFailedToast": "To ni uspelo. Poskusi znova.",
   "activationPromptTitle": "Zgradi svoj zemljevid umetnosti",

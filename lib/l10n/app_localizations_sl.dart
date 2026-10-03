@@ -500,6 +500,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'To ni več na voljo. Morda je bilo odstranjeno ali skrito.';
 
   @override
+  String get entityUnavailableBody =>
+      'Tega ni bilo mogoče naložiti. Morda je bilo odstranjeno ali skrito, ali pa je povezava prekinjena.';
+
+  @override
   String get activationActionUnauthorizedToast => 'Za to nimaš dovoljenja.';
 
   @override

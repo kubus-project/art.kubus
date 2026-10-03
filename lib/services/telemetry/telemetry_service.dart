@@ -1159,7 +1159,16 @@ class TelemetryService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final prefix = '$_sessionId::';
-      final keys = _onceKeys.where((key) => key.startsWith(prefix)).toList();
+      // Tabs of one browser share the session id; keep what another tab has
+      // already recorded instead of overwriting it with this tab's view.
+      final stored = prefs.getStringList(AppTelemetryConfig.onceKeysPrefsKey) ??
+          const <String>[];
+      final merged = <String>{
+        ...stored.where((key) => key.startsWith(prefix)),
+        ..._onceKeys.where((key) => key.startsWith(prefix)),
+      };
+      _onceKeys.addAll(merged);
+      final keys = merged.toList();
       // A session only ever holds a handful of distinct guards; the cap keeps a
       // runaway dedupe key from growing storage.
       await prefs.setStringList(

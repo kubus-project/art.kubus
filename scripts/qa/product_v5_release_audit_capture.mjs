@@ -93,10 +93,16 @@ const MIME = {
 function startServer() {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, appUrl);
-    let rel = decodeURIComponent(url.pathname);
+    let rel;
+    try {
+      rel = decodeURIComponent(url.pathname);
+    } catch {
+      res.writeHead(400).end();
+      return;
+    }
     if (rel.endsWith('/')) rel += 'index.html';
     let file = path.join(webRoot, rel);
-    if (!file.startsWith(webRoot)) {
+    if (path.relative(webRoot, file).startsWith('..')) {
       res.writeHead(403).end();
       return;
     }
@@ -193,8 +199,7 @@ async function navigateShell(page, nav, width, height, language) {
     if (!text) return;
     await page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
     await page.waitForTimeout(800);
-    const node = page.locator('flt-semantics').filter({ hasText: new RegExp(`^\s*${text}\s*$`) }).last();
-    await node.click({ force: true, timeout: 8000 });
+    await page.getByRole('button', { name: text, exact: true }).first().click({ force: true, timeout: 8000 });
   }
   await page.waitForTimeout(3500);
 }

@@ -242,6 +242,7 @@
   "activationActionLikedToast": "Liked",
   "activationActionFollowedToast": "Following",
   "activationActionTargetUnavailableToast": "This is no longer available. It may have been removed or made private.",
+  "entityUnavailableBody": "This could not be loaded. It may have been removed or made private, or your connection may have dropped.",
   "activationActionUnauthorizedToast": "You don't have permission to do that.",
   "activationActionFailedToast": "That didn't work. Please try again.",
   "activationPromptTitle": "Build your own art map",

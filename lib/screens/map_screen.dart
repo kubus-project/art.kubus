@@ -5615,11 +5615,11 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
     _mapEngagement.searchResultSelected();
-    _yieldFollowToDeliberateCamera();
     _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
     if (result.position != null) {
+      _yieldFollowToDeliberateCamera();
       await _kubusMapController.animateTo(
         result.position!,
         zoom: math.max(_lastZoom, 16.0),

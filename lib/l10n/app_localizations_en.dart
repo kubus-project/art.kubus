@@ -498,6 +498,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is no longer available. It may have been removed or made private.';
 
   @override
+  String get entityUnavailableBody =>
+      'This could not be loaded. It may have been removed or made private, or your connection may have dropped.';
+
+  @override
   String get activationActionUnauthorizedToast =>
       'You don\'t have permission to do that.';
 

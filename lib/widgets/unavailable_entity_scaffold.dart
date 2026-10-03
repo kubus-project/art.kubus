@@ -45,7 +45,7 @@ class UnavailableEntityScaffold extends StatelessWidget {
           child: EmptyStateCard(
             icon: Icons.link_off_outlined,
             title: entityLabel,
-            description: l10n.activationActionTargetUnavailableToast,
+            description: l10n.entityUnavailableBody,
             showAction: true,
             actionLabel: l10n.commonRetry,
             onAction: onRetry,
