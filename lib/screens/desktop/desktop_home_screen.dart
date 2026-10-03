@@ -1987,7 +1987,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     _scheduleCreatorIdentityResolution([canonicalWallet]);
     return DesktopCard(
-      onTap: () => openProfileIdentity(context, identity),
+      onTap: identity.canOpenProfile
+          ? () => openProfileIdentity(context, identity)
+          : null,
       padding: const EdgeInsets.all(DetailSpacing.sm + 2),
       margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
       borderRadius: BorderRadius.circular(DetailRadius.md),
@@ -1996,7 +1998,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         layout: ProfileIdentityLayout.row,
         avatarRadius: 20,
         allowFabricatedFallback: true,
-        onTap: () => openProfileIdentity(context, identity),
+        onTap: identity.canOpenProfile
+            ? () => openProfileIdentity(context, identity)
+            : null,
         titleStyle: KubusTextStyles.detailCardTitle,
         subtitleStyle: KubusTextStyles.navMetaLabel,
         trailing: Container(
