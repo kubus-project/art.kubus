@@ -77,6 +77,7 @@ import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
 import 'core/app_route_observer.dart';
+import 'core/url_coherence_observer.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/secure_account_screen.dart';
@@ -943,6 +944,7 @@ class ArtKubus extends StatefulWidget {
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
+  final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver();
 
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
@@ -1528,7 +1530,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
           navigatorKey: appNavigatorKey,
-          navigatorObservers: [_telemetryObserver, appRouteObserver],
+          navigatorObservers: [
+            _telemetryObserver,
+            appRouteObserver,
+            _urlCoherenceObserver,
+          ],
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -429,10 +429,10 @@ async function scenarioAction(page, tag, record) {
     const back = pathOf(page);
     await snap(page, `${tag}-action-back-to-entity`, record);
     record.notes = { ...(record.notes || {}), afterBack: { path: back, history: await historyLength(page) } };
-    // KNOWN (pre-existing): the gate pushes the named `/onboarding` route; on
-    // browser Back the address bar keeps that name although the entity is on
-    // screen. Reported, not failed; the visible screen below is what is asserted.
-    known(record, `${tag}: address bar returns to the entity after Back`, back === entityPath, back);
+    // The gate pushes the named `/onboarding` route and the entity beneath it
+    // is unnamed, so the address bar used to keep `/onboarding` after Back.
+    // UrlCoherenceObserver now restores the URL of the visible page.
+    check(record, `${tag}: address bar returns to the entity after Back`, back === entityPath, back);
     const treeAfterBack = textOf(await semantics(page));
     check(record, `${tag}: Back from the account step shows the entity, not onboarding`, !/create an account|sign in/i.test(treeAfterBack.slice(0, 200)) || /najemni/i.test(treeAfterBack), treeAfterBack.slice(0, 120));
     // The address bar must agree with what is on screen: a refresh here must
@@ -445,7 +445,7 @@ async function scenarioAction(page, tag, record) {
     // wall. It must now land in public discovery or on the entity.
     const reloadText = textOf(await semantics(page).catch(() => []));
     check(record, `${tag}: refresh after Back shows no welcome wall`, !/choose one path|get started/i.test(reloadText), afterReload);
-    known(record, `${tag}: refresh after Back returns to the entity`, afterReload === entityPath, afterReload);
+    check(record, `${tag}: refresh after Back returns to the entity`, afterReload === entityPath, afterReload);
   }
 }
 
