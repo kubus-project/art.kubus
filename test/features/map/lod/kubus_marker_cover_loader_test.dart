@@ -15,6 +15,7 @@ Future<ui.Image> _image() async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  coverUrlCacheTests();
 
   test('de-duplicates concurrent loads of the same URL', () async {
     var calls = 0;
@@ -140,5 +141,65 @@ void main() {
         KubusMarkerCoverLoader(fetch: (url, width) async => _image());
     loader.dispose();
     expect(await loader.load('x', targetWidthPx: 96), isNull);
+  });
+}
+
+void coverUrlCacheTests() {
+  group('KubusCoverUrlCache', () {
+    test('resolves once while the signature is unchanged', () {
+      final cache = KubusCoverUrlCache();
+      var calls = 0;
+      String? lookup() => cache.lookup(
+            markerId: 'm1',
+            signature: 'a',
+            resolve: () {
+              calls += 1;
+              return 'https://x/a.jpg';
+            },
+          );
+      expect(lookup(), 'https://x/a.jpg');
+      expect(lookup(), 'https://x/a.jpg');
+      expect(calls, 1);
+    });
+
+    test('a marker without a cover is remembered until its data changes', () {
+      final cache = KubusCoverUrlCache();
+      var calls = 0;
+      String? lookup(String signature, String? url) => cache.lookup(
+            markerId: 'm1',
+            signature: signature,
+            resolve: () {
+              calls += 1;
+              return url;
+            },
+          );
+      // Planned before the linked artwork has arrived: no cover yet.
+      expect(lookup('no-artwork', null), isNull);
+      expect(lookup('no-artwork', null), isNull);
+      expect(calls, 1);
+      // The artwork hydrates: the answer must be recomputed, not stay empty.
+      expect(lookup('artwork-arrived', 'https://x/b.jpg'), 'https://x/b.jpg');
+      expect(calls, 2);
+    });
+
+    test('a refreshed record with a new cover replaces the old one', () {
+      final cache = KubusCoverUrlCache();
+      expect(
+        cache.lookup(
+          markerId: 'm1',
+          signature: 'v1',
+          resolve: () => 'https://x/old.jpg',
+        ),
+        'https://x/old.jpg',
+      );
+      expect(
+        cache.lookup(
+          markerId: 'm1',
+          signature: 'v2',
+          resolve: () => 'https://x/new.jpg',
+        ),
+        'https://x/new.jpg',
+      );
+    });
   });
 }

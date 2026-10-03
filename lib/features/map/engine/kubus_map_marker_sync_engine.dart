@@ -96,7 +96,7 @@ class KubusMapMarkerSyncEngine {
   int _coverImagesRegistered = 0;
   int _coverEpoch = -1;
   final Set<String> _pendingCoverKeys = <String>{};
-  final Map<String, String> _coverUrlByMarker = <String, String>{};
+  final KubusCoverUrlCache _coverUrls = KubusCoverUrlCache();
 
   /// Cover images registered in the current style epoch (debug / evidence).
   int get coverImagesRegistered => _coverImagesRegistered;
@@ -510,22 +510,28 @@ class KubusMapMarkerSyncEngine {
   static const int _coverFetchWidthLogicalPx = 160;
 
   String? _coverUrlFor(ArtMarker marker) {
-    final cached = _coverUrlByMarker[marker.id];
-    if (cached != null) return cached.isEmpty ? null : cached;
     final artworkId = marker.artworkId;
     final artwork = artworkId == null || artworkId.isEmpty
         ? null
         : Provider.of<ArtworkProvider>(host.hostContext, listen: false)
             .getArtworkById(artworkId);
-    final url = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: marker.metadata,
-      maxWidth: _coverFetchWidthLogicalPx,
+    // The cached answer is only valid for the data it was resolved from.
+    // Artwork hydration is asynchronous (a marker can be planned before its
+    // artwork has arrived) and refreshed records carry new data, so the entry
+    // is keyed by what the resolver reads, not by marker id alone. A marker
+    // without a cover is remembered too, but only until that data changes.
+    final signature = '${artwork?.id}|${artwork?.imageUrl}|'
+        '${identityHashCode(artwork?.metadata)}|'
+        '${identityHashCode(marker.metadata)}';
+    return _coverUrls.lookup(
+      markerId: marker.id,
+      signature: signature,
+      resolve: () => ArtworkMediaResolver.resolveCover(
+        artwork: artwork,
+        metadata: marker.metadata,
+        maxWidth: _coverFetchWidthLogicalPx,
+      ),
     );
-    // An empty marker is remembered too: a marker with no cover is not
-    // re-resolved on every sync.
-    _coverUrlByMarker[marker.id] = url ?? '';
-    return url;
   }
 
   /// Chooses the bounded set of markers that should show a cover now and
@@ -611,6 +617,11 @@ class KubusMapMarkerSyncEngine {
       // Rasterising a cover is a GPU readback: never start one mid-gesture. The
       // screens re-plan covers when the camera idles at street scale.
       if (host.kubusMapController.cameraIsMoving) continue;
+      // A spent image pool cannot take another cover: planning it again would
+      // only fetch, render and discard it on every idle.
+      if (_coverImagesRegistered >= KubusMarkerLod.maxRegisteredCoverImages) {
+        continue;
+      }
       _prepareCover(
         marker: marker,
         url: url,
@@ -661,17 +672,19 @@ class KubusMapMarkerSyncEngine {
         final shape = ArtMapMarkerShape.forType(marker.type);
         final hash = url.hashCode;
 
-        Future<void> register(bool selected) async {
+        // Whether an image was actually added: a resync is only worth its cost
+        // when the source can now show something new.
+        Future<bool> register(bool selected) async {
           final id = MapMarkerIconIds.markerCover(
             markerId: marker.id,
             coverHash: hash,
             isDark: isDark,
             selected: selected,
           );
-          if (host.registeredMapImages.contains(id)) return;
+          if (host.registeredMapImages.contains(id)) return false;
           if (_coverImagesRegistered >=
               KubusMarkerLod.maxRegisteredCoverImages) {
-            return;
+            return false;
           }
           final bytes = await ArtMarkerCubeIconRenderer.renderCoverMarkerPng(
             cover: image,
@@ -687,11 +700,12 @@ class KubusMapMarkerSyncEngine {
           );
           if (!host.hostMounted ||
               host.kubusMapController.styleEpoch != styleEpoch) {
-            return;
+            return false;
           }
           await controller.addImage(id, bytes);
           host.registeredMapImages.add(id);
           _coverImagesRegistered += 1;
+          return true;
         }
 
         // One cover at a time, only while the camera is still: the readback
@@ -699,9 +713,9 @@ class KubusMapMarkerSyncEngine {
         // cover is re-planned at the next camera idle.
         final rendered = await _coverGate.runSerial<bool>(
           () async {
-            await register(false);
-            if (needSelectedVariant) await register(true);
-            return true;
+            final base = await register(false);
+            final glow = needSelectedVariant && await register(true);
+            return base || glow;
           },
           shouldRun: () =>
               host.hostMounted &&

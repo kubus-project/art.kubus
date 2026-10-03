@@ -1,6 +1,7 @@
 import 'package:art_kubus/features/map/shared/map_marker_regroup_gate.dart';
 import 'package:art_kubus/features/map/shared/map_marker_selection_resolver.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/utils/art_marker_list_diff.dart';
 import 'package:art_kubus/widgets/map/kubus_map_marker_features.dart';
 import 'package:art_kubus/widgets/map/kubus_map_marker_geojson_builder.dart';
 import 'package:art_kubus/widgets/map/kubus_map_marker_rendering.dart';
@@ -189,6 +190,42 @@ void main() {
         [selected, direct, temp, ordinary],
       ).map((m) => m.id);
       expect(kept, <String>['${kSearchTemporaryMarkerPrefix}artwork-1']);
+    });
+
+    test('a selected marker the response returned is not carried over', () {
+      final kept = markersPreservedAcrossViewportRefresh(
+        [selected, ordinary],
+        selectedMarkerId: 'sel',
+        fetched: [selected, ordinary],
+      ).map((m) => m.id);
+      expect(kept, isEmpty);
+    });
+
+    test('the fresh selected record wins over the loaded copy in the merge',
+        () {
+      final fresh = selected.copyWith(name: 'fresh name');
+      final merged = ArtMarkerListDiff.upsertById(
+        current: [fresh, ordinary],
+        updates: markersPreservedAcrossViewportRefresh(
+          [selected, ordinary],
+          selectedMarkerId: 'sel',
+          fetched: [fresh, ordinary],
+        ),
+      );
+      expect(merged.firstWhere((m) => m.id == 'sel').name, 'fresh name');
+    });
+
+    test('a selected marker the response omitted is still carried over', () {
+      final merged = ArtMarkerListDiff.upsertById(
+        current: [ordinary],
+        updates: markersPreservedAcrossViewportRefresh(
+          [selected, ordinary],
+          selectedMarkerId: 'sel',
+          fetched: [ordinary],
+        ),
+      );
+      expect(
+          merged.map((m) => m.id), containsAll(<String>['sel', ordinary.id]));
     });
 
     test('blank ids never match everything', () {

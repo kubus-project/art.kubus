@@ -5,6 +5,38 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+/// Remembers which cover URL a marker resolved to, for as long as the data it
+/// was resolved from is unchanged.
+///
+/// Resolving a cover walks several metadata fields, so the answer is cached per
+/// marker, including "this marker has no cover". The entry is keyed by a
+/// signature of what the resolver reads: artwork hydration is asynchronous (a
+/// marker can be planned before its artwork arrives) and refreshed records carry
+/// new data, so a cached answer, a missing one above all, must not outlive the
+/// data it came from.
+class KubusCoverUrlCache {
+  final Map<String, ({String signature, String url})> _entries =
+      <String, ({String signature, String url})>{};
+
+  /// The cover URL for [markerId], or null when it has none. [resolve] runs only
+  /// when nothing is cached for this [signature].
+  String? lookup({
+    required String markerId,
+    required String signature,
+    required String? Function() resolve,
+  }) {
+    final cached = _entries[markerId];
+    if (cached != null && cached.signature == signature) {
+      return cached.url.isEmpty ? null : cached.url;
+    }
+    final url = resolve();
+    _entries[markerId] = (signature: signature, url: url ?? '');
+    return url;
+  }
+
+  int get length => _entries.length;
+}
+
 /// Fetches one decoded cover image, already scaled to roughly [targetWidthPx].
 ///
 /// Returns null when the image cannot be loaded; it must not throw.

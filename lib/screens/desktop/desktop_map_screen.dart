@@ -2163,7 +2163,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (controller == null) return null;
     try {
       final bounds = await controller.getVisibleRegion();
-      return GeoBounds.fromCorners(
+      return GeoBounds.fromVisibleCorners(
         LatLng(bounds.southwest.latitude, bounds.southwest.longitude),
         LatLng(bounds.northeast.latitude, bounds.northeast.longitude),
       );
@@ -5134,6 +5134,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               current: result.markers,
               updates: markersPreservedAcrossViewportRefresh(
                 _artMarkers,
+                fetched: result.markers,
                 selectedMarkerId: _kubusMapController.selectedMarkerId,
                 directTargetMarkerId: _directTargetMarkerId,
               ),

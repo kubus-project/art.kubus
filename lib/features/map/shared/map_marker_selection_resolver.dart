@@ -131,16 +131,23 @@ const String kSearchTemporaryMarkerPrefix = 'search_temp_';
 /// **selected** marker (it is on screen as the selection, and a pan must not
 /// dismiss it just because the new bounds no longer contain it), the direct
 /// deep-link target, and the temporary markers created for a search result.
+///
+/// The selected marker is carried over only when the response [fetched] does
+/// not contain it: when the backend returned it, the fresh record (position,
+/// metadata, presentation) is the one that must win over the loaded copy.
 Iterable<ArtMarker> markersPreservedAcrossViewportRefresh(
   Iterable<ArtMarker> current, {
   String? selectedMarkerId,
   String? directTargetMarkerId,
+  Iterable<ArtMarker> fetched = const <ArtMarker>[],
 }) {
   final selected = selectedMarkerId?.trim() ?? '';
   final direct = directTargetMarkerId?.trim() ?? '';
+  final selectedWasFetched =
+      selected.isNotEmpty && fetched.any((marker) => marker.id == selected);
   return current.where(
     (marker) =>
-        (selected.isNotEmpty && marker.id == selected) ||
+        (selected.isNotEmpty && marker.id == selected && !selectedWasFetched) ||
         (direct.isNotEmpty && marker.id == direct) ||
         marker.id.startsWith(kSearchTemporaryMarkerPrefix),
   );
