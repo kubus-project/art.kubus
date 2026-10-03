@@ -60,7 +60,16 @@ class LocaleProvider extends ChangeNotifier {
   /// meaningful frame (no persisted-locale flash). A supported override is also
   /// persisted, so a later cold start without the locale in the URL keeps it.
   Future<void> initialize({String? overrideLanguageCode}) async {
-    if (_initialized) return;
+    if (_initialized) {
+      // The provider is initialised at creation from the launch URL; a later
+      // call (AppInitializer, with the entry URI a native deep link delivers
+      // afterwards) can still carry a supported locale that must win.
+      final lateCode = _supportedOrNull(overrideLanguageCode);
+      if (lateCode != null && lateCode != _locale.languageCode) {
+        await setLanguageCode(lateCode);
+      }
+      return;
+    }
 
     final previous = _locale.languageCode;
     final override = _supportedOrNull(overrideLanguageCode);

@@ -1105,6 +1105,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
       returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',

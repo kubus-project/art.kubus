@@ -31,6 +31,10 @@ class AppTelemetryConfig {
   static const String sessionIdPrefsKey = 'app_telemetry_session_id_v1';
   static const String sessionStartPrefsKey = 'app_telemetry_session_start_v1';
 
+  /// Once-per-session guards, stored with the session they belong to so a page
+  /// reload inside the same session does not emit the event a second time.
+  static const String onceKeysPrefsKey = 'app_telemetry_once_keys_v1';
+
   static bool get enabledByBuildFlag => AppConfig.isFeatureEnabled('analytics');
   static String get env => AppConfig.isProduction ? 'prod' : 'dev';
 }
@@ -79,6 +83,13 @@ class AppTelemetryEventTypes {
   // (how visitors discover and engage with a programme). Payloads should carry
   // only ids/coarse context, never precise location history.
   static const String mapOpened = 'map_opened';
+
+  /// The first *deliberate* map interaction of a session: the visitor panned or
+  /// zoomed by hand, opened a marker, or chose a search result. Distinct from
+  /// [mapOpened], which only says the map rendered. Once per session; `kind`
+  /// names which interaction came first (`camera_gesture`, `marker_open`,
+  /// `search_select`). Never a pan/zoom stream.
+  static const String mapEngaged = 'map_engaged';
   static const String nearbyDiscoveryUsed = 'nearby_discovery_used';
   static const String artworkViewed = 'artwork_viewed';
   static const String eventViewed = 'event_viewed';
@@ -147,6 +158,7 @@ class AppTelemetryEventTypes {
     guestAppLoaded,
     guestMapLoaded,
     mapOpened,
+    mapEngaged,
     nearbyDiscoveryUsed,
     artworkViewed,
     eventViewed,

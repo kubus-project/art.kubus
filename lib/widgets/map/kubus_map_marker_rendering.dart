@@ -190,6 +190,59 @@ List<KubusClusterBucket> kubusClusterMarkersByGridLevel(
   return result;
 }
 
+/// Clusters [markers] like [kubusClusterMarkersByGridLevel] but never lets a
+/// pinned marker disappear into a cluster.
+///
+/// A pinned marker (the selected one) is returned as its own single-marker
+/// bucket at its exact position, and the remaining markers are clustered
+/// without it, so a selection survives any zoom change as a visible marker
+/// instead of being absorbed into a count badge. A pinned marker that shares
+/// its coordinate with others stays in that same-coordinate stack, whose
+/// badge is its representation (and which spiderfies on selection).
+List<KubusClusterBucket> kubusClusterBucketsWithPinned(
+  List<ArtMarker> markers,
+  int level, {
+  bool sortBySizeDesc = false,
+  Set<String> pinnedMarkerIds = const <String>{},
+}) {
+  if (pinnedMarkerIds.isEmpty) {
+    return kubusClusterMarkersByGridLevel(
+      markers,
+      level,
+      sortBySizeDesc: sortBySizeDesc,
+    );
+  }
+
+  final byCoordinate = groupMarkersByCoordinateKey(markers);
+  final pinned = <ArtMarker>[];
+  final rest = <ArtMarker>[];
+  for (final marker in markers) {
+    final alone =
+        (byCoordinate[mapMarkerCoordinateKey(marker.position)]?.length ?? 1) ==
+            1;
+    if (alone && pinnedMarkerIds.contains(marker.id)) {
+      pinned.add(marker);
+    } else {
+      rest.add(marker);
+    }
+  }
+  final clusters = kubusClusterMarkersByGridLevel(
+    rest,
+    level,
+    sortBySizeDesc: sortBySizeDesc,
+  );
+  if (pinned.isEmpty) return clusters;
+  return <KubusClusterBucket>[
+    ...clusters,
+    for (final marker in pinned)
+      KubusClusterBucket(
+        cell: GridUtils.gridCellForLevel(marker.position, level),
+        markers: List<ArtMarker>.unmodifiable(<ArtMarker>[marker]),
+        centroid: marker.position,
+      ),
+  ];
+}
+
 /// Pre-registers marker icons in parallel batches to avoid waterfall.
 ///
 /// This is shared by both `MapScreen` and `DesktopMapScreen`.
@@ -207,15 +260,17 @@ Future<void> kubusPreregisterMarkerIcons({
   required double pixelRatio,
   required IconData Function(ArtMarkerType type) resolveMarkerIcon,
   required Color Function(ArtMarker marker) resolveMarkerBaseColor,
+  Set<String> pinnedMarkerIds = const <String>{},
 }) async {
   final toRender = <KubusIconRenderTask>[];
 
   if (useClustering) {
     final level = clusterGridLevelForZoom(zoom);
-    final clusters = kubusClusterMarkersByGridLevel(
+    final clusters = kubusClusterBucketsWithPinned(
       markers,
       level,
       sortBySizeDesc: sortClustersBySizeDesc,
+      pinnedMarkerIds: pinnedMarkerIds,
     );
 
     for (final cluster in clusters) {
@@ -262,7 +317,8 @@ Future<void> kubusPreregisterMarkerIcons({
         final signature = kubusClusterCategorySignature(
           kubusClusterCategoryBreakdown(cluster.markers),
         );
-        final label = cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
+        final label =
+            cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
         final iconId = MapMarkerIconIds.cluster(
           categorySignature: signature,
           label: label,
@@ -417,7 +473,8 @@ Future<void> kubusPreregisterMarkerIcons({
         registeredMapImages.add(task.iconId);
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('kubusPreregisterMarkerIcons: addImage failed (${task.iconId}): $e');
+          debugPrint(
+              'kubusPreregisterMarkerIcons: addImage failed (${task.iconId}): $e');
         }
       }
     }));

@@ -1,0 +1,8 @@
+baseline-r1: cycles requested=20, completed=20, died_at_cycle=0
+  FATAL EXCEPTION            : 0
+  PlatformViewsController    : 0
+  SurfaceProducer...getWidth : 0
+  NullPointerException       : 44
+  ActivityManager death      : 0
+  MapLibre native errors     : 0
+  device: sdk_gphone64_x86_64 android 14 (EMULATOR)

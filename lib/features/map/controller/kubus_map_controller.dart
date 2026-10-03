@@ -194,6 +194,7 @@ class KubusMapController {
     this.onSelectionChanged,
     this.onAutoFollowChanged,
     this.onBackgroundTap,
+    this.onUserMarkerInteraction,
     this.onRequestMarkerLayerStyleUpdate,
     this.onRequestMarkerDataSync,
     this.onMarkerOverlayAcknowledged,
@@ -226,6 +227,13 @@ class KubusMapController {
   /// Screens can use this to close side panels / overlays that are not owned
   /// by this controller.
   final VoidCallback? onBackgroundTap;
+
+  /// Called when the *user* tapped a marker, cluster or same-location group on
+  /// the map: the web feature-tap path and the native hit-test path. Never
+  /// called for programmatic selection (deep-link targets, search) or for a
+  /// click that web suppresses because its feature tap already handled it, so
+  /// it is a deliberate-interaction signal and cannot double-count.
+  final VoidCallback? onUserMarkerInteraction;
 
   /// Called when pressed/hover/selection changes and the screen should restyle marker layers.
   final VoidCallback? onRequestMarkerLayerStyleUpdate;
@@ -283,6 +291,7 @@ class KubusMapController {
   );
 
   bool _programmaticCameraMove = false;
+  bool _hasCameraFrame = false;
   bool _cameraIsMoving = false;
 
   static const Duration _hoverUpdateThrottle = Duration(milliseconds: 16);
@@ -362,6 +371,10 @@ class KubusMapController {
   bool get autoFollow => _autoFollow;
   bool get cameraIsMoving => _cameraIsMoving;
 
+  /// Whether at least one real camera frame has been received. Until then
+  /// [camera] is only the constructor default, not where the map is.
+  bool get hasCameraFrame => _hasCameraFrame;
+
   bool get styleInitialized => _styleInitialized;
   bool get styleInitializationInProgress => _styleInitializationInProgress;
   int get styleEpoch => _styleEpoch;
@@ -372,6 +385,10 @@ class KubusMapController {
   int get selectedMarkerStackIndex => _selectedMarkerStackIndex;
   DateTime? get selectedMarkerAt => _selectedMarkerAt;
   String? get expandedCoordinateKey => _expandedCoordinateKey;
+
+  /// Ids of the markers currently inside the viewport (maintained by the
+  /// viewport visibility refresh). Close-level covers are chosen from these.
+  Set<String> get visibleMarkerIds => _visibleMarkerIds;
   bool get hasExpandedSameLocation => _expandedCoordinateKey != null;
   bool get reduceMotion => _reduceMotion;
   int get markerOverlayLayoutRevision => _markerOverlayLayoutRevision;
@@ -836,9 +853,23 @@ class KubusMapController {
     }
   }
 
+  /// A style swap (theme change, fallback style) is about to start, so every
+  /// installed layer is about to disappear until [handleStyleLoaded] runs again.
+  ///
+  /// Marking the controller not-initialised first stops marker restyles (the
+  /// ambient badge bob and pulse tick every ~66 ms) from addressing layers that
+  /// are already gone, which MapLibre reports as "Cannot style non-existing
+  /// layer". The epoch is not bumped here: [handleStyleLoaded] owns that.
+  void markStyleReloading() {
+    _styleInitialized = false;
+    _hitboxLayerReady = false;
+    _hitboxLayerEpoch = -1;
+  }
+
   void handleCameraMove(ml.CameraPosition position) {
     if (_mapController == null) return;
     _cameraIsMoving = true;
+    _hasCameraFrame = true;
 
     final bool hasGesture = !_programmaticCameraMove;
     if (hasGesture && _autoFollow) {
@@ -954,6 +985,15 @@ class KubusMapController {
   bool _isFiniteScreenPoint(math.Point<double> point) =>
       point.x.isFinite && point.y.isFinite;
 
+  /// Test seam for the web-only MapLibre feature-tap callback.
+  @visibleForTesting
+  void debugHandleMapFeatureTapped(
+    dynamic point,
+    dynamic coordinates,
+    dynamic id,
+  ) =>
+      _handleMapFeatureTapped(point, coordinates, id, null, null);
+
   /// Web only: invoked via MapLibre's onFeatureTapped.
   void _handleMapFeatureTapped(
     dynamic point,
@@ -975,6 +1015,7 @@ class KubusMapController {
     _lastFeatureTapAt = DateTime.now();
     _lastFeatureTapPoint = tapPoint;
     _debugFeatureTapCount += 1;
+    onUserMarkerInteraction?.call();
 
     if (featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
       final coordinateKey =
@@ -1084,10 +1125,10 @@ class KubusMapController {
     math.Point<double> point, {
     required bool isWeb,
   }) async {
-    final controller = _mapController;
-    if (controller == null) return;
     if (!_isFiniteScreenPoint(point)) return;
 
+    // The suppressed click after a web feature tap, and the web background
+    // tap, need no native map controller: neither is a marker interaction.
     if (MapTapGating.shouldIgnoreMapClickAfterFeatureTap(
       lastFeatureTapAt: _lastFeatureTapAt,
       lastFeatureTapPoint: _lastFeatureTapPoint,
@@ -1105,10 +1146,14 @@ class KubusMapController {
       return;
     }
 
+    final controller = _mapController;
+    if (controller == null) return;
+
     // If style isn't ready, try a best-effort fallback pick.
     if (_styleInitializationInProgress || !_styleInitialized) {
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback != null) {
+        onUserMarkerInteraction?.call();
         final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
         selectMarker(stack.first, stackedMarkers: stack);
       }
@@ -1118,6 +1163,7 @@ class KubusMapController {
     if (!await _canQueryMarkerHitbox(forceRefresh: true)) {
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback != null) {
+        onUserMarkerInteraction?.call();
         final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
         selectMarker(stack.first, stackedMarkers: stack);
       }
@@ -1149,6 +1195,7 @@ class KubusMapController {
       final propsRaw = first is Map ? first['properties'] : null;
       final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
       final kind = props['kind']?.toString();
+      onUserMarkerInteraction?.call();
 
       if (kind == 'cluster') {
         final coordinateKey = props['sameCoordinateKey']?.toString();
@@ -1194,6 +1241,7 @@ class KubusMapController {
 
       final fallback = await _fallbackPickMarkerAtPoint(point);
       if (fallback == null) return;
+      onUserMarkerInteraction?.call();
       final stack = _computeMarkerStack(fallback, pinSelectedFirst: true);
       selectMarker(stack.first, stackedMarkers: stack);
     }
@@ -1436,9 +1484,14 @@ class KubusMapController {
 
   List<KubusRenderedMarker> buildRenderedMarkers() {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    // The selected marker is always rendered: hiding its content layer while
+    // it is selected must not make the selection invisible on the map (the
+    // filter pipeline pins it for the same reason).
     final visibleMarkers = _markers
         .where((m) =>
-            m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+            m.hasValidPosition &&
+            ((_markerTypeVisibility[m.type] ?? true) ||
+                m.id == _selectedMarkerId))
         .toList(growable: false);
 
     final rendered = <KubusRenderedMarker>[];
@@ -1896,7 +1949,16 @@ class KubusMapController {
         _scheduleEntryAnimations(trueEntrances.toList(growable: false),
             staggered: true);
       }
+      final visibleSetChanged = entered.isNotEmpty || exited.isNotEmpty;
       _visibleMarkerIds = nextVisible;
+      // A marker that re-enters the viewport (not a first-time entrance) has no
+      // animation to trigger a source write, yet its rendered entry opacity
+      // depends on being in the visible set. Without this it stayed invisible
+      // until some unrelated sync, e.g. after zooming from a world view to a
+      // street.
+      if (visibleSetChanged && trueEntrances.isEmpty) {
+        _requestMarkerDataSync();
+      }
     } catch (_) {
       // Best effort: viewport checks can fail during style transitions,
       // especially on first web navigation into the map route.
@@ -1936,7 +1998,25 @@ class KubusMapController {
     );
   }
 
+  /// A globe zoomed far out has no rectangular viewport: MapLibre reports
+  /// `west == east` (a zero-width span) or a non-finite box. That means the whole
+  /// world is in view, not that nothing is.
+  static bool isDegenerateVisibleBounds(ml.LatLngBounds bounds) {
+    final south = bounds.southwest.latitude;
+    final north = bounds.northeast.latitude;
+    final west = bounds.southwest.longitude;
+    final east = bounds.northeast.longitude;
+    if (!south.isFinite ||
+        !north.isFinite ||
+        !west.isFinite ||
+        !east.isFinite) {
+      return true;
+    }
+    return (west - east).abs() < 1e-6 || (north - south).abs() < 1e-6;
+  }
+
   bool _isMarkerWithinBounds(LatLng point, ml.LatLngBounds bounds) {
+    if (isDegenerateVisibleBounds(bounds)) return true;
     final south = bounds.southwest.latitude;
     final north = bounds.northeast.latitude;
     if (point.latitude < south || point.latitude > north) return false;

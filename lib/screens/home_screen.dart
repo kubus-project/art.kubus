@@ -45,7 +45,6 @@ import '../utils/app_animations.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
-import '../utils/home_rail_semantics.dart';
 import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/map_navigation.dart';
@@ -1552,7 +1551,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             valueStyle: valueStyle,
             titleStyle: titleStyle,
             padding: padding,
-            withIcon: shouldShowIcon,
           ),
         );
 
@@ -1888,8 +1886,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: [
         SharedSectionHeader(
           title: title,
-          icon: _iconForRailItem(rail.entityType),
-          iconColor: HomeRailSemantics.of(context, rail.entityType),
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),
@@ -2081,9 +2077,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Canonical wallet capability acquisition, shared with the rest of the
   // app. This used to push an informational Web3 onboarding screen straight
   // into wallet creation/connection, bypassing the contextual account gate
-  // for guests. The gate now owns capability acquisition for both guests
-  // (account -> role/profile -> wallet) and signed-in users missing only
-  // wallet capability (straight to wallet setup).
+  // for guests. The gate now owns capability acquisition and asks only for what
+  // this tap needs: the wallet. Guests get an account first, then wallet setup;
+  // signed-in users missing only the wallet go straight to wallet setup. No
+  // role or profile questionnaire stands in between.
   Future<void> _showWalletOnboarding(BuildContext context) async {
     if (kDebugMode) {
       debugPrint('HomeScreen: wallet capability activation triggered');

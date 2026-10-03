@@ -166,9 +166,8 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
   }
 }
 
-/// Compact metric for dashboard side panels: a small contextual icon tile,
-/// the number and its label on a flat surface (the shared centred
-/// [KubusStatCard]).
+/// Compact metric for dashboard side panels: the number, its label and the
+/// metric's cropped glyph (the shared expressive centred [KubusStatCard]).
 class KubusSidebarStatCard extends StatelessWidget {
   const KubusSidebarStatCard({
     super.key,
@@ -184,7 +183,7 @@ class KubusSidebarStatCard extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  /// Contextual accent for the icon tile, from [KubusColorRoles].
+  /// Contextual accent for the ghost glyph and field, from [KubusColorRoles].
   final Color accent;
   final double minHeight;
   final String? semanticsLabel;

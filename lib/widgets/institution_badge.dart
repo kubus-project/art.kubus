@@ -27,9 +27,18 @@ class InstitutionBadge extends StatelessWidget {
     final textColor =
         useOnPrimary ? colorScheme.onPrimary : colorScheme.onSurface;
 
-    // Icon-only mode: just show the icon without text or background container
+    final label = AppLocalizations.of(context)!.badgeInstitutionLabel;
+
+    // Icon-only mode (dense headers): the glyph is the role's only
+    // expression, so it carries the role name for screen readers.
     if (iconOnly) {
-      return Icon(Icons.apartment_rounded, size: fontSize + 4, color: accent);
+      return Semantics(
+        label: label,
+        child: ExcludeSemantics(
+          child:
+              Icon(Icons.apartment_rounded, size: fontSize + 4, color: accent),
+        ),
+      );
     }
 
     return Container(
@@ -39,21 +48,16 @@ class InstitutionBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(color: accent.withValues(alpha: 0.5)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.apartment_rounded, size: fontSize + 4, color: accent),
-          const SizedBox(width: KubusSpacing.xs),
-          Text(
-            AppLocalizations.of(context)!.badgeInstitutionLabel.toUpperCase(),
-            style: KubusTextStyles.compactBadge.copyWith(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
+      // The role word and its colour are the badge; a glyph beside the word
+      // would only say the role twice.
+      child: Text(
+        label.toUpperCase(),
+        style: KubusTextStyles.compactBadge.copyWith(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }

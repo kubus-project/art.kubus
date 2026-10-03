@@ -338,7 +338,7 @@ class MapTargetCoordinator {
   }
 
   ArtMarker? _resolve(MapTargetIntent intent, Iterable<ArtMarker> markers) {
-    return resolveBestMarkerCandidate(
+    final resolved = resolveBestMarkerCandidate(
       markers.where((marker) => marker.hasValidPosition),
       exactMarkerId: intent.exactMarkerId,
       artworkId: intent.artworkId,
@@ -347,7 +347,25 @@ class MapTargetCoordinator {
       preferredLabel: intent.preferredLabel,
       preferredPosition: intent.preferredPosition,
     );
+    // The resolver treats the exact marker id as a hint and, when it is not
+    // loaded, falls back to the nearest or lowest-id marker. With no artwork or
+    // subject relation to narrow the set, that fallback would select an
+    // unrelated marker from whatever the viewport happens to hold (a cold
+    // /map/<id> link does not start near its target). Require the exact marker
+    // so the coordinator fetches it by id instead.
+    final exactId = intent.markerId;
+    if (resolved != null &&
+        exactId.isNotEmpty &&
+        resolved.id != exactId &&
+        _hasNoRelation(intent)) {
+      return null;
+    }
+    return resolved;
   }
+
+  static bool _hasNoRelation(MapTargetIntent intent) =>
+      (intent.artworkId?.trim() ?? '').isEmpty &&
+      (intent.subjectId?.trim() ?? '').isEmpty;
 
   bool _isCurrent(MapTargetIntent intent, int generation) =>
       !_disposed && identical(_pending, intent) && _generation == generation;

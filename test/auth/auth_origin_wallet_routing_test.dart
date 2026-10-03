@@ -21,6 +21,7 @@ void main() {
         'authProvider': 'wallet',
       },
       hasHydratedProfile: true,
+      hasUsableProfile: true,
       requiresWalletBackup: false,
       walletAddress: 'solana:wallet-direct-123',
       userId: 'user-wallet-1',
@@ -31,7 +32,7 @@ void main() {
     expect(result.onboardingStepId, isNull);
   });
 
-  test('new wallet user routes to onboarding with wallet origin', () async {
+  test('new wallet user stops at the account with wallet origin', () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
       prefs: prefs,
@@ -40,14 +41,15 @@ void main() {
         'authProvider': 'wallet',
       },
       hasHydratedProfile: false,
+      hasUsableProfile: false,
       requiresWalletBackup: false,
       walletAddress: 'solana:wallet-new-456',
       userId: 'user-wallet-2',
     );
 
-    expect(result.state, PostAuthRouteState.onboardingRequired);
-    expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'role');
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+    expect(result.onboardingStepId, isNull);
   });
 
   test('wallet auth with redirect route honored', () async {
@@ -56,6 +58,7 @@ void main() {
       prefs: prefs,
       payload: <String, dynamic>{'authProvider': 'wallet'},
       hasHydratedProfile: true,
+      hasUsableProfile: true,
       requiresWalletBackup: false,
       redirectRoute: '/settings',
       redirectArguments: <String, Object>{'section': 'security'},
@@ -77,6 +80,7 @@ void main() {
         'authProvider': 'wallet',
       },
       hasHydratedProfile: true,
+      hasUsableProfile: true,
       requiresWalletBackup: false,
       walletAddress: 'solana:wallet-not-google-999',
       userId: 'user-wallet-4',

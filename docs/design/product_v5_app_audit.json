@@ -3155,34 +3155,34 @@
   },
   "current": {
     "totals": {
-      "accent_color_property": 183,
+      "accent_color_property": 180,
       "accent_gradients_api": 64,
       "animated_gradient_background": 19,
       "backdrop_filter": 3,
       "backdrop_glass_sheet": 23,
       "box_shadow": 48,
-      "color_roles": 394,
-      "empty_state_card": 89,
+      "color_roles": 411,
+      "empty_state_card": 88,
       "frosted_container": 6,
       "glass_effects_api": 80,
       "google_fonts_direct": 1,
-      "hex_color_literal": 123,
+      "hex_color_literal": 125,
       "image_filter_blur": 4,
       "inline_loading": 187,
-      "inter_helper": 634,
-      "kub8_text": 129,
-      "kubus_button": 104,
+      "inter_helper": 630,
+      "kub8_text": 143,
+      "kubus_button": 102,
       "kubus_card": 17,
       "kubus_chip": 1,
       "kubus_colors_primary": 3,
       "kubus_gradients_api": 7,
-      "kubus_outline_button": 17,
+      "kubus_outline_button": 16,
       "kubus_snackbar": 631,
       "legacy_blue_cyan_hex": 8,
       "legacy_primary_variant": 6,
-      "linear_gradient": 58,
-      "lines": 340232,
-      "liquid_glass_panel": 97,
+      "linear_gradient": 57,
+      "lines": 341280,
+      "liquid_glass_panel": 92,
       "material_card": 14,
       "material_chip": 28,
       "material_colors_named": 7,
@@ -3192,13 +3192,13 @@
       "material_text_button": 291,
       "mono_compat_helper": 4,
       "outfit_helper": 1,
-      "radial_gradient": 1,
+      "radial_gradient": 5,
       "raw_progress_indicator": 1,
       "raw_snackbar": 657,
-      "semantics": 141,
-      "show_bottom_sheet": 72,
-      "show_dialog": 173,
-      "structural_helper": 53
+      "semantics": 147,
+      "show_bottom_sheet": 71,
+      "show_dialog": 172,
+      "structural_helper": 55
     },
     "files_with_occurrence": {
       "accent_color_property": 35,
@@ -3207,7 +3207,7 @@
       "backdrop_filter": 2,
       "backdrop_glass_sheet": 16,
       "box_shadow": 36,
-      "color_roles": 147,
+      "color_roles": 154,
       "empty_state_card": 39,
       "frosted_container": 4,
       "glass_effects_api": 25,
@@ -3216,18 +3216,18 @@
       "image_filter_blur": 3,
       "inline_loading": 104,
       "inter_helper": 51,
-      "kub8_text": 41,
+      "kub8_text": 42,
       "kubus_button": 45,
       "kubus_card": 14,
       "kubus_chip": 1,
       "kubus_colors_primary": 3,
       "kubus_gradients_api": 4,
-      "kubus_outline_button": 9,
+      "kubus_outline_button": 8,
       "kubus_snackbar": 88,
       "legacy_blue_cyan_hex": 2,
       "legacy_primary_variant": 4,
-      "linear_gradient": 39,
-      "liquid_glass_panel": 61,
+      "linear_gradient": 38,
+      "liquid_glass_panel": 59,
       "material_card": 7,
       "material_chip": 23,
       "material_colors_named": 3,
@@ -3237,20 +3237,20 @@
       "material_text_button": 101,
       "mono_compat_helper": 3,
       "outfit_helper": 1,
-      "radial_gradient": 1,
+      "radial_gradient": 4,
       "raw_progress_indicator": 1,
       "raw_snackbar": 96,
-      "semantics": 79,
-      "show_bottom_sheet": 45,
+      "semantics": 82,
+      "show_bottom_sheet": 44,
       "show_dialog": 71,
-      "structural_helper": 25
+      "structural_helper": 27
     },
     "areas": {
       "01_shell_navigation": {
         "color_roles": 12,
         "kubus_button": 3,
         "kubus_snackbar": 1,
-        "lines": 5376,
+        "lines": 5346,
         "liquid_glass_panel": 1,
         "material_card": 1,
         "material_elevated_button": 1,
@@ -3262,21 +3262,21 @@
       "02_home_discovery": {
         "accent_color_property": 6,
         "box_shadow": 3,
-        "color_roles": 15,
+        "color_roles": 13,
         "empty_state_card": 8,
         "glass_effects_api": 1,
         "inline_loading": 10,
         "kubus_button": 2,
         "kubus_snackbar": 3,
         "linear_gradient": 5,
-        "lines": 6093,
+        "lines": 6032,
         "liquid_glass_panel": 2,
         "material_card": 5,
         "material_elevated_button": 1,
         "material_outlined_button": 2,
         "material_text_button": 2,
         "raw_snackbar": 3,
-        "semantics": 2,
+        "semantics": 1,
         "show_bottom_sheet": 1,
         "show_dialog": 2,
         "structural_helper": 1
@@ -3293,7 +3293,7 @@
         "kub8_text": 2,
         "kubus_snackbar": 43,
         "linear_gradient": 6,
-        "lines": 37445,
+        "lines": 37599,
         "liquid_glass_panel": 1,
         "material_elevated_button": 1,
         "material_filled_button": 5,
@@ -3318,15 +3318,15 @@
         "animated_gradient_background": 4,
         "backdrop_glass_sheet": 4,
         "box_shadow": 6,
-        "color_roles": 19,
+        "color_roles": 21,
         "empty_state_card": 1,
         "inline_loading": 31,
         "inter_helper": 125,
         "kub8_text": 3,
-        "kubus_button": 4,
+        "kubus_button": 5,
         "kubus_snackbar": 137,
         "linear_gradient": 9,
-        "lines": 19850,
+        "lines": 19975,
         "liquid_glass_panel": 7,
         "material_card": 2,
         "material_chip": 2,
@@ -3335,24 +3335,24 @@
         "material_outlined_button": 11,
         "material_text_button": 40,
         "raw_snackbar": 137,
-        "semantics": 6,
+        "semantics": 8,
         "show_bottom_sheet": 9,
         "show_dialog": 24,
-        "structural_helper": 2
+        "structural_helper": 3
       },
       "05_profiles": {
-        "accent_color_property": 18,
+        "accent_color_property": 16,
         "backdrop_glass_sheet": 6,
         "box_shadow": 1,
-        "color_roles": 36,
+        "color_roles": 35,
         "empty_state_card": 24,
         "inline_loading": 18,
         "inter_helper": 66,
         "kub8_text": 3,
         "kubus_button": 3,
         "kubus_snackbar": 55,
-        "linear_gradient": 8,
-        "lines": 14428,
+        "linear_gradient": 7,
+        "lines": 14400,
         "liquid_glass_panel": 7,
         "material_elevated_button": 3,
         "material_outlined_button": 1,
@@ -3374,7 +3374,7 @@
         "kubus_button": 5,
         "kubus_snackbar": 92,
         "linear_gradient": 5,
-        "lines": 29069,
+        "lines": 29083,
         "liquid_glass_panel": 7,
         "material_chip": 11,
         "material_elevated_button": 23,
@@ -3392,30 +3392,30 @@
         "accent_gradients_api": 36,
         "animated_gradient_background": 8,
         "box_shadow": 1,
-        "color_roles": 30,
+        "color_roles": 32,
         "glass_effects_api": 6,
         "inline_loading": 11,
         "inter_helper": 6,
-        "kubus_button": 29,
+        "kubus_button": 28,
         "kubus_card": 7,
-        "kubus_outline_button": 4,
+        "kubus_outline_button": 3,
         "kubus_snackbar": 79,
         "linear_gradient": 2,
-        "lines": 19074,
-        "liquid_glass_panel": 9,
+        "lines": 18941,
+        "liquid_glass_panel": 8,
         "material_elevated_button": 8,
         "material_filled_button": 3,
         "material_outlined_button": 7,
         "material_text_button": 38,
         "raw_snackbar": 79,
         "semantics": 6,
-        "show_bottom_sheet": 5,
-        "show_dialog": 7,
+        "show_bottom_sheet": 4,
+        "show_dialog": 6,
         "structural_helper": 4
       },
       "08_create_contribute": {
         "animated_gradient_background": 1,
-        "color_roles": 30,
+        "color_roles": 29,
         "empty_state_card": 3,
         "glass_effects_api": 1,
         "inline_loading": 9,
@@ -3425,32 +3425,30 @@
         "kubus_card": 2,
         "kubus_outline_button": 3,
         "kubus_snackbar": 46,
-        "linear_gradient": 1,
-        "lines": 10339,
-        "liquid_glass_panel": 6,
+        "lines": 10245,
+        "liquid_glass_panel": 3,
         "material_chip": 2,
         "material_elevated_button": 8,
         "material_filled_button": 5,
         "material_outlined_button": 22,
         "material_text_button": 5,
         "raw_snackbar": 46,
-        "semantics": 3,
+        "semantics": 5,
         "show_bottom_sheet": 1,
-        "show_dialog": 10
+        "show_dialog": 10,
+        "structural_helper": 2
       },
       "09_settings": {
         "accent_color_property": 3,
         "animated_gradient_background": 1,
         "box_shadow": 3,
-        "color_roles": 16,
+        "color_roles": 26,
         "empty_state_card": 1,
         "inline_loading": 3,
-        "inter_helper": 107,
+        "inter_helper": 104,
         "kub8_text": 4,
         "kubus_snackbar": 56,
-        "linear_gradient": 1,
-        "lines": 9444,
-        "liquid_glass_panel": 1,
+        "lines": 9193,
         "material_card": 4,
         "material_chip": 2,
         "material_elevated_button": 31,
@@ -3458,7 +3456,7 @@
         "material_outlined_button": 1,
         "material_text_button": 45,
         "raw_snackbar": 63,
-        "semantics": 1,
+        "semantics": 2,
         "show_bottom_sheet": 1,
         "show_dialog": 44,
         "structural_helper": 2
@@ -3473,7 +3471,7 @@
         "kub8_text": 4,
         "kubus_button": 11,
         "kubus_snackbar": 30,
-        "lines": 6209,
+        "lines": 6157,
         "liquid_glass_panel": 5,
         "material_chip": 1,
         "material_elevated_button": 6,
@@ -3481,7 +3479,6 @@
         "material_outlined_button": 5,
         "material_text_button": 4,
         "raw_snackbar": 30,
-        "semantics": 2,
         "show_bottom_sheet": 4,
         "show_dialog": 4
       },
@@ -3489,20 +3486,20 @@
         "accent_color_property": 3,
         "accent_gradients_api": 27,
         "animated_gradient_background": 1,
-        "color_roles": 92,
-        "empty_state_card": 19,
+        "color_roles": 97,
+        "empty_state_card": 18,
         "frosted_container": 3,
         "glass_effects_api": 1,
         "inline_loading": 14,
         "inter_helper": 125,
-        "kub8_text": 53,
-        "kubus_button": 26,
+        "kub8_text": 59,
+        "kubus_button": 24,
         "kubus_card": 1,
         "kubus_outline_button": 3,
         "kubus_snackbar": 55,
         "legacy_primary_variant": 1,
         "linear_gradient": 3,
-        "lines": 22732,
+        "lines": 22809,
         "liquid_glass_panel": 11,
         "material_card": 1,
         "material_chip": 4,
@@ -3516,7 +3513,7 @@
         "semantics": 11,
         "show_bottom_sheet": 8,
         "show_dialog": 17,
-        "structural_helper": 12
+        "structural_helper": 11
       },
       "12_ar_spatial": {
         "glass_effects_api": 1,
@@ -3550,12 +3547,12 @@
         "backdrop_filter": 3,
         "backdrop_glass_sheet": 4,
         "box_shadow": 16,
-        "color_roles": 57,
+        "color_roles": 60,
         "empty_state_card": 3,
         "frosted_container": 1,
         "glass_effects_api": 50,
         "google_fonts_direct": 1,
-        "hex_color_literal": 108,
+        "hex_color_literal": 110,
         "image_filter_blur": 4,
         "inline_loading": 21,
         "inter_helper": 1,
@@ -3569,8 +3566,8 @@
         "kubus_snackbar": 14,
         "legacy_blue_cyan_hex": 8,
         "legacy_primary_variant": 5,
-        "linear_gradient": 17,
-        "lines": 24576,
+        "linear_gradient": 19,
+        "lines": 25596,
         "liquid_glass_panel": 33,
         "material_card": 1,
         "material_chip": 2,
@@ -3580,30 +3577,31 @@
         "material_outlined_button": 3,
         "material_text_button": 8,
         "outfit_helper": 1,
+        "radial_gradient": 4,
         "raw_progress_indicator": 1,
         "raw_snackbar": 14,
-        "semantics": 41,
+        "semantics": 45,
         "show_bottom_sheet": 4,
         "show_dialog": 8,
         "structural_helper": 15
       },
       "99_other": {
-        "accent_color_property": 17,
+        "accent_color_property": 16,
         "backdrop_glass_sheet": 3,
         "box_shadow": 5,
-        "color_roles": 14,
+        "color_roles": 13,
         "empty_state_card": 4,
         "frosted_container": 1,
         "hex_color_literal": 15,
         "inline_loading": 4,
-        "inter_helper": 34,
-        "kub8_text": 53,
+        "inter_helper": 33,
+        "kub8_text": 61,
         "kubus_button": 3,
         "kubus_card": 6,
         "kubus_colors_primary": 1,
         "kubus_snackbar": 16,
         "linear_gradient": 1,
-        "lines": 129227,
+        "lines": 129534,
         "liquid_glass_panel": 4,
         "material_chip": 3,
         "material_colors_named": 2,
@@ -3629,7 +3627,7 @@
         "material_text_button": 2,
         "material_card": 1,
         "show_dialog": 1,
-        "lines": 1212
+        "lines": 1169
       },
       "lib/features/analytics/analytics_metric_colors.dart": {
         "area": "99_other",
@@ -3687,10 +3685,10 @@
       },
       "lib/features/analytics/widgets/analytics_overview_grid.dart": {
         "area": "99_other",
-        "inter_helper": 7,
-        "color_roles": 2,
+        "inter_helper": 6,
+        "color_roles": 1,
         "semantics": 2,
-        "lines": 340
+        "lines": 412
       },
       "lib/features/analytics/widgets/analytics_section_panel.dart": {
         "area": "99_other",
@@ -3780,14 +3778,14 @@
       "lib/main.dart": {
         "area": "99_other",
         "raw_snackbar": 1,
-        "lines": 1547
+        "lines": 1553
       },
       "lib/main_app.dart": {
         "area": "01_shell_navigation",
         "color_roles": 1,
         "kubus_button": 3,
         "semantics": 1,
-        "lines": 482
+        "lines": 473
       },
       "lib/models/achievements.dart": {
         "area": "99_other",
@@ -3818,7 +3816,7 @@
         "area": "99_other",
         "hex_color_literal": 8,
         "kubus_colors_primary": 1,
-        "lines": 390
+        "lines": 391
       },
       "lib/providers/wallet_provider.dart": {
         "area": "99_other",
@@ -3899,6 +3897,7 @@
         "area": "04_subject_detail_reference",
         "animated_gradient_background": 1,
         "color_roles": 1,
+        "kubus_button": 1,
         "material_elevated_button": 1,
         "material_filled_button": 2,
         "material_text_button": 1,
@@ -3906,7 +3905,7 @@
         "kubus_snackbar": 20,
         "raw_snackbar": 20,
         "show_dialog": 1,
-        "lines": 1046
+        "lines": 1052
       },
       "lib/screens/art/collection_detail_screen.dart": {
         "area": "04_subject_detail_reference",
@@ -3923,7 +3922,6 @@
       },
       "lib/screens/art/collection_settings_screen.dart": {
         "area": "04_subject_detail_reference",
-        "color_roles": 1,
         "material_elevated_button": 1,
         "material_filled_button": 3,
         "material_text_button": 2,
@@ -3931,7 +3929,7 @@
         "kubus_snackbar": 11,
         "raw_snackbar": 11,
         "show_dialog": 2,
-        "lines": 1036
+        "lines": 1020
       },
       "lib/screens/auth/email_verification_success_screen.dart": {
         "area": "07_auth_onboarding",
@@ -3939,7 +3937,7 @@
         "animated_gradient_background": 1,
         "kubus_button": 1,
         "inline_loading": 1,
-        "lines": 335
+        "lines": 358
       },
       "lib/screens/auth/forgot_password_screen.dart": {
         "area": "07_auth_onboarding",
@@ -3991,7 +3989,7 @@
         "material_text_button": 4,
         "kubus_snackbar": 15,
         "raw_snackbar": 15,
-        "lines": 1162
+        "lines": 1168
       },
       "lib/screens/auth/verify_email_screen.dart": {
         "area": "07_auth_onboarding",
@@ -4014,7 +4012,7 @@
         "kubus_snackbar": 3,
         "raw_snackbar": 3,
         "semantics": 1,
-        "lines": 444
+        "lines": 453
       },
       "lib/screens/community/community_screen_parts/community_screen_p1.dart": {
         "area": "06_community_social",
@@ -4055,7 +4053,7 @@
         "material_chip": 1,
         "inline_loading": 2,
         "show_bottom_sheet": 3,
-        "lines": 1304
+        "lines": 1305
       },
       "lib/screens/community/community_screen_parts/community_screen_p4.dart": {
         "area": "06_community_social",
@@ -4107,7 +4105,7 @@
         "raw_snackbar": 15,
         "show_dialog": 2,
         "show_bottom_sheet": 4,
-        "lines": 1627
+        "lines": 1628
       },
       "lib/screens/community/messages_screen.dart": {
         "area": "06_community_social",
@@ -4159,9 +4157,9 @@
         "inter_helper": 34,
         "liquid_glass_panel": 3,
         "backdrop_glass_sheet": 1,
-        "linear_gradient": 2,
+        "linear_gradient": 1,
         "box_shadow": 1,
-        "accent_color_property": 9,
+        "accent_color_property": 7,
         "color_roles": 2,
         "material_elevated_button": 1,
         "material_text_button": 8,
@@ -4171,7 +4169,7 @@
         "show_dialog": 4,
         "show_bottom_sheet": 1,
         "kub8_text": 2,
-        "lines": 2549
+        "lines": 2528
       },
       "lib/screens/community/profile_screen_methods.dart": {
         "area": "05_profiles",
@@ -4198,7 +4196,7 @@
         "raw_snackbar": 11,
         "show_dialog": 2,
         "show_bottom_sheet": 1,
-        "lines": 1703
+        "lines": 1714
       },
       "lib/screens/desktop/art/desktop_artwork_detail_screen.dart": {
         "area": "04_subject_detail_reference",
@@ -4244,7 +4242,7 @@
         "material_chip": 1,
         "inline_loading": 1,
         "show_dialog": 1,
-        "lines": 1251
+        "lines": 1252
       },
       "lib/screens/desktop/community/desktop_community_screen_parts/desktop_community_screen_p3.dart": {
         "area": "06_community_social",
@@ -4291,7 +4289,7 @@
         "kubus_snackbar": 4,
         "raw_snackbar": 4,
         "show_dialog": 1,
-        "lines": 1472
+        "lines": 1473
       },
       "lib/screens/desktop/community/desktop_community_screen_parts/desktop_community_screen_p6.dart": {
         "area": "06_community_social",
@@ -4304,7 +4302,7 @@
         "raw_snackbar": 4,
         "show_dialog": 3,
         "show_bottom_sheet": 1,
-        "lines": 785
+        "lines": 786
       },
       "lib/screens/desktop/community/desktop_profile_edit_screen.dart": {
         "area": "05_profiles",
@@ -4323,13 +4321,13 @@
         "inter_helper": 7,
         "linear_gradient": 1,
         "accent_color_property": 2,
-        "color_roles": 6,
+        "color_roles": 4,
         "material_text_button": 6,
         "empty_state_card": 9,
         "inline_loading": 6,
         "raw_snackbar": 1,
         "show_dialog": 1,
-        "lines": 2322
+        "lines": 2259
       },
       "lib/screens/desktop/community/desktop_user_profile_screen.dart": {
         "area": "05_profiles",
@@ -4346,7 +4344,7 @@
         "raw_snackbar": 11,
         "show_dialog": 3,
         "show_bottom_sheet": 1,
-        "lines": 2082
+        "lines": 2063
       },
       "lib/screens/desktop/components/desktop_navigation.dart": {
         "area": "01_shell_navigation",
@@ -4366,11 +4364,11 @@
         "area": "99_other",
         "liquid_glass_panel": 3,
         "box_shadow": 2,
-        "accent_color_property": 8,
+        "accent_color_property": 7,
         "color_roles": 1,
         "material_elevated_button": 1,
         "inline_loading": 1,
-        "lines": 588
+        "lines": 584
       },
       "lib/screens/desktop/desktop_home_screen.dart": {
         "area": "02_home_discovery",
@@ -4379,13 +4377,13 @@
         "linear_gradient": 1,
         "box_shadow": 1,
         "accent_color_property": 6,
-        "color_roles": 5,
+        "color_roles": 4,
         "empty_state_card": 1,
         "inline_loading": 6,
         "kubus_snackbar": 2,
         "raw_snackbar": 2,
         "show_dialog": 1,
-        "lines": 2879
+        "lines": 2851
       },
       "lib/screens/desktop/desktop_map_screen.dart": {
         "area": "03_map_surrounding_ui",
@@ -4395,36 +4393,38 @@
         "raw_snackbar": 12,
         "semantics": 7,
         "kub8_text": 2,
-        "lines": 6296
+        "lines": 6314
       },
       "lib/screens/desktop/desktop_settings_screen.dart": {
         "area": "09_settings",
-        "liquid_glass_panel": 1,
         "animated_gradient_background": 1,
-        "lines": 225
+        "color_roles": 1,
+        "lines": 209
       },
       "lib/screens/desktop/desktop_settings_screen_parts/desktop_settings_screen_p1.dart": {
         "area": "09_settings",
-        "linear_gradient": 1,
+        "color_roles": 3,
         "material_elevated_button": 8,
         "material_text_button": 10,
         "material_chip": 1,
         "kubus_snackbar": 8,
         "raw_snackbar": 8,
         "show_dialog": 11,
-        "lines": 1277
+        "semantics": 1,
+        "lines": 1264
       },
       "lib/screens/desktop/desktop_settings_screen_parts/desktop_settings_screen_p2.dart": {
         "area": "09_settings",
         "box_shadow": 1,
         "accent_color_property": 2,
+        "color_roles": 1,
         "material_elevated_button": 5,
         "material_text_button": 6,
         "inline_loading": 1,
         "kubus_snackbar": 14,
         "raw_snackbar": 14,
         "show_dialog": 5,
-        "lines": 1365
+        "lines": 1188
       },
       "lib/screens/desktop/desktop_settings_screen_parts/desktop_settings_screen_p3.dart": {
         "area": "09_settings",
@@ -4432,13 +4432,13 @@
         "kubus_snackbar": 1,
         "raw_snackbar": 1,
         "kub8_text": 4,
-        "lines": 908
+        "lines": 895
       },
       "lib/screens/desktop/desktop_shell.dart": {
         "area": "01_shell_navigation",
         "color_roles": 5,
         "show_dialog": 1,
-        "lines": 1119
+        "lines": 1096
       },
       "lib/screens/desktop/desktop_shell_scope.dart": {
         "area": "01_shell_navigation",
@@ -4449,18 +4449,17 @@
       "lib/screens/desktop/onboarding/desktop_web3_onboarding.dart": {
         "area": "07_auth_onboarding",
         "accent_color_property": 1,
-        "color_roles": 8,
+        "color_roles": 9,
         "kubus_button": 2,
         "material_text_button": 1,
-        "lines": 393
+        "lines": 403
       },
       "lib/screens/desktop/web3/desktop_artist_studio_screen.dart": {
         "area": "10_artist_institution_management",
-        "color_roles": 4,
+        "color_roles": 2,
         "kubus_button": 3,
-        "semantics": 1,
         "kub8_text": 1,
-        "lines": 631
+        "lines": 602
       },
       "lib/screens/desktop/web3/desktop_connect_wallet_screen.dart": {
         "area": "11_web3_wallet_marketplace_dao",
@@ -4479,14 +4478,13 @@
         "kubus_button": 2,
         "kubus_snackbar": 1,
         "raw_snackbar": 1,
-        "semantics": 1,
         "kub8_text": 3,
-        "lines": 669
+        "lines": 639
       },
       "lib/screens/desktop/web3/desktop_marketplace_screen.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "structural_helper": 1,
-        "color_roles": 1,
+        "color_roles": 2,
         "kubus_button": 3,
         "material_filled_button": 2,
         "material_text_button": 2,
@@ -4495,22 +4493,22 @@
         "raw_snackbar": 4,
         "show_dialog": 2,
         "semantics": 1,
-        "lines": 816
+        "lines": 834
       },
       "lib/screens/desktop/web3/desktop_wallet_screen.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "structural_helper": 2,
         "accent_color_property": 1,
         "color_roles": 16,
-        "kubus_button": 4,
+        "kubus_button": 2,
         "material_text_button": 1,
         "empty_state_card": 3,
         "inline_loading": 1,
         "kubus_snackbar": 2,
         "raw_snackbar": 2,
         "semantics": 1,
-        "kub8_text": 2,
-        "lines": 1278
+        "kub8_text": 3,
+        "lines": 1297
       },
       "lib/screens/download_app_screen.dart": {
         "area": "99_other",
@@ -4541,7 +4539,6 @@
       "lib/screens/events/exhibition_creator_screen.dart": {
         "area": "08_create_contribute",
         "inter_helper": 5,
-        "color_roles": 1,
         "material_elevated_button": 1,
         "material_filled_button": 1,
         "material_outlined_button": 3,
@@ -4549,7 +4546,7 @@
         "kubus_snackbar": 10,
         "raw_snackbar": 10,
         "show_dialog": 2,
-        "lines": 1084
+        "lines": 1069
       },
       "lib/screens/events/exhibition_detail_screen.dart": {
         "area": "04_subject_detail_reference",
@@ -4585,7 +4582,7 @@
       "lib/screens/home_screen.dart": {
         "area": "02_home_discovery",
         "linear_gradient": 1,
-        "color_roles": 7,
+        "color_roles": 6,
         "material_elevated_button": 1,
         "material_outlined_button": 2,
         "material_text_button": 2,
@@ -4596,8 +4593,7 @@
         "raw_snackbar": 1,
         "show_dialog": 1,
         "show_bottom_sheet": 1,
-        "semantics": 1,
-        "lines": 2605
+        "lines": 2556
       },
       "lib/screens/map/marker_info_detail_screen.dart": {
         "area": "03_map_surrounding_ui",
@@ -4643,7 +4639,7 @@
         "raw_snackbar": 10,
         "show_dialog": 1,
         "show_bottom_sheet": 1,
-        "lines": 6134
+        "lines": 6152
       },
       "lib/screens/node/add_node_screen.dart": {
         "area": "13_node_infrastructure",
@@ -4697,8 +4693,8 @@
         "inline_loading": 3,
         "kubus_snackbar": 23,
         "raw_snackbar": 23,
-        "show_dialog": 3,
-        "lines": 6158
+        "show_dialog": 2,
+        "lines": 6226
       },
       "lib/screens/onboarding/web3/onboarding_data.dart": {
         "area": "07_auth_onboarding",
@@ -4708,11 +4704,11 @@
       "lib/screens/onboarding/web3/web3_onboarding.dart": {
         "area": "07_auth_onboarding",
         "structural_helper": 3,
-        "color_roles": 5,
+        "color_roles": 6,
         "kubus_button": 2,
         "material_text_button": 1,
         "semantics": 2,
-        "lines": 487
+        "lines": 512
       },
       "lib/screens/season0/season0_screen.dart": {
         "area": "99_other",
@@ -4738,13 +4734,13 @@
         "structural_helper": 2,
         "box_shadow": 1,
         "accent_color_property": 1,
-        "color_roles": 7,
+        "color_roles": 9,
         "material_text_button": 1,
         "kubus_snackbar": 1,
         "raw_snackbar": 1,
         "show_bottom_sheet": 1,
         "semantics": 1,
-        "lines": 1196
+        "lines": 1189
       },
       "lib/screens/settings_screen_parts/settings_screen_p2.dart": {
         "area": "09_settings",
@@ -4755,12 +4751,13 @@
         "kubus_snackbar": 21,
         "raw_snackbar": 21,
         "show_dialog": 12,
-        "lines": 1272
+        "lines": 1266
       },
       "lib/screens/settings_screen_parts/settings_screen_p3.dart": {
         "area": "09_settings",
         "inter_helper": 44,
         "box_shadow": 1,
+        "color_roles": 1,
         "material_elevated_button": 6,
         "material_text_button": 9,
         "material_card": 3,
@@ -4768,18 +4765,19 @@
         "kubus_snackbar": 6,
         "raw_snackbar": 6,
         "show_dialog": 10,
-        "lines": 1257
+        "lines": 1277
       },
       "lib/screens/settings_screen_parts/settings_screen_p4.dart": {
         "area": "09_settings",
-        "inter_helper": 13,
+        "inter_helper": 10,
+        "color_roles": 2,
         "material_elevated_button": 4,
         "material_text_button": 4,
         "inline_loading": 1,
         "kubus_snackbar": 5,
         "raw_snackbar": 5,
         "show_dialog": 4,
-        "lines": 671
+        "lines": 632
       },
       "lib/screens/spatial/spatial_library_detail_screen.dart": {
         "area": "08_create_contribute",
@@ -4804,10 +4802,10 @@
       },
       "lib/screens/web3/achievements/achievements_page.dart": {
         "area": "11_web3_wallet_marketplace_dao",
-        "structural_helper": 3,
+        "structural_helper": 2,
         "color_roles": 4,
-        "kub8_text": 3,
-        "lines": 367
+        "kub8_text": 4,
+        "lines": 374
       },
       "lib/screens/web3/artist/artist_portfolio_screen.dart": {
         "area": "10_artist_institution_management",
@@ -4822,13 +4820,13 @@
       "lib/screens/web3/artist/artist_studio.dart": {
         "area": "10_artist_institution_management",
         "backdrop_glass_sheet": 2,
-        "color_roles": 3,
+        "color_roles": 4,
         "kubus_button": 3,
         "empty_state_card": 2,
         "kubus_snackbar": 5,
         "raw_snackbar": 5,
         "show_bottom_sheet": 2,
-        "lines": 847
+        "lines": 850
       },
       "lib/screens/web3/artist/artist_studio_create_screen.dart": {
         "area": "10_artist_institution_management",
@@ -4857,7 +4855,7 @@
         "kubus_snackbar": 18,
         "raw_snackbar": 18,
         "show_dialog": 1,
-        "lines": 2197
+        "lines": 2177
       },
       "lib/screens/web3/artist/collection_creator.dart": {
         "area": "08_create_contribute",
@@ -4869,12 +4867,12 @@
         "inline_loading": 1,
         "kubus_snackbar": 7,
         "raw_snackbar": 7,
-        "lines": 1075
+        "lines": 1062
       },
       "lib/screens/web3/dao/governance_hub.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "structural_helper": 1,
-        "color_roles": 5,
+        "color_roles": 6,
         "kubus_button": 2,
         "material_elevated_button": 5,
         "material_outlined_button": 1,
@@ -4887,13 +4885,13 @@
         "show_bottom_sheet": 2,
         "semantics": 1,
         "kub8_text": 10,
-        "lines": 2777
+        "lines": 2760
       },
       "lib/screens/web3/institution/event_creator.dart": {
         "area": "08_create_contribute",
         "inter_helper": 5,
         "liquid_glass_panel": 1,
-        "color_roles": 15,
+        "color_roles": 14,
         "material_elevated_button": 4,
         "material_filled_button": 1,
         "material_outlined_button": 5,
@@ -4901,7 +4899,7 @@
         "kubus_snackbar": 10,
         "raw_snackbar": 10,
         "show_dialog": 3,
-        "lines": 1699
+        "lines": 1684
       },
       "lib/screens/web3/institution/event_manager.dart": {
         "area": "10_artist_institution_management",
@@ -4929,19 +4927,19 @@
       "lib/screens/web3/institution/institution_hub.dart": {
         "area": "10_artist_institution_management",
         "backdrop_glass_sheet": 1,
-        "color_roles": 1,
+        "color_roles": 2,
         "kubus_button": 3,
         "empty_state_card": 2,
         "kubus_snackbar": 5,
         "raw_snackbar": 5,
         "show_bottom_sheet": 2,
-        "lines": 817
+        "lines": 821
       },
       "lib/screens/web3/marketplace/marketplace.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "structural_helper": 1,
         "accent_color_property": 2,
-        "color_roles": 6,
+        "color_roles": 8,
         "kubus_button": 2,
         "material_elevated_button": 2,
         "material_text_button": 3,
@@ -4951,7 +4949,7 @@
         "show_dialog": 3,
         "show_bottom_sheet": 2,
         "semantics": 1,
-        "lines": 1676
+        "lines": 1658
       },
       "lib/screens/web3/promotions/promotion_checkout_return_screen.dart": {
         "area": "11_web3_wallet_marketplace_dao",
@@ -5051,17 +5049,17 @@
       "lib/screens/web3/wallet/wallet_home.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "structural_helper": 4,
-        "color_roles": 5,
+        "color_roles": 6,
         "kubus_button": 1,
         "material_text_button": 1,
-        "empty_state_card": 4,
+        "empty_state_card": 3,
         "inline_loading": 1,
         "kubus_snackbar": 2,
         "raw_snackbar": 2,
         "show_bottom_sheet": 1,
         "semantics": 3,
-        "kub8_text": 7,
-        "lines": 966
+        "kub8_text": 10,
+        "lines": 1033
       },
       "lib/services/achievement_service.dart": {
         "area": "99_other",
@@ -5097,8 +5095,8 @@
       },
       "lib/services/solana_wallet_service.dart": {
         "area": "99_other",
-        "kub8_text": 4,
-        "lines": 3424
+        "kub8_text": 7,
+        "lines": 3473
       },
       "lib/utils/activity_navigation.dart": {
         "area": "99_other",
@@ -5132,11 +5130,11 @@
         "glass_effects_api": 8,
         "linear_gradient": 9,
         "kubus_gradients_api": 1,
-        "hex_color_literal": 64,
+        "hex_color_literal": 66,
         "legacy_primary_variant": 2,
         "kubus_colors_primary": 1,
         "legacy_blue_cyan_hex": 1,
-        "lines": 1148
+        "lines": 1181
       },
       "lib/utils/home/home_quick_action_executor.dart": {
         "area": "99_other",
@@ -5170,7 +5168,7 @@
         "legacy_primary_variant": 2,
         "color_roles": 1,
         "material_chip": 1,
-        "lines": 478
+        "lines": 450
       },
       "lib/utils/node_state_presentation.dart": {
         "area": "99_other",
@@ -5186,6 +5184,11 @@
         "area": "99_other",
         "kub8_text": 2,
         "lines": 31
+      },
+      "lib/utils/token_identity_rules.dart": {
+        "area": "99_other",
+        "kub8_text": 5,
+        "lines": 49
       },
       "lib/utils/user_profile_navigation.dart": {
         "area": "99_other",
@@ -5228,7 +5231,8 @@
       "lib/widgets/artist_badge.dart": {
         "area": "14_shared_components",
         "color_roles": 1,
-        "lines": 62
+        "semantics": 1,
+        "lines": 65
       },
       "lib/widgets/artwork_gallery_view.dart": {
         "area": "14_shared_components",
@@ -5240,7 +5244,7 @@
         "area": "14_shared_components",
         "color_roles": 2,
         "inline_loading": 1,
-        "lines": 247
+        "lines": 241
       },
       "lib/widgets/auth/contextual_activation_sheet.dart": {
         "area": "07_auth_onboarding",
@@ -5271,7 +5275,7 @@
         "material_elevated_button": 1,
         "material_outlined_button": 1,
         "inline_loading": 1,
-        "lines": 458
+        "lines": 467
       },
       "lib/widgets/auth_entry_controls.dart": {
         "area": "07_auth_onboarding",
@@ -5320,7 +5324,14 @@
         "kubus_snackbar": 9,
         "raw_snackbar": 9,
         "show_dialog": 1,
-        "lines": 1001
+        "lines": 1028
+      },
+      "lib/widgets/common/kubus_action_tile.dart": {
+        "area": "14_shared_components",
+        "radial_gradient": 1,
+        "color_roles": 1,
+        "semantics": 1,
+        "lines": 190
       },
       "lib/widgets/common/kubus_activity_row.dart": {
         "area": "14_shared_components",
@@ -5328,10 +5339,22 @@
         "semantics": 1,
         "lines": 160
       },
+      "lib/widgets/common/kubus_atmosphere.dart": {
+        "area": "14_shared_components",
+        "linear_gradient": 2,
+        "radial_gradient": 2,
+        "color_roles": 2,
+        "lines": 452
+      },
       "lib/widgets/common/kubus_cached_image.dart": {
         "area": "14_shared_components",
         "semantics": 1,
         "lines": 198
+      },
+      "lib/widgets/common/kubus_context_icon.dart": {
+        "area": "14_shared_components",
+        "semantics": 1,
+        "lines": 97
       },
       "lib/widgets/common/kubus_filter_panel.dart": {
         "area": "14_shared_components",
@@ -5416,10 +5439,11 @@
       },
       "lib/widgets/common/kubus_stat_card.dart": {
         "area": "14_shared_components",
+        "radial_gradient": 1,
         "color_roles": 2,
         "semantics": 1,
         "kub8_text": 1,
-        "lines": 221
+        "lines": 392
       },
       "lib/widgets/common/kubus_text_field.dart": {
         "area": "14_shared_components",
@@ -5515,16 +5539,16 @@
       },
       "lib/widgets/creator/creator_kit.dart": {
         "area": "08_create_contribute",
-        "liquid_glass_panel": 4,
+        "structural_helper": 2,
+        "liquid_glass_panel": 1,
         "glass_effects_api": 1,
         "animated_gradient_background": 1,
-        "linear_gradient": 1,
-        "color_roles": 7,
+        "color_roles": 8,
         "material_elevated_button": 1,
         "material_outlined_button": 4,
         "inline_loading": 1,
-        "semantics": 2,
-        "lines": 1890
+        "semantics": 4,
+        "lines": 1859
       },
       "lib/widgets/creator/creator_poap_section.dart": {
         "area": "08_create_contribute",
@@ -5537,7 +5561,7 @@
         "color_roles": 9,
         "inline_loading": 1,
         "semantics": 4,
-        "lines": 525
+        "lines": 563
       },
       "lib/widgets/detail/artwork_engagement_sections.dart": {
         "area": "04_subject_detail_reference",
@@ -5596,24 +5620,27 @@
       },
       "lib/widgets/detail/profile_utility_actions.dart": {
         "area": "04_subject_detail_reference",
+        "color_roles": 1,
         "semantics": 1,
-        "lines": 96
+        "lines": 141
       },
       "lib/widgets/detail/shared_section_widgets.dart": {
         "area": "04_subject_detail_reference",
         "liquid_glass_panel": 1,
         "linear_gradient": 1,
         "box_shadow": 2,
-        "color_roles": 1,
         "empty_state_card": 1,
         "inline_loading": 1,
         "semantics": 1,
-        "lines": 426
+        "lines": 409
       },
       "lib/widgets/detail/shared_settings_widgets.dart": {
         "area": "04_subject_detail_reference",
+        "structural_helper": 1,
         "box_shadow": 1,
-        "lines": 268
+        "color_roles": 3,
+        "semantics": 2,
+        "lines": 375
       },
       "lib/widgets/detail/subject_action_group.dart": {
         "area": "04_subject_detail_reference",
@@ -5661,7 +5688,7 @@
         "material_text_button": 1,
         "semantics": 5,
         "kub8_text": 1,
-        "lines": 955
+        "lines": 956
       },
       "lib/widgets/general_background.dart": {
         "area": "14_shared_components",
@@ -5708,7 +5735,7 @@
         "color_roles": 1,
         "kubus_button": 2,
         "semantics": 1,
-        "lines": 103
+        "lines": 119
       },
       "lib/widgets/home/home_promotion_rail.dart": {
         "area": "02_home_discovery",
@@ -5732,13 +5759,14 @@
       "lib/widgets/institution_badge.dart": {
         "area": "14_shared_components",
         "color_roles": 1,
-        "lines": 61
+        "semantics": 1,
+        "lines": 65
       },
       "lib/widgets/kubus_action_sidebar.dart": {
         "area": "14_shared_components",
         "color_roles": 2,
         "semantics": 1,
-        "lines": 205
+        "lines": 206
       },
       "lib/widgets/kubus_auth_method_button.dart": {
         "area": "14_shared_components",
@@ -5773,7 +5801,7 @@
         "color_roles": 1,
         "show_dialog": 1,
         "show_bottom_sheet": 1,
-        "lines": 58
+        "lines": 63
       },
       "lib/widgets/kubus_snackbar.dart": {
         "area": "14_shared_components",
@@ -5834,7 +5862,7 @@
         "glass_effects_api": 2,
         "material_filled_button": 1,
         "semantics": 1,
-        "lines": 140
+        "lines": 148
       },
       "lib/widgets/map/kubus_map_glass_surface.dart": {
         "area": "03_map_surrounding_ui",
@@ -5920,7 +5948,7 @@
         "color_roles": 3,
         "semantics": 2,
         "kub8_text": 1,
-        "lines": 306
+        "lines": 341
       },
       "lib/widgets/mobile_shell_exit_scope.dart": {
         "area": "01_shell_navigation",
@@ -5954,12 +5982,6 @@
         "empty_state_card": 1,
         "inline_loading": 1,
         "lines": 160
-      },
-      "lib/widgets/onboarding/alpha_notice_dialog.dart": {
-        "area": "07_auth_onboarding",
-        "kubus_button": 1,
-        "kubus_outline_button": 1,
-        "lines": 110
       },
       "lib/widgets/onboarding/onboarding_wallet_connect_step.dart": {
         "area": "07_auth_onboarding",
@@ -5997,7 +6019,7 @@
       "lib/widgets/profile/profile_account_health_section.dart": {
         "area": "05_profiles",
         "semantics": 1,
-        "lines": 163
+        "lines": 155
       },
       "lib/widgets/profile/profile_achievements_preview_section.dart": {
         "area": "05_profiles",
@@ -6005,6 +6027,11 @@
         "empty_state_card": 2,
         "kub8_text": 1,
         "lines": 386
+      },
+      "lib/widgets/profile/profile_cover_field.dart": {
+        "area": "05_profiles",
+        "color_roles": 1,
+        "lines": 69
       },
       "lib/widgets/profile/profile_edit_form_body.dart": {
         "area": "05_profiles",
@@ -6023,7 +6050,7 @@
         "kubus_snackbar": 1,
         "raw_snackbar": 1,
         "semantics": 2,
-        "lines": 385
+        "lines": 388
       },
       "lib/widgets/promotion/duration_slider.dart": {
         "area": "11_web3_wallet_marketplace_dao",
@@ -6205,16 +6232,6 @@
         "material_outlined_button": 1,
         "lines": 866
       },
-      "lib/widgets/user_persona_onboarding_gate.dart": {
-        "area": "07_auth_onboarding",
-        "show_bottom_sheet": 1,
-        "lines": 128
-      },
-      "lib/widgets/user_persona_onboarding_sheet.dart": {
-        "area": "07_auth_onboarding",
-        "liquid_glass_panel": 1,
-        "lines": 119
-      },
       "lib/widgets/user_persona_picker_content.dart": {
         "area": "07_auth_onboarding",
         "inline_loading": 1,
@@ -6227,20 +6244,20 @@
         "legacy_primary_variant": 1,
         "color_roles": 1,
         "semantics": 1,
-        "kub8_text": 7,
-        "lines": 461
+        "kub8_text": 8,
+        "lines": 459
       },
       "lib/widgets/wallet/kubus_wallet_shell.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "color_roles": 6,
         "inline_loading": 1,
         "semantics": 2,
-        "lines": 574
+        "lines": 611
       },
       "lib/widgets/wallet/wallet_action_controller.dart": {
         "area": "11_web3_wallet_marketplace_dao",
         "color_roles": 1,
-        "lines": 302
+        "lines": 299
       },
       "lib/widgets/wallet_backup_banner_card.dart": {
         "area": "11_web3_wallet_marketplace_dao",
@@ -6260,7 +6277,7 @@
         "area": "11_web3_wallet_marketplace_dao",
         "mono_compat_helper": 1,
         "material_outlined_button": 1,
-        "lines": 434
+        "lines": 403
       },
       "lib/widgets/wallet_mnemonic_backup_prompt.dart": {
         "area": "11_web3_wallet_marketplace_dao",

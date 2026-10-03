@@ -498,6 +498,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is no longer available. It may have been removed or made private.';
 
   @override
+  String get entityUnavailableBody =>
+      'This could not be loaded right now. Check your connection and try again.';
+
+  @override
   String get activationActionUnauthorizedToast =>
       'You don\'t have permission to do that.';
 
@@ -1583,7 +1587,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Most people finish this in about 2 minutes.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Create your profile first';
+  String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
   String get onboardingFlowAccountBody =>
@@ -1949,19 +1953,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingWelcomeDescription =>
       'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.';
-
-  @override
-  String get alphaNoticeTitle => 'You are entering the art.kubus alpha';
-
-  @override
-  String get alphaNoticeBody =>
-      'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.';
-
-  @override
-  String get alphaNoticeContinue => 'Continue to onboarding';
-
-  @override
-  String get alphaNoticeBackToWebsite => 'Back to website';
 
   @override
   String get onboardingExploreTitle => 'Explore the open art map';
@@ -4772,6 +4763,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String mapFilterVisibleLayerCountLabel(int visible, int total) {
     return '$visible of $total visible';
   }
+
+  @override
+  String get mapConstraintsLabel => 'Active map restrictions';
+
+  @override
+  String mapConstraintRadius(Object radiusKm) {
+    return 'Within $radiusKm km of you';
+  }
+
+  @override
+  String mapConstraintRadiusNoLocation(Object radiusKm) {
+    return 'Within $radiusKm km of you, location needed';
+  }
+
+  @override
+  String mapConstraintQuery(Object query) {
+    return 'Search: $query';
+  }
+
+  @override
+  String mapConstraintHiddenLayers(int count) {
+    return 'Hidden types: $count';
+  }
+
+  @override
+  String mapConstraintClear(Object label) {
+    return 'Clear $label';
+  }
+
+  @override
+  String get mapConstraintResetAll => 'Reset all';
 
   @override
   String get mapLayersTitle => 'Map layers';
@@ -8830,6 +8852,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
 
   @override
+  String get institutionHubLockedTitle => 'Institution Hub is locked';
+
+  @override
+  String get institutionHubLockedDescription =>
+      'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.';
+
+  @override
   String get artistStudioSettingsTitle => 'Studio Settings';
 
   @override
@@ -12527,7 +12556,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get daoHubHeaderSubtitle =>
-      'Experimental community governance for artists, institutions, and cultural participation';
+      'Experimental decision-making for artists, institutions, and cultural participation';
 
   @override
   String get daoHubInfoDialogTitle => 'How community governance works';

@@ -10,11 +10,26 @@ Amplitude, Hotjar or fingerprinting is used anywhere in this pipeline.
 
 ## Entry-route taxonomy
 
-| Class | Routes |
-| --- | --- |
-| App home (direct acquisition, implicit intent) | `/`, `/en`, `/sl`, `/main` |
-| Direct acquisition (explicit intent) | `/register` |
-| Discovery | `/map` |
+| Class | Routes | Meaning |
+| --- | --- | --- |
+| Discovery entry | `/`, `/en`, `/sl`, `/main`, `/map` | The visitor lands in public discovery. No account, onboarding, role, wallet or permission is asked for. |
+| Explicit account intent | `/register` | The visitor chose to create an account. The only landing route that is an account ask. |
+
+**The root is discovery-first.** Until Wave 5A-E the app home routes were
+labelled "direct acquisition, implicit intent" because a fresh visitor on `/`
+was sent into onboarding. That is no longer true: a fresh anonymous cold start on
+`/`, `/en`, `/sl`, `/main` or `/map` opens the public map, and onboarding is a
+capability/continuation state reached only from an explicit account action,
+never an acquisition entry. See [`docs/GUEST_FIRST_ENTRY.md`](../GUEST_FIRST_ENTRY.md).
+
+The route *literals* are unchanged on purpose. They are mirrored in three
+repositories and checked by `test/services/campaign_contract_test.dart`, so
+relabelling a class must not become cross-repo churn. What changed is the
+meaning: the set that code names `directAcquisitionEntryRoutes` and the
+backend's direct-acquisition cohort still contain `/`, `/en`, `/sl` and `/main`
+for continuity of historical reporting. Read those rows as *discovery entry*;
+only `/register` rows are explicit account intent. Renaming the backend cohort is
+a separate, deliberate change.
 
 Everything else — `/onboarding`, auth callbacks, dynamic entity paths, arbitrary
 app routes — is **not** a campaign entry. `/onboarding` in particular is an
@@ -44,6 +59,62 @@ list was missing `/en` and `/sl`, a campaign landing on
 `https://app.kubus.site/en?utm_*` kept every UTM but dropped its `entry_route`,
 and the backend's direct-acquisition cohort requires that route — so those
 clicks were attributable and permanently unactivatable.
+
+## Organic discovery funnel (event map)
+
+Organic search traffic is large enough to instrument and too small to judge by
+registrations alone. The funnel is first-party only (no third-party analytics)
+and uses events that already exist wherever one fits:
+
+| Step | Event | Status |
+| --- | --- | --- |
+| Search/app entry | `app_entry` (+ `entry_route`, `utm_*`, `entry_intent` metadata); `guest_app_loaded` for guest-mode entries | existing |
+| Entity / city / map view | `artwork_viewed`, `event_viewed`, `exhibition_viewed`, `institution_viewed`, `map_opened`, `guest_map_loaded` | existing |
+| Meaningful discovery | **`map_engaged`** (`kind`: `camera_gesture`, `marker_open` or `search_select`) | **new** |
+| Protected action attempt | `protected_action_clicked` | existing |
+| Activation gate | `auth_gate_viewed`, `auth_gate_dismissed`, `auth_method_selected`, `activation_prompt_viewed/dismissed/accepted` | existing |
+| Account created | `registration_submitted` (not an account), `email_verified`, `account_session_created` | existing |
+| Pending action completed | `pending_action_restored`, `pending_action_confirmation_viewed`, `pending_action_completed`, `pending_action_failed`, `first_save_completed`, `first_follow_completed` | existing |
+
+`nearby_discovery_used` is allowlisted on both sides but has no emitter; it was
+not repurposed, because "used Nearby" is narrower than "used the map".
+
+### `map_engaged`
+
+The first *deliberate* map interaction of a session, once per session, never a
+pan/zoom stream. It is distinct from `map_opened`, which only says the map
+rendered. Qualifying (first one wins):
+
+- `marker_open`: the visitor tapped a marker, cluster or same-location group on the map (web feature tap and native hit test, both owned by `KubusMapController`; a web click suppressed after a feature tap does not count twice);
+- `search_select`: the visitor chose a map search result;
+- `camera_gesture`: a user-caused pan or zoom of at least
+  `MapEngagementTracker.zoomThresholdLevels` (0.5 level) or a quarter of a 512px
+  tile span.
+
+Not qualifying: the map initialising, an automatic camera restore, a
+programmatic `fitBounds`, a deep-link-driven marker selection, a page open.
+Implementation: `lib/features/map/telemetry/map_engagement_tracker.dart`, fed
+from both map screens only with non-programmatic camera frames.
+
+**Rollout order matters for this event.** Unlike an unknown metadata key (which
+the backend sanitiser drops silently), an unknown `event_type` is a `400` for
+the whole batch, and the client treats a `400` as "drop the batch". So
+`map_engaged` must be allowlisted in the backend
+(`src/routes/analytics.js`, `allowedAppEventTypes`) **before** an app build that
+emits it is served: deploy **backend, then app**. The backend change adds no
+column and no migration; `kind` is already an accepted free-form key.
+
+### Organic entry attribution
+
+`entry_route` is deliberately a bounded allowlist (see above), so it separates
+root discovery (`/`, `/en`, `/sl`, `/main`), `/map` and explicit `/register`.
+It does not record dynamic entity paths. A canonical-entity entry (a visitor
+arriving from search on `/en/artworks/:id`) is recognised in the session by its
+first `screen_view` / `artwork_viewed` / `event_viewed` rather than by a route
+dimension, which avoids turning entity ids into analytics rows. City and
+editorial entry happens on `art.kubus.site` (a separate property); it joins this
+funnel only when the page's call to action carries UTMs into the app.
+Google does not supply the query a visitor typed, and none is recorded here.
 
 ## Contribution taxonomy
 

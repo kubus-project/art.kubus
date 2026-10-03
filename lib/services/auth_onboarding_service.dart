@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
+import '../models/protected_action_requirements.dart';
 import 'onboarding_state_service.dart';
 
 class StructuredOnboardingResumeState {
@@ -73,13 +74,36 @@ class AuthOnboardingService {
     required bool hasPendingAuthOnboarding,
     required bool hasAuthenticatedSession,
     required bool hasHydratedProfile,
+
+    /// `ProfileProvider.hasUsablePublicProfile` (see `isUsablePublicProfile`).
+    /// Required whenever [requirements] is given: hydration alone is not a
+    /// usable identity, and a scoped resolution must not treat it as one.
+    bool? hasUsableProfile,
     required bool requiresWalletBackup,
     bool requiresWalletSetup = false,
     required String? heuristicNextStepId,
     required String? persona,
     String? flowScopeKey,
     Map<String, dynamic>? payload,
+    ProtectedActionRequirements? requirements,
   }) async {
+    assert(
+      requirements == null || hasUsableProfile != null,
+      'A scoped resolution needs the canonical usable-profile result.',
+    );
+    // A named capability request is the whole of what this authentication was
+    // for. Account creation alone never implies the structured journey: only
+    // the role, profile or wallet step that capability needs can resume.
+    if (requirements != null) {
+      return _resolveScopedResume(
+        requirements: requirements,
+        hasAuthenticatedSession: hasAuthenticatedSession,
+        hasUsableProfile: hasUsableProfile ?? false,
+        requiresWalletSetup: requiresWalletSetup,
+        persona: persona,
+      );
+    }
+
     final payloadIsNewAccount =
         payload != null && payloadIndicatesNewAccount(payload);
 
@@ -188,6 +212,36 @@ class AuthOnboardingService {
     return StructuredOnboardingResumeState(
       requiresStructuredOnboarding: true,
       nextStepId: hasAuthenticatedSession ? 'role' : 'account',
+    );
+  }
+
+  /// The only step a scoped authentication can still owe: the first of
+  /// role, profile and wallet that the requested capability names and the
+  /// account does not yet have. Null scope or an account-only scope owes none.
+  static StructuredOnboardingResumeState _resolveScopedResume({
+    required ProtectedActionRequirements requirements,
+    required bool hasAuthenticatedSession,
+    required bool hasUsableProfile,
+    required bool requiresWalletSetup,
+    required String? persona,
+  }) {
+    if (!hasAuthenticatedSession) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: true,
+        nextStepId: 'account',
+      );
+    }
+    String? step;
+    if (requirements.requiresRole && (persona ?? '').trim().isEmpty) {
+      step = 'role';
+    } else if (requirements.requiresProfile && !hasUsableProfile) {
+      step = 'profile';
+    } else if (requirements.requiresWallet && requiresWalletSetup) {
+      step = 'walletConnect';
+    }
+    return StructuredOnboardingResumeState(
+      requiresStructuredOnboarding: step != null,
+      nextStepId: step,
     );
   }
 

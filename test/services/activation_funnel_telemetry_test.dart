@@ -360,4 +360,61 @@ void main() {
     expect(utm['utm_content'], 'creative-b');
     expect(GuestSessionService.entryIntentSync(prefs), 'discover');
   });
+
+  group('map_engaged (first deliberate map interaction)', () {
+    test('is client-allowlisted and distinct from map_opened', () {
+      expect(AppTelemetryEventTypes.allowed, contains('map_engaged'));
+      expect(AppTelemetryEventTypes.mapEngaged, isNot('map_opened'));
+    });
+
+    test('is emitted once per session, whatever the interaction', () async {
+      final (svc, queue) = await makeService();
+
+      await svc.trackMapEngaged(kind: 'camera_gesture');
+      await svc.trackMapEngaged(kind: 'marker_open');
+      await svc.trackMapEngaged(kind: 'search_select');
+
+      final events = (await drain(queue))
+          .where((e) => e.eventType == 'map_engaged')
+          .toList();
+      expect(events, hasLength(1));
+      expect(events.single.metadata['kind'], 'camera_gesture');
+    });
+
+    test('map_opened alone is not engagement', () async {
+      final (svc, queue) = await makeService();
+
+      await svc.trackMapOpened();
+
+      final events = await drain(queue);
+      expect(events.map((e) => e.eventType), <String>['map_opened']);
+    });
+
+    test('keeps entry attribution without any raw pan or zoom values',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'kubus_entry_route_v1': '/map',
+        'kubus_entry_utm_utm_source': 'newsletter',
+      });
+      final (svc, queue) = await makeService();
+
+      await svc.trackMapEngaged(kind: 'camera_gesture');
+
+      final event = (await drain(queue)).single;
+      expect(event.metadata['entry_route'], '/map');
+      expect(event.metadata['utm_source'], 'newsletter');
+      expect(event.metadata.keys, isNot(contains('zoom')));
+      expect(event.metadata.keys, isNot(contains('latitude')));
+      expect(event.metadata.keys, isNot(contains('longitude')));
+    });
+
+    test('an unbounded kind is clamped', () async {
+      final (svc, queue) = await makeService();
+
+      await svc.trackMapEngaged(kind: 'x' * 200);
+
+      final event = (await drain(queue)).single;
+      expect((event.metadata['kind'] as String).length, lessThanOrEqualTo(32));
+    });
+  });
 }

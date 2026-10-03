@@ -281,6 +281,33 @@ Both screens must:
 
 ---
 
+## Spatial system additions (Wave 5B)
+
+Read `docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md` before touching the map. In
+short, still one map, one controller, one selection owner:
+
+- **Capability**: `KubusMapCapabilities` (web with MapLibre GL JS 5.x draws a
+  globe via a style-level projection stamped by `MapStyleService`; Android and
+  iOS are flat Mercator). Never fork a renderer; the flat map is the fallback.
+- **Level of detail**: `KubusMarkerLod` (far dots, mid canonical marker, close
+  bounded covers inside the canonical geometry) and `MapSpatialFraming`
+  (world to artwork levels, globe minimum zoom). Marker features are zoom
+  dependent now, so any new sync trigger must go through
+  `KubusMarkerRegroupGate`.
+- **Selection invariant**: the selected marker is pinned out of clusters, kept
+  opaque at every zoom, rendered even if its layer is hidden, and carried across
+  viewport refreshes (`markersPreservedAcrossViewportRefresh`). Do not add a
+  second selection state.
+- **Constraints**: anything that silently narrows results must be a
+  `KubusMapConstraint` (`map_constraints.dart`) so the strip can show and clear
+  it.
+- **Session memory**: `KubusMapSessionMemory` carries camera, search, filters and
+  selection across the phone/wide screen swap. It holds no renderer logic.
+- MapLibre has no `removeImage` and `setFeatureState` is web only: do not
+  depend on either.
+
+---
+
 ## Technical Debt Policy
 
 If logic appears in both map screens:

@@ -5,6 +5,7 @@ import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
+import '../features/map/session/kubus_map_session_memory.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
@@ -112,6 +113,9 @@ class SettingsService {
     ProfileProvider? profileProvider,
     SavedItemsProvider? savedItemsProvider,
   }) async {
+    // First, and synchronous: nothing below may fail before the map's memory of
+    // this account (camera, filters, search, selection) is gone.
+    KubusMapSessionMemory.clearAll();
     await backendApi.clearAuth();
     notificationProvider?.reset();
     profileProvider?.signOut();

@@ -513,8 +513,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.profileMenuSavedItemsTitle,
               subtitle: subtitle,
-              icon: Icons.bookmarks_outlined,
-              iconColor: KubusColorRoles.of(context).foregroundMuted,
               action: TextButton.icon(
                 onPressed: () => _navigateToSavedItems(
                   showClearAll: savedProvider.totalSavedCount > 0,
@@ -525,30 +523,25 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: DetailSpacing.md),
             if (savedIds.isEmpty)
-              DesktopCard(
-                child: EmptyStateCard(
-                  icon: Icons.bookmark_border,
-                  title: l10n.savedItemsEmptySectionTitle(
-                    l10n.savedItemsArtworkLabel,
-                  ),
-                  description: l10n.savedItemsEmptySectionDescription(
-                    l10n.savedItemsArtworkLabel,
-                  ),
+              EmptyStateCard(
+                icon: Icons.bookmark_border,
+                title: l10n.savedItemsEmptySectionTitle(
+                  l10n.savedItemsArtworkLabel,
+                ),
+                description: l10n.savedItemsEmptySectionDescription(
+                  l10n.savedItemsArtworkLabel,
                 ),
               )
             else if (savedArtworks.isEmpty)
-              DesktopCard(
-                child: KubusStatCard(
-                  title:
-                      l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
-                  value: l10n.savedItemsSummaryCount(savedIds.length),
-                  icon: Icons.bookmarks_outlined,
-                  layout: KubusStatCardLayout.centered,
-                  onTap: () => _navigateToSavedItems(
-                    showClearAll: savedProvider.totalSavedCount > 0,
-                  ),
-                  minHeight: 96,
+              KubusStatCard(
+                title: l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
+                value: l10n.savedItemsSummaryCount(savedIds.length),
+                icon: Icons.bookmarks_outlined,
+                layout: KubusStatCardLayout.centered,
+                onTap: () => _navigateToSavedItems(
+                  showClearAll: savedProvider.totalSavedCount > 0,
                 ),
+                minHeight: 96,
               )
             else
               SizedBox(
@@ -1005,7 +998,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfilePortfolioTitle,
           subtitle: l10n.desktopProfilePortfolioSubtitle,
-          icon: Icons.palette,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showArtworks(
@@ -1017,7 +1009,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: DetailSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1027,12 +1019,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           )
         else if (_artistArtworks.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.image_outlined,
-              title: l10n.artistGalleryEmptyTitle,
-              description: l10n.profileArtistArtworksEmptyLabel,
-            ),
+          EmptyStateCard(
+            icon: Icons.image_outlined,
+            title: l10n.artistGalleryEmptyTitle,
+            description: l10n.profileArtistArtworksEmptyLabel,
           )
         else
           SizedBox(
@@ -1058,7 +1048,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.userProfileCollectionsTitle,
           subtitle: l10n.userProfileCollectionsDesktopSubtitle,
-          icon: Icons.collections_outlined,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () =>
@@ -1068,7 +1057,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: DetailSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1078,12 +1067,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           )
         else if (_artistCollections.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.collections_outlined,
-              title: l10n.userProfileNoCollectionsTitle,
-              description: l10n.desktopProfileNoCollectionsDescription,
-            ),
+          EmptyStateCard(
+            icon: Icons.collections_outlined,
+            title: l10n.userProfileNoCollectionsTitle,
+            description: l10n.desktopProfileNoCollectionsDescription,
           )
         else
           SizedBox(
@@ -1109,9 +1096,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileEventsTitle,
           subtitle: l10n.desktopProfileEventsSubtitle,
-          icon: Icons.event,
         ),
-        const SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: DetailSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1121,12 +1107,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           )
         else if (_artistEvents.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.event_outlined,
-              title: l10n.desktopProfileNoEventsTitle,
-              description: l10n.desktopProfileNoEventsDescription,
-            ),
+          EmptyStateCard(
+            icon: Icons.event_outlined,
+            title: l10n.desktopProfileNoEventsTitle,
+            description: l10n.desktopProfileNoEventsDescription,
           )
         else
           SizedBox(
@@ -1152,9 +1136,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileInstitutionProgramsTitle,
           subtitle: l10n.desktopProfileInstitutionProgramsSubtitle,
-          icon: Icons.museum,
         ),
-        const SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: DetailSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1164,12 +1147,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           )
         else if (_artistEvents.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: AppColorUtils.exhibitionIcon,
-              title: l10n.desktopProfileNoExhibitionsTitle,
-              description: l10n.desktopProfileNoExhibitionsDescription,
-            ),
+          EmptyStateCard(
+            icon: AppColorUtils.exhibitionIcon,
+            title: l10n.desktopProfileNoExhibitionsTitle,
+            description: l10n.desktopProfileNoExhibitionsDescription,
           )
         else
           SizedBox(
@@ -1196,7 +1177,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfilePermanentCollectionTitle,
           subtitle: l10n.desktopProfilePermanentCollectionSubtitle,
-          icon: Icons.account_balance,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () =>
@@ -1206,7 +1186,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: DetailSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1216,13 +1196,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           )
         else if (_artistCollections.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              icon: Icons.collections_outlined,
-              title: l10n.userProfileNoCollectionsTitle,
-              description:
-                  l10n.desktopProfilePermanentCollectionEmptyDescription,
-            ),
+          EmptyStateCard(
+            icon: Icons.collections_outlined,
+            title: l10n.userProfileNoCollectionsTitle,
+            description: l10n.desktopProfilePermanentCollectionEmptyDescription,
           )
         else
           SizedBox(
@@ -1268,7 +1245,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.desktopProfileRecentlyViewedTitle,
               subtitle: l10n.desktopProfileRecentlyViewedSubtitle,
-              icon: Icons.history,
               action: viewHistory.isNotEmpty
                   ? TextButton.icon(
                       onPressed: () {
@@ -1292,14 +1268,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                     )
                   : null,
             ),
-            const SizedBox(height: DetailSpacing.xl),
+            const SizedBox(height: DetailSpacing.md),
             if (viewedArtworks.isEmpty)
-              DesktopCard(
-                child: EmptyStateCard(
-                  icon: Icons.visibility_outlined,
-                  title: l10n.desktopProfileNoViewedArtworksTitle,
-                  description: l10n.desktopProfileNoViewedArtworksDescription,
-                ),
+              EmptyStateCard(
+                icon: Icons.visibility_outlined,
+                title: l10n.desktopProfileNoViewedArtworksTitle,
+                description: l10n.desktopProfileNoViewedArtworksDescription,
               )
             else
               SizedBox(
@@ -1434,9 +1408,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             DesktopSectionHeader(
               title: l10n.profilePerformanceSectionTitle,
               subtitle: l10n.desktopProfilePerformanceSubtitle,
-              icon: Icons.analytics_outlined,
             ),
-            const SizedBox(height: DetailSpacing.xl),
+            const SizedBox(height: DetailSpacing.md),
             DesktopGrid(
               minCrossAxisCount: 2,
               maxCrossAxisCount: 4,
@@ -1900,7 +1873,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         DesktopSectionHeader(
           title: l10n.desktopProfileYourPostsTitle,
           subtitle: l10n.desktopProfileYourPostsSubtitle,
-          icon: Icons.article_outlined,
         ),
         const SizedBox(height: 16),
         FutureBuilder<List<CommunityPost>>(
@@ -1917,27 +1889,22 @@ class _ProfileScreenState extends State<ProfileScreen>
             }
 
             if (snapshot.hasError) {
-              return DesktopCard(
-                child: EmptyStateCard(
-                  icon: Icons.error_outline,
-                  title: l10n.userProfilePostsLoadFailedTitle,
-                  description: l10n.userProfilePostsLoadFailedDescription,
-                  showAction: true,
-                  actionLabel: l10n.commonRetry,
-                  onAction: () =>
-                      setState(() => _postsFuture = _loadUserPosts()),
-                ),
+              return EmptyStateCard(
+                icon: Icons.error_outline,
+                title: l10n.userProfilePostsLoadFailedTitle,
+                description: l10n.userProfilePostsLoadFailedDescription,
+                showAction: true,
+                actionLabel: l10n.commonRetry,
+                onAction: () => setState(() => _postsFuture = _loadUserPosts()),
               );
             }
 
             final posts = snapshot.data ?? [];
             if (posts.isEmpty) {
-              return DesktopCard(
-                child: EmptyStateCard(
-                  icon: Icons.article,
-                  title: l10n.userProfileNoPostsTitle,
-                  description: l10n.profileNoPostsYetDescription,
-                ),
+              return EmptyStateCard(
+                icon: Icons.article,
+                title: l10n.userProfileNoPostsTitle,
+                description: l10n.profileNoPostsYetDescription,
               );
             }
 

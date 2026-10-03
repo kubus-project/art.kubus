@@ -188,7 +188,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
 
     return _buildSection(
       l10n.settingsAppearanceSectionTitle,
-      Icons.palette,
       [
         _buildThemeModeTile(l10n, themeProvider),
         const SizedBox(height: 12),
@@ -204,7 +203,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
 
     return _buildSection(
       l10n.settingsLanguageTitle,
-      Icons.language,
       [
         _buildSettingsPanel(
           child: Row(
@@ -573,7 +571,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
       builder: (context, platformProvider, child) {
         return _buildSection(
           l10n.settingsPlatformFeaturesSectionTitle,
-          Icons.devices,
           [
             _buildSettingsPanel(
               child: Column(
@@ -655,7 +652,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
             if (kDebugMode)
               _buildSection(
                 l10n.settingsDeveloperToolsSectionTitle,
-                Icons.developer_mode,
                 [
                   _buildSettingsTile(
                     'Map performance debug',
@@ -751,7 +747,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
     return _buildSection(
       l10n.settingsProfileSectionTitle,
-      Icons.person_outline,
       [
         _buildSettingsTile(
           l10n.settingsProfileVisibilityTileTitle,
@@ -1003,7 +998,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
     final walletStatusLabel = access.settingsStatusSummary(l10n);
     return _buildSection(
       l10n.settingsWalletSectionTitle,
-      Icons.account_balance_wallet,
       [
         _buildSettingsTile(
           l10n.settingsWalletConnectionTileTitle,
@@ -1110,7 +1104,6 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
     final canShowBiometricsToggle = _hasPin && _biometricsSupported;
     return _buildSection(
       l10n.settingsSecurityPrivacySectionTitle,
-      Icons.security,
       [
         _buildSettingsTile(
           l10n.settingsSetPinTileTitle,

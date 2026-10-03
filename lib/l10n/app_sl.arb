@@ -242,6 +242,7 @@
   "activationActionLikedToast": "Všečkano",
   "activationActionFollowedToast": "Spremljaš",
   "activationActionTargetUnavailableToast": "To ni več na voljo. Morda je bilo odstranjeno ali skrito.",
+  "entityUnavailableBody": "Tega zdaj ni bilo mogoče naložiti. Preveri povezavo in poskusi znova.",
   "activationActionUnauthorizedToast": "Za to nimaš dovoljenja.",
   "activationActionFailedToast": "To ni uspelo. Poskusi znova.",
   "activationPromptTitle": "Zgradi svoj zemljevid umetnosti",
@@ -598,7 +599,7 @@
   "onboardingFlowWelcomeInfoCreate": "Dodaj kontekst, objavi dela ali nadaljuj z raziskovanjem.",
   "onboardingFlowWelcomeInfoFollow": "Sledi krajem, zgodbam in umetnikom ter prilagodi tok vsebin.",
   "onboardingFlowWelcomeInfoTime": "Večina uporabnikov to dokonča v približno 2 minutah.",
-  "onboardingFlowAccountTitle": "Najprej ustvari profil",
+  "onboardingFlowAccountTitle": "Ustvari svoj račun",
   "onboardingFlowAccountBody": "Uporabi e-pošto, Google ali prijavo z denarnico. Odkrivanje, zemljevid in skupnost delujejo brez denarnice.",
   "onboardingFlowAccountVerifyHint": "Če si se registriral/a z e-pošto, pred prijavo potrdi e-poštni naslov.",
   "onboardingFlowCreateAccount": "Ustvari račun",
@@ -715,10 +716,6 @@
   "onboardingWelcomeTitle": "art.kubus je odprta umetniška platforma.",
   "onboardingWelcomeSubtitle": "Skupnostno odkrivanje kulture",
   "onboardingWelcomeDescription": "Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus povezuje skupnostni umetniški zemljevid z infrastrukturo javnega kulturnega arhiva.",
-  "alphaNoticeTitle": "Vstopaš v art.kubus alpha",
-  "alphaNoticeBody": "Platforma je aktivna, vendar se še razvija. Funkcije, postavitve in interakcije se lahko med razvojem spremenijo. Podatke računov nameravamo ohraniti skozi razvoj platforme, občasne spremembe pa so še vedno mogoče.\n\nV alpha različici ne vnašaj občutljivih ali zasebnih informacij.",
-  "alphaNoticeContinue": "Nadaljuj na uvod",
-  "alphaNoticeBackToWebsite": "Nazaj na spletno stran",
   "onboardingExploreTitle": "Raziskuj odprti zemljevid umetnosti",
   "onboardingExploreSubtitle": "Odkrij lokalno in javno umetnost",
   "onboardingExploreDescription": "S skupnostno ustvarjenim kulturnim zemljevidom najdi umetnine, razstave, institucije, ustvarjalce in zgodbe javnega prostora v bližini.",
@@ -1410,16 +1407,16 @@
   "institutionHubApplicationTitle": "Prijava institucije",
   "institutionHubApplicationSubtitle": "Deli svoje poslanstvo, programski fokus in način sodelovanja s skupnostjo.",
   "institutionHubApplicationOrganizationLabel": "Ime organizacije",
-  "institutionHubApplicationContactLabel": "Spletna stran ali kontaktni e-postni naslov",
+  "institutionHubApplicationContactLabel": "Spletna stran ali kontaktni e-poštni naslov",
   "institutionHubApplicationFocusLabel": "Kuratorski fokus",
   "institutionHubApplicationMissionLabel": "Poslanstvo in cilji",
   "institutionHubApplicationOrganizationRequired": "Vnesi ime organizacije.",
-  "institutionHubApplicationContactRequired": "Deli spletno stran ali kontaktni e-postni naslov.",
-  "institutionHubApplicationFocusRequired": "Opisi programski fokus.",
-  "institutionHubApplicationMissionRequired": "Opisi poslanstvo z vsaj 20 znaki.",
+  "institutionHubApplicationContactRequired": "Deli spletno stran ali kontaktni e-poštni naslov.",
+  "institutionHubApplicationFocusRequired": "Opiši programski fokus.",
+  "institutionHubApplicationMissionRequired": "Opiši poslanstvo z vsaj 20 znaki.",
   "institutionHubApplicationWalletRequired": "Pred oddajo poveži denarnico.",
   "institutionHubApplicationSubmittedToast": "Prijava je oddana v pregled upravljanja.",
-  "institutionHubApplicationSubmitUnavailableToast": "Prijave trenutno ni mogoce oddati.",
+  "institutionHubApplicationSubmitUnavailableToast": "Prijave trenutno ni mogoče oddati.",
   "institutionHubApplicationSubmitFailedToast": "Oddaja ni uspela: {error}",
   "@institutionHubApplicationSubmitFailedToast": {
     "placeholders": {
@@ -1443,7 +1440,7 @@
   "institutionHubDaoStatusSyncedLabel": "Stanje sinhronizirano iz pregleda upravljanja",
   "institutionHubDaoReviewQueueMessage": "Tvoja prijava čaka v vrsti za pregled upravljanja.",
   "institutionHubApprovedToolsMessage": "Cestitke! Institucijska orodja so odobrena.",
-  "institutionHubRejectedResubmitMessage": "Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddas s popravki.",
+  "institutionHubRejectedResubmitMessage": "Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddaš s popravki.",
   "web3MarketplaceP1Title": "Digitalne izdaje",
   "web3MarketplaceP1Description": "Digitalne izdaje povezujejo umetnine s provenienco.",
   "web3MarketplaceP1Feature1": "Brskaj po digitalnih izdajah",
@@ -1744,6 +1741,51 @@
         "type": "int"
       }
     }
+  },
+  "mapConstraintsLabel": "Aktivne omejitve zemljevida",
+  "@mapConstraintsLabel": {
+    "description": "Oznaka za bralnike zaslona za vrstico, ki našteje, kaj trenutno omejuje umetnine na zemljevidu."
+  },
+  "mapConstraintRadius": "Znotraj {radiusKm} km od vas",
+  "@mapConstraintRadius": {
+    "description": "Omejitev zemljevida: prikazane so le umetnine znotraj radija okoli obiskovalca.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintRadiusNoLocation": "Znotraj {radiusKm} km od vas, potrebna lokacija",
+  "@mapConstraintRadiusNoLocation": {
+    "description": "Omejitev radija, ki še ne more ničesar zožiti, ker lokacija obiskovalca ni na voljo.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintQuery": "Iskanje: {query}",
+  "@mapConstraintQuery": {
+    "description": "Omejitev zemljevida: prikazane so le umetnine, ki ustrezajo iskanemu besedilu.",
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "mapConstraintHiddenLayers": "Skriti tipi: {count}",
+  "@mapConstraintHiddenLayers": {
+    "description": "Omejitev zemljevida: toliko vsebinskih tipov (umetnina, dogodek, ...) je skritih.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapConstraintClear": "Počisti: {label}",
+  "@mapConstraintClear": {
+    "description": "Dostopna oznaka kontrolnika, ki odstrani eno omejitev zemljevida; label je besedilo omejitve.",
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "mapConstraintResetAll": "Ponastavi vse",
+  "@mapConstraintResetAll": {
+    "description": "Kontrolnik, ki naenkrat odstrani vse omejitve zemljevida (iskalno besedilo in filtre)."
   },
   "mapLayersTitle": "Sloji zemljevida",
   "mapDiscoveryPathTitle": "Pot odkrivanja",
@@ -3286,6 +3328,8 @@
   "artistStudioSeparateWalletsTip": "Ločeni denarnici za umetniško in institucijsko vlogo ti pomagata ohraniti jasen dostop in ločene poti pregleda.",
   "artistStudioLockedTitle": "Umetniški studio je zaklenjen",
   "artistStudioLockedDescription": "Prijavi se v pregled upravljanja, da odkleneš studijska orodja za objavljanje, predstavitev in spremljanje svojega dela.",
+  "institutionHubLockedTitle": "Središče za institucije je zaklenjeno",
+  "institutionHubLockedDescription": "Prijavi se v pregled upravljanja, da odkleneš orodja institucije za dogodke, razstave in analitiko programa.",
   "artistStudioSettingsTitle": "Nastavitve studia",
   "artistStudioApplicationModalTitle": "Umetniška prijava",
   "artistStudioApplicationModalSubtitle": "Deli kratek pregled svoje prakse. Prijave so usmerjene v vrsto za pregled upravljanja.",
@@ -3481,7 +3525,7 @@
   "marketplaceEmptyCollectionTitle": "Digitalnih izdaj še ni",
   "marketplaceEmptyCollectionDescription": "Ustvari digitalne izdaje iz umetnin in jih hrani tukaj.",
   "marketplaceExploreArArtButton": "Razišči AR umetnost",
-  "marketplaceSettingsShowArOnlyTitle": "Prikazi samo AR zbirke",
+  "marketplaceSettingsShowArOnlyTitle": "Prikaži samo AR zbirke",
   "marketplaceSettingsShowArOnlyDescription": "Filtriraj zbirke, ki zahtevajo AR interakcijo.",
   "marketplaceFeaturedTab": "Izpostavljeno",
   "marketplaceTrendingTab": "V trendu",
@@ -4110,7 +4154,7 @@
   },
   "communityGroupFallbackName": "tej skupini",
   "communityGroupPickerTitle": "Izberi skupino",
-  "communityGroupPickerJoinFirstToast": "Pridruzi se skupini, da usmeris objavo.",
+  "communityGroupPickerJoinFirstToast": "Pridruži se skupini, da usmeriš objavo.",
   "communityComposerPostCreatedToast": "Objava ustvarjena",
   "communityComposerCreatePostFailedToast": "Objave ni bilo mogoče ustvariti.",
   "communityToggleLikeFailedToast": "Všečka ni bilo mogoče posodobiti.",
@@ -4258,8 +4302,8 @@
   "desktopHomeTopCreatorsLoadFailed": "Ustvarjalcev ni mogoče naložiti.",
   "desktopHomeTopCreatorsEmpty": "Naj ustvarjalci se bodo prikazali tukaj",
   "desktopHomeCreatorFallbackName": "Ustvarjalec",
-  "homeRailsUnavailableTitle": "Domace tirnice niso na voljo",
-  "homeRailsUnavailableDescription": "Razvrscenih domacih tirnic trenutno ni mogoce naloziti.",
+  "homeRailsUnavailableTitle": "Domače tirnice niso na voljo",
+  "homeRailsUnavailableDescription": "Razvrščenih domačih tirnic trenutno ni mogoče naložiti.",
   "homeRailsWarmingTitle": "Odkritja se pripravljajo",
   "homeRailsWarmingDescription": "Izpostavljene umetnine, umetniki, institucije, dogodki in razstave se prikažejo, ko je na voljo razvrščena vsebina.",
   "homeRailArtworksTitle": "Umetnine",
@@ -4748,7 +4792,7 @@
   "daoHubAppBarTitle": "Skupnostno upravljanje",
   "labsDaoSemanticLabel": "Skupnostno upravljanje",
   "labsMarketplaceSemanticLabel": "Digitalne izdaje",
-  "daoHubHeaderSubtitle": "Skupnostno upravljanje za umetnike, institucije in kulturno sodelovanje",
+  "daoHubHeaderSubtitle": "Eksperimentalno odločanje za umetnike, institucije in kulturno sodelovanje",
   "daoHubInfoDialogTitle": "Kako deluje skupnostno upravljanje",
   "daoHubInfoDialogBody": "Ta laboratorij skupnosti daje pregleden način za predlaganje, pregledovanje in razpravo o odločitvah platforme. KUB8 beleži sodelovanje in priznanje; ni finančna vrednost.",
   "daoHubTabActiveProposals": "Predlogi",

@@ -242,6 +242,7 @@
   "activationActionLikedToast": "Liked",
   "activationActionFollowedToast": "Following",
   "activationActionTargetUnavailableToast": "This is no longer available. It may have been removed or made private.",
+  "entityUnavailableBody": "This could not be loaded right now. Check your connection and try again.",
   "activationActionUnauthorizedToast": "You don't have permission to do that.",
   "activationActionFailedToast": "That didn't work. Please try again.",
   "activationPromptTitle": "Build your own art map",
@@ -598,7 +599,7 @@
   "onboardingFlowWelcomeInfoCreate": "Share artworks, add cultural context, or keep exploring the open art map.",
   "onboardingFlowWelcomeInfoFollow": "Follow artists, institutions, exhibitions, and public-space art.",
   "onboardingFlowWelcomeInfoTime": "Most people finish this in about 2 minutes.",
-  "onboardingFlowAccountTitle": "Create your profile first",
+  "onboardingFlowAccountTitle": "Create your account",
   "onboardingFlowAccountBody": "Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.",
   "onboardingFlowAccountVerifyHint": "If you registered with email, verify your email before signing in.",
   "onboardingFlowCreateAccount": "Create account",
@@ -715,10 +716,6 @@
   "onboardingWelcomeTitle": "art.kubus is an open art platform.",
   "onboardingWelcomeSubtitle": "Community-first cultural discovery",
   "onboardingWelcomeDescription": "Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.",
-  "alphaNoticeTitle": "You are entering the art.kubus alpha",
-  "alphaNoticeBody": "The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.",
-  "alphaNoticeContinue": "Continue to onboarding",
-  "alphaNoticeBackToWebsite": "Back to website",
   "onboardingExploreTitle": "Explore the open art map",
   "onboardingExploreSubtitle": "Discover local and public-space art",
   "onboardingExploreDescription": "Use the community-generated cultural map to find artworks, exhibitions, institutions, artists, and public-space stories nearby.",
@@ -1783,6 +1780,51 @@
         "type": "int"
       }
     }
+  },
+  "mapConstraintsLabel": "Active map restrictions",
+  "@mapConstraintsLabel": {
+    "description": "Semantics label for the strip that lists what is currently restricting the artworks shown on the map."
+  },
+  "mapConstraintRadius": "Within {radiusKm} km of you",
+  "@mapConstraintRadius": {
+    "description": "Map restriction chip: only artworks within the travel radius around the visitor are shown.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintRadiusNoLocation": "Within {radiusKm} km of you, location needed",
+  "@mapConstraintRadiusNoLocation": {
+    "description": "Map restriction chip for a travel radius that cannot narrow anything yet because the visitor's location is not available.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapConstraintQuery": "Search: {query}",
+  "@mapConstraintQuery": {
+    "description": "Map restriction chip: only artworks matching this search text are shown.",
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "mapConstraintHiddenLayers": "Hidden types: {count}",
+  "@mapConstraintHiddenLayers": {
+    "description": "Map restriction chip: this many content types (artwork, event, ...) are hidden from the map.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapConstraintClear": "Clear {label}",
+  "@mapConstraintClear": {
+    "description": "Accessible label of the control that removes one map restriction; label is the restriction text.",
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "mapConstraintResetAll": "Reset all",
+  "@mapConstraintResetAll": {
+    "description": "Control that removes every map restriction (search text and filters) at once."
   },
   "mapLayersTitle": "Map layers",
   "mapDiscoveryPathTitle": "Discovery path",
@@ -3549,6 +3591,8 @@
   "artistStudioSeparateWalletsTip": "Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.",
   "artistStudioLockedTitle": "Artist Studio is locked",
   "artistStudioLockedDescription": "Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.",
+  "institutionHubLockedTitle": "Institution Hub is locked",
+  "institutionHubLockedDescription": "Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.",
   "artistStudioSettingsTitle": "Studio Settings",
   "artistStudioApplicationModalTitle": "Artist application",
   "artistStudioApplicationModalSubtitle": "Share a snapshot of your practice. Submissions are routed to the governance review queue.",
@@ -5059,7 +5103,7 @@
   "daoHubAppBarTitle": "Community governance",
   "labsDaoSemanticLabel": "Community Governance",
   "labsMarketplaceSemanticLabel": "Digital Editions",
-  "daoHubHeaderSubtitle": "Experimental community governance for artists, institutions, and cultural participation",
+  "daoHubHeaderSubtitle": "Experimental decision-making for artists, institutions, and cultural participation",
   "daoHubInfoDialogTitle": "How community governance works",
   "daoHubInfoDialogBody": "This lab gives the community a transparent way to propose, review, and discuss platform decisions. KUB8 records participation and recognition; it is not financial value.",
   "daoHubTabActiveProposals": "Proposals",

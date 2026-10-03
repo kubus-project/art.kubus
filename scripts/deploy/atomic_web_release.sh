@@ -335,7 +335,25 @@ promote() {
     [ -d "$LIVE_DIR/.well-known" ] && [ ! -L "$LIVE_DIR/.well-known" ] \
       || die "host validation directory is unsafe"
     mkdir -p "$candidate_dir/.well-known"
-    cp -a "$LIVE_DIR/.well-known/." "$candidate_dir/.well-known/"
+    # Carry host-owned files over, but never let a stale live copy replace a
+    # file the artifact ships itself (for example assetlinks.json): the new
+    # release must be able to change it.
+    # The lists are read from files so the loops run in this shell: a failed
+    # mkdir or cp must stop the promotion rather than ship a partial copy.
+    host_dirs="$(mktemp)"
+    host_files="$(mktemp)"
+    (cd "$LIVE_DIR/.well-known" && find . -type d) > "$host_dirs"
+    (cd "$LIVE_DIR/.well-known" && find . \( -type f -o -type l \)) > "$host_files"
+    while IFS= read -r host_dir; do
+      mkdir -p "$candidate_dir/.well-known/$host_dir"
+    done < "$host_dirs"
+    while IFS= read -r host_file; do
+      if [ ! -e "$candidate_dir/.well-known/$host_file" ] \
+        && [ ! -L "$candidate_dir/.well-known/$host_file" ]; then
+        cp -a "$LIVE_DIR/.well-known/$host_file" "$candidate_dir/.well-known/$host_file"
+      fi
+    done < "$host_files"
+    rm -f "$host_dirs" "$host_files"
   fi
   find "$candidate_dir" -type d -exec chmod 755 {} +
   find "$candidate_dir" -type f -exec chmod 644 {} +

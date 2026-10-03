@@ -108,6 +108,23 @@ await expectGatewayHandoff('/artworks/contract-probe');
 // The oldest marker query alias remains a one-hop locale-aware redirect.
 await expectRedirect('/map?marker=contract-probe', 308, '/en/map/contract-probe');
 
+// --- Digital Asset Links ------------------------------------------------------
+// Android verifies App Links against this exact path. It must be a real static
+// file: 200, JSON, no redirect, and never the Flutter shell or the 404 document.
+{
+  const res = await fetch(`${BASE}/.well-known/assetlinks.json`, { redirect: 'manual' });
+  const body = await res.text();
+  let statements = null;
+  try { statements = JSON.parse(body); } catch { /* reported below */ }
+  const ok = res.status === 200
+    && (res.headers.get('content-type') ?? '').startsWith('application/json')
+    && Array.isArray(statements)
+    && statements.some((s) => s?.target?.package_name === 'com.art.kubus'
+      && (s.relation ?? []).includes('delegate_permission/common.handle_all_urls'));
+  record('/.well-known/assetlinks.json is served as JSON', ok,
+    `${res.status} ${res.headers.get('content-type')} (expected 200 application/json with com.art.kubus)`);
+}
+
 // --- Honest failure behaviour -----------------------------------------------
 // Unknown paths are real 404s, never an indexable Flutter shell.
 await expectStatus('/__unknown-routing-probe', 404);

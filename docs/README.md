@@ -11,6 +11,8 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 - **Agent sequencing / work packages**: [`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md)
 - **Current design direction**: [`DESIGN_SYSTEM_V2.md`](DESIGN_SYSTEM_V2.md)
 - **Canonical public-entry target**: [`APP_NATIVE_PUBLIC_ENTRY.md`](APP_NATIVE_PUBLIC_ENTRY.md)
+- **Guest-first entry and capability contract**: [`GUEST_FIRST_ENTRY.md`](GUEST_FIRST_ENTRY.md)
+- **Organic search baseline and index-quality handoff**: [`seo/organic-baseline-2026-10.md`](seo/organic-baseline-2026-10.md)
 - **Places, routes and field evidence**: [`PLACES_ROUTES_FIELD.md`](PLACES_ROUTES_FIELD.md)
 - **Institution, editorial and lifecycle**: [`INSTITUTION_EDITORIAL_LIFECYCLE.md`](INSTITUTION_EDITORIAL_LIFECYCLE.md)
 - **Future spatial delivery**: [`SPATIAL_DELIVERY_ROADMAP.md`](SPATIAL_DELIVERY_ROADMAP.md)

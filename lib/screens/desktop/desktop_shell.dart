@@ -15,7 +15,6 @@ import '../../providers/profile_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/deep_link_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
-import '../../providers/deferred_onboarding_provider.dart';
 import '../../config/config.dart';
 import '../../utils/activity_navigation.dart';
 import '../../services/backend_api_service.dart';
@@ -378,16 +377,6 @@ class _DesktopShellState extends State<DesktopShell>
       int index, List<DesktopNavItem> navItems, bool isSignedIn) {
     if (index < 0 || index >= navItems.length) return;
     final item = navItems[index];
-
-    if (item.route != _activeRoute) {
-      try {
-        if (context
-            .read<DeferredOnboardingProvider>()
-            .maybeShowOnboarding(context)) {
-          return;
-        }
-      } catch (_) {}
-    }
 
     if (!isSignedIn && item.route == _web3EntryRoute) {
       unawaited(_activateWeb3Capability());
@@ -981,13 +970,6 @@ class _DesktopShellState extends State<DesktopShell>
     _lastDeepLinkSignature = signature;
     _lastDeepLinkHandledAt = now;
 
-    final DeferredOnboardingProvider? deferredOnboardingProvider = (() {
-      try {
-        return shellContext.read<DeferredOnboardingProvider>();
-      } catch (_) {
-        return null;
-      }
-    })();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       if (!shellContext.mounted) return;
@@ -1019,10 +1001,6 @@ class _DesktopShellState extends State<DesktopShell>
       } finally {
         _dispatchingInitialCanonicalEntry = false;
       }
-      if (!mounted) return;
-      try {
-        deferredOnboardingProvider?.markInitialDeepLinkHandled();
-      } catch (_) {}
     });
   }
 

@@ -57,6 +57,14 @@ class OnboardingStateService {
       'onboarding_account_link_started_at_v1';
   static const Duration accountLinkGuardTimeout = Duration(minutes: 10);
 
+  /// The named capability (see `ProtectedActionRequirements.storageValue`) the
+  /// current account journey was started for. Remembered only so that an
+  /// interrupted journey resumes with the same, narrow scope instead of
+  /// widening into the full structured flow.
+  static const String capabilityScopeKey = 'onboarding_capability_scope_v1';
+  static const String _pendingEmailVerificationKey =
+      'onboarding_pending_email_verification_v1';
+
   static String _scopedKey(String key, String? flowScopeKey) {
     final scope = (flowScopeKey ?? '').trim();
     if (scope.isEmpty) return key;
@@ -135,6 +143,7 @@ class OnboardingStateService {
       p,
       scopeKey: authOnboardingScopeKey,
     );
+    await p.remove(capabilityScopeKey);
     // A user who finished onboarding (created/linked an account) is no longer a
     // guest; subsequent launches use the normal returning-user flow.
     await GuestSessionService.clearGuestMode(prefs: p);
@@ -157,6 +166,57 @@ class OnboardingStateService {
     await p.setBool(PreferenceKeys.hasSeenWelcome, false);
     await p.setBool(PreferenceKeys.isFirstLaunch, true);
     await _clearPendingAuthOnboardingKeys(p);
+    await p.remove(capabilityScopeKey);
+  }
+
+  /// Remembers the capability scope of the journey that is starting.
+  static Future<void> saveCapabilityScope(
+    String scope, {
+    SharedPreferences? prefs,
+  }) async {
+    final normalized = scope.trim();
+    if (normalized.isEmpty) return;
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setString(capabilityScopeKey, normalized);
+  }
+
+  static Future<void> clearCapabilityScope({SharedPreferences? prefs}) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.remove(capabilityScopeKey);
+  }
+
+  /// The remembered scope, but only while a journey is genuinely still open:
+  /// pending email verification, a pending structured journey, or an active
+  /// Google/account-link guard. A scope left behind by a journey the visitor
+  /// simply backed out of must not turn a later, voluntary full onboarding
+  /// into a scoped one.
+  static String? capabilityScopeSync(SharedPreferences prefs) {
+    final scope = (prefs.getString(capabilityScopeKey) ?? '').trim();
+    if (scope.isEmpty) return null;
+    final hasPendingJourney =
+        (prefs.getBool(_pendingEmailVerificationKey) ?? false) ||
+            hasAnyPendingAuthOnboardingSync(prefs) ||
+            hasActiveGoogleOnboardingRegistrationGuardSync(prefs) ||
+            hasActiveAccountLinkGuardSync(prefs);
+    return hasPendingJourney ? scope : null;
+  }
+
+  /// Whether *any* pending structured journey is recorded, under the unscoped
+  /// key or under any user/wallet scope.
+  ///
+  /// `markAuthOnboardingPending` writes the scoped key and removes the unscoped
+  /// one whenever a user or wallet is known, so a caller that has no session
+  /// to derive a scope from (degraded startup, the watchdog) must look at all
+  /// of them. Only a stored `true` counts; a cleared, false or non-boolean
+  /// value is a stale marker and is ignored.
+  static bool hasAnyPendingAuthOnboardingSync(SharedPreferences prefs) {
+    final base = PreferenceKeys.pendingAuthOnboarding;
+    for (final key in prefs.getKeys()) {
+      if (key != base && !key.startsWith('$base:')) continue;
+      final value = prefs.get(key);
+      if (value == true) return true;
+    }
+    return false;
   }
 
   static Future<OnboardingFlowProgress> loadFlowProgress({
@@ -317,9 +377,11 @@ class OnboardingStateService {
     final normalizedScope = (scopeKey ?? '').trim();
     if (normalizedScope.isEmpty) {
       await _clearPendingAuthOnboardingKeys(p);
-      return;
+    } else {
+      await _clearPendingAuthOnboardingForScope(p, scopeKey: normalizedScope);
     }
-    await _clearPendingAuthOnboardingForScope(p, scopeKey: normalizedScope);
+    // The scope describes the pending journey; without one it is meaningless.
+    await p.remove(capabilityScopeKey);
   }
 
   static bool hasActiveGoogleOnboardingRegistrationGuardSync(
@@ -395,7 +457,8 @@ class OnboardingStateService {
   }
 
   static String? accountLinkGuardUserIdSync(SharedPreferences prefs) {
-    final userId = (prefs.getString(onboardingAccountLinkUserIdKey) ?? '').trim();
+    final userId =
+        (prefs.getString(onboardingAccountLinkUserIdKey) ?? '').trim();
     return userId.isEmpty ? null : userId;
   }
 

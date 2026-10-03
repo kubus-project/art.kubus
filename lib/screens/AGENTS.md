@@ -48,3 +48,6 @@ Only release and emergency hotfix pull requests target `master`.
 	- “/// AR Screen with seamless Android and iOS support”
 	- “/// On web, redirects to download app screen”
 	- “// Keep AR chrome transparent so the root gradient can still paint.”
+
+## Spatial system (Wave 5B)
+Both map screens use the shared spatial layer; read `docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md` and the root `AGENTS.md` section before changing either. A map target (deep link, search result) is one deliberate camera move: switch follow-me off first (`_yieldFollowToDeliberateCamera`), because every compass heading update re-aims the camera while following and cancels the move. Selection stays single-owner; do not add map state to the screen.

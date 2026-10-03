@@ -156,7 +156,6 @@ class WalletActionController {
     bool swapEnabled = false,
     WalletActionSurface surface = WalletActionSurface.walletHome,
   }) {
-    final canTransact = authority.canTransact;
     final hasWallet = authority.hasWalletIdentity;
     // Semantic accents: value leaving the wallet is warm/negative, value
     // arriving is positive, moving value between assets is neutral-cool, and
@@ -165,9 +164,9 @@ class WalletActionController {
       WalletActionConfig(
         type: WalletActionType.send,
         title: l10n.walletHomeSendAction,
-        subtitle: canTransact
-            ? l10n.walletHomeDesktopSendSubtitle
-            : l10n.walletSessionSignerMissing,
+        // The signer state is said once, by the wallet's status line; the
+        // tile keeps naming its action (a tap runs the guard that explains).
+        subtitle: l10n.walletHomeDesktopSendSubtitle,
         icon: Icons.arrow_upward_rounded,
         color: roles.negativeAction,
         run: onSend,
@@ -188,9 +187,7 @@ class WalletActionController {
         WalletActionConfig(
           type: WalletActionType.swap,
           title: l10n.walletHomeSwapAction,
-          subtitle: canTransact
-              ? l10n.walletHomeDesktopSwapSubtitle
-              : l10n.walletSessionSignerMissing,
+          subtitle: l10n.walletHomeDesktopSwapSubtitle,
           icon: Icons.swap_horiz_rounded,
           color: roles.statBlue,
           run: onSwap,

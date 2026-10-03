@@ -104,6 +104,17 @@ class AppConfig {
   /// clustered marker badges; it does not generate per-zoom world geometry.
   static const bool enableMapIsometricView = true;
 
+  /// Map: render the basemap as a globe where the renderer supports it.
+  ///
+  /// Only the web renderer (MapLibre GL JS 5.x) can draw a globe today; native
+  /// renderers keep the flat Mercator map with the same camera framing, marker
+  /// levels and constraints (see `KubusMapCapabilities`). Disable to force the
+  /// flat map everywhere.
+  static const bool enableMapGlobe = bool.fromEnvironment(
+    'MAP_GLOBE_ENABLED',
+    defaultValue: true,
+  );
+
   /// Preview: calculate pedestrian routes on device from bounded OSM graph
   /// data and render them in the existing art.kubus MapLibre map.
   static const bool enableMapWalkingNavigation = bool.fromEnvironment(
@@ -565,6 +576,8 @@ class AppConfig {
         return enableRePromptLoginOnExpiry;
       case 'mapIsometricView':
         return enableMapIsometricView;
+      case 'mapGlobe':
+        return enableMapGlobe;
       case 'mapWalkingNavigation':
         return enableMapWalkingNavigation;
       case 'streetArtMarkers':

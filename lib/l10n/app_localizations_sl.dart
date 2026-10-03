@@ -500,6 +500,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'To ni več na voljo. Morda je bilo odstranjeno ali skrito.';
 
   @override
+  String get entityUnavailableBody =>
+      'Tega zdaj ni bilo mogoče naložiti. Preveri povezavo in poskusi znova.';
+
+  @override
   String get activationActionUnauthorizedToast => 'Za to nimaš dovoljenja.';
 
   @override
@@ -1592,7 +1596,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Večina uporabnikov to dokonča v približno 2 minutah.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Najprej ustvari profil';
+  String get onboardingFlowAccountTitle => 'Ustvari svoj račun';
 
   @override
   String get onboardingFlowAccountBody =>
@@ -1959,19 +1963,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get onboardingWelcomeDescription =>
       'Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus povezuje skupnostni umetniški zemljevid z infrastrukturo javnega kulturnega arhiva.';
-
-  @override
-  String get alphaNoticeTitle => 'Vstopaš v art.kubus alpha';
-
-  @override
-  String get alphaNoticeBody =>
-      'Platforma je aktivna, vendar se še razvija. Funkcije, postavitve in interakcije se lahko med razvojem spremenijo. Podatke računov nameravamo ohraniti skozi razvoj platforme, občasne spremembe pa so še vedno mogoče.\n\nV alpha različici ne vnašaj občutljivih ali zasebnih informacij.';
-
-  @override
-  String get alphaNoticeContinue => 'Nadaljuj na uvod';
-
-  @override
-  String get alphaNoticeBackToWebsite => 'Nazaj na spletno stran';
 
   @override
   String get onboardingExploreTitle => 'Raziskuj odprti zemljevid umetnosti';
@@ -4001,7 +3992,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationContactLabel =>
-      'Spletna stran ali kontaktni e-postni naslov';
+      'Spletna stran ali kontaktni e-poštni naslov';
 
   @override
   String get institutionHubApplicationFocusLabel => 'Kuratorski fokus';
@@ -4015,15 +4006,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationContactRequired =>
-      'Deli spletno stran ali kontaktni e-postni naslov.';
+      'Deli spletno stran ali kontaktni e-poštni naslov.';
 
   @override
   String get institutionHubApplicationFocusRequired =>
-      'Opisi programski fokus.';
+      'Opiši programski fokus.';
 
   @override
   String get institutionHubApplicationMissionRequired =>
-      'Opisi poslanstvo z vsaj 20 znaki.';
+      'Opiši poslanstvo z vsaj 20 znaki.';
 
   @override
   String get institutionHubApplicationWalletRequired =>
@@ -4035,7 +4026,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubApplicationSubmitUnavailableToast =>
-      'Prijave trenutno ni mogoce oddati.';
+      'Prijave trenutno ni mogoče oddati.';
 
   @override
   String institutionHubApplicationSubmitFailedToast(Object error) {
@@ -4104,7 +4095,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubRejectedResubmitMessage =>
-      'Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddas s popravki.';
+      'Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddaš s popravki.';
 
   @override
   String get web3MarketplaceP1Title => 'Digitalne izdaje';
@@ -4806,6 +4797,37 @@ class AppLocalizationsSl extends AppLocalizations {
   String mapFilterVisibleLayerCountLabel(int visible, int total) {
     return 'Vidnih $visible od $total';
   }
+
+  @override
+  String get mapConstraintsLabel => 'Aktivne omejitve zemljevida';
+
+  @override
+  String mapConstraintRadius(Object radiusKm) {
+    return 'Znotraj $radiusKm km od vas';
+  }
+
+  @override
+  String mapConstraintRadiusNoLocation(Object radiusKm) {
+    return 'Znotraj $radiusKm km od vas, potrebna lokacija';
+  }
+
+  @override
+  String mapConstraintQuery(Object query) {
+    return 'Iskanje: $query';
+  }
+
+  @override
+  String mapConstraintHiddenLayers(int count) {
+    return 'Skriti tipi: $count';
+  }
+
+  @override
+  String mapConstraintClear(Object label) {
+    return 'Počisti: $label';
+  }
+
+  @override
+  String get mapConstraintResetAll => 'Ponastavi vse';
 
   @override
   String get mapLayersTitle => 'Sloji zemljevida';
@@ -8898,6 +8920,14 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prijavi se v pregled upravljanja, da odkleneš studijska orodja za objavljanje, predstavitev in spremljanje svojega dela.';
 
   @override
+  String get institutionHubLockedTitle =>
+      'Središče za institucije je zaklenjeno';
+
+  @override
+  String get institutionHubLockedDescription =>
+      'Prijavi se v pregled upravljanja, da odkleneš orodja institucije za dogodke, razstave in analitiko programa.';
+
+  @override
   String get artistStudioSettingsTitle => 'Nastavitve studia';
 
   @override
@@ -9402,7 +9432,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Denarnico Solana poveži, če želiš videti digitalne izdaje, vezane na račun.';
 
   @override
-  String get marketplaceSettingsShowArOnlyTitle => 'Prikazi samo AR zbirke';
+  String get marketplaceSettingsShowArOnlyTitle => 'Prikaži samo AR zbirke';
 
   @override
   String get marketplaceSettingsShowArOnlyDescription =>
@@ -10907,7 +10937,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityGroupPickerJoinFirstToast =>
-      'Pridruzi se skupini, da usmeris objavo.';
+      'Pridruži se skupini, da usmeriš objavo.';
 
   @override
   String get communityComposerPostCreatedToast => 'Objava ustvarjena';
@@ -11328,11 +11358,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeCreatorFallbackName => 'Ustvarjalec';
 
   @override
-  String get homeRailsUnavailableTitle => 'Domace tirnice niso na voljo';
+  String get homeRailsUnavailableTitle => 'Domače tirnice niso na voljo';
 
   @override
   String get homeRailsUnavailableDescription =>
-      'Razvrscenih domacih tirnic trenutno ni mogoce naloziti.';
+      'Razvrščenih domačih tirnic trenutno ni mogoče naložiti.';
 
   @override
   String get homeRailsWarmingTitle => 'Odkritja se pripravljajo';
@@ -12653,7 +12683,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoHubHeaderSubtitle =>
-      'Skupnostno upravljanje za umetnike, institucije in kulturno sodelovanje';
+      'Eksperimentalno odločanje za umetnike, institucije in kulturno sodelovanje';
 
   @override
   String get daoHubInfoDialogTitle => 'Kako deluje skupnostno upravljanje';

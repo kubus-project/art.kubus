@@ -35,9 +35,60 @@ void main() {
     KubusClientContext.instance.setEnabled(false);
   });
 
+  testWidgets('once-per-session events are not repeated after a reload',
+      (tester) async {
+    final firstQueue = InMemoryTelemetryEventQueue();
+    final first = TelemetryService.createForTest(
+      queue: firstQueue,
+      sender: FakeTelemetrySender(<TelemetrySendResult>[]),
+    );
+    await first.ensureInitialized();
+    await first.trackAppEntry();
+    await first.trackMapEngaged(kind: 'marker_open');
+    // Let the fire-and-forget guard persistence finish.
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(await firstQueue.count(), 2);
+    final sessionId = (await firstQueue.peekBatch(10)).first.sessionId;
+    first.setAnalyticsPreferenceEnabled(false);
+
+    // A full page reload builds a new service over the same stored session.
+    final secondQueue = InMemoryTelemetryEventQueue();
+    final second = TelemetryService.createForTest(
+      queue: secondQueue,
+      sender: FakeTelemetrySender(<TelemetrySendResult>[]),
+    );
+    await second.ensureInitialized();
+    await second.trackAppEntry();
+    await second.trackMapEngaged(kind: 'pan');
+    expect(await secondQueue.count(), 0,
+        reason: 'the session already recorded app_entry and map_engaged');
+
+    // A different event of the same session still goes through.
+    await second.trackEvent(AppTelemetryEventTypes.screenView);
+    final batch = await secondQueue.peekBatch(10);
+    expect(batch, hasLength(1));
+    expect(batch.single.sessionId, sessionId);
+    second.setAnalyticsPreferenceEnabled(false);
+  });
+
+  testWidgets('a rotated session records its entry again', (tester) async {
+    final queue = InMemoryTelemetryEventQueue();
+    final svc = TelemetryService.createForTest(
+      queue: queue,
+      sender: FakeTelemetrySender(<TelemetrySendResult>[]),
+    );
+    await svc.ensureInitialized();
+    await svc.trackAppEntry();
+    await svc.rotateSession();
+    await svc.trackAppEntry();
+    expect(await queue.count(), 2);
+    svc.setAnalyticsPreferenceEnabled(false);
+  });
+
   testWidgets('TelemetryService queues allowed events', (tester) async {
     final queue = InMemoryTelemetryEventQueue();
-    final sender = FakeTelemetrySender(<TelemetrySendResult>[TelemetrySendResult.ok()]);
+    final sender =
+        FakeTelemetrySender(<TelemetrySendResult>[TelemetrySendResult.ok()]);
     final svc = TelemetryService.createForTest(queue: queue, sender: sender);
 
     await svc.ensureInitialized();
@@ -60,7 +111,8 @@ void main() {
   testWidgets('TelemetryService backs off then retries flush', (tester) async {
     final queue = InMemoryTelemetryEventQueue();
     final sender = FakeTelemetrySender(<TelemetrySendResult>[
-      TelemetrySendResult.retry(retryAfter: const Duration(seconds: 5), statusCode: 429),
+      TelemetrySendResult.retry(
+          retryAfter: const Duration(seconds: 5), statusCode: 429),
       TelemetrySendResult.ok(),
     ]);
     final svc = TelemetryService.createForTest(queue: queue, sender: sender);

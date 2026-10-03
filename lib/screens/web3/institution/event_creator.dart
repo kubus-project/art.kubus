@@ -529,11 +529,6 @@ class _EventCreatorState extends State<EventCreator>
           subtitle: created == null
               ? l10n.eventCreatorStatusDraftSubtitle
               : l10n.eventCreatorStatusSavedSubtitle,
-          icon: created == null
-              ? Icons.edit_outlined
-              : Icons.event_available_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -571,9 +566,6 @@ class _EventCreatorState extends State<EventCreator>
           title: l10n.eventCreatorReadyInstitutionLabel,
           subtitle: selectedInstitution?.name ??
               l10n.eventCreatorReadyInstitutionPending,
-          icon: Icons.apartment_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.summary,
           child: DesktopCreatorSummaryRow(
             label: l10n.eventCreatorReadyInstitutionLabel,
             value: selectedInstitution?.name ??
@@ -585,9 +577,6 @@ class _EventCreatorState extends State<EventCreator>
         DesktopCreatorSidebarSection(
           title: l10n.eventCreatorReadinessTitle,
           subtitle: l10n.eventCreatorReadinessSubtitle,
-          icon: Icons.fact_check_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
             contextType: contextType,
@@ -597,9 +586,6 @@ class _EventCreatorState extends State<EventCreator>
         DesktopCreatorSidebarSection(
           title: l10n.eventCreatorQuickActionsTitle,
           subtitle: l10n.eventCreatorQuickActionsSubtitle,
-          icon: Icons.flash_on_outlined,
-          contextType: contextType,
-          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

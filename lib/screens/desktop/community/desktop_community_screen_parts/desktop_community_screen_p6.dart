@@ -663,6 +663,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     // Guests see the contextual account surface; their draft stays in the
     // composer so posting can continue after sign-in.
     final canPost = await const ContextualAuthGate().ensureAuthenticated(
+      requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
       returnRoute: '/community',

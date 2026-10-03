@@ -6,7 +6,11 @@ on.
 
 > **Meta ad traffic no longer lands only on `/map`.** Paid campaigns now also
 > link straight to `https://app.kubus.site/register`, which is a different
-> acquisition path with its own funnel. First-party attribution for both — the
+> acquisition path with its own funnel. `/register` is the only landing route
+> that is an explicit account ask: the app root (`/`, `/en`, `/sl`, `/main`) is
+> discovery-first and opens the public map for a fresh visitor, so it must not be
+> treated as an implicit-intent registration entry. See
+> `docs/analytics/campaign-activation-contract.md`. First-party attribution for both — the
 > UTM taxonomy, the two funnels, and how to inspect a campaign in admin — is
 > documented in `backend/docs/CAMPAIGN_ATTRIBUTION.md`. That pipeline is
 > independent of this pixel and works whether or not the pixel is ever enabled.

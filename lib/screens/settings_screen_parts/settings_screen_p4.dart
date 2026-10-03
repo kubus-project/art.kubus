@@ -211,8 +211,6 @@ extension _SettingsScreenStatePart4 on _SettingsScreenState {
                       // Same hierarchy as desktop: Marketing / Activity /
                       // Essential email groups, then app notifications.
                       SharedSettingsSectionHeader(
-                        icon: Icons.mail_outline,
-                        accent: KubusColorRoles.of(context).active,
                         title: l10n.settingsEmailPreferencesSectionTitle,
                         subtitle:
                             l10n.settingsEmailPreferencesTransactionalNote,
@@ -327,8 +325,6 @@ extension _SettingsScreenStatePart4 on _SettingsScreenState {
                       ),
                       const SizedBox(height: KubusSpacing.sm),
                       SharedSettingsSectionHeader(
-                        icon: Icons.notifications_none_outlined,
-                        accent: KubusColorRoles.of(context).secondary,
                         title: l10n.settingsAppNotificationsSectionTitle,
                         subtitle: l10n.settingsAppNotificationsSectionSubtitle,
                       ),

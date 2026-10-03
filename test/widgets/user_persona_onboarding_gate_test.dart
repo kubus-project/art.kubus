@@ -2,7 +2,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/widgets/user_persona_onboarding_gate.dart';
-import 'package:art_kubus/widgets/user_persona_onboarding_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -44,7 +43,9 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('shows persona sheet for legacy signed-in users',
+  // Account creation must never be followed by a role picker: a visitor who
+  // signed up to save, like, follow or comment returns to where they were.
+  testWidgets('a signed-in account without a role gets no persona sheet',
       (tester) async {
     final profileProvider = ProfileProvider();
     profileProvider.setCurrentUser(_profileForWallet('0xabc'));
@@ -52,10 +53,23 @@ void main() {
     await tester.pumpWidget(_buildTestApp(profileProvider));
     await tester.pumpAndSettle();
 
-    expect(find.byType(UserPersonaOnboardingSheet), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
   });
 
-  testWidgets('suppresses persona sheet while structured onboarding is pending',
+  testWidgets('a freshly signed-up account is never interrupted on the child',
+      (tester) async {
+    final profileProvider = ProfileProvider();
+
+    await tester.pumpWidget(_buildTestApp(profileProvider));
+    await tester.pumpAndSettle();
+    profileProvider.setCurrentUser(_profileForWallet('0xnew'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Container), findsWidgets);
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('pending structured onboarding does not surface a sheet either',
       (tester) async {
     SharedPreferences.setMockInitialValues(
       const <String, Object>{'pending_auth_onboarding_v1': true},
@@ -66,6 +80,6 @@ void main() {
     await tester.pumpWidget(_buildTestApp(profileProvider));
     await tester.pumpAndSettle();
 
-    expect(find.byType(UserPersonaOnboardingSheet), findsNothing);
+    expect(find.byType(BottomSheet), findsNothing);
   });
 }

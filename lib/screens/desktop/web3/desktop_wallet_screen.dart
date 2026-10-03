@@ -94,7 +94,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isLarge = screenWidth >= 1200;
+    final isLarge = screenWidth >= _railBreakpoint;
     // Adaptive rail: compact on smaller desktops so it never dominates, a touch
     // wider on large displays where there is room for more detail.
     final double railWidth = screenWidth >= 1360 ? 340 : 300;
@@ -352,7 +352,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final l10n = AppLocalizations.of(context)!;
     final authority = walletProvider.authority;
     final canTransact = authority.canTransact;
-    final network = walletProvider.currentSolanaNetwork;
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
 
     return Padding(
@@ -372,18 +371,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
+                    // No subtitle: the signer state is the status line
+                    // below and the network is the selector beside it, each
+                    // said once.
                     child: KubusScreenHeaderBar(
                       title: l10n.walletHomeTitle,
-                      subtitle: canTransact
-                          ? '${l10n.settingsWalletConnectionConnected} · $network'
-                          : '${l10n.walletSessionSignerMissing} · $network',
                       padding: EdgeInsets.zero,
                       minHeight: KubusHeaderMetrics.headerMinHeight,
-                      subtitleStyle: KubusTextStyles.screenSubtitle.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.72),
-                      ),
                     ),
                   ),
                   const SizedBox(width: DetailSpacing.lg),
@@ -543,25 +537,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   KubusTokenIdentity.solSymbol),
             ],
           ),
-          const SizedBox(height: KubusSpacing.lg),
-          Wrap(
-            spacing: KubusSpacing.sm,
-            runSpacing: KubusSpacing.sm,
-            children: [
-              KubusButton(
-                onPressed: _openReceiveScreen,
-                icon: Icons.arrow_downward_rounded,
-                label: l10n.walletHomeReceiveAction,
-                variant: KubusButtonVariant.secondary,
-              ),
-              KubusButton(
-                onPressed: walletProvider.refreshData,
-                icon: Icons.refresh,
-                label: l10n.commonRefresh,
-                variant: KubusButtonVariant.quiet,
-              ),
-            ],
-          ),
+          // No actions here: Refresh belongs to the header that owns the
+          // wallet state, Receive to the quick actions.
         ],
       ),
     );
@@ -762,6 +739,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
+  /// From this width the right rail is shown, and it owns the wallet
+  /// security status; below it the assets tab carries that status instead.
+  static const double _railBreakpoint = 1200;
+
+  /// The custody status renders once per composition: in the rail when it
+  /// is visible, otherwise after the asset list.
+  bool get _securityInRail =>
+      MediaQuery.sizeOf(context).width >= _railBreakpoint;
+
   Widget _buildAssetsTab(ThemeProvider themeProvider) {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
@@ -798,15 +784,17 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   ),
                 ),
               ),
-              SizedBox(height: DetailSpacing.xxl),
-              _buildSecuritySectionCard(walletProvider),
+              if (!_securityInRail) ...[
+                SizedBox(height: DetailSpacing.xxl),
+                _buildSecuritySectionCard(walletProvider),
+              ],
             ],
           );
         }
 
         return ListView.builder(
           padding: EdgeInsets.all(DetailSpacing.xxl),
-          itemCount: tokens.length + 1,
+          itemCount: tokens.length + (_securityInRail ? 0 : 1),
           itemBuilder: (context, index) {
             if (index == tokens.length) {
               return Padding(

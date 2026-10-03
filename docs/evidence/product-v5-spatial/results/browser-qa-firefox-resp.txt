@@ -1,0 +1,78 @@
+
+== firefox-320x640-light-responsive ok
+  PASS firefox-320x640-light-responsive: globe fills the shorter side at its minimum zoom (min 1.05)
+  PASS firefox-320x640-light-responsive: no horizontal page overflow ({"scrollWidth":320,"innerWidth":320})
+  PASS firefox-320x640-light-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-320x640-light-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-320x640-light-responsive: no uncaught page errors
+
+== firefox-320x640-dark-responsive ok
+  PASS firefox-320x640-dark-responsive: globe fills the shorter side at its minimum zoom (min 1.05)
+  PASS firefox-320x640-dark-responsive: no horizontal page overflow ({"scrollWidth":320,"innerWidth":320})
+  PASS firefox-320x640-dark-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-320x640-dark-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-320x640-dark-responsive: no uncaught page errors
+
+== firefox-390x844-light-responsive ok
+  PASS firefox-390x844-light-responsive: globe fills the shorter side at its minimum zoom (min 1.35)
+  PASS firefox-390x844-light-responsive: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
+  PASS firefox-390x844-light-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-390x844-light-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-390x844-light-responsive: no uncaught page errors
+
+== firefox-390x844-dark-responsive ok
+  PASS firefox-390x844-dark-responsive: globe fills the shorter side at its minimum zoom (min 1.35)
+  PASS firefox-390x844-dark-responsive: no horizontal page overflow ({"scrollWidth":390,"innerWidth":390})
+  PASS firefox-390x844-dark-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-390x844-dark-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-390x844-dark-responsive: no uncaught page errors
+
+== firefox-768x1024-light-responsive ok
+  PASS firefox-768x1024-light-responsive: globe fills the shorter side at its minimum zoom (min 2.45)
+  PASS firefox-768x1024-light-responsive: no horizontal page overflow ({"scrollWidth":768,"innerWidth":768})
+  PASS firefox-768x1024-light-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-768x1024-light-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-768x1024-light-responsive: no uncaught page errors
+
+== firefox-768x1024-dark-responsive ok
+  PASS firefox-768x1024-dark-responsive: globe fills the shorter side at its minimum zoom (min 2.45)
+  PASS firefox-768x1024-dark-responsive: no horizontal page overflow ({"scrollWidth":768,"innerWidth":768})
+  PASS firefox-768x1024-dark-responsive: control /Center on me|Središči/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-768x1024-dark-responsive: control /Show filters|Filtri|Filters/i is exposed (Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on me)
+  PASS firefox-768x1024-dark-responsive: no uncaught page errors
+
+== firefox-1440x900-light-responsive ok
+  PASS firefox-1440x900-light-responsive: globe fills the shorter side at its minimum zoom (min 2.8)
+  PASS firefox-1440x900-light-responsive: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
+  PASS firefox-1440x900-light-responsive: control /Zoom in|Povečaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-light-responsive: control /Zoom out|Pomanjšaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-light-responsive: control /Center on me|Središči/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-light-responsive: control /Show filters|Filtri|Filters/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-light-responsive: no uncaught page errors
+
+== firefox-1440x900-dark-responsive ok
+  PASS firefox-1440x900-dark-responsive: globe fills the shorter side at its minimum zoom (min 2.8)
+  PASS firefox-1440x900-dark-responsive: no horizontal page overflow ({"scrollWidth":1440,"innerWidth":1440})
+  PASS firefox-1440x900-dark-responsive: control /Zoom in|Povečaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-dark-responsive: control /Zoom out|Pomanjšaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-dark-responsive: control /Center on me|Središči/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-dark-responsive: control /Show filters|Filtri|Filters/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1440x900-dark-responsive: no uncaught page errors
+
+== firefox-1920x1080-light-responsive ok
+  PASS firefox-1920x1080-light-responsive: globe fills the shorter side at its minimum zoom (min 3.05)
+  PASS firefox-1920x1080-light-responsive: no horizontal page overflow ({"scrollWidth":1920,"innerWidth":1920})
+  PASS firefox-1920x1080-light-responsive: control /Zoom in|Povečaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-light-responsive: control /Zoom out|Pomanjšaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-light-responsive: control /Center on me|Središči/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-light-responsive: control /Show filters|Filtri|Filters/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-light-responsive: no uncaught page errors
+
+== firefox-1920x1080-dark-responsive ok
+  PASS firefox-1920x1080-dark-responsive: globe fills the shorter side at its minimum zoom (min 3.05)
+  PASS firefox-1920x1080-dark-responsive: no horizontal page overflow ({"scrollWidth":1920,"innerWidth":1920})
+  PASS firefox-1920x1080-dark-responsive: control /Zoom in|Povečaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-dark-responsive: control /Zoom out|Pomanjšaj/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-dark-responsive: control /Center on me|Središči/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-dark-responsive: control /Show filters|Filtri|Filters/i is exposed (art.kubusArt platformCollapse navigationHomeExploreConnectInfrastructureWalletSign inFilters FiltersDiscovery path Disco)
+  PASS firefox-1920x1080-dark-responsive: no uncaught page errors

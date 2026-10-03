@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -368,7 +369,7 @@ void main() {
   });
 
   testWidgets(
-      'Google onboarding with requiresWalletSetup defers wallet setup to onboarding',
+      'a wallet-scoped Google onboarding defers wallet setup to onboarding',
       (tester) async {
     final api = BackendApiService();
     var bindRequests = 0;
@@ -418,6 +419,7 @@ void main() {
           },
         },
       },
+      requirements: ProtectedActionRequirements.wallet,
       onStageChanged: (_) {},
     );
 
@@ -435,9 +437,47 @@ void main() {
   });
 
   testWidgets(
-      'Google onboarding wallet setup pending still returns onboarding retry route',
+      'wallet-scoped Google onboarding with wallet setup pending returns the onboarding retry route',
       (tester) async {
     final walletProvider = _RecordingWalletProvider(failCreate: true);
+    final profileProvider = _RecordingProfileProvider();
+    final context = await _pumpPostAuthContext(
+      tester,
+      profileProvider,
+      walletProvider: walletProvider,
+    );
+
+    final result = await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.googleOnboarding,
+      embedded: true,
+      payload: const <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'token': 'initial-token',
+          'requiresWalletSetup': true,
+          'isNewUser': true,
+          'user': <String, dynamic>{
+            'id': 'google-user-setup',
+            'email': 'setup@example.com',
+          },
+        },
+      },
+      requirements: ProtectedActionRequirements.wallet,
+      onStageChanged: (_) {},
+    );
+
+    expect(result.completed, isTrue);
+    expect(result.onboardingStepId, 'walletConnect');
+    expect(result.routeName, '/onboarding');
+    expect(walletProvider.createWalletCalls, 0);
+    expect(profileProvider.walletLoads, 0);
+  });
+
+  testWidgets(
+      'an account-only Google onboarding never asks for a wallet, even when the backend offers one',
+      (tester) async {
+    final walletProvider = _RecordingWalletProvider();
     final profileProvider = _RecordingProfileProvider();
     final context = await _pumpPostAuthContext(
       tester,
@@ -465,10 +505,8 @@ void main() {
     );
 
     expect(result.completed, isTrue);
-    expect(result.onboardingStepId, 'walletConnect');
-    expect(result.routeName, '/onboarding');
+    expect(result.onboardingStepId, isNull);
     expect(walletProvider.createWalletCalls, 0);
-    expect(profileProvider.walletLoads, 0);
   });
 
   testWidgets(

@@ -39,8 +39,6 @@ void main() {
       hasValidSession: false,
       hasPendingVerificationEmailFlag: true,
       pendingVerificationEmail: 'user@example.com',
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
     );
 
     expect(decision.route, StartupRouteType.onboarding);
@@ -55,8 +53,6 @@ void main() {
       hasValidSession: false,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
     );
 
     expect(decision.route, StartupRouteType.onboarding);
@@ -71,8 +67,6 @@ void main() {
       hasValidSession: true,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
     );
 
     expect(decision.route, StartupRouteType.none);
@@ -85,38 +79,88 @@ void main() {
       hasValidSession: false,
       hasPendingVerificationEmailFlag: true,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
     );
 
     expect(decision.route, StartupRouteType.onboarding);
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test('shouldSkipOnboarding + shouldShowSignIn -> signIn', () {
+  test(
+      'a fresh anonymous visitor with no journey in flight is never onboarding',
+      () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: false,
       hasValidSession: false,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: true,
-      shouldShowSignIn: true,
     );
 
-    expect(decision.route, StartupRouteType.signIn);
+    expect(decision.route, StartupRouteType.none);
+    expect(decision.onboardingInitialStepId, isNull);
   });
 
-  test('shouldSkipOnboarding + !shouldShowSignIn -> main', () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: false,
-      hasValidSession: false,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-      shouldSkipOnboarding: true,
-      shouldShowSignIn: false,
-    );
+  group('resolveColdStartEntry (guest-first)', () {
+    for (final route in <String?>[null, '', '/', '/main', '/map', '/unknown']) {
+      test('fresh anonymous entry on "$route" opens public discovery', () {
+        final entry = resolveColdStartEntry(
+          preferredShellRoute: route,
+          hasValidSession: false,
+          hasLocalAccount: false,
+        );
 
-    expect(decision.route, StartupRouteType.main);
+        expect(entry.shellRoute, '/map');
+        expect(entry.activateGuestMode, isTrue);
+      });
+    }
+
+    test('anonymous /community stays on the public community feed', () {
+      final entry = resolveColdStartEntry(
+        preferredShellRoute: '/community',
+        hasValidSession: false,
+        hasLocalAccount: false,
+      );
+
+      expect(entry.shellRoute, '/community');
+      expect(entry.activateGuestMode, isTrue);
+    });
+
+    test('a lapsed server session is not an app lock and not a guest', () {
+      final entry = resolveColdStartEntry(
+        preferredShellRoute: '/main',
+        hasValidSession: false,
+        hasLocalAccount: true,
+      );
+
+      expect(entry.shellRoute, '/map');
+      expect(entry.activateGuestMode, isFalse);
+    });
+
+    test('a signed-in returning user keeps their shell destination', () {
+      expect(
+        resolveColdStartEntry(
+          preferredShellRoute: null,
+          hasValidSession: true,
+          hasLocalAccount: true,
+        ).shellRoute,
+        '/main',
+      );
+      expect(
+        resolveColdStartEntry(
+          preferredShellRoute: '/map',
+          hasValidSession: true,
+          hasLocalAccount: true,
+        ).shellRoute,
+        '/map',
+      );
+      expect(
+        resolveColdStartEntry(
+          preferredShellRoute: '/community',
+          hasValidSession: true,
+          hasLocalAccount: true,
+        ).shellRoute,
+        '/community',
+      );
+    });
   });
 
   test('Google onboarding guard without session routes to account', () {
@@ -125,8 +169,6 @@ void main() {
       hasValidSession: false,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: true,
-      shouldShowSignIn: true,
       hasActiveGoogleOnboardingGuard: true,
     );
 
@@ -141,8 +183,6 @@ void main() {
       hasValidSession: true,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
       hasActiveGoogleOnboardingGuard: true,
       hasWallet: false,
     );
@@ -157,8 +197,6 @@ void main() {
       hasValidSession: false,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: true,
-      shouldShowSignIn: true,
       hasActiveAccountLinkGuard: true,
     );
 
@@ -173,8 +211,6 @@ void main() {
       hasValidSession: true,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: true,
       hasActiveAccountLinkGuard: true,
       hasWallet: false,
     );
@@ -191,8 +227,6 @@ void main() {
       hasValidSession: true,
       hasPendingVerificationEmailFlag: false,
       pendingVerificationEmail: null,
-      shouldSkipOnboarding: false,
-      shouldShowSignIn: false,
       hasActiveAccountLinkGuard: true,
       hasWallet: true,
       structuredOnboardingStepId: 'walletBackupIntro',

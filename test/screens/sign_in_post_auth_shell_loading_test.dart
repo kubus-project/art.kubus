@@ -1,3 +1,4 @@
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/cache_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -180,6 +181,8 @@ class _NoopPostAuthCoordinator extends PostAuthCoordinator {
     bool modalReauth = false,
     bool requiresWalletBackup = false,
     bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
     Future<void> Function()? onBeforeSavedItemsSync,
     required ValueChanged<PostAuthStage> onStageChanged,
   }) async {

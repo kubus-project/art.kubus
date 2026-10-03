@@ -44,7 +44,6 @@ import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
 import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
-import '../../utils/home_rail_semantics.dart';
 import '../../utils/home_activity_cards.dart';
 import '../../utils/home/home_quick_action_executor.dart';
 import '../../utils/home/home_quick_action_models.dart';
@@ -518,11 +517,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         return CommunityLocation(lat: 46.05, lng: 14.50);
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
+      // Only use the visitor's position when they have already granted it.
+      // Opening Home must never raise an OS location prompt: location is asked
+      // for when the visitor taps my location / nearby, not by a feed loading.
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
         return CommunityLocation(lat: 46.05, lng: 14.50);
@@ -1049,8 +1047,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         DesktopSectionHeader(
           title: l10n.desktopHomeYourActivityTitle,
           subtitle: l10n.desktopHomeYourActivitySubtitle,
-          icon: Icons.analytics_outlined,
-          iconColor: AppColorUtils.coralAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (sectionLoading)
@@ -1110,8 +1106,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           subtitle: quickScreens.isEmpty
               ? l10n.desktopHomeQuickActionsEmptySubtitle
               : l10n.desktopHomeQuickActionsSubtitle,
-          icon: Icons.flash_on,
-          iconColor: AppColorUtils.amberAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
         if (quickScreens.isEmpty)
@@ -1397,8 +1391,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       children: [
         DesktopSectionHeader(
           title: title,
-          icon: _iconForHomeRail(rail.entityType),
-          iconColor: HomeRailSemantics.of(context, rail.entityType),
         ),
         const SizedBox(height: DetailSpacing.xl),
         HomePromotionRailList(
@@ -1995,7 +1987,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     _scheduleCreatorIdentityResolution([canonicalWallet]);
     return DesktopCard(
-      onTap: () => openProfileIdentity(context, identity),
+      onTap: identity.canOpenProfile
+          ? () => openProfileIdentity(context, identity)
+          : null,
       padding: const EdgeInsets.all(DetailSpacing.sm + 2),
       margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
       borderRadius: BorderRadius.circular(DetailRadius.md),
@@ -2004,7 +1998,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         layout: ProfileIdentityLayout.row,
         avatarRadius: 20,
         allowFabricatedFallback: true,
-        onTap: () => openProfileIdentity(context, identity),
+        onTap: identity.canOpenProfile
+            ? () => openProfileIdentity(context, identity)
+            : null,
         titleStyle: KubusTextStyles.detailCardTitle,
         subtitleStyle: KubusTextStyles.navMetaLabel,
         trailing: Container(

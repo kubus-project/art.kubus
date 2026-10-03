@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
-import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/app_refresh_provider.dart';
 import 'providers/chat_provider.dart';
@@ -87,9 +86,6 @@ class _MainAppState extends State<MainApp> {
 
       // ignore: discarded_futures
       ShareDeepLinkNavigation.open(context, target);
-      try {
-        context.read<DeferredOnboardingProvider>().markInitialDeepLinkHandled();
-      } catch (_) {}
     });
   }
 
@@ -277,11 +273,6 @@ class _MainAppState extends State<MainApp> {
   void _handleNavTap(int index) {
     final tabs = context.read<MainTabProvider>();
     if (tabs.currentIndex == index) return;
-
-    // If onboarding is deferred due to a cold-start deep link, show it
-    // once the user tries to navigate away from the deep-linked surface.
-    final deferredOnboarding = context.read<DeferredOnboardingProvider>();
-    if (deferredOnboarding.maybeShowOnboarding(context)) return;
 
     if (tabs.currentIndex == 0 && index != 0) {
       _tutorialOverlayController.deactivateOwner(

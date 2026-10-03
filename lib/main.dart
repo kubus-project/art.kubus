@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
+import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import 'providers/app_mode_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
+import 'features/map/session/kubus_map_session_memory.dart';
 import 'providers/tile_providers.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
@@ -75,6 +77,7 @@ import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
 import 'core/app_route_observer.dart';
+import 'core/url_coherence_observer.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/secure_account_screen.dart';
@@ -379,15 +382,13 @@ class _AppLauncherState extends State<AppLauncher> {
   Future<void> _initPushNotifications() async {
     const initTimeout = Duration(seconds: 6);
     try {
-      // Initialize push notification service and (optionally) request permission
-      // early so the preference is persisted for subsequent launches.
-      final service = PushNotificationService();
-      await service.initialize().timeout(initTimeout);
-      // On web, requesting Notification permission must be triggered by a user
-      // gesture. Asking during startup produces a browser warning and is ignored.
-      if (!kIsWeb) {
-        await service.requestPermission().timeout(initTimeout);
-      }
+      // Initialise the notification infrastructure only. Startup never asks
+      // for the notification permission: a first-time visitor has not yet seen
+      // anything that notifications would be about. The permission follows
+      // intent: the settings toggle, or the onboarding permissions step a
+      // visitor opts into. (`initialize` reads the current status; it does not
+      // prompt, and on iOS the plugin's own alert/badge/sound requests are off.)
+      await PushNotificationService().initialize().timeout(initTimeout);
       AppConfig.debugPrint('AppLauncher: PushNotificationService initialized.');
     } on TimeoutException catch (e) {
       AppConfig.debugPrint(
@@ -407,7 +408,23 @@ class _AppLauncherState extends State<AppLauncher> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
+        // Remembers the map's camera, search, filters and selection across
+        // a phone/wide layout swap (see KubusMapSessionMemory).
+        Provider<KubusMapSessionMemory>(
+          create: (_) => KubusMapSessionMemory(),
+          dispose: (_, memory) => memory.dispose(),
+        ),
+        // The launch language is resolved here, not only in AppInitializer:
+        // /sign-in and /register resolve straight to their screens and never
+        // build AppInitializer, so they used to ignore the saved language and
+        // `?lang=` and always rendered English.
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) => LocaleProvider()
+            ..initialize(
+              overrideLanguageCode:
+                  LocaleProvider.localeCodeFromUri(_launchUriForLocale()),
+            ),
+        ),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),
         ),
@@ -938,6 +955,7 @@ class ArtKubus extends StatefulWidget {
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
+  final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver();
 
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
@@ -1048,6 +1066,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               redirectArguments: redirectArguments,
               initialEmail: email,
               requiresWalletSetup: args['requiresWalletSetup'] == true,
+              requirements: ProtectedActionRequirements.fromStorage(
+                    args['requirements']?.toString(),
+                  ) ??
+                  ProtectedActionRequirements.accountOnly,
             );
           }
           return const SignInScreen();
@@ -1081,6 +1103,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                 args['completionArguments'],
               ),
               requiresWalletSetup: args['requiresWalletSetup'] == true,
+              requirements: ProtectedActionRequirements.fromStorage(
+                args['requirements']?.toString(),
+              ),
               preferredAuthMethod: PreferredAuthMethod.fromStorage(
                 args['preferredAuthMethod']?.toString(),
               ),
@@ -1089,9 +1114,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               ),
             );
           }
-          return OnboardingFlowScreen(
-            forceDesktop: DesktopBreakpoints.isDesktop(context),
-          );
+          // A bare `/onboarding` has no capability scope: every in-app push
+          // supplies arguments, and a browser refresh or a typed/stale URL
+          // drops them. Showing the full welcome flow there would put a
+          // first-visit wall in front of discovery, so hand it to the
+          // initializer instead: a real pending account journey still
+          // resumes at its own step, anyone else lands in public discovery.
+          // Voluntary profile completion opens the flow directly from
+          // settings rather than by this route.
+          return const AppInitializer();
         },
         '/secure-account': (context) => const SecureAccountScreen(),
         '/verify-email': (context) {
@@ -1510,7 +1541,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
           navigatorKey: appNavigatorKey,
-          navigatorObservers: [_telemetryObserver, appRouteObserver],
+          navigatorObservers: [
+            _telemetryObserver,
+            appRouteObserver,
+            _urlCoherenceObserver,
+          ],
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -1543,4 +1578,13 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       },
     );
   }
+}
+
+/// The URL the app was launched with: the address bar on web, the platform
+/// route elsewhere. Used only to resolve the launch language.
+Uri? _launchUriForLocale() {
+  if (kIsWeb) return Uri.base;
+  return Uri.tryParse(
+    WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+  );
 }

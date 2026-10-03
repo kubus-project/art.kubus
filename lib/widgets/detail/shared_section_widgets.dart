@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../utils/design_tokens.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../empty_state_card.dart';
 import '../glass_components.dart';
 import '../inline_loading.dart';
 import '../common/kubus_screen_header.dart';
 
+/// Section title, optional subtitle and a trailing control. Typographic
+/// only: the title names the section, so no glyph repeats it.
 class SharedSectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final IconData? icon;
-  final Color? iconColor;
   final Widget? trailing;
   final EdgeInsetsGeometry? padding;
 
@@ -21,8 +20,6 @@ class SharedSectionHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
-    this.icon,
-    this.iconColor,
     this.trailing,
     this.padding,
   });
@@ -30,10 +27,6 @@ class SharedSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Section icons are wayfinding, not decoration: a bare muted glyph
-    // aligned to the title, no tinted tile. [iconColor] stays available
-    // for callers that carry a real semantic state.
-    final iconTint = iconColor ?? KubusColorRoles.of(context).foregroundMuted;
 
     return Padding(
       padding: padding ??
@@ -42,14 +35,6 @@ class SharedSectionHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (icon != null) ...[
-            Icon(
-              icon,
-              color: iconTint,
-              size: KubusHeaderMetrics.actionIcon,
-            ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,8 +101,6 @@ class SharedShowcaseSection<T> extends StatelessWidget {
           SharedSectionHeader(
             title: title,
             subtitle: subtitle,
-            icon: icon,
-            iconColor: iconColor,
             trailing: trailing,
             padding: EdgeInsets.zero,
           ),

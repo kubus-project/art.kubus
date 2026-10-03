@@ -918,6 +918,12 @@ abstract class AppLocalizations {
   /// **'This is no longer available. It may have been removed or made private.'**
   String get activationActionTargetUnavailableToast;
 
+  /// Body of the state shown when a detail screen's entity could not be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'This could not be loaded right now. Check your connection and try again.'**
+  String get entityUnavailableBody;
+
   /// No description provided for @activationActionUnauthorizedToast.
   ///
   /// In en, this message translates to:
@@ -2865,7 +2871,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create your profile first'**
+  /// **'Create your account'**
   String get onboardingFlowAccountTitle;
 
   /// No description provided for @onboardingFlowAccountBody.
@@ -3473,30 +3479,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus combines a community-built art map with public cultural archive infrastructure.'**
   String get onboardingWelcomeDescription;
-
-  /// No description provided for @alphaNoticeTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'You are entering the art.kubus alpha'**
-  String get alphaNoticeTitle;
-
-  /// No description provided for @alphaNoticeBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.'**
-  String get alphaNoticeBody;
-
-  /// No description provided for @alphaNoticeContinue.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue to onboarding'**
-  String get alphaNoticeContinue;
-
-  /// No description provided for @alphaNoticeBackToWebsite.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to website'**
-  String get alphaNoticeBackToWebsite;
 
   /// No description provided for @onboardingExploreTitle.
   ///
@@ -8502,6 +8484,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{visible} of {total} visible'**
   String mapFilterVisibleLayerCountLabel(int visible, int total);
+
+  /// Semantics label for the strip that lists what is currently restricting the artworks shown on the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Active map restrictions'**
+  String get mapConstraintsLabel;
+
+  /// Map restriction chip: only artworks within the travel radius around the visitor are shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {radiusKm} km of you'**
+  String mapConstraintRadius(Object radiusKm);
+
+  /// Map restriction chip for a travel radius that cannot narrow anything yet because the visitor's location is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {radiusKm} km of you, location needed'**
+  String mapConstraintRadiusNoLocation(Object radiusKm);
+
+  /// Map restriction chip: only artworks matching this search text are shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Search: {query}'**
+  String mapConstraintQuery(Object query);
+
+  /// Map restriction chip: this many content types (artwork, event, ...) are hidden from the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden types: {count}'**
+  String mapConstraintHiddenLayers(int count);
+
+  /// Accessible label of the control that removes one map restriction; label is the restriction text.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {label}'**
+  String mapConstraintClear(Object label);
+
+  /// Control that removes every map restriction (search text and filters) at once.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all'**
+  String get mapConstraintResetAll;
 
   /// No description provided for @mapLayersTitle.
   ///
@@ -15424,6 +15448,18 @@ abstract class AppLocalizations {
   /// **'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.'**
   String get artistStudioLockedDescription;
 
+  /// No description provided for @institutionHubLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution Hub is locked'**
+  String get institutionHubLockedTitle;
+
+  /// No description provided for @institutionHubLockedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.'**
+  String get institutionHubLockedDescription;
+
   /// No description provided for @artistStudioSettingsTitle.
   ///
   /// In en, this message translates to:
@@ -21892,7 +21928,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Experimental community governance for artists, institutions, and cultural participation'**
+  /// **'Experimental decision-making for artists, institutions, and cultural participation'**
   String get daoHubHeaderSubtitle;
 
   /// No description provided for @daoHubInfoDialogTitle.
