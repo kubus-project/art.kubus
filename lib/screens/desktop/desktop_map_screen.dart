@@ -2755,8 +2755,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             if (_styleInitialized) {
               _queueMarkerVisualRefreshForZoom(_cameraZoom);
               // Close-level covers are chosen from what the settled viewport
-              // holds, so a pan that ends at street scale re-plans them once.
-              if (KubusMarkerLod.allowsCovers(_cameraZoom)) {
+              // holds, so a pan that ends at cover scale re-plans
+              // (and prefetches) them once.
+              if (KubusMarkerLod.plansCoversAt(_cameraZoom)) {
                 _requestMarkerVisualSync();
               }
               unawaited(_renderCoordinator.updateRenderMode());

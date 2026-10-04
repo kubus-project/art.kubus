@@ -6,12 +6,7 @@ import 'package:art_kubus/models/promotion.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
-ArtMarker _marker(
-  String id,
-  double lat,
-  double lng, {
-  bool promoted = false,
-}) {
+ArtMarker _marker(String id, double lat, double lng, {bool promoted = false}) {
   return ArtMarker(
     id: id,
     name: id,
@@ -28,16 +23,19 @@ ArtMarker _marker(
 
 void main() {
   group('tier boundaries', () {
-    test('far below the blend centre, mid from it, close at street scale', () {
-      expect(KubusMarkerLod.tierForZoom(0), KubusMarkerLodTier.far);
-      expect(KubusMarkerLod.tierForZoom(2.55), KubusMarkerLodTier.far);
-      expect(KubusMarkerLod.tierForZoom(5.99), KubusMarkerLodTier.far);
-      expect(KubusMarkerLod.tierForZoom(6.0), KubusMarkerLodTier.mid);
-      expect(KubusMarkerLod.tierForZoom(10), KubusMarkerLodTier.mid);
-      expect(KubusMarkerLod.tierForZoom(14.99), KubusMarkerLodTier.mid);
-      expect(KubusMarkerLod.tierForZoom(15.0), KubusMarkerLodTier.close);
-      expect(KubusMarkerLod.tierForZoom(22), KubusMarkerLodTier.close);
-    });
+    test(
+      'far below the blend centre, mid from it, close at street approach',
+      () {
+        expect(KubusMarkerLod.tierForZoom(0), KubusMarkerLodTier.far);
+        expect(KubusMarkerLod.tierForZoom(2.55), KubusMarkerLodTier.far);
+        expect(KubusMarkerLod.tierForZoom(5.99), KubusMarkerLodTier.far);
+        expect(KubusMarkerLod.tierForZoom(6.0), KubusMarkerLodTier.mid);
+        expect(KubusMarkerLod.tierForZoom(10), KubusMarkerLodTier.mid);
+        expect(KubusMarkerLod.tierForZoom(12.49), KubusMarkerLodTier.mid);
+        expect(KubusMarkerLod.tierForZoom(12.5), KubusMarkerLodTier.close);
+        expect(KubusMarkerLod.tierForZoom(22), KubusMarkerLodTier.close);
+      },
+    );
 
     test('a non-finite zoom is treated as far (cheapest, never blank)', () {
       expect(KubusMarkerLod.tierForZoom(double.nan), KubusMarkerLodTier.far);
@@ -55,9 +53,109 @@ void main() {
       expect(KubusMarkerLod.blendEndZoom > KubusMarkerLod.farMaxZoom, isTrue);
     });
 
-    test('covers only at street scale', () {
-      expect(KubusMarkerLod.allowsCovers(14.9), isFalse);
-      expect(KubusMarkerLod.allowsCovers(15.0), isTrue);
+    test('nearby covers display from street approach, not street scale', () {
+      expect(KubusMarkerLod.allowsCovers(12.49), isFalse);
+      expect(KubusMarkerLod.allowsCovers(12.5), isTrue);
+      expect(
+        KubusMarkerLod.coverDisplayMinZoom,
+        lessThan(15.0),
+        reason: '0.8.0 waited for zoom 15; covers were visibly too late',
+      );
+    });
+
+    test('prefetch starts one step before display, never after it', () {
+      expect(KubusMarkerLod.allowsCoverPrefetch(11.49), isFalse);
+      expect(KubusMarkerLod.allowsCoverPrefetch(11.5), isTrue);
+      expect(
+        KubusMarkerLod.coverPrefetchMinZoom,
+        lessThan(KubusMarkerLod.coverDisplayMinZoom),
+      );
+    });
+
+    test('the selected marker may show its cover earlier than nearby ones', () {
+      expect(KubusMarkerLod.allowsSelectedCover(9.99), isFalse);
+      expect(KubusMarkerLod.allowsSelectedCover(10.0), isTrue);
+      expect(KubusMarkerLod.allowsCovers(10.0), isFalse);
+      expect(
+        KubusMarkerLod.selectedCoverMinZoom,
+        lessThan(KubusMarkerLod.coverPrefetchMinZoom),
+      );
+    });
+
+    test('cover stages rise monotonically with zoom', () {
+      var previous = KubusMarkerLod.coverStageForZoom(0);
+      expect(previous, 0);
+      for (double zoom = 0; zoom <= 22; zoom += 0.25) {
+        final stage = KubusMarkerLod.coverStageForZoom(zoom);
+        expect(stage, greaterThanOrEqualTo(previous), reason: 'zoom=$zoom');
+        previous = stage;
+      }
+      expect(KubusMarkerLod.coverStageForZoom(10.0), 1);
+      expect(KubusMarkerLod.coverStageForZoom(11.5), 2);
+      expect(KubusMarkerLod.coverStageForZoom(12.5), 3);
+      expect(KubusMarkerLod.coverStageForZoom(13.5), 4);
+      expect(KubusMarkerLod.coverStageForZoom(14.5), 5);
+      expect(KubusMarkerLod.coverStageForZoom(double.nan), 0);
+    });
+  });
+
+  group('zoom-sensitive cover budget', () {
+    const desktop = Size(1440, 900);
+    const phone = Size(390, 844);
+
+    test('no nearby covers below the display zoom', () {
+      expect(KubusMarkerLod.coverBudget(desktop, zoom: 12.4), 0);
+      expect(KubusMarkerLod.coverBudget(desktop, zoom: 9), 0);
+    });
+
+    test('early < medium < full, and full equals the viewport budget', () {
+      for (final viewport in [desktop, phone]) {
+        final early = KubusMarkerLod.coverBudget(viewport, zoom: 12.6);
+        final medium = KubusMarkerLod.coverBudget(viewport, zoom: 13.6);
+        final full = KubusMarkerLod.coverBudget(viewport, zoom: 15);
+        expect(
+          early,
+          greaterThanOrEqualTo(KubusMarkerLod.earlyCoverBudgetFloor),
+        );
+        expect(early, lessThan(medium), reason: '$viewport');
+        expect(medium, lessThan(full), reason: '$viewport');
+        expect(full, KubusMarkerLod.coverBudget(viewport));
+        expect(full, lessThanOrEqualTo(KubusMarkerLod.maxCoverBudget));
+      }
+    });
+
+    test('prefetch warms the next stage, bounded by it', () {
+      expect(KubusMarkerLod.coverPrefetchBudget(desktop, zoom: 11.0), 0);
+      expect(
+        KubusMarkerLod.coverPrefetchBudget(desktop, zoom: 11.6),
+        KubusMarkerLod.coverBudget(desktop, zoom: 12.5),
+      );
+      expect(
+        KubusMarkerLod.coverPrefetchBudget(desktop, zoom: 12.6),
+        KubusMarkerLod.coverBudget(desktop, zoom: 13.5),
+      );
+      expect(
+        KubusMarkerLod.coverPrefetchBudget(desktop, zoom: 16),
+        KubusMarkerLod.coverBudget(desktop),
+      );
+    });
+  });
+
+  group('cover fetch size', () {
+    test('tracks the marker face, never archival media', () {
+      final w1 = KubusMarkerLod.coverFetchWidthPx(1);
+      final w2 = KubusMarkerLod.coverFetchWidthPx(2);
+      final w3 = KubusMarkerLod.coverFetchWidthPx(3);
+      expect(w1, lessThanOrEqualTo(w2));
+      expect(w2, lessThanOrEqualTo(w3));
+      expect(
+        w2,
+        greaterThanOrEqualTo(KubusMarkerLod.coverFaceLogicalPx * 2),
+        reason: 'never below the physical face size',
+      );
+      expect(w3, lessThanOrEqualTo(256));
+      expect(w2 % 32, 0, reason: 'snapped so caches see few sizes');
+      expect(KubusMarkerLod.coverFetchWidthPx(double.nan), w1);
     });
   });
 
@@ -89,6 +187,47 @@ void main() {
         KubusMarkerLod.coverBudget(const Size(double.nan, 100)),
         KubusMarkerLod.minCoverBudget,
       );
+    });
+  });
+
+  group('cover plan by zoom', () {
+    const center = LatLng(46.05, 14.5);
+    const desktop = Size(1440, 900);
+    final markers = <ArtMarker>[
+      for (var i = 0; i < 40; i++) _marker('m$i', 46.05 + i * 0.0003, 14.5),
+      _marker('sel', 46.06, 14.51),
+    ];
+    List<String> plan(double zoom, {String? selectedId = 'sel'}) =>
+        KubusMarkerLod.planCoverIds(
+          candidates: markers,
+          selectedId: selectedId,
+          center: center,
+          viewport: desktop,
+          zoom: zoom,
+          hasCover: (_) => true,
+        );
+
+    test('nothing at city scale, not even the selected marker', () {
+      expect(plan(9.5), isEmpty);
+    });
+
+    test('the selected marker shows its cover before nearby covers', () {
+      expect(plan(10.5), <String>['sel']);
+      expect(plan(12.0), <String>['sel']);
+      expect(plan(12.0, selectedId: null), isEmpty);
+    });
+
+    test('nearby covers arrive progressively, never as one photo wall', () {
+      final early = plan(12.6);
+      final medium = plan(13.6);
+      final full = plan(15.0);
+      expect(early.first, 'sel');
+      expect(early.length, lessThan(medium.length));
+      expect(medium.length, lessThan(full.length));
+      expect(full.length, KubusMarkerLod.coverBudget(desktop));
+      // Every stage is a prefix of the next: covers already shown stay shown.
+      expect(medium.take(early.length), early);
+      expect(full.take(medium.length), medium);
     });
   });
 
@@ -138,21 +277,23 @@ void main() {
       expect(ids.toSet().length, 8);
     });
 
-    test('markers without a cover, or with a failed one, never take a slot',
-        () {
-      final bare = _marker('bare', 46.0501, 14.5);
-      final failed = _marker('failed', 46.0502, 14.5);
-      final ok = _marker('ok', 46.0503, 14.5);
-      final ids = KubusMarkerLod.selectCoverMarkerIds(
-        candidates: [bare, failed, ok],
-        selectedId: null,
-        center: center,
-        budget: 5,
-        hasCover: (m) => m.id != 'bare',
-        failedIds: <String>{'failed'},
-      );
-      expect(ids, <String>['ok']);
-    });
+    test(
+      'markers without a cover, or with a failed one, never take a slot',
+      () {
+        final bare = _marker('bare', 46.0501, 14.5);
+        final failed = _marker('failed', 46.0502, 14.5);
+        final ok = _marker('ok', 46.0503, 14.5);
+        final ids = KubusMarkerLod.selectCoverMarkerIds(
+          candidates: [bare, failed, ok],
+          selectedId: null,
+          center: center,
+          budget: 5,
+          hasCover: (m) => m.id != 'bare',
+          failedIds: <String>{'failed'},
+        );
+        expect(ids, <String>['ok']);
+      },
+    );
 
     test('a selected marker whose cover failed falls back to its marker', () {
       final selected = _marker('sel', 46.05, 14.5);
@@ -213,17 +354,19 @@ void main() {
       expect(hidden[3], 0.0);
     });
 
-    test('hitbox targets the dot when far and the floating badge otherwise',
-        () {
-      final anchor = KubusMarkerLod.hitboxAnchorExpression() as List;
-      expect(anchor, <Object>[
-        'step',
-        const <Object>['zoom'],
-        'center',
-        KubusMarkerLod.blendStartZoom,
-        'bottom',
-      ]);
-    });
+    test(
+      'hitbox targets the dot when far and the floating badge otherwise',
+      () {
+        final anchor = KubusMarkerLod.hitboxAnchorExpression() as List;
+        expect(anchor, <Object>[
+          'step',
+          const <Object>['zoom'],
+          'center',
+          KubusMarkerLod.blendStartZoom,
+          'bottom',
+        ]);
+      },
+    );
 
     test('far clusters grow with member count and are capped', () {
       final expr = KubusMarkerLod.dotRadiusExpression(

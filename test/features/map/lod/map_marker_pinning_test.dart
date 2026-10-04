@@ -267,12 +267,17 @@ void main() {
       expect(step(gate, 5.9), KubusMarkerRegroup.none);
     });
 
-    test('reaching street scale turns covers on (visual), not a regroup', () {
+    test('each cover stage is a visual change, not a regroup', () {
       final gate = KubusMarkerRegroupGate();
-      step(gate, 14.2);
-      // Past clusterMaxZoom there is no grid; covers start at 15.
-      step(gate, 14.8);
-      expect(step(gate, 15.1), KubusMarkerRegroup.visual);
+      step(gate, 12.1);
+      // Past clusterMaxZoom there is no grid; covers display from 12.5 and
+      // their budget grows at 13.5 and 14.5.
+      expect(step(gate, 12.3), KubusMarkerRegroup.none);
+      expect(step(gate, 12.6), KubusMarkerRegroup.visual);
+      expect(step(gate, 13.0), KubusMarkerRegroup.none);
+      expect(step(gate, 13.6), KubusMarkerRegroup.visual);
+      expect(step(gate, 14.6), KubusMarkerRegroup.visual);
+      expect(step(gate, 16.0), KubusMarkerRegroup.none);
     });
 
     test('rapid zoom in and out reports every boundary it crosses', () {

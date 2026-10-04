@@ -23,7 +23,7 @@ class KubusMarkerRegroupGate {
   bool? _clustering;
   int? _gridLevel;
   bool? _artwork;
-  bool? _covers;
+  int? _coverStage;
 
   KubusMarkerRegroup update({
     required double zoom,
@@ -33,14 +33,14 @@ class KubusMarkerRegroupGate {
     final clustering = zoom < clusterMaxZoom;
     final gridLevel = clustering ? gridLevelForZoom(zoom) : -1;
     final artwork = KubusMarkerLod.needsMarkerArtwork(zoom);
-    final covers = KubusMarkerLod.allowsCovers(zoom);
+    final coverStage = KubusMarkerLod.coverStageForZoom(zoom);
 
     final topology = clustering != _clustering || gridLevel != _gridLevel;
-    final visual = artwork != _artwork || covers != _covers;
+    final visual = artwork != _artwork || coverStage != _coverStage;
     _clustering = clustering;
     _gridLevel = gridLevel;
     _artwork = artwork;
-    _covers = covers;
+    _coverStage = coverStage;
 
     if (topology) return KubusMarkerRegroup.topology;
     if (visual) return KubusMarkerRegroup.visual;
