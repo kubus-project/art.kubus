@@ -343,13 +343,22 @@ class KubusHoverResponse extends StatefulWidget {
     Brightness brightness, {
     required bool hovered,
   }) {
-    // Nothing is painted at rest (no transparent blur to rasterise per frame);
-    // [BoxShadow.lerpList] fades a shadow in from, and out to, no shadow.
-    if (!hovered) return const <BoxShadow>[];
+    // The resting entry is the same shadow at **alpha 0**, not an empty list.
+    //
+    // An empty list looks like "nothing at rest", but it makes
+    // [BoxShadow.lerpList] fall back to `BoxShadow.scale(t)`, which
+    // interpolates blur and spread while leaving the colour — and therefore
+    // the alpha — at its final value. The shadow then snaps to full strength
+    // on the first animated frame and only grows its blur, which is exactly
+    // the popping this helper exists to avoid. Keeping both ends of the lerp
+    // present, with identical geometry, makes it a plain alpha fade.
+    //
+    // It costs nothing at rest: a `SrcOver` draw with alpha 0 has nothing to
+    // draw, so the transparent blur is never rasterised.
     final peak = brightness == Brightness.dark ? 0.34 : 0.24;
     return <BoxShadow>[
       BoxShadow(
-        color: accent.withValues(alpha: peak),
+        color: accent.withValues(alpha: hovered ? peak : 0),
         blurRadius: 18,
         spreadRadius: -5,
         offset: const Offset(0, 8),
