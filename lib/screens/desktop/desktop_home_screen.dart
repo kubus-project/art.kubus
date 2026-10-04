@@ -29,6 +29,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_action_tile.dart';
+import '../../widgets/common/kubus_shadow_safe_strip.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -1170,22 +1171,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ],
           )
         else
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: quickScreens.map((screen) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: DetailSpacing.md),
-                  child: _buildQuickActionCard(
-                    screen.labelKey.resolve(l10n),
-                    screen.icon,
-                    _getScreenColor(screen.key, Theme.of(context).colorScheme),
-                    () => _handleQuickAction(screen.key),
-                    visitCount: screen.visitCount,
-                  ),
-                );
-              }).toList(),
-            ),
+          KubusShadowSafeStrip(
+            gap: DetailSpacing.md,
+            children: quickScreens.map((screen) {
+              return _buildQuickActionCard(
+                screen.labelKey.resolve(l10n),
+                screen.icon,
+                _getScreenColor(screen.key, Theme.of(context).colorScheme),
+                () => _handleQuickAction(screen.key),
+                visitCount: screen.visitCount,
+              );
+            }).toList(growable: false),
           ),
       ],
     );

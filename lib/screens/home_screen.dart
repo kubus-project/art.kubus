@@ -65,6 +65,7 @@ import '../utils/home_rail_creator_identity.dart';
 import '../utils/home_activity_cards.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_action_tile.dart';
+import '../widgets/common/kubus_shadow_safe_strip.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
@@ -252,32 +253,10 @@ class HomeWeb3CardStrip extends StatelessWidget {
 
     // The cards share one height (the tallest), so Labs and lock states and
     // longer localised copy never leave a ragged strip.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      // The hovered tile's accent shadow reaches well past its own box: an
-      // 18 px blur with a -5 px spread offset 8 px down, under a tile that has
-      // itself lifted 2 px. That is 7 px above, 21 px below and 13 px to each
-      // side. Padding alone cannot buy the horizontal room without pushing the
-      // first card out of alignment with the section title, so the viewport
-      // deliberately does not clip and the page gutter absorbs the sideways
-      // bleed; the vertical room is reserved here so the shadow never lands on
-      // the neighbouring section.
-      clipBehavior: Clip.none,
-      padding: const EdgeInsets.only(
-        top: KubusSpacing.sm,
-        bottom: KubusSpacing.lg,
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: orderedCards.asMap().entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
-              child: buildWeb3CardEntry(entry.value),
-            );
-          }).toList(growable: false),
-        ),
-      ),
+    return KubusShadowSafeStrip(
+      equalHeight: true,
+      gap: KubusSpacing.sm,
+      children: orderedCards.map(buildWeb3CardEntry).toList(growable: false),
     );
   }
 }
@@ -1018,10 +997,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         Widget buildActionStrip(List<Widget> children) {
           if (!isCompactLayout) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: children),
-            );
+            return KubusShadowSafeStrip(children: children);
           }
 
           return Wrap(
