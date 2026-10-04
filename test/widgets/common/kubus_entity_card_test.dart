@@ -109,7 +109,15 @@ void main() {
         tester.widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
     final decoration = container.decoration as BoxDecoration;
     debugDisableShadows = previous;
-    expect(decoration.boxShadow, isEmpty);
+    // Nothing *visible* at rest. The hover shadow keeps a fully transparent
+    // entry at rest so its alpha can fade in rather than pop (an empty list
+    // would interpolate from full strength), so assert on alpha, not length.
+    expect(
+      (decoration.boxShadow ?? const <BoxShadow>[]).every(
+        (shadow) => shadow.color.a == 0,
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('a card without usable media shows the authored role field',
