@@ -25,6 +25,7 @@ import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
 import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
+import 'node/kubus_node_screen.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
@@ -46,6 +47,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
 import '../utils/keyboard_inset_resolver.dart';
+import '../config/config.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/map_navigation.dart';
 import '../utils/share_deep_link_navigation.dart';
@@ -94,6 +96,7 @@ List<String> resolveHomeWeb3CardOrder({
   required UserPersona? persona,
   required bool isArtist,
   required bool isInstitution,
+  bool nodeEnabled = false,
 }) {
   final ordered = <String>[];
   final preferInstitutionFirst =
@@ -114,6 +117,12 @@ List<String> resolveHomeWeb3CardOrder({
   }
 
   ordered.add('marketplace');
+
+  // kubus Node sits with the other advanced capabilities rather than becoming
+  // a sixth permanent bottom tab, which is the pattern the existing four
+  // follow. It is last because it is infrastructure, not practice.
+  if (nodeEnabled) ordered.add('node');
+
   return ordered;
 }
 
@@ -129,6 +138,7 @@ class HomeWeb3CardStrip extends StatelessWidget {
     required this.onOpenArtistStudio,
     required this.onOpenInstitutionHub,
     required this.onOpenMarketplace,
+    required this.onOpenNode,
     required this.onShowWalletOnboarding,
   });
 
@@ -140,15 +150,18 @@ class HomeWeb3CardStrip extends StatelessWidget {
   final VoidCallback onOpenArtistStudio;
   final VoidCallback onOpenInstitutionHub;
   final VoidCallback onOpenMarketplace;
+  final VoidCallback onOpenNode;
   final VoidCallback onShowWalletOnboarding;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final nodeEnabled = AppConfig.isFeatureEnabled('availabilityNodes');
     final orderedCards = resolveHomeWeb3CardOrder(
       persona: persona,
       isArtist: isArtist,
       isInstitution: isInstitution,
+      nodeEnabled: nodeEnabled,
     );
     final cardWidth = MediaQuery.of(context).size.width < 375 ? 196.0 : 208.0;
     final roles = KubusColorRoles.of(context);
@@ -199,6 +212,23 @@ class HomeWeb3CardStrip extends StatelessWidget {
               isLocked: !isEffectivelyConnected,
               labsFeature: KubusLabsFeature.marketplace,
               cardKey: const ValueKey<String>('home_web3_marketplace'),
+            ),
+          );
+        case 'node':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.kubusNodeEntryTitle,
+              subtitle: l10n.kubusNodeRailSubtitle,
+              icon: Icons.dns_outlined,
+              color: roles.web3NodeAccent,
+              // No wallet gate. Owning and pairing a Node is runtime
+              // ownership against the account, not a signing operation, so it
+              // is not grouped behind the wallet onboarding the financial
+              // capabilities use. A wallet is still required for any action
+              // that genuinely needs wallet authority.
+              onTap: onOpenNode,
+              cardKey: const ValueKey<String>('home_web3_node'),
             ),
           );
         case 'dao':
@@ -1572,6 +1602,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const Marketplace(),
+                ),
+              ),
+              onOpenNode: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KubusNodeScreen(),
                 ),
               ),
               onShowWalletOnboarding: () => _showWalletOnboarding(context),

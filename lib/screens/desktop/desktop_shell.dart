@@ -26,6 +26,7 @@ import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
 import 'web3/desktop_marketplace_screen.dart';
+import '../node/kubus_node_screen.dart';
 import 'web3/desktop_wallet_screen.dart';
 import 'web3/desktop_artist_studio_screen.dart';
 import 'web3/desktop_institution_hub_screen.dart';
@@ -66,6 +67,42 @@ class DesktopBreakpoints {
       MediaQuery.of(context).size.width >= expanded;
   static bool isDesktop(BuildContext context) =>
       MediaQuery.of(context).size.width >= medium;
+}
+
+/// The destinations the navigation offers for this account state. Pure, so
+/// the capability/rollout rules can be asserted without pumping the shell.
+@visibleForTesting
+List<DesktopNavItem> resolveDesktopNavItems(bool isSignedIn,
+    {required bool isArtist, required bool isInstitution}) {
+  if (!isSignedIn) {
+    return _DesktopShellState._guestNavItems;
+  }
+
+  // Start with all signed-in items
+  var items = List<DesktopNavItem>.of(_DesktopShellState._signedInNavItems);
+
+  // If user has both badges, hide Organize (Institution Hub)
+  // If only Institution badge is active, hide Create (Artist Studio)
+  // If only Artist badge is active, hide Organize (Institution Hub)
+  if (isArtist && isInstitution) {
+    // Both badges are active - hide Organize, keep Create
+    items = items.where((item) => item.route != '/institution').toList();
+  } else if (isInstitution && !isArtist) {
+    // Only institution badge is active - hide Create
+    items = items.where((item) => item.route != '/artist-studio').toList();
+  } else if (isArtist && !isInstitution) {
+    // Only artist badge is active - hide Organize
+    items = items.where((item) => item.route != '/institution').toList();
+  }
+
+  // Node follows its own rollout flag, like every other Node entry point.
+  if (!AppConfig.isFeatureEnabled('availabilityNodes')) {
+    items = items
+        .where((item) => item.route != _DesktopShellState._nodeRoute)
+        .toList();
+  }
+
+  return items;
 }
 
 /// Main desktop shell that provides the sidebar navigation
@@ -158,7 +195,20 @@ class _DesktopShellState extends State<DesktopShell>
       route: '/marketplace',
       labsFeature: KubusLabsFeature.marketplace,
     ),
+    // kubus Node belongs beside the other advanced capability destinations.
+    // It is runtime ownership, not a financial capability, so it carries no
+    // Labs gate and no wallet requirement of its own: the Node surface's own
+    // rollout flag and the backend ownership contract decide what it shows.
+    DesktopNavItem(
+      icon: Icons.dns_outlined,
+      activeIcon: Icons.dns,
+      labelKey: DesktopNavLabelKey.node,
+      route: _nodeRoute,
+    ),
   ];
+
+  /// In-shell route for the kubus Node dashboard.
+  static const String _nodeRoute = '/kubus-node';
 
   static const List<DesktopNavItem> _guestNavItems = [
     DesktopNavItem(
@@ -490,6 +540,8 @@ class _DesktopShellState extends State<DesktopShell>
         return const DesktopGovernanceHubScreen();
       case '/marketplace':
         return const DesktopMarketplaceScreen();
+      case _nodeRoute:
+        return const KubusNodeScreen(embedded: true);
       case _walletRoute:
         return const DesktopWalletScreen();
       case '/home':
@@ -514,6 +566,8 @@ class _DesktopShellState extends State<DesktopShell>
         return 'DesktopGovernanceHub';
       case '/marketplace':
         return 'DesktopMarketplace';
+      case _nodeRoute:
+        return 'DesktopKubusNode';
       case _walletRoute:
         return 'DesktopWallet';
       case _web3EntryRoute:
@@ -531,32 +585,6 @@ class _DesktopShellState extends State<DesktopShell>
         : _telemetryScreenNameForRoute(_activeRoute);
     TelemetryService()
         .setActiveScreen(screenName: screenName, screenRoute: screenRoute);
-  }
-
-  List<DesktopNavItem> _navItemsForState(bool isSignedIn,
-      {required bool isArtist, required bool isInstitution}) {
-    if (!isSignedIn) {
-      return _guestNavItems;
-    }
-
-    // Start with all signed-in items
-    var items = List<DesktopNavItem>.of(_signedInNavItems);
-
-    // If user has both badges, hide Organize (Institution Hub)
-    // If only Institution badge is active, hide Create (Artist Studio)
-    // If only Artist badge is active, hide Organize (Institution Hub)
-    if (isArtist && isInstitution) {
-      // Both badges are active - hide Organize, keep Create
-      items = items.where((item) => item.route != '/institution').toList();
-    } else if (isInstitution && !isArtist) {
-      // Only institution badge is active - hide Create
-      items = items.where((item) => item.route != '/artist-studio').toList();
-    } else if (isArtist && !isInstitution) {
-      // Only artist badge is active - hide Organize
-      items = items.where((item) => item.route != '/institution').toList();
-    }
-
-    return items;
   }
 
   @override
@@ -596,7 +624,7 @@ class _DesktopShellState extends State<DesktopShell>
     final isSignedIn = navState.isSignedIn;
     final isArtist = navState.isArtist;
     final isInstitution = navState.isInstitution;
-    final navItems = _navItemsForState(isSignedIn,
+    final navItems = resolveDesktopNavItems(isSignedIn,
         isArtist: isArtist, isInstitution: isInstitution);
     final isWalletRoute = _activeRoute == _walletRoute;
     final hasActiveRoute = navItems.any((item) => item.route == _activeRoute);

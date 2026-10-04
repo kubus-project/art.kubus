@@ -14,6 +14,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import '../../widgets/auth/auth_atmosphere.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
@@ -250,14 +251,9 @@ class _EmailVerificationSuccessScreenState
     final l10n = AppLocalizations.of(context)!;
     final email = (widget.email ?? '').trim();
 
-    return AnimatedGradientBackground(
-      duration: const Duration(seconds: 10),
-      intensity: 0.18,
-      colors: [
-        scheme.primary.withValues(alpha: 0.48),
-        KubusColors.successDark.withValues(alpha: 0.46),
-        scheme.primary.withValues(alpha: 0.48),
-      ],
+    // One shared account-entry field, so the end of the flow is visibly the
+    // same place as its beginning.
+    return AuthAtmosphere(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(

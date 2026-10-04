@@ -21781,6 +21781,12 @@ abstract class AppLocalizations {
   /// **'Digital editions'**
   String get desktopShellNavTrade;
 
+  /// No description provided for @desktopShellNavNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Node'**
+  String get desktopShellNavNode;
+
   /// No description provided for @desktopShellNavWeb3.
   ///
   /// In en, this message translates to:
@@ -29403,6 +29409,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Nodes'**
   String get kubusMyNodesTitle;
+
+  /// No description provided for @kubusNodeOwnedNodesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'On this account'**
+  String get kubusNodeOwnedNodesHeading;
+
+  /// No description provided for @kubusNodeConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a Node'**
+  String get kubusNodeConnectAction;
+
+  /// No description provided for @kubusNodeRailSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hardware, on the network'**
+  String get kubusNodeRailSubtitle;
+
+  /// No description provided for @kubusNodeConnectHandoffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your Node and it shows a one-time code. Scan it once and this account is paired — you will not need it again.'**
+  String get kubusNodeConnectHandoffBody;
 
   /// No description provided for @kubusConnectionNearby.
   ///

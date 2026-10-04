@@ -12610,6 +12610,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopShellNavTrade => 'Digitalne izdaje';
 
   @override
+  String get desktopShellNavNode => 'Node';
+
+  @override
   String get desktopShellNavWeb3 => 'Infrastruktura';
 
   @override
@@ -17079,6 +17082,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusMyNodesTitle => 'Moja vozlišča';
+
+  @override
+  String get kubusNodeOwnedNodesHeading => 'Na tem računu';
+
+  @override
+  String get kubusNodeConnectAction => 'Povežite vozlišče';
+
+  @override
+  String get kubusNodeRailSubtitle => 'Vaša oprema v omrežju';
+
+  @override
+  String get kubusNodeConnectHandoffBody =>
+      'Odprite svoje vozlišče in prikazalo bo enkratno kodo. Skenirajte jo enkrat in ta račun je povezan — več je ne boste potrebovali.';
 
   @override
   String get kubusConnectionNearby => 'Povezano v bližini';

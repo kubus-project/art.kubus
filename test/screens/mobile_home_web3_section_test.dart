@@ -42,6 +42,7 @@ Future<void> _pumpHomeWeb3Strip(
                 onOpenArtistStudio: () {},
                 onOpenInstitutionHub: () {},
                 onOpenMarketplace: () {},
+                onOpenNode: () {},
                 onShowWalletOnboarding: () {},
               ),
             ),

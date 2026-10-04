@@ -12483,6 +12483,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavTrade => 'Digital editions';
 
   @override
+  String get desktopShellNavNode => 'Node';
+
+  @override
   String get desktopShellNavWeb3 => 'Infrastructure';
 
   @override
@@ -16903,6 +16906,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusMyNodesTitle => 'My Nodes';
+
+  @override
+  String get kubusNodeOwnedNodesHeading => 'On this account';
+
+  @override
+  String get kubusNodeConnectAction => 'Connect a Node';
+
+  @override
+  String get kubusNodeRailSubtitle => 'Your hardware, on the network';
+
+  @override
+  String get kubusNodeConnectHandoffBody =>
+      'Open your Node and it shows a one-time code. Scan it once and this account is paired — you will not need it again.';
 
   @override
   String get kubusConnectionNearby => 'Connected nearby';
