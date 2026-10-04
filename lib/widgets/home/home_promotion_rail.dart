@@ -173,6 +173,7 @@ class _HomePromotionRailCard extends StatelessWidget {
         leading: isPerson || hasMark
             ? AvatarWidget(
                 wallet: data.walletSeed,
+                displayName: data.label,
                 avatarUrl: data.avatarUrl,
                 radius: profileAvatarRadius,
                 borderWidth: 0,

@@ -38,7 +38,8 @@ class ProfileFixtures {
 
   /// 35 characters, continuous alphanumerics — legitimate under the canonical
   /// policy but historically swallowed by the broad wallet heuristic.
-  static const String longAlphanumericUsername = 'annakovacstreetmuralistljubljana2026';
+  static const String longAlphanumericUsername =
+      'annakovacstreetmuralistljubljana2026';
 
   static User user({
     String id = wallet,

@@ -22,6 +22,11 @@ class AvatarWidget extends StatefulWidget {
 
   final String? avatarUrl;
   final String wallet;
+
+  /// The account's display name, used only for the initials shown when there is
+  /// no image. Without it the initials come from the wallet string, which reads
+  /// as an arbitrary character (a profile hero showed "7").
+  final String? displayName;
   final double radius;
   final double borderWidth;
   final Color? borderColor;
@@ -39,6 +44,7 @@ class AvatarWidget extends StatefulWidget {
     super.key,
     this.avatarUrl,
     required this.wallet,
+    this.displayName,
     this.radius = 18,
     this.borderWidth = 0,
     this.borderColor,
@@ -233,6 +239,27 @@ class _AvatarWidgetState extends State<AvatarWidget>
     super.dispose();
   }
 
+  /// Up to two initials from the display name, else from the wallet string.
+  String _initials() {
+    final source = (widget.displayName ?? '').trim().isNotEmpty
+        ? widget.displayName!
+        : widget.wallet;
+    return source
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .map((p) => String.fromCharCode(p.runes.first))
+        .take(2)
+        .join()
+        .toUpperCase();
+  }
+
+  /// Small avatars keep the compact 10-14 px label; a profile-sized one scales
+  /// with the mark instead of a 14 px letter in a 90 px square.
+  double _initialsFontSize() => widget.radius >= 32
+      ? widget.radius * 0.62
+      : (widget.radius * 0.7).clamp(10, 14).toDouble();
+
   @override
   Widget build(BuildContext context) {
     final effective = _effectiveUrl ?? '';
@@ -262,13 +289,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
               height: size,
               fit: BoxFit.cover,
               errorBuilder: (ctx, error, stack) {
-                final parts = widget.wallet.trim().split(RegExp(r'\s+'));
-                final initials = parts
-                    .where((p) => p.isNotEmpty)
-                    .map((p) => p[0])
-                    .take(2)
-                    .join()
-                    .toUpperCase();
+                final initials = _initials();
                 return Container(
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerHighest,
@@ -277,7 +298,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
                   alignment: Alignment.center,
                   child: Text(initials.isNotEmpty ? initials : 'U',
                       style: TextStyle(
-                          fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
+                          fontSize: _initialsFontSize(),
                           fontWeight: FontWeight.w600)),
                 );
               },
@@ -286,13 +307,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
         ),
       );
     } else {
-      final parts = widget.wallet.trim().split(RegExp(r'\s+'));
-      final initials = parts
-          .where((p) => p.isNotEmpty)
-          .map((p) => p[0])
-          .take(2)
-          .join()
-          .toUpperCase();
+      final initials = _initials();
       content = Container(
         width: size,
         height: size,
@@ -303,8 +318,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
         alignment: Alignment.center,
         child: Text(initials.isNotEmpty ? initials : 'U',
             style: TextStyle(
-                fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
-                fontWeight: FontWeight.w600)),
+                fontSize: _initialsFontSize(), fontWeight: FontWeight.w600)),
       );
     }
 

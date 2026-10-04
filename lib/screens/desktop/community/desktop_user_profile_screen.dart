@@ -965,6 +965,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           avatarRadius: avatarRadius,
           avatar: AvatarWidget(
             wallet: user!.id,
+            displayName: user!.name,
             avatarUrl: user!.profileImageUrl,
             radius: avatarRadius,
             borderWidth: 0,
@@ -1478,6 +1479,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         const SizedBox(height: KubusSpacing.md),
         ProfilePostsPreviewSection(
+          showHeading: false,
           posts: _posts,
           isLoading: _postsLoading,
           error: _postsError,

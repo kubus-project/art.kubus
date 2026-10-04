@@ -30,6 +30,7 @@ class ProfilePostsPreviewSection extends StatelessWidget {
     this.emptyDescription,
     this.padding = EdgeInsets.zero,
     this.totalCount,
+    this.showHeading = true,
   });
 
   final List<CommunityPost> posts;
@@ -46,6 +47,10 @@ class ProfilePostsPreviewSection extends StatelessWidget {
   /// The profile's real post count where it is known, so "View all posts"
   /// appears even when the first page happens to be shorter than the preview.
   final int? totalCount;
+
+  /// The section's own "Posts" title. A host that already prints a richer
+  /// header (title and subtitle) turns it off rather than repeat the word.
+  final bool showHeading;
 
   /// How many posts the preview shows. Two on a phone, three once there is a
   /// column wide enough to read three without the section swallowing the page.
@@ -68,13 +73,15 @@ class ProfilePostsPreviewSection extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.userProfilePostsTitle,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: roles.foreground,
+              if (showHeading) ...[
+                Text(
+                  l10n.userProfilePostsTitle,
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    color: roles.foreground,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
+                const SizedBox(height: KubusSpacing.md),
+              ],
               if (isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: KubusSpacing.lg),

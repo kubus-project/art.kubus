@@ -3,6 +3,18 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:art_kubus/models/kubus_node_models.dart';
+import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/providers/artwork_provider.dart';
+import 'package:art_kubus/providers/collab_provider.dart';
+import 'package:art_kubus/providers/portfolio_provider.dart';
+import 'package:art_kubus/screens/art/artwork_edit_screen.dart';
+import 'package:art_kubus/screens/desktop/web3/desktop_governance_hub_screen.dart';
+import 'package:art_kubus/screens/web3/artist/artist_portfolio_screen.dart';
+import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/screens/auth/forgot_password_screen.dart';
@@ -247,6 +259,157 @@ void main() {
       size: const Size(900, 320),
       brightness: Brightness.dark,
       signedIn: owner,
+    );
+  });
+  // ------------------------------------------------------------------ studio
+  PortfolioProvider portfolioWith(List<Artwork> artworks) {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('qa-token');
+    api.setHttpClient(
+      MockClient((request) async {
+        Map<String, Object?> ok(Object data) =>
+            <String, Object?>{'success': true, 'data': data};
+        final body = switch (request.url.path) {
+          '/api/artworks' => ok(artworks
+              .map((a) => <String, Object?>{
+                    'id': a.id,
+                    'title': a.title,
+                    'artist': a.artist,
+                    'description': a.description,
+                    'latitude': a.position.latitude,
+                    'longitude': a.position.longitude,
+                    'rewards': a.rewards,
+                    'createdAt': a.createdAt.toIso8601String(),
+                    'category': a.category,
+                    'isPublic': a.isPublic,
+                    'isActive': a.isActive,
+                  })
+              .toList(growable: false)),
+          '/api/exhibitions' =>
+            ok(<String, Object?>{'exhibitions': const <Object?>[]}),
+          _ => ok(const <Object?>[]),
+        };
+        return http.Response(
+          jsonEncode(body),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+    return PortfolioProvider(api: api)..setWalletAddress('wallet-1');
+  }
+
+  Artwork studioArtwork(
+    String id,
+    String title,
+    String category, {
+    bool isPublic = true,
+    bool isActive = true,
+  }) =>
+      Artwork(
+        id: id,
+        title: title,
+        artist: 'Ana Kova\u010d',
+        description: 'Painted on site, 2025.',
+        position: const LatLng(46.05, 14.5),
+        rewards: 5,
+        createdAt: DateTime.utc(2026, 3, 17),
+        category: category,
+        isPublic: isPublic,
+        isActive: isActive,
+      );
+
+  final mixedArtworks = <Artwork>[
+    studioArtwork('a1', 'Riverside mural', 'Mural'),
+    studioArtwork('a2', 'Tobacna doorway', 'Street art', isPublic: false),
+    studioArtwork('a3', 'Metelkova wall study', 'Installation'),
+    studioArtwork('a4', 'Night lines', 'Digital', isActive: false),
+    studioArtwork('a5', 'Fountain, afternoon', 'Photography'),
+    studioArtwork('a6', 'Rooftop sketch', 'Drawing', isPublic: false),
+  ];
+
+  for (final entry in <String, Size>{
+    '390': const Size(390, 1600),
+    '768': const Size(768, 1400),
+    '1440': const Size(1440, 1100),
+    '1920': const Size(1920, 1100),
+  }.entries) {
+    scene('studio-gallery-${entry.key}', (tester) async {
+      await surface(
+        tester,
+        'studio-gallery-${entry.key}-light',
+        () => const Material(
+          type: MaterialType.transparency,
+          child: ArtistPortfolioScreen(walletAddress: 'wallet-1'),
+        ),
+        size: entry.value,
+        signedIn: qaOwner(isArtist: true),
+        extraProviders: [
+          ChangeNotifierProvider<PortfolioProvider>.value(
+            value: portfolioWith(mixedArtworks),
+          ),
+        ],
+      );
+    });
+  }
+  scene('studio-gallery-empty', (tester) async {
+    await surface(
+      tester,
+      'studio-gallery-empty-1440-dark',
+      () => const Material(
+        type: MaterialType.transparency,
+        child: ArtistPortfolioScreen(walletAddress: 'wallet-1'),
+      ),
+      size: desktop,
+      brightness: Brightness.dark,
+      signedIn: qaOwner(isArtist: true),
+      extraProviders: [
+        ChangeNotifierProvider<PortfolioProvider>.value(
+          value: portfolioWith(const <Artwork>[]),
+        ),
+      ],
+    );
+  });
+  scene('studio-editor', (tester) async {
+    final artworks = ArtworkProvider()..addOrUpdateArtwork(qaArtwork());
+    await surface(
+      tester,
+      'studio-editor-1440-light',
+      () => qaShellHost(const ArtworkEditScreen(
+          artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
+      size: const Size(1440, 1000),
+      signedIn: qaOwner(isArtist: true),
+      extraProviders: [
+        ChangeNotifierProvider<ArtworkProvider>.value(value: artworks),
+        ChangeNotifierProvider<CollabProvider>(
+          create: (_) => CollabProvider(api: QaFixtureCollabApi()),
+        ),
+      ],
+    );
+    Provider.of<CollabProvider>(
+      tester.element(find.byType(ArtworkEditScreen)),
+      listen: false,
+    ).stopInvitePolling();
+  });
+
+  // --------------------------------------------------------------------- dao
+  scene('dao-desktop', (tester) async {
+    await surface(
+      tester,
+      'dao-desktop-1440-light',
+      () => const DesktopGovernanceHubScreen(),
+      size: const Size(1440, 1100),
+      signedIn: qaOwner(),
+    );
+  });
+  scene('dao-mobile', (tester) async {
+    await surface(
+      tester,
+      'dao-mobile-390-dark',
+      () => const GovernanceHub(),
+      size: const Size(390, 1500),
+      brightness: Brightness.dark,
+      signedIn: qaOwner(),
     );
   });
 }

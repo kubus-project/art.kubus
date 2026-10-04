@@ -251,7 +251,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
           fit: StackFit.expand,
           children: [
             _buildMediaLayer(context, roles, motion),
-            _buildScrim(context),
+            _buildScrim(context, accent),
             Positioned(
               left: 0,
               right: 0,
@@ -413,12 +413,19 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
   /// same construction the profile cover fallback uses, so a card without an
   /// image still reads as a deliberate surface for that kind of entity.
   Widget _buildField(BuildContext context, KubusColorRoles roles) {
+    final accent = _accent(roles);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return KubusAtmosphere(
       key: const ValueKey<String>('kubus_entity_card_field'),
-      accent: _accent(roles),
+      accent: accent,
       // One hue: the field states one role, not a two-colour composition.
-      secondary: _accent(roles),
-      base: roles.surfaceRaised,
+      secondary: accent,
+      // The ground itself carries the role's hue. On the raised surface alone
+      // a card with no image is a near-white wash, which is not an identity.
+      base: Color.alphaBlend(
+        accent.withValues(alpha: dark ? 0.16 : 0.30),
+        roles.surfaceRaised,
+      ),
       glyph: _glyph,
       glyphAlignment: Alignment.bottomRight,
       framed: false,
@@ -429,7 +436,16 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
 
   /// A scrim only where the type sits. The image keeps its own light
   /// everywhere else, which is the whole point of a media-led card.
-  Widget _buildScrim(BuildContext context) {
+  ///
+  /// With no image there is no photograph to protect, so the scrim is drawn
+  /// from the entity's own deep tone rather than black: the card stays a
+  /// field of that role instead of fading to neutral grey.
+  Widget _buildScrim(BuildContext context, Color accent) {
+    final resolved = KubusCachedImage.resolveImageUrl(widget.imageUrl);
+    final hasMedia = resolved != null && resolved.isNotEmpty;
+    final ink = hasMedia
+        ? Colors.black
+        : Color.lerp(Colors.black, accent, 0.32) ?? Colors.black;
     return IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -440,9 +456,9 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
             stops: const <double>[0, 0.45, 0.78, 1],
             colors: <Color>[
               Colors.transparent,
-              Colors.black.withValues(alpha: 0.06),
-              Colors.black.withValues(alpha: 0.52),
-              Colors.black.withValues(alpha: 0.80),
+              ink.withValues(alpha: 0.06),
+              ink.withValues(alpha: 0.52),
+              ink.withValues(alpha: 0.80),
             ],
           ),
         ),

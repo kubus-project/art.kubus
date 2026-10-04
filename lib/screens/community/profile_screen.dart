@@ -635,6 +635,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 wallet: profileProvider
                                         .currentUser?.walletAddress ??
                                     '',
+                                displayName:
+                                    profileProvider.currentUser?.displayName,
                                 avatarUrl: profileProvider.currentUser?.avatar,
                                 radius: avatarRadius,
                                 borderWidth: 0,

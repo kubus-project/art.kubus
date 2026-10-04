@@ -93,8 +93,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       if (!mounted) return;
       setState(() {
         _mode = _SecureAccountMode.loadError;
-        _inlineError = AppLocalizations.of(context)!
-            .authResetPasswordFailedInline;
+        _inlineError =
+            AppLocalizations.of(context)!.authResetPasswordFailedInline;
       });
     }
   }

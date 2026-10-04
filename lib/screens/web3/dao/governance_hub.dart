@@ -524,10 +524,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
             activeProposals.isNotEmpty &&
             web3Provider.kub8Balance <= 0;
 
-        // The proposal list has four distinct states; the governance
-        // destinations sit above all of them, because "there is nothing to
-        // vote on right now" is exactly when someone wants to open the
-        // treasury or submit a proposal.
+        // The proposal list has four distinct states.
         final Widget body;
         if (daoProvider.isLoading && isEmpty) {
           body = const KubusSectionLoading(rows: 3, rowHeight: 160);
@@ -537,12 +534,18 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
             onRetry: () => daoProvider.refreshData(force: true),
           );
         } else if (isEmpty) {
-          body = Center(
-            child: EmptyStateCard(
-              icon: Icons.how_to_vote,
-              title: l10n.daoActiveProposalsEmptyTitle,
-              description: l10n.daoActiveProposalsEmptyDescription,
-            ),
+          // "Nothing to vote on" is the moment the one task that is not a
+          // place to go applies: put a proposal forward.
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              EmptyStateCard(
+                icon: Icons.how_to_vote,
+                title: l10n.daoActiveProposalsEmptyTitle,
+                description: l10n.daoActiveProposalsEmptyDescription,
+              ),
+              _buildCreateProposalTask(capabilities),
+            ],
           );
         } else {
           body = Column(
@@ -568,11 +571,6 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
               ),
               const SizedBox(height: KubusSpacing.md),
             ],
-            // Authored destinations above the proposal list: the tabs are
-            // where you *are*, these are the governance tasks you came to do.
-            // Deliberately a different role from the tabs, not the same
-            // navigation printed twice.
-            _buildGovernanceDestinations(capabilities),
             body,
           ],
         );
@@ -580,67 +578,31 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     );
   }
 
-  /// High-level governance destinations in the kubus action grammar.
+  /// The one governance task that is not already a tab: put a proposal
+  /// forward, offered when there is nothing to vote on.
   ///
-  /// These are real destinations and primary tasks — submit a proposal, review
-  /// your own voting record, open the treasury, manage delegation — so they
-  /// take [KubusActionTile], the product's destination language. Proposal rows
-  /// stay proposal content and the header numbers stay [KubusStatCard]: a
-  /// proposal is not a shortcut and a metric is not a destination.
+  /// It takes [KubusActionTile], the product's destination language, because it
+  /// is a primary task. Treasury, delegation and voting history are *not*
+  /// offered as tiles here: they are the tabs directly above, and printing the
+  /// same navigation twice is noise. Proposal rows stay proposal content and the
+  /// header numbers stay [KubusStatCard].
   ///
-  /// Capability gating is unchanged: each tile appears exactly where its tab
-  /// appears, so nothing becomes reachable that was not already.
-  Widget _buildGovernanceDestinations(Web3Capabilities capabilities) {
+  /// Gated exactly as the Create proposal tab is, so nothing becomes reachable
+  /// that was not already.
+  Widget _buildCreateProposalTask(Web3Capabilities capabilities) {
+    if (!capabilities.canCreateProposal) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final accent = roles.web3DaoAccent;
-
-    final destinations = <Widget>[
-      if (capabilities.canCreateProposal)
-        KubusActionTile(
-          key: const ValueKey<String>('dao_destination_create_proposal'),
-          title: l10n.daoHubTabCreateProposal,
-          icon: Icons.add_circle_outline,
-          accent: accent,
-          layout: KubusActionTileLayout.inline,
-          onTap: () => _setSelectedIndex(2),
-        ),
-      if (capabilities.canViewOwnGovernanceHistory)
-        KubusActionTile(
-          key: const ValueKey<String>('dao_destination_voting_history'),
-          title: l10n.daoHubTabVotingHistory,
-          icon: Icons.history,
-          accent: accent,
-          layout: KubusActionTileLayout.inline,
-          onTap: () => _setSelectedIndex(1),
-        ),
-      KubusActionTile(
-        key: const ValueKey<String>('dao_destination_treasury'),
-        title: l10n.daoHubTabTreasury,
-        icon: Icons.account_balance_outlined,
-        accent: accent,
-        layout: KubusActionTileLayout.inline,
-        onTap: () => _setSelectedIndex(3),
-      ),
-      if (capabilities.hasAccount)
-        KubusActionTile(
-          key: const ValueKey<String>('dao_destination_delegation'),
-          title: l10n.daoHubTabDelegation,
-          icon: Icons.people_outline,
-          accent: accent,
-          layout: KubusActionTileLayout.inline,
-          onTap: () => _setSelectedIndex(4),
-        ),
-    ];
-
-    if (destinations.isEmpty) return const SizedBox.shrink();
+    final accent = KubusColorRoles.of(context).web3DaoAccent;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
-      child: Wrap(
-        spacing: KubusSpacing.sm,
-        runSpacing: KubusSpacing.sm,
-        children: destinations,
+      padding: const EdgeInsets.only(top: KubusSpacing.md),
+      child: KubusActionTile(
+        key: const ValueKey<String>('dao_task_create_proposal'),
+        title: l10n.daoHubTabCreateProposal,
+        icon: Icons.add_circle_outline,
+        accent: accent,
+        layout: KubusActionTileLayout.inline,
+        onTap: () => _setSelectedIndex(2),
       ),
     );
   }

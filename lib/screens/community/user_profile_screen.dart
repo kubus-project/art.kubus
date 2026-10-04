@@ -614,6 +614,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           avatarRadius: avatarRadius,
           avatar: AvatarWidget(
             wallet: user!.id,
+            displayName: user!.name,
             avatarUrl: user!.profileImageUrl,
             radius: avatarRadius,
             borderWidth: 0,
@@ -1139,7 +1140,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       dataState: _profileController.achievementPreviewDataState,
       publicProgress: _profileController.package?.achievementProgress,
       publicDefinitions: _profileController.package?.achievementDefinitions,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.zero,
       // Visitors should not scroll past an empty-state card for a
       // section the profile owner has no content in.
       showWhenEmpty: false,
@@ -1149,7 +1150,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   /// A bounded preview, never a feed. See [ProfilePostsPreviewSection].
   Widget _buildPostsSection(AppLocalizations l10n) {
     return ProfilePostsPreviewSection(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
+      padding: EdgeInsets.zero,
       posts: _posts,
       isLoading: _postsLoading,
       error: _postsError,
@@ -1178,101 +1179,88 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildArtistHighlightsGrid(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KubusHeaderText(
-            title: l10n.userProfileArtistHighlightsTitle,
-            subtitle: l10n.userProfileArtistHighlightsSubtitle(user!.name),
-            kind: KubusHeaderKind.section,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.userProfileArtworksTitle,
-            items: _artistArtworks,
-            emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-            emptyIcon: Icons.image_outlined,
-            builder: _buildArtworkCard,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.userProfileCollectionsTitle,
-            items: _artistCollections,
-            emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
-            emptyIcon: Icons.collections_outlined,
-            builder: _buildCollectionCard,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KubusHeaderText(
+          title: l10n.userProfileArtistHighlightsTitle,
+          subtitle: l10n.userProfileArtistHighlightsSubtitle(user!.name),
+          kind: KubusHeaderKind.section,
+        ),
+        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileArtworksTitle,
+          items: _artistArtworks,
+          emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+          emptyIcon: Icons.image_outlined,
+          builder: _buildArtworkCard,
+        ),
+        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileCollectionsTitle,
+          items: _artistCollections,
+          emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
+          emptyIcon: Icons.collections_outlined,
+          builder: _buildCollectionCard,
+        ),
+      ],
     );
   }
 
   Widget _buildArtistEventsShowcase(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KubusHeaderText(
-            title: l10n.userProfileEventsTitle,
-            subtitle: l10n.userProfileEventsSubtitleFeaturing(user!.name),
-            kind: KubusHeaderKind.section,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.userProfileEventsTitle,
-            items: _artistEvents,
-            emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
-            emptyIcon: Icons.event,
-            builder: _buildEventCard,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileEventsTitle,
+          subtitle: l10n.userProfileEventsSubtitleFeaturing(user!.name),
+          items: _artistEvents,
+          emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
+          emptyIcon: Icons.event,
+          builder: _buildEventCard,
+        ),
+      ],
     );
   }
 
   Widget _buildInstitutionHighlights(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KubusHeaderText(
-            title: l10n.userProfileInstitutionHighlightsTitle,
-            subtitle: l10n.userProfileInstitutionHighlightsSubtitle(user!.name),
-            kind: KubusHeaderKind.section,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.userProfileEventsTitle,
-            items: _artistEvents,
-            emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
-            emptyIcon: Icons.event,
-            builder: _buildEventCard,
-          ),
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.userProfileCollectionsTitle,
-            items: _artistCollections,
-            emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
-            emptyIcon: Icons.collections_outlined,
-            builder: _buildCollectionCard,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KubusHeaderText(
+          title: l10n.userProfileInstitutionHighlightsTitle,
+          subtitle: l10n.userProfileInstitutionHighlightsSubtitle(user!.name),
+          kind: KubusHeaderKind.section,
+        ),
+        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileEventsTitle,
+          items: _artistEvents,
+          emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
+          emptyIcon: Icons.event,
+          builder: _buildEventCard,
+        ),
+        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileCollectionsTitle,
+          items: _artistCollections,
+          emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
+          emptyIcon: Icons.collections_outlined,
+          builder: _buildCollectionCard,
+        ),
+      ],
     );
   }
 
   Widget _buildShowcaseSection({
     required AppLocalizations l10n,
     required String title,
+    String? subtitle,
     required List<Map<String, dynamic>> items,
     required Widget Function(Map<String, dynamic>) builder,
     required String emptyLabel,
@@ -1280,6 +1268,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }) {
     return SharedShowcaseSection<Map<String, dynamic>>(
       title: title,
+      subtitle: subtitle,
       items: items,
       itemBuilder: (context, item) => builder(item),
       isLoading: _artistDataLoading && !_artistDataLoaded,

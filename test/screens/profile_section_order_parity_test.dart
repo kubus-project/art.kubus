@@ -80,8 +80,7 @@ void main() {
       ProfileSurface.desktopPublic,
       ProfileSurface.communityOverlay,
     ]) {
-      testWidgets('${surface.name} composes one identity hero',
-          (tester) async {
+      testWidgets('${surface.name} composes one identity hero', (tester) async {
         final user = ProfileFixtures.user(isArtist: true, isVerified: true);
         await pumpProfileSurface(
           tester,

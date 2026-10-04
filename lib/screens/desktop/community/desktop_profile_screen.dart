@@ -789,6 +789,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     padding: const EdgeInsets.all(avatarRingPadding),
                     child: AvatarWidget(
                       wallet: user?.walletAddress ?? '',
+                      displayName: user?.displayName,
                       avatarUrl: user?.avatar,
                       radius: avatarRadius,
                       borderWidth: 0,
