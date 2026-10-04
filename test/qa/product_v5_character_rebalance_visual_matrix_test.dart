@@ -198,8 +198,8 @@ void main() {
     await surface(
       tester,
       'E-artwork-editor-desktop-dark-en',
-      () => qaShellHost(
-          const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+      () => qaShellHost(const ArtworkEditScreen(
+          artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
       size: const Size(1440, 1000),
       signedIn: qaOwner(isArtist: true),
       extraProviders: [
@@ -310,8 +310,8 @@ void main() {
     await surface(
       tester,
       'X-artwork-editor-desktop-dark-en-text200',
-      () => qaShellHost(
-          const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+      () => qaShellHost(const ArtworkEditScreen(
+          artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
       size: const Size(1440, 1400),
       textScale: 2,
       signedIn: qaOwner(isArtist: true),

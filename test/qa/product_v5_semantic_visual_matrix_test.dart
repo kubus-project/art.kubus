@@ -446,8 +446,8 @@ void main() {
     await surface(
       tester,
       'creator-editor-desktop-1440-dark-en',
-      () => qaShellHost(
-          const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+      () => qaShellHost(const ArtworkEditScreen(
+          artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
       size: desktop,
       signedIn: artist,
       extraProviders: [

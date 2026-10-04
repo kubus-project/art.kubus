@@ -34,7 +34,6 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
-import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../../utils/kubus_entity_semantics.dart';
 import '../../../widgets/common/kubus_entity_card.dart';
 import '../../community/profile_screen_methods.dart';
@@ -1548,25 +1547,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               source: 'desktop_profile_showcase')
           : null,
       width: 220,
-    );
-  }
-
-  Widget _buildPlaceholderImage(double height, IconData icon) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
-      ),
-      child: Center(
-          child: Icon(icon,
-              size: 48,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimaryContainer
-                  .withValues(alpha: 0.4))),
     );
   }
 

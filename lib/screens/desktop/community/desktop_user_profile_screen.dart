@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../../../widgets/profile/profile_cover_field.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
@@ -41,7 +40,6 @@ import '../../community/profile_posts_screen.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
-import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../../widgets/detail/expandable_detail_text.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
@@ -60,7 +58,6 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
-import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
 
