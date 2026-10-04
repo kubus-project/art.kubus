@@ -97,6 +97,7 @@ class ProfileIdentitySummary extends StatelessWidget {
               wallet: identity.navigationIdentifier ??
                   identity.username ??
                   identity.walletSeed,
+              displayName: identity.avatarInitialsSource,
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.
@@ -129,6 +130,7 @@ class ProfileIdentitySummary extends StatelessWidget {
               wallet: identity.navigationIdentifier ??
                   identity.username ??
                   identity.walletSeed,
+              displayName: identity.avatarInitialsSource,
               radius: avatarRadius,
               allowFabricatedFallback: allowFabricatedFallback,
               // A display-only avatar seed is not a profile identifier.

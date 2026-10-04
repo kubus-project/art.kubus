@@ -29,6 +29,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_action_tile.dart';
+import '../../widgets/common/kubus_shadow_safe_strip.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -42,6 +43,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
+import '../../widgets/common/kubus_entity_card.dart';
 import '../../utils/home_search_destination.dart';
 import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
@@ -1169,22 +1171,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ],
           )
         else
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: quickScreens.map((screen) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: DetailSpacing.md),
-                  child: _buildQuickActionCard(
-                    screen.labelKey.resolve(l10n),
-                    screen.icon,
-                    _getScreenColor(screen.key, Theme.of(context).colorScheme),
-                    () => _handleQuickAction(screen.key),
-                    visitCount: screen.visitCount,
-                  ),
-                );
-              }).toList(),
-            ),
+          KubusShadowSafeStrip(
+            gap: DetailSpacing.md,
+            children: quickScreens.map((screen) {
+              return _buildQuickActionCard(
+                screen.labelKey.resolve(l10n),
+                screen.icon,
+                _getScreenColor(screen.key, Theme.of(context).colorScheme),
+                () => _handleQuickAction(screen.key),
+                visitCount: screen.visitCount,
+              );
+            }).toList(growable: false),
           ),
       ],
     );
@@ -1401,7 +1398,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           height: 236,
           cardWidth: 240,
           cardSpacing: DetailSpacing.lg,
-          imageHeight: 140,
           profileAvatarRadius: 34,
           enableHover: true,
           placeholderIconBuilder: _iconForHomeRail,
@@ -1413,19 +1409,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               unawaited(_openHomeRailItem(item));
             }
           },
-          titleStyle: KubusTextStyles.detailCardTitle,
-          subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
-          ),
         ),
       ],
     );
   }
 
   Widget? _buildHomeRailCardSubtitle(HomeRailItem item) {
-    final scheme = Theme.of(context).colorScheme;
-    final baseStyle = KubusTextStyles.navMetaLabel;
+    // The rail card's context line reads off the media plate, so it takes the
+    // card's own on-media register rather than a surface foreground colour.
+    final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
+    final linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
@@ -1437,13 +1430,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
       final creatorText = Text(
         creatorIdentity.label,
-        maxLines: 2,
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: creatorIdentity.canOpenProfile
             ? baseStyle.copyWith(
-                color: scheme.primary,
+                color: linkColor,
                 decoration: TextDecoration.underline,
-                decorationColor: scheme.primary,
+                decorationColor: linkColor.withValues(alpha: 0.7),
               )
             : baseStyle,
       );
@@ -1470,7 +1463,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (subtitle.isEmpty) return null;
     return Text(
       subtitle,
-      maxLines: 2,
+      maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: baseStyle,
     );

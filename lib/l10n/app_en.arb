@@ -243,6 +243,9 @@
   "activationActionFollowedToast": "Following",
   "activationActionTargetUnavailableToast": "This is no longer available. It may have been removed or made private.",
   "entityUnavailableBody": "This could not be loaded right now. Check your connection and try again.",
+  "@entityUnavailableBody": {
+    "description": "Body of the state shown when a detail screen's entity could not be loaded."
+  },
   "activationActionUnauthorizedToast": "You don't have permission to do that.",
   "activationActionFailedToast": "That didn't work. Please try again.",
   "activationPromptTitle": "Build your own art map",
@@ -2266,6 +2269,7 @@
     }
   },
   "userProfileNoMorePostsLabel": "No more posts",
+  "userProfileViewAllPostsLabel": "View all posts",
   "userProfileArtistHighlightsTitle": "Artist highlights",
   "userProfileArtistHighlightsSubtitle": "Latest drops from {name}.",
   "@userProfileArtistHighlightsSubtitle": {
@@ -5078,6 +5082,7 @@
   "desktopShellNavOrganize": "Organize",
   "desktopShellNavGovern": "Govern",
   "desktopShellNavTrade": "Digital editions",
+  "desktopShellNavNode": "Node",
   "desktopShellNavWeb3": "Infrastructure",
   "navigationScreenCreateAr": "Create AR",
   "navigationScreenExploreMap": "Explore Map",
@@ -6862,6 +6867,10 @@
   "walletGalleryStatusSold": "Sold",
   "walletGalleryStatusTransferred": "Transferred",
   "kubusMyNodesTitle": "My Nodes",
+  "kubusNodeOwnedNodesHeading": "On this account",
+  "kubusNodeConnectAction": "Connect a Node",
+  "kubusNodeRailSubtitle": "Your hardware, on the network",
+  "kubusNodeConnectHandoffBody": "Open your Node and it shows a one-time code. Scan it once and this account is paired — you will not need it again.",
   "kubusConnectionNearby": "Connected nearby",
   "kubusConnectionRemote": "Connected remotely",
   "kubusComputeAuthorizationRequired": "Compute authorization required. Update this Node’s permissions to use network compute. Your Node stays paired.",

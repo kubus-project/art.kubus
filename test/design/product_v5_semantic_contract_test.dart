@@ -264,8 +264,8 @@ void main() {
       final artworks = ArtworkProvider()..addOrUpdateArtwork(qaArtwork());
       final l10n = await pumpScreen(
         tester,
-        qaShellHost(
-            const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+        qaShellHost(const ArtworkEditScreen(
+            artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
         size: const Size(1440, 1000),
         signedIn: qaOwner(isArtist: true),
         extraProviders: [

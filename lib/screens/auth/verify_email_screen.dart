@@ -9,10 +9,10 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/common/kubus_context_icon.dart';
+import '../../widgets/auth/auth_atmosphere.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/kubus_snackbar.dart';
-import '../../widgets/glass_components.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart';
@@ -292,7 +292,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
@@ -325,12 +324,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       );
     }
 
-    final bgStart = scheme.primary.withValues(alpha: 0.55);
-    final bgEnd = roles.positiveAction.withValues(alpha: 0.50);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
-    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
@@ -346,12 +339,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          AnimatedGradientBackground(
-            duration: const Duration(seconds: 10),
-            intensity: 0.2,
-            colors: bgColors,
-            child: const SizedBox.expand(),
-          ),
+          // One shared account-entry field, so this screen is visibly the
+          // same place as Sign in and Register rather than its own gradient.
+          const AuthAtmosphere(child: SizedBox.expand()),
           SafeArea(
             top: false,
             child: LayoutBuilder(

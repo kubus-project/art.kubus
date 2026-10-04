@@ -36,6 +36,7 @@ Artwork _buildArtwork({
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required List<Artwork> artworks,
+  Size size = const Size(390, 844),
 }) async {
   final api = BackendApiService();
   api.setAuthTokenForTesting('test-token');
@@ -92,20 +93,35 @@ Future<void> _pumpScreen(
   final provider = PortfolioProvider(api: api);
   provider.setWalletAddress('wallet-1');
 
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   await tester.pumpWidget(
     ChangeNotifierProvider<PortfolioProvider>.value(
       value: provider,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(
-          body: ArtistPortfolioScreen(walletAddress: 'wallet-1'),
+        home: MediaQuery(
+          data: MediaQueryData(size: size),
+          child: const Scaffold(
+            body: ArtistPortfolioScreen(walletAddress: 'wallet-1'),
+          ),
         ),
       ),
     ),
   );
 
   await tester.pumpAndSettle();
+}
+
+/// How many columns the gallery actually laid out.
+int _galleryColumns(WidgetTester tester) {
+  final grid = tester.widget<GridView>(find.byType(GridView));
+  final delegate =
+      grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+  return delegate.crossAxisCount;
 }
 
 void main() {
@@ -180,5 +196,74 @@ void main() {
     await tester.tap(find.text('Draft Artwork'));
     await tester.pumpAndSettle();
     expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
+  });
+
+  group('the gallery is a responsive, image-led workspace', () {
+    final artworks = <Artwork>[
+      for (var i = 0; i < 8; i++)
+        _buildArtwork(
+          id: 'art-$i',
+          title: 'Work $i',
+          isPublic: true,
+          isActive: true,
+        ),
+    ];
+
+    // A phone stays an image-led list; a wide window gains columns at a
+    // consistent rhythm instead of stranding one narrow column in the middle
+    // of it. The old gallery was a single list at every width.
+    for (final expectation in const <(double, int)>[
+      (390, 1),
+      (768, 2),
+      (1440, 4),
+      (1920, 5),
+    ]) {
+      testWidgets(
+          '${expectation.$1.toInt()} px lays out '
+          '${expectation.$2} column(s)', (tester) async {
+        await _pumpScreen(
+          tester,
+          artworks: artworks,
+          size: Size(expectation.$1, 1000),
+        );
+        expect(_galleryColumns(tester), expectation.$2);
+      });
+    }
+
+    testWidgets('every card carries its publication state and one overflow',
+        (tester) async {
+      await _pumpScreen(
+        tester,
+        artworks: <Artwork>[
+          _buildArtwork(
+            id: 'art-pub',
+            title: 'Published',
+            isPublic: true,
+            isActive: true,
+          ),
+          _buildArtwork(
+            id: 'art-draft',
+            title: 'Draft one',
+            isPublic: false,
+            isActive: true,
+          ),
+        ],
+        size: const Size(1440, 1000),
+      );
+      final context = tester.element(find.byType(ArtistPortfolioScreen));
+      final l10n = AppLocalizations.of(context)!;
+
+      // Publication state is information, so it is always visible — touch
+      // never hovers — and the management control is exactly one per card.
+      expect(
+        find.text(l10n.artistGalleryFilterActive.toUpperCase()),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.artistGalleryFilterDraft.toUpperCase()),
+        findsOneWidget,
+      );
+      expect(find.byTooltip(l10n.commonMore), findsNWidgets(2));
+    });
   });
 }

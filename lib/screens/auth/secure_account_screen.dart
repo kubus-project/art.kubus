@@ -8,11 +8,10 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
+import '../../widgets/auth/auth_atmosphere.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -94,8 +93,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       if (!mounted) return;
       setState(() {
         _mode = _SecureAccountMode.loadError;
-        _inlineError = AppLocalizations.of(context)!
-            .authResetPasswordFailedInline;
+        _inlineError =
+            AppLocalizations.of(context)!.authResetPasswordFailedInline;
       });
     }
   }
@@ -573,14 +572,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     final l10n = AppLocalizations.of(context)!;
     final appModeProvider = context.watch<AppModeProvider?>();
     final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
-
-    final bgStart = scheme.primary.withValues(alpha: 0.55);
-    final bgEnd = roles.statTeal.withValues(alpha: 0.48);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
-    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final Widget body;
     if (isIpfsFallbackMode) {
@@ -619,12 +611,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          AnimatedGradientBackground(
-            duration: const Duration(seconds: 10),
-            intensity: 0.18,
-            colors: bgColors,
-            child: const SizedBox.expand(),
-          ),
+          // One shared account-entry field, so this screen is visibly the
+          // same place as Sign in and Register rather than its own gradient.
+          const AuthAtmosphere(child: SizedBox.expand()),
           SafeArea(
             child: KeyboardInsetPadding(
               child: Padding(

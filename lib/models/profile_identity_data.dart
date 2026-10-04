@@ -29,6 +29,28 @@ class ProfileIdentityData {
     return normalizedUserId.isEmpty ? null : normalizedUserId;
   }
 
+  /// The best human-facing text to take avatar initials from: the display
+  /// name, else the username, else the handle. A wallet (or a shortened
+  /// wallet used as a placeholder label) is never an initial, so the avatar
+  /// reads as a name rather than an arbitrary character such as "7". Null
+  /// when nothing human is known.
+  String? get avatarInitialsSource {
+    final wallet = walletSeed.trim();
+    for (final candidate in [label, username, handle]) {
+      var text = (candidate ?? '').trim();
+      if (text.startsWith('@')) text = text.substring(1).trim();
+      if (text.isEmpty) continue;
+      if (text == wallet || WalletUtils.looksLikeWallet(text)) continue;
+      if (wallet.isNotEmpty &&
+          (text.contains('\u2026') || text.contains('...')) &&
+          text.codeUnitAt(0) == wallet.codeUnitAt(0)) {
+        continue;
+      }
+      return text;
+    }
+    return null;
+  }
+
   bool get canOpenProfile =>
       navigationIdentifier != null || (username ?? '').trim().isNotEmpty;
 

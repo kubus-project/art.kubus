@@ -417,7 +417,24 @@ async function themeSwitchKeepsState(page, tag, run, id, scheme) {
   run.step = 'theme-switch';
   const next = scheme === 'dark' ? 'light' : 'dark';
   await page.emulateMedia({ colorScheme: next });
-  await settle(page, 4500);
+  // The product layers are re-installed once the new style has been applied.
+  // On the real GPU that is under 2.5 s; on SwiftShader (software GL, the
+  // worst case this suite also runs) the phone viewport needs up to ~17 s, so
+  // wait for the layers rather than for a fixed time. A run that never
+  // re-installs them still fails below.
+  const swapStart = Date.now();
+  await page
+    .waitForFunction(
+      () => {
+        const map = window.__maps[window.__maps.length - 1];
+        return map && map.getLayer && map.getLayer('kubus_marker_layer');
+      },
+      null,
+      { timeout: 45000 },
+    )
+    .catch(() => {});
+  run.themeSwitchReinstallMs = Date.now() - swapStart;
+  await settle(page, 1500);
   const state = await page.evaluate(mapState);
   check(
     run,

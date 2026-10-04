@@ -1,6 +1,9 @@
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
+import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
+import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -96,5 +99,62 @@ void main() {
     expect(find.text('Quorum reached'), findsNothing);
     expect(find.text('Quorum pending'), findsNothing);
     expect(find.textContaining('75.0% support'), findsOneWidget);
+  });
+
+  group('governance does not print its tabs a second time', () {
+    const tabDuplicates = <String>[
+      'dao_destination_treasury',
+      'dao_destination_delegation',
+      'dao_destination_voting_history',
+      'dao_destination_create_proposal',
+    ];
+
+    testWidgets(
+        'with proposals, no tile merely repeats a tab; proposals stay '
+        'content and the numbers stay metrics', (tester) async {
+      await _pump(tester, _FakeDao(active: [_proposal()]));
+
+      for (final key in tabDuplicates) {
+        expect(find.byKey(ValueKey<String>(key)), findsNothing, reason: key);
+      }
+      expect(find.byType(KubusActionTile), findsNothing);
+
+      // A proposal is content, not a shortcut.
+      expect(find.text('Open the winter mural fund'), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.text('Open the winter mural fund'),
+          matching: find.byType(KubusActionTile),
+        ),
+        findsNothing,
+      );
+
+      // The header numbers stay metrics.
+      expect(find.byType(KubusStatCard), findsWidgets);
+    });
+
+    testWidgets('an empty list offers no signing task without the capability',
+        (tester) async {
+      await _pump(tester, _FakeDao());
+
+      expect(find.text('No active proposals'), findsWidgets);
+      for (final key in tabDuplicates) {
+        expect(find.byKey(ValueKey<String>(key)), findsNothing, reason: key);
+      }
+      // The create-proposal task is gated exactly as its tab is: with no
+      // wallet the tab is absent, so the task is too.
+      expect(
+        find.byKey(const ValueKey<String>('dao_task_create_proposal')),
+        findsNothing,
+      );
+      final createTab = find
+          .descendant(
+            of: find.byType(KubusDashboardTabs),
+            matching: find.text('Create proposal'),
+          )
+          .evaluate()
+          .isNotEmpty;
+      expect(createTab, isFalse);
+    });
   });
 }

@@ -2216,6 +2216,7 @@
     }
   },
   "userProfileNoMorePostsLabel": "Ni več objav",
+  "userProfileViewAllPostsLabel": "Vse objave",
   "userProfileArtistHighlightsTitle": "Poudarki umetnika",
   "userProfileArtistHighlightsSubtitle": "Najnovejše objave od {name}.",
   "@userProfileArtistHighlightsSubtitle": {
@@ -4767,6 +4768,7 @@
   "desktopShellNavOrganize": "Organiziraj",
   "desktopShellNavGovern": "Upravljaj",
   "desktopShellNavTrade": "Digitalne izdaje",
+  "desktopShellNavNode": "Node",
   "desktopShellNavWeb3": "Infrastruktura",
   "navigationScreenCreateAr": "Ustvari AR",
   "navigationScreenExploreMap": "Raziskuj zemljevid",
@@ -6832,6 +6834,10 @@
   "walletGalleryStatusSold": "Prodana",
   "walletGalleryStatusTransferred": "Prenesena",
   "kubusMyNodesTitle": "Moja vozlišča",
+  "kubusNodeOwnedNodesHeading": "Na tem računu",
+  "kubusNodeConnectAction": "Povežite vozlišče",
+  "kubusNodeRailSubtitle": "Vaša oprema v omrežju",
+  "kubusNodeConnectHandoffBody": "Odprite svoje vozlišče in prikazalo bo enkratno kodo. Skenirajte jo enkrat in ta račun je povezan — več je ne boste potrebovali.",
   "kubusConnectionNearby": "Povezano v bližini",
   "kubusConnectionRemote": "Povezano na daljavo",
   "kubusComputeAuthorizationRequired": "Za omrežno obdelavo posodobite dovoljenja tega vozlišča. Vozlišče ostaja seznanjeno.",

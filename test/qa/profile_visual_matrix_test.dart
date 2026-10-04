@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -77,6 +78,7 @@ void main() {
     Locale locale = const Locale('en'),
     Brightness brightness = Brightness.dark,
     double textScale = 1.0,
+    List<CommunityPost> posts = const <CommunityPost>[],
   }) async {
     await pumpProfileSurface(
       tester,
@@ -86,11 +88,20 @@ void main() {
       locale: locale,
       brightness: brightness,
       textScale: textScale,
+      posts: posts,
+      // The screens are transparent and rely on the shell's ground; without it
+      // a capture composites on white and reads as broken contrast.
+      paintGround: true,
     );
 
     final image = await _captureRoot(tester);
     final file = File('${outputDir.path}/$name.png');
     file.writeAsBytesSync(image);
+
+    // The first scene in a process also initialises the shared auth and wallet
+    // singletons, whose 800 ms storage timeouts start after the harness drain.
+    // Run fake time past them so no timer outlives the scene.
+    await tester.pump(const Duration(seconds: 2));
 
     captures.add(<String, Object?>{
       'name': name,
@@ -140,6 +151,59 @@ void main() {
           size: size,
         );
       });
+    }
+  });
+
+  // Whole-page composition: the viewport captures above stop at the fold, which
+  // hides exactly what the profile hierarchy is about (portfolio before social
+  // activity, a bounded post preview, the large stats closing the page).
+  group('full page', () {
+    final institutionWithPosts = ProfileFixtures.user(
+      name: 'Muzej sodobne umetnosti Metelkova',
+      username: 'msum_metelkova',
+      isInstitution: true,
+      isVerified: true,
+    );
+    for (final entry in <String, ({ProfileSurface surface, Size size})>{
+      'mobile-390': (
+        surface: ProfileSurface.mobilePublic,
+        size: const Size(390, 3000)
+      ),
+      'tablet-768': (
+        surface: ProfileSurface.desktopPublic,
+        size: const Size(768, 2800)
+      ),
+      'desktop-1440': (
+        surface: ProfileSurface.desktopPublic,
+        size: const Size(1440, 2800)
+      ),
+      'wide-1920': (
+        surface: ProfileSurface.desktopPublic,
+        size: const Size(1920, 2800)
+      ),
+    }.entries) {
+      for (final who in <String, User>{
+        'artist': artist,
+        'institution': institutionWithPosts,
+      }.entries) {
+        for (final brightness in Brightness.values) {
+          testWidgets('${entry.key} ${who.key} ${brightness.name}',
+              (tester) async {
+            await capture(
+              tester,
+              name: 'page-${entry.key}-${who.key}-${brightness.name}',
+              surface: entry.value.surface,
+              user: who.value,
+              size: entry.value.size,
+              brightness: brightness,
+              posts: ProfileFixtures.posts(
+                authorId: who.value.id,
+                authorName: who.value.name,
+              ),
+            );
+          });
+        }
+      }
     }
   });
 

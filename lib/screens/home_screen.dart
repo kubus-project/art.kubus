@@ -25,6 +25,7 @@ import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
 import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
+import 'node/kubus_node_screen.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
@@ -46,6 +47,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
 import '../utils/keyboard_inset_resolver.dart';
+import '../config/config.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/map_navigation.dart';
 import '../utils/share_deep_link_navigation.dart';
@@ -63,6 +65,7 @@ import '../utils/home_rail_creator_identity.dart';
 import '../utils/home_activity_cards.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_action_tile.dart';
+import '../widgets/common/kubus_shadow_safe_strip.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
@@ -79,6 +82,7 @@ import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../widgets/common/kubus_flat_panel.dart';
+import '../widgets/common/kubus_entity_card.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -93,6 +97,7 @@ List<String> resolveHomeWeb3CardOrder({
   required UserPersona? persona,
   required bool isArtist,
   required bool isInstitution,
+  bool nodeEnabled = false,
 }) {
   final ordered = <String>[];
   final preferInstitutionFirst =
@@ -113,6 +118,12 @@ List<String> resolveHomeWeb3CardOrder({
   }
 
   ordered.add('marketplace');
+
+  // kubus Node sits with the other advanced capabilities rather than becoming
+  // a sixth permanent bottom tab, which is the pattern the existing four
+  // follow. It is last because it is infrastructure, not practice.
+  if (nodeEnabled) ordered.add('node');
+
   return ordered;
 }
 
@@ -128,6 +139,7 @@ class HomeWeb3CardStrip extends StatelessWidget {
     required this.onOpenArtistStudio,
     required this.onOpenInstitutionHub,
     required this.onOpenMarketplace,
+    required this.onOpenNode,
     required this.onShowWalletOnboarding,
   });
 
@@ -139,15 +151,18 @@ class HomeWeb3CardStrip extends StatelessWidget {
   final VoidCallback onOpenArtistStudio;
   final VoidCallback onOpenInstitutionHub;
   final VoidCallback onOpenMarketplace;
+  final VoidCallback onOpenNode;
   final VoidCallback onShowWalletOnboarding;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final nodeEnabled = AppConfig.isFeatureEnabled('availabilityNodes');
     final orderedCards = resolveHomeWeb3CardOrder(
       persona: persona,
       isArtist: isArtist,
       isInstitution: isInstitution,
+      nodeEnabled: nodeEnabled,
     );
     final cardWidth = MediaQuery.of(context).size.width < 375 ? 196.0 : 208.0;
     final roles = KubusColorRoles.of(context);
@@ -200,6 +215,23 @@ class HomeWeb3CardStrip extends StatelessWidget {
               cardKey: const ValueKey<String>('home_web3_marketplace'),
             ),
           );
+        case 'node':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.kubusNodeEntryTitle,
+              subtitle: l10n.kubusNodeRailSubtitle,
+              icon: Icons.dns_outlined,
+              color: roles.web3NodeAccent,
+              // No wallet gate. Owning and pairing a Node is runtime
+              // ownership against the account, not a signing operation, so it
+              // is not grouped behind the wallet onboarding the financial
+              // capabilities use. A wallet is still required for any action
+              // that genuinely needs wallet authority.
+              onTap: onOpenNode,
+              cardKey: const ValueKey<String>('home_web3_node'),
+            ),
+          );
         case 'dao':
         default:
           return SizedBox(
@@ -221,32 +253,10 @@ class HomeWeb3CardStrip extends StatelessWidget {
 
     // The cards share one height (the tallest), so Labs and lock states and
     // longer localised copy never leave a ragged strip.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      // The hovered tile's accent shadow reaches well past its own box: an
-      // 18 px blur with a -5 px spread offset 8 px down, under a tile that has
-      // itself lifted 2 px. That is 7 px above, 21 px below and 13 px to each
-      // side. Padding alone cannot buy the horizontal room without pushing the
-      // first card out of alignment with the section title, so the viewport
-      // deliberately does not clip and the page gutter absorbs the sideways
-      // bleed; the vertical room is reserved here so the shadow never lands on
-      // the neighbouring section.
-      clipBehavior: Clip.none,
-      padding: const EdgeInsets.only(
-        top: KubusSpacing.sm,
-        bottom: KubusSpacing.lg,
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: orderedCards.asMap().entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
-              child: buildWeb3CardEntry(entry.value),
-            );
-          }).toList(growable: false),
-        ),
-      ),
+    return KubusShadowSafeStrip(
+      equalHeight: true,
+      gap: KubusSpacing.sm,
+      children: orderedCards.map(buildWeb3CardEntry).toList(growable: false),
     );
   }
 }
@@ -987,10 +997,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         Widget buildActionStrip(List<Widget> children) {
           if (!isCompactLayout) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: children),
-            );
+            return KubusShadowSafeStrip(children: children);
           }
 
           return Wrap(
@@ -1573,6 +1580,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   builder: (context) => const Marketplace(),
                 ),
               ),
+              onOpenNode: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KubusNodeScreen(),
+                ),
+              ),
               onShowWalletOnboarding: () => _showWalletOnboarding(context),
             ),
           ],
@@ -1748,7 +1761,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     HomeRail rail,
     List<HomeRailItem> items,
   ) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final title = switch (rail.entityType) {
       PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
@@ -1775,24 +1787,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: compactScreen ? 188 : 196,
               cardWidth: compactScreen ? 156 : 168,
               cardSpacing: KubusSpacing.md,
-              imageHeight: compactScreen ? 100 : 108,
               profileAvatarRadius: compactScreen ? 24 : 28,
               placeholderIconBuilder: _iconForRailItem,
               profileFallbackLabel: l10n.desktopHomeCreatorFallbackName,
               subtitleBuilder: (context, item) =>
-                  _buildHomeRailCardSubtitle(item, scheme),
+                  _buildHomeRailCardSubtitle(item),
               onItemTap: (item) {
                 if (_hasHomeRailDestination(item)) {
                   unawaited(_openHomeRailItem(item));
                 }
               },
-              titleStyle: KubusTextStyles.sectionTitle.copyWith(
-                fontSize: KubusHeaderMetrics.screenSubtitle,
-                color: scheme.onSurface,
-              ),
-              subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.82),
-              ),
             );
           },
         ),
@@ -1800,10 +1804,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget? _buildHomeRailCardSubtitle(HomeRailItem item, ColorScheme scheme) {
-    final baseStyle = KubusTextStyles.navMetaLabel.copyWith(
-      color: scheme.onSurface.withValues(alpha: 0.64),
-    );
+  Widget? _buildHomeRailCardSubtitle(HomeRailItem item) {
+    // The rail card's context line reads off the media plate, so it takes the
+    // card's own on-media register rather than a surface foreground colour.
+    final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
+    const linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
@@ -1814,13 +1819,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       final creatorText = Text(
         creatorIdentity.label,
-        maxLines: 2,
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: creatorIdentity.canOpenProfile
             ? baseStyle.copyWith(
-                color: scheme.primary,
+                color: linkColor,
                 decoration: TextDecoration.underline,
-                decorationColor: scheme.primary,
+                decorationColor: linkColor.withValues(alpha: 0.7),
               )
             : baseStyle,
       );
@@ -1844,7 +1849,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (subtitle.isEmpty) return null;
     return Text(
       subtitle,
-      maxLines: 2,
+      maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: baseStyle,
     );

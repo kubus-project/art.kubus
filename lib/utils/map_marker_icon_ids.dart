@@ -25,7 +25,7 @@ class MapMarkerIconIds {
   /// Bumping this invalidates every cached cluster icon id so MapLibre cannot
   /// reuse a stale image (e.g. the old generic count circle) after the cluster
   /// renderer changes. Bump whenever [renderClusterPng]'s visual output changes.
-  static const String clusterRendererVersion = 'v2';
+  static const String clusterRendererVersion = 'v3';
 
   /// Cluster icon id.
   ///

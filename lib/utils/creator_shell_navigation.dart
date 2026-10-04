@@ -5,8 +5,6 @@ import '../l10n/app_localizations.dart';
 import '../models/exhibition.dart';
 import '../models/event.dart';
 import '../providers/artwork_drafts_provider.dart';
-import '../providers/artwork_provider.dart';
-import '../screens/art/artwork_edit_screen.dart';
 import '../screens/art/collection_detail_screen.dart';
 import '../screens/art/collection_settings_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -89,40 +87,6 @@ class CreatorShellNavigation {
     }
 
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
-  }
-
-  static Future<void> openArtworkEditorWorkspace(
-    BuildContext context, {
-    required String artworkId,
-  }) async {
-    final id = artworkId.trim();
-    if (id.isEmpty) return;
-
-    final shellScope = DesktopShellScope.of(context);
-    final isDesktop =
-        shellScope != null || DesktopBreakpoints.isDesktop(context);
-    final navigator = Navigator.of(context);
-    final provider = context.read<ArtworkProvider>();
-    try {
-      await provider.fetchArtworkIfNeeded(id);
-    } catch (_) {
-      // Let the editor surface handle load errors.
-    }
-
-    final screen = ArtworkEditScreen(
-      artworkId: id,
-      showAppBar: !isDesktop,
-      embedded: isDesktop,
-    );
-
-    if (shellScope != null) {
-      shellScope.pushScreen(screen);
-      return;
-    }
-
-    await navigator.push(
       MaterialPageRoute(builder: (_) => screen),
     );
   }

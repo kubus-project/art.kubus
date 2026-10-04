@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../l10n/app_localizations.dart';
 import '../providers/artwork_provider.dart';
 import '../screens/art/artwork_edit_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -18,7 +17,6 @@ Future<void> openArtworkEditor(
   final navigator = Navigator.of(context);
   final isDesktop = DesktopBreakpoints.isDesktop(context);
   final shellScope = isDesktop ? DesktopShellScope.of(context) : null;
-  final l10n = AppLocalizations.of(context);
 
   try {
     await provider.fetchArtworkIfNeeded(id);
@@ -27,19 +25,14 @@ Future<void> openArtworkEditor(
   }
 
   if (shellScope != null) {
-    final titleFromCache = provider.getArtworkById(id)?.title.trim();
-    final title = (titleFromCache != null && titleFromCache.isNotEmpty)
-        ? titleFromCache
-        : (l10n?.commonEdit ?? id);
-
+    // One chrome owner. The editor's own DesktopCreatorShell header carries
+    // back, the artwork's title and the subject actions, so it is pushed
+    // bare: wrapping it in a DesktopSubScreen too is what produced two
+    // titles and two back buttons.
     shellScope.pushScreen(
-      DesktopSubScreen(
-        title: title,
-        child: ArtworkEditScreen(
-          artworkId: id,
-          showAppBar: false,
-          embedded: true,
-        ),
+      ArtworkEditScreen(
+        artworkId: id,
+        chrome: ArtworkEditChrome.workspace,
       ),
     );
     return;
