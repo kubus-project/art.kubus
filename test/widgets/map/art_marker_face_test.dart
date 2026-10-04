@@ -272,6 +272,12 @@ void main() {
       }
 
       await tester.runAsync(QaFontLoader.ensureLoaded);
+      if (!QaFontLoader.loadedFamilies.contains('MaterialIcons')) {
+        // The icon font comes from the local Flutter SDK cache; without it a
+        // glyph paints no ink and there is nothing to locate.
+        markTestSkipped('MaterialIcons font unavailable in this environment');
+        return;
+      }
       // A solid square glyph shows exactly where glyph ink lands.
       final withGlyph = await render(Icons.square);
       final without = await render(const IconData(0));
