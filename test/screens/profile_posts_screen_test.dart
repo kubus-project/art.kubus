@@ -193,7 +193,6 @@ void main() {
     await tester.pump(const Duration(seconds: 7));
     SocketService().disconnect();
     await tester.pump(const Duration(seconds: 21));
-
   });
 
   testWidgets('standalone screen keeps its own app bar', (tester) async {

@@ -146,120 +146,120 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
     final name = (widget.displayName ?? _controller.user?.name ?? '').trim();
 
     final body = RefreshIndicator(
-        onRefresh: _loadPosts,
-        color: accent,
-        child: _controller.postsLoading && posts.isEmpty
-            ? const Center(child: InlineLoading(width: 40, height: 40))
-            : ListView.separated(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  KubusSpacing.md,
-                  KubusSpacing.md,
-                  KubusSpacing.md,
-                  KubusSpacing.xxl,
-                ),
-                // Header, the posts, then the paging foot.
-                itemCount: posts.isEmpty ? 2 : posts.length + 2,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: KubusSpacing.sm),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
-                      child: KubusHeaderText(
-                        // Embedded, the host header already says "Posts".
-                        title: widget.embedded && name.isNotEmpty
-                            ? name
-                            : l10n.userProfilePostsTitle,
-                        subtitle: widget.embedded || name.isEmpty ? null : name,
-                        kind: KubusHeaderKind.section,
-                        titleColor: roles.foreground,
+      onRefresh: _loadPosts,
+      color: accent,
+      child: _controller.postsLoading && posts.isEmpty
+          ? const Center(child: InlineLoading(width: 40, height: 40))
+          : ListView.separated(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.md,
+                KubusSpacing.md,
+                KubusSpacing.md,
+                KubusSpacing.xxl,
+              ),
+              // Header, the posts, then the paging foot.
+              itemCount: posts.isEmpty ? 2 : posts.length + 2,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: KubusSpacing.sm),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                    child: KubusHeaderText(
+                      // Embedded, the host header already says "Posts".
+                      title: widget.embedded && name.isNotEmpty
+                          ? name
+                          : l10n.userProfilePostsTitle,
+                      subtitle: widget.embedded || name.isEmpty ? null : name,
+                      kind: KubusHeaderKind.section,
+                      titleColor: roles.foreground,
+                    ),
+                  );
+                }
+                if (posts.isEmpty) {
+                  final error = _controller.postsError;
+                  return EmptyStateCard(
+                    icon: error == null ? Icons.article : Icons.cloud_off,
+                    title: error == null
+                        ? l10n.userProfileNoPostsTitle
+                        : l10n.userProfilePostsLoadFailedTitle,
+                    description: error ??
+                        (name.isEmpty
+                            ? ''
+                            : l10n.userProfileNoPostsDescription(name)),
+                    showAction: error != null,
+                    actionLabel: error == null ? null : l10n.commonRetry,
+                    onAction:
+                        error == null ? null : () => unawaited(_loadPosts()),
+                  );
+                }
+                if (index <= posts.length) {
+                  return CommunityPostCard(
+                    post: posts[index - 1],
+                    accentColor: accent,
+                    onOpenPostDetail: _openPost,
+                  );
+                }
+                if (_controller.loadingMore) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: InlineLoading(tileSize: 4),
                       ),
-                    );
-                  }
-                  if (posts.isEmpty) {
-                    final error = _controller.postsError;
-                    return EmptyStateCard(
-                      icon: error == null ? Icons.article : Icons.cloud_off,
-                      title: error == null
-                          ? l10n.userProfileNoPostsTitle
-                          : l10n.userProfilePostsLoadFailedTitle,
-                      description: error ??
-                          (name.isEmpty
-                              ? ''
-                              : l10n.userProfileNoPostsDescription(name)),
-                      showAction: error != null,
-                      actionLabel: error == null ? null : l10n.commonRetry,
-                      onAction:
-                          error == null ? null : () => unawaited(_loadPosts()),
-                    );
-                  }
-                  if (index <= posts.length) {
-                    return CommunityPostCard(
-                      post: posts[index - 1],
-                      accentColor: accent,
-                      onOpenPostDetail: _openPost,
-                    );
-                  }
-                  if (_controller.loadingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                      child: Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: InlineLoading(tileSize: 4),
-                        ),
-                      ),
-                    );
-                  }
-                  if (_controller.postsError != null) {
-                    return Semantics(
-                      container: true,
-                      liveRegion: true,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: KubusSpacing.sm,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _controller.postsError!,
-                              textAlign: TextAlign.center,
-                              style: KubusTextStyles.sectionSubtitle.copyWith(
-                                color: roles.foregroundMuted,
-                              ),
-                            ),
-                            const SizedBox(height: KubusSpacing.xs),
-                            TextButton(
-                              onPressed: _loadMore,
-                              child: Text(l10n.commonRetry),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  if (_controller.isLastPage) {
-                    return Padding(
+                    ),
+                  );
+                }
+                if (_controller.postsError != null) {
+                  return Semantics(
+                    container: true,
+                    liveRegion: true,
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: KubusSpacing.sm,
                       ),
-                      child: Center(
-                        child: Text(
-                          l10n.userProfileNoMorePostsLabel,
-                          style: KubusTextStyles.sectionSubtitle.copyWith(
-                            color: roles.foregroundMuted,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _controller.postsError!,
+                            textAlign: TextAlign.center,
+                            style: KubusTextStyles.sectionSubtitle.copyWith(
+                              color: roles.foregroundMuted,
+                            ),
                           ),
+                          const SizedBox(height: KubusSpacing.xs),
+                          TextButton(
+                            onPressed: _loadMore,
+                            child: Text(l10n.commonRetry),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (_controller.isLastPage) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: KubusSpacing.sm,
+                    ),
+                    child: Center(
+                      child: Text(
+                        l10n.userProfileNoMorePostsLabel,
+                        style: KubusTextStyles.sectionSubtitle.copyWith(
+                          color: roles.foregroundMuted,
                         ),
                       ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
     );
 
     if (widget.embedded) return body;
