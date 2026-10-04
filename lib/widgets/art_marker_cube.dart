@@ -560,8 +560,9 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
   }) {
     const double minContrast = 3.2;
-    const white = Color(0xFFFFFFFF);
-    const black = Color(0xFF000000);
+    // The marker palette's own extremes, so no colour is declared here.
+    const white = MarkerCubePalette.glyphLightMode;
+    const black = MarkerCubePalette.glyphDarkMode;
     final preferred = isDark ? black : white;
     final opposite = isDark ? white : black;
 
