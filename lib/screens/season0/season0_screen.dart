@@ -90,7 +90,7 @@ class Season0Screen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // KUB8 points info
-            _buildPointsInfo(context, l10n, scheme),
+            _buildPointsInfo(context, l10n),
           ],
         ),
       ),
@@ -115,8 +115,7 @@ class Season0Screen extends StatelessWidget {
   }
 
   /// A note, not a destination: ordinary grouped content with no icon box.
-  Widget _buildPointsInfo(
-      BuildContext context, AppLocalizations l10n, ColorScheme scheme) {
+  Widget _buildPointsInfo(BuildContext context, AppLocalizations l10n) {
     final roles = KubusColorRoles.of(context);
     final showLabsNote = AppConfig.isFeatureEnabled('labs');
     return KubusCard(

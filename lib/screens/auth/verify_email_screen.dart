@@ -307,10 +307,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           l10n.authVerifyEmailHighlightSpam,
           l10n.authVerifyEmailHighlightSecure,
         ],
-        icon: KubusContextIcon(
-            icon: Icons.mark_email_read_outlined,
-            accent: KubusColorRoles.of(context).active,
-            size: KubusContextIconSize.hero),
+        icon: KubusHeroIcon(Icons.mark_email_read_outlined),
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -387,11 +384,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (!compact) ...[
-                                    KubusContextIcon(
-                                        icon: Icons.mark_email_read_outlined,
-                                        accent:
-                                            KubusColorRoles.of(context).active,
-                                        size: KubusContextIconSize.hero),
+                                    KubusHeroIcon(
+                                        Icons.mark_email_read_outlined),
                                     const SizedBox(height: 12),
                                   ],
                                   Text(

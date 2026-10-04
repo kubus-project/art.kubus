@@ -26,7 +26,6 @@ import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
-import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_accent_gradients.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
@@ -4201,10 +4200,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        KubusContextIcon(
-            icon: Icons.explore_outlined,
-            accent: KubusColorRoles.of(context).active,
-            size: KubusContextIconSize.hero),
+        KubusHeroIcon(Icons.explore_outlined),
         const SizedBox(height: KubusSpacing.xl),
         Text(
           title,

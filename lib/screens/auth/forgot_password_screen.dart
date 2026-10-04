@@ -183,10 +183,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           l10n.authForgotPasswordHighlightOne,
           l10n.authForgotPasswordHighlightTwo,
         ],
-        icon: KubusContextIcon(
-            icon: Icons.lock_reset_rounded,
-            accent: KubusColorRoles.of(context).active,
-            size: KubusContextIconSize.hero),
+        icon: KubusHeroIcon(Icons.lock_reset_rounded),
         form: form,
       );
     }
@@ -231,10 +228,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       children: [
                         Column(
                           children: [
-                            KubusContextIcon(
-                                icon: Icons.lock_reset_rounded,
-                                accent: KubusColorRoles.of(context).active,
-                                size: KubusContextIconSize.hero),
+                            KubusHeroIcon(Icons.lock_reset_rounded),
                             const SizedBox(height: 12),
                             Text(
                               l10n.authForgotPasswordTitle,
