@@ -223,11 +223,18 @@ class HomeWeb3CardStrip extends StatelessWidget {
     // longer localised copy never leave a ragged strip.
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      // Room above and below for the 2 px lift and the accent shadow, which a
-      // horizontal scroller would otherwise clip at the tile edge.
+      // The hovered tile's accent shadow reaches well past its own box: an
+      // 18 px blur with a -5 px spread offset 8 px down, under a tile that has
+      // itself lifted 2 px. That is 7 px above, 21 px below and 13 px to each
+      // side. Padding alone cannot buy the horizontal room without pushing the
+      // first card out of alignment with the section title, so the viewport
+      // deliberately does not clip and the page gutter absorbs the sideways
+      // bleed; the vertical room is reserved here so the shadow never lands on
+      // the neighbouring section.
+      clipBehavior: Clip.none,
       padding: const EdgeInsets.only(
-        top: KubusSpacing.xs,
-        bottom: KubusSpacing.lg - KubusSpacing.xs,
+        top: KubusSpacing.sm,
+        bottom: KubusSpacing.lg,
       ),
       child: IntrinsicHeight(
         child: Row(
