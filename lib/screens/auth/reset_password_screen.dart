@@ -223,10 +223,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           l10n.authResetPasswordHighlightOne,
           l10n.authResetPasswordHighlightTwo,
         ],
-        icon: KubusContextIcon(
-            icon: Icons.lock_reset_rounded,
-            accent: KubusColorRoles.of(context).active,
-            size: KubusContextIconSize.hero),
+        icon: KubusHeroIcon(Icons.lock_reset_rounded),
         form: form,
       );
     }
@@ -271,10 +268,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       children: [
                         Column(
                           children: [
-                            KubusContextIcon(
-                                icon: Icons.lock_reset_rounded,
-                                accent: KubusColorRoles.of(context).active,
-                                size: KubusContextIconSize.hero),
+                            KubusHeroIcon(Icons.lock_reset_rounded),
                             const SizedBox(height: 12),
                             Text(
                               l10n.authResetPasswordTitle,

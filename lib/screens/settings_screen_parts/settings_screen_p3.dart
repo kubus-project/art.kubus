@@ -843,9 +843,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
             }).toList(),
             onChanged: onChanged,
           ),
-          leadingBackgroundColor: Colors.transparent,
-          leadingBorderColor: Colors.transparent,
-          leadingIconColor: roles.foregroundMuted,
           titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w500,
             color: roles.foreground,

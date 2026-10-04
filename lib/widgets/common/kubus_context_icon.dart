@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 
 /// Size steps for [KubusContextIcon]. Pick one; never hand-roll geometry.
 enum KubusContextIconSize {
@@ -93,4 +94,20 @@ class KubusContextIcon extends StatelessWidget {
     }
     return Semantics(label: semanticLabel, image: true, child: tile);
   }
+}
+
+/// The page-identity icon of an auth, onboarding or wallet-setup screen: the
+/// hero [KubusContextIcon] in the structural family colour. One place to change
+/// the policy for every such screen.
+class KubusHeroIcon extends StatelessWidget {
+  const KubusHeroIcon(this.icon, {super.key});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => KubusContextIcon(
+        icon: icon,
+        accent: KubusColorRoles.of(context).active,
+        size: KubusContextIconSize.hero,
+      );
 }

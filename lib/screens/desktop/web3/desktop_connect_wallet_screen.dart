@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/common/kubus_context_icon.dart';
 import '../../../widgets/glass_components.dart';
 import '../../web3/wallet/connectwallet_screen.dart';
@@ -43,11 +42,7 @@ class DesktopConnectWalletScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        KubusContextIcon(
-          icon: Icons.account_balance_wallet_outlined,
-          accent: KubusColorRoles.of(context).active,
-          size: KubusContextIconSize.hero,
-        ),
+        KubusHeroIcon(Icons.account_balance_wallet_outlined),
         const SizedBox(height: KubusSpacing.lg),
         Text(
           l10n.walletHomeSignedOutTitle,

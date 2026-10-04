@@ -713,6 +713,10 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
     Widget? status,
     Key? tileKey,
   }) {
+    assert(
+      status == null || (onTap != null && trailing == null),
+      'A status belongs to a destination tile (onTap, no trailing control).',
+    );
     if (onTap != null && trailing == null) {
       return SharedSettingsDestinationTile(
         key: tileKey,
@@ -742,11 +746,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
       borderRadius: BorderRadius.circular(KubusRadius.sm),
       leadingBoxSize: KubusHeaderMetrics.actionHitArea,
       leadingIconSize: KubusHeaderMetrics.actionIcon,
-      leadingBackgroundColor: isDestructive
-          ? errorColor.withValues(alpha: 0.1)
-          : scheme.primaryContainer,
-      leadingIconColor:
-          isDestructive ? errorColor : scheme.onSurface.withValues(alpha: 0.7),
       titleStyle: KubusTextStyles.sectionTitle.copyWith(
         color: isDestructive ? errorColor : scheme.onSurface,
       ),
@@ -879,8 +878,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       leadingBoxSize: KubusHeaderMetrics.actionHitArea,
       leadingIconSize: KubusHeaderMetrics.actionIcon,
-      leadingBackgroundColor: Colors.transparent,
-      leadingIconColor: scheme.onSurface.withValues(alpha: 0.7),
       titleStyle: KubusTextStyles.sectionTitle.copyWith(
         fontSize: KubusChromeMetrics.profileName + 1,
         color: scheme.onSurface,

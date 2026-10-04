@@ -2,6 +2,7 @@ import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
 import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _accent = Color(0xFF14B8A6);
@@ -65,6 +66,25 @@ Offset _surfaceTopLeft(WidgetTester tester) => tester.getTopLeft(
           )
           .first,
     );
+
+/// The alpha actually being painted, read off the render object.
+///
+/// [_shadowAlpha] reads the *target* decoration handed to [AnimatedContainer],
+/// which is the right thing for a rest/settled assertion but can never observe
+/// the interpolation: the in-between decoration lives in the animation's own
+/// state and reaches the tree as the render object's decoration.
+double _paintedShadowAlpha(WidgetTester tester) {
+  final box = tester.renderObject<RenderDecoratedBox>(
+    find
+        .descendant(
+          of: find.byType(AnimatedContainer).first,
+          matching: find.byType(DecoratedBox),
+        )
+        .first,
+  );
+  final shadows = (box.decoration as BoxDecoration).boxShadow;
+  return shadows == null || shadows.isEmpty ? 0 : shadows.first.color.a;
+}
 
 double _shadowAlpha(WidgetTester tester) {
   final box = tester.widget<AnimatedContainer>(
@@ -207,6 +227,100 @@ void main() {
       expect(_surfaceTopLeft(tester), rest);
       expect(_shadowAlpha(tester), 0);
     });
+  });
+
+  // The remount fix is about `lift: lifts && interactive` rather than
+  // `lift: lifts`, so it can only be observed where `lifts` is true: the
+  // compact layout never lifts, which makes both spellings identical there.
+  // Every lifting layout is covered.
+  for (final layout in const <KubusActionTileLayout>[
+    KubusActionTileLayout.stacked,
+    KubusActionTileLayout.inline,
+    KubusActionTileLayout.compact,
+  ]) {
+    testWidgets(
+        'toggling loading keeps the same ${layout.name} tile subtree '
+        '(no remount)', (tester) async {
+      Widget tile({required bool loading}) => MaterialApp(
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 260,
+                  height: layout == KubusActionTileLayout.stacked ? 140 : null,
+                  child: KubusActionTile(
+                    title: 'Send',
+                    icon: Icons.arrow_upward,
+                    accent: _accent,
+                    layout: layout,
+                    loading: loading,
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          );
+      await tester.pumpWidget(tile(loading: false));
+      final before = tester.element(find.byType(InkWell));
+      // InlineLoading animates forever, so pump frames instead of settling.
+      await tester.pumpWidget(tile(loading: true));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.element(find.byType(InkWell)), same(before));
+    });
+  }
+
+  testWidgets('an empty subtitle is no subtitle', (tester) async {
+    await tester.pumpWidget(_host(KubusActionTileLayout.compact, subtitle: ''));
+    final emptyHeight = tester.getSize(find.byType(KubusActionTile)).height;
+    final data =
+        tester.getSemantics(find.byType(KubusActionTile)).getSemanticsData();
+    expect(data.hint, isEmpty);
+    // The real effects, not just the hint: no subtitle Text is built at all,
+    // and the tile takes the no-subtitle minimum height.
+    expect(
+      find.descendant(
+        of: find.byType(KubusActionTile),
+        matching: find.text(''),
+      ),
+      findsNothing,
+    );
+
+    await tester.pumpWidget(
+      _host(KubusActionTileLayout.compact, subtitle: 'Backup and sign-in'),
+    );
+    expect(
+      tester.getSize(find.byType(KubusActionTile)).height,
+      greaterThan(emptyHeight),
+    );
+  });
+
+  testWidgets('the hover shadow fades in rather than popping to full strength',
+      (tester) async {
+    // Both ends of the implicit lerp must carry the same geometry, or
+    // BoxShadow.lerpList falls back to scaling blur while holding the colour
+    // at its final alpha — the shadow then appears at full strength on the
+    // first frame.
+    await tester.pumpWidget(_host(KubusActionTileLayout.stacked));
+    expect(_paintedShadowAlpha(tester), 0);
+
+    final gesture = await _mouse(tester);
+    await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
+    await tester.pump();
+
+    final samples = <double>[];
+    for (var i = 0; i < 3; i++) {
+      await tester.pump(const Duration(milliseconds: 45));
+      samples.add(_paintedShadowAlpha(tester));
+    }
+    await tester.pumpAndSettle();
+    final peak = _paintedShadowAlpha(tester);
+
+    expect(peak, greaterThan(0));
+    // Strictly increasing, and the first sampled frame is well below peak.
+    expect(samples.first, lessThan(peak * 0.75));
+    for (var i = 1; i < samples.length; i++) {
+      expect(samples[i], greaterThan(samples[i - 1]));
+    }
   });
 
   group('KubusActionTile.compact', () {

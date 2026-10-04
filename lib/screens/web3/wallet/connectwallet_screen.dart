@@ -1606,10 +1606,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                   borderRadius: BorderRadius.circular(KubusRadius.lg),
                   child: Column(
                     children: [
-                      KubusContextIcon(
-                          icon: Icons.account_balance_wallet_outlined,
-                          accent: KubusColorRoles.of(context).active,
-                          size: KubusContextIconSize.hero),
+                      KubusHeroIcon(Icons.account_balance_wallet_outlined),
                       const SizedBox(
                           height: KubusSpacing.sm + KubusSpacing.xxs),
                       Text(
@@ -1739,10 +1736,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    KubusContextIcon(
-                        icon: Icons.vpn_key_rounded,
-                        accent: KubusColorRoles.of(context).active,
-                        size: KubusContextIconSize.hero),
+                    KubusHeroIcon(Icons.vpn_key_rounded),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2058,10 +2052,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    KubusContextIcon(
-                        icon: Icons.add_circle_outline_rounded,
-                        accent: KubusColorRoles.of(context).active,
-                        size: KubusContextIconSize.hero),
+                    KubusHeroIcon(Icons.add_circle_outline_rounded),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2272,10 +2263,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               Center(
                 child: Column(
                   children: [
-                    KubusContextIcon(
-                        icon: Icons.qr_code_scanner_rounded,
-                        accent: KubusColorRoles.of(context).active,
-                        size: KubusContextIconSize.hero),
+                    KubusHeroIcon(Icons.qr_code_scanner_rounded),
                     SizedBox(
                         height:
                             isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
@@ -2684,10 +2672,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            KubusContextIcon(
-                icon: Icons.check_circle_rounded,
-                accent: KubusColorRoles.of(context).active,
-                size: KubusContextIconSize.hero),
+            KubusHeroIcon(Icons.check_circle_rounded),
             SizedBox(height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
             Text(
               l10n.connectWalletConnectedTitle,
