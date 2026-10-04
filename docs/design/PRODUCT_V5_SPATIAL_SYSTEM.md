@@ -115,8 +115,22 @@ One identity (the canonical kubus marker), three costs. Thresholds live in
 | Level | Zoom | What is drawn | Cost |
 | --- | --- | --- | --- |
 | far | < 6 | data-coloured dots; clusters are dots sized by `sqrt(count)` (capped 14 px) | no marker artwork rendered, registered or downloaded |
-| mid | 6 – 15 | the canonical kubus marker (shape, signal ring, promotion star) with count badges for clusters | existing |
-| close | ≥ 15 | the canonical marker with the artwork cover **inside its geometry** for a bounded set | covers bounded, see §5 |
+| mid | 6 – 12.5 | the canonical kubus marker (shape, signal ring, promotion star) with count badges for clusters; the **selected** marker may already show its cover from 10 | existing |
+| close | ≥ 12.5 | the canonical marker with the artwork cover **inside its geometry** for a bounded, staged set | covers bounded, see §5 |
+
+Cover stages (`KubusMarkerLod.coverStageForZoom`, 0.8.1):
+
+| Stage | Zoom | Constant | What happens |
+| --- | --- | --- | --- |
+| 0 none | < 10 | — | no covers |
+| 1 selected only | 10 – 11.5 | `selectedCoverMinZoom = 10.0` | the selected marker (pinned out of clustering) shows its cover |
+| 2 prefetch | 11.5 – 12.5 | `coverPrefetchMinZoom = 11.5` | nearby covers are downloaded and decoded (never rasterised) for the next stage |
+| 3 early | 12.5 – 13.5 | `coverDisplayMinZoom = 12.5` | nearby covers display, early budget |
+| 4 medium | 13.5 – 14.5 | `coverMediumBudgetZoom = 13.5` | medium budget |
+| 5 full | ≥ 14.5 | `coverFullBudgetZoom = 14.5` | full viewport budget |
+
+Covers start after clusters dissolve (`MapScreenConstants.clusterMaxZoom =
+12.0`), so a nearby cover only ever replaces a canonical individual marker.
 
 * Far → mid is a continuous GPU ramp: the badge opacity interpolates over
   `[5.5, 6.5]` while the dot stays underneath; marker artwork is prepared from
@@ -130,20 +144,39 @@ One identity (the canonical kubus marker), three costs. Thresholds live in
   inset by a 2.5 px category-colour rim, same signal ring and promotion star.
   Photography never replaces the marker silhouette.
 * Cover images are requested through `ArtworkMediaResolver.resolveCover(...,
-  maxWidth: 160)` (thumbnail / width-clamped URLs, never archival media) and
-  decoded at the rendered size.
+  maxWidth: KubusMarkerLod.coverFetchWidthPx(markerPixelRatio))` (thumbnail /
+  width-clamped URLs, never archival media) and decoded at that same width.
+  The width is the 44 px cover face x 1.5 oversample x the device pixel
+  ratio, snapped up to 32 px steps and clamped to 96-256: 96 px at 1x, 160 px
+  at 2x, 224 px at 3x.
 
 ## 5. Cover budget
 
 Covers are the only per-record cost, so they are the only bounded set:
 
-* active covers = `clamp(viewport area / 60 000 px², 8, 24)` (phone ≈ 8,
-  1440x900 ≈ 22, hard cap 24). Candidates are markers inside the viewport that
-  are not part of a same-coordinate stack; order is selected → promoted →
-  nearest to the camera centre. The selected marker is always included.
-* `KubusMarkerCoverLoader`: de-duplicates in-flight URLs, at most 4 concurrent
-  fetches, an LRU of 48 decoded images (disposed on eviction), and a failed URL
-  is not retried for 5 minutes. A failed or missing cover leaves the canonical
+* full budget = `clamp(round(viewport area / 60 000 px²), 8, 24)` (390x844
+  phone = 8, 1440x900 = 22, hard cap 24). The budget is **staged** by zoom
+  (`KubusMarkerLod.coverBudget(viewport, zoom:)`), it never jumps straight to
+  a photo wall:
+
+  | Stage | Budget | 390x844 | 1440x900 |
+  | --- | --- | --- | --- |
+  | ≤ 2 (below 12.5) | 0 nearby | 0 | 0 |
+  | 3 early (12.5) | `max(3, ceil(full / 4))` | 3 | 6 |
+  | 4 medium (13.5) | `max(5, ceil(full / 2))` | 5 | 11 |
+  | 5 full (14.5) | full | 8 | 22 |
+
+  The prefetch budget at a stage is the *next* stage's display budget
+  (`coverPrefetchBudget`), so the covers about to appear are already decoded.
+* Candidates are markers inside the viewport that are not part of a
+  same-coordinate stack; order is **selected → promoted → nearest** to the
+  camera centre (ties by id). The selected marker is always included and sits
+  outside the budget.
+* `KubusMarkerCoverLoader`: de-duplicates in-flight requests, at most 4
+  concurrent fetches, an LRU of 48 decoded images (disposed on eviction), and
+  a failed URL is not retried for 5 minutes. Decodes are keyed by resolved URL
+  **and** physical width, so markers sharing media share one decode while a
+  different pixel ratio never reuses a too-small bitmap. A failed or missing cover leaves the canonical
   marker (and frees its slot for the next candidate); it can never remove a
   marker.
 * MapLibre has no image removal and the web plugin ignores a re-added name, so
@@ -151,13 +184,21 @@ Covers are the only per-record cost, so they are the only bounded set:
   (≈ 10 MB worst case on a 2x phone). When spent, markers keep their canonical
   badge until the next style load clears the images. This is a stated limit,
   not an eviction scheme.
-* Covers are re-planned when the camera settles at street scale and when a
-  cover finishes loading; they are not recomputed per camera frame.
-* Cover work never competes with the camera (`KubusCoverWorkGate`): a cover is
-  fetched and rasterised only while the camera is idle, one at a time, and the
-  marker source is rebuilt once per batch of finished covers instead of once per
-  cover. A cover skipped because the camera moved is re-planned at the next idle.
-  The reason is measured in §10c.
+* Covers are re-planned on camera idle whenever
+  `KubusMarkerLod.plansCoversAt(zoom, hasSelection:)` holds: from the prefetch
+  zoom (11.5) for everyone, and from 10 when a marker is selected (selection
+  usually animates the camera, and a cover is never rasterised mid-move, so
+  the selection's own resync skipped it). They also re-plan when a cover
+  finishes loading; they are never recomputed per camera frame.
+* **Camera-idle raster rule.** A cover is rasterised (a GPU readback) only
+  while the camera is idle, one at a time (`KubusCoverWorkGate`); prefetch
+  (download + decode) also waits for idle. A cover skipped because the camera
+  moved is re-planned at the next idle.
+* **Coalesced source refresh.** Finished covers do not each rebuild the marker
+  source: the gate fires one resync 140 ms after the last finished cover
+  (`resyncDelay`), but never later than 450 ms after the first pending one
+  (`resyncMaxWait`), so a long batch shows its first covers early instead of
+  only after the last. The reason is measured in §10c.
 
 ## 6. Selection invariant
 
@@ -186,10 +227,27 @@ disappears while selected".
 
 ## 7. Clusters and same-coordinate records
 
-Clustering stays the existing Dart grid ("pseudo-clustering", zoom < 12) with
-its entry/regroup animation, spiderfy and cluster-tap activation. 5B changes
-only what a cluster *looks like* when far (a sized dot) and keeps selected
-markers out of it. Same-coordinate groups still collapse to one
+Clustering stays the existing Dart grid ("pseudo-clustering", below
+`clusterMaxZoom = 12.0`) with its entry/regroup animation, spiderfy and
+cluster-tap activation. 5B changes only what a cluster *looks like* when far
+(a sized dot) and keeps selected markers out of it.
+
+Grouping distance tapers toward street scale (0.8.1,
+`MapScreenConstants.clusterTargetSpacingPx`): the grid level is derived from
+a banded target on-screen spacing, wide far out so the world reads as a few
+coherent groups and narrowing as the camera approaches a place:
+
+| Zoom | Target spacing |
+| --- | --- |
+| < 5 | 116 px |
+| 5 – 7.5 | 100 px |
+| 7.5 – 10 | 84 px |
+| 10 – 12 | 68 px |
+| ≥ 12 | no clustering |
+
+Bands, not a continuous curve: the grid level is an integer, and a
+continuous target would move its rounding point every frame of a zoom and
+make the topology flicker. Same-coordinate groups still collapse to one
 `cluster_same:` feature that spiderfies; covers skip them.
 
 A shared `KubusMarkerRegroupGate` replaces the duplicated per-screen logic and
@@ -378,6 +436,12 @@ resyncs of a batch into one trailing rebuild. Skipped covers are re-planned at
 the next camera idle (both screens already do this at street scale). The
 level-of-detail rules, the cover budget, the selected-marker invariant and the
 image budget are unchanged.
+
+0.8.1 superseded parts of this 5B description (the measurements above are the
+5B record and stay as measured): covers now start earlier and staged, the
+trailing rebuild has a 450 ms maximum wait, and idle re-planning starts at the
+prefetch zoom or, with a selection, at 10. The current contract is §4, §5 and
+§7; the 0.8.0 vs 0.8.1 comparison is in `docs/release-0.8.1.md`.
 
 Measurement integrity note: an earlier pass was taken while a stray Android
 emulator from a previous session consumed CPU; it inflated every configuration.

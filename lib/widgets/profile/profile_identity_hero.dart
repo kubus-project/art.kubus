@@ -176,7 +176,7 @@ class ProfileIdentityHero extends StatelessWidget {
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AvatarMount(radius: avatarRadius, child: avatar),
+                  ProfileAvatarMount(radius: avatarRadius, child: avatar),
                   const SizedBox(width: KubusSpacing.md),
                   // Loose, capped: the plate covers the identity content,
                   // it does not take the row's remaining width.
@@ -210,7 +210,8 @@ class ProfileIdentityHero extends StatelessWidget {
                   // of the desktop row.
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: _AvatarMount(radius: avatarRadius, child: avatar),
+                    child:
+                        ProfileAvatarMount(radius: avatarRadius, child: avatar),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
                   plate,
@@ -291,8 +292,15 @@ class ProfileIdentityHero extends StatelessWidget {
 
 /// The avatar's mount: no frame, no padding. A soft neutral shadow in the
 /// avatar's own shape is the only separation from a photograph behind it.
-class _AvatarMount extends StatelessWidget {
-  const _AvatarMount({required this.radius, required this.child});
+/// The profile avatar's mount, shared by the public hero and the owner's own
+/// profile headers: no frame, no padding. A soft neutral shadow in the
+/// avatar's own shape is the only separation from a photograph behind it.
+class ProfileAvatarMount extends StatelessWidget {
+  const ProfileAvatarMount({
+    super.key,
+    required this.radius,
+    required this.child,
+  });
 
   final double radius;
   final Widget child;

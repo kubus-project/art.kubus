@@ -43,8 +43,21 @@ Node connection changed.
   Follow and Message right beside it, instead of a page-wide band with the
   buttons floating at the far edge.
 - The role is shown once (the Artist or Institution badge), not twice.
-- The profile picture has no extra frame around it.
+- The profile picture has no extra frame around it, on other people's
+  profiles and on your own.
 - A profile without a cover shows a quieter field in its role colour.
+
+## Action and statistic tiles
+
+- The large faded symbol on settings rows, support links, Home shortcuts and
+  statistic tiles now sits mostly inside its tile, lightly cropped at the
+  corner, instead of being pushed so far off the edge that it looked
+  accidentally clipped. On settings and support rows it no longer sits under
+  the arrow.
+- On a computer, pointing at a settings or support row now answers with the
+  symbol as well: it moves slightly inward and grows a little, while the row
+  itself stays still. Statistic tiles do the same. With reduced motion turned
+  on, the symbol stays still and only the colour and edge respond.
 
 ## Account security
 

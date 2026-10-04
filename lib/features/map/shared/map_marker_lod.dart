@@ -179,7 +179,8 @@ abstract final class KubusMarkerLod {
 
   /// Physical pixel width to request and decode for a marker cover at
   /// [pixelRatio], snapped to 32 px steps so a CDN/proxy cache sees few
-  /// distinct sizes. Never archival: a 3x phone asks for ~208 px.
+  /// distinct sizes, clamped to 96-256. Never archival: 1x asks for 96 px,
+  /// 2x for 160 px and 3x for 224 px.
   static int coverFetchWidthPx(double pixelRatio) {
     final ratio = pixelRatio.isFinite && pixelRatio > 0 ? pixelRatio : 1.0;
     final raw = coverFaceLogicalPx * coverOversample * ratio;

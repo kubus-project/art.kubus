@@ -203,9 +203,108 @@ class KubusEdgeLight extends StatelessWidget {
   }
 }
 
-/// An oversized, cropped, low-opacity contextual glyph used as visual
-/// material: it bleeds off the corner named by [alignment] so only part of
-/// the symbol shows. Decorative by contract: no semantics, no hit testing.
+/// Where a [KubusGhostGlyph] sits and how much of it the surface crops.
+///
+/// The one placement vocabulary for ghost glyphs: callers pick a role, never
+/// a bleed. Tile and stat glyphs stay mostly inside their surface (roughly
+/// 80 % of the drawn symbol visible) so they read as an authored part of the
+/// card, not an icon that slipped off it. Only hero fields crop hard.
+enum KubusGhostGlyphPlacement {
+  /// Dense full-width rows (compact action tiles): the glyph is sized to the
+  /// row height and only its top edge is cropped; the caller keeps it clear
+  /// of the trailing arrow with [KubusGhostGlyph.inset].
+  row(
+    bleed: 0.15,
+    extentFactor: 1,
+    minExtent: 48,
+    maxExtent: 88,
+    hoverShift: 2.5,
+    hoverScale: 1.03,
+  ),
+
+  /// Grid action tiles (stacked).
+  tile(
+    bleed: 0.15,
+    extentFactor: 0.8,
+    minExtent: 48,
+    maxExtent: 120,
+    hoverShift: 2.5,
+    hoverScale: 1.03,
+  ),
+
+  /// Expressive stat cards and lead metric cards.
+  stat(
+    bleed: 0.16,
+    extentFactor: 0.9,
+    minExtent: 56,
+    maxExtent: 140,
+    hoverShift: 3,
+    hoverScale: 1.035,
+  ),
+
+  /// Hero and cover atmospheres: a fragment of the symbol as material. No
+  /// hover response; heroes are not controls.
+  hero(
+    bleed: 0.36,
+    extentFactor: 1.25,
+    minExtent: 56,
+    maxExtent: 220,
+    hoverShift: 0,
+    hoverScale: 1,
+  );
+
+  const KubusGhostGlyphPlacement({
+    required this.bleed,
+    required this.extentFactor,
+    required this.minExtent,
+    required this.maxExtent,
+    required this.hoverShift,
+    required this.hoverScale,
+  });
+
+  /// Fraction of the glyph box pushed past each cropped edge. Material
+  /// symbols carry about 8 % padding per side, so 0.15 crops roughly a tenth
+  /// of the drawn shape on each of the two corner edges.
+  final double bleed;
+
+  /// Glyph size as a fraction of the surface's shorter side, clamped to
+  /// [minExtent]-[maxExtent].
+  final double extentFactor;
+  final double minExtent;
+  final double maxExtent;
+
+  /// Hover response: how far the glyph drifts toward the surface centre
+  /// (vector length, px) and how much it grows. Paint only.
+  final double hoverShift;
+  final double hoverScale;
+
+  double extentFor(Size size) =>
+      (math.min(size.width, size.height) * extentFactor)
+          .clamp(minExtent, maxExtent);
+
+  /// The inward drift for a glyph anchored at [alignment], at hover progress
+  /// [t] (0 rest, 1 hovered).
+  Offset shiftAt(Alignment alignment, double t) {
+    final dx = -alignment.x.sign;
+    final dy = -alignment.y.sign;
+    final length = math.sqrt(dx * dx + dy * dy);
+    if (length == 0 || t == 0) return Offset.zero;
+    return Offset(dx, dy) * (hoverShift * t / length);
+  }
+
+  double scaleAt(double t) => 1 + (hoverScale - 1) * t;
+}
+
+/// An oversized, low-opacity contextual glyph used as visual material: it
+/// sits in the corner named by [alignment] and is cropped by the surface
+/// according to its [placement]. Decorative by contract: no semantics, no
+/// hit testing.
+///
+/// Hover is owned here: when [hovered], the glyph drifts
+/// [KubusGhostGlyphPlacement.hoverShift] px toward the surface centre and
+/// grows to [KubusGhostGlyphPlacement.hoverScale] over
+/// [KubusHoverResponse.duration]. Paint only, so the surface and its copy
+/// never move. Reduced motion keeps the glyph still.
 ///
 /// Place it as a full-size layer of a clipped [Stack]
 /// (`Positioned.fill(child: KubusGhostGlyph(...))`).
@@ -214,43 +313,43 @@ class KubusGhostGlyph extends StatelessWidget {
     super.key,
     required this.icon,
     required this.color,
+    this.placement = KubusGhostGlyphPlacement.tile,
     this.alignment = Alignment.bottomRight,
     this.extent,
-    this.bleed = 0.28,
     this.opacity,
-    this.scale = 1,
-    this.shift = Offset.zero,
+    this.hovered = false,
+    this.inset = EdgeInsets.zero,
   });
 
   final IconData icon;
   final Color color;
+  final KubusGhostGlyphPlacement placement;
   final Alignment alignment;
 
-  /// Glyph size. Defaults to 1.25x the shorter side of the layer, clamped to
-  /// 56-220 px so tiny tiles keep a recognisable shape and heroes do not
-  /// turn into wallpaper.
+  /// Glyph size; defaults to [KubusGhostGlyphPlacement.extentFor] the layer.
   final double? extent;
-
-  /// Fraction of the glyph pushed past the edge (cropped).
-  final double bleed;
 
   /// Glyph opacity; defaults to [defaultOpacity] for the ambient theme.
   final double? opacity;
 
-  /// Hover response hooks (applied as paint transforms, never layout).
-  final double scale;
-  final Offset shift;
+  /// Pointer hover on the owning surface.
+  final bool hovered;
+
+  /// Moves the glyph's corner anchor inward, keeping a lane free (for
+  /// example a trailing arrow). An inset edge is no longer cropped.
+  final EdgeInsets inset;
 
   static double defaultOpacity(Brightness b) =>
       b == Brightness.dark ? 0.11 : 0.085;
 
-  static double extentFor(Size size) =>
-      (math.min(size.width, size.height) * 1.25).clamp(56.0, 220.0);
+  static double _edge(double inset, double overhang) =>
+      inset > 0 ? inset : -overhang;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final alpha = opacity ?? defaultOpacity(brightness);
+    final motion = KubusHoverResponse.motionAllowed(context);
     return IgnorePointer(
       child: ExcludeSemantics(
         child: ClipRect(
@@ -260,30 +359,34 @@ class KubusGhostGlyph extends StatelessWidget {
               if (!size.isFinite || size.isEmpty) {
                 return const SizedBox.shrink();
               }
-              final glyphSize = extent ?? extentFor(size);
-              final overhang = glyphSize * bleed;
-              final dx = alignment.x >= 0 ? null : -overhang;
-              final dxRight = alignment.x >= 0 ? -overhang : null;
-              final dy = alignment.y >= 0 ? null : -overhang;
-              final dyBottom = alignment.y >= 0 ? -overhang : null;
+              final glyphSize = extent ?? placement.extentFor(size);
+              final overhang = glyphSize * placement.bleed;
+              final right = alignment.x >= 0;
+              final bottom = alignment.y >= 0;
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: dx,
-                    right: dxRight,
-                    top: dy,
-                    bottom: dyBottom,
-                    child: Transform.translate(
-                      offset: shift,
-                      child: Transform.scale(
-                        scale: scale,
-                        alignment: Alignment(-alignment.x, -alignment.y),
-                        child: Icon(
-                          icon,
-                          size: glyphSize,
-                          color: color.withValues(alpha: alpha),
+                    left: right ? null : _edge(inset.left, overhang),
+                    right: right ? _edge(inset.right, overhang) : null,
+                    top: bottom ? null : _edge(inset.top, overhang),
+                    bottom: bottom ? _edge(inset.bottom, overhang) : null,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: hovered && motion ? 1 : 0),
+                      duration:
+                          motion ? KubusHoverResponse.duration : Duration.zero,
+                      curve: Curves.easeOutCubic,
+                      builder: (context, t, child) => Transform.translate(
+                        offset: placement.shiftAt(alignment, t),
+                        child: Transform.scale(
+                          scale: placement.scaleAt(t),
+                          child: child,
                         ),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: glyphSize,
+                        color: color.withValues(alpha: alpha),
                       ),
                     ),
                   ),
