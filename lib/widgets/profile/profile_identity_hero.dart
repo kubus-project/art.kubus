@@ -128,8 +128,10 @@ class ProfileIdentityHero extends StatelessWidget {
   /// Below this the avatar sits above the plate instead of beside it.
   static const double avatarAbovePlateWidth = 400;
 
-  /// Width reserved for the actions when they sit beside the identity.
-  static const double actionsColumnWidth = 232;
+  /// Width reserved for the actions when they sit beside the identity: wide
+  /// enough that Follow and Message share one row (the actions stack below
+  /// their own 260 px breakpoint).
+  static const double actionsColumnWidth = 288;
 
   /// Widest the identity plate grows beside the avatar. It shrinks to its
   /// content below this; a longer name or handle wraps inside it.
