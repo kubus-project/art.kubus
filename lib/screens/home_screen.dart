@@ -79,6 +79,7 @@ import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../widgets/common/kubus_flat_panel.dart';
+import '../widgets/common/kubus_entity_card.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -1748,7 +1749,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     HomeRail rail,
     List<HomeRailItem> items,
   ) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final title = switch (rail.entityType) {
       PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
@@ -1775,24 +1775,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: compactScreen ? 188 : 196,
               cardWidth: compactScreen ? 156 : 168,
               cardSpacing: KubusSpacing.md,
-              imageHeight: compactScreen ? 100 : 108,
               profileAvatarRadius: compactScreen ? 24 : 28,
               placeholderIconBuilder: _iconForRailItem,
               profileFallbackLabel: l10n.desktopHomeCreatorFallbackName,
               subtitleBuilder: (context, item) =>
-                  _buildHomeRailCardSubtitle(item, scheme),
+                  _buildHomeRailCardSubtitle(item),
               onItemTap: (item) {
                 if (_hasHomeRailDestination(item)) {
                   unawaited(_openHomeRailItem(item));
                 }
               },
-              titleStyle: KubusTextStyles.sectionTitle.copyWith(
-                fontSize: KubusHeaderMetrics.screenSubtitle,
-                color: scheme.onSurface,
-              ),
-              subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.82),
-              ),
             );
           },
         ),
@@ -1800,10 +1792,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget? _buildHomeRailCardSubtitle(HomeRailItem item, ColorScheme scheme) {
-    final baseStyle = KubusTextStyles.navMetaLabel.copyWith(
-      color: scheme.onSurface.withValues(alpha: 0.64),
-    );
+  Widget? _buildHomeRailCardSubtitle(HomeRailItem item) {
+    // The rail card's context line reads off the media plate, so it takes the
+    // card's own on-media register rather than a surface foreground colour.
+    final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
+    const linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
@@ -1814,13 +1807,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       final creatorText = Text(
         creatorIdentity.label,
-        maxLines: 2,
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: creatorIdentity.canOpenProfile
             ? baseStyle.copyWith(
-                color: scheme.primary,
+                color: linkColor,
                 decoration: TextDecoration.underline,
-                decorationColor: scheme.primary,
+                decorationColor: linkColor.withValues(alpha: 0.7),
               )
             : baseStyle,
       );
@@ -1844,7 +1837,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (subtitle.isEmpty) return null;
     return Text(
       subtitle,
-      maxLines: 2,
+      maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: baseStyle,
     );

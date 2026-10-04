@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/models/user_profile.dart';
@@ -12,6 +13,7 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/community_interactions_provider.dart';
+import 'package:art_kubus/providers/community_subject_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
@@ -73,6 +75,10 @@ Future<void> pumpProfileSurface(
   double textScale = 1.0,
   bool canonicalPublicEntry = false,
 
+  /// Posts by the viewed profile, injected through the screens' existing
+  /// extended-package seam. Empty by default.
+  List<CommunityPost> posts = const <CommunityPost>[],
+
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
   DAOProvider? daoProvider,
@@ -109,6 +115,7 @@ Future<void> pumpProfileSurface(
     surface,
     resolvedUser,
     canonicalPublicEntry: canonicalPublicEntry,
+    posts: posts,
   );
 
   await tester.pumpWidget(
@@ -131,6 +138,10 @@ Future<void> pumpProfileSurface(
             create: (_) => SavedItemsProvider()),
         ChangeNotifierProvider<CommunityInteractionsProvider>(
             create: (_) => CommunityInteractionsProvider()),
+        // Needed once the profile renders real posts: the post card's metadata
+        // section resolves its subject references through this.
+        ChangeNotifierProvider<CommunitySubjectProvider>(
+            create: (_) => CommunitySubjectProvider()),
         ChangeNotifierProvider<AppRefreshProvider>(
             create: (_) => AppRefreshProvider()),
         ChangeNotifierProvider<AttestationProvider>(
@@ -199,10 +210,11 @@ Widget _surfaceWidget(
   ProfileSurface surface,
   User user, {
   bool canonicalPublicEntry = false,
+  List<CommunityPost> posts = const <CommunityPost>[],
 }) {
   final critical = ProfileFixtures.critical(user: user);
   final extended = Future<ProfileExtendedPackage?>.value(
-    ProfileFixtures.extended(),
+    ProfileFixtures.extended(initialPosts: posts),
   );
 
   switch (surface) {

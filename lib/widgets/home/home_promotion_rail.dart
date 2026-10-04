@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../models/profile_identity_data.dart';
 import '../../models/promotion.dart';
-import '../../utils/home_rail_semantics.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/kubus_entity_semantics.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../widgets/glass_components.dart';
-import '../../widgets/profile_identity_summary.dart';
+import '../../widgets/avatar_widget.dart';
+import '../../widgets/common/kubus_entity_card.dart';
 import '../../widgets/staggered_fade_slide.dart';
 
 typedef HomePromotionSubtitleBuilder = Widget? Function(
@@ -17,6 +19,16 @@ typedef HomePromotionTapHandler = void Function(HomeRailItem item);
 
 typedef HomePromotionIconBuilder = IconData Function(
     PromotionEntityType entityType);
+
+/// Which rail entities are previewed as an identity rather than as a cultural
+/// object.
+///
+/// An artist rail and an institution rail are both rails of *who*, so they get
+/// the same identity-led composition. Giving the dedicated composition to
+/// profiles alone left institutions reading as anonymous media cards.
+bool homeRailItemIsIdentity(PromotionEntityType entityType) =>
+    entityType == PromotionEntityType.profile ||
+    entityType == PromotionEntityType.institution;
 
 class HomePromotionRailList extends StatelessWidget {
   const HomePromotionRailList({
@@ -30,13 +42,10 @@ class HomePromotionRailList extends StatelessWidget {
     this.cardWidth = 176,
     this.cardSpacing = 16,
     this.horizontalPadding = 0,
-    this.imageHeight = 108,
     this.profileAvatarRadius = 28,
     this.enableHover = false,
     this.onItemTap,
     this.subtitleBuilder,
-    this.titleStyle,
-    this.subtitleStyle,
   });
 
   final List<HomeRailItem> items;
@@ -46,15 +55,12 @@ class HomePromotionRailList extends StatelessWidget {
   final double cardWidth;
   final double cardSpacing;
   final double horizontalPadding;
-  final double imageHeight;
   final double profileAvatarRadius;
   final bool enableHover;
   final HomePromotionTapHandler? onItemTap;
   final HomePromotionSubtitleBuilder? subtitleBuilder;
   final HomePromotionIconBuilder placeholderIconBuilder;
   final String profileFallbackLabel;
-  final TextStyle? titleStyle;
-  final TextStyle? subtitleStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +72,8 @@ class HomePromotionRailList extends StatelessWidget {
       height: height,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        // The hover lift and the contextual shadow live outside the card's own
+        // box; clipping here would shave them off at the rail edge.
         clipBehavior: Clip.none,
         physics: const BouncingScrollPhysics(),
         child: Padding(
@@ -80,15 +88,12 @@ class HomePromotionRailList extends StatelessWidget {
                 child: _HomePromotionRailCard(
                   item: item,
                   width: cardWidth,
-                  imageHeight: imageHeight,
                   profileAvatarRadius: profileAvatarRadius,
                   enableHover: enableHover,
                   onTap: onItemTap == null ? null : () => onItemTap!(item),
                   subtitle: subtitleBuilder?.call(context, item),
                   placeholderIcon: placeholderIconBuilder.call(item.entityType),
                   profileFallbackLabel: profileFallbackLabel,
-                  titleStyle: titleStyle,
-                  subtitleStyle: subtitleStyle,
                 ),
               );
 
@@ -112,366 +117,124 @@ class HomePromotionRailList extends StatelessWidget {
   }
 }
 
-class _HomePromotionRailCard extends StatefulWidget {
+/// One rail entry, composed through the shared [KubusEntityCard] so a Home
+/// rail card, a profile portfolio card and a studio gallery card are one
+/// system rather than three unrelated ones.
+class _HomePromotionRailCard extends StatelessWidget {
   const _HomePromotionRailCard({
     required this.item,
     required this.width,
-    required this.imageHeight,
     required this.profileAvatarRadius,
     required this.enableHover,
     required this.placeholderIcon,
     required this.profileFallbackLabel,
     this.onTap,
     this.subtitle,
-    this.titleStyle,
-    this.subtitleStyle,
   });
 
   final HomeRailItem item;
   final double width;
-  final double imageHeight;
   final double profileAvatarRadius;
   final bool enableHover;
   final VoidCallback? onTap;
   final Widget? subtitle;
   final IconData placeholderIcon;
   final String profileFallbackLabel;
-  final TextStyle? titleStyle;
-  final TextStyle? subtitleStyle;
-
-  @override
-  State<_HomePromotionRailCard> createState() => _HomePromotionRailCardState();
-}
-
-class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
-  bool _isHovered = false;
-  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    // Entity-semantic accent shared with the section header, map markers and
-    // the desktop rail via the single HomeRailSemantics resolver.
-    final accent = HomeRailSemantics.of(context, widget.item.entityType);
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final borderRadius = BorderRadius.circular(18);
+    // Entity-semantic kind shared with the section header, the profile
+    // portfolio and the studio gallery via the single KubusEntitySemantics
+    // resolver; the card derives its accent and no-media glyph from it.
+    final kind = KubusEntitySemantics.fromPromotion(item.entityType);
+    final identity = homeRailItemIsIdentity(item.entityType);
 
-    final cardChild = widget.item.entityType == PromotionEntityType.profile
-        ? _buildProfileCard(context, accent)
-        : _buildMediaCard(context, accent);
-
-    // Keyboard focus is a first-class, always-available signal; hover lift is
-    // opt-in per surface (desktop rails). Both drive the same accent edge.
-    final highlighted = _isFocused || (_isHovered && widget.enableHover);
-    final lifted = _isFocused || (_isHovered && widget.enableHover);
-
-    final decorated = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      width: widget.width,
-      transform:
-          lifted ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        border: Border.all(
-          color: _isFocused
-              ? accent.withValues(alpha: 0.85)
-              : highlighted
-                  ? accent.withValues(alpha: 0.42)
-                  : scheme.outline.withValues(alpha: 0.14),
-          width: _isFocused ? 2 : (highlighted ? 1.25 : 1),
-        ),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.14),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: scheme.shadow.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.10 : 0.07,
-                  ),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-      ),
-      child: LiquidGlassCard(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: borderRadius,
-        showBorder: false,
-        blurSigma: style.blurSigma,
-        backgroundColor: style.tintColor,
-        fallbackMinOpacity: style.fallbackMinOpacity,
-        child: cardChild,
-      ),
-    );
-
-    return FocusableActionDetector(
-      enabled: widget.onTap != null,
-      mouseCursor:
-          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            widget.onTap?.call();
-            return null;
-          },
-        ),
-      },
-      onShowHoverHighlight: widget.enableHover
-          ? (hovered) => setState(() => _isHovered = hovered)
-          : null,
-      onShowFocusHighlight: (focused) => setState(() => _isFocused = focused),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: decorated,
-      ),
-    );
-  }
-
-  Widget _buildMediaCard(BuildContext context, Color accent) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: widget.imageHeight,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _CardImageSurface(
-                  imageUrl: widget.item.imageUrl,
-                  placeholderIcon: widget.placeholderIcon,
-                  accent: accent,
-                ),
-                // Restrained entity-semantic edge along the base of the media.
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                      height: 3, color: accent.withValues(alpha: 0.9)),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        scheme.surfaceTint.withValues(alpha: 0.10),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.10),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-                if (widget.item.promotion.isPromoted)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Icon(
-                      Icons.star,
-                      color: KubusColorRoles.of(context).achievementGold,
-                      size: 18,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  widget.item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: widget.titleStyle ??
-                      Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: scheme.onSurface,
-                            fontWeight: FontWeight.w700,
-                          ),
-                ),
-                if (widget.subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  widget.subtitle!,
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileCard(BuildContext context, Color accent) {
-    final theme = Theme.of(context);
-    final identity = ProfileIdentityData.fromHomeRailItem(
-      widget.item,
-      fallbackLabel: widget.profileFallbackLabel,
-    );
-    final backgroundUrl = _resolveProfileCover(widget.item);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _CardImageSurface(
-            imageUrl: backgroundUrl,
-            placeholderIcon: widget.placeholderIcon,
-            alignPlaceholderToTop: false,
-            accent: accent,
-          ),
-          // Restrained entity-semantic edge along the base of the profile card.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(height: 3, color: accent.withValues(alpha: 0.9)),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.18),
-                  Colors.black.withValues(alpha: 0.32),
-                  Colors.black.withValues(alpha: 0.64),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-          if (widget.item.promotion.isPromoted)
-            Positioned(
-              top: 12,
-              left: 12,
-              child: Icon(
-                Icons.star,
-                color: KubusColorRoles.of(context).achievementGold,
-                size: 18,
-              ),
-            ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: ProfileIdentitySummary(
-                  identity: identity,
-                  layout: ProfileIdentityLayout.stacked,
-                  avatarRadius: widget.profileAvatarRadius,
-                  allowFabricatedFallback: true,
-                  titleStyle: widget.titleStyle ??
-                      theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                  subtitleStyle: widget.subtitleStyle ??
-                      theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.88),
-                      ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CardImageSurface extends StatelessWidget {
-  const _CardImageSurface({
-    required this.imageUrl,
-    required this.placeholderIcon,
-    required this.accent,
-    this.alignPlaceholderToTop = true,
-  });
-
-  final String? imageUrl;
-  final IconData placeholderIcon;
-  final Color accent;
-  final bool alignPlaceholderToTop;
-
-  @override
-  Widget build(BuildContext context) {
-    final resolvedImage = MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
-        MediaUrlResolver.resolve(imageUrl);
-
-    if (resolvedImage != null && resolvedImage.isNotEmpty) {
-      return Image.network(
-        resolvedImage,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            _buildPlaceholder(context, alignToTop: alignPlaceholderToTop),
+    if (identity) {
+      final data = ProfileIdentityData.fromHomeRailItem(
+        item,
+        fallbackLabel: profileFallbackLabel,
+      );
+      final isPerson = item.entityType == PromotionEntityType.profile;
+      final hasMark = (data.avatarUrl ?? '').trim().isNotEmpty;
+      return KubusEntityCard(
+        variant: KubusEntityCardVariant.identity,
+        kind: kind,
+        title: data.label,
+        subtitle: data.handle,
+        // The rail owns its own placeholder glyph vocabulary (person,
+        // apartment), which is what the surrounding section header already
+        // uses, so it overrides the kind's default.
+        fallbackGlyph: placeholderIcon,
+        imageUrl: resolveHomeRailIdentityCover(item),
+        // An institution without a logo gets no mark at all rather than a
+        // fabricated person-shaped one: the role field already says what it
+        // is. A person always gets one, fabricated from their wallet if the
+        // account has not set a picture.
+        leading: isPerson || hasMark
+            ? AvatarWidget(
+                wallet: data.walletSeed,
+                avatarUrl: data.avatarUrl,
+                radius: profileAvatarRadius,
+                borderWidth: 0,
+                allowFabricatedFallback: isPerson,
+                enableProfileNavigation: false,
+                showStatusIndicator: false,
+              )
+            : null,
+        badge: item.promotion.isPromoted ? const _PromotedMark() : null,
+        onTap: onTap,
+        width: width,
+        enableHover: enableHover,
+        titleMaxLines: 1,
       );
     }
 
-    return _buildPlaceholder(context, alignToTop: alignPlaceholderToTop);
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: kind,
+      title: item.title,
+      subtitleWidget: subtitle,
+      fallbackGlyph: placeholderIcon,
+      imageUrl: item.imageUrl,
+      badge: item.promotion.isPromoted ? const _PromotedMark() : null,
+      onTap: onTap,
+      width: width,
+      enableHover: enableHover,
+    );
   }
+}
 
-  Widget _buildPlaceholder(
-    BuildContext context, {
-    required bool alignToTop,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        // Entity-semantic placeholder tint so an image-less card still reads as
-        // its rail type; the calm surface base keeps it restrained.
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.withValues(alpha: 0.24),
-            accent.withValues(alpha: 0.12),
-            scheme.surfaceContainerHigh.withValues(alpha: 0.28),
-          ],
-        ),
-      ),
-      child: Align(
-        alignment: alignToTop ? Alignment.center : Alignment.center,
-        child: Icon(
-          placeholderIcon,
-          color: scheme.onSurface.withValues(alpha: 0.64),
-          size: 30,
-        ),
+/// The promotion mark over a card's media. Decorative: the rail's own
+/// semantics already say what the card is.
+class _PromotedMark extends StatelessWidget {
+  const _PromotedMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Icon(
+        Icons.star,
+        color: KubusColorRoles.of(context).achievementGold,
+        size: KubusSizes.trailingChevron + 2,
       ),
     );
   }
 }
 
-String? _resolveProfileCover(HomeRailItem item) {
-  String? pickRaw(List<String> keys) {
-    for (final key in keys) {
-      final value = item.raw[key]?.toString().trim();
-      if (value != null && value.isNotEmpty) {
-        return value;
-      }
-    }
-    return null;
-  }
-
-  final rawCover = pickRaw(const <String>[
+/// The cover an identity rail card paints behind its avatar or logo.
+///
+/// The backend home-rail query already carries `avatar_url` and
+/// `cover_image_url` for profiles, under several historical spellings. Nothing
+/// here invents a field — it reads the ones the payload actually uses.
+///
+/// A logo is deliberately **not** a cover fallback: an institution's logo is
+/// already the card's leading mark (see
+/// [ProfileIdentityData.fromHomeRailItem]), so using it behind itself would
+/// print the same image twice. With no real cover the card falls through to
+/// the authored role field instead, which is a designed surface rather than an
+/// anonymous gradient.
+String? resolveHomeRailIdentityCover(HomeRailItem item) {
+  for (final key in const <String>[
     'coverImage',
     'coverImageUrl',
     'cover_image_url',
@@ -481,25 +244,14 @@ String? _resolveProfileCover(HomeRailItem item) {
     'banner',
     'bannerUrl',
     'banner_url',
-  ]);
-  final resolved = MediaUrlResolver.resolveDisplayUrl(rawCover) ??
-      MediaUrlResolver.resolve(rawCover);
-  if (resolved != null && resolved.isNotEmpty) {
-    return resolved;
+  ]) {
+    final raw = item.raw[key]?.toString().trim();
+    if (raw == null || raw.isEmpty) continue;
+    final resolved = MediaUrlResolver.resolveDisplayUrl(raw) ??
+        MediaUrlResolver.resolve(raw);
+    if (resolved != null && resolved.isNotEmpty) {
+      return resolved;
+    }
   }
-
-  if (item.entityType == PromotionEntityType.institution) {
-    final fallbackInstitutionImage = pickRaw(const <String>[
-      'logoUrl',
-      'logo_url',
-      'imageUrl',
-      'image_url',
-    ]);
-    return MediaUrlResolver.resolveDisplayUrl(fallbackInstitutionImage) ??
-        MediaUrlResolver.resolve(fallbackInstitutionImage) ??
-        MediaUrlResolver.resolveDisplayUrl(item.imageUrl) ??
-        MediaUrlResolver.resolve(item.imageUrl);
-  }
-
   return null;
 }

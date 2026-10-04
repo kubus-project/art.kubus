@@ -2216,6 +2216,7 @@
     }
   },
   "userProfileNoMorePostsLabel": "Ni več objav",
+  "userProfileViewAllPostsLabel": "Vse objave",
   "userProfileArtistHighlightsTitle": "Poudarki umetnika",
   "userProfileArtistHighlightsSubtitle": "Najnovejše objave od {name}.",
   "@userProfileArtistHighlightsSubtitle": {

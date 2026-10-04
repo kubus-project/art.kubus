@@ -10087,6 +10087,12 @@ abstract class AppLocalizations {
   /// **'No more posts'**
   String get userProfileNoMorePostsLabel;
 
+  /// No description provided for @userProfileViewAllPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'View all posts'**
+  String get userProfileViewAllPostsLabel;
+
   /// No description provided for @userProfileArtistHighlightsTitle.
   ///
   /// In en, this message translates to:

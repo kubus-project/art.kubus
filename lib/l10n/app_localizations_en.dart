@@ -5709,6 +5709,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileNoMorePostsLabel => 'No more posts';
 
   @override
+  String get userProfileViewAllPostsLabel => 'View all posts';
+
+  @override
   String get userProfileArtistHighlightsTitle => 'Artist highlights';
 
   @override

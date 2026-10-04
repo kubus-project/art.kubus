@@ -5760,6 +5760,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileNoMorePostsLabel => 'Ni več objav';
 
   @override
+  String get userProfileViewAllPostsLabel => 'Vse objave';
+
+  @override
   String get userProfileArtistHighlightsTitle => 'Poudarki umetnika';
 
   @override

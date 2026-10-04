@@ -1,3 +1,4 @@
+import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 
@@ -95,11 +96,37 @@ class ProfileFixtures {
     );
   }
 
-  /// Empty-but-resolved extended package so screens leave their loading state
-  /// without ever touching the network.
-  static ProfileExtendedPackage extended() {
+  /// Deterministic posts by the viewed profile.
+  ///
+  /// Enough of them to prove the profile preview is bounded: the profile must
+  /// show two or three and hand the rest to the dedicated post history.
+  static List<CommunityPost> posts({
+    int count = 6,
+    String authorId = wallet,
+    String authorName = 'Ana Kovač',
+  }) {
+    return List<CommunityPost>.generate(
+      count,
+      (index) => CommunityPost(
+        id: 'post_$index',
+        authorId: authorId,
+        authorWallet: authorId,
+        authorName: authorName,
+        content: 'Mural study number ${index + 1}.',
+        // Frozen, strictly decreasing, so ordering never varies between runs.
+        timestamp: fetchedAt.subtract(Duration(days: index + 1)),
+      ),
+      growable: false,
+    );
+  }
+
+  /// Resolved extended package so screens leave their loading state without
+  /// ever touching the network. Empty posts by default.
+  static ProfileExtendedPackage extended({
+    List<CommunityPost> initialPosts = const <CommunityPost>[],
+  }) {
     return ProfileExtendedPackage(
-      initialPosts: const [],
+      initialPosts: initialPosts,
       fetchedAt: fetchedAt,
     );
   }

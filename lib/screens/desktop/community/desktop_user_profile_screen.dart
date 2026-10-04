@@ -36,12 +36,17 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../screens/community/post_detail_screen.dart';
+import '../../../widgets/profile/profile_posts_preview_section.dart';
+import '../../community/profile_posts_screen.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../../widgets/detail/expandable_detail_text.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
+import '../../../widgets/profile/profile_identity_hero.dart';
+import '../../../utils/kubus_entity_semantics.dart';
+import '../../../widgets/common/kubus_entity_card.dart';
 import '../../../widgets/detail/profile_identity_block.dart';
 import '../../../widgets/detail/profile_utility_actions.dart';
 import '../../../models/dao.dart';
@@ -60,8 +65,6 @@ import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
 
 const double _kProfileOverlayMaxWidth = 920.0;
-const double _kProfileCoverHeightWithImage = 216.0;
-const double _kProfileCoverHeightWithoutImage = 164.0;
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -101,13 +104,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   bool isLoading = true;
   List<CommunityPost> _posts = [];
   bool _postsLoading = true;
-  bool _isLastPage = false;
-  bool _loadingMore = false;
   String? _postsError;
 
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   bool _isFollowMutationInFlight = false;
+  String? _failedCoverImageUrl;
   int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
@@ -148,13 +150,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
+    // No scroll-driven paging here. The profile shows a bounded post preview
+    // so the closing statistics stay reachable; the dedicated post-history
+    // screen owns paging.
     _scrollController = ScrollController();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
-        _loadMorePosts();
-      }
-    });
 
     _animationController.forward();
     _profileController = ProfilePackageController(
@@ -212,8 +211,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       isLoading = _profileController.isLoadingCritical;
       _posts = _profileController.posts;
       _postsLoading = _profileController.postsLoading;
-      _isLastPage = _profileController.isLastPage;
-      _loadingMore = _profileController.loadingMore;
       _postsError = _profileController.postsError;
       _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
       _artistArtworks = _profileController.artistArtworks;
@@ -345,23 +342,23 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         if (!isCanonicalPublicEntry)
                           _buildProfileCard(
                               themeProvider, isArtist, isInstitution, l10n),
+                        // Relationship actions live inside the identity hero
+                        // on every non-canonical surface, so they are not
+                        // repeated as a band of their own here. The canonical
+                        // public-entry hero keeps its own editorial order and
+                        // still renders them explicitly.
+                        if (isCanonicalPublicEntry) ...[
+                          const SizedBox(height: KubusSpacing.md),
+                          _buildActionButtons(
+                            themeProvider,
+                            l10n,
+                            isCommunityOverlay: isCommunityOverlay,
+                          ),
+                        ],
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.lg
-                              : KubusSpacing.md,
-                        ),
-                        // Identity -> relationship actions -> work. Numbers
-                        // come after the work (same hierarchy as the mobile
-                        // profile), so statistics never lead the page.
-                        _buildActionButtons(
-                          themeProvider,
-                          l10n,
-                          isCommunityOverlay: isCommunityOverlay,
-                        ),
-                        SizedBox(
-                          height: isCommunityOverlay
-                              ? KubusSpacing.sm + KubusSpacing.xs
-                              : KubusSpacing.lg,
+                              : KubusSpacing.xl,
                         ),
                         // Wide two-column content begins at ~1200px so
                         // intermediate desktop widths do not inherit the mobile
@@ -389,7 +386,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             isCanonicalPublicEntry: false,
                             l10n: l10n,
                           ),
-                        const SizedBox(height: KubusSpacing.lg),
+                        // Recognition before the numbers: achievements are
+                        // still about the person, the statistics are the
+                        // closing composition. The wide layout keeps
+                        // achievements in its trailing side column instead.
+                        if (!isCanonicalPublicEntry &&
+                            !isLarge &&
+                            (user?.showAchievements ?? true)) ...[
+                          const SizedBox(height: KubusSpacing.lg),
+                          _buildAchievementsSection(themeProvider, l10n),
+                        ],
+                        const SizedBox(height: KubusSpacing.xl),
                         if (isCanonicalPublicEntry)
                           _buildStatsCards(themeProvider, isLarge, l10n)
                         else
@@ -399,15 +406,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             l10n,
                             isCommunityOverlay: isCommunityOverlay,
                           ),
-                        // Non-canonical single column: achievements follow
-                        // the numbers, as on mobile. The wide layout keeps
-                        // them in its side column.
-                        if (!isCanonicalPublicEntry &&
-                            !isLarge &&
-                            (user?.showAchievements ?? true)) ...[
-                          const SizedBox(height: KubusSpacing.lg),
-                          _buildAchievementsSection(themeProvider, l10n),
-                        ],
                         const SizedBox(height: KubusSpacing.lg),
                       ],
                     ),
@@ -935,189 +933,132 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
+  /// Identity hero: the cover is the canvas, the avatar and the glass identity
+  /// plate sit on it, and Follow/Message belong to the same composition —
+  /// the same authored system the mobile profile and the community overlay use.
+  ///
+  /// There is deliberately no outer card around it. Wrapping a cover in a
+  /// bordered surface produced the card-in-card look that made the old header
+  /// read as four unrelated bands.
   Widget _buildProfileCard(ThemeProvider themeProvider, bool isArtist,
       bool isInstitution, AppLocalizations l10n) {
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
-    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+    final coverUrlIsKnownBad =
+        coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
     const avatarRadius = 44.0;
-    const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
-    const avatarRingPadding = 4.0;
 
-    final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius + avatarRingPadding,
-      cornerRadiusFactor: avatarCornerRadiusFactor,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ProfileIdentityHero(
+          displayName: user!.name,
+          handle: user!.username,
+          isVerified: user!.isVerified,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          coverImageUrl: coverUrlIsKnownBad ? null : coverImageUrl,
+          coverSemanticLabel: user!.name,
+          onCoverError: () => _noteFailedCoverImage(coverImageUrl),
+          roleLabel: _profileRoleLabel(
+            l10n,
+            isArtist: isArtist,
+            isInstitution: isInstitution,
+          ),
+          density: ProfileIdentityDensity.spacious,
+          avatarRadius: avatarRadius,
+          avatar: AvatarWidget(
+            wallet: user!.id,
+            avatarUrl: user!.profileImageUrl,
+            radius: avatarRadius,
+            borderWidth: 0,
+            borderColor: Colors.transparent,
+            enableProfileNavigation: false,
+            heroTag: widget.heroTag,
+          ),
+          actions: ProfileRelationshipActions(
+            isFollowing: user!.isFollowing,
+            isFollowLoading: _isFollowMutationInFlight,
+            onFollow: () => unawaited(_toggleFollow()),
+            onMessage: () => unawaited(_openConversation()),
+            followLabel: l10n.userProfileFollowButton,
+            followingLabel: l10n.userProfileFollowingButton,
+            messageLabel: l10n.userProfileMessageButtonLabel,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        _buildPracticeBlock(l10n),
+      ],
     );
-    final scheme = Theme.of(context).colorScheme;
+  }
 
-    // The avatar overlaps the cover's bottom edge by a small *fixed* amount —
-    // it is a constant-size circle, so `Positioned(bottom:)` inside the cover
-    // `Stack` is safe for it (bounded, cannot grow with text scale). Identity
-    // text is different: it used to share that same Positioned row, so at
-    // large text scales a wrapped display name grew upward past the stack's
-    // own top edge and visually collided with the utility toolbar above the
-    // card. Identity now lays out in normal flow below the cover — using only
-    // non-negative padding, since Flutter's `Padding` asserts
-    // `padding.isNonNegative` — and can never overlap anything above it.
-    const avatarOverlap = 32.0;
-    final avatarDiameter = (avatarRadius + avatarRingPadding) * 2;
+  void _noteFailedCoverImage(String? url) {
+    if (url == null || url.isEmpty) return;
+    if (_failedCoverImageUrl == url) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _failedCoverImageUrl = url);
+    });
+  }
 
+  String _profileRoleLabel(
+    AppLocalizations l10n, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    if (isInstitution) return l10n.settingsRoleInstitutionTitle;
+    if (isArtist) return l10n.settingsRoleArtistTitle;
+    return l10n.userProfileTitle;
+  }
+
+  /// Practice before paperwork: the biography carries the weight, the practice
+  /// fields support it, and activity and the join date are one quiet caption
+  /// line rather than metadata cards of equal weight.
+  Widget _buildPracticeBlock(AppLocalizations l10n) {
     final roles = KubusColorRoles.of(context);
-    return Container(
-      clipBehavior: Clip.none,
-      decoration: BoxDecoration(
-        color: roles.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.surface),
-        border: Border.all(color: roles.rule),
-      ),
+    final bio = user!.bio.trim();
+    final hasPracticeFields =
+        user!.fieldOfWork.isNotEmpty || user!.yearsActive > 0;
+
+    return ConstrainedBox(
+      // Reading measure: prose does not run the full 1200 px column.
+      constraints: const BoxConstraints(maxWidth: 760),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            // The cover art is clipped to rounded top corners, but the avatar
-            // must NOT be: it deliberately overflows past the cover's bottom
-            // edge (see avatarOverlap below), and a ClipRRect always clips to
-            // its child's layout bounds regardless of the child Stack's own
-            // Clip.none — so the avatar has to live in this outer,
-            // unclipped Stack rather than inside the ClipRRect below.
-            clipBehavior: Clip.none,
+          if (bio.isNotEmpty) ...[
+            ExpandableDetailText(
+              text: bio,
+              collapsedMaxLines: 4,
+              style: KubusTextStyles.lede.copyWith(color: roles.foreground),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+          ],
+          if (hasPracticeFields) ...[
+            ProfileArtistInfoFields(
+              fieldOfWork: user!.fieldOfWork,
+              yearsActive: user!.yearsActive,
+              textAlign: TextAlign.left,
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+          ],
+          Wrap(
+            spacing: KubusSpacing.md,
+            runSpacing: KubusSpacing.xs,
             children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.surface),
-                ),
-                child: Stack(
-                  children: [
-                    SizedBox(
-                      height: hasCoverImage
-                          ? _kProfileCoverHeightWithImage
-                          : _kProfileCoverHeightWithoutImage,
-                      width: double.infinity,
-                      // Without an image the cover is the role field (the
-                      // role colour, never the personal user accent).
-                      child: hasCoverImage
-                          ? Image.network(
-                              coverImageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return ColoredBox(color: roles.surfaceRaised);
-                              },
-                            )
-                          : ProfileCoverField(
-                              isArtist: isArtist,
-                              isInstitution: isInstitution,
-                            ),
-                    ),
-                    // Media scrim only over a real image.
-                    if (hasCoverImage)
-                      Positioned.fill(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withValues(alpha: 0.18),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+              UserActivityStatusLine(
+                walletAddress: user!.id,
+                textAlign: TextAlign.start,
+                textStyle: KubusTextStyles.detailCaption.copyWith(
+                  color: roles.foregroundSubtle,
                 ),
               ),
-              Positioned(
-                left: KubusSpacing.lg,
-                bottom: -avatarOverlap,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: roles.surface,
-                    borderRadius: BorderRadius.circular(
-                      avatarRingShapeRadius,
-                    ),
-                    border: Border.all(color: roles.rule),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(avatarRingPadding),
-                    child: AvatarWidget(
-                      wallet: user!.id,
-                      avatarUrl: user!.profileImageUrl,
-                      radius: avatarRadius,
-                      borderWidth: 0,
-                      borderColor: Colors.transparent,
-                      cornerRadiusFactor: avatarCornerRadiusFactor,
-                      enableProfileNavigation: false,
-                      heroTag: widget.heroTag,
-                    ),
-                  ),
+              Text(
+                _formatJoinedLabel(l10n, user!.joinedDate),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: roles.foregroundSubtle,
                 ),
               ),
             ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: KubusSpacing.lg + avatarDiameter + KubusSpacing.md,
-              right: KubusSpacing.lg,
-              top: avatarOverlap,
-              bottom: KubusSpacing.sm,
-            ),
-            child: ProfileIdentityBlock(
-              displayName: user!.name,
-              handle: user!.username,
-              isVerified: user!.isVerified,
-              isArtist: isArtist,
-              isInstitution: isInstitution,
-              nameColor: scheme.onSurface,
-              handleColor: scheme.onSurface.withValues(alpha: 0.60),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: scheme.outline.withValues(alpha: 0.08),
-                  width: KubusSizes.hairline,
-                ),
-              ),
-            ),
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                UserActivityStatusLine(
-                  walletAddress: user!.id,
-                  textAlign: TextAlign.start,
-                  textStyle: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.62),
-                  ),
-                ),
-                if (user!.bio.isNotEmpty) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  ExpandableDetailText(
-                    text: user!.bio,
-                    collapsedMaxLines: 3,
-                    style: KubusTextStyles.detailBody.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.78),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: KubusSpacing.sm),
-                ProfileArtistInfoFields(
-                  fieldOfWork: user!.fieldOfWork,
-                  yearsActive: user!.yearsActive,
-                  textAlign: TextAlign.left,
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  _formatJoinedLabel(l10n, user!.joinedDate),
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.52),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -1472,31 +1413,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       fallbackSubtitle: l10n.commonArtwork,
     );
 
-    return SharedShowcaseCard(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.artwork,
       imageUrl: card.imageUrl,
       title: card.title,
       subtitle: card.subtitle,
-      footer: l10n.userProfileLikesLabel(card.likesCount),
+      meta: l10n.userProfileLikesLabel(card.likesCount),
       onTap: card.id != null
-          ? () {
-              openArtwork(context, card.id!, source: 'desktop_user_profile');
-            }
+          ? () => openArtwork(context, card.id!, source: 'desktop_user_profile')
           : null,
       width: 220,
-      imageHeight: 160,
-      titleStyle: KubusTypography.inter(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      subtitleStyle: KubusTypography.inter(
-        fontSize: 13,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-      ),
-      footerStyle: KubusTypography.inter(
-        fontSize: 12,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-      ),
     );
   }
 
@@ -1507,34 +1434,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       fallbackTitle: l10n.userProfileCollectionFallbackTitle,
     );
 
-    return SharedShowcaseCard(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.collection,
       imageUrl: card.imageUrl,
       title: card.title,
       subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
-      footer: card.description,
+      meta: card.description,
       onTap: (card.id != null && card.id!.isNotEmpty)
-          ? () {
-              _openDesktopShellAwareScreen(
+          ? () => _openDesktopShellAwareScreen(
                 CollectionDetailScreen(collectionId: card.id!),
-              );
-            }
+              )
           : null,
       width: 200,
-      imageHeight: 120,
-      placeholderIcon: Icons.collections_outlined,
-      titleStyle: KubusTypography.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      subtitleStyle: KubusTypography.inter(
-        fontSize: 12,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-      ),
-      footerStyle: KubusTypography.inter(
-        fontSize: 11,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-      ),
     );
   }
 
@@ -1556,6 +1468,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
+  /// A bounded preview, never a feed: the complete history has its own screen,
+  /// so the closing statistics below stay reachable.
   Widget _buildPostsSection(
       ThemeProvider themeProvider, AppLocalizations l10n) {
     return Column(
@@ -1565,67 +1479,26 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           title: l10n.userProfilePostsTitle,
           subtitle: l10n.userProfileRecentActivitySubtitle(user!.name),
         ),
-        const SizedBox(height: 16),
-        if (_postsLoading)
-          DesktopCard(
-            child: Container(
-              height: 200,
-              alignment: Alignment.center,
-              child: const InlineLoading(width: 40, height: 40),
+        const SizedBox(height: KubusSpacing.md),
+        ProfilePostsPreviewSection(
+          posts: _posts,
+          isLoading: _postsLoading,
+          error: _postsError,
+          onRetry: _loadPosts,
+          totalCount: user?.postsCount,
+          accentColor: themeProvider.accentColor,
+          emptyDescription: l10n.userProfileNoPostsDescription(user!.name),
+          onOpenPost: (target) =>
+              _openDesktopShellAwareScreen(PostDetailScreen(post: target)),
+          onViewAll: () => _openDesktopShellAwareScreen(
+            ProfilePostsScreen(
+              userId: widget.userId,
+              username: user?.username,
+              displayName: user?.name,
             ),
-          )
-        else if (_postsError != null)
-          EmptyStateCard(
-            icon: Icons.cloud_off,
-            title: l10n.userProfilePostsLoadFailedTitle,
-            description: _postsError!,
-            showAction: true,
-            actionLabel: l10n.commonRetry,
-            onAction: _loadPosts,
-          )
-        else if (_posts.isEmpty)
-          EmptyStateCard(
-            title: l10n.userProfileNoPostsTitle,
-            description: l10n.userProfileNoPostsDescription(user!.name),
-            icon: Icons.article,
-          )
-        else
-          Column(
-            children: [
-              ..._posts.map((post) => _buildPostCard(post, themeProvider)),
-              if (_loadingMore)
-                Container(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  alignment: Alignment.center,
-                  child: const InlineLoading(width: 40, height: 40),
-                )
-              else if (_isLastPage)
-                Container(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  alignment: Alignment.center,
-                  child: Text(
-                    l10n.userProfileNoMorePostsLabel,
-                    style: KubusTypography.inter(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-            ],
           ),
+        ),
       ],
-    );
-  }
-
-  Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
-    return CommunityPostCard(
-      post: post,
-      accentColor: themeProvider.accentColor,
-      onOpenPostDetail: (target) {
-        _openDesktopShellAwareScreen(PostDetailScreen(post: target));
-      },
     );
   }
 
@@ -1650,15 +1523,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       interactionsProvider: context.read<CommunityInteractionsProvider>(),
       savedItemsProvider: context.read<SavedItemsProvider>(),
       errorMessage: l10n.userProfilePostsLoadFailedDescription,
-    );
-  }
-
-  Future<void> _loadMorePosts() async {
-    final l10n = AppLocalizations.of(context)!;
-    await _profileController.loadMorePosts(
-      interactionsProvider: context.read<CommunityInteractionsProvider>(),
-      savedItemsProvider: context.read<SavedItemsProvider>(),
-      errorMessage: l10n.userProfilePostsLoadMoreFailedDescription,
     );
   }
 

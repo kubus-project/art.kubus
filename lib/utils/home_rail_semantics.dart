@@ -2,36 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../models/promotion.dart';
 import 'kubus_color_roles.dart';
+import 'kubus_entity_semantics.dart';
 
-/// Single source of truth for Home discovery-rail entity semantics.
+/// Home discovery-rail entity semantics.
 ///
-/// Every rail entity type maps to a distinct, restrained, theme-aware accent
-/// drawn from [KubusColorRoles]'s stat palette. Four of the five mappings match
-/// [AppColorUtils.markerSubjectColor] so a marker on the map and its rail card
-/// read as the same entity family; `profile`/artist takes a distinct calm blue
-/// (artist identity red would clash with the event coral).
-///
-/// Mobile and desktop Home must both resolve accents through this class so the
-/// two surfaces never drift apart. Colour is only ever a *secondary* signal —
-/// the card's icon and text keep each entity type identifiable without it.
+/// Kept as the rail's own name, but it is no longer a second mapping: it
+/// delegates to [KubusEntitySemantics], which is the single source of truth
+/// shared by the Home rails, profile portfolio cards and the studio gallery.
+/// A rail card and a profile card for the same kind of thing therefore cannot
+/// drift apart.
 class HomeRailSemantics {
   const HomeRailSemantics._();
 
   /// Restrained accent for [type] using the supplied [roles].
-  static Color accentFor(PromotionEntityType type, KubusColorRoles roles) {
-    switch (type) {
-      case PromotionEntityType.artwork:
-        return roles.statTeal;
-      case PromotionEntityType.profile:
-        return roles.statBlue;
-      case PromotionEntityType.institution:
-        return roles.statGreen;
-      case PromotionEntityType.event:
-        return roles.statCoral;
-      case PromotionEntityType.exhibition:
-        return roles.achievementGold;
-    }
-  }
+  static Color accentFor(PromotionEntityType type, KubusColorRoles roles) =>
+      KubusEntitySemantics.accentFor(
+        KubusEntitySemantics.fromPromotion(type),
+        roles,
+      );
 
   /// Convenience accessor that reads roles from [context].
   static Color of(BuildContext context, PromotionEntityType type) =>
