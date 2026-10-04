@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../avatar_widget.dart';
 import '../common/kubus_cached_image.dart';
 import '../detail/profile_identity_block.dart';
 import '../glass_components.dart';
@@ -27,9 +28,19 @@ import 'profile_cover_field.dart';
 ///   carries the display name, the full handle, verification and the role, and
 ///   it is tinted with the surface colour rather than left transparent, so
 ///   ordinary foreground contrast holds over any photograph.
-/// * Relationship actions belong to the same horizontal composition: beside the
-///   plate where the width allows it, on their own run inside the plate where
-///   it does not.
+/// * The plate is as wide as the identity it carries (capped at
+///   [plateMaxWidth]), not as wide as the row: a short name gets a compact
+///   plate, never a slab that fills the space because the space exists.
+/// * Relationship actions belong to the same horizontal composition: directly
+///   after the compact plate, top-aligned with it, where the width allows it;
+///   on their own run inside the plate where it does not. A wide plate never
+///   leaves the actions as a detached island.
+/// * The role is said once. Artist and institution accounts carry their role
+///   badge inside the identity block, so the hero's role eyebrow is shown only
+///   for an account without a role badge.
+/// * The avatar is mounted bare: its own shape plus a soft neutral shadow for
+///   contrast over a photograph, no second frame around an already-shaped
+///   mark.
 ///
 /// ## Why the plate is laid out below the cover rather than positioned in it
 /// Identity text grows. A `Positioned` plate anchored to the cover's bottom
@@ -85,7 +96,9 @@ class ProfileIdentityHero extends StatelessWidget {
   /// re-requesting a known-bad URL.
   final VoidCallback? onCoverError;
 
-  /// The role as a word — Artist, Institution — above the name.
+  /// The role as a word above the name, for an account whose role is not
+  /// already carried by a badge. Ignored for artists and institutions: their
+  /// [ProfileIdentityBlock] badge is the one public role indicator.
   final String? roleLabel;
 
   /// Follow / Message. Normally [ProfileRelationshipActions].
@@ -118,6 +131,10 @@ class ProfileIdentityHero extends StatelessWidget {
   /// Width reserved for the actions when they sit beside the identity.
   static const double actionsColumnWidth = 232;
 
+  /// Widest the identity plate grows beside the avatar. It shrinks to its
+  /// content below this; a longer name or handle wraps inside it.
+  static const double plateMaxWidth = 520;
+
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
@@ -144,7 +161,7 @@ class ProfileIdentityHero extends StatelessWidget {
           isVerified: isVerified,
           isArtist: isArtist,
           isInstitution: isInstitution,
-          roleLabel: roleLabel,
+          roleLabel: isArtist || isInstitution ? null : roleLabel,
           identityStatus: identityStatus,
           density: density,
           nameStyle: nameStyle,
@@ -157,15 +174,20 @@ class ProfileIdentityHero extends StatelessWidget {
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AvatarMount(
-                    roles: roles,
-                    accent: accent,
-                    child: avatar,
-                  ),
+                  _AvatarMount(radius: avatarRadius, child: avatar),
                   const SizedBox(width: KubusSpacing.md),
-                  Expanded(child: plate),
+                  // Loose, capped: the plate covers the identity content,
+                  // it does not take the row's remaining width.
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: plateMaxWidth,
+                      ),
+                      child: plate,
+                    ),
+                  ),
                   if (actionsBeside) ...[
-                    const SizedBox(width: KubusSpacing.md),
+                    const SizedBox(width: KubusSpacing.lg),
                     SizedBox(
                       width: actionsColumnWidth,
                       // Actions align with the plate's top so Follow sits
@@ -186,11 +208,7 @@ class ProfileIdentityHero extends StatelessWidget {
                   // of the desktop row.
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: _AvatarMount(
-                      roles: roles,
-                      accent: accent,
-                      child: avatar,
-                    ),
+                    child: _AvatarMount(radius: avatarRadius, child: avatar),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
                   plate,
@@ -269,36 +287,31 @@ class ProfileIdentityHero extends StatelessWidget {
   }
 }
 
-/// The avatar's mount: a surface ring that separates the mark from whatever
-/// photograph happens to sit behind it.
+/// The avatar's mount: no frame, no padding. A soft neutral shadow in the
+/// avatar's own shape is the only separation from a photograph behind it.
 class _AvatarMount extends StatelessWidget {
-  const _AvatarMount({
-    required this.roles,
-    required this.accent,
-    required this.child,
-  });
+  const _AvatarMount({required this.radius, required this.child});
 
-  final KubusColorRoles roles;
-  final Color accent;
+  final double radius;
   final Widget child;
-
-  static const double padding = 4;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
+      key: const ValueKey<String>('profile-hero-avatar-mount'),
       decoration: BoxDecoration(
-        color: roles.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.42),
-          width: KubusSizes.hairline,
+        borderRadius: BorderRadius.circular(
+          AvatarWidget.shapeRadiusFor(radius: radius),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(padding),
-        child: child,
-      ),
+      child: child,
     );
   }
 }
