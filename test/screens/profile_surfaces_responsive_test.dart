@@ -272,6 +272,7 @@ Size _defaultSizeFor(ProfileSurface surface) {
     case ProfileSurface.desktopPublic:
     case ProfileSurface.desktopOwner:
     case ProfileSurface.desktopOwnerInShell:
+    case ProfileSurface.desktopPublicInShellStack:
       return const Size(1280, 1000);
     case ProfileSurface.communityOverlay:
       return const Size(1024, 1000);

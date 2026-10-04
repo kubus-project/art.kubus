@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/models/user_profile.dart';
@@ -12,6 +13,7 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/community_interactions_provider.dart';
+import 'package:art_kubus/providers/community_subject_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
@@ -48,6 +50,10 @@ enum ProfileSurface {
   /// The owner profile as the desktop shell pushes it: inside a poppable
   /// [DesktopShellScope], where it owns the single sub-screen header.
   desktopOwnerInShell,
+
+  /// The public desktop profile inside a shell that really stacks what it is
+  /// asked to push (and pops it on Back), like the app's desktop shell.
+  desktopPublicInShellStack,
 }
 
 /// Renders the **actual** profile screens against deterministic fixtures.
@@ -72,6 +78,10 @@ Future<void> pumpProfileSurface(
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
   bool canonicalPublicEntry = false,
+
+  /// Posts by the viewed profile, injected through the screens' existing
+  /// extended-package seam. Empty by default.
+  List<CommunityPost> posts = const <CommunityPost>[],
 
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
@@ -109,6 +119,7 @@ Future<void> pumpProfileSurface(
     surface,
     resolvedUser,
     canonicalPublicEntry: canonicalPublicEntry,
+    posts: posts,
   );
 
   await tester.pumpWidget(
@@ -131,6 +142,10 @@ Future<void> pumpProfileSurface(
             create: (_) => SavedItemsProvider()),
         ChangeNotifierProvider<CommunityInteractionsProvider>(
             create: (_) => CommunityInteractionsProvider()),
+        // Needed once the profile renders real posts: the post card's metadata
+        // section resolves its subject references through this.
+        ChangeNotifierProvider<CommunitySubjectProvider>(
+            create: (_) => CommunitySubjectProvider()),
         ChangeNotifierProvider<AppRefreshProvider>(
             create: (_) => AppRefreshProvider()),
         ChangeNotifierProvider<AttestationProvider>(
@@ -199,10 +214,11 @@ Widget _surfaceWidget(
   ProfileSurface surface,
   User user, {
   bool canonicalPublicEntry = false,
+  List<CommunityPost> posts = const <CommunityPost>[],
 }) {
   final critical = ProfileFixtures.critical(user: user);
   final extended = Future<ProfileExtendedPackage?>.value(
-    ProfileFixtures.extended(),
+    ProfileFixtures.extended(initialPosts: posts),
   );
 
   switch (surface) {
@@ -238,6 +254,14 @@ Widget _surfaceWidget(
           child: publicEntryScreen,
         );
       }
+    case ProfileSurface.desktopPublicInShellStack:
+      return _ShellStackHost(
+        root: desktop_public.UserProfileScreen(
+          userId: user.id,
+          initialCriticalPackage: critical,
+          initialExtendedPackageFuture: extended,
+        ),
+      );
     case ProfileSurface.communityOverlay:
       return DesktopProfilePresentationScope(
         presentation: DesktopProfilePresentation.communityOverlay,
@@ -284,4 +308,37 @@ UserProfile _ownerProfileFrom(User user) {
     createdAt: ProfileFixtures.fetchedAt,
     updatedAt: ProfileFixtures.fetchedAt,
   );
+}
+
+/// A minimal stand-in for the desktop shell: pushScreen stacks the screen,
+/// popScreen removes it. There is deliberately no Navigator involvement.
+class _ShellStackHost extends StatefulWidget {
+  const _ShellStackHost({required this.root});
+
+  final Widget root;
+
+  @override
+  State<_ShellStackHost> createState() => _ShellStackHostState();
+}
+
+class _ShellStackHostState extends State<_ShellStackHost> {
+  final List<Widget> _stack = <Widget>[];
+
+  @override
+  Widget build(BuildContext context) {
+    return DesktopShellScope(
+      pushScreen: (screen) => setState(() => _stack.add(screen)),
+      popScreen: () => setState(() => _stack.removeLast()),
+      navigateToRoute: (_) {},
+      openNotifications: () {},
+      openFunctionsPanel: (_, {content}) {},
+      setFunctionsPanelContent: (_) {},
+      closeFunctionsPanel: () {},
+      canPop: _stack.isNotEmpty,
+      child: Material(
+        type: MaterialType.transparency,
+        child: _stack.isEmpty ? widget.root : _stack.last,
+      ),
+    );
+  }
 }

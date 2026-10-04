@@ -7,11 +7,11 @@ import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/gradient_icon_card.dart';
+import '../../widgets/common/kubus_context_icon.dart';
+import '../../widgets/auth/auth_atmosphere.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/kubus_snackbar.dart';
-import '../../widgets/glass_components.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart';
@@ -169,7 +169,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
@@ -183,24 +182,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           l10n.authForgotPasswordHighlightOne,
           l10n.authForgotPasswordHighlightTwo,
         ],
-        icon: GradientIconCard(
-          start: scheme.primary,
-          end: roles.positiveAction,
-          icon: Icons.lock_reset_rounded,
-          iconSize: 52,
-          width: 100,
-          height: 100,
-          radius: 20,
-        ),
+        icon: KubusHeroIcon(Icons.lock_reset_rounded),
         form: form,
       );
     }
-
-    final bgStart = scheme.primary.withValues(alpha: 0.55);
-    final bgEnd = roles.positiveAction.withValues(alpha: 0.50);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
-    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -216,12 +201,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          AnimatedGradientBackground(
-            duration: const Duration(seconds: 10),
-            intensity: 0.2,
-            colors: bgColors,
-            child: const SizedBox.expand(),
-          ),
+          // One shared account-entry field, so this screen is visibly the
+          // same place as Sign in and Register rather than its own gradient.
+          const AuthAtmosphere(child: SizedBox.expand()),
           SafeArea(
             top: false,
             child: SingleChildScrollView(
@@ -236,15 +218,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       children: [
                         Column(
                           children: [
-                            GradientIconCard(
-                              start: scheme.primary,
-                              end: roles.positiveAction,
-                              icon: Icons.lock_reset_rounded,
-                              iconSize: 52,
-                              width: 100,
-                              height: 100,
-                              radius: 20,
-                            ),
+                            KubusHeroIcon(Icons.lock_reset_rounded),
                             const SizedBox(height: 12),
                             Text(
                               l10n.authForgotPasswordTitle,

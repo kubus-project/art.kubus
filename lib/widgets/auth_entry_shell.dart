@@ -3,6 +3,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/material.dart';
@@ -48,10 +49,12 @@ class AuthEntryShell extends StatelessWidget {
       ),
     );
 
-    // Account entry is calm and direct: flat page ground, no animated colour
-    // field. The form surface and type carry the hierarchy.
-    return ColoredBox(
-      color: KubusColorRoles.of(context).ground,
+    // Account entry is an entry state and a focused transitional context: one
+    // of the few places the product earns an atmospheric ground. It is the
+    // same restrained field the whole auth family uses, so Sign in and
+    // Register cannot drift from Forgot/Reset/Verify. The form surface and
+    // type still carry the hierarchy.
+    return AuthAtmosphere(
       child: Theme(
         data: shellTheme,
         child: Scaffold(

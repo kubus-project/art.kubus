@@ -111,8 +111,8 @@ void main() {
         addTearDown(collab.stopInvitePolling);
         await expectClean(
           tester,
-          () => qaShellHost(
-              const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+          () => qaShellHost(const ArtworkEditScreen(
+              artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
           size: Size(width, 1200),
           artist: true,
           extraProviders: [
@@ -182,8 +182,8 @@ void main() {
       addTearDown(collab.stopInvitePolling);
       await expectClean(
         tester,
-        () => qaShellHost(
-            const ArtworkEditScreen(artworkId: 'art-a', embedded: true)),
+        () => qaShellHost(const ArtworkEditScreen(
+            artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
         size: const Size(1440, 1600),
         textScale: 2,
         artist: true,

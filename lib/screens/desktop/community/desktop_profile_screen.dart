@@ -34,7 +34,8 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
-import '../../../widgets/detail/shared_section_widgets.dart';
+import '../../../utils/kubus_entity_semantics.dart';
+import '../../../widgets/common/kubus_entity_card.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/profile/profile_account_health_section.dart';
@@ -43,6 +44,7 @@ import '../../../widgets/profile/profile_badges_verification_section.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/common/kubus_action_tile.dart';
 import '../../../utils/kubus_brand_colors.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -553,20 +555,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(width: DetailSpacing.lg),
                   itemBuilder: (context, index) {
                     final artwork = savedArtworks[index];
-                    return SharedShowcaseCard(
+                    return KubusEntityCard(
+                      variant: KubusEntityCardVariant.media,
+                      kind: KubusEntityKind.artwork,
                       imageUrl: artwork.imageUrl,
                       title: artwork.title,
                       subtitle: artwork.artist,
-                      footer: l10n.userProfileLikesLabel(artwork.likesCount),
+                      meta: l10n.userProfileLikesLabel(artwork.likesCount),
                       onTap: () => openArtwork(
                         context,
                         artwork.id,
                         source: 'desktop_profile_saved_items',
                       ),
                       width: 190,
-                      imageHeight: 110,
-                      titleMaxLines: 2,
-                      subtitleMaxLines: 1,
                     );
                   },
                 ),
@@ -602,17 +603,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: DetailSpacing.md),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.person_outline, color: scheme.primary),
-                title: Text(
-                  l10n.profileAnalyticsProfileTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  l10n.desktopProfileAnalyticsProfileSubtitle,
-                  style: KubusTypography.inter(fontSize: 12),
-                ),
+              KubusActionTile(
+                title: l10n.profileAnalyticsProfileTitle,
+                subtitle: l10n.desktopProfileAnalyticsProfileSubtitle,
+                icon: Icons.person_outline,
+                accent: KubusColorRoles.of(dialogContext).statTeal,
+                layout: KubusActionTileLayout.compact,
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _openDesktopShellAwareScreen(
@@ -628,17 +624,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
               ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                title: Text(
-                  l10n.profileAnalyticsCommunityTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  l10n.desktopProfileAnalyticsCommunitySubtitle,
-                  style: KubusTypography.inter(fontSize: 12),
-                ),
+              const SizedBox(height: KubusSpacing.sm),
+              KubusActionTile(
+                title: l10n.profileAnalyticsCommunityTitle,
+                subtitle: l10n.desktopProfileAnalyticsCommunitySubtitle,
+                icon: Icons.forum_outlined,
+                accent: KubusColorRoles.of(dialogContext).statTeal,
+                layout: KubusActionTileLayout.compact,
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _openDesktopShellAwareScreen(
@@ -797,6 +789,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     padding: const EdgeInsets.all(avatarRingPadding),
                     child: AvatarWidget(
                       wallet: user?.walletAddress ?? '',
+                      displayName: user?.displayName,
                       avatarUrl: user?.avatar,
                       radius: avatarRadius,
                       borderWidth: 0,
@@ -1467,331 +1460,94 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtworkShowcaseCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final card = ProfileArtworkShowcaseData.fromMap(
       data,
-      fallbackTitle: 'Untitled',
-      fallbackSubtitle: 'Artwork',
+      fallbackTitle: l10n.commonUntitled,
+      fallbackSubtitle: l10n.commonArtwork,
     );
 
-    return GestureDetector(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.artwork,
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: card.subtitle,
+      meta: l10n.userProfileLikesLabel(card.likesCount),
       onTap: card.id != null
-          ? () {
-              openArtwork(context, card.id!, source: 'desktop_profile');
-            }
+          ? () => openArtwork(context, card.id!, source: 'desktop_profile')
           : null,
-      child: MouseRegion(
-        cursor: card.id != null
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        child: SizedBox(
-          width: 240,
-          child: DesktopCard(
-            padding: EdgeInsets.zero,
-            enableHover: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(KubusRadius.lg),
-                  ),
-                  child: card.imageUrl != null
-                      ? Image.network(
-                          _normalizeMediaUrl(card.imageUrl) ?? '',
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderImage(180, Icons.image_outlined),
-                        )
-                      : _buildPlaceholderImage(180, Icons.image_outlined),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        card.title,
-                        style: KubusTextStyles.detailCardTitle.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        card.subtitle,
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.66),
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.favorite_border,
-                            size: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(width: KubusSpacing.xs),
-                          Text(
-                            '${card.likesCount}',
-                            style: KubusTextStyles.detailCaption.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.66),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      width: 240,
     );
   }
 
   Widget _buildCollectionShowcaseCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final card = ProfileCollectionShowcaseData.fromMap(
       data,
-      fallbackTitle: 'Collection',
+      fallbackTitle: l10n.profileCollectionFallbackTitle,
     );
 
-    return SizedBox(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.collection,
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
+      meta: card.description,
+      onTap: (card.id != null && card.id!.isNotEmpty)
+          ? () => _openDesktopShellAwareScreen(
+                CollectionDetailScreen(collectionId: card.id!),
+              )
+          : null,
       width: 220,
-      child: DesktopCard(
-        padding: EdgeInsets.zero,
-        enableHover: true,
-        onTap: (card.id != null && card.id!.isNotEmpty)
-            ? () {
-                _openDesktopShellAwareScreen(
-                  CollectionDetailScreen(collectionId: card.id!),
-                );
-              }
-            : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(KubusRadius.lg),
-              ),
-              child: card.imageUrl != null
-                  ? Image.network(
-                      _normalizeMediaUrl(card.imageUrl) ?? '',
-                      height: 140,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(
-                          140, Icons.collections_outlined),
-                    )
-                  : _buildPlaceholderImage(140, Icons.collections_outlined),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    card.title,
-                    style: KubusTextStyles.detailCardTitle.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: KubusSpacing.xs),
-                  Text(
-                    '${card.artworkCount} artworks',
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.66),
-                    ),
-                  ),
-                  if ((card.description ?? '').isNotEmpty) ...[
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      card.description!,
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildEventShowcaseCard(Map<String, dynamic> data,
       {bool isInstitution = false}) {
+    final l10n = AppLocalizations.of(context)!;
     final card = ProfileEventShowcaseData.fromMap(
       data,
-      fallbackTitle: 'Event',
-      fallbackLocation: 'TBA',
+      fallbackTitle: l10n.profileEventFallbackTitle,
+      fallbackLocation: l10n.profileEventLocationTba,
     );
-    final dateLabel = _formatEventDate(card.startDate);
 
-    return SizedBox(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.event,
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: _formatEventDate(card.startDate),
+      meta: card.location ?? l10n.profileEventLocationTba,
+      onTap: (card.id != null && card.id!.isNotEmpty)
+          ? () => _openDesktopShellAwareScreen(
+                EventDetailScreen(eventId: card.id!),
+              )
+          : null,
       width: isInstitution ? 280 : 240,
-      child: DesktopCard(
-        padding: EdgeInsets.zero,
-        enableHover: true,
-        onTap: (card.id != null && card.id!.isNotEmpty)
-            ? () {
-                _openDesktopShellAwareScreen(
-                  EventDetailScreen(eventId: card.id!),
-                );
-              }
-            : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(DetailRadius.lg)),
-              child: card.imageUrl != null
-                  ? Image.network(
-                      _normalizeMediaUrl(card.imageUrl) ?? '',
-                      height: isInstitution ? 160 : 140,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(
-                          isInstitution ? 160 : 140, Icons.event),
-                    )
-                  : _buildPlaceholderImage(
-                      isInstitution ? 160 : 140, Icons.event),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(DetailSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    card.title,
-                    style: DetailTypography.cardTitle(context).copyWith(
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: DetailSpacing.sm),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: DetailSpacing.xs),
-                      Text(
-                        dateLabel,
-                        style: DetailTypography.caption(context).copyWith(
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: DetailSpacing.xs),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: DetailSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          card.location ?? 'TBA',
-                          style: DetailTypography.caption(context).copyWith(
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildPlaceholderImage(double height, IconData icon) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
-      ),
-      child: Center(
-          child: Icon(icon,
-              size: 48,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimaryContainer
-                  .withValues(alpha: 0.4))),
-    );
-  }
-
-  Widget _buildShowcaseCard(
-      {String? imageUrl,
-      required String title,
-      required String subtitle,
-      String? artworkId}) {
-    return SharedShowcaseCard(
+  /// One shared entity preview for the recently-viewed rail too, so this
+  /// screen no longer carries a second artwork-card design of its own.
+  Widget _buildShowcaseCard({
+    String? imageUrl,
+    required String title,
+    required String subtitle,
+    String? artworkId,
+  }) {
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: KubusEntityKind.artwork,
       imageUrl: imageUrl,
       title: title,
       subtitle: subtitle,
       onTap: artworkId != null
-          ? () {
-              openArtwork(context, artworkId,
-                  source: 'desktop_profile_showcase');
-            }
+          ? () => openArtwork(context, artworkId,
+              source: 'desktop_profile_showcase')
           : null,
       width: 220,
-      imageHeight: 160,
-      titleStyle: DetailTypography.cardTitle(context).copyWith(
-        fontSize: 14,
-      ),
-      subtitleStyle: DetailTypography.caption(context).copyWith(
-        fontSize: 12,
-      ),
     );
   }
 

@@ -25,6 +25,8 @@ import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/kubus_entity_semantics.dart';
+import '../../widgets/common/kubus_entity_card.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../utils/app_color_utils.dart';
 import '../../widgets/detail/profile_identity_block.dart';
@@ -59,6 +61,7 @@ import '../../widgets/profile/profile_badges_verification_section.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../widgets/common/kubus_action_tile.dart';
 import '../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -632,6 +635,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 wallet: profileProvider
                                         .currentUser?.walletAddress ??
                                     '',
+                                displayName:
+                                    profileProvider.currentUser?.displayName,
                                 avatarUrl: profileProvider.currentUser?.avatar,
                                 radius: avatarRadius,
                                 borderWidth: 0,
@@ -1267,16 +1272,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                 SharedShowcaseSection<Artwork>(
                   title: l10n.profileMenuSavedItemsTitle,
                   items: savedArtworks,
-                  itemBuilder: (context, artwork) => SharedShowcaseCard(
+                  itemBuilder: (context, artwork) => KubusEntityCard(
+                    variant: KubusEntityCardVariant.media,
+                    kind: KubusEntityKind.artwork,
                     imageUrl: artwork.imageUrl,
                     title: artwork.title,
                     subtitle: artwork.artist,
-                    footer: l10n.userProfileLikesLabel(artwork.likesCount),
+                    meta: l10n.userProfileLikesLabel(artwork.likesCount),
                     onTap: () => openArtwork(
                       context,
                       artwork.id,
                       source: 'profile_saved_artworks',
                     ),
+                    width: 200,
                   ),
                   emptyTitle: l10n
                       .savedItemsEmptySectionTitle(l10n.savedItemsArtworkLabel),
@@ -1545,10 +1553,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
 
     return _buildShowcaseCard(
+      kind: KubusEntityKind.artwork,
       imageUrl: card.imageUrl,
       title: card.title,
       subtitle: card.subtitle,
-      footer: l10n.userProfileLikesLabel(card.likesCount),
+      meta: l10n.userProfileLikesLabel(card.likesCount),
       onTap: card.id != null
           ? () => openArtwork(context, card.id!, source: 'profile_showcase')
           : null,
@@ -1563,10 +1572,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
 
     return _buildShowcaseCard(
+      kind: KubusEntityKind.collection,
       imageUrl: card.imageUrl,
       title: card.title,
       subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
-      footer: card.description ?? l10n.profileCollectionCuratedByYouFooter,
+      meta: card.description ?? l10n.profileCollectionCuratedByYouFooter,
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1591,10 +1601,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     final date = _formatDateLabel(card.startDate);
 
     return _buildShowcaseCard(
+      kind: KubusEntityKind.event,
       imageUrl: card.imageUrl,
       title: card.title,
       subtitle: date,
-      footer: card.location ?? l10n.profileEventLocationTba,
+      meta: card.location ?? l10n.profileEventLocationTba,
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1608,21 +1619,26 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// One shared entity preview for every showcase rail on this screen: the
+  /// media is the subject, the title and its context read off the plate, and
+  /// the category accent and glyph come from [KubusEntitySemantics].
   Widget _buildShowcaseCard({
+    required KubusEntityKind kind,
     String? imageUrl,
     required String title,
     required String subtitle,
-    required String footer,
+    required String meta,
     VoidCallback? onTap,
   }) {
-    return SharedShowcaseCard(
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: kind,
       imageUrl: imageUrl,
       title: title,
       subtitle: subtitle,
-      footer: footer,
+      meta: meta,
       onTap: onTap,
       width: 200,
-      imageHeight: 110,
     );
   }
 
@@ -2022,46 +2038,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// A profile menu destination: the dense tile, no icon box.
   Widget _buildOptionItem(IconData icon, String title, VoidCallback onTap) {
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-      child: LiquidGlassCard(
+      child: KubusActionTile(
+        title: title,
+        icon: icon,
+        accent: KubusColorRoles.of(context).active,
+        layout: KubusActionTileLayout.compact,
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md,
-          vertical: KubusSpacing.sm,
-        ),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: Row(
-          children: [
-            Container(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Icon(icon, color: accent),
-            ),
-            const SizedBox(width: KubusSpacing.md),
-            Expanded(
-              child: Text(
-                title,
-                style: KubusTextStyles.navLabel.copyWith(
-                  fontSize: 16,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: KubusSizes.trailingChevron,
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ],
-        ),
       ),
     );
   }

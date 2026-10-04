@@ -22,6 +22,7 @@ enum DesktopNavLabelKey {
   organize,
   govern,
   trade,
+  node,
   web3,
 }
 
@@ -42,6 +43,8 @@ extension DesktopNavLabelKeyX on DesktopNavLabelKey {
         return l10n.desktopShellNavGovern;
       case DesktopNavLabelKey.trade:
         return l10n.desktopShellNavTrade;
+      case DesktopNavLabelKey.node:
+        return l10n.desktopShellNavNode;
       case DesktopNavLabelKey.web3:
         return l10n.desktopShellNavWeb3;
     }

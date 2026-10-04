@@ -168,15 +168,35 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     );
   }
 
+  /// One settings row. A row that goes somewhere or does something is a
+  /// destination ([SharedSettingsDestinationTile]); a row that carries its
+  /// own control ([trailing]: a switch or a dropdown) or states a fact is a
+  /// flat form-control row.
   Widget _buildSettingsTile(
     String title,
     String subtitle,
     IconData icon, {
     VoidCallback? onTap,
     Widget? trailing,
+    Widget? status,
     bool isDestructive = false,
     Key? tileKey,
   }) {
+    assert(
+      status == null || (onTap != null && trailing == null),
+      'A status belongs to a destination tile (onTap, no trailing control).',
+    );
+    if (onTap != null && trailing == null) {
+      return SharedSettingsDestinationTile(
+        key: tileKey,
+        title: title,
+        subtitle: subtitle,
+        icon: icon,
+        onTap: onTap,
+        isDestructive: isDestructive,
+        status: status,
+      );
+    }
     final roles = KubusColorRoles.of(context);
     final textTheme = Theme.of(context).textTheme;
     final tint = roles.surface;
@@ -193,13 +213,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           onTap: onTap,
           trailing: trailing,
           isDestructive: isDestructive,
-          showChevron: trailing == null,
+          showChevron: false,
+          showLeadingIcon: false,
           backgroundColor: tint,
           borderColor: Colors.transparent,
-          leadingBackgroundColor: Colors.transparent,
-          leadingBorderColor: Colors.transparent,
-          leadingIconColor:
-              isDestructive ? roles.destructive : roles.foregroundMuted,
           titleStyle: textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: isDestructive ? roles.destructive : roles.foreground,

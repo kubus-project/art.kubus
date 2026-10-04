@@ -38,7 +38,7 @@ import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
-import 'package:art_kubus/widgets/gradient_icon_card.dart';
+import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
@@ -3568,7 +3568,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Widget _buildWelcomeScreen(AppLocalizations l10n, ColorScheme scheme) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final spotlight = _paletteForStep(_OnboardingStep.welcome);
     final compactMobileHeight =
         !_isDesktop && MediaQuery.sizeOf(context).height < 700;
 
@@ -3629,8 +3628,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                   l10n.onboardingFlowWelcomeInfoFollow,
                                   l10n.onboardingFlowWelcomeInfoTime,
                                 ],
-                                start: spotlight.start,
-                                end: spotlight.end,
                               ),
                             ),
                             const SizedBox(width: KubusSpacing.xl),
@@ -4189,15 +4186,11 @@ class _WelcomeHeroColumn extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.details,
-    required this.start,
-    required this.end,
   });
 
   final String title;
   final String subtitle;
   final List<String> details;
-  final Color start;
-  final Color end;
 
   @override
   Widget build(BuildContext context) {
@@ -4207,15 +4200,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GradientIconCard(
-          start: start,
-          end: end,
-          icon: Icons.explore_outlined,
-          iconSize: 42,
-          width: 88,
-          height: 88,
-          radius: 24,
-        ),
+        KubusHeroIcon(Icons.explore_outlined),
         const SizedBox(height: KubusSpacing.xl),
         Text(
           title,

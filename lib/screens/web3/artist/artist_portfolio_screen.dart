@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,10 @@ import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/kubus_entity_semantics.dart';
+import '../../../widgets/common/kubus_entity_card.dart';
+import '../../../widgets/common/kubus_glass_icon_button.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -60,7 +65,6 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     return Consumer<PortfolioProvider>(
       builder: (context, provider, _) {
@@ -84,23 +88,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   onRefresh: () => provider.refresh(force: true),
                   child: entries.isEmpty
                       ? _buildEmptyState(l10n)
-                      : ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(
-                            KubusSpacing.md,
-                            KubusSpacing.sm,
-                            KubusSpacing.md,
-                            KubusSpacing.lg,
-                          ),
-                          itemCount: entries.length,
-                          separatorBuilder: (_, __) => const SizedBox(
-                              height: KubusSpacing.sm + KubusSpacing.xxs),
-                          itemBuilder: (context, index) {
-                            final entry = entries[index];
-                            return _buildEntryCard(
-                                context, entry, provider, scheme, l10n);
-                          },
-                        ),
+                      : _buildGallery(context, entries, provider, l10n),
                 ),
               ),
             ],
@@ -311,145 +299,132 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     );
   }
 
+  /// The workspace's dominant surface: an image-led adaptive grid.
+  ///
+  /// The column count comes from the available width against a target card
+  /// width, so a wide window gets more columns at a consistent rhythm instead
+  /// of one narrow list stranded in the middle of it, and cards never stretch
+  /// to fill the screen. Below [_galleryGridMinWidth] it stays a one-column
+  /// list of banner cards, so a phone gets an image-led list rather than a
+  /// grid of postage stamps.
+  Widget _buildGallery(
+    BuildContext context,
+    List<PortfolioEntry> entries,
+    PortfolioProvider provider,
+    AppLocalizations l10n,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const padding = KubusSpacing.md;
+        const gap = KubusSpacing.md;
+        final available = constraints.maxWidth - (padding * 2);
+        final columns = available < _galleryGridMinWidth
+            ? 1
+            : (available / _galleryTargetCardWidth).floor().clamp(1, 5);
+        final cardWidth = (available - (gap * (columns - 1))) / columns;
+
+        return GridView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            padding,
+            KubusSpacing.sm,
+            padding,
+            KubusSpacing.lg,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            // One column is a wide banner card; several are portrait-ish
+            // previews. The media stays the subject either way.
+            mainAxisExtent: columns == 1
+                ? _galleryListCardHeight
+                : cardWidth * _galleryCardAspect,
+          ),
+          itemCount: entries.length,
+          itemBuilder: (context, index) => _buildEntryCard(
+            context,
+            entries[index],
+            provider,
+            l10n,
+          ),
+        );
+      },
+    );
+  }
+
+  /// Below this the gallery is a one-column list of banner cards.
+  static const double _galleryGridMinWidth = 560;
+
+  /// Target card width the column count is derived from.
+  static const double _galleryTargetCardWidth = 300;
+
+  /// Height of a single-column banner card.
+  static const double _galleryListCardHeight = 148;
+
+  /// Grid card height as a ratio of its width.
+  static const double _galleryCardAspect = 1.12;
+
+  /// One studio gallery card.
+  ///
+  /// The shared [KubusEntityCard] — the same preview grammar as the profile
+  /// portfolio and the Home rails — plus the two creator affordances a studio
+  /// needs: the publication state, which is information and therefore always
+  /// visible, and one overflow control. Both sit over the media's edges rather
+  /// than as a pile of buttons across the artwork, and the overflow stays
+  /// visible because touch never hovers.
   Widget _buildEntryCard(
     BuildContext context,
     PortfolioEntry entry,
     PortfolioProvider provider,
-    ColorScheme scheme,
     AppLocalizations l10n,
   ) {
+    final roles = KubusColorRoles.of(context);
     final artwork = entry.type == PortfolioEntryType.artwork
         ? provider.artworkById(entry.id)
         : null;
     final coverUrl = () {
-      if (entry.type == PortfolioEntryType.artwork) {
-        if (artwork != null) {
-          return ArtworkMediaResolver.resolveCover(artwork: artwork) ??
-              MediaUrlResolver.resolve(entry.coverUrl);
-        }
+      if (entry.type == PortfolioEntryType.artwork && artwork != null) {
+        return ArtworkMediaResolver.resolveCover(artwork: artwork) ??
+            MediaUrlResolver.resolve(entry.coverUrl);
       }
       return MediaUrlResolver.resolve(entry.coverUrl);
     }();
 
-    final statusColor = entry.isPublished ? scheme.primary : scheme.tertiary;
+    final kind = switch (entry.type) {
+      PortfolioEntryType.artwork => KubusEntityKind.artwork,
+      PortfolioEntryType.collection => KubusEntityKind.collection,
+      PortfolioEntryType.exhibition => KubusEntityKind.exhibition,
+    };
+    final typeLabel = switch (entry.type) {
+      PortfolioEntryType.artwork => l10n.userProfileArtworksTitle,
+      PortfolioEntryType.collection => l10n.userProfileCollectionsTitle,
+      PortfolioEntryType.exhibition => l10n.artistStudioTabExhibitions,
+    };
+    final subtitle = entry.subtitle?.trim();
 
-    String typeLabel() {
-      switch (entry.type) {
-        case PortfolioEntryType.artwork:
-          return l10n.userProfileArtworksTitle;
-        case PortfolioEntryType.collection:
-          return l10n.userProfileCollectionsTitle;
-        case PortfolioEntryType.exhibition:
-          return l10n.artistStudioTabExhibitions;
-      }
-    }
-
-    String statusLabel() {
-      return entry.isPublished
-          ? l10n.artistGalleryFilterActive
-          : l10n.artistGalleryFilterDraft;
-    }
-
-    return Material(
-      color: scheme.surface,
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        onTap: () => _openEntry(context, entry, provider),
-        child: Container(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            border:
-                Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _CoverThumb(url: coverUrl),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            entry.title,
-                            style: KubusTextStyles.sectionTitle.copyWith(
-                              color: scheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: KubusSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.sm,
-                            vertical: KubusSpacing.xxs + KubusSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(KubusRadius.xl),
-                          ),
-                          child: Text(
-                            statusLabel(),
-                            style: KubusTextStyles.compactBadge.copyWith(
-                              color: statusColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-                    Row(
-                      children: [
-                        Text(
-                          typeLabel(),
-                          style: KubusTextStyles.sectionSubtitle.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.65),
-                          ),
-                        ),
-                        if (entry.subtitle != null &&
-                            entry.subtitle!.trim().isNotEmpty) ...[
-                          Text(
-                            ' • ',
-                            style: KubusTextStyles.navMetaLabel.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.45),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              entry.subtitle!.trim(),
-                              style: KubusTextStyles.navMetaLabel.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.65),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-              IconButton(
-                tooltip: l10n.commonMore,
-                onPressed: () =>
-                    _showEntryOptionsSheet(context, provider, entry),
-                icon: Icon(
-                  Icons.more_horiz,
-                  color: scheme.onSurface.withValues(alpha: 0.75),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return KubusEntityCard(
+      variant: KubusEntityCardVariant.media,
+      kind: kind,
+      imageUrl: coverUrl,
+      title: entry.title,
+      subtitle: typeLabel,
+      meta: (subtitle == null || subtitle.isEmpty) ? null : subtitle,
+      onTap: () => unawaited(_openEntry(context, entry, provider)),
+      status: _PublicationStateChip(
+        label: entry.isPublished
+            ? l10n.artistGalleryFilterActive
+            : l10n.artistGalleryFilterDraft,
+        tone: entry.isPublished ? roles.positiveAction : roles.warningAction,
       ),
+      actions: [
+        _GalleryOverflowButton(
+          tooltip: l10n.commonMore,
+          onPressed: () =>
+              unawaited(_showEntryOptionsSheet(context, provider, entry)),
+        ),
+      ],
+      alwaysShowActions: true,
     );
   }
 
@@ -696,35 +671,51 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   }
 }
 
-class _CoverThumb extends StatelessWidget {
-  final String? url;
+/// The publication state over a gallery card's media.
+///
+/// State is information, so it is always visible; a small tinted pill rather
+/// than a block of colour, so it never competes with the artwork.
+class _PublicationStateChip extends StatelessWidget {
+  const _PublicationStateChip({required this.label, required this.tone});
 
-  const _CoverThumb({this.url});
+  final String label;
+  final Color tone;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      child: Container(
-        width: 56,
-        height: 56,
-        color: scheme.surfaceContainerHighest,
-        child: (url != null && url!.isNotEmpty)
-            ? Image.network(
-                url!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image_outlined,
-                  color: scheme.onSurface.withValues(alpha: 0.5),
-                ),
-              )
-            : Icon(
-                Icons.image_outlined,
-                color: scheme.onSurface.withValues(alpha: 0.45),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.xxs,
       ),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(KubusRadius.xs),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: KubusTextStyles.compactBadge.copyWith(color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// One restrained management control over a gallery card's media.
+class _GalleryOverflowButton extends StatelessWidget {
+  const _GalleryOverflowButton({
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return KubusGlassIconButton(
+      icon: Icons.more_horiz,
+      tooltip: tooltip,
+      onPressed: onPressed,
     );
   }
 }

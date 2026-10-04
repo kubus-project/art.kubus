@@ -426,6 +426,7 @@ class ProfilePackageController extends ChangeNotifier {
     final currentUser = user;
     if (currentUser == null || _isLastPage || _loadingMore) return;
     _loadingMore = true;
+    _postsError = null;
     _currentPage += 1;
     _notifyListenersSafe();
 
@@ -441,7 +442,8 @@ class ProfilePackageController extends ChangeNotifier {
         savedItemsProvider: savedItemsProvider,
         interactionsProvider: interactionsProvider,
       );
-      _posts.addAll(more);
+      // A new list: the one in hand may be fixed-length or unmodifiable.
+      _posts = <CommunityPost>[..._posts, ...more];
       _isLastPage = more.length < pageSize;
       _loadingMore = false;
       ProfilePackageMutationTracker.postsPatched(

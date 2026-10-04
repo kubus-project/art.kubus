@@ -24,6 +24,7 @@ import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
+import '../../../widgets/common/kubus_action_tile.dart';
 import '../../../widgets/topbar_icon.dart';
 import '../../../features/web3/web3_capabilities.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
@@ -518,33 +519,44 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
         final activeProposals = daoProvider.getActiveProposals();
         final reviews = daoProvider.reviews;
         final isEmpty = activeProposals.isEmpty && reviews.isEmpty;
-
-        if (daoProvider.isLoading && isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(KubusSpacing.md),
-            child: KubusSectionLoading(rows: 3, rowHeight: 160),
-          );
-        }
-        if (daoProvider.loadError != null && isEmpty) {
-          return KubusStateView.fromError(
-            daoProvider.loadError,
-            onRetry: () => daoProvider.refreshData(force: true),
-          );
-        }
-        if (isEmpty) {
-          return Center(
-            child: EmptyStateCard(
-              icon: Icons.how_to_vote,
-              title: l10n.daoActiveProposalsEmptyTitle,
-              description: l10n.daoActiveProposalsEmptyDescription,
-            ),
-          );
-        }
-
         final capabilities = _capabilities();
         final notEligible = capabilities.canVote &&
             activeProposals.isNotEmpty &&
             web3Provider.kub8Balance <= 0;
+
+        // The proposal list has four distinct states.
+        final Widget body;
+        if (daoProvider.isLoading && isEmpty) {
+          body = const KubusSectionLoading(rows: 3, rowHeight: 160);
+        } else if (daoProvider.loadError != null && isEmpty) {
+          body = KubusStateView.fromError(
+            daoProvider.loadError,
+            onRetry: () => daoProvider.refreshData(force: true),
+          );
+        } else if (isEmpty) {
+          // "Nothing to vote on" is the moment the one task that is not a
+          // place to go applies: put a proposal forward.
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              EmptyStateCard(
+                icon: Icons.how_to_vote,
+                title: l10n.daoActiveProposalsEmptyTitle,
+                description: l10n.daoActiveProposalsEmptyDescription,
+              ),
+              _buildCreateProposalTask(capabilities),
+            ],
+          );
+        } else {
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (reviews.isNotEmpty) _buildReviewQueue(reviews),
+              ...activeProposals
+                  .map((proposal) => _buildProposalCard(proposal)),
+            ],
+          );
+        }
 
         return ListView(
           padding: const EdgeInsets.all(KubusSpacing.md),
@@ -559,11 +571,39 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
               ),
               const SizedBox(height: KubusSpacing.md),
             ],
-            if (reviews.isNotEmpty) _buildReviewQueue(reviews),
-            ...activeProposals.map((proposal) => _buildProposalCard(proposal)),
+            body,
           ],
         );
       },
+    );
+  }
+
+  /// The one governance task that is not already a tab: put a proposal
+  /// forward, offered when there is nothing to vote on.
+  ///
+  /// It takes [KubusActionTile], the product's destination language, because it
+  /// is a primary task. Treasury, delegation and voting history are *not*
+  /// offered as tiles here: they are the tabs directly above, and printing the
+  /// same navigation twice is noise. Proposal rows stay proposal content and the
+  /// header numbers stay [KubusStatCard].
+  ///
+  /// Gated exactly as the Create proposal tab is, so nothing becomes reachable
+  /// that was not already.
+  Widget _buildCreateProposalTask(Web3Capabilities capabilities) {
+    if (!capabilities.canCreateProposal) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    final accent = KubusColorRoles.of(context).web3DaoAccent;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: KubusSpacing.md),
+      child: KubusActionTile(
+        key: const ValueKey<String>('dao_task_create_proposal'),
+        title: l10n.daoHubTabCreateProposal,
+        icon: Icons.add_circle_outline,
+        accent: accent,
+        layout: KubusActionTileLayout.inline,
+        onTap: () => _setSelectedIndex(2),
+      ),
     );
   }
 

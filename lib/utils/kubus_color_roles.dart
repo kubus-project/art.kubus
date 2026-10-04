@@ -153,6 +153,14 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Marketplace accent (orange)
   Color get web3MarketplaceAccent => lockedFeature;
 
+  /// kubus Node accent.
+  ///
+  /// Its own hue, distinct from the five capability colours: Node is runtime
+  /// infrastructure, not a practice surface and not the wallet. Treating it as
+  /// the wallet's colour would imply it needs wallet authority, which it does
+  /// not.
+  Color get web3NodeAccent => statPurple;
+
   /// Resolve Web3 hub accent from a screen/feature key.
   ///
   /// Keys supported:
@@ -185,6 +193,10 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       case 'sell':
       case 'nft':
         return web3MarketplaceAccent;
+      case 'node':
+      case 'kubus_node':
+      case 'kubus-node':
+        return web3NodeAccent;
       default:
         return web3MarketplaceAccent;
     }
@@ -218,6 +230,10 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       case 'trade':
       case 'nft':
         return web3MarketplaceAccent;
+      case 'node':
+      case 'kubus_node':
+      case 'kubus-node':
+        return web3NodeAccent;
       case 'community':
       case 'connect':
       case 'analytics':

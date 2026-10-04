@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/support_links.dart';
+import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,82 +29,93 @@ class SupportSectionCard extends StatelessWidget {
         'Help us keep building art.kubus - every donation helps.';
 
     final roles = KubusColorRoles.of(context);
-    // Flat, secondary support notice: it closes Home without competing with
-    // cultural content (no glass card or gradient icon tile).
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: roles.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.surface),
-        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+    // A closing section, not a card: the heading names it, the three ways to
+    // give are destinations (compact tiles), and nothing is boxed twice.
+    final links = <_SupportLink>[
+      _SupportLink(
+        label: l10n?.supportMethodKofi ?? 'Ko-fi',
+        subtitle: l10n?.supportMethodKofiHint ?? 'Coffee-sized support',
+        icon: Icons.local_cafe_outlined,
+        url: SupportLinks.kofiUrl,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.volunteer_activism_outlined,
-                color: roles.foregroundMuted,
-                size: 24,
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.72),
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () => _openMoreInfo(context),
-                child: Text(l10n?.supportSectionMoreInfo ?? 'More info'),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          Wrap(
-            spacing: KubusSpacing.sm,
-            runSpacing: KubusSpacing.sm,
-            children: [
-              _SupportLinkChip(
-                label: l10n?.supportMethodKofi ?? 'Ko-fi',
-                subtitle: l10n?.supportMethodKofiHint ?? 'Coffee-sized support',
-                icon: Icons.local_cafe_outlined,
-                url: SupportLinks.kofiUrl,
-              ),
-              _SupportLinkChip(
-                label: l10n?.supportMethodPaypal ?? 'PayPal',
-                subtitle: l10n?.supportMethodPaypalHint ?? 'Donate via PayPal',
-                icon: Icons.payments_outlined,
-                url: SupportLinks.paypalDonateUrl,
-              ),
-              _SupportLinkChip(
-                label: l10n?.supportMethodGithubSponsors ?? 'GitHub Sponsors',
-                subtitle: l10n?.supportMethodGithubSponsorsHint ??
-                    'Support via GitHub',
-                icon: Icons.code,
-                url: SupportLinks.githubSponsorsUrl,
-              ),
-            ],
-          ),
-        ],
+      _SupportLink(
+        label: l10n?.supportMethodPaypal ?? 'PayPal',
+        subtitle: l10n?.supportMethodPaypalHint ?? 'Donate via PayPal',
+        icon: Icons.payments_outlined,
+        url: SupportLinks.paypalDonateUrl,
       ),
+      _SupportLink(
+        label: l10n?.supportMethodGithubSponsors ?? 'GitHub Sponsors',
+        subtitle: l10n?.supportMethodGithubSponsorsHint ?? 'Support via GitHub',
+        icon: Icons.code,
+        url: SupportLinks.githubSponsorsUrl,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xs),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _openMoreInfo(context),
+              child: Text(l10n?.supportSectionMoreInfo ?? 'More info'),
+            ),
+          ],
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = KubusSpacing.sm;
+            final columns = constraints.maxWidth >= 760
+                ? 3
+                : constraints.maxWidth >= 520
+                    ? 2
+                    : 1;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final link in links)
+                  SizedBox(
+                    width: width,
+                    child: KubusActionTile(
+                      title: link.label,
+                      subtitle: link.subtitle,
+                      icon: link.icon,
+                      accent: roles.statAmber,
+                      layout: KubusActionTileLayout.compact,
+                      onTap: () => _openSupportLink(link.url),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -211,8 +223,8 @@ class SupportSectionCard extends StatelessWidget {
   }
 }
 
-class _SupportLinkChip extends StatelessWidget {
-  const _SupportLinkChip({
+class _SupportLink {
+  const _SupportLink({
     required this.label,
     required this.subtitle,
     required this.icon,
@@ -223,88 +235,24 @@ class _SupportLinkChip extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final String url;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    final roles = KubusColorRoles.of(context);
-    return Semantics(
-      button: true,
-      label: label,
-      hint: subtitle,
-      child: Material(
-        color: roles.surfaceRaised,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.surface),
-          side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
-        ),
-        child: InkWell(
-          onTap: () => _open(url),
-          borderRadius: BorderRadius.circular(KubusRadius.surface),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm + 2,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 20, color: roles.foregroundMuted),
-                  const SizedBox(width: KubusSpacing.sm),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.xxs),
-                        Text(
-                          subtitle,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.72),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+Future<void> _openSupportLink(String url) async {
+  if (AppConfig.enableHapticFeedback && !kIsWeb) {
+    try {
+      HapticFeedback.selectionClick();
+    } catch (_) {}
   }
 
-  Future<void> _open(String url) async {
-    if (AppConfig.enableHapticFeedback && !kIsWeb) {
-      try {
-        HapticFeedback.selectionClick();
-      } catch (_) {}
-    }
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
 
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: SupportLinks.preferredLaunchMode);
-      }
-    } catch (_) {
-      // Best-effort: do not throw on link open.
+  try {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: SupportLinks.preferredLaunchMode);
     }
+  } catch (_) {
+    // Best-effort: do not throw on link open.
   }
 }
 

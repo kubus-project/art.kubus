@@ -783,22 +783,9 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
           l10n.authSecureAccountTitle,
           _secureAccountSubtitle(l10n),
           Icons.lock_outline,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const EmailVerificationStatusBadge(
-                dense: true,
-                alignment: Alignment.centerRight,
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.45),
-              ),
-            ],
+          status: const EmailVerificationStatusBadge(
+            dense: true,
+            alignment: Alignment.centerRight,
           ),
           onTap: () async {
             await Navigator.of(context).pushNamed('/secure-account');
@@ -1022,7 +1009,7 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               );
             }
           },
-          trailing: walletProvider.hasWalletIdentity
+          status: walletProvider.hasWalletIdentity
               ? Icon(
                   walletProvider.isReadOnlySession
                       ? Icons.visibility

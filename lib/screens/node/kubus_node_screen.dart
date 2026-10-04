@@ -23,7 +23,12 @@ import 'my_nodes_screen.dart';
 /// directly; everything passes through [NodeStatePresentation] so the app and
 /// the node speak with one voice.
 class KubusNodeScreen extends StatefulWidget {
-  const KubusNodeScreen({super.key});
+  const KubusNodeScreen({super.key, this.embedded = false});
+
+  /// True where a desktop shell hosts the dashboard as a destination. The host
+  /// then owns the screen chrome, so the dashboard drops its own [AppBar] and
+  /// carries the refresh control in its header instead of repeating a title.
+  final bool embedded;
 
   @override
   State<KubusNodeScreen> createState() => _KubusNodeScreenState();
@@ -58,23 +63,26 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
     final wide = MediaQuery.sizeOf(context).width >= 900;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_l10n.kubusNodeEntryTitle),
-        actions: [
-          if (node.isPaired)
-            IconButton(
-              tooltip: MaterialLocalizations.of(context)
-                  .refreshIndicatorSemanticLabel,
-              onPressed: _refreshing ? null : _refresh,
-              icon: const Icon(Icons.refresh_rounded),
+      backgroundColor: widget.embedded ? Colors.transparent : null,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(_l10n.kubusNodeEntryTitle),
+              actions: [if (node.isPaired) _refreshButton()],
             ),
-        ],
-      ),
       body: SafeArea(
         child: node.isPaired ? _buildPaired(node, wide) : _buildUnpaired(node),
       ),
     );
   }
+
+  Widget _refreshButton() => IconButton(
+        key: const ValueKey<String>('node_refresh_action'),
+        tooltip:
+            MaterialLocalizations.of(context).refreshIndicatorSemanticLabel,
+        onPressed: _refreshing ? null : _refresh,
+        icon: const Icon(Icons.refresh_rounded),
+      );
 
   /// Value before configuration. Someone who has never run a node reads what it
   /// is for, not a form.
@@ -121,17 +129,15 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
                   ),
                 ),
               const SizedBox(height: KubusSpacing.lg),
+              // One primary action. Operator setup used to sit right here as a
+              // second, competing entry; it now lives under the dashboard's
+              // Security & Setup, behind the advanced disclosure, because a
+              // normal person connecting a Node never needs it.
               FilledButton.icon(
+                key: const ValueKey<String>('node_home_connect_action'),
                 onPressed: _openPairing,
                 icon: const Icon(Icons.qr_code_scanner_rounded),
-                label: Text(_l10n.kubusNodeEntryConnectCta),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              TextButton.icon(
-                onPressed: () => Navigator.of(context)
-                    .pushNamed('/settings/availability-node/advanced'),
-                icon: const Icon(Icons.tune_rounded),
-                label: Text(_l10n.kubusNodeAdvancedOperatorSetup),
+                label: Text(_l10n.kubusNodeConnectAction),
               ),
               const SizedBox(height: KubusSpacing.lg),
               Text(
@@ -175,6 +181,7 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
         _Header(
           label: _nodeLabel(snapshot),
           description: participation,
+          trailing: widget.embedded ? _refreshButton() : null,
         ),
         const SizedBox(height: KubusSpacing.md),
         NodePanel(
@@ -316,10 +323,15 @@ double _horizontalPadding(BuildContext context) =>
     MediaQuery.sizeOf(context).width > 900 ? KubusSpacing.xxl : KubusSpacing.lg;
 
 class _Header extends StatelessWidget {
-  const _Header({required this.label, required this.description});
+  const _Header({
+    required this.label,
+    required this.description,
+    this.trailing,
+  });
 
   final String label;
   final NodeStateDescription description;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -327,20 +339,28 @@ class _Header extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: KubusSpacing.md,
-          runSpacing: KubusSpacing.xs,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+            Expanded(
+              child: Wrap(
+                spacing: KubusSpacing.md,
+                runSpacing: KubusSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  NodeStatusLabel(
+                    label: description.title,
+                    severity: description.severity,
+                  ),
+                ],
+              ),
             ),
-            NodeStatusLabel(
-              label: description.title,
-              severity: description.severity,
-            ),
+            if (trailing != null) trailing!,
           ],
         ),
         const SizedBox(height: KubusSpacing.xs),
@@ -948,6 +968,26 @@ class _SetupSection extends StatelessWidget {
                   label: 'Peer ID',
                   value: peerId,
                 ),
+              // Recovery, not the normal path. Operator identity, tokens and
+              // environment are a real need when a Node has to be recovered
+              // by hand, so they are kept — but behind this disclosure, with
+              // their cost stated, rather than offered as pairing UX.
+              const SizedBox(height: KubusSpacing.sm),
+              NodeDetailRow(
+                label: l10n.kubusNodeAdvancedOperatorSetup,
+                value: l10n.kubusNodeAdvancedOperatorSetupBody,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const ValueKey<String>('node_advanced_operator_setup'),
+                  onPressed: () => Navigator.of(context)
+                      .pushNamed('/settings/availability-node/advanced'),
+                  icon: const Icon(Icons.tune_rounded),
+                  label: Text(l10n.kubusNodeAdvancedOperatorSetup),
+                ),
+              ),
             ],
           ),
         ),

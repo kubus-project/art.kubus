@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
+import '../../widgets/common/kubus_action_tile.dart';
+import '../../widgets/kubus_card.dart';
 import '../../providers/themeprovider.dart';
 import '../../services/backend_api_service.dart';
 import '../web3/artist/artist_studio.dart';
@@ -23,6 +26,7 @@ class Season0Screen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final accent = context.watch<ThemeProvider>().accentColor;
+    final roles = KubusColorRoles.of(context);
 
     return Scaffold(
       appBar: embedded
@@ -59,30 +63,26 @@ class Season0Screen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
 
-            // CTA: Apply as artist
-            _ActionCard(
+            // Destinations: the contextual colour of where each one leads.
+            _ctaTile(
               icon: Icons.palette_outlined,
-              color: scheme.secondary,
+              accent: roles.web3ArtistStudioAccent,
               title: l10n.season0ApplyArtistCta,
               subtitle: l10n.season0ApplyArtistSubtitle,
               onTap: () => _handleApplyArtist(context),
             ),
-            const SizedBox(height: 12),
-
-            // CTA: Apply as institution
-            _ActionCard(
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _ctaTile(
               icon: Icons.apartment_outlined,
-              color: scheme.tertiary,
+              accent: roles.web3InstitutionAccent,
               title: l10n.season0ApplyInstitutionCta,
               subtitle: l10n.season0ApplyInstitutionSubtitle,
               onTap: () => _handleApplyInstitution(context),
             ),
-            const SizedBox(height: 12),
-
-            // CTA: Newsletter
-            _ActionCard(
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _ctaTile(
               icon: Icons.mail_outline,
-              color: accent,
+              accent: roles.active,
               title: l10n.season0NewsletterCta,
               subtitle: l10n.season0NewsletterSubtitle,
               onTap: () => _handleNewsletter(context),
@@ -90,73 +90,68 @@ class Season0Screen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // KUB8 points info
-            _buildPointsInfo(context, l10n, scheme),
+            _buildPointsInfo(context, l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPointsInfo(
-      BuildContext context, AppLocalizations l10n, ColorScheme scheme) {
+  Widget _ctaTile({
+    required IconData icon,
+    required Color accent,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return KubusActionTile(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      accent: accent,
+      onTap: onTap,
+      minHeight: 120,
+    );
+  }
+
+  /// A note, not a destination: ordinary grouped content with no icon box.
+  Widget _buildPointsInfo(BuildContext context, AppLocalizations l10n) {
+    final roles = KubusColorRoles.of(context);
     final showLabsNote = AppConfig.isFeatureEnabled('labs');
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Row(
+    return KubusCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
-            child: Icon(Icons.stars_outlined, color: scheme.primary, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      l10n.season0PointsLabel,
-                      style: KubusTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Tooltip(
-                      message: l10n.season0PointsTooltip,
-                      child: Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: scheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-                if (showLabsNote) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.season0OnChainNote,
-                    style: KubusTypography.inter(
-                      fontSize: 12,
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  l10n.season0PointsLabel,
+                  style: KubusTextStyles.detailCardTitle.copyWith(
+                    color: roles.foreground,
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
+              Tooltip(
+                message: l10n.season0PointsTooltip,
+                child: Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: roles.foregroundMuted,
+                ),
+              ),
+            ],
           ),
+          if (showLabsNote) ...[
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              l10n.season0OnChainNote,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: roles.foregroundMuted,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -201,79 +196,5 @@ class Season0Screen extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: KubusTypography.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: KubusTypography.inter(
-                      fontSize: 13,
-                      color: scheme.onSurface.withValues(alpha: 0.65),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: scheme.onSurface.withValues(alpha: 0.35),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

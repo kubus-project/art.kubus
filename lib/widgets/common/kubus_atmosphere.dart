@@ -310,11 +310,16 @@ class KubusHoverResponse extends StatefulWidget {
     required this.builder,
     this.lift = false,
     this.cursor = MouseCursor.defer,
+    this.enabled = true,
   });
 
   final Widget Function(BuildContext context, bool hovered) builder;
   final bool lift;
   final MouseCursor cursor;
+
+  /// A disabled response never reports hover and never lifts, but keeps the
+  /// same widget structure, so toggling it does not remount the child.
+  final bool enabled;
 
   /// Hover answer timing, shared by everything built on this primitive.
   static const Duration duration = Duration(milliseconds: 180);
@@ -323,6 +328,43 @@ class KubusHoverResponse extends StatefulWidget {
   /// Whether decorative movement is allowed in [context].
   static bool motionAllowed(BuildContext context) =>
       !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+
+  /// Distance a navigation arrow travels toward its destination on hover.
+  static const double arrowTravel = 2;
+
+  /// Soft contextual shadow under a hovered, lifted surface.
+  ///
+  /// A tinted drop (offset down, negative spread) rather than a glow: it
+  /// grounds the 2 px lift in the destination's own colour and never blooms
+  /// around the tile. Dark grounds need more alpha before a coloured shadow
+  /// registers at all.
+  static List<BoxShadow> accentShadow(
+    Color accent,
+    Brightness brightness, {
+    required bool hovered,
+  }) {
+    // The resting entry is the same shadow at **alpha 0**, not an empty list.
+    //
+    // An empty list looks like "nothing at rest", but it makes
+    // [BoxShadow.lerpList] fall back to `BoxShadow.scale(t)`, which
+    // interpolates blur and spread while leaving the colour — and therefore
+    // the alpha — at its final value. The shadow then snaps to full strength
+    // on the first animated frame and only grows its blur, which is exactly
+    // the popping this helper exists to avoid. Keeping both ends of the lerp
+    // present, with identical geometry, makes it a plain alpha fade.
+    //
+    // It costs nothing at rest: a `SrcOver` draw with alpha 0 has nothing to
+    // draw, so the transparent blur is never rasterised.
+    final peak = brightness == Brightness.dark ? 0.34 : 0.24;
+    return <BoxShadow>[
+      BoxShadow(
+        color: accent.withValues(alpha: hovered ? peak : 0),
+        blurRadius: 18,
+        spreadRadius: -5,
+        offset: const Offset(0, 8),
+      ),
+    ];
+  }
 
   @override
   State<KubusHoverResponse> createState() => _KubusHoverResponseState();
@@ -339,7 +381,8 @@ class _KubusHoverResponseState extends State<KubusHoverResponse> {
   @override
   Widget build(BuildContext context) {
     final motion = KubusHoverResponse.motionAllowed(context);
-    final child = widget.builder(context, _hovered);
+    final hovered = _hovered && widget.enabled;
+    final child = widget.builder(context, hovered);
     return MouseRegion(
       cursor: widget.cursor,
       onEnter: (event) => _set(true),
@@ -348,7 +391,7 @@ class _KubusHoverResponseState extends State<KubusHoverResponse> {
           ? child
           : TweenAnimationBuilder<double>(
               tween: Tween<double>(
-                end: _hovered && motion ? -KubusHoverResponse.liftDistance : 0,
+                end: hovered && motion ? -KubusHoverResponse.liftDistance : 0,
               ),
               duration: motion ? KubusHoverResponse.duration : Duration.zero,
               curve: Curves.easeOutCubic,

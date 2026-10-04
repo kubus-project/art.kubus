@@ -408,7 +408,9 @@ Core widgets:
 - `lib/widgets/empty_state_card.dart`
 - `lib/widgets/inline_loading.dart`
 - `lib/widgets/app_loading.dart`
-- `lib/widgets/gradient_icon_card.dart`
+- `lib/widgets/common/kubus_action_tile.dart` (every destination or shortcut: stacked, inline, compact; never a local icon-square card)
+- `lib/widgets/common/kubus_stat_card.dart` (metrics)
+- `lib/widgets/common/kubus_context_icon.dart` (page identity icon)
 
 ---
 
