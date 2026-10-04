@@ -684,14 +684,16 @@ class KubusMapMarkerSyncEngine {
       for (final marker in candidates) marker.id: marker,
     };
     final width = _coverFetchWidthPx;
+    // A settled camera replaces the warm-up set: prefetches planned for an
+    // earlier view that have not started yet must not delay this one.
+    _coverLoader.cancelPendingPrefetches();
     for (final id in ids) {
       final marker = byId[id];
       final url = marker == null ? null : _coverUrlFor(marker);
-      if (url == null ||
-          _coverLoader.cached(url, targetWidthPx: width) != null) {
+      if (url == null || _coverLoader.cached(url, targetPx: width) != null) {
         continue;
       }
-      unawaited(_coverLoader.load(url, targetWidthPx: width));
+      unawaited(_coverLoader.load(url, targetPx: width, prefetch: true));
     }
   }
 
@@ -712,7 +714,7 @@ class KubusMapMarkerSyncEngine {
     final targetWidth = _coverFetchWidthPx;
     unawaited(() async {
       try {
-        final image = await _coverLoader.load(url, targetWidthPx: targetWidth);
+        final image = await _coverLoader.load(url, targetPx: targetWidth);
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.

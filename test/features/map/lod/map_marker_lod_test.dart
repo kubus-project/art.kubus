@@ -225,6 +225,20 @@ void main() {
       expect(plan(12.0, selectedId: null), isEmpty);
     });
 
+    test('a selection never costs the early stage a nearby cover', () {
+      const phone = Size(390, 844);
+      final ids = KubusMarkerLod.planCoverIds(
+        candidates: markers,
+        selectedId: 'sel',
+        center: center,
+        viewport: phone,
+        zoom: 12.6,
+        hasCover: (_) => true,
+      );
+      expect(ids.first, 'sel');
+      expect(ids.length - 1, KubusMarkerLod.earlyCoverBudgetFloor);
+    });
+
     test('nearby covers arrive progressively, never as one photo wall', () {
       final early = plan(12.6);
       final medium = plan(13.6);
@@ -232,7 +246,8 @@ void main() {
       expect(early.first, 'sel');
       expect(early.length, lessThan(medium.length));
       expect(medium.length, lessThan(full.length));
-      expect(full.length, KubusMarkerLod.coverBudget(desktop));
+      // The selection rides on top of the nearby budget.
+      expect(full.length, KubusMarkerLod.coverBudget(desktop) + 1);
       // Every stage is a prefix of the next: covers already shown stay shown.
       expect(medium.take(early.length), early);
       expect(full.take(medium.length), medium);
@@ -280,9 +295,10 @@ void main() {
         budget: 8,
         hasCover: allHaveCovers,
       );
-      expect(ids.length, 8);
+      // Eight nearby covers plus the selection, which never costs one.
+      expect(ids.length, 9);
       expect(ids.first, 'm39');
-      expect(ids.toSet().length, 8);
+      expect(ids.toSet().length, 9);
     });
 
     test(
