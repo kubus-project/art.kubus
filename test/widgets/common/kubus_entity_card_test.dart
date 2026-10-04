@@ -17,6 +17,57 @@ Widget _buildHarness(Widget child, {bool disableAnimations = false}) {
 }
 
 void main() {
+  testWidgets(
+      'nested controls stay separately discoverable inside a tappable card',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var creatorTaps = 0;
+    var overflowTaps = 0;
+
+    await tester.pumpWidget(
+      _buildHarness(
+        KubusEntityCard(
+          variant: KubusEntityCardVariant.media,
+          kind: KubusEntityKind.artwork,
+          title: 'Sun Garden',
+          subtitleWidget: TextButton(
+            onPressed: () => creatorTaps += 1,
+            child: const Text('Ana Kovac'),
+          ),
+          alwaysShowActions: true,
+          actions: [
+            IconButton(
+              onPressed: () => overflowTaps += 1,
+              tooltip: 'More actions',
+              icon: const Icon(Icons.more_horiz),
+            ),
+          ],
+          width: 220,
+          height: 240,
+          onTap: () {},
+        ),
+      ),
+    );
+
+    // The card is still one named button...
+    expect(find.bySemanticsLabel('Sun Garden'), findsOneWidget);
+    // ...and the creator link and overflow action are their own nodes.
+    final creator = tester.getSemantics(find.byType(TextButton));
+    expect(creator.label, 'Ana Kovac');
+    expect(creator.flagsCollection.isButton, isTrue);
+    final overflow = tester.getSemantics(find.byType(IconButton));
+    expect(overflow.tooltip, 'More actions');
+    expect(overflow.flagsCollection.isButton, isTrue);
+
+    await tester.tap(find.byType(TextButton));
+    await tester.tap(find.byType(IconButton));
+    expect(creatorTaps, 1);
+    expect(overflowTaps, 1);
+    // The title is not duplicated as a second, standalone node.
+    expect(find.text('Sun Garden'), findsOneWidget);
+    semantics.dispose();
+  });
+
   testWidgets('a tappable entity card exposes button semantics and taps',
       (tester) async {
     final semantics = tester.ensureSemantics();

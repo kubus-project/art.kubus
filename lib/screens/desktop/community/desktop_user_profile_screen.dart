@@ -1489,13 +1489,25 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           emptyDescription: l10n.userProfileNoPostsDescription(user!.name),
           onOpenPost: (target) =>
               _openDesktopShellAwareScreen(PostDetailScreen(post: target)),
-          onViewAll: () => _openDesktopShellAwareScreen(
-            ProfilePostsScreen(
+          onViewAll: () {
+            final shellScope = DesktopShellScope.of(context);
+            final postsScreen = ProfilePostsScreen(
               userId: widget.userId,
               username: user?.username,
               displayName: user?.name,
-            ),
-          ),
+              embedded: shellScope != null,
+            );
+            // In the shell, DesktopSubScreen owns the one title and Back
+            // (shell pop); the list renders without its own app bar.
+            _openDesktopShellAwareScreen(
+              shellScope == null
+                  ? postsScreen
+                  : DesktopSubScreen(
+                      title: l10n.userProfilePostsTitle,
+                      child: postsScreen,
+                    ),
+            );
+          },
         ),
       ],
     );

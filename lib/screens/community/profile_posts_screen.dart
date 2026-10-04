@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/community_interactions_provider.dart';
+import '../../models/profile_package.dart';
 import '../../providers/profile_package_controller.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
@@ -16,6 +17,7 @@ import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/inline_loading.dart';
+import '../desktop/desktop_shell_scope.dart';
 import 'post_detail_screen.dart';
 
 /// The complete post history of one profile.
@@ -30,6 +32,8 @@ class ProfilePostsScreen extends StatefulWidget {
     required this.userId,
     this.username,
     this.displayName,
+    this.embedded = false,
+    @visibleForTesting this.initialCriticalPackage,
   });
 
   final String userId;
@@ -38,6 +42,13 @@ class ProfilePostsScreen extends StatefulWidget {
   /// Shown in the header where it is known, so the screen says whose posts
   /// these are without a second request.
   final String? displayName;
+
+  /// Hosted by a chrome owner (the desktop shell's [DesktopSubScreen]): the
+  /// screen renders only its list, with no app bar, title or back control of
+  /// its own, so the host's single header is the only one.
+  final bool embedded;
+
+  final ProfileCriticalPackage? initialCriticalPackage;
 
   @override
   State<ProfilePostsScreen> createState() => _ProfilePostsScreenState();
@@ -53,6 +64,7 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
     _controller = ProfilePackageController(
       walletAddress: widget.userId,
       username: widget.username,
+      initialCriticalPackage: widget.initialCriticalPackage,
     );
     _controller.addListener(_onControllerChanged);
     _scrollController = ScrollController();
@@ -95,6 +107,13 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
     final position = _scrollController.position;
     if (position.pixels < position.maxScrollExtent - 320) return;
     if (_controller.isLastPage || _controller.loadingMore) return;
+    // A failed page waits for the footer's Retry instead of re-firing on
+    // every scroll tick.
+    if (_controller.postsError != null) return;
+    _loadMore();
+  }
+
+  void _loadMore() {
     final l10n = AppLocalizations.of(context);
     unawaited(
       _controller.loadMorePosts(
@@ -106,6 +125,11 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
   }
 
   void _openPost(CommunityPost post) {
+    final shellScope = DesktopShellScope.of(context);
+    if (widget.embedded && shellScope != null) {
+      shellScope.pushScreen(PostDetailScreen(post: post));
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => PostDetailScreen(post: post),
@@ -121,18 +145,7 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
     final posts = _controller.posts;
     final name = (widget.displayName ?? _controller.user?.name ?? '').trim();
 
-    return Scaffold(
-      appBar: AppBar(
-        flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          l10n.userProfilePostsTitle,
-          style: KubusTextStyles.mobileAppBarTitle,
-        ),
-      ),
-      body: RefreshIndicator(
+    final body = RefreshIndicator(
         onRefresh: _loadPosts,
         color: accent,
         child: _controller.postsLoading && posts.isEmpty
@@ -155,8 +168,11 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
                       child: KubusHeaderText(
-                        title: l10n.userProfilePostsTitle,
-                        subtitle: name.isEmpty ? null : name,
+                        // Embedded, the host header already says "Posts".
+                        title: widget.embedded && name.isNotEmpty
+                            ? name
+                            : l10n.userProfilePostsTitle,
+                        subtitle: widget.embedded || name.isEmpty ? null : name,
                         kind: KubusHeaderKind.section,
                         titleColor: roles.foreground,
                       ),
@@ -198,6 +214,34 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
                       ),
                     );
                   }
+                  if (_controller.postsError != null) {
+                    return Semantics(
+                      container: true,
+                      liveRegion: true,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: KubusSpacing.sm,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _controller.postsError!,
+                              textAlign: TextAlign.center,
+                              style: KubusTextStyles.sectionSubtitle.copyWith(
+                                color: roles.foregroundMuted,
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.xs),
+                            TextButton(
+                              onPressed: _loadMore,
+                              child: Text(l10n.commonRetry),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
                   if (_controller.isLastPage) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
@@ -216,7 +260,22 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
                   return const SizedBox.shrink();
                 },
               ),
+    );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          l10n.userProfilePostsTitle,
+          style: KubusTextStyles.mobileAppBarTitle,
+        ),
       ),
+      body: body,
     );
   }
 }

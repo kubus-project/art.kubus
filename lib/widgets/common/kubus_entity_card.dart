@@ -213,6 +213,13 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
   IconData get _glyph =>
       widget.fallbackGlyph ?? KubusEntitySemantics.glyphFor(widget.kind);
 
+  /// An interactive card is one button named by its label, so its own content
+  /// is hidden from the tree. The action buttons and a [subtitleWidget] (an
+  /// interactive creator link) are not part of that content: they stay
+  /// separate, reachable nodes.
+  Widget _readOnly(Widget child) =>
+      _interactive ? ExcludeSemantics(child: child) : child;
+
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
@@ -221,11 +228,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
     final motion = KubusHoverResponse.motionAllowed(context);
     final radius = BorderRadius.circular(KubusEntityCard.radius);
 
-    // An interactive card is one button named by its label, so its own content
-    // is hidden from the tree. The action buttons are not part of that content:
-    // they stay separate, reachable nodes.
-    Widget readOnly(Widget child) =>
-        _interactive ? ExcludeSemantics(child: child) : child;
+    final readOnly = _readOnly;
     final actionsShown = widget.alwaysShowActions || _answering;
 
     Widget card = AnimatedContainer(
@@ -263,7 +266,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: readOnly(_buildPlate(context, roles)),
+              child: _buildPlate(context, roles),
             ),
             // The category edge sits above the plate so a pale image can never
             // wash it out.
@@ -485,17 +488,19 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.status != null) ...[
-          widget.status!,
+          _readOnly(widget.status!),
           const SizedBox(height: KubusSpacing.xs),
         ],
-        Text(
-          widget.title,
-          maxLines: widget.titleMaxLines,
-          overflow: TextOverflow.ellipsis,
-          style: KubusTextStyles.sectionTitle.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            height: 1.15,
+        _readOnly(
+          Text(
+            widget.title,
+            maxLines: widget.titleMaxLines,
+            overflow: TextOverflow.ellipsis,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+            ),
           ),
         ),
         if (widget.subtitleWidget != null) ...[
@@ -503,21 +508,25 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
           widget.subtitleWidget!,
         ] else if ((widget.subtitle ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.xxs),
-          Text(
-            widget.subtitle!.trim(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KubusEntityCard.onMediaSubtitleStyle(),
+          _readOnly(
+            Text(
+              widget.subtitle!.trim(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KubusEntityCard.onMediaSubtitleStyle(),
+            ),
           ),
         ],
         if ((widget.meta ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.xxs),
-          Text(
-            widget.meta!.trim(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: Colors.white.withValues(alpha: 0.70),
+          _readOnly(
+            Text(
+              widget.meta!.trim(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: Colors.white.withValues(alpha: 0.70),
+              ),
             ),
           ),
         ],
@@ -535,7 +544,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                widget.leading!,
+                _readOnly(widget.leading!),
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(child: text),
               ],
