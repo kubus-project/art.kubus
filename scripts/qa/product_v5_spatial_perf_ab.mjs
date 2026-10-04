@@ -17,6 +17,14 @@
 //      PERF_ORDER=interleave|sequential  PERF_API=https://api.kubus.site
 // Output: output/playwright/spatial/<label>/report.json + summary.txt
 //
+// PERF_PATH=covers runs the cover-heavy street-approach path instead of the
+// zoom/pan/zoom-out sweep: Ljubljana (62 markers with media in the pinned
+// fixture) approached 11 -> 13, held idle, deepened 13 -> 14.6, held idle,
+// panned at 14.6, held idle, zoomed out. It reports time from each idle to the
+// first cover image registered (`mc_*` addImage), cover image count, and the
+// app's own cover-pipeline phase timings (fetch/decode, render PNG, addImage,
+// resync wait) where the bundle publishes them to window.__kubusCoverPerf.
+//
 // What is recorded per run: requestAnimationFrame deltas per camera segment
 // (zoom-in, pan at street zoom, zoom-out), long tasks, the CPU time MapLibre
 // spends inside Map._render, GeoJSONSource.setData calls (count, duration,
@@ -42,6 +50,7 @@ const runsPerCell = Number(process.env.PERF_RUNS || 5);
 const browserName = process.env.PERF_BROWSER || 'chromium';
 const glMode = process.env.PERF_GL || 'swiftshader';
 const order = process.env.PERF_ORDER || 'interleave';
+const perfPath = (process.env.PERF_PATH || 'sweep').trim();
 const configs = (process.env.PERF_CONFIGS || '')
   .split(',')
   .map((s) => s.trim())
@@ -182,10 +191,13 @@ async function installFixture(context, config, stats) {
 // prototype as soon as it exists (works for both 4.x and 5.x bundles).
 const HOOK = () => {
   window.__maps = [];
+  // Opt-in sink for the app's cover-pipeline phase timings.
+  window.__kubusCoverPerf = [];
   window.__perf = {
     renderMs: [],
     setData: [],
     addImage: 0,
+    addImageNames: [],
     removeImage: 0,
     longTasks: [],
     segment: 'boot',
@@ -230,6 +242,7 @@ const HOOK = () => {
       const addImage = proto.addImage;
       proto.addImage = function (...args) {
         window.__perf.addImage += 1;
+        window.__perf.addImageNames.push({ id: String(args[0]), t: performance.now(), seg: window.__perf.segment });
         return addImage.apply(this, args);
       };
       const removeImage = proto.removeImage;
@@ -284,6 +297,62 @@ function summarise(deltas) {
     over50: s.filter((d) => d > 50).length,
   };
 }
+
+const COVER_SEGMENTS = ['approach', 'idle-13', 'deepen', 'idle-14.6', 'pan', 'idle-pan', 'zoom-out'];
+
+/** Street-approach path for cover-heavy measurement (runs in the page). */
+const COVER_PATH = () =>
+  new Promise((resolve) => {
+    const map = window.__maps[window.__maps.length - 1];
+    const frames = [];
+    const counts = [];
+    const idles = [];
+    let last = performance.now();
+    let running = true;
+    const tick = (now) => {
+      frames.push({ d: now - last, seg: window.__perf.segment });
+      last = now;
+      if (running) requestAnimationFrame(tick);
+    };
+    const snapshot = (seg) => {
+      let features = -1;
+      try {
+        features = map.querySourceFeatures('kubus_markers').length;
+      } catch {}
+      counts.push({ seg, features, images: map.listImages ? map.listImages().length : -1 });
+    };
+    const ease = (seg, opts, idleSeg) =>
+      new Promise((done) => {
+        window.__perf.segment = seg;
+        map.once('moveend', () => {
+          window.__perf.segment = idleSeg;
+          idles.push({ seg: idleSeg, t: performance.now() });
+          done();
+        });
+        map.easeTo(opts);
+      });
+    const hold = (ms) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      window.__perf.segment = 'setup';
+      map.jumpTo({ zoom: 11, center: [14.5058, 46.0519] });
+      await hold(2500);
+      requestAnimationFrame(tick);
+      await ease('approach', { zoom: 13, duration: 1800 }, 'idle-13');
+      await hold(3500);
+      snapshot('idle-13');
+      await ease('deepen', { zoom: 14.6, duration: 1500 }, 'idle-14.6');
+      await hold(3500);
+      snapshot('idle-14.6');
+      await ease('pan', { center: [14.5098, 46.0499], duration: 1200 }, 'idle-pan');
+      await hold(3500);
+      snapshot('idle-pan');
+      await ease('zoom-out', { zoom: 9, duration: 1800 }, 'end');
+      snapshot('zoom-out');
+      running = false;
+      frames.shift();
+      resolve({ frames, counts, idles });
+    })();
+  });
 
 async function oneRun(config, viewport, runIndex) {
   const browserType = browserName === 'firefox' ? firefox : chromium;
@@ -359,9 +428,11 @@ async function oneRun(config, viewport, runIndex) {
       window.__perf.longTasks = [];
       window.__perf.readPixels = [];
       window.__perf.addImageAtStart = window.__perf.addImage;
+      window.__perf.addImageNames = [];
+      window.__kubusCoverPerf.length = 0;
     });
 
-    const result = await page.evaluate(
+    const result = perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
       () =>
         new Promise((resolve) => {
           const map = window.__maps[window.__maps.length - 1];
@@ -416,8 +487,31 @@ async function oneRun(config, viewport, runIndex) {
       };
     });
 
+    const coverPerf = await page.evaluate(() => (window.__kubusCoverPerf || []).map((e) => ({ phase: e.phase, ms: e.ms })));
+    const coverAdds = perf.addImageNames.filter((a) => a.id.startsWith('mc_'));
+    const firstCoverAfter = {};
+    for (const idle of result.idles || []) {
+      const first = coverAdds.find((a) => a.t >= idle.t);
+      firstCoverAfter[idle.seg] = first ? fix(first.t - idle.t) : null;
+    }
+    const phase = (name) => {
+      const v = coverPerf.filter((e) => e.phase === name).map((e) => e.ms).sort((a, b) => a - b);
+      return { n: v.length, p50: fix(quantile(v, 0.5)), p95: fix(quantile(v, 0.95)) };
+    };
+    const covers = {
+      registered: coverAdds.length,
+      registeredWhileMoving: coverAdds.filter((a) => !a.seg.startsWith('idle') && a.seg !== 'end').length,
+      firstCoverAfter,
+      phases: {
+        fetchDecode: phase('fetchDecode'),
+        renderPng: phase('renderPng'),
+        addImage: phase('addImage'),
+        resyncDelay: phase('resyncDelay'),
+      },
+    };
+
     const bySeg = {};
-    for (const seg of ['zoom-in', 'pan', 'zoom-out']) {
+    for (const seg of perfPath === 'covers' ? COVER_SEGMENTS : ['zoom-in', 'pan', 'zoom-out']) {
       bySeg[seg] = summarise(result.frames.filter((f) => f.seg === seg).map((f) => f.d));
     }
     const render = perf.renderMs.map((r) => r.d).sort((a, b) => a - b);
@@ -455,6 +549,7 @@ async function oneRun(config, viewport, runIndex) {
       images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage },
       counts: result.counts,
       cover,
+      covers,
       fixture: stats,
     };
   } finally {
@@ -499,7 +594,7 @@ try {
 }
 
 // Median of per-run statistics for each config x viewport.
-const lines = [`# A/B/C web performance (${browserName}, ${glMode})`, `# runs per cell: ${runsPerCell}`, ''];
+const lines = [`# A/B/C web performance (${browserName}, ${glMode}, path=${perfPath})`, `# runs per cell: ${runsPerCell}`, ''];
 const summary = [];
 for (const vp of viewports) {
   const key = `${vp.width}x${vp.height}`;
@@ -537,8 +632,19 @@ for (const vp of viewports) {
       imagesAtEnd: m((r) => r.counts[2]?.images),
       coverRequests: m((r) => r.cover.requests),
       coverKb: m((r) => r.cover.decodedKb),
-      segP95: Object.fromEntries(['zoom-in', 'pan', 'zoom-out'].map((s) => [s, m((r) => r.bySeg[s].p95)])),
-      segOver50: Object.fromEntries(['zoom-in', 'pan', 'zoom-out'].map((s) => [s, m((r) => r.bySeg[s].over50)])),
+      segP95: Object.fromEntries(Object.keys(cell[0].bySeg).map((s) => [s, m((r) => r.bySeg[s].p95)])),
+      segOver50: Object.fromEntries(Object.keys(cell[0].bySeg).map((s) => [s, m((r) => r.bySeg[s].over50)])),
+      coverImages: m((r) => r.covers.registered),
+      coverImagesWhileMoving: m((r) => r.covers.registeredWhileMoving),
+      firstCoverAfter: Object.fromEntries(
+        Object.keys(cell[0].covers.firstCoverAfter).map((s) => [s, m((r) => r.covers.firstCoverAfter[s])]),
+      ),
+      phases: Object.fromEntries(
+        Object.keys(cell[0].covers.phases).map((k) => [
+          k,
+          { n: m((r) => r.covers.phases[k].n), p50: m((r) => r.covers.phases[k].p50), p95: m((r) => r.covers.phases[k].p95) },
+        ]),
+      ),
       p95Spread: [Math.min(...cell.map((r) => r.all.p95)), Math.max(...cell.map((r) => r.all.p95))],
     };
     summary.push(row);
@@ -549,9 +655,14 @@ for (const vp of viewports) {
         `| feat(z-in/pan)=${row.featuresAtZoomIn}/${row.featuresAtPan} images=${row.imagesAtEnd} | covers=${row.coverRequests} ${row.coverKb}KB ` +
         `| segP95 ${JSON.stringify(row.segP95)} seg>50 ${JSON.stringify(row.segOver50)} | p95 spread ${row.p95Spread.join('..')} | gl=${row.renderer}`,
     );
+    if (perfPath === 'covers') {
+      lines.push(
+        `   covers: images=${row.coverImages} (while moving ${row.coverImagesWhileMoving}) firstCoverAfterIdle ${JSON.stringify(row.firstCoverAfter)} phases ${JSON.stringify(row.phases)}`,
+      );
+    }
   }
   lines.push('');
 }
-await fs.writeFile(path.join(outDir, 'report.json'), JSON.stringify({ browserName, glMode, runsPerCell, summary, runs }, null, 1));
+await fs.writeFile(path.join(outDir, 'report.json'), JSON.stringify({ browserName, glMode, perfPath, runsPerCell, summary, runs }, null, 1));
 await fs.writeFile(path.join(outDir, 'summary.txt'), lines.join('\n'));
 console.log(lines.join('\n'));

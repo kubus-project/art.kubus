@@ -72,8 +72,11 @@ abstract final class KubusMarkerLod {
       zoom.isFinite && zoom >= coverPrefetchMinZoom;
 
   /// Whether a settled camera at [zoom] should re-plan covers (display or
-  /// prefetch). Screens call this on camera idle.
-  static bool plansCoversAt(double zoom) => allowsSelectedCover(zoom);
+  /// prefetch). Screens call this on camera idle. The selected-only band
+  /// below [coverPrefetchMinZoom] needs no idle re-plan: a selection change
+  /// and a cover-stage crossing already resync, and a pan does not change
+  /// which marker is selected.
+  static bool plansCoversAt(double zoom) => allowsCoverPrefetch(zoom);
 
   /// Discrete cover stage for [zoom]. Crossing a stage changes what the marker
   /// source shows (or prefetches), so the regroup gate and the sync engine
