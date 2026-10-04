@@ -529,17 +529,6 @@ class ArtMarkerCubeIconRenderer {
         .toColor();
   }
 
-  /// The restrained directional field of a badge body: slightly lighter at the
-  /// upper left, slightly deeper at the lower right. The category colour stays
-  /// immediately recognisable; this only gives the face depth.
-  static Shader _bodyFieldShader(Rect bounds, Color base) {
-    return ui.Gradient.linear(
-      bounds.topLeft,
-      bounds.bottomRight,
-      <Color>[_shiftLightness(base, 0.07), _shiftLightness(base, -0.08)],
-    );
-  }
-
   static double _contrastRatio(Color a, Color b) {
     final la = a.computeLuminance() + 0.05;
     final lb = b.computeLuminance() + 0.05;
@@ -586,6 +575,159 @@ class ArtMarkerCubeIconRenderer {
       from: Color.lerp(field, target, math.min(0.97, t + 0.12))!,
       to: Color.lerp(field, target, t)!,
     );
+  }
+
+  /// The face glyph's tonal pair for a body of [field] colour, independent of
+  /// the map theme: a light tint of the category colour (the light falls from
+  /// the upper left, as on a stat card), or a deep shade of it where the
+  /// category colour is too pale to carry a light glyph. Never plain black or
+  /// white: the glyph is made of the category colour.
+  @visibleForTesting
+  static ({Color from, Color to}) faceGlyphTintFor(Color field) {
+    const double minContrast = 3.0;
+    const light = MarkerCubePalette.glyphLightMode;
+    const dark = MarkerCubePalette.glyphDarkMode;
+    double reach(Color target) =>
+        _contrastRatio(Color.lerp(field, target, 0.9)!, field);
+    final target = reach(light) >= minContrast ? light : dark;
+    var t = 0.62;
+    while (t < 0.92 &&
+        _contrastRatio(Color.lerp(field, target, t)!, field) < minContrast) {
+      t += 0.03;
+    }
+    return (
+      from: Color.lerp(field, target, math.min(0.94, t + 0.14))!,
+      to: Color.lerp(field, target, t)!,
+    );
+  }
+
+  /// The PRODUCT v5 marker face: a [KubusStatCard] compressed into the
+  /// category's cartographic silhouette.
+  ///
+  /// Inside [bodyPath]:
+  /// * the category colour as a directional tonal field (light upper left,
+  ///   deep lower right), with an atmospheric wash where the light falls;
+  /// * the category glyph oversized and cropped off the trailing corner. At
+  ///   map scale this ghost glyph *is* the category signal; there is no small
+  ///   icon floating dead centre;
+  /// * an accent rim: a light active edge on the lit side fading into a deep
+  ///   edge on the shaded side.
+  /// [selected] strengthens the field, the wash and the rim. [glyphOpacity]
+  /// lets a cluster quieten the glyph under its count.
+  static void _paintExpressiveFace({
+    required Canvas canvas,
+    required Path bodyPath,
+    required Color color,
+    required IconData? glyph,
+    required ArtMapMarkerShape shape,
+    bool selected = false,
+    double glyphOpacity = 0.62,
+    double glyphScale = 1.12,
+    Offset glyphShift = const Offset(0.20, 0.17),
+  }) {
+    final bounds = bodyPath.getBounds();
+    final lift = selected ? 0.13 : 0.10;
+    canvas.drawPath(
+      bodyPath,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          bounds.topLeft,
+          bounds.bottomRight,
+          <Color>[_shiftLightness(color, lift), _shiftLightness(color, -0.15)],
+        ),
+    );
+
+    canvas.save();
+    canvas.clipPath(bodyPath);
+
+    // Atmospheric wash where the light falls (the stat card's field, inverted:
+    // the whole body is already the category colour).
+    final washCenter = Offset(
+      bounds.left + bounds.width * 0.24,
+      bounds.top + bounds.height * 0.20,
+    );
+    canvas.drawCircle(
+      washCenter,
+      bounds.longestSide * 0.78,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          washCenter,
+          bounds.longestSide * 0.78,
+          <Color>[
+            MarkerCubePalette.glyphLightMode
+                .withValues(alpha: selected ? 0.30 : 0.20),
+            MarkerCubePalette.glyphLightMode.withValues(alpha: 0),
+          ],
+        ),
+    );
+
+    // Oversized ghost glyph, cropped off the trailing (lower-right) corner.
+    if (glyph != null && glyph.codePoint != 0) {
+      final tint = faceGlyphTintFor(color);
+      final size = math.min(bounds.width, bounds.height) *
+          _ghostGlyphFactor(shape) *
+          glyphScale;
+      final center = bounds.center +
+          Offset(bounds.width * glyphShift.dx, bounds.height * glyphShift.dy) +
+          Offset(0, _glyphNudgeY(shape, bounds.height));
+      _paintTonalGlyph(
+        canvas: canvas,
+        center: center,
+        glyph: glyph,
+        size: size,
+        from: tint.from.withValues(alpha: glyphOpacity),
+        to: tint.to.withValues(alpha: glyphOpacity * 0.82),
+      );
+    }
+    canvas.restore();
+
+    // Accent rim: lit edge upper left, deep edge lower right.
+    canvas.drawPath(
+      bodyPath,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = selected ? 2.0 : 1.4
+        ..shader = ui.Gradient.linear(
+          bounds.topLeft,
+          bounds.bottomRight,
+          <Color>[
+            Color.lerp(color, MarkerCubePalette.glyphLightMode,
+                    selected ? 0.75 : 0.55)!
+                .withValues(alpha: selected ? 0.95 : 0.80),
+            _shiftLightness(color, -0.24).withValues(alpha: 0.75),
+          ],
+        ),
+    );
+  }
+
+  /// Ghost glyph size as a fraction of the silhouette's shorter side. Larger
+  /// than the face (so it crops), tuned per shape so the visible part keeps
+  /// the glyph's recognisable mass.
+  static double _ghostGlyphFactor(ArtMapMarkerShape shape) {
+    switch (shape) {
+      case ArtMapMarkerShape.roundedSquare:
+      case ArtMapMarkerShape.circle:
+        return 0.98;
+      case ArtMapMarkerShape.hexagon:
+      case ArtMapMarkerShape.portalHex:
+        return 0.92;
+      case ArtMapMarkerShape.arch:
+        return 0.94;
+      case ArtMapMarkerShape.diamond:
+        return 0.80;
+      case ArtMapMarkerShape.pill:
+        return 1.02;
+      case ArtMapMarkerShape.capsule:
+        return 0.96;
+    }
+  }
+
+  /// A count that stays legible on [field]: light ink where it clears
+  /// contrast, otherwise a deep shade of the field itself.
+  static Color _countInkFor(Color field) {
+    const light = MarkerCubePalette.glyphLightMode;
+    if (_contrastRatio(light, field) >= 3.0) return light;
+    return _shiftLightness(field, -0.62);
   }
 
   /// Paints [glyph] centred at [center] with a tonal gradient instead of a
@@ -884,8 +1026,6 @@ class ArtMarkerCubeIconRenderer {
     double pixelRatio = 2.0,
     ui.Image? cover,
   }) async {
-    final iconForeground = _iconForegroundForTheme(isDark: isDark);
-
     return _renderPng(
       width: badgePngWidth,
       height: badgePngHeight,
@@ -918,11 +1058,16 @@ class ArtMarkerCubeIconRenderer {
           );
         }
 
-        // Body fill: the subject colour with a restrained directional field.
+        // Body: the expressive face (field, wash, cropped ghost glyph, rim).
+        // A cover replaces the glyph; the rim and field stay around it.
         final bodyPath = _buildBadgePath(shape, center, bodySize);
-        canvas.drawPath(
-          bodyPath,
-          Paint()..shader = _bodyFieldShader(bodyPath.getBounds(), baseColor),
+        _paintExpressiveFace(
+          canvas: canvas,
+          bodyPath: bodyPath,
+          color: baseColor,
+          glyph: cover == null ? icon : null,
+          shape: shape,
+          selected: forceGlow,
         );
 
         if (cover != null) {
@@ -962,26 +1107,16 @@ class ArtMarkerCubeIconRenderer {
           canvas.restore();
         }
 
-        // Subtle outline for crispness on both light and dark maps.
-        canvas.drawPath(
-          bodyPath,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.25
-            ..color = iconForeground.withValues(alpha: isDark ? 0.18 : 0.12),
-        );
-
-        // Large tonal glyph, sized to the silhouette's own face. A cover
-        // replaces it.
-        if (cover == null && icon.codePoint != 0) {
-          final tint = glyphTintFor(baseColor, isDark: isDark);
-          _paintTonalGlyph(
-            canvas: canvas,
-            center: center + Offset(0, _glyphNudgeY(shape, bodySize)),
-            glyph: icon,
-            size: bodySize * glyphScaleFor(shape),
-            from: tint.from,
-            to: tint.to,
+        if (cover != null) {
+          // The category rim stays visible around the photograph.
+          canvas.drawPath(
+            bodyPath,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = forceGlow ? 2.0 : 1.4
+              ..color = Color.lerp(baseColor, MarkerCubePalette.glyphLightMode,
+                      forceGlow ? 0.55 : 0.25)!
+                  .withValues(alpha: 0.9),
           );
         }
 
@@ -1338,33 +1473,25 @@ class ArtMarkerCubeIconRenderer {
       );
     }
 
+    // The same face as a single marker of this category, with the ghost
+    // glyph quietened so the count leads: identity from shape, field and
+    // count, not from icon detail.
     final bodyPath = _buildBadgePath(shape, center, bodySize);
-    canvas.drawPath(
-      bodyPath,
-      Paint()..shader = _bodyFieldShader(bodyPath.getBounds(), color),
-    );
-    canvas.drawPath(
-      bodyPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = iconForeground.withValues(alpha: 0.16),
-    );
-
-    // Category glyph in the upper body, count centred just below it so both
-    // stay legible without overlapping.
-    final tint = glyphTintFor(color, isDark: isDark);
-    _paintTonalGlyph(
+    _paintExpressiveFace(
       canvas: canvas,
-      center: center - const Offset(0, 9),
+      bodyPath: bodyPath,
+      color: color,
       glyph: category.icon,
-      size: bodySize * 0.34,
-      from: tint.from,
-      to: tint.to,
+      shape: shape,
+      glyphOpacity: 0.40,
+      glyphScale: 1.1,
+      glyphShift: const Offset(0.26, 0.24),
     );
 
     final countStyle = labelStyle.copyWith(
-      fontSize: (labelStyle.fontSize ?? 14.0) * 0.92,
+      fontSize: (labelStyle.fontSize ?? 14.0) * 1.18,
+      fontWeight: FontWeight.w800,
+      color: _countInkFor(color),
     );
     final labelPainter = TextPainter(
       text: TextSpan(text: label, style: countStyle),
@@ -1372,19 +1499,21 @@ class ArtMarkerCubeIconRenderer {
       textDirection: TextDirection.ltr,
     );
     labelPainter.layout();
+    // Upper left, where the light falls and the ghost glyph is not.
     labelPainter.paint(
       canvas,
       Offset(
-        center.dx - labelPainter.width / 2,
-        center.dy + 5 - labelPainter.height / 2,
+        center.dx - bodySize * 0.10 - labelPainter.width / 2,
+        center.dy - bodySize * 0.09 - labelPainter.height / 2,
       ),
     );
   }
 
-  /// Paints a combined cluster badge: a ring of small category-shaped pips
-  /// (one per dominant category, in that category's colour) around a central
-  /// count circle. This makes a mixed cluster visually communicate the variety
-  /// of categories it holds while keeping the count readable.
+  /// Paints a mixed cluster: the dominant category's silhouette and face carry
+  /// the badge and its count; each secondary category is a small plain
+  /// silhouette in its own colour tucked behind the dominant body's trailing
+  /// edge. At far scale identity comes from shape, field and count; the
+  /// secondary cue is geometry and colour only, never a tiny icon.
   static void _paintCombinedClusterBadge({
     required Canvas canvas,
     required Offset center,
@@ -1397,111 +1526,89 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
     required List<ClusterCategoryBadge> categories,
   }) {
-    const double centralRadius = 14.5;
-    const double ringRadius = 19.0;
-    final int pipCount = categories.length;
-    final double pipSize = pipCount <= 3 ? 16.0 : 14.0;
+    const double mainSize = 38.0;
+    const double pipSize = 18.0;
+    final dominant = categories.first;
+    final secondary = categories.skip(1).take(3).toList();
+    final mainCenter = center + const Offset(-5, 1);
 
     // Soft drop shadow grounding the whole badge.
-    canvas.drawCircle(
-      center + const Offset(0, 3.5),
-      ringRadius + pipSize / 2,
+    canvas.drawPath(
+      _buildBadgePath(
+          dominant.shape, mainCenter + const Offset(0, 3.5), mainSize + 6),
       Paint()
         ..color = style.shadowColor.withValues(alpha: 0.20)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
     );
 
     if (showGlow) {
-      canvas.drawCircle(
-        center,
-        ringRadius + pipSize / 2 + 4,
+      canvas.drawPath(
+        _buildBadgePath(dominant.shape, mainCenter, mainSize + 14),
         Paint()
-          ..color = baseColor.withValues(alpha: 0.22)
+          ..color = dominant.color.withValues(alpha: 0.24)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
       );
     }
 
-    // Category pips evenly distributed around the ring, starting at the top.
-    final pipOutline = iconForeground.withValues(alpha: isDark ? 0.32 : 0.85);
-    for (var i = 0; i < pipCount; i++) {
-      final angle = -math.pi / 2 + (2 * math.pi / pipCount) * i;
-      final pipCenter = Offset(
-        center.dx + math.cos(angle) * ringRadius,
-        center.dy + math.sin(angle) * ringRadius,
-      );
-      final category = categories[i];
-
-      // Tiny shadow so adjacent pips stay separated on busy map tiles.
-      final pipShadow = _buildBadgePath(
-          category.shape, pipCenter + const Offset(0, 1.0), pipSize);
-      canvas.drawPath(
-        pipShadow,
-        Paint()
-          ..color = style.shadowColor.withValues(alpha: 0.20)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
-      );
-
+    // Secondary categories fan out behind the trailing edge, upper right to
+    // lower right, so they read as "and also" rather than as equals.
+    const angles = <double>[-0.55, 0.05, 0.65];
+    for (var i = 0; i < secondary.length; i++) {
+      final category = secondary[i];
+      final angle = angles[i];
+      final pipCenter = mainCenter +
+          Offset(math.cos(angle) * mainSize * 0.66,
+              math.sin(angle) * mainSize * 0.66);
       final pipPath = _buildBadgePath(category.shape, pipCenter, pipSize);
       canvas.drawPath(
         pipPath,
-        Paint()..shader = _bodyFieldShader(pipPath.getBounds(), category.color),
+        Paint()
+          ..shader = ui.Gradient.linear(
+            pipPath.getBounds().topLeft,
+            pipPath.getBounds().bottomRight,
+            <Color>[
+              _shiftLightness(category.color, 0.08),
+              _shiftLightness(category.color, -0.14),
+            ],
+          ),
       );
       canvas.drawPath(
         pipPath,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0
-          ..color = pipOutline,
-      );
-
-      // Category glyph inside the pip so the cluster shows each contained
-      // category's icon, not just its shape + colour.
-      final pipTint = glyphTintFor(category.color, isDark: isDark);
-      _paintTonalGlyph(
-        canvas: canvas,
-        center: pipCenter,
-        glyph: category.icon,
-        size: pipSize * 0.60,
-        from: pipTint.from,
-        to: pipTint.to,
+          ..strokeWidth = 1.2
+          ..color =
+              _shiftLightness(category.color, -0.26).withValues(alpha: 0.85),
       );
     }
 
-    // Central count body drawn on top so the number is always legible. It is
-    // the dominant category's own silhouette, not a generic circle, so a mixed
-    // cluster still reads as the geometry it is mostly made of with the other
-    // categories orbiting it as pips.
-    final centralPath = _buildBadgePath(
-      categories.first.shape,
-      center,
-      centralRadius * 2,
-    );
-    canvas.drawPath(
-      centralPath,
-      Paint()..shader = _bodyFieldShader(centralPath.getBounds(), baseColor),
-    );
-    canvas.drawPath(
-      centralPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = iconForeground.withValues(alpha: isDark ? 0.22 : 0.85),
+    final mainPath = _buildBadgePath(dominant.shape, mainCenter, mainSize);
+    _paintExpressiveFace(
+      canvas: canvas,
+      bodyPath: mainPath,
+      color: dominant.color,
+      glyph: dominant.icon,
+      shape: dominant.shape,
+      glyphOpacity: 0.36,
+      glyphScale: 1.1,
+      glyphShift: const Offset(0.26, 0.24),
     );
 
-    final scaledLabelStyle = labelStyle.copyWith(
-      fontSize: (labelStyle.fontSize ?? 14.0) * 0.82,
+    final countStyle = labelStyle.copyWith(
+      fontSize: (labelStyle.fontSize ?? 14.0) * 1.02,
+      fontWeight: FontWeight.w800,
+      color: _countInkFor(dominant.color),
     );
     final labelPainter = TextPainter(
-      text: TextSpan(text: label, style: scaledLabelStyle),
+      text: TextSpan(text: label, style: countStyle),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
-    );
-    labelPainter.layout();
+    )..layout();
     labelPainter.paint(
       canvas,
       Offset(
-        center.dx - labelPainter.width / 2,
-        center.dy - labelPainter.height / 2,
+        mainCenter.dx - mainSize * 0.06 - labelPainter.width / 2,
+        mainCenter.dy - mainSize * 0.05 - labelPainter.height / 2,
       ),
     );
   }
