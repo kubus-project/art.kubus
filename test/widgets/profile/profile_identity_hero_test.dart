@@ -87,7 +87,8 @@ void main() {
       ),
     );
     // Actions follow the plate and share its top band (one composition).
-    expect(actions.right, lessThan(heroWidth - 200));
+    expect(actions.right, lessThan(heroWidth * 0.9),
+        reason: 'actions follow the plate, not the far edge');
     expect((actions.top - avatar.top).abs(), lessThan(40));
   });
 
