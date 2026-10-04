@@ -486,6 +486,157 @@ class ArtMarkerCubeIconRenderer {
         : MarkerCubePalette.glyphLightMode;
   }
 
+  /// How large a glyph's em box is, as a fraction of the badge body's edge,
+  /// tuned to each silhouette's own usable face.
+  ///
+  /// A Material glyph fills about 80% of its em box, so these land the visible
+  /// glyph at roughly 55-70% of the face. They differ because the shapes do:
+  /// a diamond and a pill have far less room than a rounded square or a
+  /// hexagon, and a capsule is limited by its narrow width.
+  @visibleForTesting
+  static double glyphScaleFor(ArtMapMarkerShape shape) {
+    switch (shape) {
+      case ArtMapMarkerShape.roundedSquare:
+        return 0.68;
+      case ArtMapMarkerShape.diamond:
+        return 0.54;
+      case ArtMapMarkerShape.arch:
+        return 0.62;
+      case ArtMapMarkerShape.pill:
+        return 0.50;
+      case ArtMapMarkerShape.hexagon:
+        return 0.64;
+      case ArtMapMarkerShape.portalHex:
+        return 0.64;
+      case ArtMapMarkerShape.capsule:
+        return 0.54;
+      case ArtMapMarkerShape.circle:
+        return 0.66;
+    }
+  }
+
+  /// Optical vertical nudge for a glyph inside [shape]: the arch's rounded top
+  /// leaves its visual mass low, so its glyph sits a little lower.
+  static double _glyphNudgeY(ArtMapMarkerShape shape, double bodySize) {
+    return shape == ArtMapMarkerShape.arch ? bodySize * 0.04 : 0.0;
+  }
+
+  /// The subject colour with its HSL lightness moved by [delta].
+  static Color _shiftLightness(Color color, double delta) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withLightness((hsl.lightness + delta).clamp(0.0, 1.0).toDouble())
+        .toColor();
+  }
+
+  /// The restrained directional field of a badge body: slightly lighter at the
+  /// upper left, slightly deeper at the lower right. The category colour stays
+  /// immediately recognisable; this only gives the face depth.
+  static Shader _bodyFieldShader(Rect bounds, Color base) {
+    return ui.Gradient.linear(
+      bounds.topLeft,
+      bounds.bottomRight,
+      <Color>[_shiftLightness(base, 0.07), _shiftLightness(base, -0.08)],
+    );
+  }
+
+  static double _contrastRatio(Color a, Color b) {
+    final la = a.computeLuminance() + 0.05;
+    final lb = b.computeLuminance() + 0.05;
+    return la > lb ? la / lb : lb / la;
+  }
+
+  /// The glyph's tonal pair for a body of [field] colour: a tint of the
+  /// category colour pushed toward white (light theme) or black (dark theme),
+  /// lighter-to-deeper along the same diagonal as the body field.
+  ///
+  /// The theme polarity is the existing preference (white glyphs on the light
+  /// map, black on the dark one). It is the starting point, not a rule: where a
+  /// category colour cannot reach legible contrast that way (a pale yellow
+  /// under a white glyph) the opposite polarity is used instead.
+  @visibleForTesting
+  static ({Color from, Color to}) glyphTintFor(
+    Color field, {
+    required bool isDark,
+  }) {
+    const double minContrast = 3.2;
+    const white = Color(0xFFFFFFFF);
+    const black = Color(0xFF000000);
+    final preferred = isDark ? black : white;
+    final opposite = isDark ? white : black;
+
+    double reachable(Color target) =>
+        _contrastRatio(Color.lerp(field, target, 0.96)!, field);
+
+    final target = reachable(preferred) >= minContrast ||
+            reachable(preferred) >= reachable(opposite)
+        ? preferred
+        : opposite;
+
+    // Weakest acceptable tint: the further end of the pair.
+    var t = 0.70;
+    while (t < 0.96 &&
+        _contrastRatio(Color.lerp(field, target, t)!, field) < minContrast) {
+      t += 0.03;
+    }
+    return (
+      // Never all the way to the extreme: a tint that reaches pure white or
+      // black is just the plain ink this exists to replace.
+      from: Color.lerp(field, target, math.min(0.97, t + 0.12))!,
+      to: Color.lerp(field, target, t)!,
+    );
+  }
+
+  /// Paints [glyph] centred at [center] with a tonal gradient instead of a
+  /// flat ink: the same diagonal as the body field, so the glyph reads as part
+  /// of the face rather than a sticker on it.
+  static void _paintTonalGlyph({
+    required Canvas canvas,
+    required Offset center,
+    required IconData glyph,
+    required double size,
+    required Color from,
+    required Color to,
+  }) {
+    if (glyph.codePoint == 0) return;
+    TextPainter build(Paint? foreground) => TextPainter(
+          text: TextSpan(
+            text: String.fromCharCode(glyph.codePoint),
+            style: TextStyle(
+              fontSize: size,
+              fontFamily: glyph.fontFamily ?? 'MaterialIcons',
+              fontFamilyFallback: const <String>[
+                'MaterialIcons',
+                'Material Symbols Outlined',
+              ],
+              package: glyph.fontPackage,
+              foreground: foreground,
+              color: foreground == null ? from : null,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+
+    final measure = build(null)..layout();
+    final rect = Rect.fromCenter(
+      center: center,
+      width: measure.width,
+      height: measure.height,
+    );
+    final painter = build(
+      Paint()
+        ..shader = ui.Gradient.linear(
+          rect.topLeft,
+          rect.bottomRight,
+          <Color>[from, to],
+        ),
+    )..layout();
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
   /// Renders a marker as a flat top-down square (top face + shadow).
   static Future<Uint8List> renderMarkerPng({
     required Color baseColor,
@@ -766,9 +917,12 @@ class ArtMarkerCubeIconRenderer {
           );
         }
 
-        // Body fill (solid subject color).
+        // Body fill: the subject colour with a restrained directional field.
         final bodyPath = _buildBadgePath(shape, center, bodySize);
-        canvas.drawPath(bodyPath, Paint()..color = baseColor);
+        canvas.drawPath(
+          bodyPath,
+          Paint()..shader = _bodyFieldShader(bodyPath.getBounds(), baseColor),
+        );
 
         if (cover != null) {
           // Artwork cover inside the canonical geometry: clipped to the shape
@@ -816,31 +970,18 @@ class ArtMarkerCubeIconRenderer {
             ..color = iconForeground.withValues(alpha: isDark ? 0.18 : 0.12),
         );
 
-        // Centered icon glyph (no inner background box). A cover replaces it.
+        // Large tonal glyph, sized to the silhouette's own face. A cover
+        // replaces it.
         if (cover == null && icon.codePoint != 0) {
-          final fontFamily = icon.fontFamily ?? 'MaterialIcons';
-          final glyphPainter = TextPainter(
-            text: TextSpan(
-              text: String.fromCharCode(icon.codePoint),
-              style: TextStyle(
-                fontSize: bodySize * 0.5,
-                fontFamily: fontFamily,
-                fontFamilyFallback: const <String>[
-                  'MaterialIcons',
-                  'Material Symbols Outlined',
-                ],
-                package: icon.fontPackage,
-                color: iconForeground,
-              ),
-            ),
-            textDirection: TextDirection.ltr,
+          final tint = glyphTintFor(baseColor, isDark: isDark);
+          _paintTonalGlyph(
+            canvas: canvas,
+            center: center + Offset(0, _glyphNudgeY(shape, bodySize)),
+            glyph: icon,
+            size: bodySize * glyphScaleFor(shape),
+            from: tint.from,
+            to: tint.to,
           );
-          glyphPainter.layout();
-          final glyphOffset = Offset(
-            center.dx - glyphPainter.width / 2,
-            center.dy - glyphPainter.height / 2,
-          );
-          glyphPainter.paint(canvas, glyphOffset);
         }
 
         // Signal ring follows the body silhouette.
@@ -1158,41 +1299,6 @@ class ArtMarkerCubeIconRenderer {
     );
   }
 
-  /// Draws an icon [glyph] centred at [center], scaled to [size].
-  ///
-  /// Shared by the combined-cluster pips and the single-category cluster badge
-  /// so the glyph rendering matches the individual marker badges.
-  static void _paintClusterGlyph({
-    required Canvas canvas,
-    required Offset center,
-    required IconData glyph,
-    required double size,
-    required Color color,
-  }) {
-    if (glyph.codePoint == 0) return;
-    final painter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(glyph.codePoint),
-        style: TextStyle(
-          fontSize: size,
-          fontFamily: glyph.fontFamily ?? 'MaterialIcons',
-          fontFamilyFallback: const <String>[
-            'MaterialIcons',
-            'Material Symbols Outlined',
-          ],
-          package: glyph.fontPackage,
-          color: color,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    painter.layout();
-    painter.paint(
-      canvas,
-      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
-    );
-  }
-
   /// Paints a single-category cluster: the category's shape + colour (matching
   /// individual markers of that type) with a small category glyph in the upper
   /// body and the count centred below it, so the cluster still reads as that
@@ -1232,7 +1338,10 @@ class ArtMarkerCubeIconRenderer {
     }
 
     final bodyPath = _buildBadgePath(shape, center, bodySize);
-    canvas.drawPath(bodyPath, Paint()..color = color);
+    canvas.drawPath(
+      bodyPath,
+      Paint()..shader = _bodyFieldShader(bodyPath.getBounds(), color),
+    );
     canvas.drawPath(
       bodyPath,
       Paint()
@@ -1241,14 +1350,16 @@ class ArtMarkerCubeIconRenderer {
         ..color = iconForeground.withValues(alpha: 0.16),
     );
 
-    // Small category glyph in the upper body, count centred just below it so
-    // both stay legible without overlapping.
-    _paintClusterGlyph(
+    // Category glyph in the upper body, count centred just below it so both
+    // stay legible without overlapping.
+    final tint = glyphTintFor(color, isDark: isDark);
+    _paintTonalGlyph(
       canvas: canvas,
       center: center - const Offset(0, 9),
       glyph: category.icon,
-      size: bodySize * 0.30,
-      color: iconForeground.withValues(alpha: 0.92),
+      size: bodySize * 0.34,
+      from: tint.from,
+      to: tint.to,
     );
 
     final countStyle = labelStyle.copyWith(
@@ -1330,7 +1441,10 @@ class ArtMarkerCubeIconRenderer {
       );
 
       final pipPath = _buildBadgePath(category.shape, pipCenter, pipSize);
-      canvas.drawPath(pipPath, Paint()..color = category.color);
+      canvas.drawPath(
+        pipPath,
+        Paint()..shader = _bodyFieldShader(pipPath.getBounds(), category.color),
+      );
       canvas.drawPath(
         pipPath,
         Paint()
@@ -1341,20 +1455,32 @@ class ArtMarkerCubeIconRenderer {
 
       // Category glyph inside the pip so the cluster shows each contained
       // category's icon, not just its shape + colour.
-      _paintClusterGlyph(
+      final pipTint = glyphTintFor(category.color, isDark: isDark);
+      _paintTonalGlyph(
         canvas: canvas,
         center: pipCenter,
         glyph: category.icon,
-        size: pipSize * 0.52,
-        color: iconForeground,
+        size: pipSize * 0.60,
+        from: pipTint.from,
+        to: pipTint.to,
       );
     }
 
-    // Central count circle drawn on top so the number is always legible.
-    canvas.drawCircle(center, centralRadius, Paint()..color = baseColor);
-    canvas.drawCircle(
+    // Central count body drawn on top so the number is always legible. It is
+    // the dominant category's own silhouette, not a generic circle, so a mixed
+    // cluster still reads as the geometry it is mostly made of with the other
+    // categories orbiting it as pips.
+    final centralPath = _buildBadgePath(
+      categories.first.shape,
       center,
-      centralRadius,
+      centralRadius * 2,
+    );
+    canvas.drawPath(
+      centralPath,
+      Paint()..shader = _bodyFieldShader(centralPath.getBounds(), baseColor),
+    );
+    canvas.drawPath(
+      centralPath,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
