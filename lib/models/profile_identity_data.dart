@@ -220,6 +220,15 @@ class ProfileIdentityData {
       raw['cover_url'],
     ]);
     final imageAsMark = imageUrl != null && imageUrl != cover ? imageUrl : null;
+    // A profile's `imageUrl` falls back to its cover when it has no avatar,
+    // and a payload without explicit media fields (the 0.8.0 backend) cannot
+    // say which it is. Only a URL that is evidently an avatar upload may then
+    // stand in for the avatar; anything else could be the cover.
+    final hasExplicitMedia = cover != null || _pickAvatarUrl(raw) != null;
+    final profileImageAsMark = imageAsMark != null &&
+            (hasExplicitMedia || imageAsMark.contains('/avatars/'))
+        ? imageAsMark
+        : null;
     if (item.entityType == PromotionEntityType.profile) {
       final subtitle = (item.subtitle ?? '').trim();
       final username = CreatorDisplayFormat.normalizeUsername(
@@ -234,7 +243,7 @@ class ProfileIdentityData {
         username: username,
         userId: userId,
         wallet: userId,
-        avatarUrl: _pickAvatarUrl(raw) ?? imageAsMark,
+        avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
       );
     }
 

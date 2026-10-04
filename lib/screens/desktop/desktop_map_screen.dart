@@ -2757,7 +2757,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               // Close-level covers are chosen from what the settled viewport
               // holds, so a pan that ends at cover scale re-plans
               // (and prefetches) them once.
-              if (KubusMarkerLod.plansCoversAt(_cameraZoom)) {
+              if (KubusMarkerLod.plansCoversAt(
+                _cameraZoom,
+                hasSelection: _kubusMapController.selectedMarkerId != null,
+              )) {
                 _requestMarkerVisualSync();
               }
               unawaited(_renderCoordinator.updateRenderMode());

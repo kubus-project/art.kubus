@@ -82,6 +82,14 @@ void main() {
       );
     });
 
+    test('idle re-plans in the selected-only band only with a selection', () {
+      expect(KubusMarkerLod.plansCoversAt(10.5), isFalse);
+      expect(KubusMarkerLod.plansCoversAt(10.5, hasSelection: true), isTrue,
+          reason: 'a selection made while the camera moved needs its cover');
+      expect(KubusMarkerLod.plansCoversAt(9.5, hasSelection: true), isFalse);
+      expect(KubusMarkerLod.plansCoversAt(12.0), isTrue);
+    });
+
     test('cover stages rise monotonically with zoom', () {
       var previous = KubusMarkerLod.coverStageForZoom(0);
       expect(previous, 0);

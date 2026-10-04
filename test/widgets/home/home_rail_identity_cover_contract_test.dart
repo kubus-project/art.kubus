@@ -94,6 +94,21 @@ void main() {
           reason: 'no cover in the payload: the authored field is used');
     });
 
+    test('0.8.0 payload, no avatar: the cover in imageUrl is not an avatar',
+        () {
+      // The 0.8.0 serializer folds a missing avatar into imageUrl from the
+      // cover and publishes no field saying so.
+      final item = HomeRailItem.fromJson(<String, dynamic>{
+        ..._artistLive0800(),
+        'imageUrl': _cover,
+      });
+      final identity = ProfileIdentityData.fromHomeRailItem(
+        item,
+        fallbackLabel: 'Creator',
+      );
+      expect(identity.avatarUrl, isNull);
+    });
+
     test('imageUrl that is the cover never becomes the avatar', () {
       final item = HomeRailItem.fromJson(<String, dynamic>{
         ..._artistLive0800(),
