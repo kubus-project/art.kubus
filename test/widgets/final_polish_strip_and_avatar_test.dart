@@ -1,4 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/kubus_entity_semantics.dart';
+import 'package:art_kubus/widgets/common/kubus_entity_card.dart';
 import 'package:art_kubus/widgets/common/kubus_shadow_safe_strip.dart';
 import 'package:art_kubus/widgets/profile_identity_summary.dart';
 import 'package:flutter/material.dart';
@@ -133,5 +135,37 @@ void main() {
       expect(rect.right, 358 + KubusShadowSafeStrip.sideBleed);
       expect(KubusShadowSafeStrip.sideBleed, lessThanOrEqualTo(16));
     });
+  });
+
+  testWidgets('an entity card keeps its action buttons reachable',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _host(
+        SizedBox(
+          width: 220,
+          height: 220,
+          child: KubusEntityCard(
+            variant: KubusEntityCardVariant.media,
+            kind: KubusEntityKind.artwork,
+            title: 'Riverside mural',
+            onTap: () {},
+            alwaysShowActions: true,
+            actions: [
+              IconButton(
+                onPressed: () {},
+                tooltip: 'Edit artwork',
+                icon: const Icon(Icons.edit),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel('Riverside mural'), findsOneWidget);
+    final action = tester.getSemantics(find.byType(IconButton));
+    expect(action.tooltip, 'Edit artwork');
+    expect(action.flagsCollection.isButton, isTrue);
+    handle.dispose();
   });
 }

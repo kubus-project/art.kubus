@@ -221,6 +221,13 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
     final motion = KubusHoverResponse.motionAllowed(context);
     final radius = BorderRadius.circular(KubusEntityCard.radius);
 
+    // An interactive card is one button named by its label, so its own content
+    // is hidden from the tree. The action buttons are not part of that content:
+    // they stay separate, reachable nodes.
+    Widget readOnly(Widget child) =>
+        _interactive ? ExcludeSemantics(child: child) : child;
+    final actionsShown = widget.alwaysShowActions || _answering;
+
     Widget card = AnimatedContainer(
       duration: KubusHoverResponse.duration,
       curve: Curves.easeOutCubic,
@@ -250,13 +257,13 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _buildMediaLayer(context, roles, motion),
-            _buildScrim(context, accent),
+            readOnly(_buildMediaLayer(context, roles, motion)),
+            readOnly(_buildScrim(context, accent)),
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: _buildPlate(context, roles),
+              child: readOnly(_buildPlate(context, roles)),
             ),
             // The category edge sits above the plate so a pale image can never
             // wash it out.
@@ -275,7 +282,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
               Positioned(
                 top: KubusSpacing.sm,
                 left: KubusSpacing.sm,
-                child: widget.badge!,
+                child: readOnly(widget.badge!),
               ),
             if (widget.actions.isNotEmpty)
               Positioned(
@@ -284,12 +291,16 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
                 child: AnimatedOpacity(
                   duration: KubusHoverResponse.duration,
                   // Touch never hovers, so a touch surface pins them visible.
-                  opacity: widget.alwaysShowActions || _answering ? 1 : 0,
+                  opacity: actionsShown ? 1 : 0,
                   child: IgnorePointer(
-                    ignoring: !(widget.alwaysShowActions || _answering),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: widget.actions,
+                    ignoring: !actionsShown,
+                    // Invisible controls must not take keyboard focus either.
+                    child: ExcludeFocus(
+                      excluding: !actionsShown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: widget.actions,
+                      ),
                     ),
                   ),
                 ),
@@ -359,7 +370,8 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
       button: true,
       label: widget.semanticLabel ?? _defaultSemanticLabel(),
       onTap: widget.onTap,
-      child: ExcludeSemantics(child: detector),
+      explicitChildNodes: true,
+      child: detector,
     );
   }
 

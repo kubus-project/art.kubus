@@ -1051,6 +1051,31 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       );
     }
 
+    if (widget.chrome == ArtworkEditChrome.workspace) {
+      // Loading, failed or not found: there is no artwork to title the shell
+      // with, but the way back must not disappear with it.
+      final shellScope = DesktopShellScope.of(context);
+      return Container(
+        color: scheme.surface,
+        child: Column(
+          children: [
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Padding(
+                padding: const EdgeInsets.all(DetailSpacing.sm),
+                child: IconButton(
+                  onPressed: shellScope?.popScreen,
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: l10n.commonBack,
+                ),
+              ),
+            ),
+            Expanded(child: content),
+          ],
+        ),
+      );
+    }
+
     if (widget.chrome != ArtworkEditChrome.standalone) {
       return Container(color: scheme.surface, child: content);
     }
