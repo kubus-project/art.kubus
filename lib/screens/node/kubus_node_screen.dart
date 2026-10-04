@@ -7,7 +7,9 @@ import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../providers/availability_operator_provider.dart';
 import '../../providers/kubus_node_provider.dart';
+import '../../utils/kubus_labs_feature.dart';
 import '../../utils/node_state_presentation.dart';
+import '../../widgets/common/kubus_labs_adornment.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/node/node_ui.dart';
 import 'my_nodes_screen.dart';
@@ -99,10 +101,21 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _l10n.kubusNodeEntryTitle,
-                style: textTheme.headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+              Wrap(
+                spacing: KubusSpacing.md,
+                runSpacing: KubusSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    _l10n.kubusNodeEntryTitle,
+                    style: textTheme.headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const KubusLabsAdornment.inlinePill(
+                    feature: KubusLabsFeature.node,
+                    emphasized: true,
+                  ),
+                ],
               ),
               const SizedBox(height: KubusSpacing.sm),
               Text(_l10n.kubusNodeEntrySubtitle, style: textTheme.bodyLarge),
@@ -356,6 +369,12 @@ class _Header extends StatelessWidget {
                   NodeStatusLabel(
                     label: description.title,
                     severity: description.severity,
+                  ),
+                  // The one Labs identity of the Node surface; its sections
+                  // do not each repeat it.
+                  const KubusLabsAdornment.inlinePill(
+                    feature: KubusLabsFeature.node,
+                    emphasized: true,
                   ),
                 ],
               ),
