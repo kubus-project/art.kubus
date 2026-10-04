@@ -235,7 +235,7 @@ enum KubusGhostGlyphPlacement {
   /// Expressive stat cards and lead metric cards.
   stat(
     bleed: 0.16,
-    extentFactor: 0.9,
+    extentFactor: 0.75,
     minExtent: 56,
     maxExtent: 140,
     hoverShift: 3,
