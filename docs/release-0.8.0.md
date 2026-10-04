@@ -121,8 +121,10 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
   visitors.
 - When the service is unreachable the map shows no offline notice.
 - Signed-in, creator and institution screens were checked through the automated
-  test suites and fixture screenshots (`docs/evidence/product-v5-tile-system`),
-  not on production data.
+  test suites. Visual evidence is limited to fixture screenshots: destination
+  tiles and settings (`docs/evidence/product-v5-tile-system`) and the final
+  hardening captures of auth, Node and selected flows
+  (`docs/evidence/product-v5-final-hardening`). None of it is production data.
 - Google Play publication is a separate step and is not part of this release.
 
 ## Verification and deployment
