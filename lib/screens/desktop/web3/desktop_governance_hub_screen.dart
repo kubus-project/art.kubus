@@ -15,7 +15,7 @@ import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
 import '../../web3/dao/dao_analytics.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
-import '../../../widgets/common/kubus_stat_card.dart';
+import '../../../widgets/dao/dao_metric_strip.dart';
 import '../../../widgets/dao/dao_proposal_status.dart';
 
 /// Native desktop governance workspace with a contextual right rail.
@@ -226,15 +226,19 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            KubusStatCard(
-              title: l10n.daoHubStatYourVotingPowerLabel,
-              value: '$amount KUB8',
-              semanticsLabel: l10n.walletBalanceAmountSemantic(
-                l10n.daoHubStatYourVotingPowerLabel,
-                amount,
-                'KUB8',
-              ),
-              minHeight: 64,
+            DaoMetricStrip(
+              metrics: [
+                DaoMetric(
+                  title: l10n.daoHubStatYourVotingPowerLabel,
+                  value: '$amount KUB8',
+                  icon: Icons.how_to_vote_outlined,
+                  semanticsLabel: l10n.walletBalanceAmountSemantic(
+                    l10n.daoHubStatYourVotingPowerLabel,
+                    amount,
+                    'KUB8',
+                  ),
+                ),
+              ],
             ),
             if (votingPower <= 0) ...[
               const SizedBox(height: KubusSpacing.sm),

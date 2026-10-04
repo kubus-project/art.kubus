@@ -3,7 +3,9 @@ import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
 import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
+import 'package:art_kubus/widgets/dao/dao_metric_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -99,6 +101,31 @@ void main() {
     expect(find.text('Quorum reached'), findsNothing);
     expect(find.text('Quorum pending'), findsNothing);
     expect(find.textContaining('75.0% support'), findsOneWidget);
+  });
+
+  testWidgets('header metrics use the expressive DAO stat language',
+      (tester) async {
+    await _pump(tester, _FakeDao(active: [_proposal()]));
+    expect(find.byType(DaoMetricStrip), findsOneWidget);
+    final cards = tester
+        .widgetList<KubusStatCard>(
+          find.descendant(
+            of: find.byType(DaoMetricStrip),
+            matching: find.byType(KubusStatCard),
+          ),
+        )
+        .toList();
+    expect(cards, isNotEmpty);
+    final context = tester.element(find.byType(DaoMetricStrip));
+    final daoAccent = KubusColorRoles.of(context).web3DaoAccent;
+    for (final card in cards) {
+      expect(card.icon, isNotNull, reason: '${card.title} needs a glyph');
+      expect(card.expressive, isTrue, reason: card.title);
+      expect(card.layout, KubusStatCardLayout.centered);
+      expect(card.accent, daoAccent, reason: card.title);
+      expect(card.minHeight, greaterThanOrEqualTo(96),
+          reason: 'not a 64 px utility row');
+    }
   });
 
   group('governance does not print its tabs a second time', () {
