@@ -13,8 +13,9 @@ real screens (no network, no production data). Narrative and decisions:
 | DAO | `dao-desktop-1440-light.png`, `dao-mobile-390-dark.png` |
 | kubus Node | `node-no-node-*`, `node-discovered-*`, `node-capability-rail-wide-dark.png` |
 | Account entry | `auth-signin-*`, `auth-register-*`, `auth-forgot-*` |
+| 200 % text scale (Node, auth) | `a11y200-*` |
 | Map marker face | `marker-sheet-light.png`, `marker-sheet-dark.png` (rest, selected, cover, clusters) |
 
 Fixture limits: `flutter test` answers network requests with 400, so artwork and
 cover photographs render as the no-media role field. The marker sheet uses a
-generated stand-in photograph. The post card's author avatar is outside this pass.
+generated stand-in photograph.

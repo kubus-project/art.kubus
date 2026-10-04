@@ -120,14 +120,50 @@ and cached, never per frame or during a gesture; rendering one now costs about
 1.8 ms where it cost 1.0 ms. LOD thresholds, the cluster architecture, the cover
 work gate, anchors and the hover/selection scales are unchanged.
 
+## Last-mile polish (after #223 merged)
+
+- **Shadow-safe action strips.** Every horizontal strip of `KubusActionTile`
+  (Home Web3, Home quick actions, desktop Home quick actions) now uses one
+  `KubusShadowSafeStrip`: vertical room is padding inside the viewport, the
+  sideways room is an outer clip inflated by 14 px (never past the page gutter),
+  and the last tile has 14 px of trailing room. The first tile stays on the
+  content edge and the lift is unchanged. Tests cover the first and last tile
+  at 320, 390, 768 and 1440 px.
+- **Post author avatar.** `ProfileIdentityData.avatarInitialsSource` takes the
+  display name, then the username, then the handle, and never a wallet or a
+  shortened wallet, so a post card no longer shows "7". Avatars still do not
+  fetch profiles for a display-only identity.
+- **200 % text scale.** `a11y200-*` captures: sign in, register, forgot, verify
+  (light and dark), My Nodes (no node, discovered), the Node home, the operator
+  setup screen (the Advanced / Recovery path) and the Node capability entry.
+  No render error or overflow in any of them. Buttons keep their own text size.
+  The operator screen's section tabs scroll sideways by design. The paired-node
+  "Technical details" disclosure needs a paired fixture and was not captured.
+- **Map QA, phone theme switch.** Not a user-facing bug. On the real GPU the
+  product layers are back within 2.5 s of the switch. On SwiftShader the phone
+  viewport needs up to about 17 s, and the check waited a fixed 4.5 s. The check
+  now waits for the layers (45 s ceiling) and records the time. It failed
+  identically on dev, whose tree equals #223's head.
+- **Map QA, 1440 dark cover latency.** A flake: it passed on two consecutive
+  reruns (first cover after about 2.2 and 3.8 s). It depends on API and image
+  timing, not on the renderer.
+- **Map performance.** Same fixture, dev against this branch, five runs per
+  cell. Real GPU (RTX 3080 Ti): p95 16.8 ms in both at 1440 and 390, p99 33.4,
+  `_render` p95 3.4 / 2.8 ms, `readPixels` 86 vs 89 calls (cover reads, not
+  gesture reads). SwiftShader: p95 83.3 vs 83.2 ms at 1440 and 116.7 vs 116.6 ms
+  at 390, within run-to-run spread. Marker faces are generated once per id and
+  cached.
+
 ## Known limits of the evidence
 
 - Fixtures cannot load network imagery (`flutter test` answers every HTTP request
   with 400), so cover and artwork photographs appear as the no-media role field.
   The marker sheet uses a generated stand-in photograph, so a cover clipped inside
-  each silhouette is shown.
-- The post card's author avatar is part of the shared community identity system
-  and still derives its initials from the wallet string. It is outside this pass.
+  each silhouette is shown. Real production media was not visually tested.
+- No physical Android device was available and the emulator pacing run was not
+  repeated for this pass, so there is no physical-device evidence; the map
+  numbers above are desktop Chromium on a real GPU and on software GL.
+- The 200 % captures are Flutter-rendered fixtures, not a 200 % browser zoom.
 
 ## How to regenerate the evidence
 

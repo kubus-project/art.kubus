@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
+import 'package:art_kubus/providers/availability_operator_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/portfolio_provider.dart';
 import 'package:art_kubus/screens/art/artwork_edit_screen.dart';
@@ -25,6 +26,7 @@ import 'package:art_kubus/screens/auth/verify_email_screen.dart';
 import 'package:art_kubus/screens/home_screen.dart';
 import 'package:art_kubus/screens/node/kubus_node_screen.dart';
 import 'package:art_kubus/screens/node/my_nodes_screen.dart';
+import 'package:art_kubus/screens/settings/availability_node_operator_screen.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:flutter/material.dart';
@@ -258,6 +260,102 @@ void main() {
       ),
       size: const Size(900, 320),
       brightness: Brightness.dark,
+      signedIn: owner,
+    );
+  });
+  // ------------------------------------------------- 200 % text scale (a11y)
+  // Node and account entry at twice the text size: no overflow, no clipped
+  // title or action, nothing overlapping. `renderErrors` in the report is the
+  // machine check; the images are the visual one.
+  for (final b in Brightness.values) {
+    for (final entry in <String, Widget Function()>{
+      'signin': () => const SignInScreen(),
+      'register': () => const RegisterScreen(),
+      'forgot': () => const ForgotPasswordScreen(),
+      'verify': () => const VerifyEmailScreen(email: 'qa@kubus.site'),
+    }.entries) {
+      scene('a11y200-auth-${entry.key}-${b.name}', (tester) async {
+        await surface(
+            tester, 'a11y200-auth-${entry.key}-phone-${b.name}', entry.value,
+            size: phone, brightness: b, textScale: 2);
+      });
+    }
+  }
+  scene('a11y200-node-no-node', (tester) async {
+    await surface(
+      tester,
+      'a11y200-node-no-node-phone-light',
+      () => const MyNodesScreen(),
+      textScale: 2,
+      extraProviders: [_node(_QaNode())],
+      signedIn: owner,
+    );
+  });
+  scene('a11y200-node-discovered', (tester) async {
+    await surface(
+      tester,
+      'a11y200-node-discovered-phone-dark',
+      () => const MyNodesScreen(),
+      brightness: Brightness.dark,
+      textScale: 2,
+      extraProviders: [
+        _node(_QaNode(nodes: const [
+          {'label': 'Studio tower', 'remoteAttachAvailable': true},
+          {'label': 'Gallery archive', 'remoteAttachAvailable': false},
+        ])),
+      ],
+      signedIn: owner,
+    );
+  });
+  scene('a11y200-node-home-unpaired', (tester) async {
+    await surface(
+      tester,
+      'a11y200-node-home-unpaired-phone-light',
+      () => const KubusNodeScreen(embedded: true),
+      textScale: 2,
+      extraProviders: [_node(_QaNode())],
+      signedIn: owner,
+    );
+  });
+  scene('a11y200-node-advanced-recovery', (tester) async {
+    await surface(
+      tester,
+      'a11y200-node-advanced-recovery-phone-light',
+      () => const AvailabilityNodeOperatorScreen(),
+      size: const Size(390, 2600),
+      textScale: 2,
+      extraProviders: [
+        _node(_QaNode()),
+        ChangeNotifierProvider<AvailabilityOperatorProvider>(
+          create: (_) => AvailabilityOperatorProvider(),
+        ),
+      ],
+      signedIn: owner,
+    );
+  });
+  scene('a11y200-node-capability-entry', (tester) async {
+    await surface(
+      tester,
+      'a11y200-node-capability-entry-phone-light',
+      () => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: HomeWeb3CardStrip(
+            isEffectivelyConnected: false,
+            persona: null,
+            isArtist: true,
+            isInstitution: false,
+            onOpenDao: () {},
+            onOpenArtistStudio: () {},
+            onOpenInstitutionHub: () {},
+            onOpenMarketplace: () {},
+            onOpenNode: () {},
+            onShowWalletOnboarding: () {},
+          ),
+        ),
+      ),
+      size: const Size(390, 420),
+      textScale: 2,
       signedIn: owner,
     );
   });
