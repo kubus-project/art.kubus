@@ -1,5 +1,4 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/widgets/common/kubus_shadow_safe_strip.dart';
 import 'package:art_kubus/widgets/profile_identity_summary.dart';
 import 'package:flutter/material.dart';
