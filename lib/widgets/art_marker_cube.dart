@@ -1526,11 +1526,34 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
     required List<ClusterCategoryBadge> categories,
   }) {
-    const double mainSize = 38.0;
-    const double pipSize = 18.0;
     final dominant = categories.first;
     final secondary = categories.skip(1).take(3).toList();
-    final mainCenter = center + const Offset(-5, 1);
+    // Secondary categories fan out behind the trailing edge, upper right to
+    // lower right, so they read as "and also" rather than as equals.
+    const angles = <double>[-0.55, 0.05, 0.65];
+    Offset pipOffset(int i, double radius) =>
+        Offset(math.cos(angles[i]) * radius, math.sin(angles[i]) * radius);
+
+    // Fit the composition to the canvas from the real silhouettes (a diamond
+    // is wider than its nominal size): body plus pips, centred horizontally
+    // with a 2 px margin and scaled down only when they cannot fit.
+    const double baseMainSize = 36.0;
+    const double basePipSize = 17.0;
+    var bounds =
+        _buildBadgePath(dominant.shape, Offset.zero, baseMainSize).getBounds();
+    for (var i = 0; i < secondary.length; i++) {
+      bounds = bounds.expandToInclude(_buildBadgePath(
+        secondary[i].shape,
+        pipOffset(i, baseMainSize * 0.6),
+        basePipSize,
+      ).getBounds());
+    }
+    final fit = math.min(1.0, (badgePngWidth - 4) / bounds.width);
+    final mainSize = baseMainSize * fit;
+    final pipSize = basePipSize * fit;
+    final pipRadius = mainSize * 0.6;
+    final mainCenter =
+        Offset(center.dx - bounds.center.dx * fit, center.dy + 1);
 
     // Soft drop shadow grounding the whole badge.
     canvas.drawPath(
@@ -1543,22 +1566,16 @@ class ArtMarkerCubeIconRenderer {
 
     if (showGlow) {
       canvas.drawPath(
-        _buildBadgePath(dominant.shape, mainCenter, mainSize + 14),
+        _buildBadgePath(dominant.shape, mainCenter, mainSize + 10),
         Paint()
           ..color = dominant.color.withValues(alpha: 0.24)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
       );
     }
 
-    // Secondary categories fan out behind the trailing edge, upper right to
-    // lower right, so they read as "and also" rather than as equals.
-    const angles = <double>[-0.55, 0.05, 0.65];
     for (var i = 0; i < secondary.length; i++) {
       final category = secondary[i];
-      final angle = angles[i];
-      final pipCenter = mainCenter +
-          Offset(math.cos(angle) * mainSize * 0.66,
-              math.sin(angle) * mainSize * 0.66);
+      final pipCenter = mainCenter + pipOffset(i, pipRadius);
       final pipPath = _buildBadgePath(category.shape, pipCenter, pipSize);
       canvas.drawPath(
         pipPath,

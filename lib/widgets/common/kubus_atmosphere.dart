@@ -148,6 +148,7 @@ class KubusAtmosphere extends StatelessWidget {
               child: KubusGhostGlyph(
                 icon: glyph!,
                 color: accent,
+                placement: KubusGhostGlyphPlacement.atmosphere,
                 alignment: glyphAlignment ?? fieldAlignment,
                 extent: glyphExtent,
               ),
@@ -208,7 +209,8 @@ class KubusEdgeLight extends StatelessWidget {
 /// The one placement vocabulary for ghost glyphs: callers pick a role, never
 /// a bleed. Tile and stat glyphs stay mostly inside their surface (roughly
 /// 80 % of the drawn symbol visible) so they read as an authored part of the
-/// card, not an icon that slipped off it. Only hero fields crop hard.
+/// card, not an icon that slipped off it. Only atmosphere and hero fields
+/// crop hard.
 enum KubusGhostGlyphPlacement {
   /// Dense full-width rows (compact action tiles): the glyph is sized to the
   /// row height and only its top edge is cropped; the caller keeps it clear
@@ -242,8 +244,20 @@ enum KubusGhostGlyphPlacement {
     hoverScale: 1.035,
   ),
 
-  /// Hero and cover atmospheres: a fragment of the symbol as material. No
-  /// hover response; heroes are not controls.
+  /// [KubusAtmosphere] identity fields (home discovery, hub intros, wallet
+  /// balance, entity heroes): a large symbol cropped well into the corner.
+  /// No hover response; atmospheres are not controls.
+  atmosphere(
+    bleed: 0.28,
+    extentFactor: 1.25,
+    minExtent: 56,
+    maxExtent: 220,
+    hoverShift: 0,
+    hoverScale: 1,
+  ),
+
+  /// Profile cover fallback: only a fragment of the role symbol shows, so the
+  /// identity in front of it stays the readable layer. No hover response.
   hero(
     bleed: 0.36,
     extentFactor: 1.25,
@@ -313,7 +327,7 @@ class KubusGhostGlyph extends StatelessWidget {
     super.key,
     required this.icon,
     required this.color,
-    this.placement = KubusGhostGlyphPlacement.tile,
+    required this.placement,
     this.alignment = Alignment.bottomRight,
     this.extent,
     this.opacity,

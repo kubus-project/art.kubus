@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -333,5 +334,55 @@ void main() {
       expect(mixed, isNotEmpty);
       expect(mixed, isNot(single));
     });
+
+    for (final dominant in const [
+      ArtMarkerType.artwork,
+      ArtMarkerType.streetArt,
+    ]) {
+      testWidgets(
+          'a mixed ${dominant.name} cluster fits its canvas: no body or pip '
+          'is cut at an edge', (tester) async {
+        final t = _themeFor(false);
+        ClusterCategoryBadge badge(ArtMarkerType type, int count) =>
+            ClusterCategoryBadge(
+              shape: ArtMapMarkerShape.forType(type),
+              color: _subject(type, false),
+              count: count,
+              icon: Icons.place,
+            );
+        final others = ArtMarkerType.values
+            .where((type) => type != dominant)
+            .take(3)
+            .toList();
+        late Uint8List png;
+        await tester.runAsync(() async {
+          png = await ArtMarkerCubeIconRenderer.renderClusterPng(
+            count: 9,
+            baseColor: _subject(dominant, false),
+            scheme: t.scheme,
+            isDark: false,
+            categories: [
+              badge(dominant, 6),
+              for (final type in others) badge(type, 1),
+            ],
+            pixelRatio: 1,
+          );
+        });
+        final img = await decode(tester, png);
+        final height = img.data.lengthInBytes ~/ (img.width * 4);
+        double edgeAlpha(int x) {
+          var peak = 0.0;
+          for (var y = 0; y < height; y++) {
+            peak = math.max(peak, pixel(img, x, y).a);
+          }
+          return peak;
+        }
+
+        // Opaque shapes stop short of both side edges; only a soft shadow
+        // may reach them.
+        expect(edgeAlpha(0), lessThan(0.5), reason: 'left edge');
+        expect(edgeAlpha(img.width - 1), lessThan(0.5), reason: 'right edge');
+      });
+    }
   });
 }

@@ -130,7 +130,13 @@ void main() {
         expect(placement.hoverScale, inInclusiveRange(1.02, 1.035),
             reason: placement.name);
       }
-      // Only heroes crop hard, and they do not answer hover.
+      // Only atmospheres and heroes crop hard, and they do not answer hover.
+      // The atmosphere keeps its pre-0.8.1 geometry exactly.
+      const atmosphere = KubusGhostGlyphPlacement.atmosphere;
+      expect(atmosphere.bleed, 0.28);
+      expect(atmosphere.extentFor(const Size(400, 200)), 220);
+      expect(atmosphere.extentFor(const Size(400, 100)), 125);
+      expect(atmosphere.hoverScale, 1);
       expect(KubusGhostGlyphPlacement.hero.bleed, greaterThan(0.3));
       expect(KubusGhostGlyphPlacement.hero.hoverScale, 1);
     });
