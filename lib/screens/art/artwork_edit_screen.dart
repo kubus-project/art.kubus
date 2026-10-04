@@ -34,17 +34,46 @@ import '../desktop/desktop_shell.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
+/// Who owns this editor's screen chrome — the back affordance, the screen
+/// title and the top-level actions.
+///
+/// It is an explicit, typed decision made by the caller, not something inferred
+/// from screen width. Inference is what produced the duplicated title and the
+/// two back buttons: the desktop shell wrapped the editor in a sub-screen
+/// header *and* the editor, seeing a wide window, built its own creator-shell
+/// header inside it.
+enum ArtworkEditChrome {
+  /// A pushed route of its own: the editor owns an [AppBar] with the screen
+  /// title, the subject actions and Save.
+  standalone,
+
+  /// The desktop creator workspace: the editor owns one
+  /// [DesktopCreatorShell] header — back, the artwork's title, the subject
+  /// actions — and its own editing sidebar. The caller must **not** wrap it
+  /// in another shell header.
+  workspace,
+
+  /// Chrome belongs to something else entirely: the editor renders only its
+  /// body. For a host that already provides a title and a back affordance.
+  bodyOnly,
+}
+
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
-  final bool showAppBar;
-  final bool embedded;
+
+  /// Which chrome this instance owns. See [ArtworkEditChrome].
+  final ArtworkEditChrome chrome;
 
   const ArtworkEditScreen({
     super.key,
     required this.artworkId,
-    this.showAppBar = true,
-    this.embedded = false,
+    this.chrome = ArtworkEditChrome.standalone,
   });
+
+  /// True where the editor sits inside a desktop workspace rather than being
+  /// a page of its own, so the body drops the controls the workspace shell
+  /// and sidebar already provide.
+  bool get isEmbedded => chrome != ArtworkEditChrome.standalone;
 
   @override
   State<ArtworkEditScreen> createState() => _ArtworkEditScreenState();
@@ -190,7 +219,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   Future<void> _openArManager(Artwork artwork) async {
     final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null && widget.embedded) {
+    if (shellScope != null && widget.isEmbedded) {
       shellScope.pushScreen(
         DesktopSubScreen(
           title: AppLocalizations.of(context)?.commonViewInAr ?? 'AR',
@@ -957,7 +986,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 ),
                 const SizedBox(height: DetailSpacing.lg),
               ],
-              if (!widget.embedded &&
+              if (!widget.isEmbedded &&
                   AppConfig.isFeatureEnabled('collabInvites')) ...[
                 CollaborationPanel(
                   entityType: 'artwork',
@@ -966,7 +995,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 ),
                 const SizedBox(height: DetailSpacing.lg),
               ],
-              if (!widget.embedded)
+              if (!widget.isEmbedded)
                 FilledButton.icon(
                   onPressed: _isSaving ||
                           !_canEditArtwork(_resolveCurrentCollabRole(art))
@@ -1000,7 +1029,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       content = body!;
     }
 
-    if (widget.embedded && art != null) {
+    // Exactly one chrome owner. The workspace variant builds the single
+    // creator-shell header (back, title, subject actions) and the sidebar;
+    // bodyOnly builds neither, because its host already has them.
+    if (widget.chrome == ArtworkEditChrome.workspace && art != null) {
       final shellScope = DesktopShellScope.of(context);
       return DesktopCreatorShell(
         title: art.title.isNotEmpty ? art.title : l10n.commonEdit,
@@ -1019,7 +1051,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       );
     }
 
-    if (!widget.showAppBar) {
+    if (widget.chrome != ArtworkEditChrome.standalone) {
       return Container(color: scheme.surface, child: content);
     }
 

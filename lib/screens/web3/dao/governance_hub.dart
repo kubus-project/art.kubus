@@ -24,6 +24,7 @@ import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
+import '../../../widgets/common/kubus_action_tile.dart';
 import '../../../widgets/topbar_icon.dart';
 import '../../../features/web3/web3_capabilities.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
@@ -518,33 +519,41 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
         final activeProposals = daoProvider.getActiveProposals();
         final reviews = daoProvider.reviews;
         final isEmpty = activeProposals.isEmpty && reviews.isEmpty;
+        final capabilities = _capabilities();
+        final notEligible = capabilities.canVote &&
+            activeProposals.isNotEmpty &&
+            web3Provider.kub8Balance <= 0;
 
+        // The proposal list has four distinct states; the governance
+        // destinations sit above all of them, because "there is nothing to
+        // vote on right now" is exactly when someone wants to open the
+        // treasury or submit a proposal.
+        final Widget body;
         if (daoProvider.isLoading && isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(KubusSpacing.md),
-            child: KubusSectionLoading(rows: 3, rowHeight: 160),
-          );
-        }
-        if (daoProvider.loadError != null && isEmpty) {
-          return KubusStateView.fromError(
+          body = const KubusSectionLoading(rows: 3, rowHeight: 160);
+        } else if (daoProvider.loadError != null && isEmpty) {
+          body = KubusStateView.fromError(
             daoProvider.loadError,
             onRetry: () => daoProvider.refreshData(force: true),
           );
-        }
-        if (isEmpty) {
-          return Center(
+        } else if (isEmpty) {
+          body = Center(
             child: EmptyStateCard(
               icon: Icons.how_to_vote,
               title: l10n.daoActiveProposalsEmptyTitle,
               description: l10n.daoActiveProposalsEmptyDescription,
             ),
           );
+        } else {
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (reviews.isNotEmpty) _buildReviewQueue(reviews),
+              ...activeProposals
+                  .map((proposal) => _buildProposalCard(proposal)),
+            ],
+          );
         }
-
-        final capabilities = _capabilities();
-        final notEligible = capabilities.canVote &&
-            activeProposals.isNotEmpty &&
-            web3Provider.kub8Balance <= 0;
 
         return ListView(
           padding: const EdgeInsets.all(KubusSpacing.md),
@@ -559,11 +568,80 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
               ),
               const SizedBox(height: KubusSpacing.md),
             ],
-            if (reviews.isNotEmpty) _buildReviewQueue(reviews),
-            ...activeProposals.map((proposal) => _buildProposalCard(proposal)),
+            // Authored destinations above the proposal list: the tabs are
+            // where you *are*, these are the governance tasks you came to do.
+            // Deliberately a different role from the tabs, not the same
+            // navigation printed twice.
+            _buildGovernanceDestinations(capabilities),
+            body,
           ],
         );
       },
+    );
+  }
+
+  /// High-level governance destinations in the kubus action grammar.
+  ///
+  /// These are real destinations and primary tasks — submit a proposal, review
+  /// your own voting record, open the treasury, manage delegation — so they
+  /// take [KubusActionTile], the product's destination language. Proposal rows
+  /// stay proposal content and the header numbers stay [KubusStatCard]: a
+  /// proposal is not a shortcut and a metric is not a destination.
+  ///
+  /// Capability gating is unchanged: each tile appears exactly where its tab
+  /// appears, so nothing becomes reachable that was not already.
+  Widget _buildGovernanceDestinations(Web3Capabilities capabilities) {
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final accent = roles.web3DaoAccent;
+
+    final destinations = <Widget>[
+      if (capabilities.canCreateProposal)
+        KubusActionTile(
+          key: const ValueKey<String>('dao_destination_create_proposal'),
+          title: l10n.daoHubTabCreateProposal,
+          icon: Icons.add_circle_outline,
+          accent: accent,
+          layout: KubusActionTileLayout.inline,
+          onTap: () => _setSelectedIndex(2),
+        ),
+      if (capabilities.canViewOwnGovernanceHistory)
+        KubusActionTile(
+          key: const ValueKey<String>('dao_destination_voting_history'),
+          title: l10n.daoHubTabVotingHistory,
+          icon: Icons.history,
+          accent: accent,
+          layout: KubusActionTileLayout.inline,
+          onTap: () => _setSelectedIndex(1),
+        ),
+      KubusActionTile(
+        key: const ValueKey<String>('dao_destination_treasury'),
+        title: l10n.daoHubTabTreasury,
+        icon: Icons.account_balance_outlined,
+        accent: accent,
+        layout: KubusActionTileLayout.inline,
+        onTap: () => _setSelectedIndex(3),
+      ),
+      if (capabilities.hasAccount)
+        KubusActionTile(
+          key: const ValueKey<String>('dao_destination_delegation'),
+          title: l10n.daoHubTabDelegation,
+          icon: Icons.people_outline,
+          accent: accent,
+          layout: KubusActionTileLayout.inline,
+          onTap: () => _setSelectedIndex(4),
+        ),
+    ];
+
+    if (destinations.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: Wrap(
+        spacing: KubusSpacing.sm,
+        runSpacing: KubusSpacing.sm,
+        children: destinations,
+      ),
     );
   }
 

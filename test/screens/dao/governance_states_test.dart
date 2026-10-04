@@ -1,6 +1,9 @@
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
+import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
+import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -96,5 +99,66 @@ void main() {
     expect(find.text('Quorum reached'), findsNothing);
     expect(find.text('Quorum pending'), findsNothing);
     expect(find.textContaining('75.0% support'), findsOneWidget);
+  });
+
+  group('governance destinations use the kubus action grammar', () {
+    testWidgets(
+        'the treasury destination is an action tile, while proposals and '
+        'metrics keep their own roles', (tester) async {
+      await _pump(tester, _FakeDao(active: [_proposal()]));
+
+      // A real destination takes the destination language.
+      final treasury = find.byKey(
+        const ValueKey<String>('dao_destination_treasury'),
+      );
+      expect(treasury, findsOneWidget);
+      expect(tester.widget(treasury), isA<KubusActionTile>());
+
+      // A proposal is content, not a shortcut: it did not become a tile.
+      expect(
+        find.ancestor(
+          of: find.text('Open the winter mural fund'),
+          matching: find.byType(KubusActionTile),
+        ),
+        findsNothing,
+      );
+
+      // The header numbers stay metrics.
+      expect(find.byType(KubusStatCard), findsWidgets);
+    });
+
+    testWidgets('no wallet does not unlock a signing destination',
+        (tester) async {
+      await _pump(tester, _FakeDao());
+
+      // "Nothing to vote on" is exactly when someone wants the treasury, so
+      // the destinations sit above the empty state rather than behind it.
+      expect(find.text('No active proposals'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey<String>('dao_destination_treasury')),
+        findsOneWidget,
+      );
+
+      // Capability gating is unchanged: a destination appears exactly where
+      // its tab appears, so nothing became reachable that was not already.
+      for (final pair in const <(String, String)>[
+        ('dao_destination_create_proposal', 'Create proposal'),
+        ('dao_destination_voting_history', 'Voting history'),
+        ('dao_destination_delegation', 'Delegation'),
+      ]) {
+        final tabVisible = find
+            .descendant(
+              of: find.byType(KubusDashboardTabs),
+              matching: find.text(pair.$2),
+            )
+            .evaluate()
+            .isNotEmpty;
+        expect(
+          find.byKey(ValueKey<String>(pair.$1)).evaluate().length,
+          tabVisible ? 1 : 0,
+          reason: '${pair.$1} must track its tab',
+        );
+      }
+    });
   });
 }
