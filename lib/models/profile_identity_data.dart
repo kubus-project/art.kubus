@@ -206,6 +206,20 @@ class ProfileIdentityData {
     required String fallbackLabel,
   }) {
     final raw = item.raw;
+    // `imageUrl` is the rail's single "best image": the avatar or logo, but
+    // the cover when there is none. It may stand in for a missing explicit
+    // avatar field (older payloads carried no other), never when it is the
+    // cover itself, which belongs behind the mark, not in it.
+    final imageUrl = _normalizeText(item.imageUrl);
+    final cover = _firstNonEmpty(<dynamic>[
+      raw['coverImageUrl'],
+      raw['cover_image_url'],
+      raw['coverImage'],
+      raw['cover_image'],
+      raw['coverUrl'],
+      raw['cover_url'],
+    ]);
+    final imageAsMark = imageUrl != null && imageUrl != cover ? imageUrl : null;
     if (item.entityType == PromotionEntityType.profile) {
       final subtitle = (item.subtitle ?? '').trim();
       final username = CreatorDisplayFormat.normalizeUsername(
@@ -220,7 +234,7 @@ class ProfileIdentityData {
         username: username,
         userId: userId,
         wallet: userId,
-        avatarUrl: _pickAvatarUrl(raw),
+        avatarUrl: _pickAvatarUrl(raw) ?? imageAsMark,
       );
     }
 
@@ -232,7 +246,7 @@ class ProfileIdentityData {
         username: CreatorDisplayFormat.normalizeUsername(raw['username']),
         userId: profileTargetId,
         wallet: profileTargetId ?? item.id,
-        avatarUrl: _pickLogoOrAvatarUrl(raw) ?? _normalizeText(item.imageUrl),
+        avatarUrl: _pickLogoOrAvatarUrl(raw) ?? imageAsMark,
       );
     }
 
