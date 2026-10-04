@@ -54,6 +54,29 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
   soft shadow in their own colour; settings rows answer more quietly. With
   reduced motion nothing moves, and touch never shows hover.
 
+## Pages and screens, redone
+
+- **Public profiles** have an authored identity block (cover, avatar and a glass
+  plate with Follow and Message), a bio and practice section, a short preview
+  of recent posts with a dedicated post history, large closing stats, and
+  clearer artwork and entity presentation. Posts and profiles without an image
+  or display name fall back to a readable identity instead of a blank.
+- **Home discovery** uses image-led cards for artworks, events and exhibitions,
+  and cover-led identity cards for artists and institutions, with role-aware
+  fallback text when a field is missing.
+- **Artist Studio** shows your work as a responsive, image-led gallery with a
+  real desktop layout, and the artwork editor has a single header and toolbar.
+- **DAO** has a clearer order of governance tasks, and no longer repeats the
+  same destination in several places.
+- **Node** has desktop navigation and a mobile entry point, a clearer pairing
+  and management journey, and no wallet requirement for normal Node access.
+  Operator details are under Advanced / Recovery.
+- **Sign-in, registration, recovery and verification** share one restrained
+  background atmosphere.
+- **Map markers** use larger tonal glyphs that carry the artwork category, and
+  clusters show the category mix. Horizontal action strips no longer clip the
+  shadow of their tiles.
+
 ## Public pages open in the app
 
 - Artwork, artist, institution, event, exhibition, post and collection pages on
@@ -98,8 +121,11 @@ the spatial-memory work that was prepared for 0.8.0 earlier.
   visitors.
 - When the service is unreachable the map shows no offline notice.
 - Signed-in, creator and institution screens were checked through the automated
-  test suites and, for the destination tiles and settings, through fixture
-  screenshots (`docs/evidence/product-v5-tile-system`), not on production data.
+  test suites. Visual evidence is limited to fixture screenshots: destination
+  tiles and settings (`docs/evidence/product-v5-tile-system`) and the final
+  hardening captures of auth, Node and selected flows
+  (`docs/evidence/product-v5-final-hardening`). None of it is production data.
+- Google Play publication is a separate step and is not part of this release.
 
 ## Verification and deployment
 
