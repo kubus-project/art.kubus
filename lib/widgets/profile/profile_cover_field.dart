@@ -10,7 +10,10 @@ import '../common/kubus_atmosphere.dart';
 /// coral with a palette, institution blue with a building, any other account
 /// family teal with a compass (people who explore the map). The avatar sits
 /// bottom-left and edit top-right, so the light comes from the top-right and
-/// the symbol sits in the free bottom-right corner.
+/// the symbol sits in the free bottom-right corner, cropped by the edge.
+///
+/// It is deliberately quiet: no texture, one hue, a faint glyph. The identity
+/// plate and the avatar sit on it, and they are the subject.
 ///
 /// The colour is a *role* signal (the same one the artist / institution
 /// badges use), never the personal user accent. Owner and public profiles,
@@ -44,25 +47,65 @@ class ProfileCoverField extends StatelessWidget {
     return Icons.explore_outlined;
   }
 
+  /// Glyph opacity: quieter than the generic ghost glyph, because this field
+  /// spans a whole hero and the identity plate sits on it.
+  static double glyphOpacity(Brightness b) =>
+      b == Brightness.dark ? 0.075 : 0.06;
+
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
+    final brightness = Theme.of(context).brightness;
     final accent =
         accentFor(roles, isArtist: isArtist, isInstitution: isInstitution);
-    return KubusAtmosphere(
+    // A quiet identity field, not a placeholder and not a shader demo: the
+    // raised surface, one atmospheric wash of the role colour from the top
+    // right, a directional tonal depth toward the avatar corner, and the
+    // role symbol oversized and cropped off the bottom-right edge. No texture.
+    return DecoratedBox(
       key: const ValueKey<String>('profile_cover_field'),
-      accent: accent,
-      // One hue: a cover is one identity, not a two-colour composition.
-      secondary: accent,
-      base: roles.surfaceRaised,
-      // Edit sits top-right and the avatar bottom-left: the symbol takes the
-      // free bottom-right corner, sized to the band.
-      glyphAlignment: Alignment.bottomRight,
-      glyphExtent: 150,
-      glyph: glyphFor(isArtist: isArtist, isInstitution: isInstitution),
-      framed: false,
-      padding: EdgeInsets.zero,
-      child: const SizedBox.expand(),
+      decoration: BoxDecoration(color: roles.surfaceRaised),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topRight,
+                radius: 1.3,
+                colors: [
+                  accent.withValues(
+                    alpha: KubusAtmosphere.accentFieldAlpha(brightness) * 0.8,
+                  ),
+                  accent.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(
+                    alpha: brightness == Brightness.dark ? 0.14 : 0.04,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          KubusGhostGlyph(
+            icon: glyphFor(isArtist: isArtist, isInstitution: isInstitution),
+            color: accent,
+            alignment: Alignment.bottomRight,
+            placement: KubusGhostGlyphPlacement.hero,
+            extent: 220,
+            opacity: glyphOpacity(brightness),
+          ),
+        ],
+      ),
     );
   }
 }

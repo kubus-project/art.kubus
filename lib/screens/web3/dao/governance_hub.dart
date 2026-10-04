@@ -30,6 +30,7 @@ import '../../../features/web3/web3_capabilities.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import '../../../widgets/states/kubus_product_states.dart';
 import '../../../widgets/kubus_button.dart';
+import '../../../widgets/dao/dao_metric_strip.dart';
 import '../../../widgets/dao/dao_proposal_status.dart';
 
 class GovernanceHub extends StatelessWidget {
@@ -410,41 +411,28 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
                 KubusSpacing.md,
                 KubusSpacing.sm,
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (capabilities.hasAccount) ...[
-                    Expanded(
-                      child: KubusStatCard(
-                        title: l10n.daoHubStatYourVotingPowerLabel,
-                        value: '$votingPower KUB8',
-                        semanticsLabel: l10n.walletBalanceAmountSemantic(
-                          l10n.daoHubStatYourVotingPowerLabel,
-                          votingPower,
-                          'KUB8',
-                        ),
-                        titleMaxLines: 2,
-                        minHeight: 64,
+              child: DaoMetricStrip(
+                metrics: [
+                  if (capabilities.hasAccount)
+                    DaoMetric(
+                      title: l10n.daoHubStatYourVotingPowerLabel,
+                      value: '$votingPower KUB8',
+                      icon: Icons.how_to_vote_outlined,
+                      semanticsLabel: l10n.walletBalanceAmountSemantic(
+                        l10n.daoHubStatYourVotingPowerLabel,
+                        votingPower,
+                        'KUB8',
                       ),
                     ),
-                    const SizedBox(width: KubusSpacing.sm),
-                  ],
-                  Expanded(
-                    child: KubusStatCard(
-                      title: l10n.daoHubStatActiveProposalsLabel,
-                      value: activeProposals,
-                      titleMaxLines: 2,
-                      minHeight: 64,
-                    ),
+                  DaoMetric(
+                    title: l10n.daoHubStatActiveProposalsLabel,
+                    value: activeProposals,
+                    icon: Icons.ballot_outlined,
                   ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  Expanded(
-                    child: KubusStatCard(
-                      title: l10n.daoHubStatTotalDelegatesLabel,
-                      value: totalMembers,
-                      titleMaxLines: 2,
-                      minHeight: 64,
-                    ),
+                  DaoMetric(
+                    title: l10n.daoHubStatTotalDelegatesLabel,
+                    value: totalMembers,
+                    icon: Icons.groups_outlined,
                   ),
                 ],
               ),

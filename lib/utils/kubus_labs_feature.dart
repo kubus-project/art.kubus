@@ -18,6 +18,18 @@ enum KubusLabsFeature {
     screenIcon: Icons.storefront,
     navIcon: Icons.storefront_outlined,
     navActiveIcon: Icons.storefront,
+  ),
+
+  /// kubus Node keeps its own infrastructure glyph (the Node is a server you
+  /// own, not a lab flask); Labs is said by the adornment beside it. It is
+  /// runtime ownership, not a financial capability: the marker is identity
+  /// only and never gates access or asks for a wallet.
+  node(
+    screenKey: 'kubus_node',
+    route: '/kubus-node',
+    screenIcon: Icons.dns,
+    navIcon: Icons.dns_outlined,
+    navActiveIcon: Icons.dns,
   );
 
   const KubusLabsFeature({
@@ -42,6 +54,8 @@ enum KubusLabsFeature {
         return roles.web3DaoAccent;
       case KubusLabsFeature.marketplace:
         return roles.web3MarketplaceAccent;
+      case KubusLabsFeature.node:
+        return roles.web3NodeAccent;
     }
   }
 
@@ -51,6 +65,8 @@ enum KubusLabsFeature {
         return l10n.labsDaoSemanticLabel;
       case KubusLabsFeature.marketplace:
         return l10n.labsMarketplaceSemanticLabel;
+      case KubusLabsFeature.node:
+        return l10n.kubusNodeEntryTitle;
     }
   }
 }
@@ -66,6 +82,10 @@ KubusLabsFeature? kubusLabsFeatureForScreenKey(String screenKey) {
     case 'marketplace':
     case 'trade':
       return KubusLabsFeature.marketplace;
+    case 'node':
+    case 'kubus_node':
+    case 'kubus-node':
+      return KubusLabsFeature.node;
     default:
       return null;
   }
@@ -77,6 +97,8 @@ KubusLabsFeature? kubusLabsFeatureForRoute(String route) {
       return KubusLabsFeature.dao;
     case '/marketplace':
       return KubusLabsFeature.marketplace;
+    case '/kubus-node':
+      return KubusLabsFeature.node;
     default:
       return null;
   }

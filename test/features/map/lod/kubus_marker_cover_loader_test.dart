@@ -46,7 +46,7 @@ void main() {
     addTearDown(loader.dispose);
 
     await loader.load('u', targetWidthPx: 96);
-    expect(loader.cached('u'), isNotNull);
+    expect(loader.cached('u', targetWidthPx: 96), isNotNull);
     await loader.load('u', targetWidthPx: 96);
     expect(calls, 1);
   });
@@ -61,13 +61,13 @@ void main() {
 
     await loader.load('a', targetWidthPx: 96);
     await loader.load('b', targetWidthPx: 96);
-    loader.cached('a'); // refresh a: b is now the oldest
+    loader.cached('a', targetWidthPx: 96); // refresh a: b is now the oldest
     await loader.load('c', targetWidthPx: 96);
 
     expect(loader.cachedCount, 2);
-    expect(loader.cached('a'), isNotNull);
-    expect(loader.cached('b'), isNull);
-    expect(loader.cached('c'), isNotNull);
+    expect(loader.cached('a', targetWidthPx: 96), isNotNull);
+    expect(loader.cached('b', targetWidthPx: 96), isNull);
+    expect(loader.cached('c', targetWidthPx: 96), isNotNull);
   });
 
   test('limits concurrent fetches', () async {
@@ -134,6 +134,22 @@ void main() {
 
     expect(await loader.load('x', targetWidthPx: 96), isNull);
     expect(loader.hasFailed('x'), isTrue);
+  });
+
+  test('the same URL at another size is a separate decode', () async {
+    final widths = <int>[];
+    final loader = KubusMarkerCoverLoader(fetch: (url, width) async {
+      widths.add(width);
+      return _image();
+    });
+    addTearDown(loader.dispose);
+
+    await loader.load('u', targetWidthPx: 96);
+    await loader.load('u', targetWidthPx: 96);
+    await loader.load('u', targetWidthPx: 160);
+    expect(widths, <int>[96, 160]);
+    expect(loader.cached('u', targetWidthPx: 160), isNotNull);
+    expect(loader.cached('u', targetWidthPx: 224), isNull);
   });
 
   test('a disposed loader serves nothing', () async {

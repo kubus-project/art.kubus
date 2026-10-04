@@ -40,19 +40,32 @@ abstract final class MapScreenConstants {
   /// Cluster grid level for the current zoom, shared by mobile + desktop.
   ///
   /// Markers merge into a cluster when they fall inside the same diagonal grid
-  /// cell. The level is derived from a target on-screen cell size so the
-  /// grouping distance stays roughly constant (~56-72 px) at every zoom.
+  /// cell. The level is derived from a target on-screen cell size that tapers
+  /// with zoom (see [clusterTargetSpacingPx]): wide grouping far out, so the
+  /// world reads as a few coherent groups, narrowing as the camera approaches
+  /// a place so individual markers separate before [clusterMaxZoom].
   /// A grid cell measures `256 * 2^(zoom - level)` screen px, so levels must
   /// track the camera zoom; fixed small levels produce cells thousands of
   /// pixels wide and collapse the whole viewport into one cluster.
   static int clusterGridLevelForZoom(double zoom) {
-    final double targetSpacingPx =
-        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
     final level = GridUtils.resolvePrimaryGridLevel(
       zoom,
-      targetScreenSpacing: targetSpacingPx,
+      targetScreenSpacing: clusterTargetSpacingPx(zoom),
     );
     return level.clamp(3, 14);
+  }
+
+  /// Target on-screen grouping distance for [zoom], in logical px.
+  ///
+  /// Banded rather than continuous: the grid level is an integer, and a
+  /// continuous target would move the rounding point with every frame of a
+  /// zoom and make the topology flicker between levels. Bands step down
+  /// monotonically (far > mid > near).
+  static double clusterTargetSpacingPx(double zoom) {
+    if (!zoom.isFinite || zoom < 5.0) return 116.0;
+    if (zoom < 7.5) return 100.0;
+    if (zoom < 10.0) return 84.0;
+    return 68.0;
   }
 
   // ---------------------------------------------------------------------------

@@ -195,15 +195,17 @@ class _DesktopShellState extends State<DesktopShell>
       route: '/marketplace',
       labsFeature: KubusLabsFeature.marketplace,
     ),
-    // kubus Node belongs beside the other advanced capability destinations.
-    // It is runtime ownership, not a financial capability, so it carries no
-    // Labs gate and no wallet requirement of its own: the Node surface's own
-    // rollout flag and the backend ownership contract decide what it shows.
+    // kubus Node belongs beside the other advanced capability destinations
+    // and shares their Labs identity (the marker only, never a gate). It is
+    // runtime ownership, not a financial capability, so it has no wallet
+    // requirement of its own: the Node surface's own rollout flag and the
+    // backend ownership contract decide what it shows.
     DesktopNavItem(
-      icon: Icons.dns_outlined,
-      activeIcon: Icons.dns,
+      icon: KubusLabsFeature.node.navIcon,
+      activeIcon: KubusLabsFeature.node.navActiveIcon,
       labelKey: DesktopNavLabelKey.node,
       route: _nodeRoute,
+      labsFeature: KubusLabsFeature.node,
     ),
   ];
 

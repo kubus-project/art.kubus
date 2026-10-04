@@ -242,8 +242,8 @@ class _AnalyticsLeadCard extends StatelessWidget {
                   icon: data.icon,
                   color: accent,
                   alignment: Alignment.bottomRight,
+                  placement: KubusGhostGlyphPlacement.stat,
                   extent: 120,
-                  bleed: 0.34,
                 ),
               ),
               Padding(

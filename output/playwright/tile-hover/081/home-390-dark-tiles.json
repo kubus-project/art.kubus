@@ -1,0 +1,22 @@
+{
+  "name": "home-390-dark-tiles",
+  "route": "/",
+  "viewport": [
+    390,
+    844
+  ],
+  "theme": "dark",
+  "reducedMotion": false,
+  "hovers": [
+    [
+      100,
+      118
+    ]
+  ],
+  "shots": [
+    "home-390-dark-tiles-0-rest.png",
+    "home-390-dark-tiles-1-hover-100x118.png"
+  ],
+  "pageErrors": [],
+  "blockedExternalRequests": 42
+}

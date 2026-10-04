@@ -1,0 +1,16 @@
+{
+  "name": "home-1440-dark",
+  "route": "/",
+  "viewport": [
+    1440,
+    900
+  ],
+  "theme": "dark",
+  "reducedMotion": false,
+  "hovers": [],
+  "shots": [
+    "home-1440-dark-0-rest.png"
+  ],
+  "pageErrors": [],
+  "blockedExternalRequests": 114
+}

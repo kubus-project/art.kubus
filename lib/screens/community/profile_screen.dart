@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/profile/profile_cover_field.dart';
+import '../../widgets/profile/profile_identity_hero.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -331,15 +332,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           const avatarRadius = 44.0;
           const avatarCornerRadiusFactor =
               AvatarWidget.defaultCornerRadiusFactor;
-          const avatarShadowAlpha = 0.10;
-          const avatarShadowBlur = 8.0;
-          const avatarShadowOffsetY = 2.0;
-          const avatarRingPadding = 4.0;
-
-          final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
-            radius: avatarRadius + avatarRingPadding,
-            cornerRadiusFactor: avatarCornerRadiusFactor,
-          );
 
           final coverImageUrl =
               _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
@@ -360,7 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final stackedCoverHeight = coverEdge +
               titleRow +
               KubusSpacing.sm +
-              (avatarRadius + avatarRingPadding) * 2 +
+              avatarRadius * 2 +
               coverEdge;
           final coverHeight = hasCoverImage
               ? math.max(220.0, stackedCoverHeight)
@@ -368,7 +360,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final cacheWidth = (constraints.maxWidth * dpr).round();
           final cacheHeight = (coverHeight * dpr).round();
-          final scheme = Theme.of(context).colorScheme;
           final displayName = profileProvider.currentUser?.displayName ??
               profileProvider.currentUser?.username ??
               AppLocalizations.of(context)!.profilePersonaArtEnthusiast;
@@ -609,42 +600,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Positioned(
                           left: isSmallScreen ? 12 : 16,
                           bottom: isSmallScreen ? 12 : 16,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: scheme.surface.withValues(alpha: 0.94),
-                              borderRadius: BorderRadius.circular(
-                                avatarRingShapeRadius,
-                              ),
-                              border: Border.all(
-                                color: scheme.outline.withValues(alpha: 0.24),
-                                width: KubusSizes.hairline + 0.2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Theme.of(context)
-                                      .shadowColor
-                                      .withValues(alpha: avatarShadowAlpha),
-                                  blurRadius: avatarShadowBlur,
-                                  offset: const Offset(0, avatarShadowOffsetY),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(avatarRingPadding),
-                              child: AvatarWidget(
-                                wallet: profileProvider
-                                        .currentUser?.walletAddress ??
-                                    '',
-                                displayName:
-                                    profileProvider.currentUser?.displayName,
-                                avatarUrl: profileProvider.currentUser?.avatar,
-                                radius: avatarRadius,
-                                borderWidth: 0,
-                                borderColor: Colors.transparent,
-                                cornerRadiusFactor: avatarCornerRadiusFactor,
-                                enableProfileNavigation: false,
-                                showStatusIndicator: _showActivityStatus,
-                              ),
+                          // Bare avatar, same mount as the public hero.
+                          child: ProfileAvatarMount(
+                            radius: avatarRadius,
+                            child: AvatarWidget(
+                              wallet:
+                                  profileProvider.currentUser?.walletAddress ??
+                                      '',
+                              displayName:
+                                  profileProvider.currentUser?.displayName,
+                              avatarUrl: profileProvider.currentUser?.avatar,
+                              radius: avatarRadius,
+                              borderWidth: 0,
+                              borderColor: Colors.transparent,
+                              cornerRadiusFactor: avatarCornerRadiusFactor,
+                              enableProfileNavigation: false,
+                              showStatusIndicator: _showActivityStatus,
                             ),
                           ),
                         ),
@@ -656,7 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               Padding(
                 padding: EdgeInsets.only(
                   left: (isSmallScreen ? 12 : 16) +
-                      (avatarRadius + avatarRingPadding) * 2 +
+                      avatarRadius * 2 +
                       KubusSpacing.md,
                   right: isSmallScreen ? 12 : 16,
                   top: KubusSpacing.xs,

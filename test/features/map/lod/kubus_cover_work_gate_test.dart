@@ -88,6 +88,7 @@ void main() {
     fakeAsync((async) {
       final gate = KubusCoverWorkGate(
         resyncDelay: const Duration(milliseconds: 100),
+        resyncMaxWait: const Duration(seconds: 5),
       );
       var calls = 0;
 
@@ -102,6 +103,29 @@ void main() {
       async.elapse(const Duration(milliseconds: 100));
       expect(calls, 1);
       expect(gate.hasPendingResync, isFalse);
+      gate.dispose();
+    });
+  });
+
+  test('a long burst still flushes every resyncMaxWait', () {
+    fakeAsync((async) {
+      final gate = KubusCoverWorkGate(
+        resyncDelay: const Duration(milliseconds: 100),
+        resyncMaxWait: const Duration(milliseconds: 300),
+      );
+      var calls = 0;
+
+      // Covers keep finishing every 60 ms for 900 ms: a pure trailing debounce
+      // would show nothing until the burst ends.
+      for (var i = 0; i < 15; i += 1) {
+        gate.scheduleResync(() => calls += 1);
+        async.elapse(const Duration(milliseconds: 60));
+      }
+      // Flushes at 300, 600 and 900 ms: one per window, not one per cover.
+      expect(calls, 3);
+      expect(gate.hasPendingResync, isFalse);
+      async.elapse(const Duration(milliseconds: 500));
+      expect(calls, 3, reason: 'no stray trailing call after the last flush');
       gate.dispose();
     });
   });

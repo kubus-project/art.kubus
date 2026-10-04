@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import 'kubus_cover_perf_probe.dart';
+
 /// Remembers which cover URL a marker resolved to, for as long as the data it
 /// was resolved from is unchanged.
 ///
@@ -41,12 +43,15 @@ class KubusCoverUrlCache {
 ///
 /// Returns null when the image cannot be loaded; it must not throw.
 typedef KubusCoverFetch = Future<ui.Image?> Function(
-  String url,
-  int targetWidthPx,
-);
+    String url, int targetWidthPx);
 
 /// Bounded, de-duplicated loader for the artwork covers drawn inside close-up
 /// map markers.
+///
+/// Decoded images are keyed by the canonical resolved cover URL *and* the
+/// physical width it was decoded to, so markers that resolve to the same media
+/// share one decode while a different device pixel ratio never reuses a
+/// too-small bitmap.
 ///
 /// It owns the three limits that keep close-up covers cheap:
 ///
@@ -85,11 +90,15 @@ class KubusMarkerCoverLoader {
   int get cachedCount => _cache.length;
   int get inFlightCount => _inFlight.length;
 
-  /// A decoded image for [url] if one is already held (refreshes its recency).
-  ui.Image? cached(String url) {
-    final image = _cache.remove(url);
+  static String _key(String url, int targetWidthPx) => '$targetWidthPx|$url';
+
+  /// A decoded image for [url] at [targetWidthPx] if one is already held
+  /// (refreshes its recency).
+  ui.Image? cached(String url, {required int targetWidthPx}) {
+    final key = _key(url, targetWidthPx);
+    final image = _cache.remove(key);
     if (image == null) return null;
-    _cache[url] = image;
+    _cache[key] = image;
     return image;
   }
 
@@ -106,10 +115,11 @@ class KubusMarkerCoverLoader {
 
   Future<ui.Image?> load(String url, {required int targetWidthPx}) {
     if (_disposed) return Future<ui.Image?>.value(null);
-    final hit = cached(url);
+    final hit = cached(url, targetWidthPx: targetWidthPx);
     if (hit != null) return Future<ui.Image?>.value(hit);
     if (hasFailed(url)) return Future<ui.Image?>.value(null);
-    return _inFlight[url] ??= _run(url, targetWidthPx);
+    final key = _key(url, targetWidthPx);
+    return _inFlight[key] ??= _run(url, targetWidthPx);
   }
 
   Future<ui.Image?> _run(String url, int targetWidthPx) async {
@@ -117,11 +127,13 @@ class KubusMarkerCoverLoader {
       await _acquire();
       if (_disposed) return null;
       ui.Image? image;
+      final watch = Stopwatch()..start();
       try {
         image = await _fetch(url, targetWidthPx);
       } catch (_) {
         image = null;
       }
+      recordKubusCoverPhase(KubusCoverPhase.fetchDecode, watch.elapsed);
       if (_disposed) {
         image?.dispose();
         return null;
@@ -130,11 +142,11 @@ class KubusMarkerCoverLoader {
         _failedAt[url] = _now();
         return null;
       }
-      _cache[url] = image;
+      _cache[_key(url, targetWidthPx)] = image;
       _evictOverflow();
       return image;
     } finally {
-      _inFlight.remove(url);
+      _inFlight.remove(_key(url, targetWidthPx));
       _release();
     }
   }

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'kubus_cover_perf_probe.dart';
+
 /// Keeps close-level cover work from competing with the camera for frames.
 ///
 /// Rendering a cover marker icon rasterises it on the CanvasKit surface and
@@ -15,7 +17,9 @@ import 'package:flutter/foundation.dart';
 ///   them, so readbacks never occupy consecutive frames, and skips a job whose
 ///   `shouldRun` precondition (camera idle, same style epoch) no longer holds;
 /// * [scheduleResync] collapses the resync requests of a batch of finished
-///   covers into a single trailing rebuild.
+///   covers into one rebuild: trailing [resyncDelay] after the last request,
+///   but never later than [resyncMaxWait] after the first, so a long batch
+///   shows its first covers early instead of only after the last one.
 ///
 /// It holds no map state: callers decide what a job does and what a skipped job
 /// means (a skipped cover is simply re-planned the next time the camera idles).
@@ -23,6 +27,7 @@ class KubusCoverWorkGate {
   KubusCoverWorkGate({
     this.spacing = const Duration(milliseconds: 24),
     this.resyncDelay = const Duration(milliseconds: 140),
+    this.resyncMaxWait = const Duration(milliseconds: 450),
   });
 
   /// Pause after each job, so the next one starts on a later frame.
@@ -31,8 +36,13 @@ class KubusCoverWorkGate {
   /// Trailing delay that coalesces resync requests.
   final Duration resyncDelay;
 
+  /// Longest a pending resync may be postponed by further requests.
+  final Duration resyncMaxWait;
+
   Future<void> _tail = Future<void>.value();
   Timer? _resyncTimer;
+  Timer? _resyncDeadline;
+  Stopwatch? _resyncPending;
   bool _disposed = false;
 
   /// Runs [job] after every earlier job. Returns null when the gate was
@@ -57,14 +67,26 @@ class KubusCoverWorkGate {
     return result.future;
   }
 
-  /// Calls [resync] once, [resyncDelay] after the last request.
+  /// Calls [resync] once, [resyncDelay] after the last request, or at the
+  /// latest [resyncMaxWait] after the first pending one.
   void scheduleResync(VoidCallback resync) {
     if (_disposed) return;
-    _resyncTimer?.cancel();
-    _resyncTimer = Timer(resyncDelay, () {
+    void fire() {
+      _resyncTimer?.cancel();
       _resyncTimer = null;
-      if (!_disposed) resync();
-    });
+      _resyncDeadline?.cancel();
+      _resyncDeadline = null;
+      final waited = _resyncPending?.elapsed ?? Duration.zero;
+      _resyncPending = null;
+      if (_disposed) return;
+      recordKubusCoverPhase(KubusCoverPhase.resyncDelay, waited);
+      resync();
+    }
+
+    _resyncPending ??= Stopwatch()..start();
+    _resyncDeadline ??= Timer(resyncMaxWait, fire);
+    _resyncTimer?.cancel();
+    _resyncTimer = Timer(resyncDelay, fire);
   }
 
   bool get hasPendingResync => _resyncTimer != null;
@@ -73,5 +95,8 @@ class KubusCoverWorkGate {
     _disposed = true;
     _resyncTimer?.cancel();
     _resyncTimer = null;
+    _resyncDeadline?.cancel();
+    _resyncDeadline = null;
+    _resyncPending = null;
   }
 }

@@ -43,11 +43,14 @@ void _expectCoverRole(
   final roles = KubusColorRoles.of(
     tester.element(find.byType(ProfileCoverField)),
   );
-  final atmosphere = tester.widget<KubusAtmosphere>(
-    find.byKey(const ValueKey<String>('profile_cover_field')),
+  final glyph = tester.widget<KubusGhostGlyph>(
+    find.descendant(
+      of: find.byKey(const ValueKey<String>('profile_cover_field')),
+      matching: find.byType(KubusGhostGlyph),
+    ),
   );
   expect(
-    atmosphere.accent,
+    glyph.color,
     ProfileCoverField.accentFor(
       roles,
       isArtist: isArtist,

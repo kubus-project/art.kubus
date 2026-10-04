@@ -263,7 +263,6 @@ class KubusStatCard extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
 
     Widget surface(bool hovered) {
-      final motion = KubusHoverResponse.motionAllowed(context);
       final content = onTap == null
           ? tile
           : InkWell(
@@ -305,24 +304,15 @@ class KubusStatCard extends StatelessWidget {
                     ),
                   ),
                   Positioned.fill(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(end: hovered ? 1 : 0),
-                      duration:
-                          motion ? KubusHoverResponse.duration : Duration.zero,
-                      curve: Curves.easeOutCubic,
-                      builder: (context, t, _) => KubusGhostGlyph(
-                        key: const ValueKey<String>('kubus_stat_ghost_glyph'),
-                        icon: icon!,
-                        color: resolvedAccent,
-                        alignment: Alignment.bottomRight,
-                        // Mostly cropped: a fragment of the symbol, so the
-                        // label in front of it stays the readable layer.
-                        bleed: 0.36,
-                        opacity: KubusGhostGlyph.defaultOpacity(brightness) +
-                            0.04 * (hovered ? 1 : 0),
-                        scale: motion ? 1 + 0.06 * t : 1,
-                        shift: motion ? Offset(-4 * t, -4 * t) : Offset.zero,
-                      ),
+                    child: KubusGhostGlyph(
+                      key: const ValueKey<String>('kubus_stat_ghost_glyph'),
+                      icon: icon!,
+                      color: resolvedAccent,
+                      placement: KubusGhostGlyphPlacement.stat,
+                      alignment: Alignment.bottomRight,
+                      opacity: KubusGhostGlyph.defaultOpacity(brightness) +
+                          (hovered ? 0.04 : 0),
+                      hovered: hovered,
                     ),
                   ),
                   Positioned(

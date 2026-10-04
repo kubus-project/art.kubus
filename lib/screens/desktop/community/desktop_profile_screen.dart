@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_cover_field.dart';
+import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -674,12 +675,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
     const avatarRadius = 44.0;
     const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
-    const avatarRingPadding = 4.0;
-
-    final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius + avatarRingPadding,
-      cornerRadiusFactor: avatarCornerRadiusFactor,
-    );
     final scheme = Theme.of(context).colorScheme;
     final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
 
@@ -693,7 +688,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     // non-negative padding, since Flutter's `Padding` asserts
     // `padding.isNonNegative` — and can never overlap anything above it.
     const avatarOverlap = 32.0;
-    final avatarDiameter = (avatarRadius + avatarRingPadding) * 2;
+    const avatarDiameter = avatarRadius * 2;
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -775,29 +770,19 @@ class _ProfileScreenState extends State<ProfileScreen>
               Positioned(
                 left: KubusSpacing.lg,
                 bottom: -avatarOverlap,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(
-                      avatarRingShapeRadius,
-                    ),
-                    border: Border.all(
-                      color: KubusColorRoles.of(context).rule,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(avatarRingPadding),
-                    child: AvatarWidget(
-                      wallet: user?.walletAddress ?? '',
-                      displayName: user?.displayName,
-                      avatarUrl: user?.avatar,
-                      radius: avatarRadius,
-                      borderWidth: 0,
-                      borderColor: Colors.transparent,
-                      cornerRadiusFactor: avatarCornerRadiusFactor,
-                      enableProfileNavigation: false,
-                      showStatusIndicator: _showActivityStatus,
-                    ),
+                // Bare avatar, same mount as the public hero.
+                child: ProfileAvatarMount(
+                  radius: avatarRadius,
+                  child: AvatarWidget(
+                    wallet: user?.walletAddress ?? '',
+                    displayName: user?.displayName,
+                    avatarUrl: user?.avatar,
+                    radius: avatarRadius,
+                    borderWidth: 0,
+                    borderColor: Colors.transparent,
+                    cornerRadiusFactor: avatarCornerRadiusFactor,
+                    enableProfileNavigation: false,
+                    showStatusIndicator: _showActivityStatus,
                   ),
                 ),
               ),

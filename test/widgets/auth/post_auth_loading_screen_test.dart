@@ -4,7 +4,10 @@ import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/post_auth_coordinator.dart';
+import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
+import 'package:art_kubus/widgets/auth/auth_form_panel.dart';
 import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -114,6 +117,53 @@ Widget _buildApp(Widget child, {List<NavigatorObserver>? observers}) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('full-screen progress: one atmosphere, one panel', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{},
+          origin: AuthOrigin.wallet,
+          coordinator: const _FailingPostAuthCoordinator(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.byType(AuthAtmosphere), findsOneWidget);
+    expect(find.byKey(AuthFormPanel.surfaceKey), findsOneWidget);
+    // No second, visually equivalent frame around or inside the panel.
+    expect(find.byType(GlassSurface), findsNothing);
+    expect(find.byType(LiquidGlassCard), findsNothing);
+    expect(find.byType(Card), findsNothing);
+  });
+
+  testWidgets('embedded progress adds no panel inside its host', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        Scaffold(
+          body: PostAuthLoadingScreen(
+            payload: const <String, dynamic>{},
+            origin: AuthOrigin.emailPassword,
+            presentation: PostAuthLoadingPresentation.shellEmbedded,
+            coordinator: const _FailingPostAuthCoordinator(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.byKey(AuthFormPanel.surfaceKey), findsNothing);
+    expect(find.byType(LiquidGlassCard), findsNothing);
+    expect(find.byType(AuthAtmosphere), findsNothing);
+    expect(find.text("We couldn't finish signing you in"), findsOneWidget);
+  });
 
   testWidgets('shows post-auth failure actions when the flow fails', (
     tester,

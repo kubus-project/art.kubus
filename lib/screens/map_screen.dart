@@ -4375,8 +4375,14 @@ class _MapScreenState extends State<MapScreen>
     if (_styleInitialized) {
       _queueMarkerVisualRefreshForZoom(_lastZoom);
       // Close-level covers are chosen from what the settled viewport holds,
-      // so a pan that ends at street scale re-plans them once.
-      if (KubusMarkerLod.allowsCovers(_lastZoom)) _requestMarkerVisualSync();
+      // so a pan that ends at cover scale re-plans
+      // (and prefetches) them once.
+      if (KubusMarkerLod.plansCoversAt(
+        _lastZoom,
+        hasSelection: _kubusMapController.selectedMarkerId != null,
+      )) {
+        _requestMarkerVisualSync();
+      }
       unawaited(_renderCoordinator.updateRenderMode());
     }
 

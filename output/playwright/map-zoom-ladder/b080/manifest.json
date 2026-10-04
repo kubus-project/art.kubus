@@ -1,0 +1,156 @@
+{
+ "label": "b080",
+ "webRoot": "C:\\kubus-build\\perf\\b080",
+ "glMode": "hardware",
+ "scheme": "light",
+ "center": [
+  14.5058,
+  46.0519
+ ],
+ "manifest": [
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z5.png",
+   "zoom": 5,
+   "features": 10,
+   "clusters": 8,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z7.png",
+   "zoom": 7,
+   "features": 59,
+   "clusters": 54,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z9.png",
+   "zoom": 9,
+   "features": 36,
+   "clusters": 16,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z11.png",
+   "zoom": 11,
+   "features": 8,
+   "clusters": 8,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z12.png",
+   "zoom": 12,
+   "features": 118,
+   "clusters": 6,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z13.png",
+   "zoom": 13,
+   "features": 138,
+   "clusters": 3,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z14.png",
+   "zoom": 14,
+   "features": 106,
+   "clusters": 3,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "1440x900",
+   "file": "1440x900-z15.png",
+   "zoom": 15,
+   "features": 90,
+   "clusters": 2,
+   "coverIconsInUse": 22,
+   "coverImagesRegistered": 22
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z5.png",
+   "zoom": 5,
+   "features": 8,
+   "clusters": 7,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z7.png",
+   "zoom": 7,
+   "features": 54,
+   "clusters": 49,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z9.png",
+   "zoom": 9,
+   "features": 6,
+   "clusters": 3,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z11.png",
+   "zoom": 11,
+   "features": 8,
+   "clusters": 8,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z12.png",
+   "zoom": 12,
+   "features": 116,
+   "clusters": 6,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z13.png",
+   "zoom": 13,
+   "features": 138,
+   "clusters": 3,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z14.png",
+   "zoom": 14,
+   "features": 83,
+   "clusters": 2,
+   "coverIconsInUse": 0,
+   "coverImagesRegistered": 0
+  },
+  {
+   "viewport": "390x844",
+   "file": "390x844-z15.png",
+   "zoom": 15,
+   "features": 66,
+   "clusters": 0,
+   "coverIconsInUse": 8,
+   "coverImagesRegistered": 8
+  }
+ ]
+}

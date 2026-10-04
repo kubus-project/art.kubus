@@ -21,6 +21,11 @@ import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/screens/auth/forgot_password_screen.dart';
 import 'package:art_kubus/screens/auth/register_screen.dart';
 import 'package:art_kubus/screens/auth/reset_password_screen.dart';
+import 'package:art_kubus/screens/auth/secure_account_screen.dart';
+import 'package:art_kubus/services/post_auth_coordinator.dart';
+import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
+import 'package:art_kubus/widgets/auth_entry_shell.dart';
+import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/auth/verify_email_screen.dart';
 import 'package:art_kubus/screens/home_screen.dart';
@@ -157,6 +162,94 @@ void main() {
   const phone = Size(390, 844);
   const desktop = Size(1440, 900);
   final owner = qaOwner();
+
+  // -------------------------------------------------- auth surfaces (0.8.1)
+  // The sign-in security progress and Secure account: one atmosphere, one
+  // panel. The progress is frozen on a stage so the capture is deterministic.
+  for (final b in Brightness.values) {
+    Widget progress({required bool framed}) => PostAuthLoadingContent(
+          stage: PostAuthStage.syncingSavedItems,
+          running: true,
+          error: null,
+          onRetry: null,
+          onBackToSignIn: null,
+          framed: framed,
+        );
+    for (final entry
+        in <String, Size>{'phone': phone, 'desktop': desktop}.entries) {
+      scene('auth-progress-fullscreen-${entry.key}-${b.name}', (tester) async {
+        await surface(
+          tester,
+          'auth-progress-fullscreen-${entry.key}-${b.name}',
+          () => Material(
+            type: MaterialType.transparency,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const AuthAtmosphereForQa(),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: progress(framed: true),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          size: entry.value,
+          brightness: b,
+        );
+      });
+    }
+    scene('auth-progress-shell-desktop-${b.name}', (tester) async {
+      await surface(
+        tester,
+        'auth-progress-shell-desktop-${b.name}',
+        () => AuthEntryShell(
+          title: 'Sign in',
+          subtitle: 'Welcome back',
+          heroIcon: Icons.login_rounded,
+          form: progress(framed: false),
+        ),
+        size: desktop,
+        brightness: b,
+      );
+    });
+    for (final entry
+        in <String, Size>{'phone': phone, 'desktop': desktop}.entries) {
+      scene('auth-secure-account-${entry.key}-${b.name}', (tester) async {
+        BackendApiService().setAuthTokenForTesting('qa-token');
+        BackendApiService().setHttpClient(MockClient((request) async {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'success': true,
+              'data': <String, dynamic>{
+                'hasEmail': false,
+                'hasPassword': false,
+                'emailVerified': false,
+                'emailAuthEnabled': true,
+              },
+            }),
+            200,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
+        }));
+        await surface(
+          tester,
+          'auth-secure-account-${entry.key}-${b.name}',
+          () => const SecureAccountScreen(),
+          size: entry.value,
+          brightness: b,
+        );
+        BackendApiService().setAuthTokenForTesting(null);
+      });
+    }
+  }
 
   // -------------------------------------------------------------------- auth
   for (final b in Brightness.values) {
@@ -560,4 +653,14 @@ String _git(List<String> args) {
   } catch (_) {
     return '';
   }
+}
+
+/// The production auth atmosphere, behind a QA-local name so the scene reads
+/// as what the full-screen progress paints underneath its one panel.
+class AuthAtmosphereForQa extends StatelessWidget {
+  const AuthAtmosphereForQa({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const AuthAtmosphere(child: SizedBox.expand());
 }
