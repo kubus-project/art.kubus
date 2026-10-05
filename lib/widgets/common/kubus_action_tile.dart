@@ -15,9 +15,9 @@ enum KubusActionTileLayout {
 
   /// Dense management destination (settings, security, account): a full-width
   /// row with the title, an optional one-line subtitle, an optional [status]
-  /// and the arrow, over a lightly cropped trailing glyph. The surface never
-  /// lifts or casts a hover shadow, so a list of them does not bob; the glyph,
-  /// field, edge and a leading indicator answer instead.
+  /// and the arrow, over a lightly cropped trailing glyph. On hover it lifts
+  /// 2 px with the contextual accent shadow like the other layouts; the glyph,
+  /// field, edge and a leading indicator answer too.
   compact,
 }
 
@@ -42,13 +42,11 @@ enum KubusActionTileLayout {
 ///
 /// Hover contract (pointer only; touch never hovers):
 ///
-/// - stacked and inline: a 2 px paint-only lift, a stronger accent field and
-///   edge, a soft contextual accent shadow ([KubusHoverResponse.accentShadow])
-///   and, for stacked, the ghost glyph's inward drift and scale or, for
-///   inline, a 2 px arrow travel. 180 ms ease-out. Nothing reflows.
-/// - compact: the surface stays put (no lift, no shadow); the ghost glyph
-///   drifts ~2.5 px inward and grows to 1.03x, and the field, edge and a
-///   leading indicator strengthen.
+/// - every layout: a 2 px paint-only lift, a stronger accent field and edge,
+///   and a soft contextual accent shadow ([KubusHoverResponse.accentShadow]).
+///   Stacked and compact add the ghost glyph's inward drift and scale; compact
+///   also strengthens its leading indicator; inline adds a 2 px arrow travel.
+///   180 ms ease-out. Nothing reflows: the surface moves as one painted unit.
 /// - reduced motion: no lift, no glyph drift or scale, no arrow travel; the
 ///   field, edge, indicator and shadow state still change so the tile still
 ///   answers.
@@ -126,7 +124,9 @@ class KubusActionTile extends StatelessWidget {
     final stacked = layout == KubusActionTileLayout.stacked;
     final compact = layout == KubusActionTileLayout.compact;
     final inline = layout == KubusActionTileLayout.inline;
-    final lifts = !compact;
+    // Owner direction for 0.8.1: every layout answers the pointer with the
+    // kubus lift and accent shadow, compact rows included.
+    final arrowTravels = !compact;
     // The inline strip is too short for a subtitle, and an empty one is none.
     final shownSubtitle =
         layout == KubusActionTileLayout.inline || (subtitle ?? '').isEmpty
@@ -175,16 +175,14 @@ class KubusActionTile extends StatelessWidget {
               tileSize: 3,
             ),
           )
-        : !lifts
+        : !arrowTravels
             ? ExcludeSemantics(
                 child: Icon(Icons.arrow_forward, size: 16, color: accent),
               )
             : ExcludeSemantics(
                 child: TweenAnimationBuilder<double>(
                   tween: Tween<double>(
-                    end: hovered && motion && lifts
-                        ? KubusHoverResponse.arrowTravel
-                        : 0,
+                    end: hovered && motion ? KubusHoverResponse.arrowTravel : 0,
                   ),
                   duration:
                       motion ? KubusHoverResponse.duration : Duration.zero,
@@ -279,7 +277,7 @@ class KubusActionTile extends StatelessWidget {
       hint: shownSubtitle,
       onTap: interactive ? onTap : null,
       child: KubusHoverResponse(
-        lift: lifts,
+        lift: true,
         enabled: interactive,
         cursor:
             interactive ? SystemMouseCursors.click : SystemMouseCursors.basic,
@@ -294,13 +292,11 @@ class KubusActionTile extends StatelessWidget {
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
                 borderRadius: radius,
-                boxShadow: lifts
-                    ? KubusHoverResponse.accentShadow(
-                        accent,
-                        brightness,
-                        hovered: hovered,
-                      )
-                    : null,
+                boxShadow: KubusHoverResponse.accentShadow(
+                  accent,
+                  brightness,
+                  hovered: hovered,
+                ),
               ),
               child: Material(
                 color: roles.surface,

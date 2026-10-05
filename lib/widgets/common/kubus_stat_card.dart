@@ -32,10 +32,13 @@ enum KubusStatCardLayout {
 /// the card turning into a colour block: the fill under the text is the plain
 /// surface.
 ///
-/// Hover answers inside the clipped tile only: the glyph grows and drifts a
-/// few pixels toward the number and the field and edge brighten. The tile
-/// and its text never move. Reduced motion keeps the brightening and drops
-/// the drift. Touch never hovers.
+/// Hover (expressive tiles, pointer only) answers as one painted unit: the
+/// whole surface lifts 2 px with a soft contextual accent shadow, the field
+/// and edge brighten and the glyph grows and drifts a few pixels toward the
+/// number. The number and label never reflow or move on their own. Reduced
+/// motion keeps the brightening and the shadow state and drops the lift and
+/// the drift. A tile without [onTap] answers hover visually but keeps the
+/// default cursor and no button semantics. Touch never hovers.
 ///
 /// The spoken label is `value title` (for example "1,284 Followers") so a
 /// value is never announced without its meaning. Tappable tiles expose button
@@ -273,7 +276,7 @@ class KubusStatCard extends StatelessWidget {
                   : resolvedAccent.withValues(alpha: 0.06),
               child: tile,
             );
-      return Material(
+      final material = Material(
         color: roles.surface,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
@@ -328,6 +331,22 @@ class KubusStatCard extends StatelessWidget {
                 ],
               ),
       );
+      if (!isExpressive) return material;
+      // The shadow lives outside the clipped Material so it can fall past the
+      // tile's edge.
+      return AnimatedContainer(
+        duration: KubusHoverResponse.duration,
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: KubusHoverResponse.accentShadow(
+            resolvedAccent,
+            brightness,
+            hovered: hovered,
+          ),
+        ),
+        child: material,
+      );
     }
 
     return Semantics(
@@ -338,6 +357,7 @@ class KubusStatCard extends StatelessWidget {
       onTap: onTap,
       child: isExpressive
           ? KubusHoverResponse(
+              lift: true,
               cursor:
                   onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
               builder: (context, hovered) => surface(hovered),

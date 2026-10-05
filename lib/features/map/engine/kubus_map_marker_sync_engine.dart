@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -95,6 +96,10 @@ class KubusMapMarkerSyncEngine {
   // once the pool is spent, further markers simply keep their canonical badge
   // until the next style reload clears the images.
   int _coverImagesRegistered = 0;
+
+  /// The markers the latest plan wants a cover for. A cover that finishes
+  /// loading after the camera has moved on is dropped, never drawn offscreen.
+  Set<String> _wantedCoverIds = const <String>{};
   int _coverEpoch = -1;
   final Set<String> _pendingCoverKeys = <String>{};
   final KubusCoverUrlCache _coverUrls = KubusCoverUrlCache();
@@ -546,12 +551,16 @@ class KubusMapMarkerSyncEngine {
     );
   }
 
-  /// Chooses the bounded set of markers that should show a cover now and
-  /// returns the cover icon ids that are *already registered* for them.
+  /// Plans a cover for every eligible individual marker in view (the selected
+  /// one first) and returns the cover icon ids that are *already registered*
+  /// for them.
   ///
-  /// Covers that still need loading are started in the background and the host
-  /// is asked to resync when each one lands, so a slow image never delays the
-  /// canonical marker. Nothing here can remove a marker: no cover, a failed
+  /// There is no cap on how many in-view markers get a cover: the number of
+  /// concurrent downloads, decoded pixels, the decoded-image cache and the
+  /// work done per idle are what stay bounded. Covers that still need loading
+  /// are queued in the background (selected, promoted, then the rest spread
+  /// across the viewport) and the host is asked to resync as each one lands,
+  /// so a slow image never delays the canonical marker. Nothing here can remove a marker: no cover, a failed
   /// cover, an exhausted image pool or an unmounted host all leave the
   /// canonical badge in place.
   Map<String, KubusMarkerCoverIcons> _planCovers({
@@ -565,6 +574,13 @@ class KubusMapMarkerSyncEngine {
     required int styleEpoch,
   }) {
     if (!KubusMarkerLod.allowsSelectedCover(zoom)) {
+      // No cover is wanted at this zoom: drop the demand, anything still
+      // queued and the pins, so abandoned close-view work cannot keep running
+      // (or keep the decoded cache enlarged) after the visitor zoomed out.
+      _wantedCoverIds = const <String>{};
+      _coverLoader
+          .cancelPendingExcept(const <String>[], targetPx: _coverFetchWidthPx);
+      _coverLoader.setPinned(const <String>[], targetPx: _coverFetchWidthPx);
       return const <String, KubusMarkerCoverIcons>{};
     }
     final visible = host.kubusMapController.visibleMarkerIds;
@@ -585,26 +601,20 @@ class KubusMapMarkerSyncEngine {
       final url = _coverUrlFor(marker);
       if (url != null && _coverLoader.hasFailed(url)) failed.add(marker.id);
     }
-    final viewport = MediaQuery.maybeOf(host.hostContext)?.size ?? Size.zero;
-    final center = host.kubusMapController.camera.center;
     bool hasCover(ArtMarker marker) => _coverUrlFor(marker) != null;
     // Below the display zoom only the selected marker (pinned out of
     // clustering) may show its cover; nearby covers are at most prefetched.
     final chosen = KubusMarkerLod.planCoverIds(
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
-      viewport: viewport,
       zoom: zoom,
       hasCover: hasCover,
       failedIds: failed,
     );
-    _prefetchCovers(
+    final warmUrls = _prefetchCovers(
       zoom: zoom,
-      viewport: viewport,
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
       hasCover: hasCover,
       failed: failed,
     );
@@ -613,6 +623,41 @@ class KubusMapMarkerSyncEngine {
     final byId = <String, ArtMarker>{
       for (final marker in candidates) marker.id: marker,
     };
+    _wantedCoverIds = chosen.toSet();
+    // A viewport change cancels queued loads for covers no longer wanted, so
+    // the new view's covers are never queued behind the old one's.
+    // The warm-up set of the prefetch stage is wanted too: at zoom 11.5-12.5
+    // the display plan holds only the selection, and pruning to it would drop
+    // the very prefetches that were just queued.
+    _coverLoader.cancelPendingExcept(
+      [
+        for (final id in chosen)
+          if (byId[id] != null)
+            if (_coverUrlFor(byId[id]!) case final url?) url,
+        ...warmUrls,
+      ],
+      targetPx: _coverFetchWidthPx,
+    );
+    // Covers in the active viewport that are not drawn into the map yet keep
+    // their decoded image until they are; everything else (offscreen, old
+    // zoom, stale size) stays evictable. Registered covers need no decoded
+    // copy any more.
+    _coverLoader.setPinned(
+      [
+        for (final id in chosen)
+          if (byId[id] != null &&
+              !host.registeredMapImages.contains(
+                MapMarkerIconIds.markerCover(
+                  markerId: id,
+                  coverHash: (_coverUrlFor(byId[id]!) ?? '').hashCode,
+                  isDark: isDark,
+                  selected: false,
+                ),
+              ))
+            if (_coverUrlFor(byId[id]!) case final url?) url,
+      ],
+      targetPx: _coverFetchWidthPx,
+    );
     for (final id in chosen) {
       final marker = byId[id];
       final url = marker == null ? null : _coverUrlFor(marker);
@@ -662,30 +707,30 @@ class KubusMapMarkerSyncEngine {
     return plan;
   }
 
-  /// Warms (downloads + decodes, never rasterises) the covers the next budget
-  /// stage will show, so they are ready when the visitor zooms in. Bounded by
-  /// that stage's budget, the loader's concurrency and LRU, and only while the
-  /// camera is idle: a settled camera means a stable candidate set.
-  void _prefetchCovers({
+  /// Warms (downloads + decodes, never rasterises) the first
+  /// [KubusMarkerLod.coverPrefetchLimit] covers the display stage will show, so
+  /// they are ready when the visitor zooms in. Bounded by that limit, the
+  /// loader's concurrency and cache, and only while the camera is idle: a
+  /// settled camera means a stable candidate set.
+  ///
+  /// Returns the cover URLs the warm-up set wants (queued or already cached),
+  /// so the caller can keep them when it prunes queued loads.
+  List<String> _prefetchCovers({
     required double zoom,
-    required Size viewport,
     required List<ArtMarker> candidates,
     required String? selectedId,
-    required LatLng center,
     required bool Function(ArtMarker marker) hasCover,
     required Set<String> failed,
   }) {
-    if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return;
-    if (host.kubusMapController.cameraIsMoving) return;
-    final budget = KubusMarkerLod.coverPrefetchBudget(viewport, zoom: zoom);
-    if (budget <= 0) return;
+    if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return const <String>[];
+    if (KubusMarkerLod.allowsCovers(zoom)) return const <String>[];
+    if (host.kubusMapController.cameraIsMoving) return const <String>[];
     final ids = KubusMarkerLod.selectCoverMarkerIds(
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
-      budget: budget,
       hasCover: hasCover,
       failedIds: failed,
+      limit: KubusMarkerLod.coverPrefetchLimit,
     );
     final byId = <String, ArtMarker>{
       for (final marker in candidates) marker.id: marker,
@@ -694,14 +739,20 @@ class KubusMapMarkerSyncEngine {
     // A settled camera replaces the warm-up set: prefetches planned for an
     // earlier view that have not started yet must not delay this one.
     _coverLoader.cancelPendingPrefetches();
+    final warm = <String>[];
     for (final id in ids) {
       final marker = byId[id];
       final url = marker == null ? null : _coverUrlFor(marker);
-      if (url == null || _coverLoader.cached(url, targetPx: width) != null) {
-        continue;
-      }
-      unawaited(_coverLoader.load(url, targetPx: width, prefetch: true));
+      if (url == null) continue;
+      warm.add(url);
+      if (_coverLoader.cached(url, targetPx: width) != null) continue;
+      unawaited(
+        _coverLoader
+            .load(url, targetPx: width, prefetch: true)
+            .then((image) => image?.dispose()),
+      );
     }
+    return warm;
   }
 
   void _prepareCover({
@@ -720,8 +771,13 @@ class KubusMapMarkerSyncEngine {
     final pixelRatio = host.markerPixelRatio();
     final targetWidth = _coverFetchWidthPx;
     unawaited(() async {
+      ui.Image? image;
       try {
-        final image = await _coverLoader.load(url, targetPx: targetWidth);
+        image = await _coverLoader.load(url, targetPx: targetWidth);
+        if (image != null && !_wantedCoverIds.contains(marker.id)) {
+          // The camera moved on while this loaded: not drawn offscreen.
+          return;
+        }
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.
@@ -756,7 +812,7 @@ class KubusMapMarkerSyncEngine {
           }
           final renderWatch = Stopwatch()..start();
           final bytes = await ArtMarkerCubeIconRenderer.renderCoverMarkerPng(
-            cover: image,
+            cover: image!,
             baseColor: baseColor,
             tier: marker.signalTier,
             shape: shape,
@@ -777,6 +833,8 @@ class KubusMapMarkerSyncEngine {
           recordKubusCoverPhase(KubusCoverPhase.addImage, addWatch.elapsed);
           host.registeredMapImages.add(id);
           _coverImagesRegistered += 1;
+          recordKubusCoverGauge(
+              'registeredImages', _coverImagesRegistered.toDouble());
           return true;
         }
 
@@ -789,10 +847,14 @@ class KubusMapMarkerSyncEngine {
             final glow = needSelectedVariant && await register(true);
             return base || glow;
           },
+          // Demand is checked again here, not only after decoding: the job may
+          // have waited behind other rasterisations while the camera moved on,
+          // and an abandoned cover must not spend the append-only image pool.
           shouldRun: () =>
               host.hostMounted &&
               !host.kubusMapController.cameraIsMoving &&
-              host.kubusMapController.styleEpoch == styleEpoch,
+              host.kubusMapController.styleEpoch == styleEpoch &&
+              _wantedCoverIds.contains(marker.id),
         );
         if (rendered == true && host.hostMounted) {
           _coverGate.scheduleResync(host.requestMarkerResync);
@@ -804,6 +866,7 @@ class KubusMapMarkerSyncEngine {
           );
         }
       } finally {
+        image?.dispose();
         _pendingCoverKeys.remove(key);
       }
     }());

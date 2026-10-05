@@ -116,7 +116,7 @@ One identity (the canonical kubus marker), three costs. Thresholds live in
 | --- | --- | --- | --- |
 | far | < 6 | data-coloured dots; clusters are dots sized by `sqrt(count)` (capped 14 px) | no marker artwork rendered, registered or downloaded |
 | mid | 6 – 12.5 | the canonical kubus marker (shape, signal ring, promotion star) with count badges for clusters; the **selected** marker may already show its cover from 10 | existing |
-| close | ≥ 12.5 | the canonical marker with the artwork cover **inside its geometry** for a bounded, staged set | covers bounded, see §5 |
+| close | ≥ 12.5 | the canonical marker with the artwork cover **inside its geometry** for every eligible individual marker in view | work and memory bounded, see §5 |
 
 Cover stages (`KubusMarkerLod.coverStageForZoom`, 0.8.1):
 
@@ -125,9 +125,7 @@ Cover stages (`KubusMarkerLod.coverStageForZoom`, 0.8.1):
 | 0 none | < 10 | — | no covers |
 | 1 selected only | 10 – 11.5 | `selectedCoverMinZoom = 10.0` | the selected marker (pinned out of clustering) shows its cover |
 | 2 prefetch | 11.5 – 12.5 | `coverPrefetchMinZoom = 11.5` | nearby covers are downloaded and decoded (never rasterised) for the next stage |
-| 3 early | 12.5 – 13.5 | `coverDisplayMinZoom = 12.5` | nearby covers display, early budget |
-| 4 medium | 13.5 – 14.5 | `coverMediumBudgetZoom = 13.5` | medium budget |
-| 5 full | ≥ 14.5 | `coverFullBudgetZoom = 14.5` | full viewport budget |
+| 3 display | ≥ 12.5 | `coverDisplayMinZoom = 12.5` | **every** eligible individual marker in view is planned for a cover |
 
 Covers start after clusters dissolve (`MapScreenConstants.clusterMaxZoom =
 12.0`), so a nearby cover only ever replaces a canonical individual marker.
@@ -156,28 +154,38 @@ Covers start after clusters dissolve (`MapScreenConstants.clusterMaxZoom =
   ratio, snapped up to 32 px steps and clamped to 96-256: 96 px at 1x, 160 px
   at 2x, 224 px at 3x.
 
-## 5. Cover budget
+## 5. Cover working set
 
-Covers are the only per-record cost, so they are the only bounded set:
+There is **no fixed number of covers**. Superseded (final 0.8.1, owner
+direction): the staged 8-24 viewport budget ranked selected, promoted, then
+nearest the camera centre, which painted a photo circle around the middle of the
+screen and left eligible markers at the edges as icons. At
+`coverDisplayMinZoom` every eligible marker in view eventually shows its cover.
+What stays bounded is the work and the memory:
 
-* full budget = `clamp(round(viewport area / 60 000 px²), 8, 24)` (390x844
-  phone = 8, 1440x900 = 22, hard cap 24). The budget is **staged** by zoom
-  (`KubusMarkerLod.coverBudget(viewport, zoom:)`), it never jumps straight to
-  a photo wall:
+* **Eligible** = a marker that is currently an individual marker face (not a
+  hidden cluster child and not a same-coordinate stack), inside the viewport,
+  not hidden by a filter, with a resolvable cover that has not failed. The
+  selected marker is first, then promoted markers, then everyone else.
+* **Loading order is spatially fair** (`selectCoverMarkerIds`,
+  `spatiallyFairOrder`): the rest are binned into a 4 x 4 grid over their own
+  extent and taken round-robin in a scattered cell order, so a viewport fills
+  across its whole area instead of centre-out. A panned camera plans only the
+  new visible set; old offscreen priority is dropped. Prefetch (zoom 11.5-12.5)
+  warms at most `coverPrefetchLimit = 32`.
+* **Concurrency stays bounded**: idle-camera planning only, at most 4
+  concurrent downloads, one raster at a time while the camera is still,
+  de-duplicated in-flight requests, generation-safe cancellation, coalesced
+  source writes.
+* **Memory stays bounded**: decoded images have the 1024 px / 262144-pixel
+  ceilings; the decoded cache keeps its LRU of 48 but **pins** the covers of the
+  active viewport that are not drawn into the map yet (up to `maxPinned = 192`),
+  so a visible cover is never evicted before it is used. Offscreen, stale-size
+  and old-zoom entries are evicted first. Registered covers need no decoded copy.
+  MapLibre cannot remove an image, so registered images are append-only per
+  style epoch, capped at `maxRegisteredCoverImages = 320` (about 20 MB at 2x);
+  past it markers keep their canonical badge until the next style reload.
 
-  | Stage | Budget | 390x844 | 1440x900 |
-  | --- | --- | --- | --- |
-  | ≤ 2 (below 12.5) | 0 nearby | 0 | 0 |
-  | 3 early (12.5) | `max(3, ceil(full / 4))` | 3 | 6 |
-  | 4 medium (13.5) | `max(5, ceil(full / 2))` | 5 | 11 |
-  | 5 full (14.5) | full | 8 | 22 |
-
-  The prefetch budget at a stage is the *next* stage's display budget
-  (`coverPrefetchBudget`), so the covers about to appear are already decoded.
-* Candidates are markers inside the viewport that are not part of a
-  same-coordinate stack; order is **selected → promoted → nearest** to the
-  camera centre (ties by id). The selected marker is always included and sits
-  outside the budget.
 * `KubusMarkerCoverLoader`: de-duplicates in-flight requests, at most 4
   concurrent fetches, two lanes (covers about to be drawn always start before
   prefetches; a display request for a queued prefetch promotes it; each new
@@ -242,23 +250,37 @@ Clustering stays the existing Dart grid ("pseudo-clustering", below
 cluster-tap activation. 5B changes only what a cluster *looks like* when far
 (a sized dot) and keeps selected markers out of it.
 
-Grouping distance tapers toward street scale (0.8.1,
-`MapScreenConstants.clusterTargetSpacingPx`): the grid level is derived from
-a banded target on-screen spacing, wide far out so the world reads as a few
-coherent groups and narrowing as the camera approaches a place:
+Clustering exists to stop markers colliding, not to erase where they are
+(final 0.8.1, `MapScreenConstants.clusterTargetSpacingPx`). Superseded: the
+earlier curve grouped *more* widely the farther out the camera was (116 px),
+which folded the world into one or two dots. The world now reads as a
+distributed cultural map:
 
-| Zoom | Target spacing |
-| --- | --- |
-| < 5 | 116 px |
-| 5 – 7.5 | 100 px |
-| 7.5 – 10 | 84 px |
-| 10 – 12 | 68 px |
-| ≥ 12 | no clustering |
+| Scale | Reads as | Target spacing |
+| --- | --- | --- |
+| World (zoom 0-3) | distributed regional clusters and isolated records | 48 px rising to 56 px, further capped by the span rule |
+| Region / country (3-8) | regional, then country groups | 56 → 64 → 68 px |
+| City (8-12) | city, then neighbourhood groups | 68 → 64 → 60 px |
+| ≥ 12 | individual records | no clustering |
 
-Bands, not a continuous curve: the grid level is an integer, and a
-continuous target would move its rounding point every frame of a zoom and
-make the topology flicker. Same-coordinate groups still collapse to one
-`cluster_same:` feature that spiderfies; covers skip them.
+* The curve is **continuous and piecewise linear**, so the integer grid level
+  is a monotonic function of zoom: no topology flicker, and zooming out then in
+  gives the same membership. It is not required to be monotonic in pixels.
+* **Geographic safety rule**: a grid cell's diagonal bounds how far apart its
+  members can be, so the spacing is also capped to
+  `clusterMaxSpanMeters = 1 500 000` (equatorial Mercator metres, floor
+  `clusterMinSpacingPx = 20`). At world scale a cluster therefore represents a
+  coherent region: Lisbon and Ljubljana never share a dot, Zagreb, Celje and
+  Ljubljana do. The rule only binds below about zoom 3 and is not country based.
+* An isolated record stays its own dot (it is a cell of one). Cluster count is
+  never a budget: it falls out of the data, the viewport and the spacing.
+* The policy is shared by the web globe, the web Mercator fallback and the flat
+  Android and iOS maps; there is no globe-only clustering. Cluster activation
+  (`resolveKubusClusterActivationPlan`) still moves to the next real split zoom,
+  so a world cluster opens region → country → city.
+
+Same-coordinate groups still collapse to one `cluster_same:` feature that
+spiderfies; covers skip them.
 
 A shared `KubusMarkerRegroupGate` replaces the duplicated per-screen logic and
 reports `topology` (cluster mode / grid level changed: regroup animation),
@@ -444,8 +466,9 @@ separable from noise.
 camera is idle, runs one cover at a time with a 24 ms breather, and collapses the
 resyncs of a batch into one trailing rebuild. Skipped covers are re-planned at
 the next camera idle (both screens already do this at street scale). The
-level-of-detail rules, the cover budget, the selected-marker invariant and the
-image budget are unchanged.
+level-of-detail rules, the selected-marker invariant and the image budget are
+unchanged (the cover count policy and cluster spacing were revised for the final
+0.8.1, see §5 and §7).
 
 0.8.1 superseded parts of this 5B description (the measurements above are the
 5B record and stay as measured): covers now start earlier and staged, the

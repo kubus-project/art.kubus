@@ -193,6 +193,9 @@ const HOOK = () => {
   window.__maps = [];
   // Opt-in sink for the app's cover-pipeline phase timings.
   window.__kubusCoverPerf = [];
+  // Opt-in sink for the app's cover high-water marks (decoded count / bytes,
+  // registered images).
+  window.__kubusCoverGauges = {};
   window.__perf = {
     renderMs: [],
     setData: [],
@@ -488,11 +491,15 @@ async function oneRun(config, viewport, runIndex) {
     });
 
     const coverPerf = await page.evaluate(() => (window.__kubusCoverPerf || []).map((e) => ({ phase: e.phase, ms: e.ms })));
+    const coverGauges = await page.evaluate(() => ({ ...(window.__kubusCoverGauges || {}) }));
     const coverAdds = perf.addImageNames.filter((a) => a.id.startsWith('mc_'));
     const firstCoverAfter = {};
+    const lastCoverAfter = {};
     for (const idle of result.idles || []) {
       const first = coverAdds.find((a) => a.seg === idle.seg && a.t >= idle.t);
       firstCoverAfter[idle.seg] = first ? fix(first.t - idle.t) : null;
+      const during = coverAdds.filter((a) => a.seg === idle.seg && a.t >= idle.t);
+      lastCoverAfter[idle.seg] = during.length ? fix(during[during.length - 1].t - idle.t) : null;
     }
     const phase = (name) => {
       const v = coverPerf.filter((e) => e.phase === name).map((e) => e.ms).sort((a, b) => a - b);
@@ -502,6 +509,8 @@ async function oneRun(config, viewport, runIndex) {
       registered: coverAdds.length,
       registeredWhileMoving: coverAdds.filter((a) => !a.seg.startsWith('idle') && a.seg !== 'end').length,
       firstCoverAfter,
+      lastCoverAfter,
+      gauges: coverGauges,
       phases: {
         fetchDecode: phase('fetchDecode'),
         renderPng: phase('renderPng'),
@@ -639,6 +648,10 @@ for (const vp of viewports) {
       firstCoverAfter: Object.fromEntries(
         Object.keys(cell[0].covers.firstCoverAfter).map((s) => [s, m((r) => r.covers.firstCoverAfter[s])]),
       ),
+      lastCoverAfter: Object.fromEntries(
+        Object.keys(cell[0].covers.lastCoverAfter || {}).map((sg) => [sg, m((r) => r.covers.lastCoverAfter[sg])]),
+      ),
+      gauges: cell[cell.length - 1].covers.gauges,
       phases: Object.fromEntries(
         Object.keys(cell[0].covers.phases).map((k) => [
           k,
@@ -657,7 +670,7 @@ for (const vp of viewports) {
     );
     if (perfPath === 'covers') {
       lines.push(
-        `   covers: images=${row.coverImages} (while moving ${row.coverImagesWhileMoving}) firstCoverAfterIdle ${JSON.stringify(row.firstCoverAfter)} phases ${JSON.stringify(row.phases)}`,
+        `   covers: images=${row.coverImages} (while moving ${row.coverImagesWhileMoving}) firstCoverAfterIdle ${JSON.stringify(row.firstCoverAfter)} lastCoverAfterIdle ${JSON.stringify(row.lastCoverAfter)} gauges ${JSON.stringify(row.gauges)} phases ${JSON.stringify(row.phases)}`,
       );
     }
   }

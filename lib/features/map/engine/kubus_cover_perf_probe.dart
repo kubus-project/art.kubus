@@ -24,3 +24,9 @@ enum KubusCoverPhase {
 /// visitors pay nothing.
 void recordKubusCoverPhase(KubusCoverPhase phase, Duration elapsed) =>
     impl.recordKubusCoverPhase(phase.name, elapsed.inMicroseconds / 1000.0);
+
+/// Records a high-water mark (decoded cover count/bytes, registered images)
+/// for the browser performance harness; a no-op unless the page opted in with
+/// a `window.__kubusCoverGauges` object.
+void recordKubusCoverGauge(String name, double value) =>
+    impl.recordKubusCoverGauge(name, value);

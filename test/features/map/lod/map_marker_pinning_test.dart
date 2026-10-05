@@ -270,13 +270,13 @@ void main() {
     test('each cover stage is a visual change, not a regroup', () {
       final gate = KubusMarkerRegroupGate();
       step(gate, 12.1);
-      // Past clusterMaxZoom there is no grid; covers display from 12.5 and
-      // their budget grows at 13.5 and 14.5.
+      // Past clusterMaxZoom there is no grid; covers display from 12.5 for
+      // every eligible marker, so there is no further stage beyond it.
       expect(step(gate, 12.3), KubusMarkerRegroup.none);
       expect(step(gate, 12.6), KubusMarkerRegroup.visual);
       expect(step(gate, 13.0), KubusMarkerRegroup.none);
-      expect(step(gate, 13.6), KubusMarkerRegroup.visual);
-      expect(step(gate, 14.6), KubusMarkerRegroup.visual);
+      expect(step(gate, 13.6), KubusMarkerRegroup.none);
+      expect(step(gate, 14.6), KubusMarkerRegroup.none);
       expect(step(gate, 16.0), KubusMarkerRegroup.none);
     });
 
