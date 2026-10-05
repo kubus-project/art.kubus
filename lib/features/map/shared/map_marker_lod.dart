@@ -302,6 +302,13 @@ abstract final class KubusMarkerLod {
         'bottom',
       ];
 
+  /// Largest radius a far cluster dot may reach and how fast it grows with the
+  /// square root of its member count. Deliberately modest (final 0.8.1): at
+  /// world scale a big dot would cover a whole region and hide the geography
+  /// the clustering exists to preserve.
+  static const double farClusterMaxRadius = 10.0;
+  static const double farClusterGrowth = 0.8;
+
   /// Radius of the data-coloured dot. Clusters scale with the square root of
   /// their member count so density stays legible without any artwork.
   static Object dotRadiusExpression({
@@ -310,13 +317,13 @@ abstract final class KubusMarkerLod {
   }) {
     final Object farCluster = <Object>[
       'min',
-      14.0,
+      farClusterMaxRadius,
       <Object>[
         '+',
         clusterDotRadius,
         <Object>[
           '*',
-          1.1,
+          farClusterGrowth,
           <Object>[
             'sqrt',
             <Object>[

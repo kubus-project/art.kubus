@@ -393,7 +393,8 @@ void main() {
       expect(farStop[0], 'case');
       final cluster = farStop[2] as List;
       expect(cluster[0], 'min');
-      expect(cluster[1], 14.0);
+      expect(cluster[1], KubusMarkerLod.farClusterMaxRadius);
+      expect(KubusMarkerLod.farClusterMaxRadius, lessThanOrEqualTo(10));
       final nearStop = expr[6] as List;
       expect(nearStop[2], 5.5);
     });
