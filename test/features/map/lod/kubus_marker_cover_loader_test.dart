@@ -161,6 +161,29 @@ void main() {
       gates['next']!.complete();
     });
 
+    test('replacement plan immediately requeues a cancelled cover', () async {
+      final busy = loader.load('busy', targetPx: 96);
+      await settle();
+      final stale = loader.load('x', targetPx: 96, prefetch: true);
+      loader.cancelPendingPrefetches();
+      final replacement = loader.load('x', targetPx: 96, prefetch: true);
+      expect(identical(stale, replacement), isFalse);
+      expect(await stale, isNull);
+      // The old task's finally has run, but must not erase the new owner.
+      expect(loader.inFlightCount, 2);
+      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      loader.cancelPendingPrefetches(); // promoted replacement survives
+      gates['busy']!.complete();
+      await busy;
+      await settle();
+      expect(started, ['busy', 'x']);
+      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      gates['x']!.complete();
+      expect(await replacement, isNotNull);
+      expect(started.where((url) => url == 'x').length, 1);
+      expect(loader.inFlightCount, 0);
+    });
+
     test('a display load promotes a queued prefetch of the same image',
         () async {
       unawaited(loader.load('busy', targetPx: 96));
@@ -188,6 +211,32 @@ void main() {
     final small = shortSideTargetSize(120, 80, 160);
     expect(small.width, 120);
     expect(small.height, 80);
+  });
+
+  test('decode geometry bounds panoramas, portraits and decoded pixels', () {
+    for (final source in [
+      (16000, 100),
+      (16000, 500),
+      (100, 16000),
+      (500, 16000),
+      (16000, 16000),
+      (4000, 2000),
+      (2000, 4000),
+      (1, 16000),
+    ]) {
+      final size = shortSideTargetSize(source.$1, source.$2, 256);
+      final width = size.width!;
+      final height = size.height!;
+      expect(width, lessThanOrEqualTo(kubusCoverMaxLongEdge));
+      expect(height, lessThanOrEqualTo(kubusCoverMaxLongEdge));
+      expect(width * height, lessThanOrEqualTo(kubusCoverMaxDecodedPixels));
+      expect(width, lessThanOrEqualTo(source.$1));
+      expect(height, lessThanOrEqualTo(source.$2));
+      // Integer decode dimensions preserve the ratio within one pixel.
+      expect((width - height * source.$1 / source.$2).abs(),
+          lessThanOrEqualTo(1 + source.$1 / source.$2));
+    }
+    expect(48 * kubusCoverMaxDecodedPixels * 4, 48 * 1024 * 1024);
   });
 
   test('a failed URL is not retried inside the retry window', () async {

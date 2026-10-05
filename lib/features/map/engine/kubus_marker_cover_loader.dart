@@ -41,8 +41,7 @@ class KubusCoverUrlCache {
 }
 
 /// Fetches one decoded cover image whose shorter side is scaled to roughly
-/// [targetPx] (markers crop covers to their shorter side, so a wide image
-/// keeps its detail where the crop needs it).
+/// [targetPx], subject to a long-edge and pixel ceiling for unusual geometry.
 ///
 /// Returns null when the image cannot be loaded; it must not throw.
 typedef KubusCoverFetch = Future<ui.Image?> Function(String url, int targetPx);
@@ -139,7 +138,11 @@ class KubusMarkerCoverLoader {
       if (!prefetch) _promote(key);
       return running;
     }
-    return _inFlight[key] = _run(url, targetPx, prefetch: prefetch);
+    final owner = Completer<ui.Image?>();
+    _inFlight[key] = owner.future;
+    unawaited(_run(url, targetPx, prefetch: prefetch, owner: owner)
+        .then(owner.complete, onError: owner.completeError));
+    return owner.future;
   }
 
   /// Drops every prefetch that is still waiting for a slot.
@@ -147,6 +150,7 @@ class KubusMarkerCoverLoader {
     while (_waitingPrefetch.isNotEmpty) {
       final ticket = _waitingPrefetch.removeFirst();
       _queuedTickets.remove(ticket.key);
+      _inFlight.remove(ticket.key);
       ticket.grant.complete(false);
     }
   }
@@ -161,6 +165,7 @@ class KubusMarkerCoverLoader {
     String url,
     int targetPx, {
     required bool prefetch,
+    required Completer<ui.Image?> owner,
   }) async {
     final key = _key(url, targetPx);
     var acquired = false;
@@ -187,7 +192,7 @@ class KubusMarkerCoverLoader {
       _evictOverflow();
       return image;
     } finally {
-      _inFlight.remove(key);
+      if (identical(_inFlight[key], owner.future)) _inFlight.remove(key);
       if (acquired) _release();
     }
   }
@@ -280,10 +285,8 @@ class _LoadTicket {
   final Completer<bool> grant = Completer<bool>();
 }
 
-/// Decodes [imageProvider] so its *shorter* side is at most [shortSide] px
-/// (never upscaled). [ResizeImage] bounds one dimension or fits both inside a
-/// box; a marker crops covers to their shorter side, so that side is the one
-/// whose detail matters.
+/// Decodes [imageProvider] with a short-side target and absolute long-edge /
+/// pixel ceilings. All three bounds use one scale, without upscaling.
 class _ShortSideResizeImage extends ImageProvider<_ShortSideKey> {
   const _ShortSideResizeImage(this.imageProvider, this.shortSide);
 
@@ -315,16 +318,31 @@ class _ShortSideResizeImage extends ImageProvider<_ShortSideKey> {
 }
 
 /// The decode size that brings the shorter of [width] x [height] down to
-/// [shortSide], keeping the aspect ratio; never larger than the source.
+/// [shortSide], also bounding long edge and pixels while keeping the aspect
+/// ratio (within integer rounding); never larger than the source.
 @visibleForTesting
 ui.TargetImageSize shortSideTargetSize(int width, int height, int shortSide) {
-  final scale = shortSide / math.max(1, math.min(width, height));
+  final scale = math.min(
+    1.0,
+    math.min(
+      shortSide / math.max(1, math.min(width, height)),
+      math.min(
+        kubusCoverMaxLongEdge / math.max(width, height),
+        math.sqrt(kubusCoverMaxDecodedPixels / (width * height)),
+      ),
+    ),
+  );
   if (scale >= 1) return ui.TargetImageSize(width: width, height: height);
   return ui.TargetImageSize(
-    width: math.max(1, (width * scale).round()),
-    height: math.max(1, (height * scale).round()),
+    width: math.max(1, (width * scale).floor()),
+    height: math.max(1, (height * scale).floor()),
   );
 }
+
+/// A 44 px marker needs no archival geometry: at most 1 MiB RGBA per
+/// decoded cover and 48 MiB for the default cache (excluding GPU copies).
+const int kubusCoverMaxLongEdge = 1024;
+const int kubusCoverMaxDecodedPixels = 256 * 1024;
 
 @immutable
 class _ShortSideKey {
