@@ -491,7 +491,7 @@ async function oneRun(config, viewport, runIndex) {
     const coverAdds = perf.addImageNames.filter((a) => a.id.startsWith('mc_'));
     const firstCoverAfter = {};
     for (const idle of result.idles || []) {
-      const first = coverAdds.find((a) => a.t >= idle.t);
+      const first = coverAdds.find((a) => a.seg === idle.seg && a.t >= idle.t);
       firstCoverAfter[idle.seg] = first ? fix(first.t - idle.t) : null;
     }
     const phase = (name) => {
