@@ -8,7 +8,10 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
-const webRoot = path.resolve(rootDir, 'build/web');
+const webRoot = path.resolve(process.env.QA_WEB_ROOT || path.join(rootDir, 'build/web'));
+const proxyPublicDocuments = process.env.QA_PUBLIC_DOCUMENTS === '1';
+const publicDocumentPath = /^\/(?:en|sl)\/(?:artworks|umetnine|profiles|profili|events|dogodki|exhibitions|razstave|posts|objave|collections|zbirke|map|zemljevid|collectibles|zbirateljski-predmeti)\/[^/]+$/;
+const compactDocumentPath = /^\/(?:a|u|e|x|p|c|m|n)\/[^/]+$/;
 const upstreamOrigin = new URL(
   process.env.QA_API_ORIGIN || process.env.KUBUS_BACKEND_URL || 'https://api.kubus.site',
 );
@@ -121,7 +124,10 @@ function proxyRequest(clientReq, clientRes) {
 
 const server = http.createServer((req, res) => {
   const url = req.url || '/';
+  const pathname = new URL(url, 'http://127.0.0.1').pathname;
   if (
+    (proxyPublicDocuments &&
+      (publicDocumentPath.test(pathname) || compactDocumentPath.test(pathname))) ||
     url.startsWith('/api/') ||
     url === '/api' ||
     url.startsWith('/health') ||
