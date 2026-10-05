@@ -508,13 +508,20 @@ class KubusMapMarkerSyncEngine {
   /// Physical width the cover is requested at and decoded to. The badge face
   /// is 44 logical px, so this is the face at the device pixel ratio plus a
   /// modest oversample (see [KubusMarkerLod.coverFetchWidthPx]); the resolver
-  /// clamps the download to it, never archival media, and the decode matches
-  /// the download instead of upscaling it.
+  /// clamps the download near it (with long-edge headroom, see
+  /// [_coverDownloadWidthPx]), never archival media, and the decode targets the
+  /// short side instead of upscaling.
   int get _coverFetchWidthPx =>
       KubusMarkerLod.coverFetchWidthPx(host.markerPixelRatio());
 
+  /// Long-edge width the cover URL is clamped to. Wider than the decode target
+  /// so a landscape source keeps its short side (see
+  /// [KubusMarkerLod.coverDownloadWidthPx]).
+  int get _coverDownloadWidthPx =>
+      KubusMarkerLod.coverDownloadWidthPx(host.markerPixelRatio());
+
   String? _coverUrlFor(ArtMarker marker) {
-    final width = _coverFetchWidthPx;
+    final width = _coverDownloadWidthPx;
     final artworkId = marker.artworkId;
     final artwork = artworkId == null || artworkId.isEmpty
         ? null

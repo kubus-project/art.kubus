@@ -150,6 +150,19 @@ void main() {
   });
 
   group('cover fetch size', () {
+    test('download width gives a 16:9 source its short side, still bounded',
+        () {
+      for (final ratio in [1.0, 2.0, 3.0, double.nan]) {
+        final face = KubusMarkerLod.coverFetchWidthPx(ratio);
+        final download = KubusMarkerLod.coverDownloadWidthPx(ratio);
+        expect(download, greaterThanOrEqualTo(face));
+        // A 16:9 landscape clamped to `download` keeps >= face on its short edge.
+        expect(download * 9 / 16, greaterThanOrEqualTo(face - 1));
+        expect(download, lessThanOrEqualTo(512));
+        expect(download % 32, 0);
+      }
+    });
+
     test('tracks the marker face, never archival media', () {
       final w1 = KubusMarkerLod.coverFetchWidthPx(1);
       final w2 = KubusMarkerLod.coverFetchWidthPx(2);
