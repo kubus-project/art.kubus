@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/widgets/artwork_creator_byline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,24 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: ArtworkCreatorByline(artwork: artwork)),
       );
+  testWidgets('hydrated artist bylines retain recorded multiple authors',
+      (tester) async {
+    final artwork = parseArtworkFromBackendJson({
+      'id': 'public-record',
+      'title': 'Public work',
+      'artistName': 'Unknown',
+      'artist_name_byline': ['Recorded artist A', 'Recorded artist B'],
+      'creator_name_byline': 'Platform uploader',
+    });
+    await tester.pumpWidget(harness(artwork));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Recorded artist A', findRichText: true),
+        findsOneWidget);
+    expect(find.textContaining('Recorded artist B', findRichText: true),
+        findsOneWidget);
+    expect(find.textContaining('Platform uploader', findRichText: true),
+        findsNothing);
+  });
   testWidgets('uploader wallet and contributor are not unknown authorship',
       (tester) async {
     await tester.pumpWidget(harness(record('Unknown', {

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
-const webRoot = path.resolve(process.env.QA_WEB_ROOT || path.join(rootDir, 'build/web'));
+const webRoot = path.resolve(rootDir, process.env.QA_WEB_ROOT || 'build/web');
 const proxyPublicDocuments = process.env.QA_PUBLIC_DOCUMENTS === '1';
 const publicDocumentPath = /^\/(?:en|sl)\/(?:artworks|umetnine|profiles|profili|events|dogodki|exhibitions|razstave|posts|objave|collections|zbirke|map|zemljevid|collectibles|zbirateljski-predmeti)\/[^/]+$/;
 const compactDocumentPath = /^\/(?:a|u|e|x|p|c|m|n)\/[^/]+$/;
