@@ -1,11 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/profile/profile_cover_field.dart';
 import '../../widgets/profile/profile_identity_hero.dart';
+import '../../widgets/profile/profile_owner_identity.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,7 +28,6 @@ import '../../utils/kubus_entity_semantics.dart';
 import '../../widgets/common/kubus_entity_card.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../utils/app_color_utils.dart';
-import '../../widgets/detail/profile_identity_block.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../settings_screen.dart';
@@ -43,13 +40,11 @@ import '../../models/artwork.dart';
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
-import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_social_link_chip.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/empty_state_card.dart';
-import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/shared_section_widgets.dart';
 import 'post_detail_screen.dart';
@@ -347,539 +342,150 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// The owner's header is the public hero ([ProfileIdentityHero]) and
+  /// practice block, so "My profile" reads as the same profile implementation
+  /// as the viewed one; only the actions differ (editing and the owner's
+  /// utilities instead of Follow and Message).
   Widget _buildProfileHeader(
       {required bool isArtist, required bool isInstitution}) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final user = profileProvider.currentUser;
+    const avatarRadius = 42.0;
+    final coverImageUrl = _normalizeMediaUrl(user?.coverImage);
+    final coverUrlIsKnownBad =
+        coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+    final displayName =
+        user?.displayName ?? user?.username ?? l10n.profilePersonaArtEnthusiast;
+    final wallet = user?.walletAddress ?? '';
 
-    return SliverToBoxAdapter(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          bool isSmallScreen = constraints.maxWidth < 375;
-          bool isVerySmallScreen = constraints.maxWidth < 320;
-          const avatarRadius = 44.0;
-          const avatarCornerRadiusFactor =
-              AvatarWidget.defaultCornerRadiusFactor;
-
-          final coverImageUrl =
-              _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
-          final coverUrlIsKnownBad =
-              coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
-          final hasCoverImage = coverImageUrl != null &&
-              coverImageUrl.isNotEmpty &&
-              !coverUrlIsKnownBad;
-          // Without an image the band must still hold the title row above
-          // the avatar; a fixed 150 px let the avatar ride over the title.
-          final coverEdge = isSmallScreen ? 12.0 : 16.0;
-          final titleRow = math.max(
-            KubusHeaderMetrics.actionHitArea,
-            MediaQuery.textScalerOf(context)
-                    .scale(KubusChromeMetrics.heroTitle + KubusSpacing.sm) *
-                1.3,
-          );
-          final stackedCoverHeight = coverEdge +
-              titleRow +
-              KubusSpacing.sm +
-              avatarRadius * 2 +
-              coverEdge;
-          final coverHeight = hasCoverImage
-              ? math.max(220.0, stackedCoverHeight)
-              : stackedCoverHeight;
-          final dpr = MediaQuery.of(context).devicePixelRatio;
-          final cacheWidth = (constraints.maxWidth * dpr).round();
-          final cacheHeight = (coverHeight * dpr).round();
-          final displayName = profileProvider.currentUser?.displayName ??
-              profileProvider.currentUser?.username ??
-              AppLocalizations.of(context)!.profilePersonaArtEnthusiast;
-          final topActionGap = isSmallScreen
-              ? KubusSpacing.xs + KubusSpacing.xxs
-              : KubusSpacing.sm;
-          final topActionHitArea = isSmallScreen
-              ? KubusHeaderMetrics.actionHitArea - KubusSpacing.xs
-              : KubusHeaderMetrics.actionHitArea;
-          final topActionIconSize = isSmallScreen
-              ? KubusHeaderMetrics.actionIcon
-              : KubusHeaderMetrics.actionIcon + 1;
-
-          Widget buildTopActionIcon({
-            required IconData icon,
-            required VoidCallback onPressed,
-            required String tooltip,
-            Color? color,
-          }) {
-            return TopBarIcon(
-              size: topActionHitArea,
-              icon: Icon(
-                icon,
-                color: color ??
-                    (hasCoverImage
-                        ? Colors.white
-                        : Theme.of(context).colorScheme.onSurface),
-                size: topActionIconSize,
-              ),
-              onPressed: onPressed,
-              tooltip: tooltip,
-            );
-          }
-
-          return Column(
-            children: [
-              // Cover Image Section
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Cover image or gradient background
-                  SizedBox(
-                    width: double.infinity,
-                    height: coverHeight,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // Base: the role field without an image (role colour,
-                        // not the personal accent); plain surface under one.
-                        if (hasCoverImage)
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                            ),
-                          )
-                        else
-                          // The resolved roles (approved DAO review
-                          // included), as the rest of the profile uses.
-                          ProfileCoverField(
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                          ),
-
-                        // Cover image layer (explicit Image widget so we can downscale/catch errors)
-                        if (hasCoverImage)
-                          Image.network(
-                            coverImageUrl,
-                            fit: BoxFit.cover,
-                            cacheWidth: cacheWidth > 0 ? cacheWidth : null,
-                            cacheHeight: cacheHeight > 0 ? cacheHeight : null,
-                            filterQuality: FilterQuality.medium,
-                            errorBuilder: (context, error, stackTrace) {
-                              if (_failedCoverImageUrl != coverImageUrl) {
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (!mounted) return;
-                                  setState(() =>
-                                      _failedCoverImageUrl = coverImageUrl);
-                                });
-                              }
-                              return const SizedBox.expand();
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface,
-                                ),
-                                child: const SizedBox.expand(),
-                              );
-                            },
-                          ),
-
-                        // Gradient overlay for better text readability
-                        if (hasCoverImage)
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.3),
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.5),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // Top bar with title and actions
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Padding(
-                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    AppLocalizations.of(context)!
-                                        .navigationScreenProfile,
-                                    style: KubusTextStyles.heroTitle.copyWith(
-                                      fontSize: isVerySmallScreen
-                                          ? KubusChromeMetrics.heroTitle
-                                          : isSmallScreen
-                                              ? KubusChromeMetrics.heroTitle +
-                                                  KubusSpacing.xs
-                                              : KubusChromeMetrics.heroTitle +
-                                                  KubusSpacing.sm,
-                                      color: hasCoverImage
-                                          ? Colors.white
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                      shadows: hasCoverImage
-                                          ? [
-                                              Shadow(
-                                                offset: const Offset(0, 1),
-                                                blurRadius: 3,
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.5),
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    buildTopActionIcon(
-                                      icon: Icons.share_outlined,
-                                      onPressed: () => _shareProfile(),
-                                      tooltip: AppLocalizations.of(context)!
-                                          .commonShare,
-                                    ),
-                                    SizedBox(width: topActionGap),
-                                    buildTopActionIcon(
-                                      icon: Icons.inbox_outlined,
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const InvitesInboxScreen()),
-                                        );
-                                      },
-                                      tooltip: AppLocalizations.of(context)!
-                                          .profileInvitesTooltip,
-                                    ),
-                                    SizedBox(width: topActionGap),
-                                    if (AppConfig.isFeatureEnabled(
-                                        'analytics')) ...[
-                                      buildTopActionIcon(
-                                        icon: Icons.analytics_outlined,
-                                        onPressed: () {
-                                          final wallet = profileProvider
-                                                  .currentUser?.walletAddress ??
-                                              '';
-                                          if (wallet.trim().isEmpty) return;
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  AdvancedAnalyticsScreen(
-                                                statType: '',
-                                                walletAddress: wallet,
-                                                initialContext:
-                                                    AnalyticsExperienceContext
-                                                        .profile,
-                                                contexts: const <AnalyticsExperienceContext>[
-                                                  AnalyticsExperienceContext
-                                                      .profile,
-                                                  AnalyticsExperienceContext
-                                                      .community,
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        tooltip: AppLocalizations.of(context)!
-                                            .navigationScreenAnalytics,
-                                        color: hasCoverImage
-                                            ? Colors.white
-                                            : KubusColorRoles.of(context)
-                                                .statAmber,
-                                      ),
-                                      SizedBox(width: topActionGap),
-                                    ],
-                                    buildTopActionIcon(
-                                      icon: Icons.edit_outlined,
-                                      onPressed: () {
-                                        _editProfile();
-                                      },
-                                      tooltip: AppLocalizations.of(context)!
-                                          .settingsEditProfileTileTitle,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Avatar only — a small fixed-size overlay that can
-                        // never grow with text scale. The identity (name,
-                        // badges, handle) used to share this Positioned and
-                        // could grow upward at large text scales far enough to
-                        // collide with the top bar's Positioned(top: 0) actions
-                        // above (this Stack uses `clipBehavior: Clip.none`, so
-                        // that overlap was never clipped away). It now renders
-                        // in normal flow below the cover instead, where layout
-                        // can never overlap a sibling.
-                        Positioned(
-                          left: isSmallScreen ? 12 : 16,
-                          bottom: isSmallScreen ? 12 : 16,
-                          // Bare avatar, same mount as the public hero.
-                          child: ProfileAvatarMount(
-                            radius: avatarRadius,
-                            child: AvatarWidget(
-                              wallet:
-                                  profileProvider.currentUser?.walletAddress ??
-                                      '',
-                              displayName:
-                                  profileProvider.currentUser?.displayName,
-                              avatarUrl: profileProvider.currentUser?.avatar,
-                              radius: avatarRadius,
-                              borderWidth: 0,
-                              borderColor: Colors.transparent,
-                              cornerRadiusFactor: avatarCornerRadiusFactor,
-                              enableProfileNavigation: false,
-                              showStatusIndicator: _showActivityStatus,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.only(
-                  left: (isSmallScreen ? 12 : 16) +
-                      avatarRadius * 2 +
-                      KubusSpacing.md,
-                  right: isSmallScreen ? 12 : 16,
-                  top: KubusSpacing.xs,
-                ),
-                child: ProfileIdentityBlock(
-                  displayName: displayName,
-                  handle: profileProvider.currentUser?.username,
-                  isArtist: isArtist,
-                  isInstitution: isInstitution,
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              // Rest of profile content
-              LiquidGlassCard(
-                margin:
-                    EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 16 : 24,
-                  vertical: isSmallScreen ? 14 : 18,
-                ),
-                child: Column(
-                  children: [
-                    const EmailVerificationStatusBadge(
-                      dense: true,
-                      alignment: Alignment.center,
-                      topSpacing: 8,
-                    ),
-                    const SizedBox(height: 6),
-                    UserActivityStatusLine(
-                      walletAddress:
-                          profileProvider.currentUser?.walletAddress ?? '',
-                      textAlign: TextAlign.center,
-                      textStyle: KubusTypography.inter(
-                        fontSize: isVerySmallScreen
-                            ? 12
-                            : isSmallScreen
-                                ? 13
-                                : 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                    ),
-                    SizedBox(height: isSmallScreen ? 6 : 8),
-                    if (web3Provider.hasWalletIdentity) ...[
-                      // Technical identity stays quiet: a compact neutral
-                      // pill instead of an accent-framed centerpiece.
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: KubusBorders.hairline(context),
-                        ),
-                        child: Text(
-                          web3Provider
-                              .formatAddress(web3Provider.walletAddress),
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            fontFamily: 'RobotoMono',
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.62),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        AppLocalizations.of(context)!
-                            .profileConnectWalletToSeeProfileLabel,
-                        style: KubusTypography.inter(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    SizedBox(height: isSmallScreen ? 12 : 16),
-                    if (profileProvider.currentUser?.bio != null &&
-                        profileProvider.currentUser!.bio.isNotEmpty)
-                      // The bio is content inside the identity card: plain
-                      // text, not a second framed box inside the card.
-                      SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          profileProvider.currentUser!.bio,
-                          textAlign: TextAlign.center,
-                          style: KubusTypography.inter(
-                            fontSize: isVerySmallScreen
-                                ? 14
-                                : isSmallScreen
-                                    ? 15
-                                    : 16,
-                            height: 1.5,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.82),
-                          ),
-                          maxLines: isSmallScreen ? 3 : 4,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
-                    else
-                      Center(
-                        child: EmptyStateCard(
-                          icon: Icons.person_outline,
-                          title: AppLocalizations.of(context)!
-                              .profileNoBioYetTitle,
-                          description: AppLocalizations.of(context)!
-                              .profileNoBioYetDescription,
-                          showAction: true,
-                          actionLabel: AppLocalizations.of(context)!
-                              .settingsEditProfileTileTitle,
-                          onAction: _editProfile,
-                        ),
-                      ),
-                    // Artist facts render only when there are some: an
-                    // empty framed strip says nothing.
-                    if ((profileProvider.currentUser?.artistInfo?.specialty
-                                .any((v) => v.trim().isNotEmpty) ??
-                            false) ||
-                        (profileProvider.currentUser?.artistInfo?.yearsActive ??
-                                0) >
-                            0) ...[
-                      const SizedBox(height: 12),
-                      ProfileArtistInfoFields(
-                        fieldOfWork: profileProvider
-                                .currentUser?.artistInfo?.specialty ??
-                            const <String>[],
-                        yearsActive: profileProvider
-                                .currentUser?.artistInfo?.yearsActive ??
-                            0,
-                      ),
-                    ],
-                    if (profileProvider.currentUser?.social.isNotEmpty ==
-                        true) ...[
-                      const SizedBox(height: KubusSpacing.sm),
-                      _buildSocialLinks(profileProvider.currentUser!.social),
-                    ],
-                    SizedBox(height: isSmallScreen ? 20 : 24),
-                    isSmallScreen
-                        ? Column(
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: themeProvider.accentColor,
-                                    width: 1.5,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                child: TextButton(
-                                  onPressed: () {
-                                    _showMoreOptions();
-                                  },
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: isVerySmallScreen ? 14 : 16),
-                                  ),
-                                  child: Text(
-                                    AppLocalizations.of(context)!
-                                        .profileMoreOptionsTitle,
-                                    style: KubusTypography.inter(
-                                      fontSize: isVerySmallScreen ? 14 : 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: themeProvider.accentColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: themeProvider.accentColor,
-                                width: 1.5,
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                            ),
-                            child: TextButton.icon(
-                              onPressed: _showMoreOptions,
-                              icon: Icon(
-                                Icons.more_horiz,
-                                color: themeProvider.accentColor,
-                              ),
-                              label: Text(
-                                AppLocalizations.of(context)!
-                                    .profileMoreOptionsTitle,
-                                style: KubusTypography.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: themeProvider.accentColor,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
+    final utilities = <ProfileOwnerUtility>[
+      ProfileOwnerUtility(
+        icon: Icons.share_outlined,
+        tooltip: l10n.commonShare,
+        onPressed: _shareProfile,
+      ),
+      ProfileOwnerUtility(
+        icon: Icons.inbox_outlined,
+        tooltip: l10n.profileInvitesTooltip,
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+        ),
+      ),
+      if (AppConfig.isFeatureEnabled('analytics'))
+        ProfileOwnerUtility(
+          icon: Icons.analytics_outlined,
+          tooltip: l10n.navigationScreenAnalytics,
+          onPressed: () {
+            if (wallet.trim().isEmpty) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdvancedAnalyticsScreen(
+                  statType: '',
+                  walletAddress: wallet,
+                  initialContext: AnalyticsExperienceContext.profile,
+                  contexts: const <AnalyticsExperienceContext>[
+                    AnalyticsExperienceContext.profile,
+                    AnalyticsExperienceContext.community,
                   ],
                 ),
               ),
-            ],
-          );
-        },
+            );
+          },
+        ),
+      ProfileOwnerUtility(
+        icon: Icons.more_horiz,
+        tooltip: l10n.profileMoreOptionsTitle,
+        onPressed: _showMoreOptions,
+      ),
+    ];
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ProfileIdentityHero(
+              displayName: displayName,
+              handle: user?.username,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              coverImageUrl: coverUrlIsKnownBad ? null : coverImageUrl,
+              onCoverError: () {
+                if (coverImageUrl == null ||
+                    _failedCoverImageUrl == coverImageUrl) {
+                  return;
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  setState(() => _failedCoverImageUrl = coverImageUrl);
+                });
+              },
+              roleLabel: isInstitution
+                  ? l10n.settingsRoleInstitutionTitle
+                  : isArtist
+                      ? l10n.settingsRoleArtistTitle
+                      : l10n.navigationScreenProfile,
+              avatarRadius: avatarRadius,
+              avatar: AvatarWidget(
+                wallet: wallet,
+                displayName: user?.displayName,
+                avatarUrl: user?.avatar,
+                radius: avatarRadius,
+                borderWidth: 0,
+                borderColor: Colors.transparent,
+                enableProfileNavigation: false,
+                showStatusIndicator: _showActivityStatus,
+              ),
+              actions: ProfileOwnerActions(
+                editLabel: l10n.settingsEditProfileTileTitle,
+                onEdit: _editProfile,
+                utilities: utilities,
+              ),
+            ),
+            const SizedBox(height: DetailSpacing.lg),
+            ProfileOwnerPracticeBlock(
+              bio: user?.bio ?? '',
+              fieldOfWork: user?.artistInfo?.specialty ?? const <String>[],
+              yearsActive: user?.artistInfo?.yearsActive ?? 0,
+              emptyBioTitle: l10n.profileNoBioYetTitle,
+              editLabel: l10n.settingsEditProfileTileTitle,
+              onEdit: _editProfile,
+              socialLinks: user?.social.isNotEmpty == true
+                  ? _buildSocialLinks(user!.social)
+                  : null,
+              status: [
+                const EmailVerificationStatusBadge(
+                  dense: true,
+                  alignment: Alignment.centerLeft,
+                  topSpacing: 0,
+                ),
+                UserActivityStatusLine(
+                  walletAddress: wallet,
+                  textAlign: TextAlign.start,
+                  textStyle: KubusTextStyles.detailCaption.copyWith(
+                    color: roles.foregroundSubtle,
+                  ),
+                ),
+                Text(
+                  web3Provider.hasWalletIdentity
+                      ? web3Provider.formatAddress(web3Provider.walletAddress)
+                      : l10n.profileConnectWalletToSeeProfileLabel,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    fontFamily:
+                        web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
+                    color: roles.foregroundSubtle,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

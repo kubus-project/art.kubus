@@ -1,7 +1,7 @@
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
-import '../../../widgets/profile/profile_cover_field.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
+import '../../../widgets/profile/profile_owner_identity.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -20,7 +20,6 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/app_color_utils.dart';
-import '../../../widgets/detail/profile_identity_block.dart';
 import '../../../widgets/detail/profile_utility_actions.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
@@ -34,7 +33,6 @@ import 'desktop_profile_edit_screen.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
-import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../utils/kubus_entity_semantics.dart';
 import '../../../widgets/common/kubus_entity_card.dart';
@@ -59,7 +57,6 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
-import '../../../widgets/common/kubus_glass_icon_button.dart';
 import '../../../widgets/common/kubus_social_link_chip.dart';
 import '../../../widgets/community/community_post_card.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -695,6 +692,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// The owner's identity is the public hero and practice block, so "My
+  /// profile" is the same profile implementation as the viewed one; only the
+  /// actions differ (editing and the owner's utilities).
   Widget _buildProfileCard(
     ThemeProvider themeProvider,
     ProfileProvider profileProvider,
@@ -703,249 +703,80 @@ class _ProfileScreenState extends State<ProfileScreen>
   ) {
     final user = profileProvider.currentUser;
     final web3Provider = Provider.of<Web3Provider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final coverImageUrl = _normalizeMediaUrl(user?.coverImage);
-    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+    final wallet = user?.walletAddress ?? '';
     const avatarRadius = 44.0;
-    const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
-    final scheme = Theme.of(context).colorScheme;
     final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
 
-    // The avatar overlaps the cover's bottom edge by a small *fixed* amount —
-    // it is a constant-size circle, so `Positioned(bottom:)` inside the cover
-    // `Stack` is safe for it (bounded, cannot grow with text scale). Identity
-    // text is different: it used to share that same Positioned row, so at
-    // large text scales a wrapped display name grew upward past the stack's
-    // own top edge and visually collided with the header actions above the
-    // card. Identity now lays out in normal flow below the cover — using only
-    // non-negative padding, since Flutter's `Padding` asserts
-    // `padding.isNonNegative` — and can never overlap anything above it.
-    const avatarOverlap = 32.0;
-    const avatarDiameter = avatarRadius * 2;
-
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            // The cover art is clipped to rounded top corners, but the avatar
-            // must NOT be: it deliberately overflows past the cover's bottom
-            // edge (see avatarOverlap below), and a ClipRRect always clips to
-            // its child's layout bounds regardless of the child Stack's own
-            // Clip.none — so the avatar has to live in this outer,
-            // unclipped Stack rather than inside the ClipRRect below.
-            clipBehavior: Clip.none,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.surface),
-                ),
-                child: Stack(
-                  children: [
-                    SizedBox(
-                      height: hasCoverImage ? 228 : 156,
-                      width: double.infinity,
-                      // Without an image the cover is the role field.
-                      child: hasCoverImage
-                          ? Image.network(
-                              coverImageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return ColoredBox(
-                                  color:
-                                      KubusColorRoles.of(context).surfaceRaised,
-                                );
-                              },
-                            )
-                          : ProfileCoverField(
-                              isArtist: isArtist,
-                              isInstitution: isInstitution,
-                            ),
-                    ),
-                    // Media scrim only over a real image (keeps the edit
-                    // control legible).
-                    if (hasCoverImage)
-                      Positioned.fill(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.18),
-                                Colors.transparent,
-                                Colors.black.withValues(alpha: 0.18),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      top: KubusSpacing.md,
-                      right: KubusSpacing.md,
-                      child: KubusGlassIconButton(
-                        icon: Icons.edit_outlined,
-                        tooltip: AppLocalizations.of(context)!
-                            .settingsEditProfileTileTitle,
-                        size: KubusHeaderMetrics.actionHitArea,
-                        borderRadius: KubusRadius.md,
-                        iconColor:
-                            hasCoverImage ? Colors.white : scheme.onSurface,
-                        tooltipPreferBelow: true,
-                        tooltipVerticalOffset: KubusSpacing.sm,
-                        onPressed: _editProfile,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                left: KubusSpacing.lg,
-                bottom: -avatarOverlap,
-                // Bare avatar, same mount as the public hero.
-                child: ProfileAvatarMount(
-                  radius: avatarRadius,
-                  child: AvatarWidget(
-                    wallet: user?.walletAddress ?? '',
-                    displayName: user?.displayName,
-                    avatarUrl: user?.avatar,
-                    radius: avatarRadius,
-                    borderWidth: 0,
-                    borderColor: Colors.transparent,
-                    cornerRadiusFactor: avatarCornerRadiusFactor,
-                    enableProfileNavigation: false,
-                    showStatusIndicator: _showActivityStatus,
-                  ),
-                ),
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ProfileIdentityHero(
+          displayName: displayName,
+          handle: user?.username,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          coverImageUrl: coverImageUrl,
+          roleLabel: isInstitution
+              ? l10n.settingsRoleInstitutionTitle
+              : isArtist
+                  ? l10n.settingsRoleArtistTitle
+                  : l10n.navigationScreenProfile,
+          avatarRadius: avatarRadius,
+          avatar: AvatarWidget(
+            wallet: wallet,
+            displayName: user?.displayName,
+            avatarUrl: user?.avatar,
+            radius: avatarRadius,
+            borderWidth: 0,
+            borderColor: Colors.transparent,
+            enableProfileNavigation: false,
+            showStatusIndicator: _showActivityStatus,
           ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: KubusSpacing.lg + avatarDiameter + KubusSpacing.md,
-              right: KubusSpacing.lg,
-              top: avatarOverlap,
-              bottom: KubusSpacing.sm,
-            ),
-            child: ProfileIdentityBlock(
-              displayName: displayName,
-              handle: user?.username,
-              isArtist: isArtist,
-              isInstitution: isInstitution,
-              nameColor: scheme.onSurface,
-              handleColor: scheme.onSurface.withValues(alpha: 0.62),
-            ),
+          actions: ProfileOwnerActions(
+            editLabel: l10n.settingsEditProfileTileTitle,
+            onEdit: _editProfile,
           ),
-          const SizedBox(height: KubusSpacing.sm),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: scheme.outline.withValues(alpha: 0.08),
-                  width: KubusSizes.hairline,
-                ),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        ProfileOwnerPracticeBlock(
+          bio: user?.bio ?? '',
+          fieldOfWork: user?.artistInfo?.specialty ?? const <String>[],
+          yearsActive: user?.artistInfo?.yearsActive ?? 0,
+          emptyBioTitle: l10n.profileNoBioYetTitle,
+          editLabel: l10n.settingsEditProfileTileTitle,
+          onEdit: _editProfile,
+          socialLinks: user?.social.isNotEmpty == true
+              ? _buildSocialLinks(user!.social, themeProvider)
+              : null,
+          status: [
+            const EmailVerificationStatusBadge(
+              dense: true,
+              alignment: Alignment.centerLeft,
+              topSpacing: 0,
+            ),
+            UserActivityStatusLine(
+              walletAddress: wallet,
+              textAlign: TextAlign.start,
+              textStyle: KubusTextStyles.detailCaption.copyWith(
+                color: roles.foregroundSubtle,
               ),
             ),
-            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const EmailVerificationStatusBadge(
-                  dense: true,
-                  alignment: Alignment.centerLeft,
-                  topSpacing: 0,
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                UserActivityStatusLine(
-                  walletAddress: user?.walletAddress ?? '',
-                  textAlign: TextAlign.start,
-                  textStyle: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.62),
-                  ),
-                ),
-                if (web3Provider.hasWalletIdentity) ...[
-                  const SizedBox(height: KubusSpacing.sm),
-                  // Technical identity stays quiet: a compact neutral pill
-                  // instead of an accent-framed centerpiece.
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                      vertical: KubusSpacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      border: KubusBorders.hairline(context),
-                    ),
-                    child: Text(
-                      web3Provider.formatAddress(web3Provider.walletAddress),
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        fontFamily: 'RobotoMono',
-                        color: scheme.onSurface.withValues(alpha: 0.62),
-                      ),
-                    ),
-                  ),
-                ],
-                if (user?.bio.isNotEmpty == true) ...[
-                  const SizedBox(height: KubusSpacing.md),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.md,
-                      vertical: KubusSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          scheme.surfaceContainerHighest.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                      border: Border.all(
-                        color: scheme.outline.withValues(alpha: 0.1),
-                        width: KubusSizes.hairline,
-                      ),
-                    ),
-                    child: ExpandableDetailText(
-                      text: user!.bio,
-                      collapsedMaxLines: 3,
-                      style: KubusTextStyles.detailBody.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: KubusSpacing.md),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.08),
-                      width: KubusSizes.hairline,
-                    ),
-                  ),
-                  child: ProfileArtistInfoFields(
-                    fieldOfWork:
-                        user?.artistInfo?.specialty ?? const <String>[],
-                    yearsActive: user?.artistInfo?.yearsActive ?? 0,
-                    textAlign: TextAlign.left,
-                  ),
-                ),
-                if (user?.social.isNotEmpty == true) ...[
-                  const SizedBox(height: KubusSpacing.md),
-                  _buildSocialLinks(user!.social, themeProvider),
-                ],
-              ],
+            Text(
+              web3Provider.hasWalletIdentity
+                  ? web3Provider.formatAddress(web3Provider.walletAddress)
+                  : l10n.profileConnectWalletToSeeProfileLabel,
+              style: KubusTextStyles.detailCaption.copyWith(
+                fontFamily:
+                    web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
+                color: roles.foregroundSubtle,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 
