@@ -9,24 +9,22 @@ over from the server-rendered page. The Node connection did not change.
 
 ## The map
 
-- **Groups make more sense far out.** Markers now group across a wider area
-  when you are zoomed out and separate gradually as you approach a place. At
-  the scale of a region you see a few clear groups instead of dozens of small
-  ones (Slovenia at zoom 7: 11 groups where 0.8.0 showed about 25).
-- **Artwork covers appear much earlier.** 0.8.0 showed covers only from street
-  level (zoom 15). Now:
-  - the marker you selected shows its cover from city scale (zoom 10);
-  - a few nearby covers appear as you approach a neighbourhood (zoom 12.5);
-  - more appear as you get closer, and the full set at street level.
-
-  Covers start downloading just before they are needed, only while the map is
-  still, and are fetched at the size they are drawn. Wide (landscape) covers
-  are downloaded with enough width to fill the marker face without looking
-  soft.
-- **Bounded and cancellable.** Cover memory is capped, visible covers are
-  loaded ahead of warm-up prefetches, a cover that is no longer wanted stops
-  downloading, and the selected marker keeps its cover even when the
-  nearby-cover budget is full.
+- **The world reads as a distributed map.** Markers no longer collapse into a
+  few giant groups when you zoom out: far out the groups are small and
+  regional, so you can see where the archive is (Europe, other continents,
+  isolated records) and they split into regions, countries, cities and
+  neighbourhoods as you approach. A group never spans an unreasonably large
+  area, so Lisbon and Ljubljana are never one dot, and a lonely marker stays
+  its own dot.
+- **Every marker in view gets its cover.** From city-approach scale (zoom 12.5)
+  all eligible markers in the viewport show their artwork cover, not only the
+  few nearest the centre. They load a few at a time while the map is still,
+  spread across the whole view, and the selected marker (from zoom 10) always
+  goes first. Wide (landscape) covers are downloaded with enough width to fill
+  the marker face without looking soft.
+- **Bounded and cancellable.** Visible covers are never evicted before they are
+  drawn, offscreen ones go first, a cover that is no longer wanted stops
+  downloading, and decoded image size and download concurrency are capped.
 - **A new marker face.** Each category keeps its shape. Inside, the marker is
   now a small piece of the same design language as the app's statistic
   tiles: a lit colour field, the category's symbol large and cropped into the
@@ -46,6 +44,11 @@ over from the server-rendered page. The Node connection did not change.
 
 ## Profiles
 
+- **My profile reads like your public profile.** Your identity and practice,
+  then your work or programme, your posts, your recognition and the closing
+  statistics come first; the account tools (account health, saved items,
+  performance) are their own block at the end instead of interrupting the
+  profile.
 - The name, handle and role sit on a compact plate sized to the content, with
   Follow and Message right beside it, instead of a page-wide band with the
   buttons floating at the far edge.
@@ -61,10 +64,12 @@ over from the server-rendered page. The Node connection did not change.
   corner, instead of being pushed so far off the edge that it looked
   accidentally clipped. On settings and support rows it no longer sits under
   the arrow.
-- On a computer, pointing at a settings or support row now answers with the
-  symbol as well: it moves slightly inward and grows a little, while the row
-  itself stays still. Statistic tiles do the same. With reduced motion turned
-  on, the symbol stays still and only the colour and edge respond.
+- On a computer, every tile answers the pointer again with the kubus lift: the
+  surface rises 2 px with a soft accent shadow, its colour and edge strengthen
+  and the symbol moves slightly inward and grows. That includes the compact
+  settings and support rows and the expressive statistic tiles; the text moves
+  with the surface and never shifts inside it. With reduced motion turned on,
+  nothing moves and only the colour, edge and shadow respond.
 
 ## Account security
 

@@ -149,8 +149,8 @@ void main() {
 
   for (final reduced in [false, true]) {
     testWidgets(
-        'hover answers inside the tile; the number never moves '
-        '(reduced motion: $reduced)', (tester) async {
+        'hover lifts the whole surface as one unit; text keeps its place in '
+        'the card (reduced motion: $reduced)', (tester) async {
       await tester.pumpWidget(MediaQuery(
         data: MediaQueryData(disableAnimations: reduced),
         child: _wrap(const KubusStatCard(
@@ -163,20 +163,53 @@ void main() {
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
-      final before = tester.getRect(find.text('42'));
+      final card = find.byType(KubusStatCard);
+      // The lift is a paint transform inside the card, so the surface (its
+      // Material) is what moves.
+      final surface =
+          find.descendant(of: card, matching: find.byType(Material)).first;
       final ghost = find.descendant(
         of: find.byType(KubusGhostGlyph),
         matching: find.byIcon(Icons.visibility_outlined),
       );
+      double shadowAlpha() {
+        final box = tester.widget<AnimatedContainer>(find
+            .descendant(of: card, matching: find.byType(AnimatedContainer))
+            .first);
+        final shadows = (box.decoration! as BoxDecoration).boxShadow;
+        return shadows == null || shadows.isEmpty ? 0 : shadows.first.color.a;
+      }
+
+      final cardBefore = tester.getTopLeft(surface);
+      final sizeBefore = tester.getSize(card);
+      final numberRel = tester.getTopLeft(find.text('42')) - cardBefore;
+      final labelRel = tester.getTopLeft(find.text('Views')) - cardBefore;
       final ghostBefore = tester.getRect(ghost);
-      await gesture.moveTo(tester.getCenter(find.byType(KubusStatCard)));
+      expect(shadowAlpha(), 0);
+
+      await gesture.moveTo(tester.getCenter(card));
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.text('42')), before);
+
+      final cardAfter = tester.getTopLeft(surface);
+      expect(tester.getSize(card), sizeBefore, reason: 'paint only');
+      expect(shadowAlpha(), greaterThan(0.2),
+          reason: 'the accent shadow state changes even without motion');
+      // Number and label never move relative to the card.
+      expect(tester.getTopLeft(find.text('42')) - cardAfter, numberRel);
+      expect(tester.getTopLeft(find.text('Views')) - cardAfter, labelRel);
       if (reduced) {
+        expect(cardAfter, cardBefore, reason: 'no lift');
         expect(tester.getRect(ghost), ghostBefore,
             reason: 'reduced motion: no decorative movement');
       } else {
-        expect(tester.getRect(ghost), isNot(ghostBefore));
+        expect(
+            cardBefore.dy - cardAfter.dy, moreOrLessEquals(2, epsilon: 0.01));
+        final drift = tester.getRect(ghost).center -
+            ghostBefore.center +
+            const Offset(0, 2);
+        expect(drift.distance, greaterThan(1.5),
+            reason: 'the glyph drifts inward on its own');
+        expect(tester.getRect(ghost).width, greaterThan(ghostBefore.width));
       }
     });
   }

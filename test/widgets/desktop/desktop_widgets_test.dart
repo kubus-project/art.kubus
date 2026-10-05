@@ -50,7 +50,7 @@ void main() {
 
   testWidgets(
       'DesktopStatCard: one identity layer (cropped ghost glyph, no '
-      'foreground tile), no lift or shadow on the tile itself', (tester) async {
+      'foreground tile), no visible shadow at rest', (tester) async {
     await pumpDesktopStatCard(
       tester,
       child: const SizedBox(
@@ -75,7 +75,8 @@ void main() {
       ),
       findsOneWidget,
     );
-    // A metric is data: the tile never lifts and casts no shadow.
+    // At rest the tile casts no visible shadow (hover lifts it and fades an
+    // accent shadow in; see kubus_stat_card_test).
     expect(find.byType(DesktopStatCard), findsOneWidget);
     final decorated = tester
         .widgetList<DecoratedBox>(find.descendant(
@@ -84,6 +85,11 @@ void main() {
         ))
         .map((d) => d.decoration)
         .whereType<BoxDecoration>();
-    expect(decorated.any((d) => (d.boxShadow ?? const []).isNotEmpty), isFalse);
+    expect(
+      decorated.any(
+        (d) => (d.boxShadow ?? const []).any((shadow) => shadow.color.a > 0),
+      ),
+      isFalse,
+    );
   });
 }

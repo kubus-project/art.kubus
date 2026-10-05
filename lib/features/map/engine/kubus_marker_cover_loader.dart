@@ -58,18 +58,25 @@ typedef KubusCoverFetch = Future<ui.Image?> Function(String url, int targetPx);
 ///
 /// * at most [maxCached] decoded images are retained (least recently used is
 ///   disposed), so texture memory is bounded no matter how long the visitor
-///   pans;
+///   pans, except that images the caller has pinned ([setPinned]: covers in
+///   the active viewport that are not yet drawn into the map) are never
+///   evicted before they are used, up to [maxPinned]. Offscreen, stale-size
+///   and old-zoom entries are always evicted first;
 /// * at most [maxConcurrent] loads run at once and the same URL is never
 ///   fetched twice while one is in flight. Covers about to be drawn always
 ///   start before prefetches (`prefetch: true`), and prefetches that have not
 ///   started can be dropped with [cancelPendingPrefetches] when the view moves
 ///   on, so stale warm-ups never delay what is on screen;
+/// * every successful [load] hands the caller its **own handle**
+///   (`Image.clone`), so eviction from the cache can never invalidate an image
+///   a caller is still drawing; the caller disposes its handle;
 /// * a URL that failed is not retried for [failureRetry], so a broken cover
 ///   costs one request and the marker simply keeps its canonical badge.
 class KubusMarkerCoverLoader {
   KubusMarkerCoverLoader({
     KubusCoverFetch? fetch,
     this.maxCached = 48,
+    this.maxPinned = 192,
     this.maxConcurrent = 4,
     this.failureRetry = const Duration(minutes: 5),
     DateTime Function()? now,
@@ -78,6 +85,11 @@ class KubusMarkerCoverLoader {
 
   final KubusCoverFetch _fetch;
   final int maxCached;
+
+  /// Most decoded images the caller may keep pinned at once. With a decode
+  /// bound of 1 MiB each this caps the pinned working set; pins beyond it are
+  /// ignored (those covers can still be re-loaded, just not protected).
+  final int maxPinned;
   final int maxConcurrent;
   final Duration failureRetry;
   final DateTime Function() _now;
@@ -95,6 +107,26 @@ class KubusMarkerCoverLoader {
 
   int get cachedCount => _cache.length;
   int get inFlightCount => _inFlight.length;
+
+  /// Approximate decoded size (RGBA) of the cache, and its high-water marks,
+  /// for the performance harness.
+  int get cachedBytes =>
+      _cache.values.fold<int>(0, (sum, i) => sum + i.width * i.height * 4);
+  int peakCachedCount = 0;
+  int peakCachedBytes = 0;
+
+  Set<String> _pinned = const <String>{};
+  int get pinnedCount => _pinned.length;
+
+  /// Pins the decoded images for [urls] at [targetPx]: they survive eviction
+  /// until they are no longer pinned (call again with the current set; an empty
+  /// call unpins everything). Only the first [maxPinned] are honoured.
+  void setPinned(Iterable<String> urls, {required int targetPx}) {
+    _pinned = <String>{
+      for (final url in urls.take(maxPinned)) _key(url, targetPx),
+    };
+    _evictOverflow();
+  }
 
   static String _key(String url, int targetPx) => '$targetPx|$url';
 
@@ -130,19 +162,41 @@ class KubusMarkerCoverLoader {
   }) {
     if (_disposed) return Future<ui.Image?>.value(null);
     final hit = cached(url, targetPx: targetPx);
-    if (hit != null) return Future<ui.Image?>.value(hit);
+    if (hit != null) return Future<ui.Image?>.value(hit.clone());
     if (hasFailed(url)) return Future<ui.Image?>.value(null);
     final key = _key(url, targetPx);
     final running = _inFlight[key];
     if (running != null) {
       if (!prefetch) _promote(key);
-      return running;
+      return _lend(running);
     }
     final owner = Completer<ui.Image?>();
     _inFlight[key] = owner.future;
     unawaited(_run(url, targetPx, prefetch: prefetch, owner: owner)
         .then(owner.complete, onError: owner.completeError));
-    return owner.future;
+    return _lend(owner.future);
+  }
+
+  /// A fresh handle on the shared decoded image for one caller.
+  Future<ui.Image?> _lend(Future<ui.Image?> shared) =>
+      shared.then((image) => image?.clone());
+
+  /// Drops every queued load (display or prefetch) that has not started and
+  /// whose image is not in [keepUrls] at [targetPx]. A viewport change calls
+  /// this so covers for a view the camera has left never delay (or draw over)
+  /// the covers of the new one; a dropped load resolves to null without
+  /// counting as a failure. Loads already running finish and stay cached.
+  void cancelPendingExcept(Iterable<String> keepUrls, {required int targetPx}) {
+    final keep = <String>{for (final url in keepUrls) _key(url, targetPx)};
+    for (final queue in [_waitingDisplay, _waitingPrefetch]) {
+      for (final ticket in queue.toList()) {
+        if (keep.contains(ticket.key)) continue;
+        queue.remove(ticket);
+        _queuedTickets.remove(ticket.key);
+        _inFlight.remove(ticket.key);
+        ticket.grant.complete(false);
+      }
+    }
   }
 
   /// Drops every prefetch that is still waiting for a slot.
@@ -189,7 +243,11 @@ class KubusMarkerCoverLoader {
         return null;
       }
       _cache[_key(url, targetPx)] = image;
-      _evictOverflow();
+      _evictOverflow(protect: _key(url, targetPx));
+      peakCachedCount = math.max(peakCachedCount, _cache.length);
+      peakCachedBytes = math.max(peakCachedBytes, cachedBytes);
+      recordKubusCoverGauge('peakDecodedCount', peakCachedCount.toDouble());
+      recordKubusCoverGauge('peakDecodedBytes', peakCachedBytes.toDouble());
       return image;
     } finally {
       if (identical(_inFlight[key], owner.future)) _inFlight.remove(key);
@@ -222,10 +280,19 @@ class KubusMarkerCoverLoader {
     if (_running > 0) _running -= 1;
   }
 
-  void _evictOverflow() {
+  void _evictOverflow({String? protect}) {
+    // Offscreen / stale entries go first; a pinned (in-view, not yet drawn)
+    // image is only ever evicted by an unpinned one's turn having passed.
     while (_cache.length > maxCached) {
-      final oldest = _cache.keys.first;
-      _cache.remove(oldest)?.dispose();
+      String? victim;
+      for (final key in _cache.keys) {
+        if (key != protect && !_pinned.contains(key)) {
+          victim = key;
+          break;
+        }
+      }
+      if (victim == null) return;
+      _cache.remove(victim)?.dispose();
     }
   }
 

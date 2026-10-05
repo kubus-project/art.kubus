@@ -79,12 +79,18 @@ rejects it.
 | --- | --- |
 | Stacked | 2 px paint-only lift, stronger field and edge, soft contextual accent shadow (`KubusHoverResponse.accentShadow`: a tinted drop, y offset 8, negative spread, alpha 0.24 light / 0.34 dark, not a glow), ghost glyph drifts 3 px and scales 1.03 inside the clip |
 | Inline | 2 px lift, stronger edge, accent shadow, arrow travels 2 px |
-| Compact | stronger field and edge plus a 3 px leading indicator; no lift, no shadow, no drift (a list of rows must not bob) |
+| Compact | 2 px lift, accent shadow, stronger field and edge, a 3 px leading indicator, ghost glyph drift and scale; the arrow and text move with the surface, never relative to it |
 
-Reduced motion (`MediaQuery.disableAnimations`): no lift, glyph drift or arrow
-travel; field, edge and shadow state still change. Touch never hovers.
-`KubusStatCard` is a metric, not navigation, and keeps a different motion:
-the tile and number stay put while the ghost glyph drifts and scales.
+Every layout lifts (owner direction for 0.8.1: the older, obvious kubus
+surface response is restored on compact rows too; they are paint-only, so a
+list of them does not reflow). Reduced motion (`MediaQuery.disableAnimations`):
+no lift, glyph drift or arrow travel; field, edge, indicator and shadow state
+still change. Touch never hovers.
+`KubusStatCard` (expressive) answers hover as the same family: the surface
+lifts 2 px as one painted unit with the accent shadow while the glyph drifts
+and scales; the number and label never move relative to the card. A stat
+without `onTap` answers visually but keeps the default cursor and no button
+semantics.
 
 States: `enabled: false` mutes the tile and takes no tap (say why in the
 subtitle); `loading` swaps the arrow for a spinner.
@@ -124,8 +130,10 @@ atmosphere is removed rather than re-wrapped.
 - Dense (standard row): one compact context tile leads the row, because a
   cropped glyph is illegible at that size. No ghost glyph.
 - The value is primary and never ellipsised (it scales down if wider than
-  the tile); the label wraps. Hover moves the glyph and field, never the
-  value. Reduced motion keeps the brightening and drops the drift.
+  the tile); the label wraps. Expressive hover lifts the whole surface 2 px
+  (paint only) with the accent shadow and moves the glyph and field; the value
+  and label never move relative to the card. Reduced motion keeps the
+  brightening and the shadow state and drops the lift and the drift.
 
 ### Analytics overview (not a destination tile)
 
@@ -258,3 +266,29 @@ Tone and meaning unchanged.
 - `test/qa/product_v5_semantic_visual_matrix_test.dart`: 51-scene
   BEFORE/AFTER matrix with real Sofia Sans and Space Mono
   (`KUBUS_RUN_VISUAL_QA=1 QA_LABEL=after`).
+
+
+## Profile information hierarchy (final 0.8.1)
+
+"My profile" is the person's profile first and their account second. Mobile and
+desktop, owner and viewed profile share one section order, encoded in
+`lib/screens/community/profile_section_order.dart`
+(`publicProfileSections`, `ownerProfileSections`) and pinned by
+`test/screens/community/profile_section_order_test.dart`:
+
+1. **identity**: cover, avatar, name, handle, role, bio and the practice fields,
+   with the owner's edit and settings utilities in the header (the viewed
+   profile has follow and message there instead);
+2. **work**: an artist's portfolio, collections and events, or an institution's
+   programme, only the parts that apply to the role;
+3. **public art** the person added (viewed profile; the owner reaches the same
+   records through the Artworks statistic);
+4. **activity**: a bounded preview of public posts;
+5. **recognition**: achievements and the verified role / public badges;
+6. **closing stats**: the expressive `KubusStatCard` / `DesktopStatCard` tiles.
+
+Owner-only content (account health, saved items, what the owner viewed,
+performance) is the final **owner tools** block, under an "Account" heading and
+a divider, never inside that narrative. On wide desktop the main column carries
+work and posts, the side column carries recognition, and the stats and the
+owner tools follow full width.

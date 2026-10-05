@@ -12,6 +12,9 @@
 // Env: QA_ZOOMS=5,7,9,11,12,13,14,15   QA_VIEWPORTS=1440x900,390x844
 //      QA_CENTER=14.5058,46.0519 (lng,lat)   QA_SETTLE_MS=4500
 //      QA_SCHEME=light|dark   QA_GL=hardware|swiftshader   QA_PORT=8131
+//      QA_SYNTHETIC_WORLD=1  appends a fixed set of synthetic markers around
+//      the world to the marker API response (production only holds markers
+//      near Ljubljana), so the far-zoom spatial distribution can be judged.
 // Output: output/playwright/map-zoom-ladder/<label>/<w>x<h>-z<zoom>.png and
 //         manifest.json (per level: features rendered, images, cover images).
 import fs from 'node:fs/promises';
@@ -108,6 +111,44 @@ async function installNetworkPolicy(page) {
       delete headers.origin;
       delete headers.referer;
       const response = await route.fetch({ timeout: 20000, headers });
+      if (
+        process.env.QA_SYNTHETIC_WORLD === '1' &&
+        /\/api\/art-markers\/?$/.test(url.pathname)
+      ) {
+        try {
+          const json = await response.json();
+          const template = (json.data || [])[0];
+          if (template) {
+            const world = [
+              [38.72, -9.14], [40.42, -3.70], [48.86, 2.35], [52.52, 13.4],
+              [48.21, 16.37], [41.9, 12.5], [50.45, 30.52], [59.33, 18.07],
+              [64.15, -21.94], [40.71, -74.0], [34.05, -118.24], [19.43, -99.13],
+              [-23.55, -46.63], [-34.6, -58.38], [35.68, 139.69], [37.57, 126.98],
+              [-33.87, 151.21], [-33.92, 18.42], [-1.29, 36.82], [21.31, -157.86],
+              [28.61, 77.21], [31.23, 121.47], [30.04, 31.24], [55.75, 37.62],
+            ];
+            const extra = world.map(([latitude, longitude], i) => ({
+              ...template,
+              id: `qa-world-${i}`,
+              name: `World marker ${i}`,
+              latitude,
+              longitude,
+              artworkId: null,
+              position: { lat: latitude, lng: longitude },
+            }));
+            json.data = [...(json.data || []), ...extra];
+            if (typeof json.count === 'number') json.count = json.data.length;
+          }
+          await route.fulfill({
+            status: 200,
+            headers: { ...response.headers(), ...cors, 'content-type': 'application/json' },
+            body: JSON.stringify(json),
+          });
+          return;
+        } catch {
+          /* fall through to the untouched response */
+        }
+      }
       await route.fulfill({ response, headers: { ...response.headers(), ...cors } });
     } catch {
       await route.fulfill({ status: 503, headers: cors, body: '' });

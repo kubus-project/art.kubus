@@ -155,10 +155,7 @@ void main() {
   });
 
   group('KubusActionTile hover contract', () {
-    for (final layout in const [
-      KubusActionTileLayout.stacked,
-      KubusActionTileLayout.inline,
-    ]) {
+    for (final layout in KubusActionTileLayout.values) {
       testWidgets(
           '${layout.name}: lifts 2 px with a soft accent shadow, without '
           'moving layout', (tester) async {
@@ -195,7 +192,7 @@ void main() {
         await tester.pumpWidget(_host(layout));
         final gesture = await _mouse(tester);
         final rest = _glyph(tester);
-        final lift = layout == KubusActionTileLayout.stacked ? 2.0 : 0.0;
+        const lift = 2.0;
 
         await _hover(tester, gesture);
 
@@ -204,7 +201,7 @@ void main() {
         expect(scale, inInclusiveRange(1.02, 1.04));
         // The drift is measured on the glyph's own motion: take the tile's
         // lift out of the vertical delta.
-        final drift = hovered.center - rest.center + Offset(0, lift);
+        final drift = hovered.center - rest.center + const Offset(0, lift);
         expect(drift.distance, inInclusiveRange(2, 3));
         // Inward from the top-right corner: left and down.
         expect(drift.dx, lessThan(0));
@@ -223,8 +220,9 @@ void main() {
     });
 
     testWidgets(
-        'compact: the surface stays put (no lift, no shadow, no arrow '
-        'travel); an indicator and the glyph answer', (tester) async {
+        'compact: lifts with an accent shadow, the arrow and text stay fixed '
+        'relative to the tile, and the indicator and glyph answer',
+        (tester) async {
       await tester.pumpWidget(
         _host(KubusActionTileLayout.compact, subtitle: 'Where this goes'),
       );
@@ -238,13 +236,19 @@ void main() {
       expect(indicator().a, 0);
       final glyphBefore = _glyph(tester);
       final title = tester.getRect(find.text('Analytics'));
+      final size = tester.getSize(find.byType(KubusActionTile));
 
       await _hover(tester, gesture);
 
-      expect(_surfaceTopLeft(tester), rest);
-      expect(_arrow(tester), arrow);
-      expect(tester.getRect(find.text('Analytics')), title);
-      expect(_shadowAlpha(tester), 0);
+      // The whole surface moves as one painted unit: 2 px up, and the arrow
+      // and title move with it (never relative to the tile).
+      expect(rest.dy - _surfaceTopLeft(tester).dy,
+          moreOrLessEquals(2, epsilon: 0.01));
+      expect(_arrow(tester), arrow - const Offset(0, 2));
+      expect(tester.getRect(find.text('Analytics')),
+          title.shift(const Offset(0, -2)));
+      expect(tester.getSize(find.byType(KubusActionTile)), size);
+      expect(_shadowAlpha(tester), inInclusiveRange(0.2, 0.4));
       expect(_glyph(tester), isNot(glyphBefore));
       expect(indicator().a, greaterThan(0.5));
     });
@@ -270,10 +274,8 @@ void main() {
         if (glyph != null) {
           expect(_glyph(tester), glyph, reason: 'no glyph drift or scale');
         }
-        if (layout != KubusActionTileLayout.compact) {
-          expect(_shadowAlpha(tester), greaterThan(0),
-              reason: 'the static shadow state still changes');
-        }
+        expect(_shadowAlpha(tester), greaterThan(0),
+            reason: 'the static shadow state still changes');
       });
     }
 
@@ -287,10 +289,8 @@ void main() {
     });
   });
 
-  // The remount fix is about `lift: lifts && interactive` rather than
-  // `lift: lifts`, so it can only be observed where `lifts` is true: the
-  // compact layout never lifts, which makes both spellings identical there.
-  // Every lifting layout is covered.
+  // The remount fix is about `lift: interactive` toggling without rebuilding
+  // the subtree; every layout lifts now, so every layout is covered.
   for (final layout in const <KubusActionTileLayout>[
     KubusActionTileLayout.stacked,
     KubusActionTileLayout.inline,
