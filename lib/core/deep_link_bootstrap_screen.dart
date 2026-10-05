@@ -15,6 +15,17 @@ import '../services/share/share_deep_link_parser.dart';
 import 'app_initializer.dart';
 import 'startup_trace.dart';
 
+/// Artwork API identity behind a validated public presentation. A collectible's
+/// stable ID names only its public route, so it resolves to the backing artwork.
+@visibleForTesting
+String? publicPresentationApiId(Map<String, dynamic> presentation) {
+  final raw = presentation['type'] == 'collectible'
+      ? presentation['backingArtworkId']
+      : presentation['id'];
+  final id = raw?.toString().trim();
+  return id == null || id.isEmpty ? null : id;
+}
+
 class DeepLinkBootstrapScreen extends StatefulWidget {
   const DeepLinkBootstrapScreen({
     super.key,
@@ -62,7 +73,9 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
         context.read<ArtworkProvider>().seedPublicPresentation(
               publicPresentation,
             );
-        final id = publicPresentation['id']?.toString() ?? '';
+        // Engagement and revalidation use the artwork API identity; the
+        // collectible stable ID only names the public route.
+        final id = publicPresentationApiId(publicPresentation) ?? '';
         if (id.isNotEmpty) {
           unawaited(
             context

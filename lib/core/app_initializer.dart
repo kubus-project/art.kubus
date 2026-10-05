@@ -37,6 +37,19 @@ import '../main_app.dart';
 import 'shell_entry_screen.dart';
 import 'shell_routes.dart';
 
+/// A public deep link stays public for everyone, but only a brand-new anonymous
+/// user is persisted as a guest; a returning local account with a lapsed server
+/// session is not (mirrors `resolveColdStartEntry`'s `!hasLocalAccount`).
+@visibleForTesting
+bool shouldActivateGuestForPublicEntry({
+  required bool hasValidSession,
+  required bool hasLocalAccount,
+  required DeepLinkAccessPolicy accessPolicy,
+}) =>
+    !hasValidSession &&
+    !hasLocalAccount &&
+    accessPolicy == DeepLinkAccessPolicy.publicRead;
+
 class AppInitializer extends StatefulWidget {
   const AppInitializer({
     super.key,
@@ -667,9 +680,11 @@ class _AppInitializerState extends State<AppInitializer> {
           return;
         }
 
-        if (!hasValidSession &&
-            !hasLocalAccount &&
-            decision.accessPolicy == DeepLinkAccessPolicy.publicRead) {
+        if (shouldActivateGuestForPublicEntry(
+          hasValidSession: hasValidSession,
+          hasLocalAccount: hasLocalAccount,
+          accessPolicy: decision.accessPolicy,
+        )) {
           await GuestSessionService.activateGuestMode(prefs: prefs);
           unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
         }
