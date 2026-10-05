@@ -188,6 +188,19 @@ abstract final class KubusMarkerLod {
     return snapped;
   }
 
+  /// Widest source aspect (long edge over short edge) a cover download is sized
+  /// for. The face is square and the decode targets the short side, so a
+  /// landscape source needs this much long-edge headroom to reach it.
+  static const double coverSourceAspectHeadroom = 16 / 9;
+
+  /// Physical long-edge width a cover is *downloaded* at: enough that a 16:9
+  /// source still has [coverFetchWidthPx] on its short edge. The decode stays
+  /// short-side bound, so this only widens the (small) transfer.
+  static int coverDownloadWidthPx(double pixelRatio) {
+    final raw = coverFetchWidthPx(pixelRatio) * coverSourceAspectHeadroom;
+    return ((raw / 32).ceil() * 32).clamp(160, 512);
+  }
+
   /// The covers to display at [zoom]: the selected marker from
   /// [selectedCoverMinZoom], nearby markers from [coverDisplayMinZoom] within
   /// the staged [coverBudget]. Empty below [selectedCoverMinZoom].
