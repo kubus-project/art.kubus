@@ -31,6 +31,13 @@ async function rawFetch(url, init = {}) {
 }
 
 const canonicalUrl = requiredUrl('PUBLIC_TAKEOVER_URL');
+const expectedCanonicalUrl = optionalUrl('PUBLIC_TAKEOVER_EXPECTED_CANONICAL_URL') || canonicalUrl;
+if (expectedCanonicalUrl !== canonicalUrl) {
+  ensure(['localhost', '127.0.0.1', '[::1]'].includes(new URL(canonicalUrl).hostname),
+    'Metadata URL override is only allowed for a local candidate harness');
+  ensure(new URL(expectedCanonicalUrl).pathname === new URL(canonicalUrl).pathname,
+    'Candidate and metadata canonical paths must match exactly');
+}
 const missingUrl = requiredUrl('PUBLIC_TAKEOVER_MISSING_URL');
 const expectTakeover = booleanFromEnv('EXPECT_PUBLIC_FLUTTER_TAKEOVER', false);
 const browserNames = (process.env.PUBLIC_TAKEOVER_BROWSERS || 'chromium,firefox')
@@ -146,7 +153,7 @@ async function verifyRawHttp() {
   ensure(response.headers.get('content-type')?.includes('text/html'), 'canonical URL is not HTML');
   ensure(/<h1\b[^>]*>[^<\s][\s\S]*?<\/h1>/i.test(body), 'raw SSR document has no meaningful H1');
   ensure(/<meta\b[^>]*\bname=["']description["'][^>]*\bcontent=["'][^"']+/.test(body), 'raw SSR document has no description');
-  ensure(new RegExp(`<link\\b[^>]*\\brel=["']canonical["'][^>]*\\bhref=["']${escapeRegex(canonicalUrl)}["']`).test(body), 'canonical tag does not match requested URL');
+  ensure(new RegExp(`<link\\b[^>]*\\brel=["']canonical["'][^>]*\\bhref=["']${escapeRegex(expectedCanonicalUrl)}["']`).test(body), 'canonical tag does not match requested URL');
   ensure(/application\/ld\+json/.test(body), 'raw SSR document has no JSON-LD');
   ensure(/BreadcrumbList/.test(body), 'raw SSR document has no BreadcrumbList');
 
@@ -190,6 +197,14 @@ async function verifyBrowser(
   const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
+  let releaseBoot = () => {};
+  if (expectTakeover) {
+    const bootGate = new Promise((resolve) => { releaseBoot = resolve; });
+    await page.route('**/flutter_bootstrap.js', async (route) => {
+      await bootGate;
+      await route.continue();
+    });
+  }
   if (smokeBypassToken) {
     // Inject the bypass header only for same-origin requests; third-party
     // resources the page loads must never receive the secret token.
@@ -237,7 +252,9 @@ async function verifyBrowser(
   });
 
   try {
-    const response = await page.goto(canonicalUrl, { waitUntil: 'domcontentloaded' });
+    const response = await page.goto(canonicalUrl, {
+      waitUntil: expectTakeover ? 'commit' : 'domcontentloaded',
+    });
     ensure(response?.status() === 200, `${browserLabel} canonical URL returned ${response?.status()}`);
     ensure(page.url() === canonicalUrl, `${browserLabel} rewrote canonical URL to ${page.url()}`);
 
@@ -257,6 +274,7 @@ async function verifyBrowser(
 
     await page.locator('#public-document h1').waitFor();
     ensure(await page.locator('#public-document').evaluate((node) => !node.inert), `${browserLabel} SSR was hidden before readiness`);
+    releaseBoot();
     await page.waitForFunction(() => document.documentElement.classList.contains('kubus-takeover-complete'), null, { timeout: 90000 });
     const state = await page.evaluate(() => ({
       events: globalThis.__kubusTakeoverSmokeEvents,
@@ -301,6 +319,7 @@ async function verifyBrowser(
       optionalStandbyFailures: failures.optionalStandbyFailures,
     };
   } finally {
+    releaseBoot();
     await context.close();
   }
 }
@@ -312,7 +331,7 @@ for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
   const browser = await browserType.launch({
-    headless: true,
+    headless: booleanFromEnv('PUBLIC_TAKEOVER_HEADLESS', true),
     ...(smokeProxyOption ? { proxy: smokeProxyOption } : {}),
   });
   try {
