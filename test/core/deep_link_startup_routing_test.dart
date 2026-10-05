@@ -16,6 +16,7 @@ void main() {
       ShareEntityType.profile,
       ShareEntityType.exhibition,
       ShareEntityType.collection,
+      ShareEntityType.nft,
     ];
 
     for (final type in publicTypes) {
@@ -100,7 +101,8 @@ void main() {
     );
   });
 
-  test('NFT destination keeps its wallet-required startup boundary', () {
+  test('public collectible read does not inherit wallet action requirements',
+      () {
     const pending = ShareDeepLinkTarget(
       type: ShareEntityType.nft,
       id: 'nft-1',
@@ -114,9 +116,9 @@ void main() {
       hasValidSession: true,
     );
 
-    expect(signedOut?.accessPolicy, DeepLinkAccessPolicy.walletRequired);
-    expect(signedOut?.requiresSignIn, isTrue);
-    expect(signedOut?.signInArguments?['redirectRoute'], '/n/nft-1');
+    expect(signedOut?.accessPolicy, DeepLinkAccessPolicy.publicRead);
+    expect(signedOut?.requiresSignIn, isFalse);
+    expect(signedOut?.signInArguments, isNull);
     expect(signedIn?.requiresSignIn, isFalse);
   });
 

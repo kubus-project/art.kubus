@@ -56,11 +56,13 @@ import '../../services/meta/meta_conversion_adapter.dart';
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
   final String? attendanceMarkerId;
+  final ShareEntityType publicEntityType;
 
   const ArtDetailScreen({
     super.key,
     required this.artworkId,
     this.attendanceMarkerId,
+    this.publicEntityType = ShareEntityType.artwork,
   });
 
   @override
@@ -74,12 +76,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   String _publicReturnRoute(BuildContext context) {
     try {
-      return context.read<PublicEntityTakeoverProvider>().returnRouteForArtwork(
+      return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                widget.publicEntityType,
                 widget.artworkId,
               ) ??
-          '/a/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
     } catch (_) {
-      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
     }
   }
 
@@ -254,7 +257,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           );
         }
 
-        if (artwork == null) {
+        if (artwork == null ||
+            (widget.publicEntityType == ShareEntityType.nft &&
+                (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
@@ -439,7 +444,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       if (!mounted) return;
       try {
         unawaited(
-          context.read<PublicEntityTakeoverProvider>().markArtworkReady(
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                widget.publicEntityType,
                 artworkId,
               ),
         );

@@ -634,6 +634,14 @@ class _AppInitializerState extends State<AppInitializer> {
           initialUri: widget.initialUri,
         );
         if (decision == null) return;
+        StartupTrace.publicEntry('startup_decision',
+            entityType: pendingDeepLink.type.name,
+            accessPolicy: decision.accessPolicy.name,
+            hasSession: hasValidSession,
+            route: decision.requiresSignIn
+                ? '/sign-in'
+                : decision.browserRoutePath,
+            caller: 'AppInitializer');
 
         if (decision.requiresSignIn) {
           if (!mounted) return;
@@ -643,6 +651,12 @@ class _AppInitializerState extends State<AppInitializer> {
             arguments: decision.signInArguments,
           );
           return;
+        }
+
+        if (!hasValidSession &&
+            decision.accessPolicy == DeepLinkAccessPolicy.publicRead) {
+          await GuestSessionService.activateGuestMode(prefs: prefs);
+          unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
         }
 
         // Do not block the deep-link cold-start shell on warm-up. The
@@ -659,6 +673,8 @@ class _AppInitializerState extends State<AppInitializer> {
         final destination = decision.preferredShellRoute == ShellRoutes.map
             ? const ShellEntryScreen.map()
             : const MainApp();
+        StartupTrace.publicEntry('shell_route',
+            route: decision.preferredShellRoute, caller: 'AppInitializer');
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,

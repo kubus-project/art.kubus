@@ -68,7 +68,8 @@ void main() {
         localeCode: 'en',
       ),
     );
-    expect(collectible.target, isNull);
+    expect(collectible.target?.type, 'collectible');
+    expect(collectible.target?.path, '/en/collectibles/nft-1');
   });
 
   test('covers the localized public-read entity route matrix', () {

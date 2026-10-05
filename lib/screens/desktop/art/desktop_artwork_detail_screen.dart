@@ -47,12 +47,14 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
   final bool showAppBar;
   final String? attendanceMarkerId;
+  final ShareEntityType publicEntityType;
 
   const DesktopArtworkDetailScreen({
     super.key,
     required this.artworkId,
     this.showAppBar = false,
     this.attendanceMarkerId,
+    this.publicEntityType = ShareEntityType.artwork,
   });
 
   @override
@@ -73,12 +75,13 @@ class _DesktopArtworkDetailScreenState
 
   String _publicReturnRoute(BuildContext context) {
     try {
-      return context.read<PublicEntityTakeoverProvider>().returnRouteForArtwork(
+      return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                widget.publicEntityType,
                 widget.artworkId,
               ) ??
-          '/a/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
     } catch (_) {
-      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
     }
   }
 
@@ -239,7 +242,9 @@ class _DesktopArtworkDetailScreenState
           );
         }
 
-        if (artwork == null) {
+        if (artwork == null ||
+            (widget.publicEntityType == ShareEntityType.nft &&
+                (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
           return Scaffold(
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
@@ -263,7 +268,9 @@ class _DesktopArtworkDetailScreenState
         _scheduleTakeoverReady(artwork.id);
         final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
           context,
-          type: 'artwork',
+          type: widget.publicEntityType == ShareEntityType.nft
+              ? 'collectible'
+              : 'artwork',
           id: artwork.id,
         );
         final coverUrl = ArtworkMediaResolver.resolveCover(
@@ -458,7 +465,8 @@ class _DesktopArtworkDetailScreenState
       if (!mounted) return;
       try {
         unawaited(
-          context.read<PublicEntityTakeoverProvider>().markArtworkReady(
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                widget.publicEntityType,
                 artworkId,
               ),
         );

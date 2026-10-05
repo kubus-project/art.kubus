@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
+import '../core/startup_trace.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
@@ -237,6 +238,10 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     // both redundant and unsafe: Firefox can leave that Future pending forever
     // when the static detail view does not request another frame.
     _readyDispatched = true;
+    StartupTrace.publicEntry('entity_ready',
+        entityType: current.type,
+        route: current.path,
+        caller: 'PublicEntityTakeoverProvider');
     dispatchPublicEntityReady(
       type: current.type,
       id: current.id,
@@ -265,7 +270,8 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       ShareEntityType.collection => locale == 'sl' ? 'zbirke' : 'collections',
       ShareEntityType.post => locale == 'sl' ? 'objave' : 'posts',
       ShareEntityType.marker => locale == 'sl' ? 'zemljevid' : 'map',
-      ShareEntityType.nft => null,
+      ShareEntityType.nft =>
+        locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
     };
   }
 
@@ -278,7 +284,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       ShareEntityType.collection => 'collection',
       ShareEntityType.post => 'post',
       ShareEntityType.marker => 'marker',
-      ShareEntityType.nft => null,
+      ShareEntityType.nft => 'collectible',
     };
   }
 }

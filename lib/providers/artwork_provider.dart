@@ -175,8 +175,10 @@ class ArtworkProvider extends ChangeNotifier {
       'longitude': longitude is num ? longitude.toDouble() : 0.0,
       'isPublic': true,
       'isActive': true,
-      'isNft': false,
-      'category': 'Public artwork',
+      'isNft': presentation['type'] == 'collectible',
+      'category': presentation['type'] == 'collectible'
+          ? 'Public collectible'
+          : 'Public artwork',
       'createdAt': DateTime.now().toUtc().toIso8601String(),
       'metadata': <String, dynamic>{
         if (imageCreator != null) 'imageAuthor': imageCreator,
