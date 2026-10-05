@@ -10547,10 +10547,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
     addMeta(
       'creators',
-      json['creators'] ??
-          json['artists'] ??
-          json['collaborators'] ??
-          json['contributors'],
+      json['artists'] ?? json['creators'],
     );
     addMeta(
       'creatorWallets',

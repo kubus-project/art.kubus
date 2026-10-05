@@ -52,10 +52,12 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       String? wallet;
       try {
         if (payload is Map) {
-          wallet = (payload['walletAddress'] ?? payload['wallet_address'])?.toString();
+          wallet = (payload['walletAddress'] ?? payload['wallet_address'])
+              ?.toString();
         } else {
           // UserProfile model is not imported here; best-effort extraction.
-          wallet = (payload?.walletAddress ?? payload?.wallet_address)?.toString();
+          wallet =
+              (payload?.walletAddress ?? payload?.wallet_address)?.toString();
         }
       } catch (_) {
         wallet = null;
@@ -63,7 +65,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
       final normalized = (wallet ?? '').trim();
       if (normalized.isEmpty) return;
-      if (_creators.any((c) => (c.userId ?? '').toLowerCase() == normalized.toLowerCase())) {
+      if (_creators.any(
+          (c) => (c.userId ?? '').toLowerCase() == normalized.toLowerCase())) {
         _resolveCreatorNames(forceRefresh: true);
       }
     });
@@ -100,7 +103,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final futures = ids.map((id) async {
       try {
-        final User? user = await UserService.getUserById(id, forceRefresh: forceRefresh);
+        final User? user =
+            await UserService.getUserById(id, forceRefresh: forceRefresh);
         final name = (user?.name ?? '').trim();
         final username = (user?.username ?? '').trim();
         if (name.isNotEmpty || username.isNotEmpty) {
@@ -126,13 +130,9 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
     final creators = _creators;
     if (creators.isEmpty) {
       final artist = widget.artwork.artist.trim();
-      final walletFallback = _extractFallbackWallet(widget.artwork.metadata);
-      final compactWallet = _compactWallet(
-        WalletUtils.looksLikeWallet(artist) ? artist : walletFallback,
-      );
-      final safeArtist = artist.isNotEmpty && !WalletUtils.looksLikeWallet(artist)
+      final safeArtist = _isRecordedArtist(artist)
           ? artist
-          : (compactWallet ?? (l10n?.commonUnknown ?? 'Unknown artist'));
+          : (l10n?.commonUnknownArtist ?? 'Unknown artist');
       return Text(
         safeArtist,
         style: baseStyle,
@@ -148,7 +148,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       // Example: EN "by {artist}" -> ["by ", ""]
       // Some locales might place the placeholder elsewhere.
       final marker = '\u{FFFF}';
-      final template = (l10n != null) ? l10n.commonByArtist(marker) : 'by $marker';
+      final template =
+          (l10n != null) ? l10n.commonByArtist(marker) : 'by $marker';
       final parts = template.split(marker);
       prefix = parts.isNotEmpty ? parts.first : '';
       suffix = parts.length > 1 ? parts.sublist(1).join(marker) : '';
@@ -156,7 +157,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final linkStyle = baseStyle.copyWith(
       color: colorScheme.primary,
-      decoration: widget.linkToProfile ? TextDecoration.underline : TextDecoration.none,
+      decoration:
+          widget.linkToProfile ? TextDecoration.underline : TextDecoration.none,
       decorationColor: colorScheme.primary,
     );
 
@@ -175,12 +177,20 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       final resolved = (userId != null && userId.isNotEmpty)
           ? _resolvedIdentityByUserId[userId]
           : null;
-      final primaryLabel = (resolved?.name ?? creator.label).trim();
+      // A platform profile must never replace a recorded authorship label.
+      final primaryLabel = (_isRecordedArtist(creator.label)
+              ? creator.label
+              : (resolved?.name ?? creator.label))
+          .trim();
       final rawUsername = (resolved?.username ?? creator.username);
-      final username = (widget.showUsername && rawUsername != null && rawUsername.trim().isNotEmpty)
+      final username = (widget.showUsername &&
+              rawUsername != null &&
+              rawUsername.trim().isNotEmpty)
           ? rawUsername.trim()
           : null;
-      final combinedLabel = username == null ? primaryLabel : '$primaryLabel @${username.startsWith('@') ? username.substring(1) : username}';
+      final combinedLabel = username == null
+          ? primaryLabel
+          : '$primaryLabel @${username.startsWith('@') ? username.substring(1) : username}';
 
       if (userId != null && userId.isNotEmpty && widget.linkToProfile) {
         spans.add(
@@ -235,11 +245,13 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
     final safeUserId = (userId ?? '').trim();
     if (safeLabel.isEmpty && safeUserId.isEmpty) return;
 
-    final display = (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
-        ? safeLabel
-        : (_compactWallet(
-                WalletUtils.looksLikeWallet(safeUserId) ? safeUserId : safeLabel) ??
-            'Unknown artist');
+    final display =
+        (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
+            ? safeLabel
+            : (_compactWallet(WalletUtils.looksLikeWallet(safeUserId)
+                    ? safeUserId
+                    : safeLabel) ??
+                'Unknown artist');
 
     creators.add(
       _CreatorRef(
@@ -253,17 +265,14 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
   final meta = artwork.metadata;
 
   // Try rich creator lists first.
-  dynamic raw = meta?['creators'] ??
-      meta?['artists'] ??
-      meta?['collaborators'] ??
-      meta?['contributors'];
+  dynamic raw = meta?['artists'] ?? meta?['creators'];
 
   if (raw is List) {
     for (final entry in raw) {
       if (entry is String) {
         final s = entry.trim();
         add(
-          userId: s,
+          userId: WalletUtils.looksLikeWallet(s) ? s : null,
           label: WalletUtils.looksLikeWallet(s) ? null : s,
         );
       } else if (entry is Map) {
@@ -281,40 +290,34 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
             map['artist_name'] ??
             map['name'];
         final username = map['username'];
-        add(userId: userId?.toString(), label: label?.toString(), username: username?.toString());
+        add(
+            userId: userId?.toString(),
+            label: label?.toString(),
+            username: username?.toString());
       }
     }
   }
 
   // Try a list of wallet addresses.
-  final rawWallets = meta?['creatorWallets'] ??
-      meta?['creatorWalletAddresses'] ??
-      meta?['walletAddresses'] ??
-      meta?['wallets'];
+  final rawWallets = meta?['creatorWallets'] ?? meta?['creatorWalletAddresses'];
   if (creators.isEmpty && rawWallets is List) {
     for (final entry in rawWallets) {
       add(userId: entry?.toString(), label: null);
     }
   }
 
-  // Fallback: single creator wallet + artwork.artist label.
+  // Generic wallet/creator ownership identifies the contributor, not the
+  // cultural author. Link only an explicitly recorded artist identity.
   if (creators.isEmpty) {
-    final wallet = (meta?['walletAddress'] ??
-            meta?['wallet_address'] ??
-            meta?['artistWallet'] ??
-            meta?['artistWalletAddress'] ??
-            meta?['creatorWallet'] ??
-            meta?['creatorWalletAddress'])
-        ?.toString();
+    final wallet =
+        (meta?['artistWallet'] ?? meta?['artistWalletAddress'])?.toString();
 
     final rawArtistName = meta?['artistName'] ?? meta?['artist_name'];
     final artistName = rawArtistName?.toString().trim();
     final labelCandidate = artwork.artist.trim().isNotEmpty
         ? artwork.artist.trim()
         : (artistName != null && artistName.isNotEmpty ? artistName : '');
-    final label = labelCandidate.isNotEmpty && !WalletUtils.looksLikeWallet(labelCandidate)
-        ? labelCandidate
-        : (_compactWallet(wallet ?? labelCandidate) ?? 'Unknown artist');
+    final label = _isRecordedArtist(labelCandidate) ? labelCandidate : '';
 
     add(userId: wallet, label: label);
   }
@@ -360,33 +363,14 @@ String? _normalizeBylineLabel(String label) {
   return _compactWallet(clean) ?? 'Unknown artist';
 }
 
-String? _extractFallbackWallet(Map<String, dynamic>? meta) {
-  if (meta == null || meta.isEmpty) return null;
-  for (final key in const <String>[
-    'walletAddress',
-    'wallet_address',
-    'artistWallet',
-    'artist_wallet',
-    'creatorWallet',
-    'creator_wallet',
-    'creatorWalletAddress',
-    'creator_wallet_address',
-  ]) {
-    final raw = meta[key]?.toString().trim();
-    if (raw != null && raw.isNotEmpty && WalletUtils.looksLikeWallet(raw)) {
-      return raw;
-    }
-  }
-  return null;
-}
+bool _isRecordedArtist(String label) =>
+    label.trim().isNotEmpty &&
+    !WalletUtils.looksLikeWallet(label) &&
+    !{'unknown', 'unknown artist'}.contains(label.trim().toLowerCase());
 
 List<String> _extractCreatorBylineLabels(Map<String, dynamic>? meta) {
   if (meta == null || meta.isEmpty) return const <String>[];
-  final raw = meta['creator_name_byline'] ??
-      meta['creatorNameByline'] ??
-      meta['creator_byline'] ??
-      meta['creatorByline'] ??
-      meta['artist_name_byline'] ??
+  final raw = meta['artist_name_byline'] ??
       meta['artistNameByline'] ??
       meta['artist_byline'] ??
       meta['artistByline'];
