@@ -1,3 +1,4 @@
+import '../../core/document_title_observer.dart';
 import 'dart:convert';
 
 import 'dart:async';
@@ -305,88 +306,91 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         }
 
         _scheduleTakeoverReady(artwork.id);
-        return AnimatedGradientBackground(
-          child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            body: CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                _buildAppBar(artwork),
-                SliverToBoxAdapter(
-                  child: Padding(
+        return DocumentTitle(
+          title: artwork.title,
+          child: AnimatedGradientBackground(
+            child: Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              body: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  _buildAppBar(artwork),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        DetailSpacing.lg,
+                        DetailSpacing.md,
+                        DetailSpacing.lg,
+                        0,
+                      ),
+                      child: AspectRatio(
+                        // The server frame uses the portrait public
+                        // artwork crop at this same compact width.
+                        aspectRatio: 0.77,
+                        child: _buildPreviewCoverImage(
+                          ArtworkMediaResolver.resolveCover(artwork: artwork),
+                          semanticLabel: artwork.title.trim().isEmpty
+                              ? 'Artwork image'
+                              : '${artwork.title} image',
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
                       DetailSpacing.lg,
-                      DetailSpacing.md,
+                      DetailSpacing.xl,
                       DetailSpacing.lg,
-                      0,
+                      DetailSpacing.xl,
                     ),
-                    child: AspectRatio(
-                      // The server frame uses the portrait public
-                      // artwork crop at this same compact width.
-                      aspectRatio: 0.77,
-                      child: _buildPreviewCoverImage(
-                        ArtworkMediaResolver.resolveCover(artwork: artwork),
-                        semanticLabel: artwork.title.trim().isEmpty
-                            ? 'Artwork image'
-                            : '${artwork.title} image',
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DetailSpacing.lg,
-                    DetailSpacing.xl,
-                    DetailSpacing.lg,
-                    DetailSpacing.xl,
-                  ),
-                  sliver: SliverList(
-                    // Editorial rhythm: major zones breathe with the
-                    // larger card gap instead of packing tightly.
-                    delegate: SliverChildListDelegate([
-                      _buildArtInfo(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildPrimaryActionButtons(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildDescription(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      ArtworkProvenanceSection(artwork: artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildGallerySection(artwork),
-                      if (artwork.galleryUrls.isNotEmpty)
+                    sliver: SliverList(
+                      // Editorial rhythm: major zones breathe with the
+                      // larger card gap instead of packing tightly.
+                      delegate: SliverChildListDelegate([
+                        _buildArtInfo(artwork),
                         const SizedBox(height: DetailSpacing.cardGap),
-                      ArtworkSpatialArchiveSection(
-                        artwork: artwork,
-                        contextMarkerId: widget.attendanceMarkerId,
-                      ),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildSocialStats(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildAdditionalActions(
-                        artwork,
-                        isOwner: isOwner,
-                        canManage: canManage,
-                      ),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      if (AppConfig.isFeatureEnabled('collabInvites') &&
-                          isSignedIn) ...[
-                        CollaborationPanel(
-                          entityType: 'artworks',
-                          entityId: artwork.id,
-                          myRole: isOwner ? 'owner' : null,
+                        _buildPrimaryActionButtons(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildDescription(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        ArtworkProvenanceSection(artwork: artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildGallerySection(artwork),
+                        if (artwork.galleryUrls.isNotEmpty)
+                          const SizedBox(height: DetailSpacing.cardGap),
+                        ArtworkSpatialArchiveSection(
+                          artwork: artwork,
+                          contextMarkerId: widget.attendanceMarkerId,
                         ),
-                        const SizedBox(height: DetailSpacing.xl),
-                      ],
-                      _buildCommentsSection(artwork, artworkProvider),
-                      const SizedBox(height: 100), // Bottom padding
-                    ]),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildSocialStats(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildAdditionalActions(
+                          artwork,
+                          isOwner: isOwner,
+                          canManage: canManage,
+                        ),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        if (AppConfig.isFeatureEnabled('collabInvites') &&
+                            isSignedIn) ...[
+                          CollaborationPanel(
+                            entityType: 'artworks',
+                            entityId: artwork.id,
+                            myRole: isOwner ? 'owner' : null,
+                          ),
+                          const SizedBox(height: DetailSpacing.xl),
+                        ],
+                        _buildCommentsSection(artwork, artworkProvider),
+                        const SizedBox(height: 100), // Bottom padding
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              floatingActionButton: (_showComments && isSignedIn)
+                  ? _buildCommentFAB(artwork)
+                  : null,
             ),
-            floatingActionButton: (_showComments && isSignedIn)
-                ? _buildCommentFAB(artwork)
-                : null,
           ),
         );
       },
