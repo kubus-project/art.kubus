@@ -1,3 +1,4 @@
+import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_cover_field.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
@@ -262,71 +263,61 @@ class _ProfileScreenState extends State<ProfileScreen>
     return body;
   }
 
-  /// Two-column layout from 1200 px: the wide main column carries cultural
-  /// content; the narrow side column carries owner context (compact stats,
-  /// account health, badges, performance, achievements).
+  /// "My profile" follows the public profile's hierarchy (see
+  /// [ownerProfileSections]): identity (the card above), work, activity,
+  /// recognition, closing stats, then the owner's tools as their own block.
+  ///
+  /// Two-column from 1200 px: the wide main column carries work and posts; the
+  /// narrow side column carries recognition (badges, achievements). The stats
+  /// and the owner's tools follow full width.
   Widget _buildTwoColumnLayout({
     required ThemeProvider themeProvider,
     required ProfileProvider profileProvider,
     required bool isArtist,
     required bool isInstitution,
   }) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Main column: cultural content leads the viewport.
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isArtist) ...[
-                _buildArtistPortfolioSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-                _buildArtistCollectionsSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-                _buildArtistEventsSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-              ] else if (isInstitution) ...[
-                _buildInstitutionEventsSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-                _buildInstitutionCollectionsSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-              ] else ...[
-                _buildViewedArtworksSection(themeProvider),
-                const SizedBox(height: DetailSpacing.lg),
-              ],
-              _buildSavedItemsSection(themeProvider),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildPostsSection(themeProvider),
-            ],
-          ),
-        ),
-        const SizedBox(width: DetailSpacing.xl),
-        // Side column: owner context and account administration.
-        SizedBox(
-          width: 360,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildStatsCards(themeProvider, profileProvider, false),
-              const SizedBox(height: DetailSpacing.lg),
-              const ProfileAccountHealthSection(
-                bottomSpacing: DetailSpacing.lg,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ..._workSections(
+                    themeProvider,
+                    isArtist: isArtist,
+                    isInstitution: isInstitution,
+                  ),
+                  _buildPostsSection(themeProvider),
+                ],
               ),
-              _buildBadgesVerificationSection(),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildPerformanceStatsSection(),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildAchievementsSection(),
-            ],
-          ),
+            ),
+            const SizedBox(width: DetailSpacing.xl),
+            SizedBox(
+              width: 360,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildBadgesVerificationSection(),
+                  const SizedBox(height: DetailSpacing.lg),
+                  _buildAchievementsSection(),
+                ],
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: DetailSpacing.xl),
+        _buildStatsCards(themeProvider, profileProvider, true),
+        ..._ownerTools(themeProvider,
+            isArtist: isArtist, isInstitution: isInstitution),
       ],
     );
   }
 
-  /// Single column layout for narrower screens (<1200px): cultural content
-  /// first, then owner stats and account administration.
+  /// Single column for narrower screens (<1200px), same order.
   Widget _buildSingleColumnContent({
     required ThemeProvider themeProvider,
     required ProfileProvider profileProvider,
@@ -336,39 +327,80 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isArtist) ...[
-          _buildArtistPortfolioSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-          _buildArtistCollectionsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-          _buildArtistEventsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-        ] else if (isInstitution) ...[
-          _buildInstitutionEventsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-          _buildInstitutionCollectionsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-        ],
-        if (!isArtist && !isInstitution) ...[
-          _buildViewedArtworksSection(themeProvider),
-          const SizedBox(height: DetailSpacing.lg),
-        ],
-        _buildSavedItemsSection(themeProvider),
-        const SizedBox(height: DetailSpacing.lg),
-        _buildStatsCards(themeProvider, profileProvider, false),
-        const SizedBox(height: DetailSpacing.lg),
-        const ProfileAccountHealthSection(
-          bottomSpacing: DetailSpacing.lg,
+        ..._workSections(
+          themeProvider,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
         ),
-        _buildPerformanceStatsSection(),
+        _buildPostsSection(themeProvider),
         const SizedBox(height: DetailSpacing.lg),
         _buildBadgesVerificationSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildAchievementsSection(),
-        const SizedBox(height: DetailSpacing.lg),
-        _buildPostsSection(themeProvider),
+        const SizedBox(height: DetailSpacing.xl),
+        _buildStatsCards(themeProvider, profileProvider, false),
+        ..._ownerTools(themeProvider,
+            isArtist: isArtist, isInstitution: isInstitution),
       ],
     );
+  }
+
+  /// [ProfileSection.work]: only the parts that apply to the role, each
+  /// followed by its gap.
+  List<Widget> _workSections(
+    ThemeProvider themeProvider, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    const gap = SizedBox(height: DetailSpacing.lg);
+    return [
+      if (isArtist) ...[
+        _buildArtistPortfolioSection(themeProvider),
+        gap,
+        _buildArtistCollectionsSection(themeProvider),
+        gap,
+        _buildArtistEventsSection(themeProvider),
+        gap,
+      ] else if (isInstitution) ...[
+        _buildInstitutionEventsSection(themeProvider),
+        gap,
+        _buildInstitutionCollectionsSection(themeProvider),
+        gap,
+      ],
+    ];
+  }
+
+  /// [ProfileSection.ownerTools]: account health, saved items, what the owner
+  /// has viewed and performance. After the public-facing sections, as one
+  /// clearly separate block, never inside the profile narrative.
+  List<Widget> _ownerTools(
+    ThemeProvider themeProvider, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    const gap = SizedBox(height: DetailSpacing.lg);
+    return [
+      const SizedBox(height: DetailSpacing.xxl),
+      Divider(
+        height: KubusSizes.hairline,
+        thickness: KubusSizes.hairline,
+      ),
+      gap,
+      KubusHeaderText(
+        title: l10n.settingsGroupAccount,
+        kind: KubusHeaderKind.section,
+      ),
+      const SizedBox(height: DetailSpacing.md),
+      const ProfileAccountHealthSection(bottomSpacing: DetailSpacing.lg),
+      _buildSavedItemsSection(themeProvider),
+      if (!isArtist && !isInstitution) ...[
+        gap,
+        _buildViewedArtworksSection(themeProvider),
+      ],
+      gap,
+      _buildPerformanceStatsSection(),
+    ];
   }
 
   /// Owner utility actions use the same canonical square controls as the

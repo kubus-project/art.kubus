@@ -36,6 +36,7 @@ import '../web3/wallet/wallet_home.dart';
 import '../settings_screen.dart';
 import '../activity/saved_items_screen.dart';
 import 'profile_screen_methods.dart';
+import 'profile_section_order.dart';
 import '../activity/view_history_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../models/artwork.dart';
@@ -228,77 +229,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      _buildProfileHeader(
-                          isArtist: isArtist, isInstitution: isInstitution),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
-                          ),
-                          child: ProfileAccountHealthSection(
-                            bottomSpacing: DetailSpacing.xl,
-                          ),
+                      // The public profile's hierarchy (identity, work,
+                      // activity, recognition, closing stats), then the
+                      // owner's tools as their own secondary block.
+                      for (final section in ownerProfileSections)
+                        ..._sectionSlivers(
+                          section,
+                          isArtist: isArtist,
+                          isInstitution: isInstitution,
                         ),
-                      ),
-                      _buildStatsSection(),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
-                      SliverToBoxAdapter(
-                        child: ProfileBadgesVerificationSection(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      SliverToBoxAdapter(child: _buildSavedArtworksSection()),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      if (isArtist) ...[
-                        SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
-                        const SliverToBoxAdapter(
-                            child: SizedBox(height: DetailSpacing.xl)),
-                      ],
-                      SliverToBoxAdapter(
-                        child: isInstitution
-                            ? _buildInstitutionHighlightsSection()
-                            : const ProfileAchievementsPreviewSection(
-                                mode: ProfileAchievementsPreviewMode.ownProfile,
-                                padding: EdgeInsets.symmetric(horizontal: 24),
-                              ),
-                      ),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      SliverToBoxAdapter(child: _buildPerformanceStats()),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.lg)),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
-                          ),
-                          child: Divider(
-                            height: KubusSizes.hairline,
-                            thickness: KubusSizes.hairline,
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.lg)),
-                      SliverToBoxAdapter(child: _buildPostsSection()),
-                      if (isArtist) ...[
-                        const SliverToBoxAdapter(
-                            child: SizedBox(height: DetailSpacing.xl)),
-                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
-                      ],
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xxl)),
-                      const SliverToBoxAdapter(
-                        child: SizedBox.shrink(),
-                      ),
                       SliverToBoxAdapter(
                         child: SizedBox(
                           height: keyboardVisible
@@ -316,6 +257,94 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
     );
+  }
+
+  /// The slivers of one [ProfileSection] of "My profile".
+  List<Widget> _sectionSlivers(
+    ProfileSection section, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    const gap = SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl));
+    switch (section) {
+      case ProfileSection.identity:
+        return [
+          _buildProfileHeader(isArtist: isArtist, isInstitution: isInstitution),
+          const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+        ];
+      case ProfileSection.work:
+        return [
+          if (isArtist) ...[
+            SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
+            gap,
+            SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
+            gap,
+          ],
+          if (isInstitution) ...[
+            SliverToBoxAdapter(child: _buildInstitutionHighlightsSection()),
+            gap,
+          ],
+        ];
+      case ProfileSection.publicArt:
+        // Added public art is shown on the viewed profile; the owner reaches
+        // the same records through the Artworks statistic below.
+        return const [];
+      case ProfileSection.activity:
+        return [SliverToBoxAdapter(child: _buildPostsSection()), gap];
+      case ProfileSection.recognition:
+        return [
+          const SliverToBoxAdapter(
+            child: ProfileAchievementsPreviewSection(
+              mode: ProfileAchievementsPreviewMode.ownProfile,
+              padding: EdgeInsets.symmetric(horizontal: 24),
+            ),
+          ),
+          gap,
+          const SliverToBoxAdapter(
+            child: ProfileBadgesVerificationSection(
+              padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg),
+            ),
+          ),
+          gap,
+        ];
+      case ProfileSection.stats:
+        return [_buildStatsSection()];
+      case ProfileSection.ownerTools:
+        return [
+          const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xxl)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.lg),
+              child: Divider(
+                height: KubusSizes.hairline,
+                thickness: KubusSizes.hairline,
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.lg)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.lg),
+              child: KubusHeaderText(
+                title: AppLocalizations.of(context)!.settingsGroupAccount,
+                kind: KubusHeaderKind.section,
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.md)),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg),
+              child: ProfileAccountHealthSection(
+                bottomSpacing: DetailSpacing.xl,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: _buildSavedArtworksSection()),
+          gap,
+          SliverToBoxAdapter(child: _buildPerformanceStats()),
+        ];
+    }
   }
 
   Widget _buildProfileHeader(
