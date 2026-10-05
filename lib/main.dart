@@ -98,6 +98,7 @@ import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/guest_session_service.dart';
+import 'services/public_entity_takeover_bridge.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
@@ -439,7 +440,9 @@ class _AppLauncherState extends State<AppLauncher> {
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               onGenerateTitle: (context) =>
-                  AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+                  publicEntityDocumentTitle() ??
+                  AppLocalizations.of(context)?.appTitle ??
+                  'art.kubus',
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -1550,7 +1553,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           onGenerateTitle: (context) =>
-              AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+              publicEntityDocumentTitle() ??
+              AppLocalizations.of(context)?.appTitle ??
+              'art.kubus',
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
