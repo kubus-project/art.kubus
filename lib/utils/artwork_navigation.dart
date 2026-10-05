@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/public_entity_takeover_provider.dart';
 import '../screens/art/art_detail_screen.dart';
 import '../screens/desktop/art/desktop_artwork_detail_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -18,6 +19,17 @@ Future<void> openArtwork(
   var id = artworkId.trim();
   if (id.isEmpty) return;
   final publicEntryId = id;
+
+  if (publicEntityType == ShareEntityType.nft) {
+    try {
+      final presentation = context
+          .read<PublicEntityTakeoverProvider>()
+          .publicPresentationForCanonicalPath(
+              type: 'collectible', id: publicEntryId, pathname: Uri.base.path);
+      final backingId = presentation?['backingArtworkId']?.toString().trim();
+      if (backingId != null && backingId.isNotEmpty) id = backingId;
+    } catch (_) {}
+  }
 
   if (publicEntityType == ShareEntityType.nft &&
       !RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')

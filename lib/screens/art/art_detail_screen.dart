@@ -653,8 +653,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   label: l10n.commonShare,
                   onPressed: () => ShareService().showShareSheet(
                     context,
-                    target: ShareTarget.artwork(
+                    target: ShareTarget.artworkDetail(
                       artworkId: artwork.id,
+                      publicEntityType: widget.publicEntityType,
+                      publicEntityId: widget.publicEntryId,
                       title: artwork.title,
                     ),
                     sourceScreen: 'art_detail',
@@ -1066,8 +1068,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           onSelected: () {
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.artwork(
+              target: ShareTarget.artworkDetail(
                 artworkId: artwork.id,
+                publicEntityType: widget.publicEntityType,
+                publicEntityId: widget.publicEntryId,
                 title: artwork.title,
               ),
               sourceScreen: 'art_detail',

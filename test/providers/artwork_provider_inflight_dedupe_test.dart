@@ -97,6 +97,49 @@ class _FakeArtworkApi implements ArtworkBackendApi {
 
 void main() {
   test(
+      'collectible bootstrap caches the explicit backing record, not the route ID',
+      () {
+    final provider = ArtworkProvider(backendApi: _FakeArtworkApi());
+    provider.seedPublicPresentation({
+      'version': 2,
+      'type': 'collectible',
+      'id': 'collectible-route',
+      'backingArtworkId': 'backing-record',
+      'title': 'Public edition',
+    });
+    expect(provider.getArtworkById('collectible-route'), isNull);
+    expect(provider.getArtworkById('backing-record')?.isNft, isTrue);
+  });
+
+  test(
+      'older collectible bootstrap without backing identity falls back to fetch',
+      () async {
+    final api = _FakeArtworkApi()..completer = Completer<Artwork>();
+    final provider = ArtworkProvider(backendApi: api);
+    provider.seedPublicPresentation({
+      'version': 2,
+      'type': 'collectible',
+      'id': 'opened-mint',
+      'title': 'Public edition',
+    });
+    expect(provider.getArtworkById('opened-mint'), isNull);
+    final fetch = provider.fetchArtworkIfNeeded('opened-mint');
+    expect(api.getArtworkCalls, 1);
+    api.completer!.complete(Artwork(
+        id: 'backing-record',
+        title: 'Public edition',
+        artist: 'Artist',
+        description: '',
+        position: const LatLng(0, 0),
+        rewards: 0,
+        createdAt: DateTime(2026),
+        isNft: true));
+    expect((await fetch)?.id, 'backing-record');
+    expect(provider.getArtworkById('opened-mint'), isNull);
+    expect(provider.getArtworkById('backing-record')?.isNft, isTrue);
+  });
+
+  test(
       'ArtworkProvider.fetchArtworkIfNeeded dedupes in-flight getArtwork calls',
       () async {
     final api = _FakeArtworkApi()..completer = Completer<Artwork>();

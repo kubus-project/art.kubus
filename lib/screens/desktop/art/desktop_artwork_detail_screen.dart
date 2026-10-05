@@ -891,8 +891,10 @@ class _DesktopArtworkDetailScreenState
               label: l10n.commonShare,
               onPressed: () => ShareService().showShareSheet(
                 context,
-                target: ShareTarget.artwork(
+                target: ShareTarget.artworkDetail(
                   artworkId: artwork.id,
+                  publicEntityType: widget.publicEntityType,
+                  publicEntityId: widget.publicEntryId,
                   title: artwork.title,
                 ),
                 sourceScreen: 'desktop_art_detail',

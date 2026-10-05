@@ -668,6 +668,7 @@ class _AppInitializerState extends State<AppInitializer> {
         }
 
         if (!hasValidSession &&
+            !hasLocalAccount &&
             decision.accessPolicy == DeepLinkAccessPolicy.publicRead) {
           await GuestSessionService.activateGuestMode(prefs: prefs);
           unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
