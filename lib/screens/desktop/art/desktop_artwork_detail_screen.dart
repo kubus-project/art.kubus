@@ -48,12 +48,17 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
   final bool showAppBar;
   final String? attendanceMarkerId;
+  final ShareEntityType publicEntityType;
+  final String? publicEntityId;
+  String get publicEntryId => publicEntityId ?? artworkId;
 
   const DesktopArtworkDetailScreen({
     super.key,
     required this.artworkId,
     this.showAppBar = false,
     this.attendanceMarkerId,
+    this.publicEntityType = ShareEntityType.artwork,
+    this.publicEntityId,
   });
 
   @override
@@ -74,12 +79,13 @@ class _DesktopArtworkDetailScreenState
 
   String _publicReturnRoute(BuildContext context) {
     try {
-      return context.read<PublicEntityTakeoverProvider>().returnRouteForArtwork(
-                widget.artworkId,
+      return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                widget.publicEntityType,
+                widget.publicEntryId,
               ) ??
-          '/a/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
-      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     }
   }
 
@@ -240,7 +246,9 @@ class _DesktopArtworkDetailScreenState
           );
         }
 
-        if (artwork == null) {
+        if (artwork == null ||
+            (widget.publicEntityType == ShareEntityType.nft &&
+                (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
           return Scaffold(
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
@@ -264,8 +272,10 @@ class _DesktopArtworkDetailScreenState
         _scheduleTakeoverReady(artwork.id);
         final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
           context,
-          type: 'artwork',
-          id: artwork.id,
+          type: widget.publicEntityType == ShareEntityType.nft
+              ? 'collectible'
+              : 'artwork',
+          id: widget.publicEntryId,
         );
         final coverUrl = ArtworkMediaResolver.resolveCover(
           artwork: artwork,
@@ -462,8 +472,9 @@ class _DesktopArtworkDetailScreenState
       if (!mounted) return;
       try {
         unawaited(
-          context.read<PublicEntityTakeoverProvider>().markArtworkReady(
-                artworkId,
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                widget.publicEntityType,
+                widget.publicEntryId,
               ),
         );
       } catch (_) {}
@@ -707,8 +718,10 @@ class _DesktopArtworkDetailScreenState
       return context
           .read<PublicEntityTakeoverProvider>()
           .publicPlaceLabelForCanonicalPath(
-            type: 'artwork',
-            id: artworkId,
+            type: widget.publicEntityType == ShareEntityType.nft
+                ? 'collectible'
+                : 'artwork',
+            id: widget.publicEntryId,
             pathname: Uri.base.path,
           );
     } catch (_) {
@@ -882,8 +895,10 @@ class _DesktopArtworkDetailScreenState
               label: l10n.commonShare,
               onPressed: () => ShareService().showShareSheet(
                 context,
-                target: ShareTarget.artwork(
+                target: ShareTarget.artworkDetail(
                   artworkId: artwork.id,
+                  publicEntityType: widget.publicEntityType,
+                  publicEntityId: widget.publicEntryId,
                   title: artwork.title,
                 ),
                 sourceScreen: 'desktop_art_detail',

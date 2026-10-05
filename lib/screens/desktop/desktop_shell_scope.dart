@@ -25,7 +25,8 @@ bool matchesCanonicalPublicEntry({
     ShareEntityType.exhibition => 'exhibition',
     ShareEntityType.collection => 'collection',
     ShareEntityType.post => 'post',
-    ShareEntityType.marker || ShareEntityType.nft => null,
+    ShareEntityType.nft => 'collectible',
+    ShareEntityType.marker => null,
   };
   if (requestedType == null ||
       seededTarget.type != requestedType ||
@@ -42,7 +43,9 @@ bool matchesCanonicalPublicEntry({
     ShareEntityType.exhibition => locale == 'sl' ? 'razstave' : 'exhibitions',
     ShareEntityType.collection => locale == 'sl' ? 'zbirke' : 'collections',
     ShareEntityType.post => locale == 'sl' ? 'objave' : 'posts',
-    ShareEntityType.marker || ShareEntityType.nft => null,
+    ShareEntityType.nft =>
+      locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
+    ShareEntityType.marker => null,
   };
   if (segment == null) return false;
   final requestedPath =

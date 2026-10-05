@@ -7,6 +7,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('matchesCanonicalPublicEntry', () {
+    test('accepts exact public collectible routes in both locales', () {
+      for (final locale in ['en', 'sl']) {
+        final segment =
+            locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles';
+        final path = '/$locale/$segment/collectible-1';
+        expect(
+          matchesCanonicalPublicEntry(
+            seededTarget: PublicEntityTakeoverTarget(
+              type: 'collectible',
+              id: 'collectible-1',
+              path: path,
+              browserRoute: path,
+            ),
+            requestedTarget: ShareDeepLinkTarget(
+              type: ShareEntityType.nft,
+              id: 'collectible-1',
+              localeCode: locale,
+            ),
+          ),
+          isTrue,
+        );
+      }
+    });
+
     test('accepts the exact localized artwork route and stable ID', () {
       final requested = ShareDeepLinkTarget(
         type: ShareEntityType.artwork,

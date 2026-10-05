@@ -37,6 +37,19 @@ import '../main_app.dart';
 import 'shell_entry_screen.dart';
 import 'shell_routes.dart';
 
+/// A public deep link stays public for everyone, but only a brand-new anonymous
+/// user is persisted as a guest; a returning local account with a lapsed server
+/// session is not (mirrors `resolveColdStartEntry`'s `!hasLocalAccount`).
+@visibleForTesting
+bool shouldActivateGuestForPublicEntry({
+  required bool hasValidSession,
+  required bool hasLocalAccount,
+  required DeepLinkAccessPolicy accessPolicy,
+}) =>
+    !hasValidSession &&
+    !hasLocalAccount &&
+    accessPolicy == DeepLinkAccessPolicy.publicRead;
+
 class AppInitializer extends StatefulWidget {
   const AppInitializer({
     super.key,
@@ -567,6 +580,14 @@ class _AppInitializerState extends State<AppInitializer> {
         return startWarmUp();
       }
 
+      // Initial AppLinks resolution is asynchronous. Decide public/auth entry
+      // only after it has had a bounded chance to seed its target. A later
+      // result is replayed by the platform listener after startup completes.
+      await _safeStep<void>('resolve platform initial link',
+          GuestSessionService.waitForPlatformInitialLinkResolution,
+          timeout: const Duration(seconds: 3));
+      if (!mounted || _didNavigate) return;
+
       final pendingAuthLink = (() {
         try {
           return Provider.of<AuthDeepLinkProvider>(context, listen: false)
@@ -579,6 +600,12 @@ class _AppInitializerState extends State<AppInitializer> {
         if (!mounted) return;
         _didNavigate = true;
         switch (pendingAuthLink.type) {
+          case AuthDeepLinkType.signIn:
+            navigator.pushReplacementNamed('/sign-in');
+            break;
+          case AuthDeepLinkType.register:
+            navigator.pushReplacementNamed('/register');
+            break;
           case AuthDeepLinkType.verifyEmail:
             navigator.pushReplacementNamed(
               '/verify-email',
@@ -634,6 +661,14 @@ class _AppInitializerState extends State<AppInitializer> {
           initialUri: widget.initialUri,
         );
         if (decision == null) return;
+        StartupTrace.publicEntry('startup_decision',
+            entityType: pendingDeepLink.type.name,
+            accessPolicy: decision.accessPolicy.name,
+            hasSession: hasValidSession,
+            route: decision.requiresSignIn
+                ? '/sign-in'
+                : decision.browserRoutePath,
+            caller: 'AppInitializer');
 
         if (decision.requiresSignIn) {
           if (!mounted) return;
@@ -643,6 +678,15 @@ class _AppInitializerState extends State<AppInitializer> {
             arguments: decision.signInArguments,
           );
           return;
+        }
+
+        if (shouldActivateGuestForPublicEntry(
+          hasValidSession: hasValidSession,
+          hasLocalAccount: hasLocalAccount,
+          accessPolicy: decision.accessPolicy,
+        )) {
+          await GuestSessionService.activateGuestMode(prefs: prefs);
+          unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
         }
 
         // Do not block the deep-link cold-start shell on warm-up. The
@@ -659,6 +703,8 @@ class _AppInitializerState extends State<AppInitializer> {
         final destination = decision.preferredShellRoute == ShellRoutes.map
             ? const ShellEntryScreen.map()
             : const MainApp();
+        StartupTrace.publicEntry('shell_route',
+            route: decision.preferredShellRoute, caller: 'AppInitializer');
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,

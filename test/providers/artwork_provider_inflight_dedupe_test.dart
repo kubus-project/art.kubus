@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:art_kubus/core/deep_link_bootstrap_screen.dart'
+    show publicPresentationApiId;
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/artwork_comment.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
@@ -9,12 +11,14 @@ import 'package:latlong2/latlong.dart';
 
 class _FakeArtworkApi implements ArtworkBackendApi {
   int getArtworkCalls = 0;
+  final requestedIds = <String>[];
   Completer<Artwork>? completer;
   Completer<List<Artwork>>? artworksCompleter;
 
   @override
   Future<Artwork> getArtwork(String artworkId) {
     getArtworkCalls += 1;
+    requestedIds.add(artworkId);
     final c = completer;
     if (c != null) return c.future;
     throw StateError('completer not set');
@@ -96,6 +100,87 @@ class _FakeArtworkApi implements ArtworkBackendApi {
 }
 
 void main() {
+  test(
+      'collectible bootstrap revalidates the backing artwork, never the route ID',
+      () async {
+    final api = _FakeArtworkApi()..completer = Completer<Artwork>();
+    final provider = ArtworkProvider(backendApi: api);
+    final presentation = <String, dynamic>{
+      'version': 2,
+      'type': 'collectible',
+      'id': 'collectible-route',
+      'backingArtworkId': 'backing-record',
+      'title': 'Public edition',
+    };
+    provider.seedPublicPresentation(presentation);
+    final id = publicPresentationApiId(presentation);
+    expect(id, 'backing-record');
+    final refresh = provider.refreshArtwork(id!);
+    expect(api.requestedIds, ['backing-record']);
+    api.completer!.complete(Artwork(
+        id: 'backing-record',
+        title: 'Fresh',
+        artist: 'Artist',
+        description: '',
+        position: const LatLng(0, 0),
+        rewards: 0,
+        createdAt: DateTime(2026),
+        isNft: true));
+    await refresh;
+    expect(provider.getArtworkById('backing-record')?.title, 'Fresh');
+    expect(provider.getArtworkById('collectible-route'), isNull);
+  });
+
+  test('artwork bootstrap and legacy collectible resolve their API identity',
+      () {
+    expect(
+        publicPresentationApiId({'type': 'artwork', 'id': ' art-1 '}), 'art-1');
+    expect(publicPresentationApiId({'type': 'collectible', 'id': 'c'}), isNull);
+  });
+
+  test(
+      'collectible bootstrap caches the explicit backing record, not the route ID',
+      () {
+    final provider = ArtworkProvider(backendApi: _FakeArtworkApi());
+    provider.seedPublicPresentation({
+      'version': 2,
+      'type': 'collectible',
+      'id': 'collectible-route',
+      'backingArtworkId': 'backing-record',
+      'title': 'Public edition',
+    });
+    expect(provider.getArtworkById('collectible-route'), isNull);
+    expect(provider.getArtworkById('backing-record')?.isNft, isTrue);
+  });
+
+  test(
+      'older collectible bootstrap without backing identity falls back to fetch',
+      () async {
+    final api = _FakeArtworkApi()..completer = Completer<Artwork>();
+    final provider = ArtworkProvider(backendApi: api);
+    provider.seedPublicPresentation({
+      'version': 2,
+      'type': 'collectible',
+      'id': 'opened-mint',
+      'title': 'Public edition',
+    });
+    expect(provider.getArtworkById('opened-mint'), isNull);
+    final fetch = provider.fetchArtworkIfNeeded('opened-mint');
+    expect(api.getArtworkCalls, 1);
+    api.completer!.complete(Artwork(
+        id: 'backing-record',
+        title: 'Public edition',
+        artist: 'Artist',
+        description: '',
+        position: const LatLng(0, 0),
+        rewards: 0,
+        createdAt: DateTime(2026),
+        isNft: true));
+    expect((await fetch)?.id, 'backing-record');
+    expect(provider.getArtworkById('opened-mint'), isNull);
+    expect(provider.getArtworkById('backing-record')?.isNft, isTrue);
+  });
+
   test(
       'ArtworkProvider.fetchArtworkIfNeeded dedupes in-flight getArtwork calls',
       () async {

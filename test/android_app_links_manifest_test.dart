@@ -19,6 +19,8 @@ void main() {
     '/sl/zbirke/',
     '/en/map/',
     '/sl/zemljevid/',
+    '/en/collectibles/',
+    '/sl/zbirateljski-predmeti/',
   };
 
   const retainedLegacyPrefixes = <String>{
@@ -39,6 +41,7 @@ void main() {
     '/exhibition/',
     '/exhibitions/',
     '/x/',
+    '/n/',
   };
 
   test(
@@ -79,13 +82,15 @@ void main() {
     for (final element in dataElements) {
       expect(element.getAttribute('android:scheme'), 'https');
       expect(element.getAttribute('android:host'), 'app.kubus.site');
-      expect(element.getAttribute('android:pathPrefix'), isNotNull);
-      expect(element.getAttribute('android:path'), isNull);
+      final prefix = element.getAttribute('android:pathPrefix');
+      final exact = element.getAttribute('android:path');
+      expect((prefix != null) != (exact != null), isTrue);
       expect(element.getAttribute('android:host'), isNot('*.kubus.site'));
     }
 
     final pathPrefixes = dataElements
-        .map((element) => element.getAttribute('android:pathPrefix')!)
+        .map((element) => element.getAttribute('android:pathPrefix'))
+        .whereType<String>()
         .toSet();
     expect(pathPrefixes, containsAll(canonicalPrefixes));
     expect(pathPrefixes, containsAll(retainedLegacyPrefixes));
@@ -93,10 +98,13 @@ void main() {
     expect(pathPrefixes, isNot(contains('/en/')));
     expect(pathPrefixes, isNot(contains('/sl/')));
     expect(pathPrefixes, isNot(contains('/.well-known/')));
-    // The app has no public collectible destination, so those links must stay
-    // in the browser rather than open an app screen that cannot show them.
-    expect(pathPrefixes, isNot(contains('/n/')));
-    expect(pathPrefixes, isNot(contains('/en/collectibles/')));
-    expect(pathPrefixes, isNot(contains('/sl/zbirateljski-predmeti/')));
+    expect(pathPrefixes,
+        equals({...canonicalPrefixes, ...retainedLegacyPrefixes}));
+    final exactPaths = dataElements
+        .map((element) => element.getAttribute('android:path'))
+        .whereType<String>()
+        .toSet();
+    expect(exactPaths,
+        equals({'/sign-in', '/register', '/verify-email', '/reset-password'}));
   });
 }

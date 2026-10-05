@@ -131,6 +131,13 @@ class ArtworkProvider extends ChangeNotifier {
   /// The caller revalidates this value in the background; private/account
   /// fields are intentionally not part of this conversion.
   void seedPublicPresentation(Map<String, dynamic> presentation) {
+    final isCollectible = presentation['type'] == 'collectible';
+    final backingId = isCollectible
+        ? presentation['backingArtworkId']?.toString().trim()
+        : presentation['id']?.toString().trim();
+    // A public collectible identity is not implicitly an artwork API ID.
+    // Older payloads without the explicit relationship fall back to fetching.
+    if (backingId == null || backingId.isEmpty) return;
     final media = presentation['primaryMedia'];
     final primaryMedia = media is Map
         ? Map<String, dynamic>.from(media)
@@ -166,7 +173,7 @@ class ArtworkProvider extends ChangeNotifier {
     final latitude = placeData['latitude'];
     final longitude = placeData['longitude'];
     final artwork = Artwork.fromMap(<String, dynamic>{
-      'id': presentation['id']?.toString() ?? '',
+      'id': backingId,
       'title': presentation['title']?.toString() ?? '',
       'artist': artist,
       'description': presentation['description']?.toString() ?? '',
@@ -175,8 +182,10 @@ class ArtworkProvider extends ChangeNotifier {
       'longitude': longitude is num ? longitude.toDouble() : 0.0,
       'isPublic': true,
       'isActive': true,
-      'isNft': false,
-      'category': 'Public artwork',
+      'isNft': presentation['type'] == 'collectible',
+      'category': presentation['type'] == 'collectible'
+          ? 'Public collectible'
+          : 'Public artwork',
       'createdAt': DateTime.now().toUtc().toIso8601String(),
       'metadata': <String, dynamic>{
         if (imageCreator != null) 'imageAuthor': imageCreator,
