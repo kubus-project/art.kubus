@@ -15,8 +15,22 @@ Future<void> openArtwork(
   String? attendanceMarkerId,
   ShareEntityType publicEntityType = ShareEntityType.artwork,
 }) async {
-  final id = artworkId.trim();
+  var id = artworkId.trim();
   if (id.isEmpty) return;
+
+  if (publicEntityType == ShareEntityType.nft &&
+      !RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+          .hasMatch(id)) {
+    try {
+      final artwork =
+          await context.read<ArtworkProvider>().fetchArtworkIfNeeded(id);
+      if (!context.mounted) return;
+      if (artwork != null) id = artwork.id;
+    } catch (_) {
+      // The normal detail loader owns the public missing/unavailable frame.
+      if (!context.mounted) return;
+    }
+  }
 
   final isDesktop = DesktopBreakpoints.isDesktop(context);
   if (isDesktop) {
