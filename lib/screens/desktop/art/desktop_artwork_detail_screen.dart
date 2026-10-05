@@ -1,3 +1,4 @@
+import '../../../core/document_title_observer.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -281,23 +282,26 @@ class _DesktopArtworkDetailScreenState
           metadata: artwork.metadata,
         );
 
-        return Scaffold(
-          backgroundColor: scheme.surface,
-          appBar: widget.showAppBar
-              ? AppBar(
-                  title: KubusHeaderText(
-                    title: 'art.kubus',
-                    kind: KubusHeaderKind.screen,
-                    compact: true,
-                  ),
-                )
-              : null,
-          body: _buildDesktopPage(
-            artwork: artwork,
-            coverUrl: coverUrl,
-            artworkProvider: artworkProvider,
-            isSignedIn: isSignedIn,
-            isCanonicalPublicEntry: isCanonicalPublicEntry,
+        return DocumentTitle(
+          title: artwork.title,
+          child: Scaffold(
+            backgroundColor: scheme.surface,
+            appBar: widget.showAppBar
+                ? AppBar(
+                    title: KubusHeaderText(
+                      title: 'art.kubus',
+                      kind: KubusHeaderKind.screen,
+                      compact: true,
+                    ),
+                  )
+                : null,
+            body: _buildDesktopPage(
+              artwork: artwork,
+              coverUrl: coverUrl,
+              artworkProvider: artworkProvider,
+              isSignedIn: isSignedIn,
+              isCanonicalPublicEntry: isCanonicalPublicEntry,
+            ),
           ),
         );
       },
