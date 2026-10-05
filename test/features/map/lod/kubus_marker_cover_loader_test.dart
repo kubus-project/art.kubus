@@ -51,6 +51,77 @@ void main() {
     expect(calls, 1);
   });
 
+  test('pinned (in-view) covers are never evicted before unpinned ones',
+      () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 2,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+
+    loader.setPinned(['a', 'b'], targetPx: 96);
+    await loader.load('a', targetPx: 96);
+    await loader.load('b', targetPx: 96);
+    await loader.load('c', targetPx: 96); // unpinned: the one that goes
+    await loader.load('d', targetPx: 96);
+
+    expect(loader.cached('a', targetPx: 96), isNotNull);
+    expect(loader.cached('b', targetPx: 96), isNotNull);
+    expect(loader.cachedCount, 2);
+    expect(loader.cached('c', targetPx: 96), isNull);
+  });
+
+  test(
+      'every in-view cover can be held at once; unpinning makes them evictable',
+      () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 2,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+    final urls = [for (var i = 0; i < 10; i++) 'u$i'];
+
+    loader.setPinned(urls, targetPx: 96);
+    for (final url in urls) {
+      await loader.load(url, targetPx: 96);
+    }
+    expect(loader.cachedCount, 10,
+        reason: 'not capped by the LRU while pinned');
+    expect(loader.peakCachedCount, 10);
+    expect(loader.cachedBytes, 10 * 4 * 4 * 4);
+
+    loader.setPinned(const <String>[], targetPx: 96);
+    expect(loader.cachedCount, 2, reason: 'offscreen entries evicted first');
+  });
+
+  test('pins beyond maxPinned are ignored so memory stays bounded', () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 1,
+      maxPinned: 3,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+    final urls = [for (var i = 0; i < 8; i++) 'u$i'];
+    loader.setPinned(urls, targetPx: 96);
+    for (final url in urls) {
+      await loader.load(url, targetPx: 96);
+    }
+    expect(loader.pinnedCount, 3);
+    expect(loader.cachedCount, lessThanOrEqualTo(3 + 1));
+  });
+
+  test('a stale-size pin does not protect another size', () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 1,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+    loader.setPinned(['a'], targetPx: 96);
+    await loader.load('a', targetPx: 160);
+    await loader.load('b', targetPx: 160);
+    expect(loader.cached('a', targetPx: 160), isNull);
+  });
+
   test('keeps at most maxCached images, dropping the least recently used',
       () async {
     final loader = KubusMarkerCoverLoader(

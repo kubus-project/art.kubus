@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../utils/grid_utils.dart';
 import '../map_layers_manager.dart';
 
@@ -37,16 +39,18 @@ abstract final class MapScreenConstants {
   // ---------------------------------------------------------------------------
   static const double clusterMaxZoom = 12.0;
 
-  /// Cluster grid level for the current zoom, shared by mobile + desktop.
+  /// Cluster grid level for the current zoom, shared by mobile + desktop, the
+  /// web globe and the flat maps.
   ///
   /// Markers merge into a cluster when they fall inside the same diagonal grid
-  /// cell. The level is derived from a target on-screen cell size that tapers
-  /// with zoom (see [clusterTargetSpacingPx]): wide grouping far out, so the
-  /// world reads as a few coherent groups, narrowing as the camera approaches
-  /// a place so individual markers separate before [clusterMaxZoom].
+  /// cell, so a cluster never spans more than the cell's diagonal. The level is
+  /// derived from a target on-screen cell size ([clusterTargetSpacingPx]).
+  /// Clustering exists to stop markers colliding, not to erase where they are:
+  /// the world must read as a distributed field of regional groups and
+  /// isolated records, and regroup progressively into region, country, city
+  /// and neighbourhood clusters before individual records at [clusterMaxZoom].
   /// A grid cell measures `256 * 2^(zoom - level)` screen px, so levels must
-  /// track the camera zoom; fixed small levels produce cells thousands of
-  /// pixels wide and collapse the whole viewport into one cluster.
+  /// track the camera zoom.
   static int clusterGridLevelForZoom(double zoom) {
     final level = GridUtils.resolvePrimaryGridLevel(
       zoom,
@@ -55,17 +59,54 @@ abstract final class MapScreenConstants {
     return level.clamp(3, 14);
   }
 
+  /// Widest geographic span (projected metres at the equator, so a Mercator
+  /// pixel measure) one world-scale cluster may represent. It is what keeps a
+  /// zoomed-out map from folding Lisbon and Ljubljana into one dot just
+  /// because the camera is far away.
+  static const double clusterMaxSpanMeters = 1500000;
+
+  /// Narrowest grouping distance the span rule may force, in logical px.
+  static const double clusterMinSpacingPx = 20;
+
   /// Target on-screen grouping distance for [zoom], in logical px.
   ///
-  /// Banded rather than continuous: the grid level is an integer, and a
-  /// continuous target would move the rounding point with every frame of a
-  /// zoom and make the topology flicker between levels. Bands step down
-  /// monotonically (far > mid > near).
+  /// A continuous, piecewise-linear curve, so the integer grid level is a
+  /// monotonic function of zoom (no topology flicker, deterministic membership
+  /// when zooming out and back in). It deliberately does **not** widen with
+  /// distance: far out it starts tight (~48-56 px) and settles at 64-68 px for
+  /// regions and countries, then 60-64 px for cities.
+  ///
+  /// On top of the curve, [clusterMaxSpanMeters] caps the cell so that at world
+  /// scale a cluster is a coherent geographic region (see
+  /// [clusterSpanCapPx]). The cap only binds below about zoom 3.
   static double clusterTargetSpacingPx(double zoom) {
-    if (!zoom.isFinite || zoom < 5.0) return 116.0;
-    if (zoom < 7.5) return 100.0;
-    if (zoom < 10.0) return 84.0;
-    return 68.0;
+    final z = zoom.isFinite ? zoom : 0.0;
+    final base = _lerp(z, const <List<double>>[
+      [0, 48],
+      [3, 56],
+      [5, 64],
+      [8, 68],
+      [10, 64],
+      [12, 60],
+    ]);
+    return math.min(base, math.max(clusterMinSpacingPx, clusterSpanCapPx(z)));
+  }
+
+  /// The grouping distance, in px at [zoom], that corresponds to
+  /// [clusterMaxSpanMeters] on the ground (equatorial Mercator scale).
+  static double clusterSpanCapPx(double zoom) =>
+      clusterMaxSpanMeters / (156543.03392 / math.pow(2.0, zoom));
+
+  static double _lerp(double x, List<List<double>> points) {
+    if (x <= points.first[0]) return points.first[1];
+    for (var i = 1; i < points.length; i++) {
+      if (x <= points[i][0]) {
+        final a = points[i - 1];
+        final b = points[i];
+        return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]);
+      }
+    }
+    return points.last[1];
   }
 
   // ---------------------------------------------------------------------------

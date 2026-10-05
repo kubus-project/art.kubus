@@ -9,3 +9,9 @@ void recordKubusCoverPhase(String phase, double milliseconds) {
     ..setProperty('ms'.toJS, milliseconds.toJS);
   (sink as JSObject).callMethod<JSAny?>('push'.toJS, entry);
 }
+
+void recordKubusCoverGauge(String name, double value) {
+  final sink = globalContext.getProperty<JSAny?>('__kubusCoverGauges'.toJS);
+  if (sink == null || !sink.isA<JSObject>()) return;
+  (sink as JSObject).setProperty(name.toJS, value.toJS);
+}

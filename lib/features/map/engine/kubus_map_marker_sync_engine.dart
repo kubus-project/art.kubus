@@ -546,12 +546,16 @@ class KubusMapMarkerSyncEngine {
     );
   }
 
-  /// Chooses the bounded set of markers that should show a cover now and
-  /// returns the cover icon ids that are *already registered* for them.
+  /// Plans a cover for every eligible individual marker in view (the selected
+  /// one first) and returns the cover icon ids that are *already registered*
+  /// for them.
   ///
-  /// Covers that still need loading are started in the background and the host
-  /// is asked to resync when each one lands, so a slow image never delays the
-  /// canonical marker. Nothing here can remove a marker: no cover, a failed
+  /// There is no cap on how many in-view markers get a cover: the number of
+  /// concurrent downloads, decoded pixels, the decoded-image cache and the
+  /// work done per idle are what stay bounded. Covers that still need loading
+  /// are queued in the background (selected, promoted, then the rest spread
+  /// across the viewport) and the host is asked to resync as each one lands,
+  /// so a slow image never delays the canonical marker. Nothing here can remove a marker: no cover, a failed
   /// cover, an exhausted image pool or an unmounted host all leave the
   /// canonical badge in place.
   Map<String, KubusMarkerCoverIcons> _planCovers({
@@ -585,26 +589,20 @@ class KubusMapMarkerSyncEngine {
       final url = _coverUrlFor(marker);
       if (url != null && _coverLoader.hasFailed(url)) failed.add(marker.id);
     }
-    final viewport = MediaQuery.maybeOf(host.hostContext)?.size ?? Size.zero;
-    final center = host.kubusMapController.camera.center;
     bool hasCover(ArtMarker marker) => _coverUrlFor(marker) != null;
     // Below the display zoom only the selected marker (pinned out of
     // clustering) may show its cover; nearby covers are at most prefetched.
     final chosen = KubusMarkerLod.planCoverIds(
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
-      viewport: viewport,
       zoom: zoom,
       hasCover: hasCover,
       failedIds: failed,
     );
     _prefetchCovers(
       zoom: zoom,
-      viewport: viewport,
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
       hasCover: hasCover,
       failed: failed,
     );
@@ -613,6 +611,26 @@ class KubusMapMarkerSyncEngine {
     final byId = <String, ArtMarker>{
       for (final marker in candidates) marker.id: marker,
     };
+    // Covers in the active viewport that are not drawn into the map yet keep
+    // their decoded image until they are; everything else (offscreen, old
+    // zoom, stale size) stays evictable. Registered covers need no decoded
+    // copy any more.
+    _coverLoader.setPinned(
+      [
+        for (final id in chosen)
+          if (byId[id] != null &&
+              !host.registeredMapImages.contains(
+                MapMarkerIconIds.markerCover(
+                  markerId: id,
+                  coverHash: (_coverUrlFor(byId[id]!) ?? '').hashCode,
+                  isDark: isDark,
+                  selected: false,
+                ),
+              ))
+            if (_coverUrlFor(byId[id]!) case final url?) url,
+      ],
+      targetPx: _coverFetchWidthPx,
+    );
     for (final id in chosen) {
       final marker = byId[id];
       final url = marker == null ? null : _coverUrlFor(marker);
@@ -662,30 +680,27 @@ class KubusMapMarkerSyncEngine {
     return plan;
   }
 
-  /// Warms (downloads + decodes, never rasterises) the covers the next budget
-  /// stage will show, so they are ready when the visitor zooms in. Bounded by
-  /// that stage's budget, the loader's concurrency and LRU, and only while the
-  /// camera is idle: a settled camera means a stable candidate set.
+  /// Warms (downloads + decodes, never rasterises) the first
+  /// [KubusMarkerLod.coverPrefetchLimit] covers the display stage will show, so
+  /// they are ready when the visitor zooms in. Bounded by that limit, the
+  /// loader's concurrency and cache, and only while the camera is idle: a
+  /// settled camera means a stable candidate set.
   void _prefetchCovers({
     required double zoom,
-    required Size viewport,
     required List<ArtMarker> candidates,
     required String? selectedId,
-    required LatLng center,
     required bool Function(ArtMarker marker) hasCover,
     required Set<String> failed,
   }) {
     if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return;
+    if (KubusMarkerLod.allowsCovers(zoom)) return;
     if (host.kubusMapController.cameraIsMoving) return;
-    final budget = KubusMarkerLod.coverPrefetchBudget(viewport, zoom: zoom);
-    if (budget <= 0) return;
     final ids = KubusMarkerLod.selectCoverMarkerIds(
       candidates: candidates,
       selectedId: selectedId,
-      center: center,
-      budget: budget,
       hasCover: hasCover,
       failedIds: failed,
+      limit: KubusMarkerLod.coverPrefetchLimit,
     );
     final byId = <String, ArtMarker>{
       for (final marker in candidates) marker.id: marker,
@@ -777,6 +792,8 @@ class KubusMapMarkerSyncEngine {
           recordKubusCoverPhase(KubusCoverPhase.addImage, addWatch.elapsed);
           host.registeredMapImages.add(id);
           _coverImagesRegistered += 1;
+          recordKubusCoverGauge(
+              'registeredImages', _coverImagesRegistered.toDouble());
           return true;
         }
 

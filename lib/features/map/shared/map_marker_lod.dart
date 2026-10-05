@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/painting.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../models/art_marker.dart';
 
@@ -11,7 +10,7 @@ import '../../../models/art_marker.dart';
 ///   rendered or registered.
 /// * [mid]  the canonical kubus marker (category shape, signal ring, promotion).
 /// * [close] the canonical kubus marker with the artwork cover inside its
-///   geometry, for a bounded set of markers.
+///   geometry, for every eligible individual marker in view.
 enum KubusMarkerLodTier { far, mid, close }
 
 abstract final class KubusMarkerLod {
@@ -33,12 +32,6 @@ abstract final class KubusMarkerLod {
   /// at `MapScreenConstants.clusterMaxZoom` (12), so covers only ever replace
   /// canonical individual markers.
   static const double coverDisplayMinZoom = 12.5;
-
-  /// The cover budget grows with zoom instead of switching to a photo wall:
-  /// a small early subset from [coverDisplayMinZoom], more from here, and the
-  /// full viewport budget from [coverFullBudgetZoom].
-  static const double coverMediumBudgetZoom = 13.5;
-  static const double coverFullBudgetZoom = 14.5;
 
   /// Start of the close tier (covers allowed).
   static const double closeMinZoom = coverDisplayMinZoom;
@@ -86,84 +79,37 @@ abstract final class KubusMarkerLod {
   /// source shows (or prefetches), so the regroup gate and the sync engine
   /// compare stages rather than one boolean.
   ///
-  /// 0 none, 1 selected only, 2 prefetch, 3 early, 4 medium, 5 full.
+  /// 0 none, 1 selected only, 2 prefetch, 3 display (every eligible marker in
+  /// view).
   static int coverStageForZoom(double zoom) {
     if (!zoom.isFinite || zoom < selectedCoverMinZoom) return 0;
     if (zoom < coverPrefetchMinZoom) return 1;
     if (zoom < coverDisplayMinZoom) return 2;
-    if (zoom < coverMediumBudgetZoom) return 3;
-    if (zoom < coverFullBudgetZoom) return 4;
-    return 5;
+    return 3;
   }
 
   // ---------------------------------------------------------------------
-  // Cover budget
+  // Cover working set
   // ---------------------------------------------------------------------
 
-  /// Hard ceiling on cover images registered per style epoch. MapLibre cannot
+  /// There is deliberately no cap on how many in-view markers show a cover:
+  /// at [coverDisplayMinZoom] every eligible individual marker in the viewport
+  /// is planned, and what stays bounded is the work (download and decode
+  /// concurrency, decoded pixels per image, the decoded-image cache) and the
+  /// memory (see below), not the visible count.
+  ///
+  /// Ceiling on cover images registered per style epoch. MapLibre cannot
   /// remove an image (and the web plugin ignores a re-added name), so the pool
-  /// is capped: at ~64 KB per image on a 2x phone this is ~10 MB worst case.
-  /// When it is spent, markers keep their canonical badge until the next style
-  /// reload clears the images.
-  static const int maxRegisteredCoverImages = 160;
+  /// is append-only: at ~64 KB per image on a 2x phone this is ~20 MB worst
+  /// case, enough for several dense viewports of panning. When it is spent,
+  /// markers keep their canonical badge until the next style reload clears the
+  /// images.
+  static const int maxRegisteredCoverImages = 320;
 
-  static const int minCoverBudget = 8;
-  static const int maxCoverBudget = 24;
-
-  /// Logical pixels of map each cover is given (a cover marker is ~56x72 and
-  /// needs air around it to stay a legible marker rather than a photo wall).
-  static const double _areaPerCoverPx2 = 60000.0;
-
-  /// Practical maximum of simultaneously active covers for [viewport].
-  ///
-  /// Scales with the visible area (a phone shows few, a 1440 desktop more) and
-  /// is clamped so no device ever holds more than [maxCoverBudget] cover
-  /// textures. The reference web value is 32; 24 keeps headroom for the
-  /// canonical icons and the walking route.
-  ///
-  /// With [zoom], the budget is staged: below [coverDisplayMinZoom] there is no
-  /// nearby budget, the early stage gets a quarter, the medium stage half, and
-  /// only [coverFullBudgetZoom] and closer get the full value. The selected
-  /// marker is outside this budget (see [selectCoverMarkerIds]).
-  static int coverBudget(Size viewport, {double? zoom}) {
-    final area = viewport.width * viewport.height;
-    final full = (!area.isFinite || area <= 0)
-        ? minCoverBudget
-        : (area / _areaPerCoverPx2).round().clamp(
-              minCoverBudget,
-              maxCoverBudget,
-            );
-    if (zoom == null) return full;
-    switch (coverStageForZoom(zoom)) {
-      case 0:
-      case 1:
-      case 2:
-        return 0;
-      case 3:
-        return math.max(earlyCoverBudgetFloor, (full / 4).ceil());
-      case 4:
-        return math.max(earlyCoverBudgetFloor + 2, (full / 2).ceil());
-      default:
-        return full;
-    }
-  }
-
-  /// Fewest nearby covers the early stage shows (besides the selected one).
-  static const int earlyCoverBudgetFloor = 3;
-
-  /// Budget for warming covers ahead of display at [zoom]: the next stage's
-  /// budget, so the covers about to be shown are already decoded. Zero below
-  /// [coverPrefetchMinZoom].
-  static int coverPrefetchBudget(Size viewport, {required double zoom}) {
-    final stage = coverStageForZoom(zoom);
-    if (stage < 2) return 0;
-    final nextZoom = switch (stage) {
-      2 => coverDisplayMinZoom,
-      3 => coverMediumBudgetZoom,
-      _ => coverFullBudgetZoom,
-    };
-    return coverBudget(viewport, zoom: math.max(zoom, nextZoom));
-  }
+  /// Most covers warmed ahead of display (prefetch only decodes, never
+  /// rasterises), so the decoded cache is not churned before the covers it is
+  /// warming are shown.
+  static const int coverPrefetchLimit = 32;
 
   // ---------------------------------------------------------------------
   // Cover pixels
@@ -201,14 +147,13 @@ abstract final class KubusMarkerLod {
     return ((raw / 32).ceil() * 32).clamp(160, 512);
   }
 
-  /// The covers to display at [zoom]: the selected marker from
-  /// [selectedCoverMinZoom], nearby markers from [coverDisplayMinZoom] within
-  /// the staged [coverBudget]. Empty below [selectedCoverMinZoom].
+  /// The covers to display at [zoom], in loading priority order: the selected
+  /// marker from [selectedCoverMinZoom], and from [coverDisplayMinZoom] every
+  /// eligible candidate (see [selectCoverMarkerIds]). Empty below
+  /// [selectedCoverMinZoom].
   static List<String> planCoverIds({
     required Iterable<ArtMarker> candidates,
     required String? selectedId,
-    required LatLng center,
-    required Size viewport,
     required double zoom,
     required bool Function(ArtMarker marker) hasCover,
     Set<String> failedIds = const <String>{},
@@ -219,30 +164,32 @@ abstract final class KubusMarkerLod {
           ? candidates
           : candidates.where((marker) => marker.id == selectedId),
       selectedId: selectedId,
-      center: center,
-      budget: coverBudget(viewport, zoom: zoom),
       hasCover: hasCover,
       failedIds: failedIds,
     );
   }
 
-  /// Chooses which markers get a cover.
+  /// Orders the markers that get a cover, which is every candidate that has a
+  /// resolvable cover that has not failed (the caller passes only individual
+  /// markers that are in view).
   ///
-  /// Order: the selected marker (always, and on top of [budget]), then up to
-  /// [budget] promoted markers, then nearest to [center]. Markers without a resolvable cover
-  /// are never candidates, and a failed cover simply keeps its canonical
-  /// marker, so a missing image can never remove a marker.
+  /// The order is the loading priority: the selected marker, then promoted
+  /// markers, then everyone else interleaved across the candidates' own extent
+  /// so the viewport fills across its whole area instead of centre-out (no
+  /// ranking by distance from the map centre, which would draw a photo circle
+  /// while loading). A failed or missing cover keeps its canonical marker, so a
+  /// missing image can never remove a marker. [limit] truncates the *rest*
+  /// (used for prefetch); the selected marker is never counted against it.
   static List<String> selectCoverMarkerIds({
     required Iterable<ArtMarker> candidates,
     required String? selectedId,
-    required LatLng center,
-    required int budget,
     required bool Function(ArtMarker marker) hasCover,
     Set<String> failedIds = const <String>{},
+    int? limit,
   }) {
-    final distance = const Distance();
     final selected = <String>[];
-    final ranked = <_RankedCover>[];
+    final promoted = <ArtMarker>[];
+    final rest = <ArtMarker>[];
     for (final marker in candidates) {
       if (!marker.hasValidPosition) continue;
       if (marker.id == selectedId) {
@@ -252,24 +199,60 @@ abstract final class KubusMarkerLod {
         continue;
       }
       if (failedIds.contains(marker.id) || !hasCover(marker)) continue;
-      ranked.add(
-        _RankedCover(
-          id: marker.id,
-          promoted: marker.isPromoted,
-          meters: distance.as(LengthUnit.Meter, center, marker.position),
-        ),
-      );
+      (marker.isPromoted ? promoted : rest).add(marker);
     }
-    ranked.sort((a, b) {
-      if (a.promoted != b.promoted) return a.promoted ? -1 : 1;
-      final byDistance = a.meters.compareTo(b.meters);
-      return byDistance != 0 ? byDistance : a.id.compareTo(b.id);
-    });
-    // The selection is outside the budget: it never costs a nearby cover.
+    final ordered = <String>[
+      ...spatiallyFairOrder(promoted).map((m) => m.id),
+      ...spatiallyFairOrder(rest).map((m) => m.id),
+    ];
     return <String>[
       ...selected,
-      ...ranked.take(math.max(0, budget)).map((entry) => entry.id),
+      ...(limit == null ? ordered : ordered.take(math.max(0, limit))),
     ];
+  }
+
+  /// Scattered visiting order of the 4 x 4 cells a set of markers is binned
+  /// into (neighbouring ranks are far apart on the map).
+  static const List<int> _cellVisitOrder = <int>[
+    0, 10, 5, 15, 3, 9, 6, 12, 1, 11, 4, 14, 2, 8, 7, 13, //
+  ];
+
+  /// Interleaves [markers] across their own bounding box: bin them into a 4 x 4
+  /// grid, then take one from each cell in a scattered cell order, round after
+  /// round. Deterministic (ties by id) and independent of the camera centre.
+  @visibleForTesting
+  static List<ArtMarker> spatiallyFairOrder(List<ArtMarker> markers) {
+    if (markers.length < 3) {
+      return List<ArtMarker>.of(markers)..sort((a, b) => a.id.compareTo(b.id));
+    }
+    var minLat = double.infinity, maxLat = -double.infinity;
+    var minLng = double.infinity, maxLng = -double.infinity;
+    for (final m in markers) {
+      minLat = math.min(minLat, m.position.latitude);
+      maxLat = math.max(maxLat, m.position.latitude);
+      minLng = math.min(minLng, m.position.longitude);
+      maxLng = math.max(maxLng, m.position.longitude);
+    }
+    final latSpan = math.max(maxLat - minLat, 1e-9);
+    final lngSpan = math.max(maxLng - minLng, 1e-9);
+    final cells = List<List<ArtMarker>>.generate(16, (_) => <ArtMarker>[]);
+    for (final m in markers) {
+      final row =
+          (((m.position.latitude - minLat) / latSpan) * 4).floor().clamp(0, 3);
+      final col =
+          (((m.position.longitude - minLng) / lngSpan) * 4).floor().clamp(0, 3);
+      cells[row * 4 + col].add(m);
+    }
+    for (final cell in cells) {
+      cell.sort((a, b) => a.id.compareTo(b.id));
+    }
+    final out = <ArtMarker>[];
+    for (var round = 0; out.length < markers.length; round++) {
+      for (final index in _cellVisitOrder) {
+        if (round < cells[index].length) out.add(cells[index][round]);
+      }
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------------
@@ -365,16 +348,4 @@ abstract final class KubusMarkerLod {
       radius(clusterDotRadius),
     ];
   }
-}
-
-class _RankedCover {
-  const _RankedCover({
-    required this.id,
-    required this.promoted,
-    required this.meters,
-  });
-
-  final String id;
-  final bool promoted;
-  final double meters;
 }
