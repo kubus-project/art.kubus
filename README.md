@@ -145,7 +145,7 @@ Inside the client, screens and widgets sit on `ChangeNotifier` providers, which 
 art.kubus is in alpha and under active development. Expect frequent changes, including occasional breaking ones.
 
 - The integration branch is `dev`. Production releases are promoted from `dev` to `master`.
-- The client version on `dev` is **0.8.0** ([release notes draft](docs/release-0.8.0.md)).
+- The client version on `dev` is **0.8.1** ([release notes](docs/release-0.8.1.md); previous: [0.8.0](docs/release-0.8.0.md)).
 - The latest published release is on the [releases page](https://github.com/kubus-project/art.kubus/releases).
 - Hosted builds: [app.kubus.site](https://app.kubus.site) (production).
 

@@ -3,8 +3,9 @@
 A corrective release for visible problems that survived 0.8.0: the map's
 markers and covers, Home artist and institution covers, the profile header,
 the account-security screens, the governance numbers and the kubus Node
-entries. Nothing about how the app opens, public pages, app links or the
-Node connection changed.
+entries. It also closes the last gaps in opening public links without an
+account, and keeps a page's authorship and title truthful once the app takes
+over from the server-rendered page. The Node connection did not change.
 
 ## The map
 
@@ -19,7 +20,13 @@ Node connection changed.
   - more appear as you get closer, and the full set at street level.
 
   Covers start downloading just before they are needed, only while the map is
-  still, and are fetched at the size they are drawn.
+  still, and are fetched at the size they are drawn. Wide (landscape) covers
+  are downloaded with enough width to fill the marker face without looking
+  soft.
+- **Bounded and cancellable.** Cover memory is capped, visible covers are
+  loaded ahead of warm-up prefetches, a cover that is no longer wanted stops
+  downloading, and the selected marker keeps its cover even when the
+  nearby-cover budget is full.
 - **A new marker face.** Each category keeps its shape. Inside, the marker is
   now a small piece of the same design language as the app's statistic
   tiles: a lit colour field, the category's symbol large and cropped into the
@@ -77,3 +84,41 @@ Node connection changed.
   Digital editions: in the desktop navigation, on the Home capability strip
   and in the Node header. It still keeps its own server symbol and still needs
   no wallet.
+
+## Opening public links
+
+- Every public subject opens straight to the exact page for a signed-out
+  visitor, with no sign-in, registration, onboarding, role picker or wallet
+  setup: artwork, profile or artist, institution, event, exhibition,
+  collection, post, map place and public collectible. Sign-in appears only
+  when you do something that needs an account, and you return to the same page
+  afterwards.
+- A public collectible opens without a wallet. Its link is its own stable
+  collectible address; likes, comments and saves still go to the artwork behind
+  it, and sharing it shares the collectible link, not the artwork's.
+- Android: a link that arrives just after the app has started is now opened
+  once the app is ready instead of being lost; a link that was already handled
+  or replaced is never replayed.
+- Someone who already has an account on the device is never treated as a new
+  guest because their session expired.
+
+## Page titles and authorship
+
+- A page opened from a search result keeps its descriptive title while the app
+  takes over, and the browser tab title then follows the page you are actually
+  on (map, settings, another artwork) instead of staying on the first one.
+- Authorship matches between the server-rendered page and the app. A person or
+  account that only uploaded or imported a work is no longer shown as its
+  artist; an unknown artist stays "not recorded", an explicit artist credit
+  survives loading, several authors are kept, and an artist wallet that is
+  actually recorded still resolves to its profile.
+
+## Backend (art.kubus-backend)
+
+- Home rails carry separate avatar, cover and logo images (#73).
+- Dependency audit policy documents the two unreachable upstream advisories
+  instead of failing releases (#74).
+- Collectibles: the stable collectible address is the artwork record ID. Older
+  mint-address links resolve to it with a single, non-cacheable redirect;
+  a mint shared by several public records, or belonging to a private or
+  inactive record, is a 404 (#75, migration 097 adds the lookup index).
