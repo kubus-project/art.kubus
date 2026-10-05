@@ -14,6 +14,7 @@ import '../providers/wallet_provider.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../widgets/auth/contextual_activation_sheet.dart';
 import 'backend_api_service.dart';
+import '../core/startup_trace.dart';
 
 // The gate's own parameters are these types, so callers should not need a
 // second import to describe an action. Re-exporting also keeps `part` files
@@ -74,6 +75,8 @@ class ContextualAuthGate {
   }) async {
     final missingStep = _missingCapabilityStep(context, requirements);
     if (missingStep == null) return true;
+    StartupTrace.publicEntry('auth_gate_triggered',
+        route: returnRoute, caller: sourceScreen ?? 'ContextualAuthGate');
 
     final telemetry = TelemetryService();
     final actionKey = actionType?.storageValue ?? 'other';

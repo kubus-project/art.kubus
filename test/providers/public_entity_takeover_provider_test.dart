@@ -26,7 +26,8 @@ void main() {
     );
   });
 
-  test('rejects compact, mismatched, and wallet takeover targets', () {
+  test('rejects compact and mismatched targets; supports public collectible',
+      () {
     final compact = PublicEntityTakeoverProvider();
     compact.seed(
       initialUri: Uri.parse('/a/art-42'),
@@ -68,7 +69,8 @@ void main() {
         localeCode: 'en',
       ),
     );
-    expect(collectible.target, isNull);
+    expect(collectible.target?.type, 'collectible');
+    expect(collectible.target?.path, '/en/collectibles/nft-1');
   });
 
   test('covers the localized public-read entity route matrix', () {
