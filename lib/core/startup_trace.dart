@@ -48,6 +48,64 @@ class StartupTrace {
   /// Milliseconds elapsed since the trace started (process start).
   static int get elapsedMs => _sw.elapsedMilliseconds;
 
+  /// Deterministic entry diagnostics in debug/test or explicitly opted-in
+  /// builds. Queries, fragments, user info and auth token paths are omitted.
+  static void publicEntry(
+    String stage, {
+    Uri? uri,
+    String? entityType,
+    String? accessPolicy,
+    bool? hasSession,
+    String? route,
+    String? caller,
+  }) {
+    if (!_shouldLog) return;
+    mark('public_entry $stage '
+        '${uri == null ? '' : 'uri=${safeEntryPath(uri)} '} '
+        '${entityType == null ? '' : 'type=$entityType '} '
+        '${accessPolicy == null ? '' : 'policy=$accessPolicy '} '
+        '${hasSession == null ? '' : 'session=$hasSession '} '
+        '${route == null ? '' : 'route=${safeEntryPath(Uri.parse(route))} '} '
+        '${caller == null ? '' : 'caller=$caller'}');
+  }
+
+  @visibleForTesting
+  static String safeEntryPath(Uri uri) {
+    final parts = uri.pathSegments;
+    const publicHeads = {
+      'a',
+      'u',
+      'm',
+      'e',
+      'x',
+      'p',
+      'c',
+      'n',
+      'artworks',
+      'umetnine',
+      'profiles',
+      'profili',
+      'map',
+      'zemljevid',
+      'events',
+      'dogodki',
+      'exhibitions',
+      'razstave',
+      'posts',
+      'objave',
+      'collections',
+      'zbirke',
+      'collectibles',
+      'zbirateljski-predmeti'
+    };
+    final offset =
+        parts.isNotEmpty && {'en', 'sl'}.contains(parts.first) ? 1 : 0;
+    if (parts.length > offset && publicHeads.contains(parts[offset])) {
+      return '/${parts.take(offset + 2).map(Uri.encodeComponent).join('/')}';
+    }
+    return parts.isEmpty ? '/' : '/${Uri.encodeComponent(parts.first)}';
+  }
+
   /// Records [label] at the current elapsed time and logs it when enabled.
   static void mark(String label) {
     final ms = _sw.elapsedMilliseconds;

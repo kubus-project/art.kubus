@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/app_navigator.dart' show AppStartupGate, appNavigatorKey;
 import '../core/mobile_shell_registry.dart';
+import '../core/startup_trace.dart';
 import '../services/auth/auth_deep_link_parser.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../utils/share_deep_link_navigation.dart';
@@ -88,7 +89,40 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     if (uri == null) return;
     GuestSessionService.snapshotLaunchUrl(override: uri);
     await GuestSessionService.captureFromLaunchUrl();
-    _handleUri(uri, allowImmediateNavigation: false);
+    if (AppStartupGate.isReady) {
+      _handleUri(uri);
+      return;
+    }
+    _processUri(uri, allowImmediateNavigation: false);
+    final auth = _authDeepLinkProvider?.pending;
+    final share = _deepLinkProvider?.pending;
+    final parsedAuth = const AuthDeepLinkParser().parse(uri);
+    final parsedShare = const ShareDeepLinkParser().parse(uri);
+    final ownsAuth = auth != null &&
+        parsedAuth != null &&
+        auth.signature() == parsedAuth.signature();
+    final ownsShare = share != null &&
+        parsedShare != null &&
+        const ShareDeepLinkCodec()
+                .canonicalPathForTarget(share, includeProofTokens: false) ==
+            const ShareDeepLinkCodec()
+                .canonicalPathForTarget(parsedShare, includeProofTokens: false);
+    if (!ownsAuth && !ownsShare) return;
+    AppStartupGate.runWhenReadyIfOwned(
+      stillOwns: () => ownsAuth
+          ? identical(_authDeepLinkProvider?.pending, auth)
+          : identical(_deepLinkProvider?.pending, share),
+      action: () {
+        if (ownsAuth) {
+          _authDeepLinkProvider?.consumePending();
+        } else {
+          _deepLinkProvider?.consumePending();
+        }
+        // This is the same receipt being transferred from seed to navigation.
+        _lastHandledSignature = null;
+        _processUri(uri, allowImmediateNavigation: true);
+      },
+    );
   }
 
   /// Live (post-cold-start) link events can arrive while `AppInitializer` is
@@ -109,6 +143,11 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   }
 
   void _processUri(Uri uri, {required bool allowImmediateNavigation}) {
+    StartupTrace.publicEntry(
+        allowImmediateNavigation
+            ? 'platform_runtime_received'
+            : 'platform_initial_received',
+        uri: uri);
     final raw = uri.toString().trim();
     if (raw.isEmpty) return;
 
@@ -148,6 +187,12 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
         final ctx =
             desktopShellContext ?? mobileShellContext ?? navigator!.context;
         switch (authTarget.type) {
+          case AuthDeepLinkType.signIn:
+            Navigator.of(ctx).pushNamed('/sign-in');
+            break;
+          case AuthDeepLinkType.register:
+            Navigator.of(ctx).pushNamed('/register');
+            break;
           case AuthDeepLinkType.verifyEmail:
             Navigator.of(ctx).pushNamed(
               '/verify-email',
@@ -179,6 +224,7 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     }
 
     if (target == null) return;
+    StartupTrace.publicEntry('parsed', uri: uri, entityType: target.type.name);
 
     // De-dupe repeats (Android may dispatch the same URI more than once; and
     // some link sources trigger both initial+stream events).

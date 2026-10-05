@@ -3,6 +3,10 @@ import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
+String? readPublicEntityDocumentTitle() => web.document
+    .querySelector('meta[property="og:title"]')
+    ?.getAttribute('content');
+
 void dispatchPublicEntityRouteParsed({
   required String type,
   required String id,

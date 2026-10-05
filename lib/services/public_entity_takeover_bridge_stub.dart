@@ -11,3 +11,5 @@ void dispatchPublicEntityReady({
 }) {}
 
 Map<String, dynamic>? readPublicEntityBootstrap() => null;
+
+String? readPublicEntityDocumentTitle() => null;
