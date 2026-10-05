@@ -145,8 +145,14 @@ Covers start after clusters dissolve (`MapScreenConstants.clusterMaxZoom =
   Photography never replaces the marker silhouette.
 * Cover images are requested through `ArtworkMediaResolver.resolveCover(...,
   maxWidth: KubusMarkerLod.coverFetchWidthPx(markerPixelRatio))` (thumbnail /
-  width-clamped URLs, never archival media) and decoded at that same width.
-  The width is the 44 px cover face x 1.5 oversample x the device pixel
+  width-clamped URLs, never archival media) and decoded so that the cover's
+  *shorter* side is that size (the marker crops to the shorter side, so a
+  wide image keeps its detail where the crop needs it; never upscaled), subject
+  to absolute ceilings of 1024 px on the long edge and 262144 decoded pixels.
+  Extreme panoramas sacrifice crop resolution to preserve bounded memory.
+  The default 48-image cache holds at most 48 MiB of decoded RGBA geometry;
+  this excludes decoder working memory and GPU copies.
+  The size is the 44 px cover face x 1.5 oversample x the device pixel
   ratio, snapped up to 32 px steps and clamped to 96-256: 96 px at 1x, 160 px
   at 2x, 224 px at 3x.
 
@@ -173,7 +179,11 @@ Covers are the only per-record cost, so they are the only bounded set:
   camera centre (ties by id). The selected marker is always included and sits
   outside the budget.
 * `KubusMarkerCoverLoader`: de-duplicates in-flight requests, at most 4
-  concurrent fetches, an LRU of 48 decoded images (disposed on eviction), and
+  concurrent fetches, two lanes (covers about to be drawn always start before
+  prefetches; a display request for a queued prefetch promotes it; each new
+  prefetch plan drops prefetches that have not started), an LRU of 48 decoded images (disposed on eviction), and
+  cancellation synchronously frees the URL/size key; identity-owned completion
+  prevents an old cancelled task from removing its replacement. Also,
   a failed URL is not retried for 5 minutes. Decodes are keyed by resolved URL
   **and** physical width, so markers sharing media share one decode while a
   different pixel ratio never reuses a too-small bitmap. A failed or missing cover leaves the canonical

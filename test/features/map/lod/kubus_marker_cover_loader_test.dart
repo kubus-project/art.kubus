@@ -27,8 +27,8 @@ void main() {
     });
     addTearDown(loader.dispose);
 
-    final a = loader.load('https://x/a.jpg', targetWidthPx: 96);
-    final b = loader.load('https://x/a.jpg', targetWidthPx: 96);
+    final a = loader.load('https://x/a.jpg', targetPx: 96);
+    final b = loader.load('https://x/a.jpg', targetPx: 96);
     expect(loader.inFlightCount, 1);
     gate.complete();
     expect(await a, isNotNull);
@@ -45,9 +45,9 @@ void main() {
     });
     addTearDown(loader.dispose);
 
-    await loader.load('u', targetWidthPx: 96);
-    expect(loader.cached('u', targetWidthPx: 96), isNotNull);
-    await loader.load('u', targetWidthPx: 96);
+    await loader.load('u', targetPx: 96);
+    expect(loader.cached('u', targetPx: 96), isNotNull);
+    await loader.load('u', targetPx: 96);
     expect(calls, 1);
   });
 
@@ -59,15 +59,15 @@ void main() {
     );
     addTearDown(loader.dispose);
 
-    await loader.load('a', targetWidthPx: 96);
-    await loader.load('b', targetWidthPx: 96);
-    loader.cached('a', targetWidthPx: 96); // refresh a: b is now the oldest
-    await loader.load('c', targetWidthPx: 96);
+    await loader.load('a', targetPx: 96);
+    await loader.load('b', targetPx: 96);
+    loader.cached('a', targetPx: 96); // refresh a: b is now the oldest
+    await loader.load('c', targetPx: 96);
 
     expect(loader.cachedCount, 2);
-    expect(loader.cached('a', targetWidthPx: 96), isNotNull);
-    expect(loader.cached('b', targetWidthPx: 96), isNull);
-    expect(loader.cached('c', targetWidthPx: 96), isNotNull);
+    expect(loader.cached('a', targetPx: 96), isNotNull);
+    expect(loader.cached('b', targetPx: 96), isNull);
+    expect(loader.cached('c', targetPx: 96), isNotNull);
   });
 
   test('limits concurrent fetches', () async {
@@ -89,7 +89,7 @@ void main() {
     addTearDown(loader.dispose);
 
     final futures = <Future<ui.Image?>>[
-      for (var i = 0; i < 5; i++) loader.load('u$i', targetWidthPx: 96),
+      for (var i = 0; i < 5; i++) loader.load('u$i', targetPx: 96),
     ];
     await Future<void>.delayed(Duration.zero);
     expect(gates.length, 2, reason: 'only maxConcurrent fetches start');
@@ -100,6 +100,143 @@ void main() {
       if (gates.isNotEmpty) gates.removeAt(0).complete();
     }
     expect(peak, lessThanOrEqualTo(2));
+  });
+
+  group('display covers before prefetches', () {
+    late List<String> started;
+    late Map<String, Completer<void>> gates;
+    late KubusMarkerCoverLoader loader;
+
+    setUp(() {
+      started = <String>[];
+      gates = <String, Completer<void>>{};
+      loader = KubusMarkerCoverLoader(
+        maxConcurrent: 1,
+        fetch: (url, width) async {
+          started.add(url);
+          final gate = gates[url] = Completer<void>();
+          await gate.future;
+          return _image();
+        },
+      );
+    });
+    tearDown(() => loader.dispose());
+
+    Future<void> settle() => Future<void>.delayed(Duration.zero);
+
+    test('a display load starts before queued prefetches', () async {
+      unawaited(loader.load('busy', targetPx: 96));
+      await settle();
+      final p1 = loader.load('p1', targetPx: 96, prefetch: true);
+      final p2 = loader.load('p2', targetPx: 96, prefetch: true);
+      final shown = loader.load('shown', targetPx: 96);
+      gates['busy']!.complete();
+      await settle();
+      expect(started, <String>['busy', 'shown']);
+      gates['shown']!.complete();
+      expect(await shown, isNotNull);
+      await settle();
+      gates['p1']!.complete();
+      await settle();
+      gates['p2']!.complete();
+      expect(await p1, isNotNull);
+      expect(await p2, isNotNull);
+    });
+
+    test('cancelled prefetches never fetch and never count as failures',
+        () async {
+      unawaited(loader.load('busy', targetPx: 96));
+      await settle();
+      final stale = loader.load('stale', targetPx: 96, prefetch: true);
+      loader.cancelPendingPrefetches();
+      expect(await stale, isNull);
+      expect(loader.hasFailed('stale'), isFalse);
+      gates['busy']!.complete();
+      await settle();
+      expect(started, <String>['busy']);
+      // The slot is free again: a new load starts at once.
+      unawaited(loader.load('next', targetPx: 96));
+      await settle();
+      expect(started, <String>['busy', 'next']);
+      gates['next']!.complete();
+    });
+
+    test('replacement plan immediately requeues a cancelled cover', () async {
+      final busy = loader.load('busy', targetPx: 96);
+      await settle();
+      final stale = loader.load('x', targetPx: 96, prefetch: true);
+      loader.cancelPendingPrefetches();
+      final replacement = loader.load('x', targetPx: 96, prefetch: true);
+      expect(identical(stale, replacement), isFalse);
+      expect(await stale, isNull);
+      // The old task's finally has run, but must not erase the new owner.
+      expect(loader.inFlightCount, 2);
+      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      loader.cancelPendingPrefetches(); // promoted replacement survives
+      gates['busy']!.complete();
+      await busy;
+      await settle();
+      expect(started, ['busy', 'x']);
+      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      gates['x']!.complete();
+      expect(await replacement, isNotNull);
+      expect(started.where((url) => url == 'x').length, 1);
+      expect(loader.inFlightCount, 0);
+    });
+
+    test('a display load promotes a queued prefetch of the same image',
+        () async {
+      unawaited(loader.load('busy', targetPx: 96));
+      await settle();
+      final warm = loader.load('a', targetPx: 96, prefetch: true);
+      unawaited(loader.load('other', targetPx: 96, prefetch: true));
+      final shown = loader.load('a', targetPx: 96);
+      loader.cancelPendingPrefetches();
+      gates['busy']!.complete();
+      await settle();
+      expect(started, <String>['busy', 'a']);
+      gates['a']!.complete();
+      expect(await shown, isNotNull);
+      expect(await warm, isNotNull);
+    });
+  });
+
+  test('covers decode to their shorter side, never upscaled', () {
+    final landscape = shortSideTargetSize(1600, 900, 160);
+    expect(landscape.height, 160);
+    expect(landscape.width, 284);
+    final portrait = shortSideTargetSize(900, 1600, 160);
+    expect(portrait.width, 160);
+    expect(portrait.height, 284);
+    final small = shortSideTargetSize(120, 80, 160);
+    expect(small.width, 120);
+    expect(small.height, 80);
+  });
+
+  test('decode geometry bounds panoramas, portraits and decoded pixels', () {
+    for (final source in [
+      (16000, 100),
+      (16000, 500),
+      (100, 16000),
+      (500, 16000),
+      (16000, 16000),
+      (4000, 2000),
+      (2000, 4000),
+      (1, 16000),
+    ]) {
+      final size = shortSideTargetSize(source.$1, source.$2, 256);
+      final width = size.width!;
+      final height = size.height!;
+      expect(width, lessThanOrEqualTo(kubusCoverMaxLongEdge));
+      expect(height, lessThanOrEqualTo(kubusCoverMaxLongEdge));
+      expect(width * height, lessThanOrEqualTo(kubusCoverMaxDecodedPixels));
+      expect(width, lessThanOrEqualTo(source.$1));
+      expect(height, lessThanOrEqualTo(source.$2));
+      // Integer decode dimensions preserve the ratio within one pixel.
+      expect((width - height * source.$1 / source.$2).abs(),
+          lessThanOrEqualTo(1 + source.$1 / source.$2));
+    }
+    expect(48 * kubusCoverMaxDecodedPixels * 4, 48 * 1024 * 1024);
   });
 
   test('a failed URL is not retried inside the retry window', () async {
@@ -115,14 +252,14 @@ void main() {
     );
     addTearDown(loader.dispose);
 
-    expect(await loader.load('bad', targetWidthPx: 96), isNull);
+    expect(await loader.load('bad', targetPx: 96), isNull);
     expect(loader.hasFailed('bad'), isTrue);
-    expect(await loader.load('bad', targetWidthPx: 96), isNull);
+    expect(await loader.load('bad', targetPx: 96), isNull);
     expect(calls, 1);
 
     now = now.add(const Duration(minutes: 6));
     expect(loader.hasFailed('bad'), isFalse);
-    await loader.load('bad', targetWidthPx: 96);
+    await loader.load('bad', targetPx: 96);
     expect(calls, 2);
   });
 
@@ -132,7 +269,7 @@ void main() {
     );
     addTearDown(loader.dispose);
 
-    expect(await loader.load('x', targetWidthPx: 96), isNull);
+    expect(await loader.load('x', targetPx: 96), isNull);
     expect(loader.hasFailed('x'), isTrue);
   });
 
@@ -144,19 +281,19 @@ void main() {
     });
     addTearDown(loader.dispose);
 
-    await loader.load('u', targetWidthPx: 96);
-    await loader.load('u', targetWidthPx: 96);
-    await loader.load('u', targetWidthPx: 160);
+    await loader.load('u', targetPx: 96);
+    await loader.load('u', targetPx: 96);
+    await loader.load('u', targetPx: 160);
     expect(widths, <int>[96, 160]);
-    expect(loader.cached('u', targetWidthPx: 160), isNotNull);
-    expect(loader.cached('u', targetWidthPx: 224), isNull);
+    expect(loader.cached('u', targetPx: 160), isNotNull);
+    expect(loader.cached('u', targetPx: 224), isNull);
   });
 
   test('a disposed loader serves nothing', () async {
     final loader =
         KubusMarkerCoverLoader(fetch: (url, width) async => _image());
     loader.dispose();
-    expect(await loader.load('x', targetWidthPx: 96), isNull);
+    expect(await loader.load('x', targetPx: 96), isNull);
   });
 }
 

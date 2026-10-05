@@ -215,8 +215,8 @@ abstract final class KubusMarkerLod {
 
   /// Chooses which markers get a cover.
   ///
-  /// Order: the selected marker (always, even over budget), then promoted
-  /// markers, then nearest to [center]. Markers without a resolvable cover
+  /// Order: the selected marker (always, and on top of [budget]), then up to
+  /// [budget] promoted markers, then nearest to [center]. Markers without a resolvable cover
   /// are never candidates, and a failed cover simply keeps its canonical
   /// marker, so a missing image can never remove a marker.
   static List<String> selectCoverMarkerIds({
@@ -252,8 +252,11 @@ abstract final class KubusMarkerLod {
       final byDistance = a.meters.compareTo(b.meters);
       return byDistance != 0 ? byDistance : a.id.compareTo(b.id);
     });
-    final room = math.max(0, budget - selected.length);
-    return <String>[...selected, ...ranked.take(room).map((entry) => entry.id)];
+    // The selection is outside the budget: it never costs a nearby cover.
+    return <String>[
+      ...selected,
+      ...ranked.take(math.max(0, budget)).map((entry) => entry.id),
+    ];
   }
 
   // ---------------------------------------------------------------------

@@ -128,6 +128,7 @@ async function main() {
     await page.goto(`${appUrl}${route}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(
       () => Boolean(document.querySelector('flutter-view') || document.querySelector('flt-glass-pane')),
+      null,
       { timeout: 60000 },
     );
     await page.waitForTimeout(7000);
