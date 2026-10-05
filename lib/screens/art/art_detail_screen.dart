@@ -589,7 +589,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return context
           .read<PublicEntityTakeoverProvider>()
           .publicPlaceLabelForCanonicalPath(
-            type: 'artwork',
+            type: widget.publicEntityType == ShareEntityType.nft
+                ? 'collectible'
+                : 'artwork',
             id: artworkId,
             pathname: Uri.base.path,
           );

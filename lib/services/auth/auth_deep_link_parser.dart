@@ -51,9 +51,12 @@ class AuthDeepLinkParser {
     if (path.isEmpty) return null;
 
     final normalizedPath = path.toLowerCase();
-    if (normalizedPath == '/sign-in') return const AuthDeepLinkTarget.signIn();
-    if (normalizedPath == '/register')
+    if (normalizedPath == '/sign-in') {
+      return const AuthDeepLinkTarget.signIn();
+    }
+    if (normalizedPath == '/register') {
       return const AuthDeepLinkTarget.register();
+    }
     if (normalizedPath == '/verify-email') {
       final token = (uri.queryParameters['token'] ?? '').trim();
       if (token.isEmpty) return null;
