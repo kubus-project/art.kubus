@@ -10551,10 +10551,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     );
     addMeta(
       'creatorWallets',
-      json['creatorWallets'] ??
-          json['creatorWalletAddresses'] ??
-          json['walletAddresses'] ??
-          json['wallets'],
+      json['creatorWallets'] ?? json['creatorWalletAddresses'],
     );
     addMeta(
       'artist_name_byline',

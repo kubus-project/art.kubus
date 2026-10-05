@@ -103,8 +103,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final futures = ids.map((id) async {
       try {
-        final User? user =
-            await UserService.getUserById(id, forceRefresh: forceRefresh);
+        final User? user = await UserService.getUserById(id,
+            forceRefresh: forceRefresh, includeAchievements: false);
         final name = (user?.name ?? '').trim();
         final username = (user?.username ?? '').trim();
         if (name.isNotEmpty || username.isNotEmpty) {
@@ -178,7 +178,7 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
           ? _resolvedIdentityByUserId[userId]
           : null;
       // A platform profile must never replace a recorded authorship label.
-      final primaryLabel = (_isRecordedArtist(creator.label)
+      final primaryLabel = (creator.hasRecordedLabel
               ? creator.label
               : (resolved?.name ?? creator.label))
           .trim();
@@ -226,11 +226,13 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
 class _CreatorRef {
   final String label;
+  final bool hasRecordedLabel;
   final String? userId;
   final String? username;
 
   const _CreatorRef({
     required this.label,
+    required this.hasRecordedLabel,
     this.userId,
     this.username,
   });
@@ -256,6 +258,7 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
     creators.add(
       _CreatorRef(
         label: display,
+        hasRecordedLabel: _isRecordedArtist(safeLabel),
         userId: safeUserId.isEmpty ? null : safeUserId,
         username: (username ?? '').trim().isEmpty ? null : username?.trim(),
       ),
@@ -335,6 +338,9 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
       relabeledCreators.add(
         _CreatorRef(
           label: bylineLabel ?? creator.label,
+          hasRecordedLabel: bylineLabel == null
+              ? creator.hasRecordedLabel
+              : _isRecordedArtist(bylineLabels[i]),
           userId: creator.userId,
           username: creator.username,
         ),
@@ -353,7 +359,10 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 void _addBylineLabel(List<_CreatorRef> creators, String label) {
   final safeLabel = _normalizeBylineLabel(label);
   if (safeLabel == null) return;
-  creators.add(_CreatorRef(label: safeLabel));
+  creators.add(_CreatorRef(
+    label: safeLabel,
+    hasRecordedLabel: _isRecordedArtist(label),
+  ));
 }
 
 String? _normalizeBylineLabel(String label) {
