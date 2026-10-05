@@ -154,6 +154,63 @@ void main() {
     expect(await loader.load('stale', targetPx: 96), isNotNull);
   });
 
+  test('queued prefetches in the kept set survive a display plan prune',
+      () async {
+    final gate = Completer<void>();
+    final fetched = <String>[];
+    final loader = KubusMarkerCoverLoader(
+      maxConcurrent: 1,
+      fetch: (url, width) async {
+        fetched.add(url);
+        await gate.future;
+        return _image();
+      },
+    );
+    addTearDown(loader.dispose);
+
+    final first = loader.load('running', targetPx: 96, prefetch: true);
+    final warm = loader.load('warm', targetPx: 96, prefetch: true);
+    final stale = loader.load('stale', targetPx: 96, prefetch: true);
+    // The prefetch stage's display plan is only the selection: the warm-up
+    // set rides along in the kept URLs.
+    loader.cancelPendingExcept(['warm'], targetPx: 96);
+    gate.complete();
+
+    expect(await first, isNotNull);
+    expect(await warm, isNotNull);
+    expect(await stale, isNull);
+    expect(fetched, ['running', 'warm']);
+  });
+
+  test(
+      'an empty keep set (zoomed out of the cover stages) drops all queued work',
+      () async {
+    final gate = Completer<void>();
+    final fetched = <String>[];
+    final loader = KubusMarkerCoverLoader(
+      maxConcurrent: 1,
+      fetch: (url, width) async {
+        fetched.add(url);
+        await gate.future;
+        return _image();
+      },
+    );
+    addTearDown(loader.dispose);
+
+    final running = loader.load('a', targetPx: 96);
+    final queued1 = loader.load('b', targetPx: 96);
+    final queued2 = loader.load('c', targetPx: 96, prefetch: true);
+    loader.cancelPendingExcept(const <String>[], targetPx: 96);
+    loader.setPinned(const <String>[], targetPx: 96);
+    gate.complete();
+
+    expect(await running, isNotNull);
+    expect(await queued1, isNull);
+    expect(await queued2, isNull);
+    expect(fetched, ['a']);
+    expect(loader.pinnedCount, 0);
+  });
+
   test('a freshly loaded image is never evicted by its own insertion',
       () async {
     final loader = KubusMarkerCoverLoader(
