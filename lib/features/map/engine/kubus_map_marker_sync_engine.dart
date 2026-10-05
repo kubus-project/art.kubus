@@ -25,6 +25,7 @@ import '../controller/kubus_map_controller.dart';
 import '../shared/map_cluster_transition.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_lod.dart';
+import 'kubus_cover_perf_probe.dart';
 import 'kubus_cover_work_gate.dart';
 import 'kubus_marker_cover_loader.dart';
 
@@ -288,8 +289,8 @@ class KubusMapMarkerSyncEngine {
       // now holds the wrong artwork, so rebuild once for the current zoom.
       final settledZoom = host.syncZoom;
       if (KubusMarkerLod.needsMarkerArtwork(settledZoom) != needsArtwork ||
-          KubusMarkerLod.allowsCovers(settledZoom) !=
-              KubusMarkerLod.allowsCovers(zoom)) {
+          KubusMarkerLod.coverStageForZoom(settledZoom) !=
+              KubusMarkerLod.coverStageForZoom(zoom)) {
         host.requestMarkerResync();
       }
     } finally {
@@ -504,12 +505,23 @@ class KubusMapMarkerSyncEngine {
   // Close-level artwork covers
   // -------------------------------------------------------------------------
 
-  /// Cover width requested from the media resolver and decoded, in logical px.
-  /// The badge face is 44 logical px, so a 2x decode is already generous; the
-  /// resolver clamps the download to this width, never archival media.
-  static const int _coverFetchWidthLogicalPx = 160;
+  /// Physical width the cover is requested at and decoded to. The badge face
+  /// is 44 logical px, so this is the face at the device pixel ratio plus a
+  /// modest oversample (see [KubusMarkerLod.coverFetchWidthPx]); the resolver
+  /// clamps the download near it (with long-edge headroom, see
+  /// [_coverDownloadWidthPx]), never archival media, and the decode targets the
+  /// short side instead of upscaling.
+  int get _coverFetchWidthPx =>
+      KubusMarkerLod.coverFetchWidthPx(host.markerPixelRatio());
+
+  /// Long-edge width the cover URL is clamped to. Wider than the decode target
+  /// so a landscape source keeps its short side (see
+  /// [KubusMarkerLod.coverDownloadWidthPx]).
+  int get _coverDownloadWidthPx =>
+      KubusMarkerLod.coverDownloadWidthPx(host.markerPixelRatio());
 
   String? _coverUrlFor(ArtMarker marker) {
+    final width = _coverDownloadWidthPx;
     final artworkId = marker.artworkId;
     final artwork = artworkId == null || artworkId.isEmpty
         ? null
@@ -522,14 +534,14 @@ class KubusMapMarkerSyncEngine {
     // without a cover is remembered too, but only until that data changes.
     final signature = '${artwork?.id}|${artwork?.imageUrl}|'
         '${identityHashCode(artwork?.metadata)}|'
-        '${identityHashCode(marker.metadata)}';
+        '${identityHashCode(marker.metadata)}|$width';
     return _coverUrls.lookup(
       markerId: marker.id,
       signature: signature,
       resolve: () => ArtworkMediaResolver.resolveCover(
         artwork: artwork,
         metadata: marker.metadata,
-        maxWidth: _coverFetchWidthLogicalPx,
+        maxWidth: width,
       ),
     );
   }
@@ -552,7 +564,7 @@ class KubusMapMarkerSyncEngine {
     required ThemeProvider themeProvider,
     required int styleEpoch,
   }) {
-    if (!KubusMarkerLod.allowsCovers(zoom)) {
+    if (!KubusMarkerLod.allowsSelectedCover(zoom)) {
       return const <String, KubusMarkerCoverIcons>{};
     }
     final visible = host.kubusMapController.visibleMarkerIds;
@@ -574,13 +586,27 @@ class KubusMapMarkerSyncEngine {
       if (url != null && _coverLoader.hasFailed(url)) failed.add(marker.id);
     }
     final viewport = MediaQuery.maybeOf(host.hostContext)?.size ?? Size.zero;
-    final chosen = KubusMarkerLod.selectCoverMarkerIds(
+    final center = host.kubusMapController.camera.center;
+    bool hasCover(ArtMarker marker) => _coverUrlFor(marker) != null;
+    // Below the display zoom only the selected marker (pinned out of
+    // clustering) may show its cover; nearby covers are at most prefetched.
+    final chosen = KubusMarkerLod.planCoverIds(
       candidates: candidates,
       selectedId: selectedId,
-      center: host.kubusMapController.camera.center,
-      budget: KubusMarkerLod.coverBudget(viewport),
-      hasCover: (marker) => _coverUrlFor(marker) != null,
+      center: center,
+      viewport: viewport,
+      zoom: zoom,
+      hasCover: hasCover,
       failedIds: failed,
+    );
+    _prefetchCovers(
+      zoom: zoom,
+      viewport: viewport,
+      candidates: candidates,
+      selectedId: selectedId,
+      center: center,
+      hasCover: hasCover,
+      failed: failed,
     );
 
     final plan = <String, KubusMarkerCoverIcons>{};
@@ -636,6 +662,48 @@ class KubusMapMarkerSyncEngine {
     return plan;
   }
 
+  /// Warms (downloads + decodes, never rasterises) the covers the next budget
+  /// stage will show, so they are ready when the visitor zooms in. Bounded by
+  /// that stage's budget, the loader's concurrency and LRU, and only while the
+  /// camera is idle: a settled camera means a stable candidate set.
+  void _prefetchCovers({
+    required double zoom,
+    required Size viewport,
+    required List<ArtMarker> candidates,
+    required String? selectedId,
+    required LatLng center,
+    required bool Function(ArtMarker marker) hasCover,
+    required Set<String> failed,
+  }) {
+    if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return;
+    if (host.kubusMapController.cameraIsMoving) return;
+    final budget = KubusMarkerLod.coverPrefetchBudget(viewport, zoom: zoom);
+    if (budget <= 0) return;
+    final ids = KubusMarkerLod.selectCoverMarkerIds(
+      candidates: candidates,
+      selectedId: selectedId,
+      center: center,
+      budget: budget,
+      hasCover: hasCover,
+      failedIds: failed,
+    );
+    final byId = <String, ArtMarker>{
+      for (final marker in candidates) marker.id: marker,
+    };
+    final width = _coverFetchWidthPx;
+    // A settled camera replaces the warm-up set: prefetches planned for an
+    // earlier view that have not started yet must not delay this one.
+    _coverLoader.cancelPendingPrefetches();
+    for (final id in ids) {
+      final marker = byId[id];
+      final url = marker == null ? null : _coverUrlFor(marker);
+      if (url == null || _coverLoader.cached(url, targetPx: width) != null) {
+        continue;
+      }
+      unawaited(_coverLoader.load(url, targetPx: width, prefetch: true));
+    }
+  }
+
   void _prepareCover({
     required ArtMarker marker,
     required String url,
@@ -650,10 +718,10 @@ class KubusMapMarkerSyncEngine {
         '$needSelectedVariant';
     if (!_pendingCoverKeys.add(key)) return;
     final pixelRatio = host.markerPixelRatio();
-    final targetWidth = (_coverFetchWidthLogicalPx * pixelRatio).round();
+    final targetWidth = _coverFetchWidthPx;
     unawaited(() async {
       try {
-        final image = await _coverLoader.load(url, targetWidthPx: targetWidth);
+        final image = await _coverLoader.load(url, targetPx: targetWidth);
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.
@@ -686,6 +754,7 @@ class KubusMapMarkerSyncEngine {
               KubusMarkerLod.maxRegisteredCoverImages) {
             return false;
           }
+          final renderWatch = Stopwatch()..start();
           final bytes = await ArtMarkerCubeIconRenderer.renderCoverMarkerPng(
             cover: image,
             baseColor: baseColor,
@@ -698,11 +767,14 @@ class KubusMapMarkerSyncEngine {
             showPromotionStar: marker.isPromoted,
             pixelRatio: pixelRatio,
           );
+          recordKubusCoverPhase(KubusCoverPhase.renderPng, renderWatch.elapsed);
           if (!host.hostMounted ||
               host.kubusMapController.styleEpoch != styleEpoch) {
             return false;
           }
+          final addWatch = Stopwatch()..start();
           await controller.addImage(id, bytes);
+          recordKubusCoverPhase(KubusCoverPhase.addImage, addWatch.elapsed);
           host.registeredMapImages.add(id);
           _coverImagesRegistered += 1;
           return true;

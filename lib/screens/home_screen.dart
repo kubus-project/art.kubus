@@ -221,7 +221,7 @@ class HomeWeb3CardStrip extends StatelessWidget {
             child: _HomeWeb3Card(
               title: l10n.kubusNodeEntryTitle,
               subtitle: l10n.kubusNodeRailSubtitle,
-              icon: Icons.dns_outlined,
+              icon: KubusLabsFeature.node.screenIcon,
               color: roles.web3NodeAccent,
               // No wallet gate. Owning and pairing a Node is runtime
               // ownership against the account, not a signing operation, so it
@@ -229,6 +229,7 @@ class HomeWeb3CardStrip extends StatelessWidget {
               // capabilities use. A wallet is still required for any action
               // that genuinely needs wallet authority.
               onTap: onOpenNode,
+              labsFeature: KubusLabsFeature.node,
               cardKey: const ValueKey<String>('home_web3_node'),
             ),
           );

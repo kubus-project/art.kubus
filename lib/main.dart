@@ -77,6 +77,7 @@ import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
 import 'core/app_route_observer.dart';
+import 'core/document_title_observer.dart';
 import 'core/url_coherence_observer.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -98,6 +99,7 @@ import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/guest_session_service.dart';
+import 'services/public_entity_takeover_bridge.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
@@ -439,7 +441,9 @@ class _AppLauncherState extends State<AppLauncher> {
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               onGenerateTitle: (context) =>
-                  AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+                  publicEntityDocumentTitle() ??
+                  AppLocalizations.of(context)?.appTitle ??
+                  'art.kubus',
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -956,6 +960,16 @@ class ArtKubus extends StatefulWidget {
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
   final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver();
+  // The shared instance is what entity screens register their titles with.
+  late final DocumentTitleObserver _documentTitleObserver = (() {
+    final observer = DocumentTitleObserver.shared;
+    // Retain the server's semantic title only for the page that takes over the
+    // exact canonical URL; every later route resolves its own title.
+    final retained = kIsWeb ? publicEntityDocumentTitle() : null;
+    observer.retainedTitle = retained;
+    observer.retainedPath = retained == null ? null : Uri.base.path;
+    return observer;
+  })();
 
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
@@ -1545,12 +1559,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             _telemetryObserver,
             appRouteObserver,
             _urlCoherenceObserver,
+            _documentTitleObserver,
           ],
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           onGenerateTitle: (context) =>
-              AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+              _documentTitleObserver.title.value ??
+              publicEntityDocumentTitle() ??
+              AppLocalizations.of(context)?.appTitle ??
+              'art.kubus',
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
@@ -1560,14 +1578,24 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             TelemetryService().setLocale(
               Localizations.localeOf(context).languageCode,
             );
-            return KubusProductBackground(
-              child: SecurityGateOverlay(
-                // Mounted above the navigator so a restored pending action can
-                // be confirmed on whichever entity the visitor was returned to,
-                // on mobile and desktop alike.
-                child: PendingActionContinuationHost(
-                  navigatorKey: appNavigatorKey,
-                  child: child ?? const SizedBox.shrink(),
+            return ValueListenableBuilder<String?>(
+              valueListenable: _documentTitleObserver.title,
+              builder: (context, documentTitle, shell) => Title(
+                title: documentTitle ??
+                    AppLocalizations.of(context)?.appTitle ??
+                    'art.kubus',
+                color: Theme.of(context).primaryColor,
+                child: shell!,
+              ),
+              child: KubusProductBackground(
+                child: SecurityGateOverlay(
+                  // Mounted above the navigator so a restored pending action
+                  // can be confirmed on whichever entity the visitor was
+                  // returned to, on mobile and desktop alike.
+                  child: PendingActionContinuationHost(
+                    navigatorKey: appNavigatorKey,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             );

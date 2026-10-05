@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -9,6 +10,8 @@ import 'package:art_kubus/widgets/art_marker_cube.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../support/qa_font_loader.dart';
 
 /// The face of a map marker: a canonical silhouette per category, a restrained
 /// tonal field, and a large glyph that is legible on every category colour.
@@ -144,6 +147,47 @@ void main() {
     });
   });
 
+  group('expressive face glyph (theme independent)', () {
+    test('clears contrast on every category colour in both themes', () {
+      for (final isDark in const [false, true]) {
+        for (final type in ArtMarkerType.values) {
+          final field = _subject(type, isDark);
+          final tint = ArtMarkerCubeIconRenderer.faceGlyphTintFor(field);
+          expect(_contrast(tint.to, field), greaterThanOrEqualTo(3.0),
+              reason: '${type.name} ${isDark ? 'dark' : 'light'}');
+        }
+      }
+    });
+
+    test('is made of the category colour, never plain black or white', () {
+      for (final type in ArtMarkerType.values) {
+        final tint = ArtMarkerCubeIconRenderer.faceGlyphTintFor(
+          _subject(type, false),
+        );
+        for (final c in [tint.from, tint.to]) {
+          expect(c, isNot(const Color(0xFFFFFFFF)), reason: type.name);
+          expect(c, isNot(const Color(0xFF000000)), reason: type.name);
+        }
+        expect(tint.from, isNot(tint.to), reason: '${type.name} is tonal');
+      }
+    });
+
+    test('does not flip with the map theme', () {
+      const deepTeal = Color(0xFF0B6E63);
+      expect(
+        ArtMarkerCubeIconRenderer.faceGlyphTintFor(deepTeal).from,
+        ArtMarkerCubeIconRenderer.faceGlyphTintFor(deepTeal).from,
+      );
+      // A deep colour takes a light glyph whatever the theme.
+      expect(
+        ArtMarkerCubeIconRenderer.faceGlyphTintFor(deepTeal)
+            .from
+            .computeLuminance(),
+        greaterThan(0.5),
+      );
+    });
+  });
+
   group('rendered marker face', () {
     Future<({int width, ByteData data})> decode(
       WidgetTester tester,
@@ -208,6 +252,50 @@ void main() {
     });
 
     testWidgets(
+        'the glyph is a cropped ghost in the trailing corner, '
+        'not a centred icon', (tester) async {
+      final t = _themeFor(false);
+      Future<({int width, ByteData data})> render(IconData icon) async {
+        late Uint8List png;
+        await tester.runAsync(() async {
+          png = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+            baseColor: _subject(ArtMarkerType.artwork, false),
+            icon: icon,
+            tier: ArtMarkerSignal.subtle,
+            scheme: t.scheme,
+            roles: t.roles,
+            isDark: false,
+            shape: ArtMapMarkerShape.roundedSquare,
+            pixelRatio: 1,
+          );
+        });
+        return decode(tester, png);
+      }
+
+      await tester.runAsync(QaFontLoader.ensureLoaded);
+      if (!QaFontLoader.loadedFamilies.contains('MaterialIcons')) {
+        // The icon font comes from the local Flutter SDK cache; without it a
+        // glyph paints no ink and there is nothing to locate.
+        markTestSkipped('MaterialIcons font unavailable in this environment');
+        return;
+      }
+      // A solid square glyph shows exactly where glyph ink lands.
+      final withGlyph = await render(Icons.square);
+      final without = await render(const IconData(0));
+      const cx = ArtMarkerCubeIconRenderer.badgePngWidth / 2;
+      const cy = ArtMarkerCubeIconRenderer.badgeBodyCenterY;
+      double diff(int x, int y) {
+        final a = pixel(withGlyph, x, y);
+        final b = pixel(without, x, y);
+        return (a.computeLuminance() - b.computeLuminance()).abs();
+      }
+
+      // Ink in the lower-right quadrant, the upper-left left to the field.
+      expect(diff((cx + 12).round(), (cy + 12).round()), greaterThan(0.03));
+      expect(diff((cx - 15).round(), (cy - 15).round()), lessThan(0.02));
+    });
+
+    testWidgets(
         'a mixed cluster renders without throwing and differs from a '
         'homogeneous one', (tester) async {
       final t = _themeFor(false);
@@ -246,5 +334,55 @@ void main() {
       expect(mixed, isNotEmpty);
       expect(mixed, isNot(single));
     });
+
+    for (final dominant in const [
+      ArtMarkerType.artwork,
+      ArtMarkerType.streetArt,
+    ]) {
+      testWidgets(
+          'a mixed ${dominant.name} cluster fits its canvas: no body or pip '
+          'is cut at an edge', (tester) async {
+        final t = _themeFor(false);
+        ClusterCategoryBadge badge(ArtMarkerType type, int count) =>
+            ClusterCategoryBadge(
+              shape: ArtMapMarkerShape.forType(type),
+              color: _subject(type, false),
+              count: count,
+              icon: Icons.place,
+            );
+        final others = ArtMarkerType.values
+            .where((type) => type != dominant)
+            .take(3)
+            .toList();
+        late Uint8List png;
+        await tester.runAsync(() async {
+          png = await ArtMarkerCubeIconRenderer.renderClusterPng(
+            count: 9,
+            baseColor: _subject(dominant, false),
+            scheme: t.scheme,
+            isDark: false,
+            categories: [
+              badge(dominant, 6),
+              for (final type in others) badge(type, 1),
+            ],
+            pixelRatio: 1,
+          );
+        });
+        final img = await decode(tester, png);
+        final height = img.data.lengthInBytes ~/ (img.width * 4);
+        double edgeAlpha(int x) {
+          var peak = 0.0;
+          for (var y = 0; y < height; y++) {
+            peak = math.max(peak, pixel(img, x, y).a);
+          }
+          return peak;
+        }
+
+        // Opaque shapes stop short of both side edges; only a soft shadow
+        // may reach them.
+        expect(edgeAlpha(0), lessThan(0.5), reason: 'left edge');
+        expect(edgeAlpha(img.width - 1), lessThan(0.5), reason: 'right edge');
+      });
+    }
   });
 }

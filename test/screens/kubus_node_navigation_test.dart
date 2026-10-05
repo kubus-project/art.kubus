@@ -5,6 +5,9 @@ import 'package:art_kubus/screens/desktop/components/desktop_navigation.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/home_screen.dart';
 import 'package:art_kubus/screens/node/kubus_node_screen.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/kubus_labs_feature.dart';
+import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -96,6 +99,58 @@ void main() {
     });
   });
 
+  group('Labs identity', () {
+    test('KubusLabsFeature.node: key, route, glyph, accent', () {
+      const node = KubusLabsFeature.node;
+      expect(node.screenKey, 'kubus_node');
+      expect(node.route, '/kubus-node');
+      expect(node.navIcon, Icons.dns_outlined,
+          reason: 'the Node glyph stays infrastructure, Labs is an adornment');
+      expect(node.accent(KubusColorRoles.dark),
+          KubusColorRoles.dark.web3NodeAccent);
+      expect(kubusLabsFeatureForRoute('/kubus-node'), node);
+      expect(kubusLabsFeatureForScreenKey('node'), node);
+      expect(kubusLabsFeatureForScreenKey('kubus-node'), node);
+    });
+
+    testWidgets('the Node card on the capability strip carries Labs',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: HomeWeb3CardStrip(
+              isEffectivelyConnected: false,
+              persona: null,
+              isArtist: false,
+              isInstitution: false,
+              onOpenDao: () {},
+              onOpenArtistStudio: () {},
+              onOpenInstitutionHub: () {},
+              onOpenMarketplace: () {},
+              onOpenNode: () {},
+              onShowWalletOnboarding: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final card = find.byKey(const ValueKey<String>('home_web3_node'));
+      expect(card, findsOneWidget);
+      final labs = find.descendant(
+        of: card,
+        matching: find.byWidgetPredicate(
+          (w) => w is KubusLabsAdornment && w.feature == KubusLabsFeature.node,
+        ),
+      );
+      if (KubusLabsFeature.node.showLabsMarker) {
+        expect(labs, findsOneWidget);
+      }
+    });
+  });
+
   group('desktop navigation', () {
     List<DesktopNavLabelKey> keys(
       List<DesktopNavItem> items,
@@ -116,11 +171,12 @@ void main() {
         order.indexOf(DesktopNavLabelKey.node),
         greaterThan(order.indexOf(DesktopNavLabelKey.trade)),
       );
-      // It is a destination of the advanced group, not a Labs-gated financial
-      // capability.
+      // It shares the Labs identity of the advanced group (a marker, never a
+      // gate) while keeping its own infrastructure glyph.
       final node =
           items.firstWhere((i) => i.labelKey == DesktopNavLabelKey.node);
-      expect(node.labsFeature, isNull);
+      expect(node.labsFeature, KubusLabsFeature.node);
+      expect(node.icon, Icons.dns_outlined);
     });
 
     test('Node stays available whichever creator role the account has', () {
@@ -178,6 +234,17 @@ void main() {
       await pump(tester, embedded: true);
       expect(find.byType(AppBar), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the Node header carries the one Labs adornment',
+        (tester) async {
+      await pump(tester, embedded: true);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is KubusLabsAdornment && w.feature == KubusLabsFeature.node,
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -20,9 +20,28 @@ abstract final class KubusMarkerLod {
   static const double farMaxZoom = 6.0;
   static const double blendHalfWidth = 0.5;
 
-  /// Covers may appear from here (street scale). Same boundary as the existing
-  /// spiderfy / nearby close-up constants.
-  static const double closeMinZoom = 15.0;
+  /// The selected marker is pinned out of clustering, so its cover may show
+  /// from here: well before nearby covers, at city scale.
+  static const double selectedCoverMinZoom = 10.0;
+
+  /// Nearby covers start downloading/decoding (never rasterising) from here,
+  /// one step before they are displayed, so the first covers are warm when the
+  /// visitor arrives at street-approach scale.
+  static const double coverPrefetchMinZoom = 11.5;
+
+  /// Nearby covers may display from here (street approach). Clusters dissolve
+  /// at `MapScreenConstants.clusterMaxZoom` (12), so covers only ever replace
+  /// canonical individual markers.
+  static const double coverDisplayMinZoom = 12.5;
+
+  /// The cover budget grows with zoom instead of switching to a photo wall:
+  /// a small early subset from [coverDisplayMinZoom], more from here, and the
+  /// full viewport budget from [coverFullBudgetZoom].
+  static const double coverMediumBudgetZoom = 13.5;
+  static const double coverFullBudgetZoom = 14.5;
+
+  /// Start of the close tier (covers allowed).
+  static const double closeMinZoom = coverDisplayMinZoom;
 
   static double get blendStartZoom => farMaxZoom - blendHalfWidth;
   static double get blendEndZoom => farMaxZoom + blendHalfWidth;
@@ -40,8 +59,42 @@ abstract final class KubusMarkerLod {
   static bool needsMarkerArtwork(double zoom) =>
       zoom.isFinite && zoom >= blendStartZoom;
 
+  /// Whether nearby (non-selected) covers may be displayed.
   static bool allowsCovers(double zoom) =>
-      zoom.isFinite && zoom >= closeMinZoom;
+      zoom.isFinite && zoom >= coverDisplayMinZoom;
+
+  /// Whether the selected marker may display its cover.
+  static bool allowsSelectedCover(double zoom) =>
+      zoom.isFinite && zoom >= selectedCoverMinZoom;
+
+  /// Whether likely covers should be fetched and decoded ahead of display.
+  static bool allowsCoverPrefetch(double zoom) =>
+      zoom.isFinite && zoom >= coverPrefetchMinZoom;
+
+  /// Whether a settled camera at [zoom] should re-plan covers (display or
+  /// prefetch). Screens call this on camera idle.
+  ///
+  /// In the selected-only band below [coverPrefetchMinZoom] only a selection
+  /// can show a cover, so without one there is nothing to plan. With one the
+  /// idle re-plan is required: selecting a marker usually animates the
+  /// camera, and a cover is never rasterised mid-move, so the resync that the
+  /// selection triggered skipped it.
+  static bool plansCoversAt(double zoom, {bool hasSelection = false}) =>
+      allowsCoverPrefetch(zoom) || (hasSelection && allowsSelectedCover(zoom));
+
+  /// Discrete cover stage for [zoom]. Crossing a stage changes what the marker
+  /// source shows (or prefetches), so the regroup gate and the sync engine
+  /// compare stages rather than one boolean.
+  ///
+  /// 0 none, 1 selected only, 2 prefetch, 3 early, 4 medium, 5 full.
+  static int coverStageForZoom(double zoom) {
+    if (!zoom.isFinite || zoom < selectedCoverMinZoom) return 0;
+    if (zoom < coverPrefetchMinZoom) return 1;
+    if (zoom < coverDisplayMinZoom) return 2;
+    if (zoom < coverMediumBudgetZoom) return 3;
+    if (zoom < coverFullBudgetZoom) return 4;
+    return 5;
+  }
 
   // ---------------------------------------------------------------------
   // Cover budget
@@ -67,18 +120,116 @@ abstract final class KubusMarkerLod {
   /// is clamped so no device ever holds more than [maxCoverBudget] cover
   /// textures. The reference web value is 32; 24 keeps headroom for the
   /// canonical icons and the walking route.
-  static int coverBudget(Size viewport) {
+  ///
+  /// With [zoom], the budget is staged: below [coverDisplayMinZoom] there is no
+  /// nearby budget, the early stage gets a quarter, the medium stage half, and
+  /// only [coverFullBudgetZoom] and closer get the full value. The selected
+  /// marker is outside this budget (see [selectCoverMarkerIds]).
+  static int coverBudget(Size viewport, {double? zoom}) {
     final area = viewport.width * viewport.height;
-    if (!area.isFinite || area <= 0) return minCoverBudget;
-    return (area / _areaPerCoverPx2)
-        .round()
-        .clamp(minCoverBudget, maxCoverBudget);
+    final full = (!area.isFinite || area <= 0)
+        ? minCoverBudget
+        : (area / _areaPerCoverPx2).round().clamp(
+              minCoverBudget,
+              maxCoverBudget,
+            );
+    if (zoom == null) return full;
+    switch (coverStageForZoom(zoom)) {
+      case 0:
+      case 1:
+      case 2:
+        return 0;
+      case 3:
+        return math.max(earlyCoverBudgetFloor, (full / 4).ceil());
+      case 4:
+        return math.max(earlyCoverBudgetFloor + 2, (full / 2).ceil());
+      default:
+        return full;
+    }
+  }
+
+  /// Fewest nearby covers the early stage shows (besides the selected one).
+  static const int earlyCoverBudgetFloor = 3;
+
+  /// Budget for warming covers ahead of display at [zoom]: the next stage's
+  /// budget, so the covers about to be shown are already decoded. Zero below
+  /// [coverPrefetchMinZoom].
+  static int coverPrefetchBudget(Size viewport, {required double zoom}) {
+    final stage = coverStageForZoom(zoom);
+    if (stage < 2) return 0;
+    final nextZoom = switch (stage) {
+      2 => coverDisplayMinZoom,
+      3 => coverMediumBudgetZoom,
+      _ => coverFullBudgetZoom,
+    };
+    return coverBudget(viewport, zoom: math.max(zoom, nextZoom));
+  }
+
+  // ---------------------------------------------------------------------
+  // Cover pixels
+  // ---------------------------------------------------------------------
+
+  /// Logical width of the cover face inside a marker (the badge face is 44
+  /// logical px; the selected glow variant scales slightly).
+  static const double coverFaceLogicalPx = 44.0;
+
+  /// Oversample over the face so the cover stays crisp under the selected
+  /// scale and the shape mask's anti-aliasing.
+  static const double coverOversample = 1.5;
+
+  /// Physical pixel width to request and decode for a marker cover at
+  /// [pixelRatio], snapped to 32 px steps so a CDN/proxy cache sees few
+  /// distinct sizes, clamped to 96-256. Never archival: 1x asks for 96 px,
+  /// 2x for 160 px and 3x for 224 px.
+  static int coverFetchWidthPx(double pixelRatio) {
+    final ratio = pixelRatio.isFinite && pixelRatio > 0 ? pixelRatio : 1.0;
+    final raw = coverFaceLogicalPx * coverOversample * ratio;
+    final snapped = ((raw / 32).ceil() * 32).clamp(96, 256);
+    return snapped;
+  }
+
+  /// Widest source aspect (long edge over short edge) a cover download is sized
+  /// for. The face is square and the decode targets the short side, so a
+  /// landscape source needs this much long-edge headroom to reach it.
+  static const double coverSourceAspectHeadroom = 16 / 9;
+
+  /// Physical long-edge width a cover is *downloaded* at: enough that a 16:9
+  /// source still has [coverFetchWidthPx] on its short edge. The decode stays
+  /// short-side bound, so this only widens the (small) transfer.
+  static int coverDownloadWidthPx(double pixelRatio) {
+    final raw = coverFetchWidthPx(pixelRatio) * coverSourceAspectHeadroom;
+    return ((raw / 32).ceil() * 32).clamp(160, 512);
+  }
+
+  /// The covers to display at [zoom]: the selected marker from
+  /// [selectedCoverMinZoom], nearby markers from [coverDisplayMinZoom] within
+  /// the staged [coverBudget]. Empty below [selectedCoverMinZoom].
+  static List<String> planCoverIds({
+    required Iterable<ArtMarker> candidates,
+    required String? selectedId,
+    required LatLng center,
+    required Size viewport,
+    required double zoom,
+    required bool Function(ArtMarker marker) hasCover,
+    Set<String> failedIds = const <String>{},
+  }) {
+    if (!allowsSelectedCover(zoom)) return const <String>[];
+    return selectCoverMarkerIds(
+      candidates: allowsCovers(zoom)
+          ? candidates
+          : candidates.where((marker) => marker.id == selectedId),
+      selectedId: selectedId,
+      center: center,
+      budget: coverBudget(viewport, zoom: zoom),
+      hasCover: hasCover,
+      failedIds: failedIds,
+    );
   }
 
   /// Chooses which markers get a cover.
   ///
-  /// Order: the selected marker (always, even over budget), then promoted
-  /// markers, then nearest to [center]. Markers without a resolvable cover
+  /// Order: the selected marker (always, and on top of [budget]), then up to
+  /// [budget] promoted markers, then nearest to [center]. Markers without a resolvable cover
   /// are never candidates, and a failed cover simply keeps its canonical
   /// marker, so a missing image can never remove a marker.
   static List<String> selectCoverMarkerIds({
@@ -114,10 +265,10 @@ abstract final class KubusMarkerLod {
       final byDistance = a.meters.compareTo(b.meters);
       return byDistance != 0 ? byDistance : a.id.compareTo(b.id);
     });
-    final room = math.max(0, budget - selected.length);
+    // The selection is outside the budget: it never costs a nearby cover.
     return <String>[
       ...selected,
-      ...ranked.take(room).map((entry) => entry.id),
+      ...ranked.take(math.max(0, budget)).map((entry) => entry.id),
     ];
   }
 
@@ -142,7 +293,7 @@ abstract final class KubusMarkerLod {
             <Object>[
               '==',
               <Object>['id'],
-              selectedId
+              selectedId,
             ],
             entryOpacity,
             0.0,
@@ -199,7 +350,7 @@ abstract final class KubusMarkerLod {
           <Object>[
             '==',
             <Object>['get', 'kind'],
-            'cluster'
+            'cluster',
           ],
           cluster,
           dotRadius,

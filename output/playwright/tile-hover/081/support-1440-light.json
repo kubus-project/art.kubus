@@ -1,0 +1,22 @@
+{
+  "name": "support-1440-light",
+  "route": "/",
+  "viewport": [
+    1440,
+    900
+  ],
+  "theme": "light",
+  "reducedMotion": false,
+  "hovers": [
+    [
+      900,
+      421
+    ]
+  ],
+  "shots": [
+    "support-1440-light-0-rest.png",
+    "support-1440-light-1-hover-900x421.png"
+  ],
+  "pageErrors": [],
+  "blockedExternalRequests": 92
+}

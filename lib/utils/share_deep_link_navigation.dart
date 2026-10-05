@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../core/app_navigator.dart';
 import '../core/shell_routes.dart';
+import '../core/startup_trace.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/map_deep_link_provider.dart';
 import '../screens/desktop/desktop_map_screen.dart';
@@ -25,6 +26,11 @@ class ShareDeepLinkNavigation {
     ShareDeepLinkTarget target, {
     bool ensureShell = true,
   }) async {
+    StartupTrace.publicEntry('entity_navigation',
+        entityType: target.type.name,
+        route: const ShareDeepLinkCodec()
+            .canonicalPathForTarget(target, includeProofTokens: false),
+        caller: 'ShareDeepLinkNavigation');
     if (kDebugMode) {
       debugPrint(
           'ShareDeepLinkNavigation.open: ${target.type} id=${target.id}');
@@ -141,6 +147,9 @@ class ShareDeepLinkNavigation {
         );
         return;
       case ShareEntityType.nft:
+        tabs?.setIndex(3);
+        await openArtwork(context, target.id,
+            source: 'share_deep_link', publicEntityType: ShareEntityType.nft);
         return;
     }
   }
@@ -218,6 +227,8 @@ class ShareDeepLinkNavigation {
         );
         return;
       case ShareEntityType.nft:
+        await openArtwork(context, target.id,
+            source: 'share_deep_link', publicEntityType: ShareEntityType.nft);
         return;
     }
   }

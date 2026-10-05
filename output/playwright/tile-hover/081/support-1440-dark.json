@@ -1,0 +1,27 @@
+{
+  "name": "support-1440-dark",
+  "route": "/",
+  "viewport": [
+    1440,
+    900
+  ],
+  "theme": "dark",
+  "reducedMotion": false,
+  "hovers": [
+    [
+      900,
+      421
+    ],
+    [
+      900,
+      497
+    ]
+  ],
+  "shots": [
+    "support-1440-dark-0-rest.png",
+    "support-1440-dark-1-hover-900x421.png",
+    "support-1440-dark-2-hover-900x497.png"
+  ],
+  "pageErrors": [],
+  "blockedExternalRequests": 92
+}

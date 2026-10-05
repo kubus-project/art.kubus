@@ -1,3 +1,4 @@
+import '../../core/document_title_observer.dart';
 import 'dart:convert';
 
 import 'dart:async';
@@ -56,11 +57,16 @@ import '../../services/meta/meta_conversion_adapter.dart';
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
   final String? attendanceMarkerId;
+  final ShareEntityType publicEntityType;
+  final String? publicEntityId;
+  String get publicEntryId => publicEntityId ?? artworkId;
 
   const ArtDetailScreen({
     super.key,
     required this.artworkId,
     this.attendanceMarkerId,
+    this.publicEntityType = ShareEntityType.artwork,
+    this.publicEntityId,
   });
 
   @override
@@ -74,12 +80,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   String _publicReturnRoute(BuildContext context) {
     try {
-      return context.read<PublicEntityTakeoverProvider>().returnRouteForArtwork(
-                widget.artworkId,
+      return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
+                widget.publicEntityType,
+                widget.publicEntryId,
               ) ??
-          '/a/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
-      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     }
   }
 
@@ -254,7 +261,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           );
         }
 
-        if (artwork == null) {
+        if (artwork == null ||
+            (widget.publicEntityType == ShareEntityType.nft &&
+                (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
@@ -297,88 +306,91 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         }
 
         _scheduleTakeoverReady(artwork.id);
-        return AnimatedGradientBackground(
-          child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            body: CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                _buildAppBar(artwork),
-                SliverToBoxAdapter(
-                  child: Padding(
+        return DocumentTitle(
+          title: artwork.title,
+          child: AnimatedGradientBackground(
+            child: Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              body: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  _buildAppBar(artwork),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        DetailSpacing.lg,
+                        DetailSpacing.md,
+                        DetailSpacing.lg,
+                        0,
+                      ),
+                      child: AspectRatio(
+                        // The server frame uses the portrait public
+                        // artwork crop at this same compact width.
+                        aspectRatio: 0.77,
+                        child: _buildPreviewCoverImage(
+                          ArtworkMediaResolver.resolveCover(artwork: artwork),
+                          semanticLabel: artwork.title.trim().isEmpty
+                              ? 'Artwork image'
+                              : '${artwork.title} image',
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
                       DetailSpacing.lg,
-                      DetailSpacing.md,
+                      DetailSpacing.xl,
                       DetailSpacing.lg,
-                      0,
+                      DetailSpacing.xl,
                     ),
-                    child: AspectRatio(
-                      // The server frame uses the portrait public
-                      // artwork crop at this same compact width.
-                      aspectRatio: 0.77,
-                      child: _buildPreviewCoverImage(
-                        ArtworkMediaResolver.resolveCover(artwork: artwork),
-                        semanticLabel: artwork.title.trim().isEmpty
-                            ? 'Artwork image'
-                            : '${artwork.title} image',
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DetailSpacing.lg,
-                    DetailSpacing.xl,
-                    DetailSpacing.lg,
-                    DetailSpacing.xl,
-                  ),
-                  sliver: SliverList(
-                    // Editorial rhythm: major zones breathe with the
-                    // larger card gap instead of packing tightly.
-                    delegate: SliverChildListDelegate([
-                      _buildArtInfo(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildPrimaryActionButtons(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildDescription(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      ArtworkProvenanceSection(artwork: artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildGallerySection(artwork),
-                      if (artwork.galleryUrls.isNotEmpty)
+                    sliver: SliverList(
+                      // Editorial rhythm: major zones breathe with the
+                      // larger card gap instead of packing tightly.
+                      delegate: SliverChildListDelegate([
+                        _buildArtInfo(artwork),
                         const SizedBox(height: DetailSpacing.cardGap),
-                      ArtworkSpatialArchiveSection(
-                        artwork: artwork,
-                        contextMarkerId: widget.attendanceMarkerId,
-                      ),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildSocialStats(artwork),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      _buildAdditionalActions(
-                        artwork,
-                        isOwner: isOwner,
-                        canManage: canManage,
-                      ),
-                      const SizedBox(height: DetailSpacing.cardGap),
-                      if (AppConfig.isFeatureEnabled('collabInvites') &&
-                          isSignedIn) ...[
-                        CollaborationPanel(
-                          entityType: 'artworks',
-                          entityId: artwork.id,
-                          myRole: isOwner ? 'owner' : null,
+                        _buildPrimaryActionButtons(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildDescription(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        ArtworkProvenanceSection(artwork: artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildGallerySection(artwork),
+                        if (artwork.galleryUrls.isNotEmpty)
+                          const SizedBox(height: DetailSpacing.cardGap),
+                        ArtworkSpatialArchiveSection(
+                          artwork: artwork,
+                          contextMarkerId: widget.attendanceMarkerId,
                         ),
-                        const SizedBox(height: DetailSpacing.xl),
-                      ],
-                      _buildCommentsSection(artwork, artworkProvider),
-                      const SizedBox(height: 100), // Bottom padding
-                    ]),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildSocialStats(artwork),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        _buildAdditionalActions(
+                          artwork,
+                          isOwner: isOwner,
+                          canManage: canManage,
+                        ),
+                        const SizedBox(height: DetailSpacing.cardGap),
+                        if (AppConfig.isFeatureEnabled('collabInvites') &&
+                            isSignedIn) ...[
+                          CollaborationPanel(
+                            entityType: 'artworks',
+                            entityId: artwork.id,
+                            myRole: isOwner ? 'owner' : null,
+                          ),
+                          const SizedBox(height: DetailSpacing.xl),
+                        ],
+                        _buildCommentsSection(artwork, artworkProvider),
+                        const SizedBox(height: 100), // Bottom padding
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              floatingActionButton: (_showComments && isSignedIn)
+                  ? _buildCommentFAB(artwork)
+                  : null,
             ),
-            floatingActionButton: (_showComments && isSignedIn)
-                ? _buildCommentFAB(artwork)
-                : null,
           ),
         );
       },
@@ -439,8 +451,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       if (!mounted) return;
       try {
         unawaited(
-          context.read<PublicEntityTakeoverProvider>().markArtworkReady(
-                artworkId,
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                widget.publicEntityType,
+                widget.publicEntryId,
               ),
         );
       } catch (_) {}
@@ -583,8 +596,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return context
           .read<PublicEntityTakeoverProvider>()
           .publicPlaceLabelForCanonicalPath(
-            type: 'artwork',
-            id: artworkId,
+            type: widget.publicEntityType == ShareEntityType.nft
+                ? 'collectible'
+                : 'artwork',
+            id: widget.publicEntryId,
             pathname: Uri.base.path,
           );
     } catch (_) {
@@ -642,8 +657,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   label: l10n.commonShare,
                   onPressed: () => ShareService().showShareSheet(
                     context,
-                    target: ShareTarget.artwork(
+                    target: ShareTarget.artworkDetail(
                       artworkId: artwork.id,
+                      publicEntityType: widget.publicEntityType,
+                      publicEntityId: widget.publicEntryId,
                       title: artwork.title,
                     ),
                     sourceScreen: 'art_detail',
@@ -1055,8 +1072,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           onSelected: () {
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.artwork(
+              target: ShareTarget.artworkDetail(
                 artworkId: artwork.id,
+                publicEntityType: widget.publicEntityType,
+                publicEntityId: widget.publicEntryId,
                 title: artwork.title,
               ),
               sourceScreen: 'art_detail',

@@ -12,8 +12,8 @@ import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import '../../widgets/auth/auth_atmosphere.dart';
+import '../../widgets/auth/auth_form_panel.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
-import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/foundation.dart';
@@ -624,11 +624,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
-                    child: KubusCard(
-                      padding: const EdgeInsets.all(KubusSpacing.lg),
-                      color: scheme.surfaceContainerHigh,
-                      child: body,
-                    ),
+                    // One atmosphere, one panel: the atmosphere is the page
+                    // context, so the task does not get a second frame.
+                    child: AuthFormPanel(child: body),
                   ),
                 ),
               ),

@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:art_kubus/core/app_initializer.dart'
+    show shouldActivateGuestForPublicEntry;
 import 'package:art_kubus/core/app_initializer_helper.dart';
+import 'package:art_kubus/core/deep_link_startup_routing.dart';
 
 void main() {
   group('shouldOpenPublicMapBeforeOnboarding', () {
@@ -299,6 +302,33 @@ void main() {
         ),
         isFalse,
       );
+    });
+  });
+
+  group('shouldActivateGuestForPublicEntry', () {
+    test('fresh anonymous user opening a public link becomes a guest', () {
+      expect(
+          shouldActivateGuestForPublicEntry(
+              hasValidSession: false,
+              hasLocalAccount: false,
+              accessPolicy: DeepLinkAccessPolicy.publicRead),
+          isTrue);
+    });
+    test('returning local account with expired session is not a guest', () {
+      expect(
+          shouldActivateGuestForPublicEntry(
+              hasValidSession: false,
+              hasLocalAccount: true,
+              accessPolicy: DeepLinkAccessPolicy.publicRead),
+          isFalse);
+    });
+    test('valid session is never marked guest', () {
+      expect(
+          shouldActivateGuestForPublicEntry(
+              hasValidSession: true,
+              hasLocalAccount: true,
+              accessPolicy: DeepLinkAccessPolicy.publicRead),
+          isFalse);
     });
   });
 }

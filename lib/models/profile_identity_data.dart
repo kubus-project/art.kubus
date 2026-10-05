@@ -206,6 +206,29 @@ class ProfileIdentityData {
     required String fallbackLabel,
   }) {
     final raw = item.raw;
+    // `imageUrl` is the rail's single "best image": the avatar or logo, but
+    // the cover when there is none. It may stand in for a missing explicit
+    // avatar field (older payloads carried no other), never when it is the
+    // cover itself, which belongs behind the mark, not in it.
+    final imageUrl = _normalizeText(item.imageUrl);
+    final cover = _firstNonEmpty(<dynamic>[
+      raw['coverImageUrl'],
+      raw['cover_image_url'],
+      raw['coverImage'],
+      raw['cover_image'],
+      raw['coverUrl'],
+      raw['cover_url'],
+    ]);
+    final imageAsMark = imageUrl != null && imageUrl != cover ? imageUrl : null;
+    // A profile's `imageUrl` falls back to its cover when it has no avatar,
+    // and a payload without explicit media fields (the 0.8.0 backend) cannot
+    // say which it is. Only a URL that is evidently an avatar upload may then
+    // stand in for the avatar; anything else could be the cover.
+    final hasExplicitMedia = cover != null || _pickAvatarUrl(raw) != null;
+    final profileImageAsMark = imageAsMark != null &&
+            (hasExplicitMedia || imageAsMark.contains('/avatars/'))
+        ? imageAsMark
+        : null;
     if (item.entityType == PromotionEntityType.profile) {
       final subtitle = (item.subtitle ?? '').trim();
       final username = CreatorDisplayFormat.normalizeUsername(
@@ -220,7 +243,7 @@ class ProfileIdentityData {
         username: username,
         userId: userId,
         wallet: userId,
-        avatarUrl: _pickAvatarUrl(raw),
+        avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
       );
     }
 
@@ -232,7 +255,7 @@ class ProfileIdentityData {
         username: CreatorDisplayFormat.normalizeUsername(raw['username']),
         userId: profileTargetId,
         wallet: profileTargetId ?? item.id,
-        avatarUrl: _pickLogoOrAvatarUrl(raw) ?? _normalizeText(item.imageUrl),
+        avatarUrl: _pickLogoOrAvatarUrl(raw) ?? imageAsMark,
       );
     }
 

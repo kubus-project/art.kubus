@@ -15,9 +15,9 @@ enum KubusActionTileLayout {
 
   /// Dense management destination (settings, security, account): a full-width
   /// row with the title, an optional one-line subtitle, an optional [status]
-  /// and the arrow, over a small cropped glyph. It answers hover quietly
-  /// (field, edge and a leading indicator; no lift, no shadow, no drift) so a
-  /// list of them does not bob.
+  /// and the arrow, over a lightly cropped trailing glyph. The surface never
+  /// lifts or casts a hover shadow, so a list of them does not bob; the glyph,
+  /// field, edge and a leading indicator answer instead.
   compact,
 }
 
@@ -32,18 +32,26 @@ enum KubusActionTileLayout {
 /// it would only repeat what the title, colour and glyph already say. The
 /// inline tile is too short for a legible glyph, so it is field, title and a
 /// navigation arrow (the arrow is the affordance, not identity). The compact
-/// tile carries a small cropped glyph for scanability in long lists; it never
-/// moves.
+/// tile carries the same trailing ghost glyph, sized to the row, for
+/// scanability in long lists.
+///
+/// Ghost glyphs use [KubusGhostGlyphPlacement.tile] (stacked: mostly inside
+/// the tile, lightly cropped at the top-right corner) and
+/// [KubusGhostGlyphPlacement.row] (compact: row-height glyph cropped at the
+/// top edge only, left of the arrow lane). Never pushed off the frame.
 ///
 /// Hover contract (pointer only; touch never hovers):
 ///
 /// - stacked and inline: a 2 px paint-only lift, a stronger accent field and
 ///   edge, a soft contextual accent shadow ([KubusHoverResponse.accentShadow])
-///   and, for stacked, a 2-4 px / 1.03x drift of the clipped ghost glyph or,
-///   for inline, a 2 px arrow travel. 180 ms ease-out. Nothing reflows.
-/// - compact: field, edge and a leading indicator only.
-/// - reduced motion: no lift, no glyph drift, no arrow travel; the field,
-///   edge and shadow state still change so the tile still answers.
+///   and, for stacked, the ghost glyph's inward drift and scale or, for
+///   inline, a 2 px arrow travel. 180 ms ease-out. Nothing reflows.
+/// - compact: the surface stays put (no lift, no shadow); the ghost glyph
+///   drifts ~2.5 px inward and grows to 1.03x, and the field, edge and a
+///   leading indicator strengthen.
+/// - reduced motion: no lift, no glyph drift or scale, no arrow travel; the
+///   field, edge, indicator and shadow state still change so the tile still
+///   answers.
 ///
 /// The title owns the button semantics (the optional [subtitle] is its hint);
 /// the glyph and arrow are excluded from the tree. Minimum 44 px target,
@@ -71,7 +79,7 @@ class KubusActionTile extends StatelessWidget {
 
   final String title;
 
-  /// Destination glyph, drawn as the stacked tile's cropped ghost glyph.
+  /// Destination glyph, drawn as the tile's cropped ghost glyph.
   final IconData icon;
 
   /// Destination colour from [KubusColorRoles] / `AppColorUtils`.
@@ -104,12 +112,9 @@ class KubusActionTile extends StatelessWidget {
   /// Widest an inline tile grows at 1x text, before the text scale.
   static const double inlineMaxWidth = 280;
 
-  /// Cropped glyph size on a compact tile.
-  static const double compactGlyphExtent = 56;
-
-  /// Ghost glyph drift on a hovered stacked tile (paint only).
-  static const double glyphShift = 3;
-  static const double glyphScale = 1.03;
+  /// Trailing space a compact row keeps free of its ghost glyph: the end
+  /// padding, the 16 px arrow and a small gap.
+  static const double compactArrowLane = KubusSpacing.md + 16 + KubusSpacing.sm;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +125,7 @@ class KubusActionTile extends StatelessWidget {
     final motion = KubusHoverResponse.motionAllowed(context);
     final stacked = layout == KubusActionTileLayout.stacked;
     final compact = layout == KubusActionTileLayout.compact;
+    final inline = layout == KubusActionTileLayout.inline;
     final lifts = !compact;
     // The inline strip is too short for a subtitle, and an empty one is none.
     final shownSubtitle =
@@ -334,36 +340,22 @@ class KubusActionTile extends StatelessWidget {
                     ),
                     // The inline tile is too short for a legible ghost glyph;
                     // its arrow carries the accent instead.
-                    if (compact)
+                    if (!inline)
                       Positioned.fill(
                         child: KubusGhostGlyph(
                           key: const ValueKey<String>(
-                              'kubus_action_tile_compact_glyph'),
+                              'kubus_action_tile_ghost_glyph'),
                           icon: icon,
                           color: accent,
+                          placement: compact
+                              ? KubusGhostGlyphPlacement.row
+                              : KubusGhostGlyphPlacement.tile,
                           alignment: Alignment.topRight,
-                          extent: compactGlyphExtent,
-                          bleed: 0.3,
-                        ),
-                      ),
-                    if (stacked)
-                      Positioned.fill(
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween<double>(end: hovered && motion ? 1 : 0),
-                          duration: motion
-                              ? KubusHoverResponse.duration
-                              : Duration.zero,
-                          curve: Curves.easeOutCubic,
-                          builder: (context, t, _) => KubusGhostGlyph(
-                            key: const ValueKey<String>(
-                                'kubus_action_tile_ghost_glyph'),
-                            icon: icon,
-                            color: accent,
-                            alignment: Alignment.topRight,
-                            bleed: 0.3,
-                            scale: 1 + (glyphScale - 1) * t,
-                            shift: Offset(-glyphShift * t, glyphShift * t),
-                          ),
+                          // A compact row keeps its trailing arrow lane clear.
+                          inset: compact
+                              ? const EdgeInsets.only(right: compactArrowLane)
+                              : EdgeInsets.zero,
+                          hovered: hovered,
                         ),
                       ),
                     Positioned(

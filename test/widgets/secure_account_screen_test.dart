@@ -5,6 +5,8 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/secure_account_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
+import 'package:art_kubus/widgets/auth/auth_form_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -36,6 +38,46 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
+  });
+
+  testWidgets('secure account: one atmosphere and one form panel',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true)
+      ..setCurrentWalletAddressForTesting('wallet1');
+    final profileProvider = ProfileProvider();
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('cached-token');
+    api.setHttpClient(
+      MockClient((request) async {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{
+              'hasEmail': false,
+              'hasPassword': false,
+              'emailVerified': false,
+              'emailAuthEnabled': true,
+            },
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await tester.pumpWidget(
+      _buildHarness(
+        walletProvider: walletProvider,
+        profileProvider: profileProvider,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(AuthAtmosphere), findsOneWidget);
+    expect(find.byKey(AuthFormPanel.surfaceKey), findsOneWidget);
+    expect(find.byType(Card), findsNothing,
+        reason: 'no visually equivalent card nested in or around the panel');
   });
 
   testWidgets(

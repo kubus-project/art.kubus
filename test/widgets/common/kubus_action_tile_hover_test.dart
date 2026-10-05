@@ -102,12 +102,58 @@ double _shadowAlpha(WidgetTester tester) {
 Offset _arrow(WidgetTester tester) =>
     tester.getTopLeft(find.byIcon(Icons.arrow_forward));
 
+/// The painted rect of the ghost glyph (paint transforms included).
+Rect _glyph(WidgetTester tester) => tester.getRect(find.descendant(
+      of: find.byKey(_glyphKey),
+      matching: find.byIcon(Icons.analytics_outlined),
+    ));
+
 Future<void> _hover(WidgetTester tester, TestGesture gesture) async {
   await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
   await tester.pumpAndSettle();
 }
 
 void main() {
+  group('KubusGhostGlyphPlacement contract', () {
+    test('tile, row and stat glyphs stay mostly inside their surface', () {
+      // 0.8.1: 0.30-0.36 pushed most of the symbol off the card. Material
+      // symbols carry ~8 % padding, so 0.2 already crops ~14 % per edge.
+      for (final placement in const [
+        KubusGhostGlyphPlacement.tile,
+        KubusGhostGlyphPlacement.row,
+        KubusGhostGlyphPlacement.stat,
+      ]) {
+        expect(placement.bleed, inInclusiveRange(0.08, 0.18),
+            reason: placement.name);
+        expect(placement.hoverShift, inInclusiveRange(2, 3),
+            reason: placement.name);
+        expect(placement.hoverScale, inInclusiveRange(1.02, 1.035),
+            reason: placement.name);
+      }
+      // Only atmospheres and heroes crop hard, and they do not answer hover.
+      // The atmosphere keeps its pre-0.8.1 geometry exactly.
+      const atmosphere = KubusGhostGlyphPlacement.atmosphere;
+      expect(atmosphere.bleed, 0.28);
+      expect(atmosphere.extentFor(const Size(400, 200)), 220);
+      expect(atmosphere.extentFor(const Size(400, 100)), 125);
+      expect(atmosphere.hoverScale, 1);
+      expect(KubusGhostGlyphPlacement.hero.bleed, greaterThan(0.3));
+      expect(KubusGhostGlyphPlacement.hero.hoverScale, 1);
+    });
+
+    test('the hover drift points at the surface centre', () {
+      const p = KubusGhostGlyphPlacement.tile;
+      expect(p.shiftAt(Alignment.topRight, 0), Offset.zero);
+      final s = p.shiftAt(Alignment.topRight, 1);
+      expect(s.distance, moreOrLessEquals(p.hoverShift));
+      expect(s.dx, lessThan(0));
+      expect(s.dy, greaterThan(0));
+      final b = p.shiftAt(Alignment.bottomRight, 1);
+      expect(b.dx, lessThan(0));
+      expect(b.dy, lessThan(0));
+    });
+  });
+
   group('KubusActionTile hover contract', () {
     for (final layout in const [
       KubusActionTileLayout.stacked,
@@ -139,21 +185,32 @@ void main() {
       });
     }
 
-    testWidgets(
-        'stacked: the clipped ghost glyph drifts a few px and scales at most '
-        '4 %', (tester) async {
-      await tester.pumpWidget(_host(KubusActionTileLayout.stacked));
-      final gesture = await _mouse(tester);
-      final glyphFinder = find.byKey(_glyphKey);
-      expect(tester.widget<KubusGhostGlyph>(glyphFinder).scale, 1);
-      expect(tester.widget<KubusGhostGlyph>(glyphFinder).shift, Offset.zero);
+    for (final layout in const [
+      KubusActionTileLayout.stacked,
+      KubusActionTileLayout.compact,
+    ]) {
+      testWidgets(
+          '${layout.name}: the ghost glyph drifts 2-3 px inward and grows at '
+          'most 4 %', (tester) async {
+        await tester.pumpWidget(_host(layout));
+        final gesture = await _mouse(tester);
+        final rest = _glyph(tester);
+        final lift = layout == KubusActionTileLayout.stacked ? 2.0 : 0.0;
 
-      await _hover(tester, gesture);
+        await _hover(tester, gesture);
 
-      final glyph = tester.widget<KubusGhostGlyph>(glyphFinder);
-      expect(glyph.scale, inInclusiveRange(1.02, 1.04));
-      expect(glyph.shift.distance, inInclusiveRange(2, 5));
-    });
+        final hovered = _glyph(tester);
+        final scale = hovered.width / rest.width;
+        expect(scale, inInclusiveRange(1.02, 1.04));
+        // The drift is measured on the glyph's own motion: take the tile's
+        // lift out of the vertical delta.
+        final drift = hovered.center - rest.center + Offset(0, lift);
+        expect(drift.distance, inInclusiveRange(2, 3));
+        // Inward from the top-right corner: left and down.
+        expect(drift.dx, lessThan(0));
+        expect(drift.dy, greaterThan(0));
+      });
+    }
 
     testWidgets('inline: the arrow travels 2 px', (tester) async {
       await tester.pumpWidget(_host(KubusActionTileLayout.inline));
@@ -166,8 +223,8 @@ void main() {
     });
 
     testWidgets(
-        'compact: quiet, no lift, no shadow, no arrow travel; an indicator '
-        'answers instead', (tester) async {
+        'compact: the surface stays put (no lift, no shadow, no arrow '
+        'travel); an indicator and the glyph answer', (tester) async {
       await tester.pumpWidget(
         _host(KubusActionTileLayout.compact, subtitle: 'Where this goes'),
       );
@@ -179,15 +236,16 @@ void main() {
               .decoration! as BoxDecoration)
           .color!;
       expect(indicator().a, 0);
-      final glyphBefore = tester.getRect(find.byIcon(Icons.analytics_outlined));
+      final glyphBefore = _glyph(tester);
+      final title = tester.getRect(find.text('Analytics'));
 
       await _hover(tester, gesture);
 
       expect(_surfaceTopLeft(tester), rest);
       expect(_arrow(tester), arrow);
+      expect(tester.getRect(find.text('Analytics')), title);
       expect(_shadowAlpha(tester), 0);
-      expect(tester.getRect(find.byIcon(Icons.analytics_outlined)), glyphBefore,
-          reason: 'a dense row never drifts its glyph');
+      expect(_glyph(tester), isNot(glyphBefore));
       expect(indicator().a, greaterThan(0.5));
     });
 
@@ -200,6 +258,8 @@ void main() {
         final rest = _surfaceTopLeft(tester);
         final stacked = layout == KubusActionTileLayout.stacked;
         final arrow = stacked ? null : _arrow(tester);
+        final glyph =
+            layout == KubusActionTileLayout.inline ? null : _glyph(tester);
 
         await _hover(tester, gesture);
 
@@ -207,10 +267,8 @@ void main() {
         if (!stacked) {
           expect(_arrow(tester), arrow, reason: 'no arrow travel');
         }
-        if (layout == KubusActionTileLayout.stacked) {
-          final glyph = tester.widget<KubusGhostGlyph>(find.byKey(_glyphKey));
-          expect(glyph.scale, 1, reason: 'no glyph drift');
-          expect(glyph.shift, Offset.zero);
+        if (glyph != null) {
+          expect(_glyph(tester), glyph, reason: 'no glyph drift or scale');
         }
         if (layout != KubusActionTileLayout.compact) {
           expect(_shadowAlpha(tester), greaterThan(0),
