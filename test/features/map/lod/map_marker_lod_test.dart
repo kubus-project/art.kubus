@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 
-import 'dart:ui';
-
 import 'package:art_kubus/features/map/shared/map_marker_lod.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/promotion.dart';

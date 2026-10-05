@@ -166,9 +166,8 @@ void main() {
       final card = find.byType(KubusStatCard);
       // The lift is a paint transform inside the card, so the surface (its
       // Material) is what moves.
-      final surface = find
-          .descendant(of: card, matching: find.byType(Material))
-          .first;
+      final surface =
+          find.descendant(of: card, matching: find.byType(Material)).first;
       final ghost = find.descendant(
         of: find.byType(KubusGhostGlyph),
         matching: find.byIcon(Icons.visibility_outlined),
