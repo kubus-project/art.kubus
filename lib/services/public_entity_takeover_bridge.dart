@@ -47,7 +47,9 @@ String? validatedPublicEntityDocumentTitle({
       identity['type'] != presentation['type'] ||
       presentation['version'] != bootstrap['version'] ||
       !['en', 'sl'].contains(identity['locale']) ||
-      !pathname.startsWith('/${identity['locale']}/')) return null;
+      !pathname.startsWith('/${identity['locale']}/')) {
+    return null;
+  }
   final normalized = title?.trim();
   return normalized == null || normalized.isEmpty || normalized.length > 512
       ? null
