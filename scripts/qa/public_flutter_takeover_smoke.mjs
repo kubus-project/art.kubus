@@ -198,13 +198,6 @@ async function verifyBrowser(
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   let releaseBoot = () => {};
-  if (expectTakeover) {
-    const bootGate = new Promise((resolve) => { releaseBoot = resolve; });
-    await page.route('**/flutter_bootstrap.js', async (route) => {
-      await bootGate;
-      await route.continue();
-    });
-  }
   if (smokeBypassToken) {
     // Inject the bypass header only for same-origin requests; third-party
     // resources the page loads must never receive the secret token.
@@ -217,6 +210,15 @@ async function verifyBrowser(
       } else {
         await route.continue();
       }
+    });
+  }
+  if (expectTakeover) {
+    const bootGate = new Promise((resolve) => { releaseBoot = resolve; });
+    await page.route('**/flutter_bootstrap.js', async (route) => {
+      await bootGate;
+      await route.continue({ headers: {
+        ...route.request().headers(), ...bypassHeadersFor(route.request().url()),
+      } });
     });
   }
   const consoleErrors = [];
@@ -325,8 +327,42 @@ async function verifyBrowser(
 }
 
 const rawHttp = await verifyRawHttp();
+async function verifyFallback(browser, viewport, mode) {
+  const context = await browser.newContext({
+    viewport, javaScriptEnabled: mode !== 'no-js',
+  });
+  try {
+    const page = await context.newPage();
+    if (smokeBypassToken) {
+      await page.route('**/*', async (route) => route.continue({ headers: {
+        ...route.request().headers(), ...bypassHeadersFor(route.request().url()),
+      } }));
+    }
+    let bundleFailure;
+    if (mode === 'failed-bundle') {
+      bundleFailure = page.waitForEvent('requestfailed', {
+        predicate: (request) => new URL(request.url()).pathname === '/flutter_bootstrap.js',
+      });
+      await page.route('**/flutter_bootstrap.js', (route) => route.abort('failed'));
+    }
+    const response = await page.goto(canonicalUrl, { waitUntil: 'domcontentloaded' });
+    ensure(response?.status() === 200, `${mode} returned ${response?.status()}`);
+    if (bundleFailure) await bundleFailure;
+    await page.locator('#public-document h1').waitFor();
+    const state = await page.evaluate(() => ({
+      semanticVisible: !document.querySelector('#public-document')?.inert,
+      complete: document.documentElement.classList.contains('kubus-takeover-complete'),
+    }));
+    ensure(state.semanticVisible && !state.complete, `${mode} hid the usable semantic frame`);
+    ensure(page.url() === canonicalUrl, `${mode} rewrote the entity URL`);
+    return { mode, ...state };
+  } finally {
+    await context.close();
+  }
+}
 const browserTypes = { chromium, firefox };
 const browserResults = [];
+const fallbackResults = [];
 for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
@@ -336,6 +372,12 @@ for (const browserName of browserNames) {
   });
   try {
     for (const { name, viewport } of browserViewports) {
+      if (expectTakeover) {
+        for (const mode of ['no-js', 'failed-bundle']) {
+          fallbackResults.push({ browser: browserName, viewport: name,
+            ...await verifyFallback(browser, viewport, mode) });
+        }
+      }
       for (let repetition = 1; repetition <= browserRepetitions; repetition += 1) {
         browserResults.push(
           await verifyBrowser(
@@ -359,4 +401,5 @@ console.log(JSON.stringify({
   browserRepetitions,
   rawHttp,
   browserResults,
+  fallbackResults,
 }, null, 2));
