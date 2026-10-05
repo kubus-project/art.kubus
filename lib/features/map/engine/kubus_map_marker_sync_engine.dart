@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -95,6 +96,10 @@ class KubusMapMarkerSyncEngine {
   // once the pool is spent, further markers simply keep their canonical badge
   // until the next style reload clears the images.
   int _coverImagesRegistered = 0;
+
+  /// The markers the latest plan wants a cover for. A cover that finishes
+  /// loading after the camera has moved on is dropped, never drawn offscreen.
+  Set<String> _wantedCoverIds = const <String>{};
   int _coverEpoch = -1;
   final Set<String> _pendingCoverKeys = <String>{};
   final KubusCoverUrlCache _coverUrls = KubusCoverUrlCache();
@@ -611,6 +616,17 @@ class KubusMapMarkerSyncEngine {
     final byId = <String, ArtMarker>{
       for (final marker in candidates) marker.id: marker,
     };
+    _wantedCoverIds = chosen.toSet();
+    // A viewport change cancels queued loads for covers no longer wanted, so
+    // the new view's covers are never queued behind the old one's.
+    _coverLoader.cancelPendingExcept(
+      [
+        for (final id in chosen)
+          if (byId[id] != null)
+            if (_coverUrlFor(byId[id]!) case final url?) url,
+      ],
+      targetPx: _coverFetchWidthPx,
+    );
     // Covers in the active viewport that are not drawn into the map yet keep
     // their decoded image until they are; everything else (offscreen, old
     // zoom, stale size) stays evictable. Registered covers need no decoded
@@ -715,7 +731,11 @@ class KubusMapMarkerSyncEngine {
       if (url == null || _coverLoader.cached(url, targetPx: width) != null) {
         continue;
       }
-      unawaited(_coverLoader.load(url, targetPx: width, prefetch: true));
+      unawaited(
+        _coverLoader
+            .load(url, targetPx: width, prefetch: true)
+            .then((image) => image?.dispose()),
+      );
     }
   }
 
@@ -735,8 +755,13 @@ class KubusMapMarkerSyncEngine {
     final pixelRatio = host.markerPixelRatio();
     final targetWidth = _coverFetchWidthPx;
     unawaited(() async {
+      ui.Image? image;
       try {
-        final image = await _coverLoader.load(url, targetPx: targetWidth);
+        image = await _coverLoader.load(url, targetPx: targetWidth);
+        if (image != null && !_wantedCoverIds.contains(marker.id)) {
+          // The camera moved on while this loaded: not drawn offscreen.
+          return;
+        }
         if (image == null) {
           // A failed cover leaves the canonical marker; resync so the failed
           // marker frees its budget slot for the next candidate.
@@ -771,7 +796,7 @@ class KubusMapMarkerSyncEngine {
           }
           final renderWatch = Stopwatch()..start();
           final bytes = await ArtMarkerCubeIconRenderer.renderCoverMarkerPng(
-            cover: image,
+            cover: image!,
             baseColor: baseColor,
             tier: marker.signalTier,
             shape: shape,
@@ -821,6 +846,7 @@ class KubusMapMarkerSyncEngine {
           );
         }
       } finally {
+        image?.dispose();
         _pendingCoverKeys.remove(key);
       }
     }());

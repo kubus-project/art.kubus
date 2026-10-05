@@ -67,7 +67,9 @@ void main() {
 
     expect(loader.cached('a', targetPx: 96), isNotNull);
     expect(loader.cached('b', targetPx: 96), isNotNull);
-    expect(loader.cachedCount, 2);
+    // A fresh image is never evicted by its own insertion, so the cache may sit
+    // one over maxCached until the next load; the pinned two always survive.
+    expect(loader.cachedCount, lessThanOrEqualTo(3));
     expect(loader.cached('c', targetPx: 96), isNull);
   });
 
@@ -120,6 +122,68 @@ void main() {
     await loader.load('a', targetPx: 160);
     await loader.load('b', targetPx: 160);
     expect(loader.cached('a', targetPx: 160), isNull);
+  });
+
+  test('a viewport change cancels queued display loads that are not wanted',
+      () async {
+    final gate = Completer<void>();
+    final fetched = <String>[];
+    final loader = KubusMarkerCoverLoader(
+      maxConcurrent: 1,
+      fetch: (url, width) async {
+        fetched.add(url);
+        await gate.future;
+        return _image();
+      },
+    );
+    addTearDown(loader.dispose);
+
+    final running = loader.load('a', targetPx: 96);
+    final stale = loader.load('stale', targetPx: 96);
+    final wanted = loader.load('wanted', targetPx: 96);
+    loader.cancelPendingExcept(['wanted'], targetPx: 96);
+    gate.complete();
+
+    expect(await stale, isNull, reason: 'dropped before it started');
+    expect(await running, isNotNull, reason: 'running loads finish');
+    expect(await wanted, isNotNull, reason: 'the new view is not starved');
+    expect(fetched, ['a', 'wanted']);
+    expect(loader.hasFailed('stale'), isFalse,
+        reason: 'a cancellation is not a failure');
+    // And it can be requested again later.
+    expect(await loader.load('stale', targetPx: 96), isNotNull);
+  });
+
+  test('a freshly loaded image is never evicted by its own insertion',
+      () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 1,
+      maxPinned: 1,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+    loader.setPinned(['a'], targetPx: 96);
+    final a = await loader.load('a', targetPx: 96);
+    final b = await loader.load('b', targetPx: 96);
+    expect(a, isNotNull);
+    expect(b, isNotNull);
+    expect(b!.debugDisposed, isFalse);
+    expect(loader.cached('b', targetPx: 96), isNotNull);
+  });
+
+  test('a caller keeps a valid image after the cache evicts it', () async {
+    final loader = KubusMarkerCoverLoader(
+      maxCached: 1,
+      fetch: (url, width) async => _image(),
+    );
+    addTearDown(loader.dispose);
+    final held = await loader.load('a', targetPx: 96);
+    await loader.load('b', targetPx: 96);
+    await loader.load('c', targetPx: 96);
+    expect(loader.cached('a', targetPx: 96), isNull);
+    expect(held!.debugDisposed, isFalse);
+    expect(held.width, 4);
+    held.dispose();
   });
 
   test('keeps at most maxCached images, dropping the least recently used',
@@ -242,13 +306,13 @@ void main() {
       expect(await stale, isNull);
       // The old task's finally has run, but must not erase the new owner.
       expect(loader.inFlightCount, 2);
-      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      unawaited(loader.load('x', targetPx: 96)); // joins, never re-fetches
       loader.cancelPendingPrefetches(); // promoted replacement survives
       gates['busy']!.complete();
       await busy;
       await settle();
       expect(started, ['busy', 'x']);
-      expect(identical(loader.load('x', targetPx: 96), replacement), isTrue);
+      unawaited(loader.load('x', targetPx: 96)); // joins, never re-fetches
       gates['x']!.complete();
       expect(await replacement, isNotNull);
       expect(started.where((url) => url == 'x').length, 1);

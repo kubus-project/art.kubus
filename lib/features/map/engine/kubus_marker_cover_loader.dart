@@ -67,6 +67,9 @@ typedef KubusCoverFetch = Future<ui.Image?> Function(String url, int targetPx);
 ///   start before prefetches (`prefetch: true`), and prefetches that have not
 ///   started can be dropped with [cancelPendingPrefetches] when the view moves
 ///   on, so stale warm-ups never delay what is on screen;
+/// * every successful [load] hands the caller its **own handle**
+///   (`Image.clone`), so eviction from the cache can never invalidate an image
+///   a caller is still drawing; the caller disposes its handle;
 /// * a URL that failed is not retried for [failureRetry], so a broken cover
 ///   costs one request and the marker simply keeps its canonical badge.
 class KubusMarkerCoverLoader {
@@ -159,19 +162,41 @@ class KubusMarkerCoverLoader {
   }) {
     if (_disposed) return Future<ui.Image?>.value(null);
     final hit = cached(url, targetPx: targetPx);
-    if (hit != null) return Future<ui.Image?>.value(hit);
+    if (hit != null) return Future<ui.Image?>.value(hit.clone());
     if (hasFailed(url)) return Future<ui.Image?>.value(null);
     final key = _key(url, targetPx);
     final running = _inFlight[key];
     if (running != null) {
       if (!prefetch) _promote(key);
-      return running;
+      return _lend(running);
     }
     final owner = Completer<ui.Image?>();
     _inFlight[key] = owner.future;
     unawaited(_run(url, targetPx, prefetch: prefetch, owner: owner)
         .then(owner.complete, onError: owner.completeError));
-    return owner.future;
+    return _lend(owner.future);
+  }
+
+  /// A fresh handle on the shared decoded image for one caller.
+  Future<ui.Image?> _lend(Future<ui.Image?> shared) =>
+      shared.then((image) => image?.clone());
+
+  /// Drops every queued load (display or prefetch) that has not started and
+  /// whose image is not in [keepUrls] at [targetPx]. A viewport change calls
+  /// this so covers for a view the camera has left never delay (or draw over)
+  /// the covers of the new one; a dropped load resolves to null without
+  /// counting as a failure. Loads already running finish and stay cached.
+  void cancelPendingExcept(Iterable<String> keepUrls, {required int targetPx}) {
+    final keep = <String>{for (final url in keepUrls) _key(url, targetPx)};
+    for (final queue in [_waitingDisplay, _waitingPrefetch]) {
+      for (final ticket in queue.toList()) {
+        if (keep.contains(ticket.key)) continue;
+        queue.remove(ticket);
+        _queuedTickets.remove(ticket.key);
+        _inFlight.remove(ticket.key);
+        ticket.grant.complete(false);
+      }
+    }
   }
 
   /// Drops every prefetch that is still waiting for a slot.
@@ -218,7 +243,7 @@ class KubusMarkerCoverLoader {
         return null;
       }
       _cache[_key(url, targetPx)] = image;
-      _evictOverflow();
+      _evictOverflow(protect: _key(url, targetPx));
       peakCachedCount = math.max(peakCachedCount, _cache.length);
       peakCachedBytes = math.max(peakCachedBytes, cachedBytes);
       recordKubusCoverGauge('peakDecodedCount', peakCachedCount.toDouble());
@@ -255,13 +280,13 @@ class KubusMarkerCoverLoader {
     if (_running > 0) _running -= 1;
   }
 
-  void _evictOverflow() {
+  void _evictOverflow({String? protect}) {
     // Offscreen / stale entries go first; a pinned (in-view, not yet drawn)
     // image is only ever evicted by an unpinned one's turn having passed.
     while (_cache.length > maxCached) {
       String? victim;
       for (final key in _cache.keys) {
-        if (!_pinned.contains(key)) {
+        if (key != protect && !_pinned.contains(key)) {
           victim = key;
           break;
         }
