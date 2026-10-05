@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
+import 'providers/public_entity_takeover_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/app_refresh_provider.dart';
 import 'providers/chat_provider.dart';
@@ -45,6 +46,7 @@ class _MainAppState extends State<MainApp> {
   MainTabProvider? _tabProvider;
   int _lastTelemetryIndex = -1;
   bool _didConsumeInitialDeepLink = false;
+  bool? _previousDesktopLayout;
 
   late final TutorialOverlayController _tutorialOverlayController;
 
@@ -135,6 +137,26 @@ class _MainAppState extends State<MainApp> {
     // Use screen-based breakpoints (not platform) so large tablets get desktop
     // UI and mobile browsers on web stay on the phone layout.
     final useDesktopLayout = DesktopBreakpoints.isDesktop(context);
+    final leftDesktopLayout =
+        _previousDesktopLayout == true && !useDesktopLayout;
+    _previousDesktopLayout = useDesktopLayout;
+    if (kIsWeb && leftDesktopLayout) {
+      // Desktop details live inside DesktopShell. Removing that shell on a
+      // breakpoint change must not leave its canonical URL showing the map.
+      // Replay only the exact public entry still owning the browser pathname.
+      final entry = context.read<PublicEntityTakeoverProvider>().target;
+      if (entry != null && entry.path == Uri.base.path) {
+        final target =
+            const ShareDeepLinkParser().parse(Uri.parse(entry.browserRoute));
+        if (target != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || DesktopBreakpoints.isDesktop(context)) return;
+            // ignore: discarded_futures
+            ShareDeepLinkNavigation.open(context, target, ensureShell: false);
+          });
+        }
+      }
+    }
 
     if (useDesktopLayout) {
       return const DesktopShell();

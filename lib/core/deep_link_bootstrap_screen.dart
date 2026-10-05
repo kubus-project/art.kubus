@@ -13,6 +13,18 @@ import '../providers/public_entity_takeover_provider.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
 import 'app_initializer.dart';
+import 'startup_trace.dart';
+
+/// Artwork API identity behind a validated public presentation. A collectible's
+/// stable ID names only its public route, so it resolves to the backing artwork.
+@visibleForTesting
+String? publicPresentationApiId(Map<String, dynamic> presentation) {
+  final raw = presentation['type'] == 'collectible'
+      ? presentation['backingArtworkId']
+      : presentation['id'];
+  final id = raw?.toString().trim();
+  return id == null || id.isEmpty ? null : id;
+}
 
 class DeepLinkBootstrapScreen extends StatefulWidget {
   const DeepLinkBootstrapScreen({
@@ -37,6 +49,8 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     super.didChangeDependencies();
     if (_seeded) return;
     _seeded = true;
+    StartupTrace.publicEntry('web_received',
+        uri: widget.initialUri, entityType: widget.target.type.name);
     if (kDebugMode) {
       debugPrint(
         'DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}',
@@ -55,10 +69,13 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     final publicPresentation = Map<String, dynamic>.from(presentation);
     switch (publicPresentation['type']) {
       case 'artwork':
+      case 'collectible':
         context.read<ArtworkProvider>().seedPublicPresentation(
               publicPresentation,
             );
-        final id = publicPresentation['id']?.toString() ?? '';
+        // Engagement and revalidation use the artwork API identity; the
+        // collectible stable ID only names the public route.
+        final id = publicPresentationApiId(publicPresentation) ?? '';
         if (id.isNotEmpty) {
           unawaited(
             context

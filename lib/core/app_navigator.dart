@@ -49,6 +49,16 @@ class AppStartupGate {
     unawaited(_completer.future.then((_) => action()));
   }
 
+  /// A startup consumer may have taken this link before the gate opens.
+  static void runWhenReadyIfOwned({
+    required bool Function() stillOwns,
+    required void Function() action,
+  }) {
+    runWhenReady(() {
+      if (stillOwns()) action();
+    });
+  }
+
   /// Restores pristine (not-ready) state. This is process-lifetime state in
   /// production — one cold start, one gate — so only a test harness spanning
   /// multiple simulated app starts needs this.

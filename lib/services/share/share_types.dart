@@ -66,34 +66,54 @@ class ShareTarget {
   final String? title;
 
   factory ShareTarget.post({required String postId, String? title}) {
-    return ShareTarget(type: ShareEntityType.post, shareId: postId, title: title);
+    return ShareTarget(
+        type: ShareEntityType.post, shareId: postId, title: title);
   }
 
   factory ShareTarget.artwork({required String artworkId, String? title}) {
-    return ShareTarget(type: ShareEntityType.artwork, shareId: artworkId, title: title);
+    return ShareTarget(
+        type: ShareEntityType.artwork, shareId: artworkId, title: title);
   }
 
+  factory ShareTarget.artworkDetail({
+    required String artworkId,
+    required ShareEntityType publicEntityType,
+    required String publicEntityId,
+    String? title,
+  }) =>
+      publicEntityType == ShareEntityType.nft
+          ? ShareTarget.nft(mintAddress: publicEntityId, title: title)
+          : ShareTarget.artwork(artworkId: artworkId, title: title);
+
   factory ShareTarget.marker({required String markerId, String? title}) {
-    return ShareTarget(type: ShareEntityType.marker, shareId: markerId, title: title);
+    return ShareTarget(
+        type: ShareEntityType.marker, shareId: markerId, title: title);
   }
 
   factory ShareTarget.event({required String eventId, String? title}) {
-    return ShareTarget(type: ShareEntityType.event, shareId: eventId, title: title);
+    return ShareTarget(
+        type: ShareEntityType.event, shareId: eventId, title: title);
   }
 
-  factory ShareTarget.exhibition({required String exhibitionId, String? title}) {
-    return ShareTarget(type: ShareEntityType.exhibition, shareId: exhibitionId, title: title);
+  factory ShareTarget.exhibition(
+      {required String exhibitionId, String? title}) {
+    return ShareTarget(
+        type: ShareEntityType.exhibition, shareId: exhibitionId, title: title);
   }
 
   factory ShareTarget.profile({required String walletAddress, String? title}) {
-    return ShareTarget(type: ShareEntityType.profile, shareId: walletAddress, title: title);
+    return ShareTarget(
+        type: ShareEntityType.profile, shareId: walletAddress, title: title);
   }
 
   factory ShareTarget.nft({required String mintAddress, String? title}) {
-    return ShareTarget(type: ShareEntityType.nft, shareId: mintAddress, title: title);
+    return ShareTarget(
+        type: ShareEntityType.nft, shareId: mintAddress, title: title);
   }
 
-  factory ShareTarget.collection({required String collectionId, String? title}) {
-    return ShareTarget(type: ShareEntityType.collection, shareId: collectionId, title: title);
+  factory ShareTarget.collection(
+      {required String collectionId, String? title}) {
+    return ShareTarget(
+        type: ShareEntityType.collection, shareId: collectionId, title: title);
   }
 }

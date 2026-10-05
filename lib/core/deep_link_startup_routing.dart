@@ -41,9 +41,10 @@ class DeepLinkStartupRouting {
       case ShareEntityType.profile:
       case ShareEntityType.exhibition:
       case ShareEntityType.collection:
-        return DeepLinkAccessPolicy.publicRead;
       case ShareEntityType.nft:
-        return DeepLinkAccessPolicy.walletRequired;
+        // Shared NFT URLs identify public collectible documents. Wallet-owned
+        // assets and on-chain actions keep their contextual action gates.
+        return DeepLinkAccessPolicy.publicRead;
     }
   }
 
@@ -102,9 +103,9 @@ class DeepLinkStartupRouting {
       ShareEntityType.exhibition => locale == 'sl' ? 'razstave' : 'exhibitions',
       ShareEntityType.collection => locale == 'sl' ? 'zbirke' : 'collections',
       ShareEntityType.post => locale == 'sl' ? 'objave' : 'posts',
-      ShareEntityType.nft => null,
+      ShareEntityType.nft =>
+        locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
     };
-    if (segment == null) return null;
 
     final expected = '/$locale/$segment/${Uri.encodeComponent(pending.id)}';
     if (initialUri.path != expected) return null;
