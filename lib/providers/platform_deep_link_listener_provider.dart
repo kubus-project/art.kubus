@@ -89,7 +89,40 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     if (uri == null) return;
     GuestSessionService.snapshotLaunchUrl(override: uri);
     await GuestSessionService.captureFromLaunchUrl();
-    _handleUri(uri, allowImmediateNavigation: AppStartupGate.isReady);
+    if (AppStartupGate.isReady) {
+      _handleUri(uri);
+      return;
+    }
+    _processUri(uri, allowImmediateNavigation: false);
+    final auth = _authDeepLinkProvider?.pending;
+    final share = _deepLinkProvider?.pending;
+    final parsedAuth = const AuthDeepLinkParser().parse(uri);
+    final parsedShare = const ShareDeepLinkParser().parse(uri);
+    final ownsAuth = auth != null &&
+        parsedAuth != null &&
+        auth.signature() == parsedAuth.signature();
+    final ownsShare = share != null &&
+        parsedShare != null &&
+        const ShareDeepLinkCodec()
+                .canonicalPathForTarget(share, includeProofTokens: false) ==
+            const ShareDeepLinkCodec()
+                .canonicalPathForTarget(parsedShare, includeProofTokens: false);
+    if (!ownsAuth && !ownsShare) return;
+    AppStartupGate.runWhenReadyIfOwned(
+      stillOwns: () => ownsAuth
+          ? identical(_authDeepLinkProvider?.pending, auth)
+          : identical(_deepLinkProvider?.pending, share),
+      action: () {
+        if (ownsAuth) {
+          _authDeepLinkProvider?.consumePending();
+        } else {
+          _deepLinkProvider?.consumePending();
+        }
+        // This is the same receipt being transferred from seed to navigation.
+        _lastHandledSignature = null;
+        _processUri(uri, allowImmediateNavigation: true);
+      },
+    );
   }
 
   /// Live (post-cold-start) link events can arrive while `AppInitializer` is

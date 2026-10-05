@@ -57,12 +57,15 @@ class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
   final String? attendanceMarkerId;
   final ShareEntityType publicEntityType;
+  final String? publicEntityId;
+  String get publicEntryId => publicEntityId ?? artworkId;
 
   const ArtDetailScreen({
     super.key,
     required this.artworkId,
     this.attendanceMarkerId,
     this.publicEntityType = ShareEntityType.artwork,
+    this.publicEntityId,
   });
 
   @override
@@ -78,11 +81,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     try {
       return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
                 widget.publicEntityType,
-                widget.artworkId,
+                widget.publicEntryId,
               ) ??
-          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
-      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     }
   }
 
@@ -446,7 +449,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         unawaited(
           context.read<PublicEntityTakeoverProvider>().markEntityReady(
                 widget.publicEntityType,
-                artworkId,
+                widget.publicEntryId,
               ),
         );
       } catch (_) {}
@@ -592,7 +595,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
             type: widget.publicEntityType == ShareEntityType.nft
                 ? 'collectible'
                 : 'artwork',
-            id: artworkId,
+            id: widget.publicEntryId,
             pathname: Uri.base.path,
           );
     } catch (_) {

@@ -48,6 +48,8 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
   final bool showAppBar;
   final String? attendanceMarkerId;
   final ShareEntityType publicEntityType;
+  final String? publicEntityId;
+  String get publicEntryId => publicEntityId ?? artworkId;
 
   const DesktopArtworkDetailScreen({
     super.key,
@@ -55,6 +57,7 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
     this.showAppBar = false,
     this.attendanceMarkerId,
     this.publicEntityType = ShareEntityType.artwork,
+    this.publicEntityId,
   });
 
   @override
@@ -77,11 +80,11 @@ class _DesktopArtworkDetailScreenState
     try {
       return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
                 widget.publicEntityType,
-                widget.artworkId,
+                widget.publicEntryId,
               ) ??
-          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
+          '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
-      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.artworkId)}';
+      return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     }
   }
 
@@ -271,7 +274,7 @@ class _DesktopArtworkDetailScreenState
           type: widget.publicEntityType == ShareEntityType.nft
               ? 'collectible'
               : 'artwork',
-          id: artwork.id,
+          id: widget.publicEntryId,
         );
         final coverUrl = ArtworkMediaResolver.resolveCover(
           artwork: artwork,
@@ -467,7 +470,7 @@ class _DesktopArtworkDetailScreenState
         unawaited(
           context.read<PublicEntityTakeoverProvider>().markEntityReady(
                 widget.publicEntityType,
-                artworkId,
+                widget.publicEntryId,
               ),
         );
       } catch (_) {}
@@ -714,7 +717,7 @@ class _DesktopArtworkDetailScreenState
             type: widget.publicEntityType == ShareEntityType.nft
                 ? 'collectible'
                 : 'artwork',
-            id: artworkId,
+            id: widget.publicEntryId,
             pathname: Uri.base.path,
           );
     } catch (_) {

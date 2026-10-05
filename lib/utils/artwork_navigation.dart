@@ -17,6 +17,7 @@ Future<void> openArtwork(
 }) async {
   var id = artworkId.trim();
   if (id.isEmpty) return;
+  final publicEntryId = id;
 
   if (publicEntityType == ShareEntityType.nft &&
       !RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
@@ -49,6 +50,7 @@ Future<void> openArtwork(
             artworkId: id,
             attendanceMarkerId: attendanceMarkerId,
             publicEntityType: publicEntityType,
+            publicEntityId: publicEntryId,
           ),
         ),
       );
@@ -60,6 +62,7 @@ Future<void> openArtwork(
       showAppBar: true,
       attendanceMarkerId: attendanceMarkerId,
       publicEntityType: publicEntityType,
+      publicEntityId: publicEntryId,
     );
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     return;
@@ -71,6 +74,7 @@ Future<void> openArtwork(
         artworkId: id,
         attendanceMarkerId: attendanceMarkerId,
         publicEntityType: publicEntityType,
+        publicEntityId: publicEntryId,
       ),
     ),
   );
