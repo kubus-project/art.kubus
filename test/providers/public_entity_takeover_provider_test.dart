@@ -26,7 +26,7 @@ void main() {
     );
   });
 
-  test('rejects compact, mismatched, and wallet takeover targets', () {
+  test('rejects compact and mismatched targets; supports public collectible', () {
     final compact = PublicEntityTakeoverProvider();
     compact.seed(
       initialUri: Uri.parse('/a/art-42'),

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 enum AuthDeepLinkType {
+  signIn,
+  register,
   verifyEmail,
   resetPassword,
 }
@@ -29,6 +31,11 @@ class AuthDeepLinkTarget {
           token: token,
         );
 
+  const AuthDeepLinkTarget.signIn()
+      : this._(type: AuthDeepLinkType.signIn, token: '');
+  const AuthDeepLinkTarget.register()
+      : this._(type: AuthDeepLinkType.register, token: '');
+
   final AuthDeepLinkType type;
   final String token;
   final String? email;
@@ -44,6 +51,9 @@ class AuthDeepLinkParser {
     if (path.isEmpty) return null;
 
     final normalizedPath = path.toLowerCase();
+    if (normalizedPath == '/sign-in') return const AuthDeepLinkTarget.signIn();
+    if (normalizedPath == '/register')
+      return const AuthDeepLinkTarget.register();
     if (normalizedPath == '/verify-email') {
       final token = (uri.queryParameters['token'] ?? '').trim();
       if (token.isEmpty) return null;
@@ -63,4 +73,3 @@ class AuthDeepLinkParser {
     return null;
   }
 }
-

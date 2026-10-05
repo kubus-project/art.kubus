@@ -89,7 +89,7 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     if (uri == null) return;
     GuestSessionService.snapshotLaunchUrl(override: uri);
     await GuestSessionService.captureFromLaunchUrl();
-    _handleUri(uri, allowImmediateNavigation: false);
+    _handleUri(uri, allowImmediateNavigation: AppStartupGate.isReady);
   }
 
   /// Live (post-cold-start) link events can arrive while `AppInitializer` is
@@ -154,6 +154,12 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
         final ctx =
             desktopShellContext ?? mobileShellContext ?? navigator!.context;
         switch (authTarget.type) {
+          case AuthDeepLinkType.signIn:
+            Navigator.of(ctx).pushNamed('/sign-in');
+            break;
+          case AuthDeepLinkType.register:
+            Navigator.of(ctx).pushNamed('/register');
+            break;
           case AuthDeepLinkType.verifyEmail:
             Navigator.of(ctx).pushNamed(
               '/verify-email',

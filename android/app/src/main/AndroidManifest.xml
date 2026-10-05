@@ -105,6 +105,10 @@
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/x/" />
 
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/n/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:path="/sign-in" />
+                <data android:scheme="https" android:host="app.kubus.site" android:path="/register" />
+                <data android:scheme="https" android:host="app.kubus.site" android:path="/verify-email" />
+                <data android:scheme="https" android:host="app.kubus.site" android:path="/reset-password" />
                 <!-- Localized canonical public entity routes. Keep these finite: the app does not claim the site's root, static assets, or internal endpoints. -->
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/artworks/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/umetnine/" />

@@ -567,6 +567,14 @@ class _AppInitializerState extends State<AppInitializer> {
         return startWarmUp();
       }
 
+      // Initial AppLinks resolution is asynchronous. Decide public/auth entry
+      // only after it has had a bounded chance to seed its target. A later
+      // result is replayed by the platform listener after startup completes.
+      await _safeStep<void>('resolve platform initial link',
+          GuestSessionService.waitForPlatformInitialLinkResolution,
+          timeout: const Duration(seconds: 3));
+      if (!mounted || _didNavigate) return;
+
       final pendingAuthLink = (() {
         try {
           return Provider.of<AuthDeepLinkProvider>(context, listen: false)
@@ -579,6 +587,12 @@ class _AppInitializerState extends State<AppInitializer> {
         if (!mounted) return;
         _didNavigate = true;
         switch (pendingAuthLink.type) {
+          case AuthDeepLinkType.signIn:
+            navigator.pushReplacementNamed('/sign-in');
+            break;
+          case AuthDeepLinkType.register:
+            navigator.pushReplacementNamed('/register');
+            break;
           case AuthDeepLinkType.verifyEmail:
             navigator.pushReplacementNamed(
               '/verify-email',
