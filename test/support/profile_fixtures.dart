@@ -1,4 +1,6 @@
 import 'package:art_kubus/community/community_interactions.dart';
+import 'package:art_kubus/models/achievement_progress.dart';
+import 'package:art_kubus/models/achievements.dart' as achievements;
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 
@@ -80,12 +82,39 @@ class ProfileFixtures {
     );
   }
 
-  static ProfileCriticalPackage critical({User? user}) {
+  /// Title of the one achievement [critical] adds with `withAchievements`, so a
+  /// test can find the recognition section by what it shows.
+  static const String achievementTitle = 'Order Probe Milestone';
+
+  static ProfileCriticalPackage critical({
+    User? user,
+    bool withAchievements = false,
+  }) {
     final resolved = user ?? ProfileFixtures.user();
     return ProfileCriticalPackage(
       user: resolved,
-      achievementProgress: const [],
-      achievementDefinitions: const [],
+      achievementProgress: withAchievements
+          ? const <AchievementProgress>[
+              AchievementProgress(
+                achievementId: 'order_probe',
+                currentProgress: 1,
+                isCompleted: true,
+              ),
+            ]
+          : const [],
+      achievementDefinitions: withAchievements
+          ? const <achievements.AchievementDefinition>[
+              achievements.AchievementDefinition(
+                code: 'order_probe',
+                title: achievementTitle,
+                description: 'Proves where recognition renders.',
+                category: 'community',
+                rarity: 'rare',
+                requiredCount: 1,
+                kub8Reward: 1,
+              ),
+            ]
+          : const [],
       publicStats: <String, int>{
         'publicStreetArtAdded': 12,
         'followers': resolved.followersCount,

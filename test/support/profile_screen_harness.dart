@@ -79,6 +79,10 @@ Future<void> pumpProfileSurface(
   double textScale = 1.0,
   bool canonicalPublicEntry = false,
 
+  /// Give the viewed profile one achievement, so its recognition section
+  /// renders (it is hidden when empty).
+  bool withAchievements = false,
+
   /// Posts by the viewed profile, injected through the screens' existing
   /// extended-package seam. Empty by default.
   List<CommunityPost> posts = const <CommunityPost>[],
@@ -119,6 +123,7 @@ Future<void> pumpProfileSurface(
     surface,
     resolvedUser,
     canonicalPublicEntry: canonicalPublicEntry,
+    withAchievements: withAchievements,
     posts: posts,
   );
 
@@ -214,20 +219,42 @@ Widget _surfaceWidget(
   ProfileSurface surface,
   User user, {
   bool canonicalPublicEntry = false,
+  bool withAchievements = false,
   List<CommunityPost> posts = const <CommunityPost>[],
 }) {
-  final critical = ProfileFixtures.critical(user: user);
+  final critical = ProfileFixtures.critical(
+    user: user,
+    withAchievements: withAchievements,
+  );
   final extended = Future<ProfileExtendedPackage?>.value(
     ProfileFixtures.extended(initialPosts: posts),
   );
 
   switch (surface) {
     case ProfileSurface.mobilePublic:
-      return mobile_public.UserProfileScreen(
-        userId: user.id,
-        initialCriticalPackage: critical,
-        initialExtendedPackageFuture: extended,
-      );
+      {
+        final screen = mobile_public.UserProfileScreen(
+          userId: user.id,
+          initialCriticalPackage: critical,
+          initialExtendedPackageFuture: extended,
+        );
+        // The canonical public entry is the same screen reached from a shared
+        // link; the scope is how the screen learns that it is one.
+        return canonicalPublicEntry
+            ? DesktopShellScope(
+                pushScreen: (_) {},
+                popScreen: () {},
+                navigateToRoute: (_) {},
+                openNotifications: () {},
+                openFunctionsPanel: (_, {content}) {},
+                setFunctionsPanelContent: (_) {},
+                closeFunctionsPanel: () {},
+                canPop: false,
+                isCanonicalPublicEntry: true,
+                child: screen,
+              )
+            : screen;
+      }
     case ProfileSurface.desktopPublic:
       {
         final screen = desktop_public.UserProfileScreen(
