@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
+import '../models/map_marker_overview.dart';
 import '../providers/storage_provider.dart';
 import '../utils/geo_bounds.dart';
 import 'backend_api_service.dart';
@@ -375,6 +376,22 @@ class MapMarkerService {
         _lastQueryBounds = bounds;
         _lastQueryWasBounds = true;
       },
+    );
+  }
+
+  /// The low-zoom overview of [bounds] at [zoom]: exact aggregate nodes instead
+  /// of nearest-first detailed markers. Throws when the endpoint is unavailable;
+  /// the caller falls back to [loadMarkersInBounds].
+  Future<MapMarkerOverview> loadMarkerOverview({
+    required GeoBounds bounds,
+    required double zoom,
+  }) {
+    return _backendApi.getMarkerOverview(
+      minLat: bounds.south,
+      maxLat: bounds.north,
+      minLng: bounds.west,
+      maxLng: bounds.east,
+      zoom: zoom,
     );
   }
 

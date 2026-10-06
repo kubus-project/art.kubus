@@ -400,6 +400,10 @@ class KubusMapController {
   bool get styleInitializationInProgress => _styleInitializationInProgress;
   int get styleEpoch => _styleEpoch;
 
+  /// Whether markers of [type] are currently shown (the content-layer toggles).
+  bool isMarkerTypeVisible(ArtMarkerType type) =>
+      _markerTypeVisibility[type] ?? true;
+
   String? get selectedMarkerId => _selectedMarkerId;
   ArtMarker? get selectedMarkerData => _selectedMarkerData;
   List<ArtMarker> get selectedMarkerStack => _selectedMarkerStack;

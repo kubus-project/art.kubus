@@ -10,8 +10,10 @@ import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
 import '../../../models/art_marker.dart';
+import '../../../models/map_marker_overview.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/map_marker_icon_ids.dart';
@@ -23,6 +25,7 @@ import '../../../widgets/map/kubus_map_marker_features.dart';
 import '../../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../../widgets/map/kubus_map_marker_rendering.dart';
 import '../controller/kubus_map_controller.dart';
+import '../controller/map_overview_controller.dart';
 import '../shared/map_cluster_transition.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_lod.dart';
@@ -54,6 +57,10 @@ abstract class KubusMapMarkerSyncHost {
   /// Zoom the sync pipeline should cluster against (screens track this in
   /// different fields: `_lastZoom` on mobile, `_cameraZoom` on desktop).
   double get syncZoom;
+
+  /// The low-zoom overview to draw instead of detailed markers, or null when
+  /// detailed markers are showing. See `KubusMapOverviewController`.
+  MapMarkerOverview? get markerOverview;
 
   double get clusterMaxZoom;
   bool get sortClustersBySizeDesc;
@@ -178,6 +185,25 @@ class KubusMapMarkerSyncEngine {
         _pendingCoverKeys.clear();
       }
 
+      // World and region zoom draw the server's exact aggregate nodes, not a
+      // nearest-first slice of detailed markers, and do not cluster them again:
+      // they already are the regional groups.
+      final overview = host.markerOverview;
+      if (overview != null && zoom < KubusMapOverviewController.exitZoom) {
+        await _syncOverview(
+          overview: overview,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          roles: roles,
+          isDark: isDark,
+          zoom: zoom,
+          pinned: pinned,
+          renderedMarkers: renderedMarkers,
+          reduceMotion: reduceMotion,
+        );
+        return;
+      }
+
       final coverPlan = _planCovers(
         zoom: zoom,
         rendered: renderedMarkers,
@@ -300,6 +326,91 @@ class KubusMapMarkerSyncEngine {
       }
     } finally {
       timeline?.finish();
+    }
+  }
+
+  /// Draws the low-zoom overview: one far dot per node, plus the selected marker
+  /// pinned out of every node so it is never swallowed into an aggregate.
+  Future<void> _syncOverview({
+    required MapMarkerOverview overview,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+    required double zoom,
+    required Set<String> pinned,
+    required List<KubusRenderedMarker> renderedMarkers,
+    required bool reduceMotion,
+  }) async {
+    final blankIconId = host.kubusMapController.ids.layers.markerHitboxImageId;
+    // The map's content-layer toggles apply to the overview through each node's
+    // type breakdown: a node shows only the markers of the visible types, and
+    // disappears when none remain.
+    bool typeIsVisible(String type) => host.kubusMapController
+        .isMarkerTypeVisible(ArtMarker.parseMarkerType(type, null));
+    final nodes = <MapMarkerOverviewNode>[
+      for (final node in overview.nodes)
+        if (node.restrictedTo(typeIsVisible) case final visible?) visible,
+    ];
+    final features = <Map<String, dynamic>>[
+      for (final node in nodes)
+        kubusOverviewNodeFeature(
+          node: node,
+          blankIconId: blankIconId,
+          colorHex: MapLibreStyleUtils.hexRgb(
+            AppColorUtils.markerSubjectColor(
+              markerType: node.dominantType,
+              scheme: scheme,
+              roles: roles,
+            ),
+          ),
+        ),
+    ];
+
+    final pinnedRendered = renderedMarkers
+        .where((rendered) => pinned.contains(rendered.marker.id))
+        .toList(growable: false);
+    if (pinnedRendered.isNotEmpty) {
+      await preregisterIcons(
+        markers: <ArtMarker>[for (final item in pinnedRendered) item.marker],
+        themeProvider: themeProvider,
+        scheme: scheme,
+        roles: roles,
+        isDark: isDark,
+        useClustering: false,
+        zoom: zoom,
+        pinnedMarkerIds: pinned,
+      );
+      if (!host.hostMounted) return;
+      for (final rendered in pinnedRendered) {
+        final feature = await markerFeatureFor(
+          marker: rendered.marker.copyWith(position: rendered.position),
+          renderMarker: rendered,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          roles: roles,
+          isDark: isDark,
+        );
+        if (feature.isNotEmpty) features.add(feature);
+      }
+    }
+    if (!host.hostMounted) return;
+
+    _applyClusterTopologyTransition(features, reduceMotion: reduceMotion);
+    final layersManager = host.kubusMapController.layersManager;
+    if (layersManager != null) {
+      final didWrite = await layersManager.upsertMarkerData(
+        <String, dynamic>{'type': 'FeatureCollection', 'features': features},
+      );
+      if (didWrite) host.onMarkerSourceWrite();
+    }
+    await host.afterMarkerSync(themeProvider);
+
+    // The camera may have left the overview band (or the overview was dropped)
+    // while this pass ran: rebuild once for what is current.
+    if (host.markerOverview == null ||
+        host.syncZoom >= KubusMapOverviewController.exitZoom) {
+      host.requestMarkerResync();
     }
   }
 

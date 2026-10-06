@@ -294,12 +294,24 @@ abstract final class KubusMarkerLod {
 
   /// Hitbox anchor: at far zoom the target is the dot itself, from the blend
   /// band on it covers the badge that floats above the dot.
+  ///
+  /// A low-zoom overview node has no badge at any zoom (it is only a dot), so
+  /// its target stays on the dot.
   static Object hitboxAnchorExpression() => <Object>[
         'step',
         <Object>['zoom'],
         'center',
         blendStartZoom,
-        'bottom',
+        <Object>[
+          'case',
+          <Object>[
+            '==',
+            <Object>['get', 'overview'],
+            true,
+          ],
+          'center',
+          'bottom',
+        ],
       ];
 
   /// Largest radius a far cluster dot may reach and how fast it grows with the
@@ -345,6 +357,19 @@ abstract final class KubusMarkerLod {
           cluster,
           dotRadius,
         ];
+    // A low-zoom overview node is a dot that never turns into a badge, so it
+    // keeps the count-sized radius at every zoom instead of shrinking to the
+    // plain coordinate dot under a badge from the mid level.
+    final Object nearCluster = <Object>[
+      'case',
+      <Object>[
+        '==',
+        <Object>['get', 'overview'],
+        true,
+      ],
+      farCluster,
+      clusterDotRadius,
+    ];
     return <Object>[
       'interpolate',
       <Object>['linear'],
@@ -352,7 +377,7 @@ abstract final class KubusMarkerLod {
       3,
       radius(farCluster),
       blendEndZoom,
-      radius(clusterDotRadius),
+      radius(nearCluster),
     ];
   }
 }

@@ -36,7 +36,14 @@ class MapDataCoordinator {
       required int zoomBucket,
     }) refreshViewport,
     required void Function({bool force}) queuePendingRefresh,
-  })  : _pollingEnabled = pollingEnabled,
+
+    /// Whether the low-zoom overview needs refreshing for this viewport (the
+    /// mode changes, or the grid level or covered area no longer fits). The
+    /// density-bucket check alone cannot see that: several overview grid levels
+    /// share one bucket.
+    bool Function(GeoBounds visibleBounds)? overviewNeedsRefresh,
+  })  : _overviewNeedsRefresh = overviewNeedsRefresh,
+        _pollingEnabled = pollingEnabled,
         _mapReady = mapReady,
         _scope = scope,
         _cameraCenter = cameraCenter,
@@ -76,6 +83,7 @@ class MapDataCoordinator {
     required int zoomBucket,
   }) _refreshViewport;
   final void Function({bool force}) _queuePendingRefresh;
+  final bool Function(GeoBounds visibleBounds)? _overviewNeedsRefresh;
   bool _disposed = false;
 
   void dispose() {
@@ -128,13 +136,15 @@ class MapDataCoordinator {
     if (_disposed || _scope() != KubusMapScope.currentViewport) return;
     final visibleBounds = await _getVisibleBounds();
     if (_disposed || visibleBounds == null) return;
-    if (!MapViewportUtils.shouldRefetchViewport(
-      visibleBounds: visibleBounds,
-      loadedBounds: _loadedViewportBounds(),
-      zoomBucket: zoomBucket,
-      loadedZoomBucket: _loadedViewportZoomBucket(),
-      hasMarkers: _hasMarkers(),
-    )) {
+    final overviewStale = _overviewNeedsRefresh?.call(visibleBounds) ?? false;
+    if (!overviewStale &&
+        !MapViewportUtils.shouldRefetchViewport(
+          visibleBounds: visibleBounds,
+          loadedBounds: _loadedViewportBounds(),
+          zoomBucket: zoomBucket,
+          loadedZoomBucket: _loadedViewportZoomBucket(),
+          hasMarkers: _hasMarkers(),
+        )) {
       return;
     }
 
