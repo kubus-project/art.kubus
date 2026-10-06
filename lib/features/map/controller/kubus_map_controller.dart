@@ -10,7 +10,9 @@ import '../../../config/config.dart';
 import '../../../models/art_marker.dart';
 import '../../../utils/debouncer.dart';
 import '../../../utils/map_tap_gating.dart';
+import 'camera_arrival_tracker.dart';
 import '../shared/map_marker_collision_config.dart';
+import '../shared/map_marker_overlay_acknowledgement.dart';
 import '../shared/map_marker_collision_utils.dart';
 import '../shared/map_marker_entrance_tracker.dart';
 import '../shared/map_marker_overlay_viewport_planner.dart';
@@ -40,6 +42,7 @@ class KubusMarkerOverlayCompositionRequest {
     required this.topChromePx,
     required this.bottomChromePx,
     required this.finalLayoutIsValid,
+    required this.cardIsFullyVisible,
     required this.cameraReserved,
     required this.cameraDuration,
   });
@@ -55,6 +58,10 @@ class KubusMarkerOverlayCompositionRequest {
   final double topChromePx;
   final double bottomChromePx;
   final bool finalLayoutIsValid;
+
+  /// The card lies fully inside the viewport, even if it could not be placed
+  /// above the marker. See [kubusMarkerOverlayMayAcknowledge].
+  final bool cardIsFullyVisible;
   final bool cameraReserved;
   final Duration cameraDuration;
 }
@@ -299,6 +306,20 @@ class KubusMapController {
 
   bool get programmaticCameraMove => _programmaticCameraMove;
 
+  final KubusCameraArrivalTracker _arrival = KubusCameraArrivalTracker();
+
+  /// Completes once the camera is idle at [target] and [zoom]. See
+  /// [KubusCameraArrivalTracker]: issuing a camera animation is not arrival.
+  Future<void> awaitCameraArrival(LatLng target, double zoom) {
+    return _arrival.wait(
+      center: _camera.center,
+      currentZoom: _camera.zoom,
+      settled: _hasCameraFrame && !_cameraIsMoving,
+      target: target,
+      zoom: zoom,
+    );
+  }
+
   /// Screens that still own some camera animations can keep gesture detection
   /// consistent by syncing their programmatic-move flag into this controller.
   void setProgrammaticCameraMove(bool value) {
@@ -421,8 +442,16 @@ class KubusMapController {
       _awaitingFinalMarkerLayoutToken = null;
     }
 
+    // Called only from settled states: the camera is at rest and the one-shot
+    // composition correction was applied or is not possible.
     void acknowledge() {
-      if (!request.finalLayoutIsValid) return;
+      if (!kubusMarkerOverlayMayAcknowledge(
+        finalLayoutIsValid: request.finalLayoutIsValid,
+        cardIsFullyVisible: request.cardIsFullyVisible,
+        compositionSettled: true,
+      )) {
+        return;
+      }
       onMarkerOverlayAcknowledged?.call(
           request.marker.id, request.selectionToken);
     }
@@ -437,6 +466,12 @@ class KubusMapController {
     if ((_programmaticCameraMove || _cameraIsMoving) && !compositionIsOurs) {
       return;
     }
+    // The overlay is presented as soon as its card is on screen at a settled
+    // camera. The composition correction below only polishes the placement, and
+    // waiting for it would make readiness depend on one more layout pass that a
+    // correction which moves nothing (or an anchor that ends where it was
+    // mid-move) never produces. Acknowledging is idempotent.
+    acknowledge();
     if (compositionIsOurs) return;
 
     if (_awaitingFinalMarkerLayoutToken == selectionToken) {
@@ -762,6 +797,7 @@ class KubusMapController {
   }
 
   void dispose() {
+    _arrival.release();
     detachMapController();
     _hoverUpdateTimer?.cancel();
     _hoverUpdateTimer = null;
@@ -918,6 +954,7 @@ class KubusMapController {
   void handleCameraIdle({required bool fromProgrammaticMove}) {
     if (_mapController == null) return;
     _cameraIsMoving = false;
+    _arrival.cameraIdle(center: _camera.center, zoom: _camera.zoom);
     _programmaticCameraMove = false;
 
     if (_selectedMarkerData != null) {

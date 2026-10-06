@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:provider/provider.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
+import '../features/map/shared/map_marker_overlay_acknowledgement.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_filtering.dart';
 import '../features/map/shared/map_marker_collision_config.dart';
@@ -832,6 +833,7 @@ class _MapScreenState extends State<MapScreen>
         _yieldFollowToDeliberateCamera();
         return _animateMapTo(position, zoom: zoom);
       },
+      awaitCameraArrival: _kubusMapController.awaitCameraArrival,
       selectMarker: _showArtMarkerDialog,
       setPinnedMarker: (markerId) {
         if (_directTargetMarkerId == markerId) return;
@@ -2487,6 +2489,10 @@ class _MapScreenState extends State<MapScreen>
         );
       } catch (_) {}
     });
+    // An idle app schedules no frame, and a post-frame callback does not ask
+    // for one: without this the readiness (and with it the public takeover)
+    // would wait for the next unrelated frame.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _loadArtMarkers({
@@ -3740,11 +3746,8 @@ class _MapScreenState extends State<MapScreen>
         !viewportRect.overlaps(cardRect)) {
       return;
     }
-    final finalLayoutIsValid = cardIsAnchoredAboveMarker &&
-        cardRect.left >= -1 &&
-        cardRect.top >= -1 &&
-        cardRect.right <= viewportRect.right + 1 &&
-        cardRect.bottom <= viewportRect.bottom + 1;
+    final cardIsFullyVisible = kubusCardIsFullyVisible(cardRect, viewportRect);
+    final finalLayoutIsValid = cardIsAnchoredAboveMarker && cardIsFullyVisible;
 
     final signature = <Object>[
       selection.selectionToken,
@@ -3780,6 +3783,7 @@ class _MapScreenState extends State<MapScreen>
         topChromePx: resolvedLayout.topPadding,
         bottomChromePx: resolvedLayout.bottomPadding,
         finalLayoutIsValid: finalLayoutIsValid,
+        cardIsFullyVisible: cardIsFullyVisible,
         cameraReserved: _isWalkingFocusedMode,
         cameraDuration: cameraMotion.duration,
       ),

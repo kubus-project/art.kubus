@@ -673,6 +673,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _yieldFollowToDeliberateCamera();
         return _moveCamera(position, zoom);
       },
+      awaitCameraArrival: _kubusMapController.awaitCameraArrival,
       selectMarker: _handleMarkerTap,
       setPinnedMarker: (markerId) {
         if (_directTargetMarkerId == markerId) return;
@@ -1696,6 +1697,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
       } catch (_) {}
     });
+    // An idle app schedules no frame, and a post-frame callback does not ask
+    // for one: without this the readiness (and with it the public takeover)
+    // would wait for the next unrelated frame.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   LatLng get _effectiveCenter => _cameraCenter;
