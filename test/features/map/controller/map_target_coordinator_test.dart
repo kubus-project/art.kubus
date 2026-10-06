@@ -69,6 +69,12 @@ class _Harness {
         movedPosition = position;
         movedZoom = zoom;
       },
+      awaitCameraArrival: (position, zoom) async {
+        events.add('arrive-wait');
+        final pending = arrivalCompleter;
+        if (pending != null) await pending.future;
+        events.add('arrived');
+      },
       selectMarker: (marker) {
         events.add('select:${marker.id}');
         selectedMarker = marker;
@@ -94,6 +100,7 @@ class _Harness {
   final List<ArtMarker> markers = <ArtMarker>[];
   final List<String> events = <String>[];
   Completer<ArtMarker?>? markerFetchCompleter;
+  Completer<void>? arrivalCompleter;
   late final MapTargetCoordinator coordinator;
   ArtMarker? selectedMarker;
   LatLng? targetLoadPosition;
@@ -108,6 +115,69 @@ class _Harness {
 }
 
 void main() {
+  test(
+      'the marker is selected only after the camera has arrived, never while '
+      'the flight is still under way', () async {
+    final target = _marker(id: 'target');
+    final harness = _Harness(markerById: target)
+      ..arrivalCompleter = Completer<void>();
+    harness.coordinator
+      ..setMapControllerReady(true)
+      ..setStyleReady(true);
+
+    final future = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'target'),
+    );
+    await harness.settle();
+
+    // The move was issued and the coordinator is waiting for arrival: nothing
+    // is selected, so no camera event of the flight can dismiss a selection.
+    expect(harness.events, contains('move'));
+    expect(harness.events, contains('arrive-wait'));
+    expect(harness.events.where((e) => e.startsWith('select:')), isEmpty);
+    expect(harness.coordinator.phase, MapTargetPhase.movingCamera);
+
+    harness.arrivalCompleter!.complete();
+    await harness.settle();
+
+    expect(harness.events.indexOf('arrived'),
+        lessThan(harness.events.indexOf('select:target')));
+    expect(harness.coordinator.phase, MapTargetPhase.waitingForOverlay);
+
+    harness.coordinator.acknowledgeOverlay('target');
+    expect(await future, MapTargetResult.overlayOpened);
+    expect(harness.events.where((e) => e.startsWith('select:')), hasLength(1));
+  });
+
+  test('a target replaced during the flight is never selected', () async {
+    final first = _marker(id: 'first', position: const LatLng(46.05, 14.5));
+    final second = _marker(id: 'second', position: const LatLng(46.06, 14.51));
+    final harness = _Harness(markerById: first)
+      ..arrivalCompleter = Completer<void>();
+    harness.coordinator
+      ..setMapControllerReady(true)
+      ..setStyleReady(true);
+
+    final firstResult = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'first'),
+    );
+    await harness.settle();
+    expect(harness.events.where((e) => e.startsWith('select:')), isEmpty);
+
+    harness.markers.add(second);
+    final secondResult = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'second'),
+    );
+    expect(await firstResult, MapTargetResult.superseded);
+
+    harness.arrivalCompleter!.complete();
+    await harness.settle();
+    expect(harness.events.where((e) => e == 'select:first'), isEmpty);
+    expect(harness.events, contains('select:second'));
+    harness.coordinator.acknowledgeOverlay('second');
+    expect(await secondResult, MapTargetResult.overlayOpened);
+  });
+
   test(
       'an exact marker target that is not loaded is fetched, never replaced by '
       'an unrelated loaded marker', () async {
