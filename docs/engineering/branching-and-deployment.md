@@ -112,7 +112,7 @@ CI failures must be investigated. Do not bypass a required check, convert failur
 
 ## Staging deployment
 
-`deploy-development.yml` runs only after a manual dispatch selected on the exact `dev` head while Netcup credentials and TLS are being established. It builds web from that SHA, adds `kubus-web-revision.txt`, creates per-file checksums, applies staging-only noindex/robots policy, validates locally, and uploads a versioned release. Immediately before any remote change it checks the current remote `dev` SHA; an obsolete queued deployment exits successfully without promotion.
+`deploy-development.yml` runs on every push to `dev` and can also be dispatched manually on the exact `dev` head. It builds web from that SHA, adds `kubus-web-revision.txt`, creates per-file checksums, applies staging-only noindex/robots policy, validates locally, and uploads a versioned release. Immediately before any remote change it checks the current remote `dev` SHA; an obsolete queued deployment exits successfully without promotion.
 
 The privileged job uses only the `development-web` environment. Promotion is serialized by `deploy-development` with cancellation disabled. An unauthenticated smoke requires the configured protected response and authentication challenge. Authenticated smoke checks `/app`, localized routes, the revision, `X-Robots-Tag`, and the deny-all `robots.txt`. If smoke fails after promotion, the previous physical document root is restored automatically.
 

@@ -105,7 +105,7 @@ test('PR validation is deployment-secret-free and has a stable aggregate', () =>
 test('branch deployments have isolated sources, environments, and concurrency', () => {
   const development = workflow('deploy-development.yml');
   const production = workflow('release-production.yml');
-  assert.doesNotMatch(development, /\bpush:/);
+  assert.match(development, /\bpush:\s*branches:\s*\[dev\]/);
   assert.match(development, /\bworkflow_dispatch:/);
   assert.match(development, /test "\$SOURCE_REF" = refs\/heads\/dev/);
   assert.doesNotMatch(development, /\bpull_request:|\bpull_request_target:/);
