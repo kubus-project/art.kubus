@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../models/art_marker.dart';
+import '../../models/map_marker_overview.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -286,6 +287,46 @@ Future<Map<String, dynamic>> kubusFarClusterFeature({
     entryScale: entryScale,
     entryOpacity: entryOpacity,
   );
+}
+
+/// A far-level dot for one node of the low-zoom overview.
+///
+/// It is a cluster feature as far as the style is concerned (kind, count, colour,
+/// location), so the existing dot expressions size and colour it and a tap
+/// zooms in on it. It carries no member ids: the overview never held the
+/// markers, only their exact count.
+Map<String, dynamic> kubusOverviewNodeFeature({
+  required MapMarkerOverviewNode node,
+  required String colorHex,
+  required String blankIconId,
+}) {
+  // The cluster id prefix is what makes the tap and hover paths treat this as a
+  // cluster: a tap activates it (it holds no loaded members, so the camera
+  // simply zooms in on it).
+  final id = 'cluster:${node.id}';
+  return <String, dynamic>{
+    'type': 'Feature',
+    'id': id,
+    'properties': <String, dynamic>{
+      'id': id,
+      'kind': 'cluster',
+      'icon': blankIconId,
+      'color': colorHex,
+      'lat': node.position.latitude,
+      'lng': node.position.longitude,
+      'renderMode': 'cluster',
+      'clusterCount': node.count,
+      // Marks a low-zoom overview node: a dot only, at every zoom.
+      'overview': true,
+      'overviewDominantType': node.dominantType,
+      'entryScale': 1.0,
+      'entryOpacity': 1.0,
+    },
+    'geometry': <String, dynamic>{
+      'type': 'Point',
+      'coordinates': <double>[node.position.longitude, node.position.latitude],
+    },
+  };
 }
 
 Map<String, dynamic> _composeClusterFeature({

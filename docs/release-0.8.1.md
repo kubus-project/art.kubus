@@ -16,6 +16,16 @@ over from the server-rendered page. The Node connection did not change.
   neighbourhoods as you approach. A group never spans an unreasonably large
   area, so Lisbon and Ljubljana are never one dot, and a lonely marker stays
   its own dot.
+- **Far out, the map shows the whole archive, not a slice of it.** Below zoom 8
+  (world, continent, region) the map is drawn from exact counts that the server
+  aggregates for what is on screen, instead of the few hundred markers nearest
+  the centre (which left a Europe view with one group near Vienna while the
+  archive spans Spain to Poland). Each dot is the true number of records in its
+  area, so dense places read as dense and distant places are not lost. A
+  response is a few kilobytes instead of hundreds, and from zoom 8 the detailed
+  markers take over. An open marker is never absorbed into a dot. Filters that
+  depend on your own data (favourites, AR, discovery, search) use the detailed
+  markers, and so does an older server that does not offer the overview.
 - **Every marker in view gets its cover.** From city-approach scale (zoom 12.5)
   all eligible markers in the viewport show their artwork cover, not only the
   few nearest the centre. They load a few at a time while the map is still,
@@ -44,6 +54,11 @@ over from the server-rendered page. The Node connection did not change.
 
 ## Profiles
 
+- **A shared profile link reads in the same order.** The page you land on from a
+  shared link or a search result follows the same hierarchy as the in-app
+  profile: identity, work or programme, posts, recognition, then the closing
+  statistics (previously the statistics came before the posts on phones and the
+  achievements before the posts on computers).
 - **My profile reads like your public profile.** Your identity and practice,
   then your work or programme, your posts, your recognition and the closing
   statistics come first; the account tools (account health, saved items,
@@ -106,6 +121,12 @@ over from the server-rendered page. The Node connection did not change.
   or replaced is never replayed.
 - Someone who already has an account on the device is never treated as a new
   guest because their session expired.
+- A shared map place opens on its exact marker and only then replaces the
+  server-rendered page: the map flies to the marker, selects it and opens its
+  card. Before, the static page could stay on top of the map for good
+  (computers every time, phones for tall cards), because the marker was selected
+  while the camera was still flying and was then dismissed as if you had moved
+  the map, and a tall card was never counted as open.
 
 ## Page titles and authorship
 
@@ -123,6 +144,9 @@ over from the server-rendered page. The Node connection did not change.
 - Home rails carry separate avatar, cover and logo images (#73).
 - Dependency audit policy documents the two unreachable upstream advisories
   instead of failing releases (#74).
+- `GET /api/art-markers/overview` returns the exact, public marker counts per
+  map area for the far zoom levels (art-kubus-backend#76), and the dependency
+  advisories published since (proxy-addr, compression, jayson) are cleared.
 - Collectibles: the stable collectible address is the artwork record ID. Older
   mint-address links resolve to it with a single, non-cacheable redirect;
   a mint shared by several public records, or belonging to a private or
