@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/art_marker.dart';
+import '../models/map_marker_overview.dart';
 import '../models/promotion.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
@@ -4137,6 +4138,48 @@ class BackendApiService
       AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
       rethrow;
     }
+  }
+
+  /// The low-zoom map overview: truthful aggregate nodes for a viewport.
+  ///
+  /// GET /api/art-markers/overview?minLat=&maxLat=&minLng=&maxLng=&zoom=
+  ///
+  /// Throws when the endpoint is unavailable (an older backend, an outage) and
+  /// never answers from the offline snapshot: the caller falls back to the
+  /// detailed bounds query, which does.
+  Future<MapMarkerOverview> getMarkerOverview({
+    required double minLat,
+    required double maxLat,
+    required double minLng,
+    required double maxLng,
+    required double zoom,
+  }) async {
+    final qp = <String, String>{
+      'minLat': minLat.toString(),
+      'maxLat': maxLat.toString(),
+      'minLng': minLng.toString(),
+      'maxLng': maxLng.toString(),
+      'zoom': zoom.toStringAsFixed(2),
+    };
+    return _performPublicRead<MapMarkerOverview>(
+      allowSnapshot: false,
+      liveRead: (candidateBaseUrl) async {
+        final data = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/art-markers/overview',
+          queryParameters: qp,
+          includeAuth: false,
+          allowOrbitFallback: false,
+        );
+        final overview = MapMarkerOverview.tryParse(data);
+        if (overview == null) {
+          throw const FormatException('Unrecognised marker overview response');
+        }
+        return overview;
+      },
+      snapshotRead: () async =>
+          throw UnsupportedError('The marker overview has no snapshot'),
+    );
   }
 
   /// Get art markers that are inside a viewport/bounds.

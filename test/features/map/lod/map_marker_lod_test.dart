@@ -376,7 +376,16 @@ void main() {
           const <Object>['zoom'],
           'center',
           KubusMarkerLod.blendStartZoom,
-          'bottom',
+          const <Object>[
+            'case',
+            <Object>[
+              '==',
+              <Object>['get', 'overview'],
+              true,
+            ],
+            'center',
+            'bottom',
+          ],
         ]);
       },
     );
@@ -394,7 +403,18 @@ void main() {
       expect(cluster[1], KubusMarkerLod.farClusterMaxRadius);
       expect(KubusMarkerLod.farClusterMaxRadius, lessThanOrEqualTo(10));
       final nearStop = expr[6] as List;
-      expect(nearStop[2], 5.5);
+      // A plain cluster shrinks to the coordinate dot under its badge; an
+      // overview node (a dot at every zoom) keeps the count-sized radius.
+      final nearCluster = nearStop[2] as List;
+      expect(nearCluster[0], 'case');
+      expect(nearCluster[1], const <Object>[
+        '==',
+        <Object>['get', 'overview'],
+        true,
+      ]);
+      expect(nearCluster[2], isA<List>());
+      expect((nearCluster[2] as List)[0], 'min');
+      expect(nearCluster[3], 5.5);
     });
   });
 }

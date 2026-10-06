@@ -81,6 +81,8 @@ class MapTargetCoordinator {
     required Future<void> Function(LatLng position) loadMarkersAround,
     required void Function(List<ArtMarker> markers) mergeMarkers,
     required Future<void> Function(LatLng position, double zoom) moveCamera,
+    required Future<void> Function(LatLng position, double zoom)
+        awaitCameraArrival,
     required void Function(ArtMarker marker) selectMarker,
     required void Function(String? markerId) setPinnedMarker,
     required void Function(MapTargetIntent intent, MapTargetResult result)
@@ -92,6 +94,7 @@ class MapTargetCoordinator {
         _loadMarkersAround = loadMarkersAround,
         _mergeMarkers = mergeMarkers,
         _moveCamera = moveCamera,
+        _awaitCameraArrival = awaitCameraArrival,
         _selectMarker = selectMarker,
         _setPinnedMarker = setPinnedMarker,
         _showFallback = showFallback,
@@ -104,6 +107,11 @@ class MapTargetCoordinator {
   final Future<void> Function(LatLng position) _loadMarkersAround;
   final void Function(List<ArtMarker> markers) _mergeMarkers;
   final Future<void> Function(LatLng position, double zoom) _moveCamera;
+
+  /// Completes when the camera is idle at the target. Issuing the move is not
+  /// arrival: selecting while the flight is still under way lets later camera
+  /// events read as a user pan and dismiss the selection.
+  final Future<void> Function(LatLng position, double zoom) _awaitCameraArrival;
   final void Function(ArtMarker marker) _selectMarker;
   final void Function(String? markerId) _setPinnedMarker;
   final void Function(MapTargetIntent intent, MapTargetResult result)
@@ -311,7 +319,10 @@ class MapTargetCoordinator {
 
         _pin(candidate.id);
         _phase = MapTargetPhase.movingCamera;
-        await _moveCamera(candidate.position, focusZoomFor(intent));
+        final focusZoom = focusZoomFor(intent);
+        await _moveCamera(candidate.position, focusZoom);
+        if (!_isCurrent(intent, generation)) return;
+        await _awaitCameraArrival(candidate.position, focusZoom);
         if (!_isCurrent(intent, generation)) return;
 
         _awaitingOverlayMarkerId = candidate.id;

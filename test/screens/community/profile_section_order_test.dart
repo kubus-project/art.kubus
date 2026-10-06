@@ -31,4 +31,61 @@ void main() {
     }
     expect(ownerProfileSections.first, ProfileSection.identity);
   });
+
+  group('composeProfileSections', () {
+    test('builds the sections in canonical order whatever builds them', () {
+      final built = composeProfileSections<String>(
+        order: publicProfileSections,
+        build: (section) => [section.name],
+      );
+      expect(built, publicProfileSections.map((section) => section.name));
+    });
+
+    test('a section that does not apply is left out, order of the rest kept',
+        () {
+      final built = composeProfileSections<String>(
+        order: ownerProfileSections,
+        build: (section) => section == ProfileSection.work ||
+                section == ProfileSection.publicArt
+            ? const <String>[]
+            : [section.name],
+      );
+      expect(built, <String>[
+        'identity',
+        'activity',
+        'recognition',
+        'stats',
+        'ownerTools',
+      ]);
+    });
+
+    test('gaps sit only between sections that contributed something', () {
+      final built = composeProfileSections<String>(
+        order: publicProfileSections,
+        gap: (previous, next) => '|${previous.name}>${next.name}|',
+        build: (section) => section == ProfileSection.publicArt
+            ? const <String>[]
+            : [section.name, '${section.name}-detail'],
+      );
+      expect(built.where((item) => item.startsWith('|')).toList(), <String>[
+        '|identity>work|',
+        '|work>activity|',
+        '|activity>recognition|',
+        '|recognition>stats|',
+      ]);
+      expect(built.first, 'identity');
+      expect(built.last, 'stats-detail');
+    });
+
+    test('nothing to build yields nothing, and no stray gap', () {
+      expect(
+        composeProfileSections<String>(
+          order: publicProfileSections,
+          gap: (_, __) => 'gap',
+          build: (_) => const <String>[],
+        ),
+        isEmpty,
+      );
+    });
+  });
 }

@@ -13,10 +13,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:provider/provider.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
+import '../features/map/shared/map_marker_overlay_acknowledgement.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_filtering.dart';
 import '../features/map/shared/map_marker_collision_config.dart';
+import '../features/map/controller/map_overview_controller.dart';
 import '../features/map/filters/map_filter_state.dart';
+import '../models/map_marker_overview.dart';
 import '../features/map/telemetry/map_engagement_tracker.dart';
 import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_marker_chrome_occlusion_plan.dart';
@@ -343,6 +346,11 @@ class _MapScreenState extends State<MapScreen>
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
   final Debouncer _radiusChangeDebouncer = Debouncer();
   late final MapTargetCoordinator _mapTargetCoordinator;
+  late final KubusMapOverviewController _overviewController =
+      KubusMapOverviewController(
+    fetch: (bounds, zoom) =>
+        _mapMarkerService.loadMarkerOverview(bounds: bounds, zoom: zoom),
+  );
   String? _directTargetMarkerId;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   MapDeepLinkClaim? _mapDeepLinkClaim;
@@ -477,6 +485,16 @@ class _MapScreenState extends State<MapScreen>
   Set<String> get registeredMapImages => _registeredMapImages;
   @override
   double get syncZoom => _lastZoom;
+  @override
+  MapMarkerOverview? get markerOverview => _overviewController.overview;
+
+  /// The overview can express the content-layer toggles but not filters that
+  /// depend on per-artwork state, so those fall back to detailed markers.
+  bool get _overviewAllowedByFilters =>
+      _filterState.discoveryStatus == KubusMapDiscoveryStatus.all &&
+      !_filterState.arOnly &&
+      !_filterState.favoritesOnly &&
+      _mapSearchController.state.query.trim().isEmpty;
   @override
   double get clusterMaxZoom => _clusterMaxZoom;
   @override
@@ -832,6 +850,7 @@ class _MapScreenState extends State<MapScreen>
         _yieldFollowToDeliberateCamera();
         return _animateMapTo(position, zoom: zoom);
       },
+      awaitCameraArrival: _kubusMapController.awaitCameraArrival,
       selectMarker: _showArtMarkerDialog,
       setPinnedMarker: (markerId) {
         if (_directTargetMarkerId == markerId) return;
@@ -875,6 +894,11 @@ class _MapScreenState extends State<MapScreen>
       refreshInterval: _markerRefreshInterval,
       refreshDistanceMeters: _markerRefreshDistanceMeters,
       getVisibleBounds: _getVisibleGeoBounds,
+      overviewNeedsRefresh: (visible) => _overviewController.needsRefresh(
+        visible: visible,
+        zoom: _lastZoom,
+        allowed: _overviewAllowedByFilters,
+      ),
       refreshNearMe: ({required center}) async {
         await _loadArtMarkers(center: center, force: false);
       },
@@ -2487,6 +2511,10 @@ class _MapScreenState extends State<MapScreen>
         );
       } catch (_) {}
     });
+    // An idle app schedules no frame, and a post-frame callback does not ask
+    // for one: without this the readiness (and with it the public takeover)
+    // would wait for the next unrelated frame.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _loadArtMarkers({
@@ -2518,15 +2546,68 @@ class _MapScreenState extends State<MapScreen>
     }
 
     GeoBounds? queryBounds = bounds;
+    GeoBounds? visibleBoundsForOverview;
     if (useBoundsQuery && queryBounds == null) {
       final visible = await _getVisibleGeoBounds();
       if (visible == null) return;
+      visibleBoundsForOverview = visible;
       final effectiveBucket = bucket ?? MapViewportUtils.zoomBucket(_lastZoom);
       queryBounds = MapViewportUtils.expandBounds(
         visible,
         MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
       );
       bucket = effectiveBucket;
+    }
+
+    if (useBoundsQuery && bucket != null) {
+      // A load requested for an earlier camera (a flight is under way) must not
+      // fetch with that camera's density: never below the current zoom's bucket.
+      // A target load that asks for a higher one keeps it.
+      bucket = math.max(bucket, MapViewportUtils.zoomBucket(_lastZoom));
+    }
+
+    // The overview serves the far buckets only (zoom below 8); a load for a
+    // closer bucket, such as one around a deep-link target, is a detailed load.
+    if (useBoundsQuery &&
+        queryBounds != null &&
+        bucket != null &&
+        bucket <= 7) {
+      // World and region zoom draw exact aggregate nodes from the server instead
+      // of a nearest-first slice of detailed markers (see
+      // KubusMapOverviewController); close zoom, an unsupported filter or an
+      // unavailable overview all use the detailed fetch below.
+      final overviewWasActive = _overviewController.isActive;
+      final overviewOutcome = await _overviewController.refresh(
+        visible: visibleBoundsForOverview ?? queryBounds,
+        queryBounds: queryBounds,
+        zoom: _lastZoom,
+        // The coordinator already decided a refetch is needed when it hands us
+        // its padded bounds; only a bounds-less call checks coverage.
+        force: force || visibleBoundsForOverview == null,
+        allowed: _overviewAllowedByFilters,
+      );
+      if (!mounted) return;
+      switch (overviewOutcome) {
+        case KubusMapOverviewRefresh.applied:
+          unawaited(_syncMapMarkers(themeProvider: themeProvider));
+          _loadedViewportBounds = queryBounds;
+          _loadedViewportZoomBucket = bucket;
+          return;
+        case KubusMapOverviewRefresh.unchanged:
+        case KubusMapOverviewRefresh.superseded:
+          return;
+        case KubusMapOverviewRefresh.detailed:
+        case KubusMapOverviewRefresh.unavailable:
+          // Leaving the overview: redraw from the detailed markers already held
+          // even if the fetch below brings nothing new.
+          if (overviewWasActive) {
+            unawaited(_syncMapMarkers(themeProvider: themeProvider));
+          }
+      }
+    } else if (useBoundsQuery && _overviewController.isActive) {
+      // Zoomed in to detailed markers: the overview is done, redraw from them.
+      _overviewController.deactivate();
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
 
     final requestId = ++_markerRequestId;
@@ -3740,11 +3821,8 @@ class _MapScreenState extends State<MapScreen>
         !viewportRect.overlaps(cardRect)) {
       return;
     }
-    final finalLayoutIsValid = cardIsAnchoredAboveMarker &&
-        cardRect.left >= -1 &&
-        cardRect.top >= -1 &&
-        cardRect.right <= viewportRect.right + 1 &&
-        cardRect.bottom <= viewportRect.bottom + 1;
+    final cardIsFullyVisible = kubusCardIsFullyVisible(cardRect, viewportRect);
+    final finalLayoutIsValid = cardIsAnchoredAboveMarker && cardIsFullyVisible;
 
     final signature = <Object>[
       selection.selectionToken,
@@ -3780,6 +3858,7 @@ class _MapScreenState extends State<MapScreen>
         topChromePx: resolvedLayout.topPadding,
         bottomChromePx: resolvedLayout.bottomPadding,
         finalLayoutIsValid: finalLayoutIsValid,
+        cardIsFullyVisible: cardIsFullyVisible,
         cameraReserved: _isWalkingFocusedMode,
         cameraDuration: cameraMotion.duration,
       ),
