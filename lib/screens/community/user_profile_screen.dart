@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'profile_section_order.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -443,69 +444,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (isCanonicalPublicEntry)
-                  _buildCanonicalPublicEntryProfileHero(
-                    isArtist: isArtist,
-                    isInstitution: isInstitution,
-                    l10n: l10n,
-                  )
-                else
-                  _buildProfileHeader(
-                    themeProvider,
-                    isArtist: isArtist,
-                    isInstitution: isInstitution,
+                // One hierarchy for the app profile and the canonical public
+                // entry alike: the shared section order owns the sequence (see
+                // [publicProfileSections]); a surface only decides what a
+                // section contributes.
+                ...composeProfileSections<Widget>(
+                  order: publicProfileSections,
+                  gap: (previous, _) => SizedBox(
+                    height: previous == ProfileSection.identity
+                        ? DetailSpacing.md
+                        : DetailSpacing.xl,
                   ),
-                const SizedBox(height: DetailSpacing.md),
-                if (isCanonicalPublicEntry) ...[
-                  if (_canonicalPublicCoverUrl != null) ...[
-                    _buildCanonicalPublicCoverMedia(
-                      _canonicalPublicCoverUrl!,
-                    ),
-                    const SizedBox(height: DetailSpacing.md),
-                  ],
-                  if (isArtist) ...[
-                    _buildArtistHighlightsGrid(l10n),
-                    const SizedBox(height: DetailSpacing.xl),
-                  ],
-                  if (isInstitution)
-                    _buildInstitutionHighlights(l10n)
-                  else if (!isArtist && (user?.showAchievements ?? true))
-                    _buildAchievements(themeProvider, l10n),
-                  const SizedBox(height: DetailSpacing.md),
-                  _buildStatsRow(l10n),
-                ] else ...[
-                  // Identity, practice, work, public contribution, community,
-                  // recognition, then the numbers. An artist's section is
-                  // their portfolio; an institution's is its programme; a
-                  // profile that is neither is not given empty artist bands.
-                  if (isArtist) ...[
-                    _buildArtistHighlightsGrid(l10n),
-                    const SizedBox(height: DetailSpacing.xl),
-                    _buildArtistEventsShowcase(l10n),
-                    const SizedBox(height: DetailSpacing.xl),
-                  ],
-                  if (isInstitution) ...[
-                    _buildInstitutionHighlights(l10n),
-                    const SizedBox(height: DetailSpacing.xl),
-                  ],
-                  _buildAddedPublicArtSection(l10n),
-                ],
-                const SizedBox(height: DetailSpacing.xl),
-                _buildPostsSection(l10n),
-                if (!isCanonicalPublicEntry) ...[
-                  if (user?.showAchievements ?? true) ...[
-                    const SizedBox(height: DetailSpacing.xl),
-                    _buildAchievements(themeProvider, l10n),
-                  ],
-                  // The closing composition: large, expressive, and reachable
-                  // because the posts above it are bounded.
-                  const SizedBox(height: DetailSpacing.xl),
-                  _buildStatsRow(l10n),
-                ],
-                if (isCanonicalPublicEntry && isArtist) ...[
-                  const SizedBox(height: DetailSpacing.xl),
-                  _buildArtistEventsShowcase(l10n),
-                ],
+                  build: (section) => _publicSectionWidgets(
+                    section,
+                    themeProvider: themeProvider,
+                    l10n: l10n,
+                    isArtist: isArtist,
+                    isInstitution: isInstitution,
+                    isCanonicalPublicEntry: isCanonicalPublicEntry,
+                  ),
+                ),
                 const SizedBox(height: DetailSpacing.xxl),
               ],
             ),
@@ -923,6 +881,67 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return l10n.userProfileJoinedLabel(
       normalizedDate.isEmpty ? trimmed : normalizedDate,
     );
+  }
+
+  /// What one [ProfileSection] contributes to the public profile; empty when
+  /// the section does not apply to this profile or surface.
+  List<Widget> _publicSectionWidgets(
+    ProfileSection section, {
+    required ThemeProvider themeProvider,
+    required AppLocalizations l10n,
+    required bool isArtist,
+    required bool isInstitution,
+    required bool isCanonicalPublicEntry,
+  }) {
+    switch (section) {
+      case ProfileSection.identity:
+        return [
+          if (isCanonicalPublicEntry)
+            _buildCanonicalPublicEntryProfileHero(
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              l10n: l10n,
+            )
+          else
+            _buildProfileHeader(
+              themeProvider,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+            ),
+          if (isCanonicalPublicEntry && _canonicalPublicCoverUrl != null) ...[
+            const SizedBox(height: DetailSpacing.md),
+            _buildCanonicalPublicCoverMedia(_canonicalPublicCoverUrl!),
+          ],
+        ];
+      case ProfileSection.work:
+        // An artist's section is their portfolio and events; an institution's
+        // is its programme; a profile that is neither is not given empty
+        // artist bands.
+        return [
+          if (isArtist) ...[
+            _buildArtistHighlightsGrid(l10n),
+            const SizedBox(height: DetailSpacing.xl),
+            _buildArtistEventsShowcase(l10n),
+          ] else if (isInstitution)
+            _buildInstitutionHighlights(l10n),
+        ];
+      case ProfileSection.publicArt:
+        // The canonical hero already carries the added-public-art count.
+        return [if (!isCanonicalPublicEntry) _buildAddedPublicArtSection(l10n)];
+      case ProfileSection.activity:
+        return [_buildPostsSection(l10n)];
+      case ProfileSection.recognition:
+        return [
+          if (user?.showAchievements ?? true)
+            _buildAchievements(themeProvider, l10n),
+        ];
+      case ProfileSection.stats:
+        // The closing composition: large, expressive, and reachable because
+        // the posts above it are bounded.
+        return [_buildStatsRow(l10n)];
+      case ProfileSection.ownerTools:
+        return const <Widget>[];
+    }
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
