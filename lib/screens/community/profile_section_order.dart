@@ -48,3 +48,28 @@ const List<ProfileSection> ownerProfileSections = <ProfileSection>[
   ...publicProfileSections,
   ProfileSection.ownerTools,
 ];
+
+/// Builds the pieces of a profile in [order], so the shared hierarchy owns the
+/// rendering instead of each screen hard-coding its own widget sequence.
+///
+/// [build] returns what [section] contributes: nothing when the section does not
+/// apply to this profile (a role without that content, or content the surface
+/// shows elsewhere), so the relative order of the sections that are present is
+/// always the canonical one. [gap], when given, is placed between two
+/// consecutive sections that both contributed something.
+List<T> composeProfileSections<T>({
+  required Iterable<ProfileSection> order,
+  required List<T> Function(ProfileSection section) build,
+  T Function(ProfileSection previous, ProfileSection next)? gap,
+}) {
+  final out = <T>[];
+  ProfileSection? previous;
+  for (final section in order) {
+    final items = build(section);
+    if (items.isEmpty) continue;
+    if (previous != null && gap != null) out.add(gap(previous, section));
+    out.addAll(items);
+    previous = section;
+  }
+  return out;
+}

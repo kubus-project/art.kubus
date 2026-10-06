@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../community/profile_section_order.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
@@ -360,15 +361,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         // Wide two-column content begins at ~1200px so
                         // intermediate desktop widths do not inherit the mobile
                         // single-column layout.
-                        if (isCanonicalPublicEntry)
-                          _buildSingleColumnContent(
-                            themeProvider: themeProvider,
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                            isCanonicalPublicEntry: true,
-                            l10n: l10n,
-                          )
-                        else if (isLarge)
+                        if (!isCanonicalPublicEntry && isLarge)
                           _buildTwoColumnLayout(
                             themeProvider: themeProvider,
                             isArtist: isArtist,
@@ -380,19 +373,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             themeProvider: themeProvider,
                             isArtist: isArtist,
                             isInstitution: isInstitution,
-                            isCanonicalPublicEntry: false,
+                            isCanonicalPublicEntry: isCanonicalPublicEntry,
                             l10n: l10n,
                           ),
-                        // Recognition before the numbers: achievements are
-                        // still about the person, the statistics are the
-                        // closing composition. The wide layout keeps
-                        // achievements in its trailing side column instead.
-                        if (!isCanonicalPublicEntry &&
-                            !isLarge &&
-                            (user?.showAchievements ?? true)) ...[
-                          const SizedBox(height: KubusSpacing.lg),
-                          _buildAchievementsSection(themeProvider, l10n),
-                        ],
                         const SizedBox(height: KubusSpacing.xl),
                         if (isCanonicalPublicEntry)
                           _buildStatsCards(themeProvider, isLarge, l10n)
@@ -421,27 +404,105 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  /// Two-column layout for wide desktop screens (>=1400px). Work reads
-  /// first; achievements sit in a trailing side column.
+  /// What one [ProfileSection] contributes to the content column(s); empty when
+  /// the section does not apply to this profile or surface. Identity and the
+  /// closing statistics are laid out full width by [build], not here.
+  List<Widget> _contentSectionWidgets(
+    ProfileSection section, {
+    required ThemeProvider themeProvider,
+    required bool isArtist,
+    required bool isInstitution,
+    required bool isCanonicalPublicEntry,
+    required AppLocalizations l10n,
+  }) {
+    switch (section) {
+      case ProfileSection.work:
+        return [
+          if (isArtist) ...[
+            _buildArtistPortfolioSection(themeProvider, l10n),
+            const SizedBox(height: KubusSpacing.md),
+            _buildArtistCollectionsSection(themeProvider, l10n),
+          ] else if (isInstitution)
+            _buildInstitutionHighlightsSection(themeProvider, l10n),
+        ];
+      case ProfileSection.publicArt:
+        // The canonical artist hero already carries the added-art count.
+        return [
+          if (!(isCanonicalPublicEntry && isArtist))
+            _buildAddedPublicArtSection(themeProvider, l10n),
+        ];
+      case ProfileSection.activity:
+        return [_buildPostsSection(themeProvider, l10n)];
+      case ProfileSection.recognition:
+        return [
+          if (user?.showAchievements ?? true)
+            _buildAchievementsSection(themeProvider, l10n),
+        ];
+      case ProfileSection.identity:
+      case ProfileSection.stats:
+      case ProfileSection.ownerTools:
+        return const <Widget>[];
+    }
+  }
+
+  /// A column of the shared hierarchy: [sections] in canonical order, with the
+  /// ones that do not apply left out.
+  Widget _contentColumn(
+    Iterable<ProfileSection> sections, {
+    required ThemeProvider themeProvider,
+    required bool isArtist,
+    required bool isInstitution,
+    required bool isCanonicalPublicEntry,
+    required AppLocalizations l10n,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: composeProfileSections<Widget>(
+        order: sections,
+        gap: (previous, next) => const SizedBox(height: KubusSpacing.md),
+        build: (section) => _contentSectionWidgets(
+          section,
+          themeProvider: themeProvider,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          isCanonicalPublicEntry: isCanonicalPublicEntry,
+          l10n: l10n,
+        ),
+      ),
+    );
+  }
+
+  /// The sections that read as the person's narrative between the identity and
+  /// the closing statistics, in canonical order.
+  static final List<ProfileSection> _narrativeSections = publicProfileSections
+      .where((section) =>
+          section != ProfileSection.identity && section != ProfileSection.stats)
+      .toList(growable: false);
+
+  /// Two-column layout for wide, non-canonical desktop screens (>=1400px).
+  /// Work, public art and posts read first in the main column; recognition sits
+  /// in a trailing side column. The relative order is still the shared one.
   Widget _buildTwoColumnLayout({
     required ThemeProvider themeProvider,
     required bool isArtist,
     required bool isInstitution,
     required AppLocalizations l10n,
   }) {
-    final showAchievements = user?.showAchievements ?? true;
-    final work = _buildWorkSections(
+    final main = _contentColumn(
+      _narrativeSections
+          .where((section) => section != ProfileSection.recognition),
       themeProvider: themeProvider,
       isArtist: isArtist,
       isInstitution: isInstitution,
+      isCanonicalPublicEntry: false,
       l10n: l10n,
     );
-    if (!showAchievements) return work;
+    if (!(user?.showAchievements ?? true)) return main;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: work),
+        Expanded(child: main),
         const SizedBox(width: KubusSpacing.lg),
         SizedBox(
           width: 380,
@@ -451,34 +512,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  /// Non-canonical content order shared by both desktop layouts and the
-  /// mobile profile: practice/works, public art, then community posts.
-  Widget _buildWorkSections({
-    required ThemeProvider themeProvider,
-    required bool isArtist,
-    required bool isInstitution,
-    required AppLocalizations l10n,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isArtist) ...[
-          _buildArtistPortfolioSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-          _buildArtistCollectionsSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ] else if (isInstitution) ...[
-          _buildInstitutionHighlightsSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ],
-        _buildAddedPublicArtSection(themeProvider, l10n),
-        const SizedBox(height: KubusSpacing.md),
-        _buildPostsSection(themeProvider, l10n),
-      ],
-    );
-  }
-
-  /// Single column layout for narrower screens (<1400px)
+  /// Single column layout (canonical public entry, and screens narrower than
+  /// 1400px): the whole narrative in the shared order.
   Widget _buildSingleColumnContent({
     required ThemeProvider themeProvider,
     required bool isArtist,
@@ -486,42 +521,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required bool isCanonicalPublicEntry,
     required AppLocalizations l10n,
   }) {
-    if (!isCanonicalPublicEntry) {
-      return _buildWorkSections(
-        themeProvider: themeProvider,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
-        l10n: l10n,
-      );
-    }
-    final showAchievements = user?.showAchievements ?? true;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isArtist) ...[
-          _buildArtistPortfolioSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-          _buildArtistCollectionsSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ] else if (isInstitution) ...[
-          _buildInstitutionHighlightsSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-          if (isCanonicalPublicEntry) ...[
-            _buildAddedPublicArtSection(themeProvider, l10n),
-            const SizedBox(height: KubusSpacing.md),
-          ],
-        ],
-        if (isCanonicalPublicEntry && !isArtist && !isInstitution) ...[
-          _buildAddedPublicArtSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ],
-        if (showAchievements) ...[
-          _buildAchievementsSection(themeProvider, l10n),
-          const SizedBox(height: KubusSpacing.md),
-        ],
-        _buildPostsSection(themeProvider, l10n),
-      ],
+    return _contentColumn(
+      _narrativeSections,
+      themeProvider: themeProvider,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+      isCanonicalPublicEntry: isCanonicalPublicEntry,
+      l10n: l10n,
     );
   }
 

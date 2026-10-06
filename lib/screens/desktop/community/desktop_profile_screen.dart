@@ -37,6 +37,7 @@ import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../utils/kubus_entity_semantics.dart';
 import '../../../widgets/common/kubus_entity_card.dart';
 import '../../community/profile_screen_methods.dart';
+import '../../community/profile_section_order.dart';
 import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/profile/profile_account_health_section.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
@@ -260,6 +261,80 @@ class _ProfileScreenState extends State<ProfileScreen>
     return body;
   }
 
+  /// What one [ProfileSection] contributes to the content column(s) of "My
+  /// profile"; empty when the section does not apply to this profile. Identity
+  /// (the card above), the closing statistics and the owner's tools are laid out
+  /// full width by the callers, not here.
+  List<Widget> _contentSectionWidgets(
+    ProfileSection section,
+    ThemeProvider themeProvider, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    const gap = SizedBox(height: DetailSpacing.lg);
+    switch (section) {
+      case ProfileSection.work:
+        // Only the parts that apply to the role.
+        return [
+          if (isArtist) ...[
+            _buildArtistPortfolioSection(themeProvider),
+            gap,
+            _buildArtistCollectionsSection(themeProvider),
+            gap,
+            _buildArtistEventsSection(themeProvider),
+          ] else if (isInstitution) ...[
+            _buildInstitutionEventsSection(themeProvider),
+            gap,
+            _buildInstitutionCollectionsSection(themeProvider),
+          ],
+        ];
+      case ProfileSection.activity:
+        return [_buildPostsSection(themeProvider)];
+      case ProfileSection.recognition:
+        return [
+          _buildBadgesVerificationSection(),
+          gap,
+          _buildAchievementsSection(),
+        ];
+      case ProfileSection.publicArt:
+      // Reached through the Artworks statistic below.
+      case ProfileSection.identity:
+      case ProfileSection.stats:
+      case ProfileSection.ownerTools:
+        return const <Widget>[];
+    }
+  }
+
+  /// A column of the shared hierarchy: [sections] in canonical order, with the
+  /// ones that do not apply left out.
+  Widget _contentColumn(
+    Iterable<ProfileSection> sections,
+    ThemeProvider themeProvider, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: composeProfileSections<Widget>(
+        order: sections,
+        gap: (previous, next) => const SizedBox(height: DetailSpacing.lg),
+        build: (section) => _contentSectionWidgets(
+          section,
+          themeProvider,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+        ),
+      ),
+    );
+  }
+
+  /// The narrative between the identity and the closing statistics, in
+  /// canonical order.
+  static final List<ProfileSection> _narrativeSections = publicProfileSections
+      .where((section) =>
+          section != ProfileSection.identity && section != ProfileSection.stats)
+      .toList(growable: false);
+
   /// "My profile" follows the public profile's hierarchy (see
   /// [ownerProfileSections]): identity (the card above), work, activity,
   /// recognition, closing stats, then the owner's tools as their own block.
@@ -280,28 +355,22 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ..._workSections(
-                    themeProvider,
-                    isArtist: isArtist,
-                    isInstitution: isInstitution,
-                  ),
-                  _buildPostsSection(themeProvider),
-                ],
+              child: _contentColumn(
+                _narrativeSections
+                    .where((section) => section != ProfileSection.recognition),
+                themeProvider,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
               ),
             ),
             const SizedBox(width: DetailSpacing.xl),
             SizedBox(
               width: 360,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildBadgesVerificationSection(),
-                  const SizedBox(height: DetailSpacing.lg),
-                  _buildAchievementsSection(),
-                ],
+              child: _contentColumn(
+                const <ProfileSection>[ProfileSection.recognition],
+                themeProvider,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
               ),
             ),
           ],
@@ -324,47 +393,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ..._workSections(
+        _contentColumn(
+          _narrativeSections,
           themeProvider,
           isArtist: isArtist,
           isInstitution: isInstitution,
         ),
-        _buildPostsSection(themeProvider),
-        const SizedBox(height: DetailSpacing.lg),
-        _buildBadgesVerificationSection(),
-        const SizedBox(height: DetailSpacing.lg),
-        _buildAchievementsSection(),
         const SizedBox(height: DetailSpacing.xl),
         _buildStatsCards(themeProvider, profileProvider, false),
         ..._ownerTools(themeProvider,
             isArtist: isArtist, isInstitution: isInstitution),
       ],
     );
-  }
-
-  /// [ProfileSection.work]: only the parts that apply to the role, each
-  /// followed by its gap.
-  List<Widget> _workSections(
-    ThemeProvider themeProvider, {
-    required bool isArtist,
-    required bool isInstitution,
-  }) {
-    const gap = SizedBox(height: DetailSpacing.lg);
-    return [
-      if (isArtist) ...[
-        _buildArtistPortfolioSection(themeProvider),
-        gap,
-        _buildArtistCollectionsSection(themeProvider),
-        gap,
-        _buildArtistEventsSection(themeProvider),
-        gap,
-      ] else if (isInstitution) ...[
-        _buildInstitutionEventsSection(themeProvider),
-        gap,
-        _buildInstitutionCollectionsSection(themeProvider),
-        gap,
-      ],
-    ];
   }
 
   /// [ProfileSection.ownerTools]: account health, saved items, what the owner
