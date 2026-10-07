@@ -17466,5 +17466,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.';
 
   @override
-  String get artworkDraftArtistHelper => 'Leave blank if the author is unknown.';
+  String get artworkDraftArtistHelper =>
+      'Leave blank if the author is unknown.';
 }
