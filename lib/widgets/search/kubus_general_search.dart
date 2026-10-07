@@ -254,7 +254,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     this.onDismiss,
     this.offset = const Offset(0, 52),
     this.maxWidth = 520,
-    this.maxHeight = 360,
+    this.maxHeight = 440,
     this.width,
     this.enabled = true,
     this.useMapGlassSurface = false,
@@ -324,6 +324,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
           fallbackUrl: result.previewImageUrl,
           additionalUrls: <String?>[result.previewImageUrl],
         );
+      case KubusSearchResultKind.collection:
       case KubusSearchResultKind.post:
       case KubusSearchResultKind.institution:
       case KubusSearchResultKind.event:
@@ -333,6 +334,34 @@ class KubusSearchResultsOverlay extends StatelessWidget {
       case KubusSearchResultKind.profile:
       case KubusSearchResultKind.screen:
         return null;
+    }
+  }
+
+  /// The secondary line of a result row. An artwork names its recorded artist
+  /// or says the author is unknown, never the uploader. A collection names its
+  /// owner and how many artworks it holds.
+  static String resultDetailText(
+    AppLocalizations l10n,
+    KubusSearchResult result,
+  ) {
+    final detail = (result.detail ?? '').trim();
+    switch (result.kind) {
+      case KubusSearchResultKind.artwork:
+        return detail.isEmpty ? l10n.commonUnknownArtist : detail;
+      case KubusSearchResultKind.collection:
+        final count = result.collectionArtworkCount;
+        return <String>[
+          if (detail.isNotEmpty) detail,
+          if (count != null) l10n.searchCollectionArtworkCount(count),
+        ].join(' · ');
+      case KubusSearchResultKind.profile:
+      case KubusSearchResultKind.institution:
+      case KubusSearchResultKind.event:
+      case KubusSearchResultKind.exhibition:
+      case KubusSearchResultKind.marker:
+      case KubusSearchResultKind.post:
+      case KubusSearchResultKind.screen:
+        return detail;
     }
   }
 
@@ -401,17 +430,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         final l10n = AppLocalizations.of(context)!;
         final resolvedAccent = accentColor ??
             Provider.of<ThemeProvider>(context, listen: false).accentColor;
-        final surfaceStyle = KubusGlassStyle.resolve(
-          context,
-          surfaceType: KubusGlassSurfaceType.panelBackground,
-          tintBase: scheme.surface,
-        );
-        // In map context, route the dropdown through the shared map-glass path
-        // ([_KubusDropdownSurface]) so it registers a backdrop region (DOM host
-        // on web, BackdropFilter on desktop/Android) and stays translucent.
-        final panelBlurEnabled = useMapGlassSurface
-            ? (enableBlur ?? kubusMapBlurEnabled(context))
-            : true;
         final resolvedPanelRadius =
             BorderRadius.circular(panelRadius ?? KubusRadius.lg);
 
@@ -435,12 +453,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                       maxHeight: maxHeight,
                     ),
                     child: _KubusDropdownSurface(
-                      useMapGlassSurface: useMapGlassSurface,
+                      overMap: useMapGlassSurface,
                       panelRadius: resolvedPanelRadius,
-                      blurSigma: surfaceStyle.blurSigma,
-                      tintColor: surfaceStyle.tintColor,
-                      fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
-                      enableBlur: panelBlurEnabled,
                       child: Builder(
                         builder: (context) {
                           if (trimmed.length < controller.config.minChars) {
@@ -464,8 +478,14 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               label: l10n.commonLoading,
                               child: const Padding(
                                 padding: EdgeInsets.all(KubusSpacing.md),
+                                // A quiet bar, not a block that fills the list.
                                 child: Center(
-                                  child: InlineLoading(tileSize: 4),
+                                  heightFactor: 1,
+                                  child: InlineLoading(
+                                    width: 96,
+                                    height: KubusSpacing.sm,
+                                    tileSize: 4,
+                                  ),
                                 ),
                               ),
                             );
@@ -516,7 +536,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               isFirst: rows.isEmpty,
                             ));
                             for (final result in group.results) {
-                              final detail = (result.detail ?? '').trim();
+                              final detail = resultDetailText(l10n, result);
                               rows.add(MouseRegion(
                                 cursor: SystemMouseCursors.click,
                                 child: ListTile(
@@ -590,66 +610,50 @@ class KubusSearchResultsOverlay extends StatelessWidget {
 
 /// Surface wrapper for the search results dropdown.
 ///
-/// In map context it routes through the shared [buildKubusMapGlassSurface] path
-/// so the dropdown registers a backdrop region (DOM CSS host on web,
-/// [BackdropFilter] on desktop/Android) and stays translucent over the live map
-/// instead of rendering as an opaque tinted panel. Outside the map it keeps the
-/// plain [LiquidGlassPanel].
+/// A results list is something to read, so it is a solid raised surface with a
+/// hairline rule everywhere, including over the live map: map chips, labels and
+/// markers must never show through result text. Over the map it is lifted off
+/// the canvas with a soft shadow instead of being made translucent.
 class _KubusDropdownSurface extends StatelessWidget {
   const _KubusDropdownSurface({
-    required this.useMapGlassSurface,
+    required this.overMap,
     required this.panelRadius,
-    required this.blurSigma,
-    required this.tintColor,
-    required this.fallbackMinOpacity,
-    required this.enableBlur,
     required this.child,
   });
 
-  final bool useMapGlassSurface;
+  final bool overMap;
   final BorderRadius panelRadius;
-  final double blurSigma;
-  final Color tintColor;
-  final double fallbackMinOpacity;
-  final bool enableBlur;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (useMapGlassSurface) {
-      return buildKubusMapGlassSurface(
-        context: context,
-        kind: KubusMapGlassSurfaceKind.panel,
-        overlayName: 'search-results-dropdown',
-        borderRadius: panelRadius,
-        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-        margin: EdgeInsets.zero,
-        tintBase: tintColor,
-        // Respect the caller's blur decision (same one the search field uses).
-        // Without this the dropdown always took the default forceRealBlur path,
-        // rendering a BackdropFilter over the live map even where real blur is
-        // unsafe (mobile web / over the native platform view), putting blur in
-        // front of the result text. When false it falls back to the static
-        // sheen + tint instead.
-        useBlur: enableBlur,
-        backdropRegionId: 'map-search-results-dropdown',
-        child: child,
-      );
-    }
-    // Outside the map the results panel is an ordinary raised surface: a
-    // temporary list over flat UI, not a spatial overlay.
     final roles = KubusColorRoles.of(context);
-    return Material(
-      color: roles.surfaceRaised,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: panelRadius,
-        side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+        boxShadow: overMap
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: scheme.shadow.withValues(alpha: 0.18),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : null,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
-        child: child,
+      child: Material(
+        color: roles.surfaceRaised,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: panelRadius,
+          side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+          child: child,
+        ),
       ),
     );
   }
@@ -668,6 +672,7 @@ class KubusSearchResultGroup {
 const List<KubusSearchResultKind> kubusSearchGroupOrder =
     <KubusSearchResultKind>[
   KubusSearchResultKind.artwork,
+  KubusSearchResultKind.collection,
   KubusSearchResultKind.profile,
   KubusSearchResultKind.institution,
   KubusSearchResultKind.event,
@@ -697,6 +702,7 @@ List<KubusSearchResultGroup> groupSearchResults(
 String searchGroupLabel(AppLocalizations l10n, KubusSearchResultKind kind) {
   return switch (kind) {
     KubusSearchResultKind.artwork => l10n.communitySearchTypeArtworks,
+    KubusSearchResultKind.collection => l10n.communitySearchTypeCollections,
     KubusSearchResultKind.profile => l10n.communitySearchTypeProfiles,
     KubusSearchResultKind.institution => l10n.communitySearchTypeInstitutions,
     KubusSearchResultKind.event => l10n.communitySearchTypeEvents,

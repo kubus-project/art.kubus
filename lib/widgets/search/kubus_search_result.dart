@@ -6,6 +6,7 @@ import '../../utils/app_color_utils.dart';
 
 enum KubusSearchResultKind {
   artwork,
+  collection,
   profile,
   institution,
   event,
@@ -80,6 +81,16 @@ class KubusSearchResult {
         'linked_artwork_id',
       ]) ??
       (kind == KubusSearchResultKind.artwork ? id : null);
+
+  String? get collectionId =>
+      kind == KubusSearchResultKind.collection ? id : null;
+
+  /// Number of artworks in a collection result, when the source reports it.
+  int? get collectionArtworkCount {
+    final raw = data['artworkCount'] ?? data['artwork_count'];
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
 
   String? get subjectId =>
       dataString(const <String>[
@@ -167,6 +178,8 @@ class KubusSearchResult {
     switch (kind) {
       case KubusSearchResultKind.artwork:
         return Icons.auto_awesome;
+      case KubusSearchResultKind.collection:
+        return Icons.collections_bookmark_outlined;
       case KubusSearchResultKind.profile:
         return Icons.account_circle_outlined;
       case KubusSearchResultKind.institution:
@@ -187,6 +200,7 @@ class KubusSearchResult {
   String subtitleText(AppLocalizations l10n) {
     final kindLabel = switch (kind) {
       KubusSearchResultKind.artwork => l10n.commonArtwork,
+      KubusSearchResultKind.collection => l10n.commonCollection,
       KubusSearchResultKind.profile => l10n.navigationScreenProfile,
       KubusSearchResultKind.institution => l10n.commonInstitution,
       KubusSearchResultKind.event => l10n.mapMarkerSubjectTypeEvent,
@@ -203,6 +217,18 @@ class KubusSearchResult {
     }
     if (resolvedDetail.isEmpty) return kindLabel;
     return '$kindLabel \u2022 $resolvedDetail';
+  }
+
+  /// Like [KubusSearchResult.fromMap], but returns null for a payload that
+  /// names a result type this client does not know. Such a result must not be
+  /// guessed into another kind: a collection read as an artwork would open the
+  /// wrong record.
+  static KubusSearchResult? tryFromMap(Map<String, dynamic> map) {
+    final rawKind = (map['type'] ?? map['kind'])?.toString().trim() ?? '';
+    if (rawKind.isNotEmpty && KubusSearchResultKindX.fromRaw(rawKind) == null) {
+      return null;
+    }
+    return KubusSearchResult.fromMap(map);
   }
 
   factory KubusSearchResult.fromMap(Map<String, dynamic> map) {
@@ -257,6 +283,8 @@ extension KubusSearchResultKindX on KubusSearchResultKind {
     switch (this) {
       case KubusSearchResultKind.artwork:
         return 'artwork';
+      case KubusSearchResultKind.collection:
+        return 'collection';
       case KubusSearchResultKind.profile:
         return 'profile';
       case KubusSearchResultKind.institution:
@@ -278,6 +306,9 @@ extension KubusSearchResultKindX on KubusSearchResultKind {
     switch ((raw ?? '').trim().toLowerCase()) {
       case 'artwork':
         return KubusSearchResultKind.artwork;
+      case 'collection':
+      case 'collections':
+        return KubusSearchResultKind.collection;
       case 'profile':
       case 'user':
         return KubusSearchResultKind.profile;

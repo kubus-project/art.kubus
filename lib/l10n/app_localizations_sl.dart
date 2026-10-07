@@ -17649,4 +17649,20 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get artworkDraftArtistHelper => 'Pustite prazno, če avtor ni znan.';
+
+  @override
+  String get communitySearchTypeCollections => 'Zbirke';
+
+  @override
+  String searchCollectionArtworkCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count umetnin',
+      few: '$count umetnine',
+      two: '$count umetnini',
+      one: '$count umetnina',
+    );
+    return '$_temp0';
+  }
 }

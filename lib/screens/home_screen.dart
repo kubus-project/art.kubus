@@ -31,6 +31,7 @@ import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
+import '../utils/creator_shell_navigation.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
@@ -956,6 +957,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     switch (destination.kind) {
       case HomeSearchDestinationKind.artwork:
         await openArtwork(context, destination.id!, source: 'home_search');
+        return;
+      case HomeSearchDestinationKind.collection:
+        await CreatorShellNavigation.openCollectionDetailWorkspace(
+          context,
+          collectionId: destination.id!,
+          collectionName: result.label,
+        );
         return;
       case HomeSearchDestinationKind.profile:
         await UserProfileNavigation.open(context, userId: destination.id!);

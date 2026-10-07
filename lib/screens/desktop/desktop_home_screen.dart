@@ -72,6 +72,7 @@ import '../../services/user_service.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_authorship.dart';
 import '../../utils/creator_display_format.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/support/support_section.dart';
@@ -2491,6 +2492,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           return;
         }
         await openArtwork(context, resolvedId, source: 'desktop_home_search');
+        return;
+      case HomeSearchDestinationKind.collection:
+        await CreatorShellNavigation.openCollectionDetailWorkspace(
+          context,
+          collectionId: destination.id!,
+          collectionName: result.label,
+        );
         return;
       case HomeSearchDestinationKind.profile:
         final resolvedId = destination.id?.trim() ?? '';

@@ -43,6 +43,7 @@ import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_navigation.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/home/home_quick_action_executor.dart';

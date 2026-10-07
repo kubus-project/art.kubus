@@ -7180,5 +7180,7 @@
   "daoTreasuryLedgerLabel": "Zabeleženi premiki zakladnice",
   "artworkEditArtistLabel": "Umetnik / avtor",
   "artworkEditArtistHelper": "Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.",
-  "artworkDraftArtistHelper": "Pustite prazno, če avtor ni znan."
+  "artworkDraftArtistHelper": "Pustite prazno, če avtor ni znan.",
+  "communitySearchTypeCollections": "Zbirke",
+  "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}"
 }

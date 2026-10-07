@@ -10163,11 +10163,15 @@ class BackendApiService
   Future<List<Map<String, dynamic>>> getSearchSuggestions({
     required String query,
     int limit = 10,
+    bool includeCollections = false,
   }) async {
     try {
       final queryParams = <String, String>{
         'q': query,
         'limit': limit.toString(),
+        // Collection suggestions are opt-in on the backend so that clients
+        // without the collection result kind never receive them.
+        if (includeCollections) 'include': 'collections',
       };
 
       final uri = Uri.parse(

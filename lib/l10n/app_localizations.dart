@@ -30346,6 +30346,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leave blank if the author is unknown.'**
   String get artworkDraftArtistHelper;
+
+  /// No description provided for @communitySearchTypeCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections'**
+  String get communitySearchTypeCollections;
+
+  /// No description provided for @searchCollectionArtworkCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 artwork} other{{count} artworks}}'**
+  String searchCollectionArtworkCount(num count);
 }
 
 class _AppLocalizationsDelegate
