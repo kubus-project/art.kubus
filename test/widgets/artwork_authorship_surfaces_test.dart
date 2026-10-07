@@ -99,8 +99,8 @@ void main() {
       await tester.pumpWidget(harness(artwork));
       await tester.pumpAndSettle();
       expect(find.text('Unknown artist'), findsOneWidget);
-      expect(find.textContaining(_uploaderName, findRichText: true),
-          findsNothing);
+      expect(
+          find.textContaining(_uploaderName, findRichText: true), findsNothing);
       expect(
           find.textContaining(_photographer, findRichText: true), findsNothing);
       expect(find.textContaining('HcHchG', findRichText: true), findsNothing);
