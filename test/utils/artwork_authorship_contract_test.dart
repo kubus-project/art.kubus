@@ -1,4 +1,3 @@
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/promotion.dart';
 import 'package:art_kubus/services/backend_api_service.dart';

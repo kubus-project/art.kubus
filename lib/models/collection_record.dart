@@ -11,10 +11,12 @@ bool _parseBool(dynamic value, bool fallback) {
   if (value is num) return value != 0;
   if (value is String) {
     final normalized = value.trim().toLowerCase();
-    if (normalized == 'true' || normalized == '1' || normalized == 'yes')
+    if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
       return true;
-    if (normalized == 'false' || normalized == '0' || normalized == 'no')
+    }
+    if (normalized == 'false' || normalized == '0' || normalized == 'no') {
       return false;
+    }
   }
   return fallback;
 }

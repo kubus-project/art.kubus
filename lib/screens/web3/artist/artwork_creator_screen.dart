@@ -62,6 +62,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _titleController;
+  late final TextEditingController _artistController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _tagsController;
   late final TextEditingController _latController;
@@ -95,6 +96,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController();
+    _artistController = TextEditingController();
     _descriptionController = TextEditingController();
     _tagsController = TextEditingController();
     _latController = TextEditingController();
@@ -116,6 +118,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _artistController.dispose();
     _descriptionController.dispose();
     _tagsController.dispose();
     _latController.dispose();
@@ -182,6 +185,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
   void _applyDraftToControllers(ArtworkDraftState draft) {
     _titleController.text = draft.title;
+    _artistController.text = draft.artistName;
     _descriptionController.text = draft.description;
     _tagsController.text = draft.tagsCsv;
     if (!draft.locationEnabled) {
@@ -775,6 +779,18 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               drafts.updateBasics(draftId: widget.draftId, title: v),
           validator: (value) =>
               (value ?? '').trim().isEmpty ? 'Title is required.' : null,
+        ),
+        const CreatorFieldSpacing(),
+        // The author of the work: optional, never prefilled from the account.
+        CreatorTextField(
+          label: AppLocalizations.of(context)!.artworkEditArtistLabel,
+          helperText: AppLocalizations.of(context)!.artworkDraftArtistHelper,
+          accentColor: accent,
+          controller: _artistController,
+          maxLength: 255,
+          textInputAction: TextInputAction.next,
+          onChanged: (v) =>
+              drafts.updateBasics(draftId: widget.draftId, artistName: v),
         ),
         const CreatorFieldSpacing(),
         CreatorTextField(

@@ -17646,4 +17646,7 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artworkEditArtistHelper =>
       'Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.';
+
+  @override
+  String get artworkDraftArtistHelper => 'Pustite prazno, če avtor ni znan.';
 }

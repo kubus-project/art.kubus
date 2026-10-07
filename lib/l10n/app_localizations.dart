@@ -30340,6 +30340,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.'**
   String get artworkEditArtistHelper;
+
+  /// No description provided for @artworkDraftArtistHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank if the author is unknown.'**
+  String get artworkDraftArtistHelper;
 }
 
 class _AppLocalizationsDelegate
