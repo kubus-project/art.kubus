@@ -210,8 +210,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
             username.isNotEmpty &&
             !WalletUtils.looksLikeWallet(username);
 
-        // Only fall back to @username/wallet if we still have no useful subtitle.
-        if ((subtitle ?? '').trim().isEmpty) {
+        // Only fall back to @username/wallet if we still have no useful
+        // subtitle. An artwork's subtitle is its recorded artist or nothing:
+        // the uploader's handle or an id is not authorship.
+        if (type.toLowerCase() != 'artwork' &&
+            (subtitle ?? '').trim().isEmpty) {
           if (hasSafeUsername) {
             subtitle = '@$username';
           } else if (wallet != null && wallet.trim().isNotEmpty) {

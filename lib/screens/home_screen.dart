@@ -1809,40 +1809,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // The rail card's context line reads off the media plate, so it takes the
     // card's own on-media register rather than a surface foreground colour.
     final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
-    const linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
-        fallbackLabel:
-            AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+        fallbackLabel: AppLocalizations.of(context)?.commonUnknownArtist ??
+            'Unknown artist',
       );
       if (creatorIdentity == null) return null;
 
-      final creatorText = Text(
+      // Authorship is a recorded name, not an account: plain text, no link.
+      return Text(
         creatorIdentity.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: creatorIdentity.canOpenProfile
-            ? baseStyle.copyWith(
-                color: linkColor,
-                decoration: TextDecoration.underline,
-                decorationColor: linkColor.withValues(alpha: 0.7),
-              )
-            : baseStyle,
-      );
-      if (!creatorIdentity.canOpenProfile) {
-        return creatorText;
-      }
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => unawaited(
-          UserProfileNavigation.open(
-            context,
-            userId: creatorIdentity.userId!,
-            username: creatorIdentity.username,
-          ),
-        ),
-        child: creatorText,
+        style: baseStyle,
       );
     }
 
