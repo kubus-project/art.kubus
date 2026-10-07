@@ -436,6 +436,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   double get syncZoom => _cameraZoom;
   @override
+  double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_cameraZoom);
+  @override
   MapMarkerOverview? get markerOverview => _overviewController.overview;
 
   /// The overview can express the content-layer toggles but not filters that

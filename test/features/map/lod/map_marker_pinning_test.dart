@@ -289,5 +289,49 @@ void main() {
       expect(seen.where((c) => c != KubusMarkerRegroup.none), isNotEmpty);
       expect(seen.first, KubusMarkerRegroup.topology);
     });
+
+    test('jitter around the street threshold does not flip the grouping', () {
+      final gate = KubusMarkerRegroupGate();
+      expect(step(gate, 11.94), KubusMarkerRegroup.topology);
+      expect(step(gate, 12.06), KubusMarkerRegroup.topology,
+          reason: 'zooming in crosses the threshold exactly where it was');
+      expect(gate.clusteringAt(12.06, clusterMaxZoom: 12), isFalse);
+      final changes = <KubusMarkerRegroup>[
+        for (var i = 0; i < 12; i++) step(gate, i.isEven ? 11.94 : 12.06),
+      ];
+      expect(changes, everyElement(KubusMarkerRegroup.none));
+      expect(gate.clusteringAt(11.94, clusterMaxZoom: 12), isFalse);
+    });
+
+    test('a deliberate zoom-out regroups once the play is used up', () {
+      final gate = KubusMarkerRegroupGate();
+      step(gate, 12.4);
+      expect(step(gate, 11.85), KubusMarkerRegroup.none,
+          reason: 'one wheel notch (~0.15) below the threshold keeps markers');
+      expect(step(gate, 11.7), KubusMarkerRegroup.topology);
+      expect(gate.clusteringAt(11.7, clusterMaxZoom: 12), isTrue);
+      expect(step(gate, 11.95), KubusMarkerRegroup.none);
+      expect(step(gate, 12.0), KubusMarkerRegroup.topology,
+          reason: 'entering individual markers always happens at A');
+    });
+
+    test('topology zoom follows zoom-in at once and lags zoom-out by the play',
+        () {
+      final gate = KubusMarkerRegroupGate();
+      expect(gate.topologyZoomFor(9), 9, reason: 'no state yet: the camera');
+      step(gate, 10);
+      expect(gate.topologyZoomFor(10.6), 10.6);
+      expect(gate.topologyZoomFor(9.9), 10);
+      expect(gate.topologyZoomFor(9.5),
+          closeTo(9.5 + KubusMarkerRegroupGate.defaultTopologyPlay, 1e-9));
+    });
+
+    test('grid levels get the same slack as the street threshold', () {
+      final gate = KubusMarkerRegroupGate();
+      step(gate, 9.02);
+      expect(step(gate, 8.95), KubusMarkerRegroup.none);
+      expect(step(gate, 9.05), KubusMarkerRegroup.none);
+      expect(step(gate, 8.7), KubusMarkerRegroup.topology);
+    });
   });
 }

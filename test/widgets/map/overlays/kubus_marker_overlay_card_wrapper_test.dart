@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import 'package:art_kubus/widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -514,4 +515,71 @@ void main() {
 
     expect(buildCount, initialBuildCount);
   });
+
+  testWidgets(
+      'entrance fade withholds the platform backdrop until the card shows '
+      'and never remounts the card', (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(200, 300));
+    addTearDown(anchor.dispose);
+    final backdropVisible = <bool>[];
+    var mounts = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 400,
+            child: KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchor,
+              placementStrategy: KubusMarkerOverlayPlacementStrategy.centered,
+              widthResolver: (_, __) => 160,
+              maxHeightResolver: (_, __) => 160,
+              heightResolver: (_, __, ___) => 120,
+              animation: const KubusMarkerOverlayAnimationConfig(
+                duration: Duration(milliseconds: 200),
+                curve: Curves.linear,
+              ),
+              cardBuilder: (_, layout) => _MountProbe(
+                onMount: () => mounts += 1,
+                onBuild: backdropVisible.add,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(backdropVisible.last, isFalse,
+        reason: 'a blur must not stand in for content that is not shown yet');
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(backdropVisible.last, isTrue);
+    await tester.pumpAndSettle();
+    expect(backdropVisible.last, isTrue);
+    expect(mounts, 1, reason: 'finishing the fade must not restart the card');
+  });
+}
+
+class _MountProbe extends StatefulWidget {
+  const _MountProbe({required this.onMount, required this.onBuild});
+
+  final VoidCallback onMount;
+  final ValueChanged<bool> onBuild;
+
+  @override
+  State<_MountProbe> createState() => _MountProbeState();
+}
+
+class _MountProbeState extends State<_MountProbe> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onMount();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    widget.onBuild(KubusMapBackdropRegionVisibility.isVisible(context));
+    return const SizedBox(width: 160, height: 120);
+  }
 }

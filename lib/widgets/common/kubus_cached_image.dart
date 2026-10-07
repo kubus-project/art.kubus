@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/media_failure_registry.dart';
 import '../../utils/media_url_resolver.dart';
 
 typedef KubusImageErrorBuilder = Widget Function(
@@ -112,6 +113,17 @@ class KubusCachedImage extends StatelessWidget {
       );
     }
 
+    // Media that just failed (here or as a map marker cover) shows its
+    // fallback without another request: a rebuilding surface, such as a quick
+    // card following its marker, would otherwise re-fetch it every frame.
+    if (KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
+      return _withFallbackSemantics(
+        errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
+            _buildFallback(context, icon: Icons.broken_image_outlined),
+        resolvedSemanticLabel,
+      );
+    }
+
     // Providing BOTH cacheWidth and cacheHeight forces Flutter to decode the
     // bitmap to exactly those pixel dimensions, ignoring the source aspect
     // ratio. That squishes/stretches the image *before* [fit] can act, so even
@@ -146,6 +158,7 @@ class KubusCachedImage extends StatelessWidget {
       semanticLabel: resolvedSemanticLabel,
       excludeFromSemantics: excludeFromSemantics,
       errorBuilder: (context, error, stackTrace) {
+        KubusMediaFailureRegistry.shared.markFailed(urlWithVersion);
         late final Widget fallback;
         if (errorBuilder != null) {
           fallback = errorBuilder!(context, error, stackTrace);
@@ -194,4 +207,13 @@ class KubusCachedImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Error handed to [KubusCachedImage.errorBuilder] when the image was not
+/// requested because the same URL failed moments ago.
+class _KubusRecentImageFailure implements Exception {
+  const _KubusRecentImageFailure();
+
+  @override
+  String toString() => 'Image recently failed to load; not retried yet.';
 }

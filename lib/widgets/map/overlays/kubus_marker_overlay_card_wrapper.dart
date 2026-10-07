@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_map_tokens.dart';
 import '../../map_overlay_blocker.dart';
+import '../glass/kubus_map_platform_backdrop_host.dart';
 
 enum KubusMarkerOverlayPlacementStrategy {
   anchored,
@@ -547,6 +548,14 @@ class _NullAnchorListenable implements ValueListenable<Offset?> {
 ///
 /// Opacity-only by design: it must not affect layout, anchoring, or hit
 /// regions while the map keeps repositioning the card every frame.
+///
+/// The card's frosted glass can be a platform backdrop region (a DOM blur on
+/// web) that Flutter's [Opacity] cannot fade, so on the first frames it showed
+/// as an empty frosted rectangle at full strength with the content still
+/// invisible. The region is therefore only published once the content is
+/// [backdropRevealOpacity] visible. The widget tree keeps the same shape for
+/// the whole fade: dropping the [Opacity] wrapper when it ends would remount
+/// the card and restart its media.
 class _OverlayEntranceFade extends StatelessWidget {
   const _OverlayEntranceFade({
     required this.duration,
@@ -554,20 +563,28 @@ class _OverlayEntranceFade extends StatelessWidget {
     required this.child,
   });
 
+  static const double backdropRevealOpacity = 0.5;
+
   final Duration duration;
   final Curve curve;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final ancestorVisible = KubusMapBackdropRegionVisibility.isVisible(context);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: duration,
       curve: curve,
       child: child,
       builder: (context, opacity, child) {
-        if (opacity >= 1.0) return child!;
-        return Opacity(opacity: opacity, child: child);
+        return Opacity(
+          opacity: opacity,
+          child: KubusMapBackdropRegionVisibility(
+            visible: ancestorVisible && opacity >= backdropRevealOpacity,
+            child: child!,
+          ),
+        );
       },
     );
   }

@@ -52,6 +52,17 @@ abstract final class MapMarkerCollisionConfig {
   /// Additional stagger per marker for sequential pop-in.
   static const int entryStaggerMs = 36;
 
+  /// Longest a staggered entrance wave may span, start of the first marker to
+  /// start of the last. With [entryStaggerMs] alone, 56 markers entering a
+  /// city took 2 s and ~45 animation-only marker source writes even though
+  /// they rendered as six clusters; the cap keeps any wave under ~0.6 s.
+  static const int entryStaggerMaxSpreadMs = 360;
+
+  /// Longest a regroup wave may span (clusters dissolving into markers at the
+  /// street threshold, or merging back). Shorter than a first entrance: the
+  /// visitor is mid-zoom and the arrangement must keep up with the camera.
+  static const int entryRegroupStaggerMaxSpreadMs = 240;
+
   /// Soft re-entry (cluster regroup) starting scale. Higher floor than a full
   /// entry so an already-visible arrangement shimmers into its new grouping
   /// instead of blinking out.

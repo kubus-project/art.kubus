@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -54,9 +55,15 @@ abstract class KubusMapMarkerSyncHost {
   KubusMapController get kubusMapController;
   Set<String> get registeredMapImages;
 
-  /// Zoom the sync pipeline should cluster against (screens track this in
-  /// different fields: `_lastZoom` on mobile, `_cameraZoom` on desktop).
+  /// Camera zoom the sync pipeline builds level of detail for (screens track
+  /// this in different fields: `_lastZoom` on mobile, `_cameraZoom` on
+  /// desktop).
   double get syncZoom;
+
+  /// Zoom marker grouping is evaluated at: [syncZoom] with the shared regroup
+  /// gate's hysteresis applied, so grouping does not flip back and forth while
+  /// the camera jitters around a boundary (see `KubusMarkerRegroupGate`).
+  double get clusterTopologyZoom;
 
   /// The low-zoom overview to draw instead of detailed markers, or null when
   /// detailed markers are showing. See `KubusMapOverviewController`.
@@ -96,7 +103,13 @@ class KubusMapMarkerSyncEngine {
 
   final KubusMapMarkerSyncHost host;
   final KubusMarkerCoverLoader _coverLoader;
-  final KubusCoverWorkGate _coverGate = KubusCoverWorkGate();
+  late final KubusCoverWorkGate _coverGate = KubusCoverWorkGate(
+    isPaced: () => host.kubusMapController.cameraIsMoving,
+  );
+
+  /// How far below the cluster threshold individual-marker artwork is warmed
+  /// (see [syncMarkers]): one zoom level, i.e. the city-scale approach.
+  static const double markerIconWarmBand = 1.0;
 
   // Cover icons registered per style epoch. MapLibre has no image removal (and
   // the web plugin ignores a re-added name), so the total is capped instead:
@@ -125,6 +138,9 @@ class KubusMapMarkerSyncEngine {
   String? _transitionTargetSignature;
   List<KubusClusterTransitionNode> _transitionOriginTopology =
       const <KubusClusterTransitionNode>[];
+  // Per-feature regroup progress of the transition in flight. Monotonic: a
+  // feature that has started moving towards its target never slides back.
+  final Map<String, double> _transitionProgressById = <String, double>{};
 
   Future<void> syncMarkersSafe({required ThemeProvider themeProvider}) async {
     try {
@@ -156,7 +172,8 @@ class KubusMapMarkerSyncEngine {
       final isDark = themeProvider.isDarkMode;
 
       final zoom = host.syncZoom;
-      final useClustering = zoom < host.clusterMaxZoom &&
+      final topologyZoom = host.clusterTopologyZoom;
+      final useClustering = topologyZoom < host.clusterMaxZoom &&
           !host.kubusMapController.hasExpandedSameLocation;
       final renderedMarkers = host.kubusMapController.buildRenderedMarkers();
       final visibleMarkers =
@@ -227,7 +244,7 @@ class KubusMapMarkerSyncEngine {
         roles: roles,
         isDark: isDark,
         useClustering: needsArtwork && useClustering,
-        zoom: zoom,
+        zoom: topologyZoom,
         pinnedMarkerIds: pinned,
       );
       if (!host.hostMounted) return;
@@ -237,7 +254,7 @@ class KubusMapMarkerSyncEngine {
       final features = await kubusBuildMarkerFeatureList(
         markers: geoMarkers,
         useClustering: useClustering,
-        zoom: zoom,
+        zoom: topologyZoom,
         clusterGridLevelForZoom: host.clusterGridLevelForZoom,
         sortClustersBySizeDesc: host.sortClustersBySizeDesc,
         shouldAbort: () => !host.hostMounted,
@@ -314,6 +331,29 @@ class KubusMapMarkerSyncEngine {
       }
 
       await host.afterMarkerSync(themeProvider);
+
+      // Close to the street threshold the next zoom-in dissolves the clusters
+      // into individual markers. Their artwork (one icon per category, tier
+      // and theme, plus the same-coordinate stacks) is rasterised now, while
+      // the camera rests, so the crossing itself only rewrites the source:
+      // rasterising it there was the longest task of the whole transition.
+      if (needsArtwork &&
+          useClustering &&
+          topologyZoom >= host.clusterMaxZoom - markerIconWarmBand &&
+          !host.kubusMapController.cameraIsMoving) {
+        unawaited(
+          preregisterIcons(
+            markers: visibleMarkers,
+            themeProvider: themeProvider,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+            useClustering: false,
+            zoom: topologyZoom,
+            pinnedMarkerIds: pinned,
+          ),
+        );
+      }
 
       // Marker artwork depends on the zoom this pass was built for. If the
       // camera moved across a level-of-detail boundary meanwhile, the source
@@ -425,6 +465,7 @@ class KubusMapMarkerSyncEngine {
       _stableTopologySignature = targetSignature;
       _transitionTargetSignature = null;
       _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      _transitionProgressById.clear();
       return;
     }
     if (_lastRenderedTopology.isEmpty || _stableTopologySignature.isEmpty) {
@@ -437,27 +478,36 @@ class KubusMapMarkerSyncEngine {
       _lastRenderedTopology = targetNodes;
       _transitionTargetSignature = null;
       _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      _transitionProgressById.clear();
       return;
     }
 
     if (_transitionTargetSignature != targetSignature) {
       _transitionTargetSignature = targetSignature;
       _transitionOriginTopology = _lastRenderedTopology;
+      _transitionProgressById.clear();
     }
-    final progress = Curves.easeOutCubic.transform(
-      kubusClusterRegroupProgress(
-        entryOpacities: features.map((feature) {
-          final properties = feature['properties'];
-          if (properties is! Map) return 1.0;
-          return (properties['entryOpacity'] as num?)?.toDouble() ?? 1.0;
-        }),
-        startOpacity: MapMarkerCollisionConfig.entryRegroupStartOpacity,
-      ),
-    );
 
+    // Each feature travels from its origin in the previous arrangement as its
+    // own (centre-out staggered) regroup entrance runs, so a dissolving cluster
+    // fans out progressively instead of every marker leaving at once.
+    var minProgress = 1.0;
     final renderedNodes = <KubusClusterTransitionNode>[];
     for (var index = 0; index < features.length; index++) {
       final target = targetNodes[index];
+      final properties = features[index]['properties'];
+      final entryOpacity = properties is Map
+          ? (properties['entryOpacity'] as num?)?.toDouble() ?? 1.0
+          : 1.0;
+      final raw = kubusClusterRegroupFeatureProgress(
+        entryOpacity: entryOpacity,
+        startOpacity: MapMarkerCollisionConfig.entryRegroupStartOpacity,
+      );
+      final previousProgress = _transitionProgressById[target.id] ?? 0.0;
+      final featureProgress = math.max(previousProgress, raw);
+      _transitionProgressById[target.id] = featureProgress;
+      if (featureProgress < minProgress) minProgress = featureProgress;
+      final progress = Curves.easeOutCubic.transform(featureProgress);
       final origin = resolveKubusClusterTransitionOrigin(
         target: target,
         previous: _transitionOriginTopology,
@@ -483,10 +533,11 @@ class KubusMapMarkerSyncEngine {
     _lastRenderedTopology = List<KubusClusterTransitionNode>.unmodifiable(
       renderedNodes,
     );
-    if (progress >= 0.999) {
+    if (minProgress >= 0.999) {
       _stableTopologySignature = targetSignature;
       _transitionTargetSignature = null;
       _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      _transitionProgressById.clear();
       _lastRenderedTopology = targetNodes;
     }
   }
@@ -796,9 +847,6 @@ class KubusMapMarkerSyncEngine {
         );
         continue;
       }
-      // Rasterising a cover is a GPU readback: never start one mid-gesture. The
-      // screens re-plan covers when the camera idles at street scale.
-      if (host.kubusMapController.cameraIsMoving) continue;
       // A spent image pool cannot take another cover: planning it again would
       // only fetch, render and discard it on every idle.
       if (_coverImagesRegistered >= KubusMarkerLod.maxRegisteredCoverImages) {
@@ -949,9 +997,11 @@ class KubusMapMarkerSyncEngine {
           return true;
         }
 
-        // One cover at a time, only while the camera is still: the readback
-        // behind each icon must not land on a frame the camera needs. A skipped
-        // cover is re-planned at the next camera idle.
+        // One cover at a time, with a breather that widens while the camera
+        // moves (see KubusCoverWorkGate.motionSpacing): the readback behind
+        // each icon never lands on consecutive frames, yet covers keep
+        // arriving during a pan or zoom instead of all at once when it stops.
+        // A skipped cover is re-planned at the next sync or camera idle.
         final rendered = await _coverGate.runSerial<bool>(
           () async {
             final base = await register(false);
@@ -963,7 +1013,6 @@ class KubusMapMarkerSyncEngine {
           // and an abandoned cover must not spend the append-only image pool.
           shouldRun: () =>
               host.hostMounted &&
-              !host.kubusMapController.cameraIsMoving &&
               host.kubusMapController.styleEpoch == styleEpoch &&
               _wantedCoverIds.contains(marker.id),
         );

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -60,21 +58,22 @@ String kubusClusterTopologySignature(
   return parts.join('|');
 }
 
-double kubusClusterRegroupProgress({
-  required Iterable<double> entryOpacities,
+/// Regroup progress (0..1) of one feature from its own entry opacity.
+///
+/// A soft regroup entrance runs from [startOpacity] to 1. Viewport entry state
+/// is intentionally sparse: off-screen features are kept at opacity zero so
+/// they do not animate when panning, and a first-time entrance starts from
+/// zero. A feature below [startOpacity] is therefore not part of the regroup
+/// and is drawn at its target, so it can never pin itself, or anything else,
+/// to an old origin. Each feature progresses on its own, which lets a
+/// dissolving cluster fan out in a staggered wave.
+double kubusClusterRegroupFeatureProgress({
+  required double entryOpacity,
   required double startOpacity,
 }) {
-  // Viewport entry state is intentionally sparse: off-screen features are
-  // represented by opacity zero so they do not animate when panning. A regroup
-  // transition must be driven only by its visible soft-regroup participants;
-  // otherwise one off-screen marker pins the entire topology at its origin.
-  final participants = entryOpacities
-      .where((opacity) => opacity >= startOpacity)
-      .toList(growable: false);
-  if (participants.isEmpty) return 1.0;
-  final opacity = participants.reduce(math.min).clamp(0.0, 1.0);
   if (startOpacity >= 1.0) return 1.0;
-  return ((opacity - startOpacity) / (1.0 - startOpacity))
+  if (entryOpacity < startOpacity) return 1.0;
+  return ((entryOpacity - startOpacity) / (1.0 - startOpacity))
       .clamp(0.0, 1.0)
       .toDouble();
 }
