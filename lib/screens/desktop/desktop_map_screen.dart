@@ -562,6 +562,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       distance: _distance,
       supportsPendingMarker: true,
+      clusterTopologyZoomFor: _regroupGate.topologyZoomFor,
       managedLayerIdsOut: _managedLayerIds,
       managedSourceIdsOut: _managedSourceIds,
       registeredMapImagesOut: _registeredMapImages,

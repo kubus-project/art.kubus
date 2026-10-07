@@ -721,6 +721,7 @@ class _MapScreenState extends State<MapScreen>
       ),
       distance: _distanceCalculator,
       dismissSelectionOnUserGesture: false,
+      clusterTopologyZoomFor: _regroupGate.topologyZoomFor,
       managedLayerIdsOut: _managedLayerIds,
       managedSourceIdsOut: _managedSourceIds,
       registeredMapImagesOut: _registeredMapImages,

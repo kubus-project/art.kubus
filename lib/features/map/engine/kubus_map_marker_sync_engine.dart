@@ -111,6 +111,11 @@ class KubusMapMarkerSyncEngine {
   /// (see [syncMarkers]): one zoom level, i.e. the city-scale approach.
   static const double markerIconWarmBand = 1.0;
 
+  /// The icon warm-up in flight, if any (see [syncMarkers]). Icon
+  /// pre-registration checks the registered set only before each asynchronous
+  /// render, so two overlapping runs would rasterise and add the same icons.
+  Future<void>? _iconWarmup;
+
   // Cover icons registered per style epoch. MapLibre has no image removal (and
   // the web plugin ignores a re-added name), so the total is capped instead:
   // once the pool is spent, further markers simply keep their canonical badge
@@ -232,6 +237,12 @@ class KubusMapMarkerSyncEngine {
         styleEpoch: styleEpoch,
       );
 
+      // A warm-up still rendering these icons finishes first, so the same icon
+      // is never rasterised twice.
+      final warmup = _iconWarmup;
+      if (warmup != null) await warmup;
+      if (!host.hostMounted) return;
+
       // Pre-register all needed icons in parallel to avoid waterfall.
       await preregisterIcons(
         markers: needsArtwork
@@ -337,22 +348,27 @@ class KubusMapMarkerSyncEngine {
       // and theme, plus the same-coordinate stacks) is rasterised now, while
       // the camera rests, so the crossing itself only rewrites the source:
       // rasterising it there was the longest task of the whole transition.
+      // One warm-up at a time, for the style it was started in.
       if (needsArtwork &&
           useClustering &&
+          _iconWarmup == null &&
           topologyZoom >= host.clusterMaxZoom - markerIconWarmBand &&
-          !host.kubusMapController.cameraIsMoving) {
-        unawaited(
-          preregisterIcons(
-            markers: visibleMarkers,
-            themeProvider: themeProvider,
-            scheme: scheme,
-            roles: roles,
-            isDark: isDark,
-            useClustering: false,
-            zoom: topologyZoom,
-            pinnedMarkerIds: pinned,
-          ),
-        );
+          !host.kubusMapController.cameraIsMoving &&
+          host.kubusMapController.styleEpoch == styleEpoch) {
+        late final Future<void> run;
+        run = preregisterIcons(
+          markers: visibleMarkers,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          roles: roles,
+          isDark: isDark,
+          useClustering: false,
+          zoom: topologyZoom,
+          pinnedMarkerIds: pinned,
+        ).catchError((Object _) {}).whenComplete(() {
+          if (identical(_iconWarmup, run)) _iconWarmup = null;
+        });
+        _iconWarmup = run;
       }
 
       // Marker artwork depends on the zoom this pass was built for. If the

@@ -196,6 +196,7 @@ class KubusMapController {
     required Distance distance,
     this.supportsPendingMarker = false,
     this.dismissSelectionOnUserGesture = true,
+    this.clusterTopologyZoomFor,
     Set<String>? managedLayerIdsOut,
     Set<String>? managedSourceIdsOut,
     Set<String>? registeredMapImagesOut,
@@ -221,6 +222,12 @@ class KubusMapController {
   /// Desktop uses this to avoid confusing anchored overlays while panning.
   /// Mobile keeps the selection open and just re-anchors it.
   final bool dismissSelectionOnUserGesture;
+
+  /// The zoom the rendered marker grouping was built at for a camera zoom
+  /// (the screen's `KubusMarkerRegroupGate.topologyZoomFor`, which lags a
+  /// zoom-out). Cluster taps must resolve their feature id at this zoom: the id
+  /// carries the grid level it was rendered with. Null means the camera zoom.
+  final double Function(double cameraZoom)? clusterTopologyZoomFor;
 
   final Distance _distance;
 
@@ -1292,6 +1299,8 @@ class KubusMapController {
   Future<void> _activateCluster(String featureId, LatLng fallbackCenter) async {
     _collapseSpiderfy();
     final gridLevelForZoom = tapConfig.clusterGridLevelForZoom;
+    final topologyZoom =
+        clusterTopologyZoomFor?.call(_camera.zoom) ?? _camera.zoom;
     final plan = gridLevelForZoom == null
         ? null
         : resolveKubusClusterActivationPlan(
@@ -1300,7 +1309,7 @@ class KubusMapController {
                 .toList(growable: false),
             clusterFeatureId: featureId,
             clusterIdPrefix: tapConfig.clusterIdPrefix,
-            currentZoom: _camera.zoom,
+            currentZoom: topologyZoom,
             maxZoom: tapConfig.clusterTapMaxZoom,
             gridLevelForZoom: gridLevelForZoom,
           );
