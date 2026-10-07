@@ -19,6 +19,7 @@ import '../../providers/collections_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/artwork_authorship.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
@@ -348,7 +349,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                       },
                       title: Text(art.title),
                       subtitle: Text(
-                        art.artist.isNotEmpty ? art.artist : art.id,
+                        art.recordedArtist ??
+                            AppLocalizations.of(context)!.commonUnknownArtist,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -992,11 +994,9 @@ class _CollectionArtworkTile extends StatelessWidget {
                 ),
                 const SizedBox(height: KubusSpacing.xxs),
                 Text(
-                  artwork.artistName?.trim().isNotEmpty == true
+                  isRecordedArtistName(artwork.artistName)
                       ? artwork.artistName!.trim()
-                      : artwork.artistWallet?.trim().isNotEmpty == true
-                          ? artwork.artistWallet!.trim()
-                          : artwork.id,
+                      : AppLocalizations.of(context)!.commonUnknownArtist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KubusTextStyles.detailCaption.copyWith(

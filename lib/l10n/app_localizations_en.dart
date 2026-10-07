@@ -17457,4 +17457,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get daoTreasuryLedgerLabel => 'Recorded treasury movements';
+
+  @override
+  String get artworkEditArtistLabel => 'Artist / author';
+
+  @override
+  String get artworkEditArtistHelper =>
+      'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.';
 }

@@ -11,8 +11,10 @@ bool _parseBool(dynamic value, bool fallback) {
   if (value is num) return value != 0;
   if (value is String) {
     final normalized = value.trim().toLowerCase();
-    if (normalized == 'true' || normalized == '1' || normalized == 'yes') return true;
-    if (normalized == 'false' || normalized == '0' || normalized == 'no') return false;
+    if (normalized == 'true' || normalized == '1' || normalized == 'yes')
+      return true;
+    if (normalized == 'false' || normalized == '0' || normalized == 'no')
+      return false;
   }
   return fallback;
 }
@@ -33,7 +35,6 @@ class CollectionArtworkRecord {
   final String? imageUrl;
   final String? imageCid;
   final String? artistName;
-  final String? artistWallet;
   final List<String> tags;
   final DateTime? addedAt;
   final String? notes;
@@ -45,7 +46,6 @@ class CollectionArtworkRecord {
     this.imageUrl,
     this.imageCid,
     this.artistName,
-    this.artistWallet,
     this.tags = const <String>[],
     this.addedAt,
     this.notes,
@@ -72,7 +72,8 @@ class CollectionArtworkRecord {
     }
 
     Map<String, dynamic>? nestedArtwork;
-    final rawArtwork = map['artwork'] ?? map['artworkPreview'] ?? map['artwork_preview'];
+    final rawArtwork =
+        map['artwork'] ?? map['artworkPreview'] ?? map['artwork_preview'];
     if (rawArtwork is Map<String, dynamic>) {
       nestedArtwork = rawArtwork;
     } else if (rawArtwork is Map) {
@@ -105,10 +106,10 @@ class CollectionArtworkRecord {
       'cid',
     ];
 
-    final resolvedImageUrl =
-        pickFrom(map, imageUrlKeys) ?? (nestedArtwork != null ? pickFrom(nestedArtwork, imageUrlKeys) : null);
-    final resolvedImageCid =
-        pickFrom(map, imageCidKeys) ?? (nestedArtwork != null ? pickFrom(nestedArtwork, imageCidKeys) : null);
+    final resolvedImageUrl = pickFrom(map, imageUrlKeys) ??
+        (nestedArtwork != null ? pickFrom(nestedArtwork, imageUrlKeys) : null);
+    final resolvedImageCid = pickFrom(map, imageCidKeys) ??
+        (nestedArtwork != null ? pickFrom(nestedArtwork, imageCidKeys) : null);
     return CollectionArtworkRecord(
       id: _stringOrEmpty(map['id'] ?? map['artworkId'] ?? map['artwork_id']),
       title: _stringOrEmpty(map['title'] ?? map['name']),
@@ -116,7 +117,6 @@ class CollectionArtworkRecord {
       imageUrl: resolvedImageUrl,
       imageCid: resolvedImageCid,
       artistName: map['artistName']?.toString(),
-      artistWallet: map['artistWallet']?.toString(),
       tags: tags,
       addedAt: _parseDateTime(map['addedAt'] ?? map['added_at']),
       notes: map['notes']?.toString(),
@@ -163,11 +163,13 @@ class CollectionRecord {
 
     return CollectionRecord(
       id: _stringOrEmpty(map['id']),
-      walletAddress: _stringOrEmpty(map['walletAddress'] ?? map['wallet_address']),
+      walletAddress:
+          _stringOrEmpty(map['walletAddress'] ?? map['wallet_address']),
       name: _stringOrEmpty(map['name'] ?? map['title']),
       description: map['description']?.toString(),
       isPublic: _parseBool(map['isPublic'] ?? map['is_public'], true),
-      artworkCount: _parseInt(map['artworkCount'] ?? map['artwork_count'], artworks.length),
+      artworkCount: _parseInt(
+          map['artworkCount'] ?? map['artwork_count'], artworks.length),
       thumbnailUrl: (map['thumbnailUrl'] ??
               map['thumbnail_url'] ??
               map['coverImage'] ??

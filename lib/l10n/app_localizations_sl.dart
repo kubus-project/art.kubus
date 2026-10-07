@@ -17639,4 +17639,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoTreasuryLedgerLabel => 'Zabeleženi premiki zakladnice';
+
+  @override
+  String get artworkEditArtistLabel => 'Umetnik / avtor';
+
+  @override
+  String get artworkEditArtistHelper =>
+      'Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.';
 }

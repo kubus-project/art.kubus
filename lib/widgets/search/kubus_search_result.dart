@@ -196,6 +196,11 @@ class KubusSearchResult {
       KubusSearchResultKind.screen => l10n.communitySearchTypeScreens,
     };
     final resolvedDetail = detail?.trim() ?? '';
+    // An artwork's detail is its recorded artist; without one it is
+    // unattributed, never the uploader.
+    if (resolvedDetail.isEmpty && kind == KubusSearchResultKind.artwork) {
+      return '$kindLabel • ${l10n.commonUnknownArtist}';
+    }
     if (resolvedDetail.isEmpty) return kindLabel;
     return '$kindLabel \u2022 $resolvedDetail';
   }

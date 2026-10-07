@@ -70,6 +70,7 @@ import '../../services/share/share_deep_link_parser.dart';
 import '../../services/share/share_types.dart';
 import '../../services/user_service.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/artwork_authorship.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../utils/wallet_utils.dart';
@@ -1418,44 +1419,20 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     // The rail card's context line reads off the media plate, so it takes the
     // card's own on-media register rather than a surface foreground colour.
     final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
-    final linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
-        fallbackLabel:
-            AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
-                'Creator',
+        fallbackLabel: AppLocalizations.of(context)?.commonUnknownArtist ??
+            'Unknown artist',
       );
       if (creatorIdentity == null) return null;
 
-      final creatorText = Text(
+      // Authorship is a recorded name, not an account: plain text, no link.
+      return Text(
         creatorIdentity.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: creatorIdentity.canOpenProfile
-            ? baseStyle.copyWith(
-                color: linkColor,
-                decoration: TextDecoration.underline,
-                decorationColor: linkColor.withValues(alpha: 0.7),
-              )
-            : baseStyle,
-      );
-      if (!creatorIdentity.canOpenProfile) {
-        return creatorText;
-      }
-      return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => unawaited(
-            UserProfileNavigation.open(
-              context,
-              userId: creatorIdentity.userId!,
-              username: creatorIdentity.username,
-            ),
-          ),
-          child: creatorText,
-        ),
+        style: baseStyle,
       );
     }
 
@@ -2551,32 +2528,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       for (final art in artworkProvider.artworks) art.id: art
     };
 
+    final unknownArtist = AppLocalizations.of(context)!.commonUnknownArtist;
     for (final art in artworkProvider.artworks) {
-      final walletFromField = WalletUtils.canonical(art.walletAddress);
-      final wallet = walletFromField.isNotEmpty
-          ? walletFromField
-          : (WalletUtils.looksLikeWallet(art.artist)
-              ? WalletUtils.canonical(art.artist)
-              : '');
-      final resolved =
-          wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
-      final formatted = CreatorDisplayFormat.format(
-        fallbackLabel:
-            AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
-        displayName: resolved?.displayName ?? art.artist,
-        username: resolved?.username,
-        wallet: wallet,
-      );
-      final creatorLine = formatted.secondary == null
-          ? formatted.primary
-          : '${formatted.primary} • ${formatted.secondary!}';
+      final wallet = WalletUtils.canonical(art.walletAddress);
       entries.add(_TrendingArtEntry(
         id: art.id,
         artworkId: art.id,
         title: art.title,
-        subtitle: creatorLine.isNotEmpty
-            ? creatorLine
-            : AppLocalizations.of(context)!.commonNotAvailableShort,
+        // The artwork's recorded author; the uploader is not the artist.
+        subtitle: art.recordedArtist ?? unknownArtist,
         likes: art.likesCount,
         hasAR: art.arEnabled,
         score: _trendingScore(art),
@@ -2594,48 +2554,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       if (idx != -1) {
         final existing = entries[idx];
         final wallet = WalletUtils.canonical(post.authorWallet);
-        final resolved =
-            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
-        final formatted = CreatorDisplayFormat.format(
-          fallbackLabel:
-              AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
-          displayName: resolved?.displayName ?? post.authorName,
-          username: resolved?.username ?? post.authorUsername,
-          wallet: wallet,
-        );
-        final authorLine = formatted.secondary == null
-            ? formatted.primary
-            : '${formatted.primary} • ${formatted.secondary!}';
         entries[idx] = existing.copyWith(
           score: existing.score + boost,
           likes: post.likeCount > 0 ? post.likeCount : existing.likes,
-          subtitle: existing.subtitle?.isNotEmpty == true
-              ? existing.subtitle
-              : authorLine,
           creatorWallet:
               existing.creatorWallet ?? (wallet.isEmpty ? null : wallet),
         );
       } else {
         final wallet = WalletUtils.canonical(post.authorWallet);
-        final resolved =
-            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
-        final formatted = CreatorDisplayFormat.format(
-          fallbackLabel:
-              AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
-          displayName: resolved?.displayName ?? post.authorName,
-          username: resolved?.username ?? post.authorUsername,
-          wallet: wallet,
-        );
-        final authorLine = formatted.secondary == null
-            ? formatted.primary
-            : '${formatted.primary} • ${formatted.secondary!}';
         final referencedArtwork = artworkMap[artId];
         entries.add(
           _TrendingArtEntry(
             id: artId,
             artworkId: artId,
             title: ref.title,
-            subtitle: authorLine,
+            // The post's author shared the artwork; they are not its artist.
+            subtitle: referencedArtwork?.recordedArtist ?? unknownArtist,
             likes: post.likeCount,
             hasAR: referencedArtwork?.arEnabled ?? true,
             score: boost,

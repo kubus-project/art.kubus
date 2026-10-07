@@ -18,6 +18,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/artwork_authorship.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/wallet_utils.dart';
@@ -81,6 +82,7 @@ class ArtworkEditScreen extends StatefulWidget {
 
 class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   late final TextEditingController _titleController;
+  late final TextEditingController _artistController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _categoryController;
   late final TextEditingController _tagsController;
@@ -364,6 +366,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController();
+    _artistController = TextEditingController();
     _descriptionController = TextEditingController();
     _categoryController = TextEditingController();
     _tagsController = TextEditingController();
@@ -381,6 +384,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _artistController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
     _tagsController.dispose();
@@ -520,6 +524,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (artwork == null) return;
 
     _titleController.text = artwork.title;
+    // Only a recorded author is shown; the uploader is never pre-filled.
+    _artistController.text = artwork.recordedArtist ?? '';
     _descriptionController.text = artwork.description;
     _categoryController.text = artwork.category;
     _tagsController.text = artwork.tags.join(', ');
@@ -617,6 +623,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
     final updates = <String, dynamic>{};
     if (title != artwork.title) updates['title'] = title;
+    // Authorship is explicit: a blank field clears it (unattributed) and is
+    // never replaced with the current account.
+    final artistName = artistNameUpdateFor(artwork, _artistController.text);
+    if (artistName != null) updates['artistName'] = artistName;
     if (description != artwork.description) {
       updates['description'] = description;
     }
@@ -850,6 +860,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 controller: _titleController,
                 enabled: !_isSaving,
                 decoration: InputDecoration(labelText: l10n.commonTitle),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              TextField(
+                controller: _artistController,
+                enabled: !_isSaving,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 255,
+                decoration: InputDecoration(
+                  labelText: l10n.artworkEditArtistLabel,
+                  helperText: l10n.artworkEditArtistHelper,
+                  helperMaxLines: 3,
+                ),
               ),
               const SizedBox(height: DetailSpacing.md),
               TextField(

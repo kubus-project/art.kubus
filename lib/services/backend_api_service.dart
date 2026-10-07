@@ -10657,14 +10657,16 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
 
   final id = stringVal(json['id'] ?? json['_id'] ?? '');
   final title = stringVal(json['title'] ?? json['name'] ?? '');
-  final artist = stringVal(
-    json['artist'] ??
-        json['artistName'] ??
-        json['artist_name'] ??
-        json['walletAddress'] ??
-        json['wallet_address'] ??
-        'Unknown Artist',
-  );
+  // Cultural authorship is the explicit artist only. The uploader/owner wallet
+  // (`walletAddress`) is a different role and is never promoted to the artist;
+  // an unattributed artwork carries an empty artist and is rendered as the
+  // localized "Unknown artist" by the surfaces that show it.
+  final artist = pickString([
+        json['artist'],
+        json['artistName'],
+        json['artist_name'],
+      ]) ??
+      '';
 
   final rawImage = pickString([
     json['imageUrl'],

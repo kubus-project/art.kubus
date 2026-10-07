@@ -7210,5 +7210,7 @@
   "daoNotEligibleTitle": "No voting power in this wallet",
   "daoNotEligibleBody": "Votes are weighted by the KUB8 in your wallet at the moment you vote. A wallet with no KUB8 cannot vote.",
   "daoTreasuryOnChainLabel": "On-chain treasury balance",
-  "daoTreasuryLedgerLabel": "Recorded treasury movements"
+  "daoTreasuryLedgerLabel": "Recorded treasury movements",
+  "artworkEditArtistLabel": "Artist / author",
+  "artworkEditArtistHelper": "Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown."
 }

@@ -30328,6 +30328,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recorded treasury movements'**
   String get daoTreasuryLedgerLabel;
+
+  /// No description provided for @artworkEditArtistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist / author'**
+  String get artworkEditArtistLabel;
+
+  /// No description provided for @artworkEditArtistHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.'**
+  String get artworkEditArtistHelper;
 }
 
 class _AppLocalizationsDelegate
