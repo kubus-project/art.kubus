@@ -251,7 +251,7 @@ void main() {
   });
 
   group('KubusSearchResultsOverlay map glass mode', () {
-    testWidgets('dropdown fallback shows the sheen and results remain tappable',
+    testWidgets('dropdown is solid, not glass, and results remain tappable',
         (tester) async {
       final themeProvider = ThemeProvider();
       addTearDown(themeProvider.dispose);
@@ -288,12 +288,23 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Dropdown is open over the map: it must read as map glass (sheen) with
-      // no raw BackdropFilter required on this fallback path.
+      // Dropdown is open over the map: result text must sit on a solid
+      // surface, so there is neither a backdrop blur nor a translucent sheen
+      // inside the overlay for map chips and labels to show through.
       final resultTile = find.widgetWithText(ListTile, 'Ocean Light');
       expect(resultTile, findsOneWidget);
-      expect(find.byType(KubusMapGlassMaterialSheen), findsWidgets);
-      expect(find.byType(BackdropFilter), findsNothing);
+      final overlay = find.byType(KubusSearchResultsOverlay);
+      expect(
+        find.descendant(
+          of: overlay,
+          matching: find.byType(KubusMapGlassMaterialSheen),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: overlay, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
 
       // Still tappable.
       tester.widget<ListTile>(resultTile).onTap?.call();

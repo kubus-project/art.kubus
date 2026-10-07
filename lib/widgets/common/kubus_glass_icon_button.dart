@@ -27,6 +27,7 @@ class KubusGlassIconButton extends StatefulWidget {
     this.tooltipVerticalOffset,
     this.borderRadius = 999,
     this.enableBlur = true,
+    this.embedded = false,
   });
 
   final IconData icon;
@@ -53,6 +54,13 @@ class KubusGlassIconButton extends StatefulWidget {
   final double? tooltipVerticalOffset;
   final double borderRadius;
   final bool enableBlur;
+
+  /// Renders the button flat, for use inside another bordered control such as
+  /// a search field: no border, shadow or glass of its own, so the field keeps
+  /// a single boundary. The full [size] hit area, tooltip, semantics and badge
+  /// are unchanged; hover and keyboard focus show as a soft fill instead of a
+  /// bordered tile.
+  final bool embedded;
 
   @override
   State<KubusGlassIconButton> createState() => _KubusGlassIconButtonState();
@@ -139,57 +147,78 @@ class _KubusGlassIconButtonState extends State<KubusGlassIconButton> {
                 onFocusChange: (value) {
                   if (_focused != value) setState(() => _focused = value);
                 },
-                child: AnimatedContainer(
-                  duration: context.animationTheme.short,
-                  curve: context.animationTheme.defaultCurve,
-                  width: resolvedSize,
-                  height: resolvedSize,
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    border: Border.all(
-                      color: borderColor,
-                      width: active || (_focused && enabled)
-                          ? 1.25
-                          : KubusSizes.hairline,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: scheme.shadow.withValues(
-                          alpha: isDark
-                              ? KubusGlassEffects.shadowOpacityDark
-                              : KubusGlassEffects.shadowOpacityLight,
+                child: widget.embedded
+                    ? AnimatedContainer(
+                        duration: context.animationTheme.short,
+                        curve: context.animationTheme.defaultCurve,
+                        width: resolvedSize,
+                        height: resolvedSize,
+                        decoration: BoxDecoration(
+                          borderRadius: radius,
+                          color: active || (enabled && (_hovered || _focused))
+                              ? accent.withValues(alpha: active ? 0.14 : 0.10)
+                              : Colors.transparent,
                         ),
-                        blurRadius: active || (_hovered && enabled) ? 16 : 14,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: LiquidGlassPanel(
-                    padding: EdgeInsets.zero,
-                    margin: EdgeInsets.zero,
-                    borderRadius: radius,
-                    blurSigma: idleStyle.blurSigma,
-                    showBorder: false,
-                    backgroundColor: active ? selectedTint : idleTint,
-                    fallbackMinOpacity: idleStyle.fallbackMinOpacity,
-                    enableBlur: widget.enableBlur,
-                    // Match the panel/card glass treatment: when real blur is
-                    // off, add the shared static sheen so control buttons
-                    // read as glass rather than flat tinted chips.
-                    child: wrapWithKubusMapGlassSheen(
-                      show: !(widget.enableBlur && allowBlur),
-                      borderRadius: radius,
-                      isDark: isDark,
-                      child: Center(
-                        child: Icon(
-                          icon,
-                          size: resolvedIconSize,
-                          color: resolvedIconColor,
+                        child: Center(
+                          child: Icon(
+                            icon,
+                            size: resolvedIconSize,
+                            color: resolvedIconColor,
+                          ),
+                        ),
+                      )
+                    : AnimatedContainer(
+                        duration: context.animationTheme.short,
+                        curve: context.animationTheme.defaultCurve,
+                        width: resolvedSize,
+                        height: resolvedSize,
+                        decoration: BoxDecoration(
+                          borderRadius: radius,
+                          border: Border.all(
+                            color: borderColor,
+                            width: active || (_focused && enabled)
+                                ? 1.25
+                                : KubusSizes.hairline,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: scheme.shadow.withValues(
+                                alpha: isDark
+                                    ? KubusGlassEffects.shadowOpacityDark
+                                    : KubusGlassEffects.shadowOpacityLight,
+                              ),
+                              blurRadius:
+                                  active || (_hovered && enabled) ? 16 : 14,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: LiquidGlassPanel(
+                          padding: EdgeInsets.zero,
+                          margin: EdgeInsets.zero,
+                          borderRadius: radius,
+                          blurSigma: idleStyle.blurSigma,
+                          showBorder: false,
+                          backgroundColor: active ? selectedTint : idleTint,
+                          fallbackMinOpacity: idleStyle.fallbackMinOpacity,
+                          enableBlur: widget.enableBlur,
+                          // Match the panel/card glass treatment: when real blur is
+                          // off, add the shared static sheen so control buttons
+                          // read as glass rather than flat tinted chips.
+                          child: wrapWithKubusMapGlassSheen(
+                            show: !(widget.enableBlur && allowBlur),
+                            borderRadius: radius,
+                            isDark: isDark,
+                            child: Center(
+                              child: Icon(
+                                icon,
+                                size: resolvedIconSize,
+                                color: resolvedIconColor,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
               ),
             ),
             if (showBadge)

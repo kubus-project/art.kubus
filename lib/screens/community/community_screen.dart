@@ -62,6 +62,7 @@ import '../../providers/profile_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/community_screen_utils.dart';
 import '../../utils/home/home_quick_action_executor.dart';
 import '../../utils/home/home_quick_action_models.dart';

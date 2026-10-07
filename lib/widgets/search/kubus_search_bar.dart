@@ -43,6 +43,7 @@ class KubusSearchBarStyle {
   final TextStyle? textStyle;
   final TextStyle? hintStyle;
 }
+
 class KubusSearchBar extends StatefulWidget {
   const KubusSearchBar({
     super.key,
@@ -360,11 +361,16 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
           curve: widget.animationCurve,
           decoration: BoxDecoration(
             borderRadius: style.borderRadius,
+            boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
+          ),
+          // The boundary is painted over the field rather than laid out around
+          // it, so the 1px -> 2px focus ring never moves the text or the icons.
+          foregroundDecoration: BoxDecoration(
+            borderRadius: style.borderRadius,
             border: Border.all(
               color: effectiveBorderColor,
               width: effectiveBorderWidth,
             ),
-            boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
           ),
           child: LiquidGlassPanel(
             padding: EdgeInsets.zero,
@@ -384,6 +390,9 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
                       GlassCapabilitiesProvider.watchAllowBlurEnabled(context)),
               borderRadius: style.borderRadius,
               isDark: theme.brightness == Brightness.dark,
+              // The field's own border is its one boundary; the sheen's rim
+              // would be a second edge just inside it.
+              showRim: false,
               child: textField,
             ),
           ),

@@ -47,7 +47,7 @@ abstract final class KubusMapMetrics {
   static const double compactChromeInset = KubusSpacing.sm + KubusSpacing.xs;
 
   /// Maximum readable width for map search and its result surface.
-  static const double searchMaxWidth = 560.0;
+  static const double searchMaxWidth = 720.0;
 
   /// Minimum interactive dimension for every map control.
   static const double minimumTouchTarget = KubusHeaderMetrics.actionHitArea;

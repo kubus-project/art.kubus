@@ -17468,4 +17468,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get artworkDraftArtistHelper =>
       'Leave blank if the author is unknown.';
+
+  @override
+  String get communitySearchTypeCollections => 'Collections';
+
+  @override
+  String searchCollectionArtworkCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count artworks',
+      one: '1 artwork',
+    );
+    return '$_temp0';
+  }
 }

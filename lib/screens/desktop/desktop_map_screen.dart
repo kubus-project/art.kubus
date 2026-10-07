@@ -108,6 +108,7 @@ import '../../features/map/shared/map_marker_lod.dart';
 import '../../features/map/shared/map_marker_regroup_gate.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/kubus_map_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/kubus_snackbar.dart';
@@ -2988,6 +2989,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         maxWidth: KubusMapMetrics.resolveSearchWidth(
           MediaQuery.sizeOf(context).width,
         ),
+        // Hostless: there is no surface to pad inside of, and the panel inset
+        // already holds the row off the side edges. Horizontal inner padding
+        // only took width away from the field; the vertical rhythm is kept.
+        sidePanelInnerPadding:
+            const EdgeInsets.symmetric(vertical: KubusSpacing.md),
         rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
         leading: Row(
           children: [
@@ -4871,6 +4877,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           openDetail: true,
         ),
       );
+      return;
+    }
+
+    if (result.kind == KubusSearchResultKind.collection) {
+      final collectionId = result.collectionId?.trim() ?? '';
+      if (collectionId.isNotEmpty) {
+        unawaited(
+          CreatorShellNavigation.openCollectionDetailWorkspace(
+            context,
+            collectionId: collectionId,
+            collectionName: result.label,
+          ),
+        );
+      }
       return;
     }
 

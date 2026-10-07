@@ -4,6 +4,7 @@ import '../widgets/search/kubus_search_result.dart';
 
 enum HomeSearchDestinationKind {
   artwork,
+  collection,
   profile,
   map,
   none,
@@ -18,6 +19,9 @@ class HomeSearchDestination {
 
   const HomeSearchDestination.artwork(String id)
       : this._(kind: HomeSearchDestinationKind.artwork, id: id);
+
+  const HomeSearchDestination.collection(String id)
+      : this._(kind: HomeSearchDestinationKind.collection, id: id);
 
   const HomeSearchDestination.profile(String id)
       : this._(kind: HomeSearchDestinationKind.profile, id: id);
@@ -36,6 +40,12 @@ class HomeSearchDestination {
     final resolvedId = result.id?.trim() ?? '';
     if (result.kind == KubusSearchResultKind.artwork && resolvedId.isNotEmpty) {
       return HomeSearchDestination.artwork(resolvedId);
+    }
+    if (result.kind == KubusSearchResultKind.collection) {
+      // A collection never falls through to the map or to an artwork.
+      return resolvedId.isNotEmpty
+          ? HomeSearchDestination.collection(resolvedId)
+          : const HomeSearchDestination.none();
     }
     if (result.kind == KubusSearchResultKind.profile && resolvedId.isNotEmpty) {
       return HomeSearchDestination.profile(resolvedId);

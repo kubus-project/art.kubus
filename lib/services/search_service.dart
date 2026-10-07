@@ -84,10 +84,13 @@ class SearchService {
       final raw = await _backendApi.getSearchSuggestions(
         query: query,
         limit: config.limit,
+        includeCollections:
+            config.effectiveKinds.contains(KubusSearchResultKind.collection),
       );
       final normalized = _backendApi.normalizeSearchSuggestions(raw);
       return normalized
-          .map(KubusSearchResult.fromMap)
+          .map(KubusSearchResult.tryFromMap)
+          .whereType<KubusSearchResult>()
           .where((result) => _includeResult(result, config))
           .toList(growable: false);
     } catch (_) {
@@ -341,6 +344,7 @@ class SearchService {
       case KubusSearchScope.home:
         switch (result.kind) {
           case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.collection:
           case KubusSearchResultKind.profile:
             return resolvedId.isNotEmpty;
           case KubusSearchResultKind.institution:
@@ -362,6 +366,7 @@ class SearchService {
           case KubusSearchResultKind.marker:
             return result.position != null;
           case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.collection:
           case KubusSearchResultKind.profile:
           case KubusSearchResultKind.post:
           case KubusSearchResultKind.screen:
@@ -369,6 +374,7 @@ class SearchService {
         }
       case KubusSearchScope.map:
         if (result.kind == KubusSearchResultKind.artwork ||
+            result.kind == KubusSearchResultKind.collection ||
             result.kind == KubusSearchResultKind.profile) {
           return resolvedId.isNotEmpty;
         }
@@ -421,6 +427,7 @@ class SearchService {
     final order = switch (scope) {
       KubusSearchScope.home => const [
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
@@ -433,6 +440,7 @@ class SearchService {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.post,
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.screen,
           KubusSearchResultKind.event,
@@ -441,6 +449,7 @@ class SearchService {
         ],
       KubusSearchScope.map => const [
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,

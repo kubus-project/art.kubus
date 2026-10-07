@@ -35,6 +35,7 @@ class KubusSearchConfig {
       case KubusSearchScope.home:
         return const {
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
@@ -46,6 +47,7 @@ class KubusSearchConfig {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.post,
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.screen,
           KubusSearchResultKind.exhibition,
@@ -53,6 +55,7 @@ class KubusSearchConfig {
       case KubusSearchScope.map:
         return const {
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,

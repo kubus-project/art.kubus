@@ -347,6 +347,12 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
         artworkId,
         source: 'desktop_community_search',
       ),
+      onCollection: (collectionId, title) =>
+          CreatorShellNavigation.openCollectionDetailWorkspace(
+        context,
+        collectionId: collectionId,
+        collectionName: title,
+      ),
       onPost: (postId) async {
         final post = _findPostById(postId);
         if (post != null) {

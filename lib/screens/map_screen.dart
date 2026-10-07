@@ -64,6 +64,7 @@ import '../widgets/map_marker_style_config.dart';
 import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/design_tokens.dart';
+import '../utils/creator_shell_navigation.dart';
 
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
@@ -5654,6 +5655,7 @@ class _MapScreenState extends State<MapScreen>
       iconColor: hintColor,
       borderRadius: KubusMapMetrics.headerSurfaceRadius,
       enableBlur: kubusMapBlurEnabled(context),
+      embedded: true,
       tooltipPreferBelow: false,
       tooltipVerticalOffset: 18,
       tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
@@ -5683,6 +5685,7 @@ class _MapScreenState extends State<MapScreen>
         iconColor: hintColor,
         borderRadius: KubusMapMetrics.headerSurfaceRadius,
         enableBlur: kubusMapBlurEnabled(context),
+        embedded: true,
         tooltipPreferBelow: false,
         tooltipVerticalOffset: 18,
         tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
@@ -5726,6 +5729,18 @@ class _MapScreenState extends State<MapScreen>
       }
       // Fallback: open detail screen directly if no marker found
       await openArtwork(context, result.id!, source: 'map_search');
+      return;
+    }
+
+    if (result.kind == KubusSearchResultKind.collection) {
+      final collectionId = result.collectionId?.trim() ?? '';
+      if (collectionId.isNotEmpty) {
+        await CreatorShellNavigation.openCollectionDetailWorkspace(
+          context,
+          collectionId: collectionId,
+          collectionName: result.label,
+        );
+      }
       return;
     }
 

@@ -862,6 +862,12 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
       ),
       onArtwork: (artworkId) =>
           openArtwork(context, artworkId, source: 'community_search'),
+      onCollection: (collectionId, title) =>
+          CreatorShellNavigation.openCollectionDetailWorkspace(
+        context,
+        collectionId: collectionId,
+        collectionName: title,
+      ),
       onPost: (postId) => PostDetailScreen.openById(context, postId),
       onScreen: (screenKey) => unawaited(
         HomeQuickActionExecutor.execute(
