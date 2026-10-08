@@ -106,6 +106,12 @@ build time, through `AppConfig.isFeatureEnabled('communityMultiMedia')`.
   "cannot be played here" message instead of playing.
 - **No server-side transcoding.** Videos are stored as uploaded and must be in
   a format the reader's browser or device can play.
+- **Video is recognised by file extension.** HTTP-stored uploads keep their
+  validated extension, so their videos play. An IPFS-only storage response
+  returns a gateway URL with no filename. That URL would be shown as an image.
+  The upload route prefers the HTTP copy when one exists. This IPFS-only case
+  was not reproduced in this pass and needs a follow-up before IPFS-only
+  storage is used for posts.
 - **Rate limits are per process.** The upload budgets are kept in memory, as
   the existing per-user limits are. Several backend instances each keep their
   own count. The nginx upload zone was raised to a burst of 30 and must be
