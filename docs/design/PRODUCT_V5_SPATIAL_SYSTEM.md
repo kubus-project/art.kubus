@@ -173,10 +173,9 @@ What stays bounded is the work and the memory:
   across its whole area instead of centre-out. A panned camera plans only the
   new visible set; old offscreen priority is dropped. Prefetch (zoom 11.5-12.5)
   warms at most `coverPrefetchLimit = 32`.
-* **Concurrency stays bounded**: idle-camera planning only, at most 4
-  concurrent downloads, one raster at a time while the camera is still,
-  de-duplicated in-flight requests, generation-safe cancellation, coalesced
-  source writes.
+* **Concurrency stays bounded**: at most 4 concurrent downloads, one raster at
+  a time (paced wider while the camera moves, §5 raster rule), de-duplicated
+  in-flight requests, generation-safe cancellation, coalesced source writes.
 * **Memory stays bounded**: decoded images have the 1024 px / 262144-pixel
   ceilings; the decoded cache keeps its LRU of 48 but **pins** the covers of the
   active viewport that are not drawn into the map yet (up to `maxPinned = 192`),
@@ -205,13 +204,26 @@ What stays bounded is the work and the memory:
 * Covers are re-planned on camera idle whenever
   `KubusMarkerLod.plansCoversAt(zoom, hasSelection:)` holds: from the prefetch
   zoom (11.5) for everyone, and from 10 when a marker is selected (selection
-  usually animates the camera, and a cover is never rasterised mid-move, so
-  the selection's own resync skipped it). They also re-plan when a cover
-  finishes loading; they are never recomputed per camera frame.
-* **Camera-idle raster rule.** A cover is rasterised (a GPU readback) only
-  while the camera is idle, one at a time (`KubusCoverWorkGate`); prefetch
-  (download + decode) also waits for idle. A cover skipped because the camera
-  moved is re-planned at the next idle.
+  usually animates the camera). They are also planned by every marker source
+  sync during motion (a level-of-detail or grouping change, an entrance
+  frame) and when a cover finishes loading; they are never recomputed per
+  camera frame.
+* **Paced raster rule** (0.8.2 Slice C, supersedes the camera-idle raster rule).
+  A cover is rasterised (a GPU readback) one at a time (`KubusCoverWorkGate`):
+  24 ms apart while the camera rests, `motionSpacing` = 140 ms apart while it
+  moves. Measured on web at 4 ms median / 10 ms p95 per raster and 1.4 ms per
+  `addImage`, that keeps covers arriving during a slow zoom or pan without
+  moving the motion frame p95/p99. Prefetch (zoom 11.5-12.5, download +
+  decode only) still waits for idle.
+* **No lost sync requests.** `MarkerVisualSyncCoordinator` throttles source
+  syncs to one per 60 ms; a request inside the window runs when the in-flight
+  sync ends or, if none is in flight, when the window closes. (Before 0.8.2 it
+  was only remembered until the next request, so a cover-stage change landing
+  just behind a regroup frame waited for the camera to stop.)
+* **Failed media is shared.** A cover that fails to load (a real error, not a
+  slow timeout) is recorded in `KubusMediaFailureRegistry`, which
+  `KubusCachedImage` (the quick card's media) honours for 2 minutes, so a card
+  following its marker does not re-request a dead URL on every rebuild.
 * **Coalesced source refresh.** Finished covers do not each rebuild the marker
   source: the gate fires one resync 140 ms after the last finished cover
   (`resyncDelay`), but never later than 450 ms after the first pending one
@@ -261,7 +273,7 @@ distributed cultural map:
 | World (zoom 0-3) | distributed regional clusters and isolated records | 48 px rising to 56 px, further capped by the span rule |
 | Region / country (3-8) | regional, then country groups | 56 → 64 → 68 px |
 | City (8-12) | city, then neighbourhood groups | 68 → 64 → 60 px |
-| ≥ 12 | individual records | no clustering |
+| ≥ 12 | individual records | no clustering (returns below 11.75, see hysteresis) |
 
 * The curve is **continuous and piecewise linear**, so the integer grid level
   is a monotonic function of zoom: no topology flicker, and zooming out then in
@@ -274,6 +286,26 @@ distributed cultural map:
   Ljubljana do. The rule only binds below about zoom 3 and is not country based.
 * An isolated record stays its own dot (it is a cell of one). Cluster count is
   never a budget: it falls out of the data, the viewport and the spacing.
+* **Grouping hysteresis** (0.8.2 Slice C, `KubusMarkerRegroupGate`). Grouping
+  is evaluated at a *topology zoom* that follows the camera at once when
+  zooming in and lags a zoom-out by `topologyPlay = 0.25`. Individual records
+  still appear exactly at A = 12.0; they regroup into clusters only below
+  B = 11.75 (grid levels get the same slack). Measured before: ±0.06 camera
+  jitter around z12 swapped 6 clusters for 55 markers on every step (14
+  topology flips, 36 source writes in 12 steps); after: 2 flips, 3 writes.
+  0.25 absorbs one MapLibre wheel notch (~0.15) plus settle jitter; level of
+  detail (artwork, covers) keeps following the real zoom.
+* **Progressive reveal.** A regroup is a centre-out wave
+  (`kubusEntryRevealOffsets`): each feature's soft entrance starts later the
+  farther it is from the viewport centre, the whole wave capped at 240 ms
+  (360 ms for a first entrance), and each marker fans out from its cluster's
+  centroid on its own progress. The cap bounds animation frames (source
+  writes) by time, not by marker count: 56 markers entering a city used to
+  stagger over 2 s (~45 animation-only writes) while rendering as six
+  clusters.
+* **Artwork warmed before the threshold.** Within one zoom of A, while the
+  camera rests, the individual-marker icons are rasterised ahead, so the
+  crossing only rewrites the source.
 * The policy is shared by the web globe, the web Mercator fallback and the flat
   Android and iOS maps; there is no globe-only clustering. Cluster activation
   (`resolveKubusClusterActivationPlan`) still moves to the next real split zoom,
@@ -475,6 +507,12 @@ unchanged (the cover count policy and cluster spacing were revised for the final
 trailing rebuild has a 450 ms maximum wait, and idle re-planning starts at the
 prefetch zoom or, with a selection, at 10. The current contract is §4, §5 and
 §7; the 0.8.0 vs 0.8.1 comparison is in `docs/release-0.8.1.md`.
+
+0.8.2 Slice C (map continuity) superseded the camera-idle start: cover jobs run
+during motion at a wider pace (§5), after a probe showed raster + `addImage` at
+~5 ms per cover and found the real reason covers waited for idle (a dropped
+throttled sync request, §5). Its before/after record and the reproducible probe
+(`scripts/qa/map_continuity_probe.mjs`) are in the Slice C pull request.
 
 Measurement integrity note: an earlier pass was taken while a stray Android
 emulator from a previous session consumed CPU; it inflated every configuration.

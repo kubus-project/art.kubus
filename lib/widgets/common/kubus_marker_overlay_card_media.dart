@@ -29,6 +29,7 @@ extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
         child: imageUrl != null
             ? KubusCachedImage(
                 imageUrl: imageUrl,
+                skipRecentlyFailed: true,
                 width: double.infinity,
                 height: resolvedHeight,
                 fit: BoxFit.cover,
