@@ -753,6 +753,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
             await hub.submitGroupPost(
               draft.targetGroup!.id,
               content: content,
+              idempotencyKey: _composerMedia.submissionKey,
               mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
               postType: postType,
               category: draft.category,
@@ -768,6 +769,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
           } else {
             await interactions.createCommunityPost(
               content: content,
+              idempotencyKey: _composerMedia.submissionKey,
               mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
               postType: postType,
               category: draft.category,

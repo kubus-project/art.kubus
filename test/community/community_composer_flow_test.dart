@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
+import 'package:art_kubus/screens/community/group_feed_screen.dart';
+import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
+import 'package:art_kubus/models/community_group.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/community/community_composer_media_tray.dart';
@@ -45,6 +49,13 @@ String _jwt() {
 }
 
 class _FakePicker extends ImagePickerPlatform {
+  @override
+  Future<XFile?> getVideo(
+          {required ImageSource source,
+          CameraDevice preferredCameraDevice = CameraDevice.rear,
+          Duration? maxDuration}) async =>
+      XFile.fromData(Uint8List.fromList([0, 0, 0, 24]),
+          path: 'clip.mp4', mimeType: 'video/mp4');
   List<XFile> files = <XFile>[];
 
   /// image_picker routes a limit of one (one slot left, or the switch off)
@@ -63,13 +74,11 @@ class _FakePicker extends ImagePickerPlatform {
       files;
 }
 
-final Uint8List _png = base64Decode(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-);
-
 class _Api {
   /// Upload file names that must fail, with how many more times to fail.
   final Map<String, int> failUpload = <String, int>{};
+  bool rateLimited = false;
+  int limitedAttempts = 0;
   int createFailures = 0;
   Completer<void>? holdCreate;
   final List<String> uploads = <String>[];
@@ -92,6 +101,18 @@ class _Api {
       final text = latin1.decode(bytes);
       final match = RegExp(r'filename="([^"]+)"').firstMatch(text);
       final name = match!.group(1)!;
+      if (rateLimited) {
+        limitedAttempts++;
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({
+              'success': false,
+              'errorCode': 'UPLOAD_RATE_LIMITED',
+              'error': 'Too many uploads',
+              'retryAfterSeconds': 45,
+            }))),
+            429,
+            headers: {'content-type': 'application/json', 'retry-after': '45'});
+      }
       final remaining = failUpload[name] ?? 0;
       if (remaining > 0) {
         failUpload[name] = remaining - 1;
@@ -103,7 +124,9 @@ class _Api {
         'data': {'relativeUrl': '/uploads/profiles/posts/$name'},
       });
     }
-    if (request.method == 'POST' && path == '/api/community/posts') {
+    if (request.method == 'POST' &&
+        (path == '/api/community/posts' ||
+            path.endsWith('/posts') && path.startsWith('/api/groups/'))) {
       final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       creates.add(payload);
       await holdCreate?.future;
@@ -140,207 +163,348 @@ Future<void> _settle(WidgetTester tester, [int steps = 20]) async {
 }
 
 void main() {
-  late _Api api;
-  late _FakePicker picker;
+  for (final surface in ['mobile', 'inline', 'dialog', 'group']) {
+    group(surface, () {
+      late _Api api;
+      late _FakePicker picker;
 
-  Future<void> openComposer(WidgetTester tester, int photoCount) async {
-    picker.files = <XFile>[
-      for (var i = 0; i < photoCount; i++)
-        XFile.fromData(_png, path: 'photo-$i.png', mimeType: 'image/png'),
-    ];
-    final prior = FlutterError.onError;
-    await pumpProductSurface(
-      tester,
-      child: const CommunityScreen(),
-      signedInProfile: qaOwner(),
-    );
-    // The harness collects render errors; restore the handler so a failing
-    // expect reports instead of hanging the test.
-    FlutterError.onError = prior;
-    await tester.tap(find.byType(FloatingActionButton).first);
-    await _settle(tester);
-    expect(find.text(_l10n.communityComposerTitle), findsOneWidget,
-        reason:
-            'the signed-in user reaches the composer, not the sign-in gate');
-    await tester.tap(find.text(_l10n.communityComposerMediaAddPhotos).first);
-    await _settle(tester);
-  }
-
-  Finder postButton() => find.widgetWithText(
-      ElevatedButton, _l10n.communityComposerSubmitPostButton);
-
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{'wallet': _wallet});
-    api = _Api();
-    picker = _FakePicker();
-    ImagePickerPlatform.instance = picker;
-    BackendApiService()
-      ..setHttpClient(MockClient.streaming(api.handle))
-      ..setAuthTokenForTesting(_jwt());
-  });
-
-  tearDown(() => BackendApiService().setAuthTokenForTesting(null));
-
-  Future<void> flush(WidgetTester tester) async {
-    // The real providers open a socket and reconnect on a timer. Disconnect
-    // after it has been created, then let the timers run out.
-    for (var round = 0; round < 3; round++) {
-      SocketService().disconnect();
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(seconds: 1));
+      Future<void> openComposer(WidgetTester tester, int photoCount) async {
+        picker.files = <XFile>[
+          for (var i = 0; i < photoCount; i++)
+            XFile.fromData(
+                File('test/fixtures/community/photo-${i % 10}.png')
+                    .readAsBytesSync(),
+                path: 'photo-$i.png',
+                mimeType: 'image/png'),
+        ];
+        final prior = FlutterError.onError;
+        await pumpProductSurface(
+          tester,
+          child: surface == 'group'
+              ? GroupFeedScreen(
+                  group: CommunityGroupSummary(
+                      id: '22222222-2222-4222-8222-222222222222',
+                      name: 'QA group',
+                      isPublic: true,
+                      ownerWallet: _wallet,
+                      memberCount: 1,
+                      isMember: true,
+                      isOwner: true))
+              : surface == 'mobile'
+                  ? const CommunityScreen()
+                  : const DesktopCommunityScreen(),
+          size: surface == 'mobile'
+              ? const Size(390, 844)
+              : const Size(1440, 1000),
+          signedInProfile: qaOwner(),
+        );
+        // The harness collects render errors; restore the handler so a failing
+        // expect reports instead of hanging the test.
+        FlutterError.onError = prior;
+        if (surface == 'mobile' || surface == 'dialog') {
+          await tester.tap(find.byType(FloatingActionButton).first);
+        } else if (surface == 'inline') {
+          await tester.tap(find
+              .text(_l10n.desktopCommunityComposerWhatsHappeningHint)
+              .first);
+        }
+        await _settle(tester);
+        if (surface == 'mobile') {
+          expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
+        }
+        final add = surface == 'mobile'
+            ? find.text(_l10n.communityComposerMediaAddPhotos).first
+            : surface == 'dialog'
+                ? find.byTooltip(_l10n.desktopCommunityComposerAddImageTooltip)
+                : surface == 'inline'
+                    ? find.byTooltip(_l10n.desktopCommunityComposerPhotoLabel)
+                    : find.byTooltip(_l10n.commonImage);
+        await tester.ensureVisible(add);
+        await tester.tap(add);
+        await _settle(tester);
       }
-    }
+
+      Finder postButton() => find
+          .widgetWithText(
+              ElevatedButton,
+              surface == 'mobile'
+                  ? _l10n.communityComposerSubmitPostButton
+                  : _l10n.commonPost)
+          .last;
+
+      setUp(() {
+        SharedPreferences.setMockInitialValues(
+            <String, Object>{'wallet': _wallet});
+        api = _Api();
+        picker = _FakePicker();
+        ImagePickerPlatform.instance = picker;
+        BackendApiService()
+          ..setHttpClient(MockClient.streaming(api.handle))
+          ..setAuthTokenForTesting(_jwt());
+      });
+
+      tearDown(() => BackendApiService().setAuthTokenForTesting(null));
+
+      Future<void> flush(WidgetTester tester) async {
+        // The real providers open a socket and reconnect on a timer. Disconnect
+        // after it has been created, then let the timers run out.
+        for (var round = 0; round < 3; round++) {
+          SocketService().disconnect();
+          for (var i = 0; i < 30; i++) {
+            await tester.pump(const Duration(seconds: 1));
+          }
+        }
+      }
+
+      testWidgets('ten photos publish in order with one create request',
+          (tester) async {
+        await openComposer(tester, 10);
+        expect(find.text('10 of 10 selected'), findsWidgets);
+
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.creates, hasLength(1));
+        expect(api.creates.single['mediaUrls'], [
+          for (var i = 0; i < 10; i++) '/uploads/profiles/posts/photo-$i.png',
+        ]);
+        expect(api.creates.single['postType'], 'image');
+        expect(api.creates.single['content'],
+            _l10n.desktopCommunitySharedPhotoFallbackContent);
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets(
+          'mixed media reorders, removes and publishes the visible order',
+          (tester) async {
+        await openComposer(tester, 3);
+        final video = surface == 'mobile'
+            ? find.text(_l10n.communityComposerMediaAddVideo).first
+            : find.byTooltip(_l10n.communityComposerMediaAddVideo).last;
+        await tester.ensureVisible(video);
+        await tester.tap(video);
+        await _settle(tester);
+        Finder tray() => find.byType(CommunityComposerMediaTray).last;
+        final controller =
+            tester.widget<CommunityComposerMediaTray>(tray()).controller;
+        expect(controller.items.map((i) => i.name),
+            ['photo-0.png', 'photo-1.png', 'photo-2.png', 'clip.mp4']);
+        final move = find
+            .descendant(
+                of: tray(),
+                matching: find.byTooltip(_l10n.communityComposerMediaMoveLater))
+            .first;
+        await tester.ensureVisible(move);
+        await tester.tap(move);
+        await _settle(tester);
+        expect(controller.items.map((i) => i.name),
+            ['photo-1.png', 'photo-0.png', 'photo-2.png', 'clip.mp4']);
+        final remove = find
+            .descendant(
+                of: tray(), matching: find.byTooltip(_l10n.commonRemove))
+            .first;
+        await tester.ensureVisible(remove);
+        await tester.tap(remove);
+        await _settle(tester);
+        expect(controller.items.map((i) => i.name),
+            ['photo-0.png', 'photo-2.png', 'clip.mp4']);
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+        expect(api.creates, hasLength(1));
+        expect(api.creates.single['mediaUrls'], [
+          '/uploads/profiles/posts/photo-0.png',
+          '/uploads/profiles/posts/photo-2.png',
+          '/uploads/profiles/posts/clip.mp4'
+        ]);
+        expect(api.creates.single['postType'], 'video');
+        expect(controller.items, isEmpty, reason: 'success clears the draft');
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets('an eleventh photo is not added', (tester) async {
+        await openComposer(tester, 11);
+        expect(find.text('10 of 10 selected'), findsWidgets);
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets(
+          'a failed third upload keeps the draft and a retry resumes there',
+          (tester) async {
+        api.failUpload['photo-2.png'] =
+            1000; // the client retries 5xx, so fail persistently
+        await openComposer(tester, 5);
+
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.uploads, ['photo-0.png', 'photo-1.png']);
+        expect(api.creates, isEmpty);
+        expect(find.text('5 of 10 selected'), findsWidgets);
+        if (surface == 'mobile') {
+          expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
+        }
+
+        api.failUpload.clear();
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.uploads, [for (var i = 0; i < 5; i++) 'photo-$i.png'],
+            reason: 'photo-0 and photo-1 are not uploaded twice');
+        expect(api.created, 1);
+        expect(api.creates.single['mediaUrls'], [
+          for (var i = 0; i < 5; i++) '/uploads/profiles/posts/photo-$i.png',
+        ]);
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets(
+          'a failed create unlocks the composer and retry reuses every upload',
+          (tester) async {
+        api
+          ..createFailures = 1 // creation never implicitly retries
+          ..holdCreate = Completer<void>();
+        await openComposer(tester, 3);
+
+        await tester.tap(postButton());
+        await _settle(tester, 30);
+
+        // Uploads done, create pending: the tray is locked.
+        expect(api.uploads, hasLength(3));
+        expect(api.creates, hasLength(1));
+        final tray = find.byType(CommunityComposerMediaTray).last;
+        final buttons = tester.widgetList<IconButton>(
+          find.descendant(of: tray, matching: find.byType(IconButton)),
+        );
+        expect(buttons, isNotEmpty);
+        expect(buttons.every((b) => b.onPressed == null), isTrue);
+
+        api.holdCreate!.complete();
+        await _settle(tester, 30);
+
+        expect(find.text('3 of 10 selected'), findsWidgets,
+            reason: 'the draft survives a failed create');
+        final unlocked = tester.widgetList<IconButton>(
+          find.descendant(of: tray, matching: find.byType(IconButton)),
+        );
+        expect(unlocked.any((b) => b.onPressed != null), isTrue);
+
+        expect(api.creates, hasLength(1),
+            reason: 'failed creation is never replayed implicitly');
+        expect(api.created, 0);
+        api
+          ..holdCreate = null
+          ..createFailures = 0;
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.uploads, hasLength(3), reason: 'no upload is repeated');
+        expect(api.created, 1, reason: 'exactly one post is finally created');
+        expect(api.creates.last['mediaUrls'], api.creates.first['mediaUrls']);
+        expect(api.creates.last['idempotencyKey'],
+            api.creates.first['idempotencyKey']);
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets(
+          '429 Retry-After preserves the draft and retries only on demand',
+          (tester) async {
+        api.rateLimited = true;
+        await openComposer(tester, 2);
+        await tester.tap(postButton());
+        for (var i = 0; i < 60 && api.limitedAttempts == 0; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        await _settle(tester, 2);
+        expect(api.limitedAttempts, 1,
+            reason: '45 seconds is not implicitly retried');
+        expect(api.creates, isEmpty);
+        expect(find.text('2 of 10 selected'), findsWidgets);
+        expect(find.textContaining('45'), findsWidgets);
+        await _settle(tester, 50);
+        expect(api.limitedAttempts, 1);
+        api.rateLimited = false;
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+        expect(api.created, 1);
+        expect(api.uploads, hasLength(2));
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets('a double tap sends exactly one create request',
+          (tester) async {
+        await openComposer(tester, 2);
+
+        await tester.tap(postButton());
+        await tester.tap(postButton(), warnIfMissed: false);
+        await _settle(tester, 60);
+
+        expect(api.creates, hasLength(1));
+        expect(api.uploads, hasLength(2));
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti,
+          timeout: const Timeout(Duration(seconds: 120)));
+      testWidgets('the sheet closes when idle and stays open while publishing',
+          (tester) async {
+        api.holdCreate = Completer<void>();
+        await openComposer(tester, 2);
+
+        await tester.tap(postButton());
+        await _settle(tester, 30);
+        expect(api.creates, hasLength(1), reason: 'create is pending');
+
+        await tester.tap(find.byTooltip(_l10n.commonClose));
+        await _settle(tester);
+        expect(find.text(_l10n.communityComposerTitle), findsOneWidget,
+            reason: 'close is refused while the post is being sent');
+
+        api.holdCreate!.complete();
+        await _settle(tester, 60);
+        expect(api.created, 1);
+        expect(find.text(_l10n.communityComposerTitle), findsNothing,
+            reason: 'the sheet closes itself after a successful post');
+
+        await tester.tap(find.byType(FloatingActionButton).first);
+        await _settle(tester);
+        if (surface == 'mobile') {
+          expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
+        }
+        await tester.tap(find.byTooltip(_l10n.commonClose));
+        await _settle(tester);
+        expect(find.text(_l10n.communityComposerTitle), findsNothing,
+            reason: 'an idle composer can always be closed');
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti || surface != 'mobile',
+          timeout: const Timeout(Duration(seconds: 120)));
+      testWidgets(
+          'with multi-media off, one attachment publishes and a second is refused',
+          (tester) async {
+        await openComposer(tester, 3);
+        expect(find.text('1 of 1 selected'), findsWidgets);
+
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.created, 1);
+        expect(api.creates.single['mediaUrls'],
+            ['/uploads/profiles/posts/photo-0.png']);
+        await flush(tester);
+      },
+          skip: AppConfig.enableCommunityMultiMedia,
+          timeout: const Timeout(Duration(seconds: 120)));
+    });
   }
-
-  testWidgets('ten photos publish in order with one create request',
-      (tester) async {
-    await openComposer(tester, 10);
-    expect(find.text('10 of 10 selected'), findsOneWidget);
-
-    await tester.tap(postButton());
-    await _settle(tester, 60);
-
-    expect(api.creates, hasLength(1));
-    expect(api.creates.single['mediaUrls'], [
-      for (var i = 0; i < 10; i++) '/uploads/profiles/posts/photo-$i.png',
-    ]);
-    expect(api.creates.single['postType'], 'image');
-    expect(api.creates.single['content'],
-        _l10n.desktopCommunitySharedPhotoFallbackContent);
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-
-  testWidgets('an eleventh photo is not added', (tester) async {
-    await openComposer(tester, 11);
-    expect(find.text('10 of 10 selected'), findsOneWidget);
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-
-  testWidgets('a failed third upload keeps the draft and a retry resumes there',
-      (tester) async {
-    api.failUpload['photo-2.png'] =
-        1000; // the client retries 5xx, so fail persistently
-    await openComposer(tester, 5);
-
-    await tester.tap(postButton());
-    await _settle(tester, 60);
-
-    expect(api.uploads, ['photo-0.png', 'photo-1.png']);
-    expect(api.creates, isEmpty);
-    expect(find.text('5 of 10 selected'), findsOneWidget);
-    expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
-
-    api.failUpload.clear();
-    await tester.tap(postButton());
-    await _settle(tester, 60);
-
-    expect(api.uploads, [for (var i = 0; i < 5; i++) 'photo-$i.png'],
-        reason: 'photo-0 and photo-1 are not uploaded twice');
-    expect(api.created, 1);
-    expect(api.creates.single['mediaUrls'], [
-      for (var i = 0; i < 5; i++) '/uploads/profiles/posts/photo-$i.png',
-    ]);
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-
-  testWidgets(
-      'a failed create unlocks the composer and retry reuses every upload',
-      (tester) async {
-    api
-      ..createFailures = 1000 // the client retries 5xx, so fail persistently
-      ..holdCreate = Completer<void>();
-    await openComposer(tester, 3);
-
-    await tester.tap(postButton());
-    await _settle(tester, 30);
-
-    // Uploads done, create pending: the tray is locked.
-    expect(api.uploads, hasLength(3));
-    expect(api.creates, hasLength(1));
-    final tray = find.byType(CommunityComposerMediaTray);
-    final buttons = tester.widgetList<IconButton>(
-      find.descendant(of: tray, matching: find.byType(IconButton)),
-    );
-    expect(buttons, isNotEmpty);
-    expect(buttons.every((b) => b.onPressed == null), isTrue);
-
-    api.holdCreate!.complete();
-    await _settle(tester, 30);
-
-    expect(find.text('3 of 10 selected'), findsOneWidget,
-        reason: 'the draft survives a failed create');
-    final unlocked = tester.widgetList<IconButton>(
-      find.descendant(of: tray, matching: find.byType(IconButton)),
-    );
-    expect(unlocked.any((b) => b.onPressed != null), isTrue);
-
-    expect(api.created, 0);
-    api
-      ..holdCreate = null
-      ..createFailures = 0;
-    await tester.tap(postButton());
-    await _settle(tester, 60);
-
-    expect(api.uploads, hasLength(3), reason: 'no upload is repeated');
-    expect(api.created, 1, reason: 'exactly one post is finally created');
-    expect(api.creates.last['mediaUrls'], api.creates.first['mediaUrls']);
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-
-  testWidgets('a double tap sends exactly one create request', (tester) async {
-    await openComposer(tester, 2);
-
-    await tester.tap(postButton());
-    await tester.tap(postButton(), warnIfMissed: false);
-    await _settle(tester, 60);
-
-    expect(api.creates, hasLength(1));
-    expect(api.uploads, hasLength(2));
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-  testWidgets('the sheet closes when idle and stays open while publishing',
-      (tester) async {
-    api.holdCreate = Completer<void>();
-    await openComposer(tester, 2);
-
-    await tester.tap(postButton());
-    await _settle(tester, 30);
-    expect(api.creates, hasLength(1), reason: 'create is pending');
-
-    await tester.tap(find.byTooltip(_l10n.commonClose));
-    await _settle(tester);
-    expect(find.text(_l10n.communityComposerTitle), findsOneWidget,
-        reason: 'close is refused while the post is being sent');
-
-    api.holdCreate!.complete();
-    await _settle(tester, 60);
-    expect(api.created, 1);
-    expect(find.text(_l10n.communityComposerTitle), findsNothing,
-        reason: 'the sheet closes itself after a successful post');
-
-    await tester.tap(find.byType(FloatingActionButton).first);
-    await _settle(tester);
-    expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
-    await tester.tap(find.byTooltip(_l10n.commonClose));
-    await _settle(tester);
-    expect(find.text(_l10n.communityComposerTitle), findsNothing,
-        reason: 'an idle composer can always be closed');
-    await flush(tester);
-  }, skip: _skipUnlessMulti, timeout: const Timeout(Duration(seconds: 120)));
-  testWidgets(
-      'with multi-media off, one attachment publishes and a second is refused',
-      (tester) async {
-    await openComposer(tester, 3);
-    expect(find.text('1 of 1 selected'), findsOneWidget);
-
-    await tester.tap(postButton());
-    await _settle(tester, 60);
-
-    expect(api.created, 1);
-    expect(api.creates.single['mediaUrls'],
-        ['/uploads/profiles/posts/photo-0.png']);
-    await flush(tester);
-  },
-      skip: AppConfig.enableCommunityMultiMedia,
-      timeout: const Timeout(Duration(seconds: 120)));
 }

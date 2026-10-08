@@ -440,6 +440,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         ),
         submit: (mediaUrls) => hub.submitGroupPost(
           summary.id,
+          idempotencyKey: _composerMedia.submissionKey,
           content: typedContent.isNotEmpty
               ? typedContent
               : communityComposerMediaFallbackCaption(

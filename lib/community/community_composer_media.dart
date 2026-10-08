@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../config/config.dart';
 import '../l10n/app_localizations.dart';
 import '../services/backend_api_service.dart';
+import '../services/telemetry/telemetry_uuid.dart';
 
 /// Maximum images and videos in one Community post, counted together.
 const int kCommunityComposerMaxMediaItems = 10;
@@ -101,6 +102,10 @@ class CommunityComposerMediaController extends ChangeNotifier {
   bool get isNotEmpty => _items.isNotEmpty;
   bool get isFull => _items.length >= maxItems;
   int get remainingSlots => maxItems - _items.length;
+  // Reuse the logical submission key after an ambiguous create failure.
+  String? _submissionKey;
+  String get submissionKey => _submissionKey ??= TelemetryUuid.v4();
+
   bool get isUploading => _uploading;
 
   /// True from the first upload until the publish settles. The tray and every
@@ -169,7 +174,9 @@ class CommunityComposerMediaController extends ChangeNotifier {
   }
 
   void clear() {
-    if (isLocked || _items.isEmpty) return;
+    if (isLocked) return;
+    _submissionKey = null;
+    if (_items.isEmpty) return;
     _items.clear();
     notifyListeners();
   }
@@ -236,6 +243,7 @@ class CommunityComposerMediaController extends ChangeNotifier {
       final mediaUrls = await uploadPending(upload);
       final result = await submit(mediaUrls);
       _items.clear();
+      _submissionKey = null;
       return result;
     } finally {
       _publishing = false;

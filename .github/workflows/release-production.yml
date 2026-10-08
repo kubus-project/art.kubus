@@ -3,6 +3,11 @@ name: Release production web
 on:
   workflow_dispatch:
     inputs:
+      community_multi_media_enabled:
+        description: Enable Community multi-media only after backend deployment and acceptance
+        required: false
+        default: false
+        type: boolean
       bootstrap_web_root:
         description: One-time physical Netcup document root preflight
         required: false
@@ -44,6 +49,7 @@ jobs:
     with:
       deployment_environment: production
       source_sha: ${{ needs.source.outputs.sha }}
+      community_multi_media_enabled: ${{ inputs.community_multi_media_enabled == true }}
       full_browser_matrix: true
 
   deploy:

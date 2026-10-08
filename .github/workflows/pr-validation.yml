@@ -186,6 +186,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$RELEASE_CANDIDATE" = true ]; then flutter test --coverage; else flutter test; fi
+      - name: Community feature flag contracts in both configurations
+        run: |
+          node --test scripts/prepare_public_build_config.test.mjs
+          flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/community test/widgets/community
+          flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=false test/community test/widgets/community
       - name: Upload release-candidate coverage
         if: ${{ github.base_ref == 'master' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

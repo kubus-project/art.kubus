@@ -785,7 +785,11 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
         // Action bar
         Padding(
           padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-          child: Row(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: KubusSpacing.xs,
+            runSpacing: KubusSpacing.xs,
             children: [
               _buildCompactActionButton(
                 Icons.image_outlined,
@@ -820,7 +824,6 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                 themeProvider,
                 onTap: () => _showMentionPicker(hub),
               ),
-              const Spacer(),
               // Character count
               Text(
                 '$remainingChars',

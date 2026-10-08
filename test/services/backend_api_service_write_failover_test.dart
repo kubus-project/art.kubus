@@ -252,4 +252,33 @@ void main() {
     );
     expect(attempts, 1);
   });
+  for (final group in [false, true]) {
+    for (final lost in [false, true]) {
+      test(
+          'creation group=$group connectionLost=$lost never implicitly replays a committed post',
+          () async {
+        var attempts = 0;
+        BackendApiService().setHttpClient(MockClient((request) async {
+          if (request.url.path != '/api/community/posts' &&
+              !request.url.path.endsWith('/posts')) {
+            return http.Response('{"success":true,"data":[]}', 200);
+          }
+          attempts++;
+          expect(jsonDecode(request.body)['idempotencyKey'],
+              'stable-submission-key');
+          if (lost) {
+            throw http.ClientException('connection dropped after commit');
+          }
+          return http.Response('{"success":false}', 500);
+        }));
+        final operation = group
+            ? BackendApiService().createGroupPost('group-1',
+                content: 'committed', idempotencyKey: 'stable-submission-key')
+            : BackendApiService().createCommunityPost(
+                content: 'committed', idempotencyKey: 'stable-submission-key');
+        await expectLater(operation, throwsException);
+        expect(attempts, 1);
+      });
+    }
+  }
 }

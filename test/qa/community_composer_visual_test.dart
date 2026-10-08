@@ -8,6 +8,7 @@ import 'package:art_kubus/community/community_composer_media.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_composer_media_tray.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
+import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:flutter/material.dart';
@@ -40,22 +41,52 @@ class _FakePicker extends ImagePickerPlatform {
       files;
 }
 
-Future<Uint8List> _swatch(WidgetTester tester, Color color) async {
-  late Uint8List bytes;
+Uint8List _fixture(int i) =>
+    File('test/fixtures/community/photo-${i % 10}.png').readAsBytesSync();
+
+// Image codec completion needs real async time, not just fake clock pumps.
+Future<void> _decodePreviews(WidgetTester tester) async {
+  final images = tester
+      .widgetList<Image>(find.descendant(
+        of: find.byType(CommunityComposerMediaTray),
+        matching: find.byType(Image),
+      ))
+      .toList();
   await tester.runAsync(() async {
-    final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawRect(
-      const Rect.fromLTWH(0, 0, 160, 120),
-      Paint()..color = Color(color.toARGB32()),
-    );
-    final image = await recorder.endRecording().toImage(160, 120);
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    bytes = data!.buffer.asUint8List();
+    for (final image in images) {
+      final completer = Completer<void>();
+      final stream = image.image.resolve(ImageConfiguration.empty);
+      late ImageStreamListener listener;
+      listener = ImageStreamListener((info, _) {
+        stream.removeListener(listener);
+        expect(info.image.width, 160);
+        expect(info.image.height, 120);
+        completer.complete();
+      }, onError: (Object error, StackTrace? stack) {
+        stream.removeListener(listener);
+        completer.completeError(error, stack);
+      });
+      stream.addListener(listener);
+      await completer.future;
+    }
   });
-  return bytes;
+  await tester.pump();
+  for (final image in images) {
+    final raw = find.descendant(
+        of: find.byWidget(image), matching: find.byType(RawImage));
+    expect(tester.widget<RawImage>(raw).image, isNotNull,
+        reason: 'the decoded frame must reach the thumbnail');
+    expect(image.fit, BoxFit.cover);
+  }
 }
 
 Future<void> _shot(WidgetTester tester, String name) async {
+  final strips = find.byType(ReorderableListView);
+  if (strips.evaluate().isNotEmpty) {
+    await tester.ensureVisible(strips.last);
+    await tester.pump();
+  }
+  await _decodePreviews(tester);
   for (var i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 300));
   }
@@ -97,6 +128,20 @@ void main() {
 
   for (final scene in const [
     (
+      name: 'desktop-1440-light-en',
+      size: Size(1440, 1000),
+      dark: false,
+      lang: 'en',
+      scale: 1.0
+    ),
+    (
+      name: 'desktop-1440-dark-sl-x15',
+      size: Size(1440, 1000),
+      dark: true,
+      lang: 'sl',
+      scale: 1.5
+    ),
+    (
       name: 'mobile-390-light-en',
       size: Size(390, 844),
       dark: false,
@@ -119,10 +164,10 @@ void main() {
     ),
   ]) {
     testWidgets('composer ${scene.name}', (tester) async {
-      final colors = List<Color>.filled(11, Colors.teal);
+      final colors = List<int>.generate(11, (i) => i);
       final files = <XFile>[];
       for (var i = 0; i < colors.length; i++) {
-        files.add(XFile.fromData(await _swatch(tester, colors[i]),
+        files.add(XFile.fromData(_fixture(i),
             path: 'photo-$i.png', mimeType: 'image/png'));
       }
       final picker = _FakePicker(files);
@@ -130,7 +175,9 @@ void main() {
 
       final errors = await pumpProductSurface(
         tester,
-        child: const CommunityScreen(),
+        child: scene.size.width > 1000
+            ? const DesktopCommunityScreen()
+            : const CommunityScreen(),
         size: scene.size,
         brightness: scene.dark ? Brightness.dark : Brightness.light,
         locale: Locale(scene.lang),
@@ -146,14 +193,18 @@ void main() {
       final l10n = lookupAppLocalizations(Locale(scene.lang));
       await _shot(tester, '${scene.name}-02-composer-open');
 
-      final add = find.text(l10n.communityComposerMediaAddPhotos);
+      final add = scene.size.width > 1000
+          ? find.byTooltip(l10n.desktopCommunityComposerAddImageTooltip)
+          : find.text(l10n.communityComposerMediaAddPhotos);
       if (add.evaluate().isNotEmpty) {
+        await tester.ensureVisible(add.first);
         await tester.tap(add.first);
         for (var i = 0; i < 6; i++) {
           await tester.pump(const Duration(milliseconds: 300));
         }
         await _shot(tester, '${scene.name}-03-ten-selected');
       }
+      expect(errors, isEmpty, reason: 'no hidden layout/image errors');
       // ignore: avoid_print
       print('${scene.name}: render errors = ${errors.toSet().toList()}');
       for (var round = 0; round < 3; round++) {
@@ -192,10 +243,10 @@ void main() {
     testWidgets('tray ${scene.name}', (tester) async {
       Future<CommunityComposerPickedMedia> image(int i) async =>
           CommunityComposerPickedMedia(
-            file: XFile.fromData(await _swatch(tester, Colors.teal),
+            file: XFile.fromData(_fixture(i),
                 path: 'photo-$i.png', mimeType: 'image/png'),
             kind: CommunityComposerMediaKind.image,
-            imageBytes: await _swatch(tester, Colors.teal),
+            imageBytes: _fixture(i),
           );
       CommunityComposerPickedMedia video(int i) => CommunityComposerPickedMedia(
             file: XFile.fromData(Uint8List.fromList([0, 0, 0]),
@@ -228,8 +279,8 @@ void main() {
           )
           .catchError((Object _) {});
 
-      tester.view.physicalSize =
-          Size(scene.width, scene.scale > 1 ? 1100 : 640);
+      tester.view.physicalSize = Size(scene.width,
+          scene.width == 1440 ? 1000 : (scene.scale > 1 ? 1100 : 844));
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(
@@ -259,6 +310,30 @@ void main() {
         ),
       ));
       await _shot(tester, '${scene.name}-uploading-locked-and-failed');
+      final l10n = lookupAppLocalizations(Locale(scene.lang));
+      final failedTray = find.byType(CommunityComposerMediaTray).last;
+      final first = failed.items.first;
+      final second = failed.items[1];
+      await tester.tap(find
+          .descendant(
+              of: failedTray,
+              matching: find.byTooltip(l10n.communityComposerMediaMoveLater))
+          .first);
+      await tester.pump();
+      expect(failed.items.first.id, second.id);
+      final secondTile = find.descendant(
+          of: failedTray, matching: find.byKey(ValueKey<String>(second.id)));
+      final rendered = tester.widget<Image>(
+          find.descendant(of: secondTile, matching: find.byType(Image)));
+      expect((rendered.image as MemoryImage).bytes,
+          orderedEquals(second.imageBytes!));
+      await _shot(tester, '${scene.name}-reordered');
+      await tester.tap(find.descendant(
+          of: secondTile, matching: find.byTooltip(l10n.commonRemove)));
+      await tester.pump();
+      expect(failed.items.first.id, first.id);
+      expect(failed.length, 4);
+      await _shot(tester, '${scene.name}-removed');
       hold.complete('/u/photo-2.png');
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 50)));

@@ -510,6 +510,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       final created = await hub.submitGroupPost(
         draft.targetGroup!.id,
         content: content,
+        idempotencyKey: _composerMedia.submissionKey,
         mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
         artworkId: artworkId,
         subjectType: subjectType,
@@ -530,6 +531,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
 
     return context.read<CommunityInteractionsProvider>().createCommunityPost(
           content: content,
+          idempotencyKey: _composerMedia.submissionKey,
           mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
           artworkId: artworkId,
           subjectType: subjectType,

@@ -1599,6 +1599,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool allowImplicitBackendFailover = true,
     Duration timeout = AppConfig.requestTimeout,
   }) {
     return _request(
@@ -1609,6 +1610,7 @@ class BackendApiService
       body: body,
       encoding: encoding,
       isIdempotent: isIdempotent,
+      allowImplicitBackendFailover: allowImplicitBackendFailover,
       timeout: timeout,
     );
   }
@@ -6376,6 +6378,7 @@ class BackendApiService
   /// POST /api/community/posts
   Future<CommunityPost> createCommunityPost({
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6420,8 +6423,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      requestBody['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(requestBody),
       );
@@ -6854,6 +6860,7 @@ class BackendApiService
   Future<CommunityPost> createGroupPost(
     String groupId, {
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6901,8 +6908,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      body['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(body),
       );

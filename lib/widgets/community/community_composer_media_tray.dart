@@ -260,7 +260,7 @@ class _CommunityComposerMediaThumbnail extends StatelessWidget {
     return ColoredBox(
       color: scheme.primaryContainer.withValues(alpha: 0.4),
       child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.sm),
+        padding: const EdgeInsets.all(KubusSpacing.xxs),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -337,6 +337,9 @@ class _TileIconButton extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
       padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
+        minimumSize: const Size(30, 30),
+        maximumSize: const Size(30, 30),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: scheme.surface.withValues(alpha: 0.85),
         foregroundColor: scheme.onSurface,
         disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.3),

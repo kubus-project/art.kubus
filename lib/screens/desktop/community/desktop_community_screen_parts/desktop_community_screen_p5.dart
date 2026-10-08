@@ -338,6 +338,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
             final groupPost = await hub.submitGroupPost(
               draft.targetGroup!.id,
               content: content,
+              idempotencyKey: _composerMedia.submissionKey,
               mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
               postType: postType,
               category: draft.category,
@@ -357,6 +358,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
           }
           return interactions.createCommunityPost(
             content: content,
+            idempotencyKey: _composerMedia.submissionKey,
             mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
             postType: postType,
             category: draft.category,

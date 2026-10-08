@@ -71,8 +71,8 @@ release-preparation commit, as in 0.8.1, not in this feature change.
 - Posts and media created before this release display unchanged. A legacy post
   with one image shows that image as a one-item carousel.
 - Stored media references keep their formats (`/uploads/...`, `https://...`,
-  `ipfs://...`). No database migration is needed; `community_posts.content` is
-  already unbounded text.
+  `ipfs://...`). Migration 098 adds durable creation deduplication; `community_posts.content`
+  is already unbounded text.
 - Repost comments and post edits that were valid before remain valid.
 - Group posts now store the full ordered media set in `media_urls`.
 - The old `UPLOAD_RATE_LIMIT` setting is no longer read. Deployment
@@ -87,19 +87,38 @@ Two repositories ship this slice. The backend must be live first.
 1. **Deploy backend PR #79** (`art.kubus-backend`, target `master`). It
    accepts the ordered `mediaUrls` set, the 2,200-character limit and the
    per-file upload budget.
-2. **Build the frontend with the multi-media switch on.** The switch is
-   `--dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true`. Release builds default to
-   off, so a release built without it keeps the single-attachment composer and
-   shows only the first item of any multi-item post.
-   The release pipeline does not pass this flag yet. `web-artifact.yml` lists
-   its web defines explicitly, and the mobile workflows read
-   `.dart_tool/public-build-defines.json`, which
-   `scripts/prepare_public_build_config.mjs` writes. Activation means adding the
-   define to one of those, in the same way as `ANALYTICS_APP_ENABLED`. That
-   change is part of the release step, not of this feature.
-3. **Rollback** needs no source change: rebuild the frontend with
-   `COMMUNITY_MULTI_MEDIA_ENABLED=false`. Stored media is untouched. Multi-item
-   posts simply show their first item.
+2. **Apply migration 098 and deploy the backend to every writable instance before enabling the frontend.** The migration adds `community_post_submissions`; both clean-install schema snapshots include it. Run the existing backend migration runner (`node src/db/migrate.js`) with the authorized environment configuration. No production migration or deployment occurred in this pass.
+3. **Complete real authenticated browser acceptance** on staging for mobile, desktop inline, desktop dialog and group composers, with the intended API topology and real picker/uploads.
+4. **Build with an explicit capability.** `scripts/prepare_public_build_config.mjs` accepts `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED=true|false`, validates it, and writes the boolean `COMMUNITY_MULTI_MEDIA_ENABLED` into `.dart_tool/public-build-defines.json`. Its default is false. The immutable web workflow passes its boolean `community_multi_media_enabled` input (default false), and the development and production dispatch workflows expose the same default-disabled input. Push-triggered development builds also default to false. `kubus-community-build.json` inside the checksummed artifact records the exact source SHA and capability.
+
+PowerShell local build commands (supply the existing required public build variables first):
+
+```powershell
+$env:KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED = 'true'
+node scripts/prepare_public_build_config.mjs --web
+flutter build web --release --dart-define-from-file=.dart_tool/public-build-defines.json
+```
+
+For an authorized workflow activation after backend deployment and acceptance:
+
+```text
+gh workflow run deploy-development.yml --ref dev -f community_multi_media_enabled=true
+gh workflow run release-production.yml --ref master -f community_multi_media_enabled=true
+```
+
+Rollback commands rebuild with the switch disabled; they do not delete stored media or revert the migration:
+
+```powershell
+$env:KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED = 'false'
+node scripts/prepare_public_build_config.mjs --web
+flutter build web --release --dart-define-from-file=.dart_tool/public-build-defines.json
+```
+
+```text
+gh workflow run release-production.yml --ref master -f community_multi_media_enabled=false
+```
+
+The equivalent direct local flag is `flutter build web --release --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true|false`. Omit the switch only when the intended result is the default-disabled release. Existing protected deployment gates still apply to workflow dispatch. These commands were documented, not dispatched in this pass.
 
 When the switch is off, composers accept one attachment, a photo or a video,
 as before. Other composer behaviour is unchanged. The flag is read once at
@@ -140,58 +159,40 @@ build time, through `AppConfig.isFeatureEnabled('communityMultiMedia')`.
 - **Localization.** New strings are in English and Slovenian. Slovenian copy
   is a first translation and has not been reviewed by a native speaker.
 
+## Duplicate-post safety
+
+Every composer owns a stable UUID for one logical submission. Failed creates retain the key, uploaded URLs and draft; success or explicit draft clearing resets it. Both providers forward the key. Direct API callers can supply `idempotencyKey` for their own retries; omission generates a fresh key per call. Legacy backend requests without a key remain compatible and are not server-deduplicated.
+
+The backend ledger is PostgreSQL-backed, with a primary key over authenticated wallet identity, operation (`community` or `group:<id>`) and submission key. Reservation, post insertion, group membership changes and subject persistence commit in one transaction. Concurrent matching requests cannot insert two posts. Completed submissions replay the saved original HTTP 201 envelope without repeating achievements, socket events, public sync or analytics. Different users, operations and keys are isolated; changed payloads with a committed key return 409. Group membership is checked before every replay.
+
+Both creation API methods disable implicit backend replay on ambiguous 5xx and transport failures, including while an older backend is deployed. Unrelated write failover, safe pre-write `NODE_NOT_WRITABLE` redirects and authentication rejection retries remain intact. No failed request is silently reported as successful.
+
+A crash between post commit and response persistence returns 409 on subsequent keyed retries instead of inserting again. Check the feed before clearing a draft or starting a new submission. This provides at-most-one insertion per key, not guaranteed delivery of asynchronous side effects after a process crash. The existing background side-effect mechanism has no durable outbox. The guarantee also assumes failover preserves the committed PostgreSQL ledger; replica data loss or a fresh key cannot be deduplicated. Manual retries against an old backend remain ambiguous until all writable instances have the new code and migration.
+
 ## Verification
 
-Results recorded for this branch. The full suites ran at the merge commit
-9a510e67. Later commits changed only one test (made explicit about the
-switch) and this note, and the Community directories were re-run after that
-change, with the switch on and off:
+Fresh local correction-pass results:
 
-- **Backend (`art.kubus-backend`, feature branch on `master`):** full Jest run
-  passed, 208 suites, 1,833 tests, 33 skipped, 0 failed. The upload quota tests
-  exercise the real router chain: per-file batch accounting, refusals that
-  spend nothing, shared single and batch budgets, the 120-file hour window with
-  its retry delay, per-user isolation on a shared IP, a file-counted IP ledger,
-  concurrent batches, and unmetered GET retrievals. ESLint is clean on the
-  changed files.
-- **Frontend (`art.kubus`, feature branch merged with `dev`):** full
-  `flutter test` passed, 3,994 tests, 14 skipped, 0 failed. The Community
-  directories also pass with the switch on and with the switch off
-  (`--dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=false|true`, 105 tests each).
-  `flutter analyze` on the whole project reports no issues, and the format
-  check on changed files reports no changes.
+- Full Flutter suite: **4,027 passed, 22 skipped, zero failures**. `flutter analyze`: no issues. Changed Dart files pass the format check.
+- Enabled focused Community, creation failover and upload Retry-After tests: **140 passed, 7 skipped**. Disabled Community/widget configuration: **102 passed, 32 skipped**. Intentional skips select the opposite flag mode and mobile-only dismissal cases.
+- Full backend Jest suite with the new PostgreSQL contract enabled: **209 passed suites, 5 skipped suites; 1,853 passed tests, 33 skipped tests, zero failures**. ESLint is clean. Both schema snapshots bootstrap with 95 migrations and matching 134-table catalogs; schema parity has zero drift.
+- Real PostgreSQL route/service idempotency contract: **17 passed**. Covers normal Community/group creation, completed replay, eight concurrent requests, separate keys/users/operations, validation/auth/group permission rejection, legacy callers, transaction rollback, HTTP 500 and connection loss after committed success, side effects once, and failure before response persistence.
+- Public-build configuration executable tests: **5 passed** (default, disabled, enabled, uppercase boolean normalization, invalid input). Existing web runtime/locale contracts: **32 passed**. Local release web builds succeed with `COMMUNITY_MULTI_MEDIA_ENABLED=true` and `false`. Existing wasm dry-run compatibility warnings remain; these were JavaScript release builds.
+- Mock-authenticated real composer flows cover **mobile, desktop inline, desktop full dialog and group feed** using existing profile/token seams, fake picker and mock HTTP client. All four cover ten photos, limit enforcement, ordered mixed image/video submission (`postType: video` when a video is present), visible reordering/removal, empty-caption fallback, publishing lock, upload/create failure retention, manual retry with the same key and reused uploads, double-tap prevention, and controlled 429/45-second Retry-After retention without implicit retry. The intentional mobile dismissal contract remains unchanged.
+- Thumbnail visual QA: **8 scenarios passed**. Valid distinct numbered 160x120 PNG fixtures replace indistinguishable swatches. The harness waits for actual asynchronous image codec completion and asserts that decoded `RawImage` frames reach `Image.memory` before capture. `XFile.fromData` and preview byte loading work; missing pictures were a capture/decoder scheduling issue. Captures now scroll the entire thumbnail strip into view. Reviewed evidence includes 390x844 light, 320px dark Slovenian, increased 1.5x text, 1440x1000 desktop light/dark, and 320px tray at 2x text. Mixed videos are distinct placeholders, and reordered/removed images match their items. Square previews use `BoxFit.cover`, without stretching. Ten items remain horizontally scrollable.
+- Broader QA reproduced and corrected two compact-layout regressions: the desktop inline action row now wraps instead of overflowing, and 72px tiles have bounded icon-button sizes and video-placeholder padding. No composer redesign was performed.
 
-Added in the completion pass:
+Reproduce visual evidence:
 
-- **Mock-authenticated widget integration** of the real mobile composer
-  (`test/community/community_composer_flow_test.dart`). It uses the existing
-  `ProfileProvider.setCurrentUser` and `setAuthTokenForTesting` seams, a fake
-  image picker and a mock HTTP client. It covers ten ordered photos in one
-  create request, the eleventh being refused, a failed third upload with a
-  retry that resumes there, a failed create that unlocks the composer and
-  reuses every upload, a double tap sending one create request, and the sheet
-  closing when idle but not while publishing. With the switch off, one
-  attachment publishes. This is not real authenticated browser testing.
-- **Backend:** multer's file-count errors now answer 400, not 500. A refund
-  after a refused settlement is proven to remove only that request's units when
-  concurrent reservations share a timestamp. Both nginx configs pass `nginx -t`
-  in a container (`nginx.conf` with placeholder certificates).
+```powershell
+$env:KUBUS_RUN_VISUAL_QA = '1'
+flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/qa/community_composer_visual_test.dart
+```
 
-Not verified in this pass:
+Generated screenshots are in `output/qa/community-composer/`; selected reviewed captures are checked in under [evidence/community-082-final](evidence/community-082-final/README.md). CI runs the enabled and disabled Community contracts, and the backend database job runs the real PostgreSQL creation contract.
 
-- **Real authenticated browser QA** of any composer, and the desktop inline,
-  desktop dialog and group composers. Only the mobile composer was driven end
-  to end, in a widget test. No authorized staging account was available.
-- **Thumbnail pictures and aspect ratio.** Screenshots from the test harness did
-  not show image thumbnails reliably, so thumbnail rendering was not confirmed
-  visually. Tile states (uploading, locked, failed, ten items, 320 px at 2x
-  text) were inspected and showed no overflow.
-- **Editing and reposting** beyond the existing unit tests.
-- **Client retry of `POST /api/community/posts` on a 5xx.** The client retries a
-  failed create, and a retry after a server-side success could duplicate a
-  post. This is existing behaviour and was not changed.
-- **A hung upload.** The composer cannot be closed while publishing, so a
-  stalled upload holds it until the request timeout.
-- **A rate-limit mutation check.** An attempt to show that the batch test fails
-  without settlement was blocked by a permission policy, and the working tree was
-  restored at once. The claim rests on reading the test assertions, not on a run.
+## Remaining acceptance gates
+
+Real authenticated browser QA was **not performed**. Mock-authenticated widget tests do not establish real session, picker, upload or multi-backend browser acceptance. Before production activation, merge under owner control, migrate/deploy all writable backends, run real staging acceptance on all composer surfaces, verify the new exact frontend artifact and its capability metadata, then explicitly enable the production flag. No merge, tag, version bump, production deployment or production secret change occurred here.
+
+The previously documented extensionless IPFS-only video limitation, native platform video constraints, per-process upload budgets and owner/native Slovenian copy review remain unchanged. A hung upload still holds the composer until the existing request timeout.
