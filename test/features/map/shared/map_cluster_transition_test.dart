@@ -54,34 +54,24 @@ void main() {
       const LatLng(5, 10),
     );
     expect(
-      kubusClusterRegroupProgress(
-        entryOpacities: const <double>[0.55, 1],
-        startOpacity: 0.55,
-      ),
+      kubusClusterRegroupFeatureProgress(
+          entryOpacity: 0.55, startOpacity: 0.55),
       0,
+      reason: 'a regroup participant that has not started is at its origin',
     );
     expect(
-      kubusClusterRegroupProgress(
-        entryOpacities: const <double>[1, 1],
-        startOpacity: 0.55,
-      ),
+      kubusClusterRegroupFeatureProgress(
+          entryOpacity: 0.775, startOpacity: 0.55),
+      closeTo(0.5, 1e-9),
+    );
+    expect(
+      kubusClusterRegroupFeatureProgress(entryOpacity: 1, startOpacity: 0.55),
       1,
     );
     expect(
-      kubusClusterRegroupProgress(
-        entryOpacities: const <double>[0, 0.55, 1],
-        startOpacity: 0.55,
-      ),
-      0,
-      reason: 'off-screen entries must not pin a visible regroup transition',
-    );
-    expect(
-      kubusClusterRegroupProgress(
-        entryOpacities: const <double>[0, 0],
-        startOpacity: 0.55,
-      ),
+      kubusClusterRegroupFeatureProgress(entryOpacity: 0, startOpacity: 0.55),
       1,
-      reason: 'a fully off-screen topology commits without an invisible tween',
+      reason: 'off-screen features are drawn at their target, never pinned',
     );
   });
 }

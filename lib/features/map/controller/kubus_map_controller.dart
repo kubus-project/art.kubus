@@ -15,6 +15,7 @@ import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_overlay_acknowledgement.dart';
 import '../shared/map_marker_collision_utils.dart';
 import '../shared/map_marker_entrance_tracker.dart';
+import '../shared/map_marker_entry_schedule.dart';
 import '../shared/map_marker_overlay_viewport_planner.dart';
 import '../shared/map_cluster_activation.dart';
 import '../map_layers_manager.dart';
@@ -195,6 +196,7 @@ class KubusMapController {
     required Distance distance,
     this.supportsPendingMarker = false,
     this.dismissSelectionOnUserGesture = true,
+    this.clusterTopologyZoomFor,
     Set<String>? managedLayerIdsOut,
     Set<String>? managedSourceIdsOut,
     Set<String>? registeredMapImagesOut,
@@ -220,6 +222,12 @@ class KubusMapController {
   /// Desktop uses this to avoid confusing anchored overlays while panning.
   /// Mobile keeps the selection open and just re-anchors it.
   final bool dismissSelectionOnUserGesture;
+
+  /// The zoom the rendered marker grouping was built at for a camera zoom
+  /// (the screen's `KubusMarkerRegroupGate.topologyZoomFor`, which lags a
+  /// zoom-out). Cluster taps must resolve their feature id at this zoom: the id
+  /// carries the grid level it was rendered with. Null means the camera zoom.
+  final double Function(double cameraZoom)? clusterTopologyZoomFor;
 
   final Distance _distance;
 
@@ -1291,6 +1299,8 @@ class KubusMapController {
   Future<void> _activateCluster(String featureId, LatLng fallbackCenter) async {
     _collapseSpiderfy();
     final gridLevelForZoom = tapConfig.clusterGridLevelForZoom;
+    final topologyZoom =
+        clusterTopologyZoomFor?.call(_camera.zoom) ?? _camera.zoom;
     final plan = gridLevelForZoom == null
         ? null
         : resolveKubusClusterActivationPlan(
@@ -1299,7 +1309,7 @@ class KubusMapController {
                 .toList(growable: false),
             clusterFeatureId: featureId,
             clusterIdPrefix: tapConfig.clusterIdPrefix,
-            currentZoom: _camera.zoom,
+            currentZoom: topologyZoom,
             maxZoom: tapConfig.clusterTapMaxZoom,
             gridLevelForZoom: gridLevelForZoom,
           );
@@ -2070,13 +2080,16 @@ class KubusMapController {
     return point.longitude >= west || point.longitude <= east;
   }
 
-  /// Soft, non-staggered re-entry animation for the currently visible markers.
+  /// Soft re-entry animation for the currently visible markers.
   ///
   /// Used when the cluster grouping changes (zoom crossed a grid level or
   /// clustering toggled) so the new marker/cluster arrangement eases in with a
-  /// quick scale/opacity pop instead of snapping. Markers whose full entry
-  /// animation is still in flight are left untouched so the staggered initial
-  /// pop-in never gets interrupted.
+  /// quick scale/opacity pop instead of snapping. The wave starts at the
+  /// viewport centre and spreads outwards within a bounded time, so a city's
+  /// clusters dissolving into dozens of individual markers read as one
+  /// progressive reveal rather than a simultaneous replacement. Markers whose
+  /// full entry animation is still in flight are left untouched so the
+  /// staggered initial pop-in never gets interrupted.
   void animateMarkerRegroup() {
     if (_reduceMotion) return;
     if (!_viewportStateInitialized) return;
@@ -2093,7 +2106,7 @@ class KubusMapController {
       ids.add(id);
     }
     if (ids.isEmpty) return;
-    _scheduleEntryAnimations(ids, staggered: false, soft: true);
+    _scheduleEntryAnimations(ids, staggered: true, soft: true);
   }
 
   void _scheduleEntryAnimations(
@@ -2110,15 +2123,31 @@ class KubusMapController {
       return;
     }
 
-    final sorted = List<String>.of(markerIds)..sort();
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final step = staggered ? MapMarkerCollisionConfig.entryStaggerMs : 0;
+    final Map<String, int> offsets;
+    if (staggered) {
+      final positions = <String, LatLng>{
+        for (final marker in _markers)
+          if (marker.hasValidPosition) marker.id: marker.position,
+      };
+      offsets = kubusEntryRevealOffsets(
+        ids: markerIds,
+        positionOf: (id) => _spiderfiedPositionByMarkerId[id] ?? positions[id],
+        center: _hasCameraFrame ? _camera.center : null,
+        maxStepMs: MapMarkerCollisionConfig.entryStaggerMs,
+        maxSpreadMs: soft
+            ? MapMarkerCollisionConfig.entryRegroupStaggerMaxSpreadMs
+            : MapMarkerCollisionConfig.entryStaggerMaxSpreadMs,
+      );
+    } else {
+      offsets = <String, int>{for (final id in markerIds) id: 0};
+    }
 
-    for (var i = 0; i < sorted.length; i++) {
-      final id = sorted[i];
+    for (final entry in offsets.entries) {
+      final id = entry.key;
       _entrySerialCounter += 1;
       _entryAnimationByMarkerId[id] = _MarkerEntryAnimationState(
-        revealAtMs: nowMs + (i * step),
+        revealAtMs: nowMs + entry.value,
         serial: _entrySerialCounter,
         soft: soft,
       );

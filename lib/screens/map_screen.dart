@@ -487,6 +487,8 @@ class _MapScreenState extends State<MapScreen>
   @override
   double get syncZoom => _lastZoom;
   @override
+  double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_lastZoom);
+  @override
   MapMarkerOverview? get markerOverview => _overviewController.overview;
 
   /// The overview can express the content-layer toggles but not filters that
@@ -719,6 +721,7 @@ class _MapScreenState extends State<MapScreen>
       ),
       distance: _distanceCalculator,
       dismissSelectionOnUserGesture: false,
+      clusterTopologyZoomFor: _regroupGate.topologyZoomFor,
       managedLayerIdsOut: _managedLayerIds,
       managedSourceIdsOut: _managedSourceIds,
       registeredMapImagesOut: _registeredMapImages,

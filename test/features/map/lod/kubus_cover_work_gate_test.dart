@@ -66,6 +66,31 @@ void main() {
     });
   });
 
+  test('jobs keep running while the camera moves, at the motion pace', () {
+    fakeAsync((async) {
+      var moving = true;
+      final gate = KubusCoverWorkGate(
+        spacing: const Duration(milliseconds: 20),
+        motionSpacing: const Duration(milliseconds: 150),
+        isPaced: () => moving,
+      );
+      final ranAt = <int>[];
+      for (var i = 0; i < 4; i += 1) {
+        gate.runSerial<void>(
+          () async => ranAt.add(async.elapsed.inMilliseconds),
+        );
+      }
+      async.elapse(const Duration(milliseconds: 320));
+      expect(ranAt, <int>[0, 150, 300],
+          reason: 'a moving camera gets covers, spaced out');
+      moving = false;
+      async.elapse(const Duration(milliseconds: 200));
+      expect(ranAt, hasLength(4));
+      expect(ranAt.last, 450, reason: 'the pace in force when a job ended');
+      gate.dispose();
+    });
+  });
+
   test('a failing job does not block the queue', () {
     fakeAsync((async) {
       final gate = KubusCoverWorkGate();

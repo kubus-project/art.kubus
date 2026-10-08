@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/media_failure_registry.dart';
 import '../../utils/media_url_resolver.dart';
 
 typedef KubusImageErrorBuilder = Widget Function(
@@ -29,6 +30,7 @@ class KubusCachedImage extends StatelessWidget {
     this.excludeFromSemantics = false,
     this.placeholderBuilder,
     this.errorBuilder,
+    this.skipRecentlyFailed = false,
   }) : assert(
           semanticLabel == null || !excludeFromSemantics,
           'semanticLabel cannot be provided when excludeFromSemantics is true.',
@@ -50,6 +52,15 @@ class KubusCachedImage extends StatelessWidget {
   final bool excludeFromSemantics;
   final WidgetBuilder? placeholderBuilder;
   final KubusImageErrorBuilder? errorBuilder;
+
+  /// Show the fallback without a request when this URL failed moments ago
+  /// (here or as a map marker cover, see [KubusMediaFailureRegistry]).
+  ///
+  /// For surfaces that rebuild continuously while open, such as the map
+  /// marker card following its marker; Flutter's image cache keeps no failed
+  /// loads, so each rebuild would otherwise request the dead URL again. Off by
+  /// default: elsewhere one failure must not hide the next attempt.
+  final bool skipRecentlyFailed;
 
   static String? versionTokenFromDate(DateTime? value) {
     if (value == null) return null;
@@ -112,6 +123,15 @@ class KubusCachedImage extends StatelessWidget {
       );
     }
 
+    if (skipRecentlyFailed &&
+        KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
+      return _withFallbackSemantics(
+        errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
+            _buildFallback(context, icon: Icons.broken_image_outlined),
+        resolvedSemanticLabel,
+      );
+    }
+
     // Providing BOTH cacheWidth and cacheHeight forces Flutter to decode the
     // bitmap to exactly those pixel dimensions, ignoring the source aspect
     // ratio. That squishes/stretches the image *before* [fit] can act, so even
@@ -146,6 +166,7 @@ class KubusCachedImage extends StatelessWidget {
       semanticLabel: resolvedSemanticLabel,
       excludeFromSemantics: excludeFromSemantics,
       errorBuilder: (context, error, stackTrace) {
+        KubusMediaFailureRegistry.shared.markFailed(urlWithVersion);
         late final Widget fallback;
         if (errorBuilder != null) {
           fallback = errorBuilder!(context, error, stackTrace);
@@ -194,4 +215,13 @@ class KubusCachedImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Error handed to [KubusCachedImage.errorBuilder] when the image was not
+/// requested because the same URL failed moments ago.
+class _KubusRecentImageFailure implements Exception {
+  const _KubusRecentImageFailure();
+
+  @override
+  String toString() => 'Image recently failed to load; not retried yet.';
 }
