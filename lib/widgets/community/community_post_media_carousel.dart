@@ -124,6 +124,8 @@ class _CommunityPostMediaCarouselState
 
   void _goTo(int index) {
     if (index < 0 || index >= widget.mediaUrls.length) return;
+    // Keep arrow-key navigation available after using an arrow control.
+    _focusNode.requestFocus();
     _pages.animateToPage(
       index,
       duration: const Duration(milliseconds: 240),

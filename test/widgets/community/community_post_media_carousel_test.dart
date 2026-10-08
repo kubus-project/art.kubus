@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+import 'package:flutter/services.dart';
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/community/community_post_media.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -100,6 +102,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('2 / 3'), findsOneWidget);
+    });
+
+    testWidgets('focused arrow controls share carousel keyboard navigation',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: _images),
+      ));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(0, 0));
+      await mouse.moveTo(tester.getCenter(find.byType(PageView)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip(_l10n.communityMediaNext));
+      await tester.pumpAndSettle();
+      expect(find.text('2 / 3'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 3'), findsOneWidget);
+      await mouse.removePointer();
     });
 
     testWidgets('tapping an image opens the post, swiping does not',
