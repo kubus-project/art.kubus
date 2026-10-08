@@ -819,6 +819,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 style: KubusTypography.inter(
                     color: Theme.of(context).colorScheme.outline)),
           ),
+          if (_hasPin)
           TextButton(
             onPressed: () async {
               final navigator = Navigator.of(context);
@@ -859,7 +860,852 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
-              if (pin.length < 4 || confirm.length < 4) {
+              if (!RegExp(r'^[0-9]{4,12}
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                return;
+              }
+              if (pin != confirm) {
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                return;
+              }
+              try {
+                await walletProvider.setPin(pin);
+                if (!mounted) return;
+                final hasPin = await walletProvider.hasPin();
+                final biometricsSupported =
+                    await walletProvider.canUseBiometrics();
+                if (!mounted) return;
+                _applyState(() {
+                  _hasPin = hasPin;
+                  _biometricsSupported = biometricsSupported;
+                  _requirePin = hasPin;
+                });
+                await _saveAllSettings();
+                await gate.reloadSettings();
+                navigator.pop();
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+              } catch (e) {
+                if (!mounted) return;
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+              }
+            },
+            child: Text(l10n.commonSave,
+                style: KubusTypography.inter(
+                    color: Theme.of(context).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsClearCacheDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsClearCacheDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              await SettingsService.clearNonCriticalCaches();
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.settingsCacheClearedToast)),
+              );
+            },
+            child: Text(l10n.settingsClearButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetPermissionFlagsDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          l10n.settingsResetPermissionFlagsDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsResetPermissionFlagsDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel,
+                style: KubusTypography.inter(
+                    color: Theme.of(dialogContext).colorScheme.outline)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+            ),
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await _resetPermissionFlags();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showKubusSnackBar(
+                SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
+              );
+            },
+            child: Text(l10n.settingsResetButton,
+                style: KubusTypography.inter(
+                    color: Theme.of(dialogContext).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPermissionFlags() async {
+    try {
+      await SettingsService.resetPermissionFlags();
+    } catch (e) {
+      debugPrint('Failed to reset persisted permission flags: $e');
+    }
+  }
+
+  void _showDataExportDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsExportDataDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsExportDataDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              // Prepare export data
+              final prefs = await SharedPreferences.getInstance();
+              final exportData = {
+                'profile': {
+                  'profileVisibility':
+                      prefs.getString('profileVisibility') ?? 'Public',
+                  'showAchievements': prefs.getBool('showAchievements') ?? true,
+                  'showFriends': prefs.getBool('showFriends') ?? true,
+                },
+                'settings': {
+                  'enableAnalytics': prefs.getBool('enableAnalytics') ?? true,
+                  'enableCrashReporting':
+                      prefs.getBool('enableCrashReporting') ?? true,
+                  'skipOnboarding':
+                      prefs.getBool('skipOnboardingForReturningUsers') ?? true,
+                },
+                'exportDate': DateTime.now().toIso8601String(),
+              };
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(
+                    content: Text(
+                        l10n.settingsDataExportedToast(exportData.length))),
+              );
+            },
+            child: Text(l10n.settingsExportButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsResetAppDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsResetAppDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
+              final notificationProvider =
+                  Provider.of<NotificationProvider>(context, listen: false);
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
+              await SettingsService.resetApp(
+                walletProvider: walletProvider,
+                backendApi: BackendApiService(),
+                notificationProvider: notificationProvider,
+                profileProvider: profileProvider,
+              );
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(
+                  content: Text(l10n.settingsAppResetSuccessToast),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              _restartToOnboarding();
+            },
+            child: Text(l10n.settingsResetButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          l10n.settingsDeleteAccountDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsDeleteAccountDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              // Show confirmation dialog; ensure mounted before calling showDialog.
+              if (!mounted) return;
+              final dialogNavigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
+              final confirmed = await showKubusDialog<bool>(
+                context: dialogContext,
+                builder: (confirmContext) => KubusAlertDialog(
+                  backgroundColor: Theme.of(confirmContext).colorScheme.surface,
+                  title: Text(
+                    l10n.settingsFinalConfirmationTitle,
+                    style: KubusTypography.inter(
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: Text(
+                    l10n.settingsDeleteAccountFinalConfirmationBody,
+                    style: KubusTypography.inter(
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(confirmContext, false),
+                      child: Text(l10n.commonCancel,
+                          style: KubusTypography.inter()),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(confirmContext, true),
+                      child: Text(
+                        l10n.settingsConfirmButton,
+                        style: KubusTypography.inter(
+                            color: Theme.of(confirmContext).colorScheme.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (!mounted) return;
+              if (confirmed == true) {
+                final walletProvider =
+                    Provider.of<WalletProvider>(context, listen: false);
+                final notificationProvider =
+                    Provider.of<NotificationProvider>(context, listen: false);
+                final profileProvider =
+                    Provider.of<ProfileProvider>(context, listen: false);
+
+                // Delete the authenticated account (users.id), never just
+                // wallet-scoped data. Requires a valid backend token; local
+                // state is only cleared after the backend confirms.
+                try {
+                  await BackendApiService().deleteMyAccount();
+                } catch (e) {
+                  debugPrint('SettingsScreen: backend deletion failed: $e');
+                  messenger.showKubusSnackBar(
+                    SnackBar(
+                        content:
+                            Text(l10n.settingsDeleteAccountBackendFailedToast)),
+                  );
+                  if (!mounted) return;
+                  dialogNavigator.pop();
+                  return;
+                }
+
+                await SettingsService.resetApp(
+                  walletProvider: walletProvider,
+                  backendApi: BackendApiService(),
+                  notificationProvider: notificationProvider,
+                  profileProvider: profileProvider,
+                );
+
+                if (!mounted) return;
+                dialogNavigator.pop();
+                messenger.showKubusSnackBar(
+                  SnackBar(
+                    content: Text(l10n.settingsAccountDeletedToast),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+                _restartToOnboarding();
+              } else {
+                if (!mounted) return;
+                dialogNavigator.pop();
+              }
+            },
+            child: Text(l10n.settingsDeleteForeverButton),
+          ),
+        ],
+      ),
+    );
+  }
+}
+).hasMatch(pin) ||
+                  !RegExp(r'^[0-9]{4,12}
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                return;
+              }
+              if (pin != confirm) {
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                return;
+              }
+              try {
+                await walletProvider.setPin(pin);
+                if (!mounted) return;
+                final hasPin = await walletProvider.hasPin();
+                final biometricsSupported =
+                    await walletProvider.canUseBiometrics();
+                if (!mounted) return;
+                _applyState(() {
+                  _hasPin = hasPin;
+                  _biometricsSupported = biometricsSupported;
+                });
+                await gate.reloadSettings();
+                navigator.pop();
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+              } catch (e) {
+                if (!mounted) return;
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+              }
+            },
+            child: Text(l10n.commonSave,
+                style: KubusTypography.inter(
+                    color: Theme.of(context).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsClearCacheDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsClearCacheDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              await SettingsService.clearNonCriticalCaches();
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.settingsCacheClearedToast)),
+              );
+            },
+            child: Text(l10n.settingsClearButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetPermissionFlagsDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          l10n.settingsResetPermissionFlagsDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsResetPermissionFlagsDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel,
+                style: KubusTypography.inter(
+                    color: Theme.of(dialogContext).colorScheme.outline)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+            ),
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await _resetPermissionFlags();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showKubusSnackBar(
+                SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
+              );
+            },
+            child: Text(l10n.settingsResetButton,
+                style: KubusTypography.inter(
+                    color: Theme.of(dialogContext).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPermissionFlags() async {
+    try {
+      await SettingsService.resetPermissionFlags();
+    } catch (e) {
+      debugPrint('Failed to reset persisted permission flags: $e');
+    }
+  }
+
+  void _showDataExportDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsExportDataDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsExportDataDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              // Prepare export data
+              final prefs = await SharedPreferences.getInstance();
+              final exportData = {
+                'profile': {
+                  'profileVisibility':
+                      prefs.getString('profileVisibility') ?? 'Public',
+                  'showAchievements': prefs.getBool('showAchievements') ?? true,
+                  'showFriends': prefs.getBool('showFriends') ?? true,
+                },
+                'settings': {
+                  'enableAnalytics': prefs.getBool('enableAnalytics') ?? true,
+                  'enableCrashReporting':
+                      prefs.getBool('enableCrashReporting') ?? true,
+                  'skipOnboarding':
+                      prefs.getBool('skipOnboardingForReturningUsers') ?? true,
+                },
+                'exportDate': DateTime.now().toIso8601String(),
+              };
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(
+                    content: Text(
+                        l10n.settingsDataExportedToast(exportData.length))),
+              );
+            },
+            child: Text(l10n.settingsExportButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (context) => KubusAlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsResetAppDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsResetAppDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
+              final notificationProvider =
+                  Provider.of<NotificationProvider>(context, listen: false);
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
+              await SettingsService.resetApp(
+                walletProvider: walletProvider,
+                backendApi: BackendApiService(),
+                notificationProvider: notificationProvider,
+                profileProvider: profileProvider,
+              );
+
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                SnackBar(
+                  content: Text(l10n.settingsAppResetSuccessToast),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              _restartToOnboarding();
+            },
+            child: Text(l10n.settingsResetButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          l10n.settingsDeleteAccountDialogTitle,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          l10n.settingsDeleteAccountDialogBody,
+          style: KubusTypography.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              // Show confirmation dialog; ensure mounted before calling showDialog.
+              if (!mounted) return;
+              final dialogNavigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
+              final confirmed = await showKubusDialog<bool>(
+                context: dialogContext,
+                builder: (confirmContext) => KubusAlertDialog(
+                  backgroundColor: Theme.of(confirmContext).colorScheme.surface,
+                  title: Text(
+                    l10n.settingsFinalConfirmationTitle,
+                    style: KubusTypography.inter(
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: Text(
+                    l10n.settingsDeleteAccountFinalConfirmationBody,
+                    style: KubusTypography.inter(
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(confirmContext, false),
+                      child: Text(l10n.commonCancel,
+                          style: KubusTypography.inter()),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(confirmContext, true),
+                      child: Text(
+                        l10n.settingsConfirmButton,
+                        style: KubusTypography.inter(
+                            color: Theme.of(confirmContext).colorScheme.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (!mounted) return;
+              if (confirmed == true) {
+                final walletProvider =
+                    Provider.of<WalletProvider>(context, listen: false);
+                final notificationProvider =
+                    Provider.of<NotificationProvider>(context, listen: false);
+                final profileProvider =
+                    Provider.of<ProfileProvider>(context, listen: false);
+
+                // Delete the authenticated account (users.id), never just
+                // wallet-scoped data. Requires a valid backend token; local
+                // state is only cleared after the backend confirms.
+                try {
+                  await BackendApiService().deleteMyAccount();
+                } catch (e) {
+                  debugPrint('SettingsScreen: backend deletion failed: $e');
+                  messenger.showKubusSnackBar(
+                    SnackBar(
+                        content:
+                            Text(l10n.settingsDeleteAccountBackendFailedToast)),
+                  );
+                  if (!mounted) return;
+                  dialogNavigator.pop();
+                  return;
+                }
+
+                await SettingsService.resetApp(
+                  walletProvider: walletProvider,
+                  backendApi: BackendApiService(),
+                  notificationProvider: notificationProvider,
+                  profileProvider: profileProvider,
+                );
+
+                if (!mounted) return;
+                dialogNavigator.pop();
+                messenger.showKubusSnackBar(
+                  SnackBar(
+                    content: Text(l10n.settingsAccountDeletedToast),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+                _restartToOnboarding();
+              } else {
+                if (!mounted) return;
+                dialogNavigator.pop();
+              }
+            },
+            child: Text(l10n.settingsDeleteForeverButton),
+          ),
+        ],
+      ),
+    );
+  }
+}
+).hasMatch(confirm)) {
                 messenger.showKubusSnackBar(
                     SnackBar(content: Text(l10n.settingsPinMinLengthError)));
                 return;
