@@ -260,7 +260,19 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
     return value.replaceFirst(RegExp(r'^@+'), '');
   }
 
+  /// Sends the inline composer once. The flag is set before the first await, so
+  /// a second tap during the sign-in check cannot start a second post.
   Future<void> _submitInlinePost() async {
+    if (_composerSubmitInFlight) return;
+    _composerSubmitInFlight = true;
+    try {
+      await _runInlinePost();
+    } finally {
+      _composerSubmitInFlight = false;
+    }
+  }
+
+  Future<void> _runInlinePost() async {
     if (communityPostExceedsLimit(_composeController.text)) {
       _showComposerTextLimitToast(AppLocalizations.of(context)!);
       return;
@@ -301,12 +313,6 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       hub.setDraftCategory(_selectedCategory);
 
       final rawContent = _composeController.text.trim();
-      final mediaUrls = await _uploadComposerMedia();
-      final content = rawContent.isNotEmpty
-          ? rawContent
-          : (_composerMedia.hasImages
-              ? l10n.desktopCommunitySharedPhotoFallbackContent
-              : '🎥');
       final postType = communityComposerPostType(
         hasImage: _composerMedia.hasImages,
         hasVideo: _composerMedia.hasVideos,
@@ -317,45 +323,56 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       final locationName =
           _selectedLocation ?? draft.locationLabel ?? location?.name;
 
-      CommunityPost createdPost;
-      if (draft.targetGroup != null) {
-        final groupPost = await hub.submitGroupPost(
-          draft.targetGroup!.id,
-          content: content,
-          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-          postType: postType,
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationLabel: locationName,
-        );
-        if (groupPost == null) {
-          throw Exception('Group post creation failed');
-        }
-        createdPost = groupPost;
-      } else {
-        createdPost = await interactions.createCommunityPost(
-          content: content,
-          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-          postType: postType,
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationName: locationName,
-          locationLat: location?.lat,
-          locationLng: location?.lng,
-        );
-      }
+      final api = BackendApiService();
+      final createdPost = await _composerMedia.publish<CommunityPost>(
+        upload: (item) => uploadCommunityComposerMediaItem(api, item),
+        submit: (mediaUrls) async {
+          final content = rawContent.isNotEmpty
+              ? rawContent
+              : communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                );
+          if (draft.targetGroup != null) {
+            final groupPost = await hub.submitGroupPost(
+              draft.targetGroup!.id,
+              content: content,
+              mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+              postType: postType,
+              category: draft.category,
+              artworkId: draft.artwork?.id,
+              subjectType: draft.subjectType,
+              subjectId: draft.subjectId,
+              subjects: draft.subjects,
+              tags: draft.tags,
+              mentions: draft.mentions,
+              location: location,
+              locationLabel: locationName,
+            );
+            if (groupPost == null) {
+              throw Exception('Group post creation failed');
+            }
+            return groupPost;
+          }
+          return interactions.createCommunityPost(
+            content: content,
+            mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+            postType: postType,
+            category: draft.category,
+            artworkId: draft.artwork?.id,
+            subjectType: draft.subjectType,
+            subjectId: draft.subjectId,
+            subjects: draft.subjects,
+            tags: draft.tags,
+            mentions: draft.mentions,
+            location: location,
+            locationName: locationName,
+            locationLat: location?.lat,
+            locationLng: location?.lng,
+          );
+        },
+      );
       final achievementResult = createdPost.achievementResult;
       if (achievementResult != null && mounted) {
         context.read<TaskProvider>().applyAchievementResult(achievementResult);
@@ -1238,6 +1255,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
 
     return GestureDetector(
       onTap: () {
+        if (_isPosting) return;
         _applyState(() {
           _showComposeDialog = false;
           _composerMedia.clear();
@@ -1276,6 +1294,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                 ),
                 leading: IconButton(
                   onPressed: () {
+                    if (_isPosting) return;
                     _applyState(() {
                       _showComposeDialog = false;
                       _composerMedia.clear();

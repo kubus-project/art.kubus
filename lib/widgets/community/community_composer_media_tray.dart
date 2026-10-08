@@ -36,7 +36,7 @@ class CommunityComposerMediaTray extends StatelessWidget {
         final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
         final items = controller.items;
-        final locked = controller.isUploading;
+        final locked = controller.isLocked;
         final canAdd = !locked && !controller.isFull;
 
         return Column(

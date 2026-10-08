@@ -27,8 +27,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!
-              .communityComposerMediaLimitReached(
-                  kCommunityComposerMaxMediaItems)),
+              .communityComposerMediaLimitReached(_composerMedia.maxItems)),
         ),
       );
       return;
@@ -45,8 +44,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!
-              .communityComposerMediaLimitReached(
-                  kCommunityComposerMaxMediaItems)),
+              .communityComposerMediaLimitReached(_composerMedia.maxItems)),
         ),
       );
       return;
@@ -56,13 +54,6 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     _applyState(() {
       _composerMedia.add(<CommunityComposerPickedMedia>[picked]);
     });
-  }
-
-  Future<List<String>> _uploadComposerMedia() {
-    final api = BackendApiService();
-    return _composerMedia.uploadPending(
-      (item) => uploadCommunityComposerMediaItem(api, item),
-    );
   }
 
   Future<void> _pickLocation() async {
@@ -684,7 +675,19 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Sends the full composer once. See [_submitInlinePost] for why the flag is
+  /// set before the first await.
   Future<void> _submitPost() async {
+    if (_composerSubmitInFlight) return;
+    _composerSubmitInFlight = true;
+    try {
+      await _runPost();
+    } finally {
+      _composerSubmitInFlight = false;
+    }
+  }
+
+  Future<void> _runPost() async {
     final rawContent = _composeController.text.trim();
     if (rawContent.isEmpty && _composerMedia.isEmpty) return;
     if (communityPostExceedsLimit(rawContent)) {
@@ -724,40 +727,46 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
-      final mediaUrls = await _uploadComposerMedia();
-      if (!mounted) return;
+      final api = BackendApiService();
+      final interactions = context.read<CommunityInteractionsProvider>();
       final postType = communityComposerPostType(
         hasImage: _composerMedia.hasImages,
         hasVideo: _composerMedia.hasVideos,
       );
-      var content = rawContent;
-      if (content.isEmpty && mediaUrls.isNotEmpty) {
-        content = l10n.desktopCommunitySharedPhotoFallbackContent;
-      }
 
       final draft = hub.draft;
       final location = draft.location;
       final locationName =
           _selectedLocation ?? draft.locationLabel ?? location?.name;
 
-      if (draft.targetGroup != null) {
-        await hub.submitGroupPost(
-          draft.targetGroup!.id,
-          content: content,
-          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-          postType: postType,
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationLabel: locationName,
-        );
-      } else {
-        await context.read<CommunityInteractionsProvider>().createCommunityPost(
+      await _composerMedia.publish<void>(
+        upload: (item) => uploadCommunityComposerMediaItem(api, item),
+        submit: (mediaUrls) async {
+          final content = rawContent.isNotEmpty
+              ? rawContent
+              : communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                );
+          if (draft.targetGroup != null) {
+            await hub.submitGroupPost(
+              draft.targetGroup!.id,
+              content: content,
+              mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+              postType: postType,
+              category: draft.category,
+              artworkId: draft.artwork?.id,
+              subjectType: draft.subjectType,
+              subjectId: draft.subjectId,
+              subjects: draft.subjects,
+              tags: draft.tags,
+              mentions: draft.mentions,
+              location: location,
+              locationLabel: locationName,
+            );
+          } else {
+            await interactions.createCommunityPost(
               content: content,
               mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
               postType: postType,
@@ -773,7 +782,9 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
               locationLat: location?.lat,
               locationLng: location?.lng,
             );
-      }
+          }
+        },
+      );
 
       if (mounted) {
         _applyState(() {

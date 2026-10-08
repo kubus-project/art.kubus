@@ -66,7 +66,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   final TextEditingController _composerController = TextEditingController();
   bool _posting = false;
   final CommunityComposerMediaController _composerMedia =
-      CommunityComposerMediaController();
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
   final Set<String> _deleteDialogOpenPostIds = <String>{};
   final Set<String> _deleteInFlightPostIds = <String>{};
 
@@ -389,8 +391,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context)!
-            .communityComposerMediaLimitReached(
-                kCommunityComposerMaxMediaItems)),
+            .communityComposerMediaLimitReached(_composerMedia.maxItems)),
       ),
     );
   }
@@ -430,30 +431,32 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     setState(() => _posting = true);
     try {
       final api = BackendApiService();
-      final mediaUrls = await _composerMedia.uploadPending(
-        (item) => uploadCommunityComposerMediaItem(
+      final draft = hub.draft;
+      await _composerMedia.publish<Object?>(
+        upload: (item) => uploadCommunityComposerMediaItem(
           api,
           item,
           metadata: {'scope': 'group_post', 'groupId': summary.id},
         ),
-      );
-      final content = typedContent.isNotEmpty
-          ? typedContent
-          : (_composerMedia.hasImages ? '📷' : '🎥');
-
-      final draft = hub.draft;
-      await hub.submitGroupPost(
-        summary.id,
-        content: content,
-        mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-        postType: communityComposerPostType(
-          hasImage: _composerMedia.hasImages,
-          hasVideo: _composerMedia.hasVideos,
+        submit: (mediaUrls) => hub.submitGroupPost(
+          summary.id,
+          content: typedContent.isNotEmpty
+              ? typedContent
+              : communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                ),
+          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: communityComposerPostType(
+            hasImage: _composerMedia.hasImages,
+            hasVideo: _composerMedia.hasVideos,
+          ),
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
+          subjects: draft.subjects,
         ),
-        artworkId: draft.artwork?.id,
-        subjectType: draft.subjectType,
-        subjectId: draft.subjectId,
-        subjects: draft.subjects,
       );
 
       if (!mounted) return;

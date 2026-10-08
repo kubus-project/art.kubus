@@ -483,13 +483,6 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
   }
 
-  Future<List<String>> _uploadComposerMedia() async {
-    final api = BackendApiService();
-    return _composerMedia.uploadPending(
-      (item) => uploadCommunityComposerMediaItem(api, item),
-    );
-  }
-
   String _resolveComposerPostType() {
     return communityComposerPostType(
       hasImage: _composerMedia.hasImages,
@@ -554,7 +547,27 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
         );
   }
 
+  /// Publishes the composer once. The flag is set synchronously, so a second tap
+  /// during the wallet check cannot start a second post.
   Future<void> _submitComposer({
+    required BuildContext sheetContext,
+    required StateSetter setModalState,
+    required CommunityHubProvider hub,
+  }) async {
+    if (_composerSubmitting) return;
+    _composerSubmitting = true;
+    try {
+      await _runComposerSubmit(
+        sheetContext: sheetContext,
+        setModalState: setModalState,
+        hub: hub,
+      );
+    } finally {
+      _composerSubmitting = false;
+    }
+  }
+
+  Future<void> _runComposerSubmit({
     required BuildContext sheetContext,
     required StateSetter setModalState,
     required CommunityHubProvider hub,
@@ -564,7 +577,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     final l10n = AppLocalizations.of(sheetContext)!;
     final appModeProvider =
         Provider.of<AppModeProvider?>(sheetContext, listen: false);
-    var content = _newPostController.text.trim();
+    final content = _newPostController.text.trim();
     if (content.isEmpty && !_hasSelectedMedia) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityComposerAddContentToast)),
@@ -604,20 +617,23 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     var loadingCleared = false;
 
     try {
-      final mediaUrls = await _uploadComposerMedia();
-      if (content.isEmpty) {
-        content = _composerMedia.hasImages
-            ? '📷'
-            : (_composerMedia.hasVideos ? '🎥' : 'Shared via art.kubus');
-      }
-
       final groupName = hub.draft.targetGroup?.name;
       final isGroupPost = hub.draft.targetGroup != null;
 
-      final createdPost = await _submitCommunityPost(
-        hub: hub,
-        content: content,
-        mediaUrls: mediaUrls,
+      final api = BackendApiService();
+      final createdPost = await _composerMedia.publish<CommunityPost>(
+        upload: (item) => uploadCommunityComposerMediaItem(api, item),
+        submit: (mediaUrls) => _submitCommunityPost(
+          hub: hub,
+          content: content.isEmpty
+              ? communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                )
+              : content,
+          mediaUrls: mediaUrls,
+        ),
       );
 
       setModalState(() => _isPostingNew = false);

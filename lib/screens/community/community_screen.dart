@@ -171,8 +171,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   TextEditingController? _composerTagController;
   TextEditingController? _composerMentionController;
   bool _isPostingNew = false;
+  bool _composerSubmitting = false;
   final CommunityComposerMediaController _composerMedia =
-      CommunityComposerMediaController();
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
   double? _artFeedLatitude;

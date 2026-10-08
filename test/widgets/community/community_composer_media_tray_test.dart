@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -158,8 +159,57 @@ void main() {
     expect(videos, 1);
   });
 
+  testWidgets(
+      'a delayed create keeps every media control locked until it settles',
+      (tester) async {
+    final controller = CommunityComposerMediaController()
+      ..add([_image('one.png'), _image('two.png')]);
+    final create = Completer<String>();
+    final publishing = controller.publish<String>(
+      upload: (item) async => '/uploads/${item.name}',
+      submit: (urls) => create.future,
+    );
+    await tester.pumpWidget(_harness(controller));
+    await tester.pump();
+
+    // Every upload has finished; only the create call is still running.
+    expect(controller.uploadedUrls, hasLength(2));
+    expect(_tileButtons(tester).every((button) => button.onPressed == null),
+        isTrue);
+    expect(
+      tester
+          .widget<TextButton>(_addButton(_l10n.communityComposerMediaAddPhotos))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(_addButton(_l10n.communityComposerMediaAddVideo))
+          .onPressed,
+      isNull,
+    );
+
+    create.complete('post-1');
+    await publishing;
+    await tester.pump();
+
+    expect(find.text('0 of 10 selected'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextButton>(_addButton(_l10n.communityComposerMediaAddPhotos))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
   counterTests();
 }
+
+Finder _addButton(String label) =>
+    find.ancestor(of: find.text(label), matching: find.byType(TextButton));
+
+Iterable<IconButton> _tileButtons(WidgetTester tester) =>
+    tester.widgetList<IconButton>(find.byType(IconButton));
 
 // The counter sits under the same composer text field, so it is covered here.
 void counterTests() {

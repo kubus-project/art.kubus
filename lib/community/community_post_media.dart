@@ -1,3 +1,4 @@
+import '../config/config.dart';
 import 'community_interactions.dart';
 
 const List<String> _videoExtensions = <String>[
@@ -18,9 +19,23 @@ bool communityMediaUrlIsVideo(String url) {
   return _videoExtensions.any(path.endsWith);
 }
 
-/// The ordered media for [post]. Uses `mediaUrls` when present, and falls back
-/// to the single `imageUrl` for legacy posts. Empty values are dropped.
-List<String> communityPostMediaUrls(CommunityPost post) {
+/// The media shown for [post]. Uses `mediaUrls` when present, and falls back to
+/// the single `imageUrl` for legacy posts. Empty values are dropped.
+///
+/// With multi-media off, only the first item is shown, so a post that already
+/// holds several URLs renders as a single panel. The stored media is unchanged.
+List<String> communityPostMediaUrls(
+  CommunityPost post, {
+  bool? multiMediaEnabled,
+}) {
+  final urls = _storedMediaUrls(post);
+  final enabled =
+      multiMediaEnabled ?? AppConfig.isFeatureEnabled('communityMultiMedia');
+  if (enabled || urls.length <= 1) return urls;
+  return List<String>.unmodifiable(<String>[urls.first]);
+}
+
+List<String> _storedMediaUrls(CommunityPost post) {
   final urls = post.mediaUrls
       .map((url) => url.trim())
       .where((url) => url.isNotEmpty)

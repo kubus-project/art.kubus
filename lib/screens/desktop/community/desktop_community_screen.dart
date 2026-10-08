@@ -124,7 +124,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   int _lastHandledComposerOpenNonce = 0;
   final TextEditingController _composeController = TextEditingController();
   final CommunityComposerMediaController _composerMedia =
-      CommunityComposerMediaController();
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
+  bool _composerSubmitInFlight = false;
   String? _selectedLocation;
   String _selectedCategory = 'post';
   final TextEditingController _tagController = TextEditingController();
