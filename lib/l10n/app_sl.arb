@@ -7317,10 +7317,10 @@
   "artworkDraftArtistHelper": "Pustite prazno, če avtor ni znan.",
   "communitySearchTypeCollections": "Zbirke",
   "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}",
-  "communityComposerRateLimitedSeconds": "Objavljanje je za?asno omejeno. Poskusite znova ?ez {seconds} s. Osnutek je ohranjen.",
+  "communityComposerRateLimitedSeconds": "Objavljanje je začasno omejeno. Poskusite znova čez {seconds} s. Osnutek je ohranjen.",
   "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
-  "communityComposerRateLimitedGeneric": "Objavljanje je za?asno omejeno. Pred ponovnim poskusom po?akajte. Osnutek je ohranjen.",
-  "communityComposerDiscardDraft": "Zavre?i ta osnutek?",
-  "communityComposerAlreadyCommitted": "Objava je morda ?e objavljena. Osnutek je ohranjen. Preden ga izbri?ete ali za?nete novo objavo, preverite vir objav.",
+  "communityComposerRateLimitedGeneric": "Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.",
+  "communityComposerDiscardDraft": "Želite zavreči ta osnutek?",
+  "communityComposerAlreadyCommitted": "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.",
   "communityComposerCheckFeed": "Preveri vir objav"
 }

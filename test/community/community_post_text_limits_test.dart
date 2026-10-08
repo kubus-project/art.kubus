@@ -111,6 +111,16 @@ void main() {
           isFalse);
     });
 
+    test('new Slovenian feedback preserves its diacritics', () {
+      final sl = lookupAppLocalizations(const Locale('sl'));
+      expect(sl.communityComposerRateLimitedSeconds(45),
+          'Objavljanje je za\u010dasno omejeno. Poskusite znova \u010dez 45 s. Osnutek je ohranjen.');
+      expect(sl.communityComposerDiscardDraft,
+          '\u017delite zavre\u010di ta osnutek?');
+      expect(sl.communityComposerAlreadyCommitted,
+          'Objava je morda \u017ee objavljena. Osnutek je ohranjen. Preden ga izbri\u0161ete ali za\u010dnete novo objavo, preverite vir objav.');
+    });
+
     test('a create rate limit preserves the wait in both locales', () {
       const error = BackendApiRequestException(
         statusCode: 429,

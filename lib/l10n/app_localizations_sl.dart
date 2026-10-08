@@ -10965,18 +10965,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String communityComposerRateLimitedSeconds(int seconds) =>
-      'Objavljanje je za?asno omejeno. Poskusite znova ?ez $seconds s. Osnutek je ohranjen.';
+      'Objavljanje je začasno omejeno. Poskusite znova čez $seconds s. Osnutek je ohranjen.';
 
   @override
   String get communityComposerRateLimitedGeneric =>
-      'Objavljanje je za?asno omejeno. Pred ponovnim poskusom po?akajte. Osnutek je ohranjen.';
+      'Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.';
 
   @override
-  String get communityComposerDiscardDraft => 'Zavre?i ta osnutek?';
+  String get communityComposerDiscardDraft => 'Želite zavreči ta osnutek?';
 
   @override
   String get communityComposerAlreadyCommitted =>
-      "Objava je morda ?e objavljena. Osnutek je ohranjen. Preden ga izbri?ete ali za?nete novo objavo, preverite vir objav.";
+      "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.";
 
   @override
   String get communityComposerCheckFeed => "Preveri vir objav";
