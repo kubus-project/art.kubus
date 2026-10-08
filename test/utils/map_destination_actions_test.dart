@@ -61,6 +61,18 @@ void main() {
       expect(MapDestination.isValidCoordinate(LatLng(46.0, double.infinity)),
           isFalse);
     });
+
+    test('out-of-range latitude or longitude is rejected', () {
+      expect(
+          MapDestination.isValidCoordinate(const LatLng(90.5, 14.5)), isFalse);
+      expect(
+          MapDestination.isValidCoordinate(const LatLng(-91, 14.5)), isFalse);
+      expect(
+          MapDestination.isValidCoordinate(const LatLng(46.0, 180.5)), isFalse);
+      expect(
+          MapDestination.isValidCoordinate(const LatLng(46.0, -181)), isFalse);
+      expect(MapDestination.isValidCoordinate(const LatLng(90, 180)), isTrue);
+    });
   });
 
   group('external launching', () {
