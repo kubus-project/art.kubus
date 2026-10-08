@@ -280,12 +280,6 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       Text((ticket['status']?.toString() ?? '') + ' · ' + _date(ticket['created_at'])),
       const SizedBox(height: KubusSpacing.lg),
       Text(ticket['message']?.toString() ?? ''),
-      if ((ticket['admin_note']?.toString() ?? '').isNotEmpty) ...[
-        const Divider(height: 32),
-        Text(t('Support note', 'Opomba podpore'),
-          style: Theme.of(context).textTheme.titleMedium),
-        Text(ticket['admin_note'].toString()),
-      ],
       for (final raw in replies) ...[
         const Divider(height: 32),
         Text(raw is Map && raw['sender_type'] == 'admin'
