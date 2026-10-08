@@ -515,28 +515,29 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
             l10n.desktopSettingsFaqTileTitle,
             l10n.desktopSettingsFaqTileSubtitle,
             Icons.help_outline,
-            onTap: _showSupportDialog,
+            onTap: () => _openSupport(SupportSection.faq),
           ),
           const SizedBox(height: 12),
           _buildSettingsRow(
             l10n.settingsContactSupportButton,
             l10n.desktopSettingsContactSupportTileSubtitle,
             Icons.email_outlined,
-            onTap: _showSupportDialog,
+            onTap: () => _openSupport(SupportSection.contact),
           ),
           const SizedBox(height: 12),
           _buildSettingsRow(
             l10n.desktopSettingsReportBugTileTitle,
             l10n.desktopSettingsReportBugTileSubtitle,
             Icons.bug_report_outlined,
-            onTap: () {
-              ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(
-                    content: Text(l10n.desktopSettingsOpeningBugReportToast)),
-              );
-            },
+            onTap: () => _openSupport(SupportSection.bug),
           ),
           const SizedBox(height: 12),
+          _buildSettingsRow(
+            l10n.settingsSupportDialogTitle,
+            'View your support tickets and bug reports',
+            Icons.inbox_outlined,
+            onTap: () => _openSupport(SupportSection.requests),
+          ),
         ],
       ),
     );
