@@ -136,7 +136,10 @@ build time, through `AppConfig.isFeatureEnabled('communityMultiMedia')`.
 
 ## Verification
 
-Results at the commit that carries this note:
+Results recorded for this branch. The full suites ran at the merge commit
+9a510e67. Later commits changed only one test (made explicit about the
+switch) and this note, and the Community directories were re-run after that
+change, with the switch on and off:
 
 - **Backend (`art.kubus-backend`, feature branch on `master`):** full Jest run
   passed, 208 suites, 1,833 tests, 33 skipped, 0 failed. The upload quota tests
