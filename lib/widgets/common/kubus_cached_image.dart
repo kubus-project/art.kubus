@@ -30,6 +30,7 @@ class KubusCachedImage extends StatelessWidget {
     this.excludeFromSemantics = false,
     this.placeholderBuilder,
     this.errorBuilder,
+    this.skipRecentlyFailed = false,
   }) : assert(
           semanticLabel == null || !excludeFromSemantics,
           'semanticLabel cannot be provided when excludeFromSemantics is true.',
@@ -51,6 +52,15 @@ class KubusCachedImage extends StatelessWidget {
   final bool excludeFromSemantics;
   final WidgetBuilder? placeholderBuilder;
   final KubusImageErrorBuilder? errorBuilder;
+
+  /// Show the fallback without a request when this URL failed moments ago
+  /// (here or as a map marker cover, see [KubusMediaFailureRegistry]).
+  ///
+  /// For surfaces that rebuild continuously while open, such as the map
+  /// marker card following its marker; Flutter's image cache keeps no failed
+  /// loads, so each rebuild would otherwise request the dead URL again. Off by
+  /// default: elsewhere one failure must not hide the next attempt.
+  final bool skipRecentlyFailed;
 
   static String? versionTokenFromDate(DateTime? value) {
     if (value == null) return null;
@@ -113,10 +123,8 @@ class KubusCachedImage extends StatelessWidget {
       );
     }
 
-    // Media that just failed (here or as a map marker cover) shows its
-    // fallback without another request: a rebuilding surface, such as a quick
-    // card following its marker, would otherwise re-fetch it every frame.
-    if (KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
+    if (skipRecentlyFailed &&
+        KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
       return _withFallbackSemantics(
         errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
             _buildFallback(context, icon: Icons.broken_image_outlined),

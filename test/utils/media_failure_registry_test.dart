@@ -51,6 +51,7 @@ void main() {
             imageUrl: url,
             width: 120,
             height: 80,
+            skipRecentlyFailed: true,
             errorBuilder: (context, error, stack) {
               reportedError = error;
               return const Text('fallback');
@@ -61,6 +62,17 @@ void main() {
       expect(find.byType(Image), findsNothing);
       expect(find.text('fallback'), findsOneWidget);
       expect(reportedError, isNotNull);
+    });
+
+    testWidgets('surfaces that did not opt in still request it',
+        (tester) async {
+      KubusMediaFailureRegistry.shared.markFailed(url);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: KubusCachedImage(imageUrl: url, width: 120, height: 80),
+        ),
+      );
+      expect(find.byType(Image), findsOneWidget);
     });
 
     testWidgets('an unknown URL is still requested', (tester) async {
