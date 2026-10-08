@@ -91,6 +91,12 @@ Two repositories ship this slice. The backend must be live first.
    `--dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true`. Release builds default to
    off, so a release built without it keeps the single-attachment composer and
    shows only the first item of any multi-item post.
+   The release pipeline does not pass this flag yet. `web-artifact.yml` lists
+   its web defines explicitly, and the mobile workflows read
+   `.dart_tool/public-build-defines.json`, which
+   `scripts/prepare_public_build_config.mjs` writes. Activation means adding the
+   define to one of those, in the same way as `ANALYTICS_APP_ENABLED`. That
+   change is part of the release step, not of this feature.
 3. **Rollback** needs no source change: rebuild the frontend with
    `COMMUNITY_MULTI_MEDIA_ENABLED=false`. Stored media is untouched. Multi-item
    posts simply show their first item.
@@ -155,12 +161,37 @@ change, with the switch on and off:
   `flutter analyze` on the whole project reports no issues, and the format
   check on changed files reports no changes.
 
+Added in the completion pass:
+
+- **Mock-authenticated widget integration** of the real mobile composer
+  (`test/community/community_composer_flow_test.dart`). It uses the existing
+  `ProfileProvider.setCurrentUser` and `setAuthTokenForTesting` seams, a fake
+  image picker and a mock HTTP client. It covers ten ordered photos in one
+  create request, the eleventh being refused, a failed third upload with a
+  retry that resumes there, a failed create that unlocks the composer and
+  reuses every upload, a double tap sending one create request, and the sheet
+  closing when idle but not while publishing. With the switch off, one
+  attachment publishes. This is not real authenticated browser testing.
+- **Backend:** multer's file-count errors now answer 400, not 500. A refund
+  after a refused settlement is proven to remove only that request's units when
+  concurrent reservations share a timestamp. Both nginx configs pass `nginx -t`
+  in a container (`nginx.conf` with placeholder certificates).
+
 Not verified in this pass:
 
-- **Authenticated browser QA.** No authorized staging account was used. The
-  composer is gated for guests, so the publish journey, the failed-upload and
-  retry scenario, and the desktop and group composers were not exercised in a
-  browser. Coverage here is unit and widget tests.
+- **Real authenticated browser QA** of any composer, and the desktop inline,
+  desktop dialog and group composers. Only the mobile composer was driven end
+  to end, in a widget test. No authorized staging account was available.
+- **Thumbnail pictures and aspect ratio.** Screenshots from the test harness did
+  not show image thumbnails reliably, so thumbnail rendering was not confirmed
+  visually. Tile states (uploading, locked, failed, ten items, 320 px at 2x
+  text) were inspected and showed no overflow.
+- **Editing and reposting** beyond the existing unit tests.
+- **Client retry of `POST /api/community/posts` on a 5xx.** The client retries a
+  failed create, and a retry after a server-side success could duplicate a
+  post. This is existing behaviour and was not changed.
+- **A hung upload.** The composer cannot be closed while publishing, so a
+  stalled upload holds it until the request timeout.
 - **A rate-limit mutation check.** An attempt to show that the batch test fails
   without settlement was blocked by a permission policy, and the working tree was
   restored at once. The claim rests on reading the test assertions, not on a run.
