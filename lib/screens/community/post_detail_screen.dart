@@ -1838,6 +1838,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               CommunityPostCard(
                                 post: _post!,
                                 accentColor: themeProvider.accentColor,
+                                expandCaption: true,
                                 onOpenPostDetail: (target) {
                                   // In detail, avoid pushing the same post.
                                   if (_post != null && target.id == _post!.id) {
