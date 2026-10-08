@@ -7777,11 +7777,13 @@ class BackendApiService
     required String subject,
     required String message,
     String? email,
+    String kind = 'support',
   }) async {
     try {
       final payload = <String, dynamic>{
         'subject': subject.trim(),
         'message': message.trim(),
+        'kind': kind == 'bug' ? 'bug' : 'support',
       };
       final emailTrimmed = (email ?? '').trim();
       if (emailTrimmed.isNotEmpty) {
@@ -7814,6 +7816,58 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
       rethrow;
+    }
+  }
+
+
+  /// A signed-in user's support inbox; the server enforces requester ownership.
+  Future<List<Map<String, dynamic>>> getMySupportTickets() async {
+    final response = await _get(
+      Uri.parse('$baseUrl/api/support/tickets'),
+      headers: _getHeaders(),
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/support/tickets',
+        body: response.body,
+      );
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return (decoded['data'] as List<dynamic>)
+        .map((value) => Map<String, dynamic>.from(value as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> getMySupportTicket(String id) async {
+    final response = await _get(
+      Uri.parse('$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}'),
+      headers: _getHeaders(),
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/support/tickets/:id',
+        body: response.body,
+      );
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(decoded['data'] as Map);
+  }
+
+  Future<void> replyToSupportTicket(String id, String message) async {
+    final response = await _post(
+      Uri.parse('$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}/replies'),
+      headers: _getHeaders(),
+      body: jsonEncode({'message': message.trim()}),
+      isIdempotent: false,
+    );
+    if (response.statusCode != 201) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/support/tickets/:id/replies',
+        body: response.body,
+      );
     }
   }
 
