@@ -6,142 +6,130 @@ part of '../settings_screen.dart';
 extension _SettingsScreenStatePart2 on _SettingsScreenState {
   Widget _buildPrivacySection(AppLocalizations l10n) {
     final configProvider = context.watch<ConfigProvider>();
-    return _buildSection(
-      l10n.settingsDataAnalyticsSectionTitle,
-      [
-        // Mock Data toggle removed - backend controls via USE_MOCK_DATA env variable
-        _buildSettingsTile(
-          l10n.settingsAnalyticsTileTitle,
-          l10n.settingsAnalyticsTileSubtitle,
-          Icons.analytics,
-          trailing: Switch(
-            value: configProvider.enableAnalytics,
-            onChanged: configProvider.setEnableAnalytics,
-            activeThumbColor: KubusColorRoles.of(context).active,
-          ),
+    return _buildSection(l10n.settingsDataAnalyticsSectionTitle, [
+      // Mock Data toggle removed - backend controls via USE_MOCK_DATA env variable
+      _buildSettingsTile(
+        l10n.settingsAnalyticsTileTitle,
+        l10n.settingsAnalyticsTileSubtitle,
+        Icons.analytics,
+        trailing: Switch(
+          value: configProvider.enableAnalytics,
+          onChanged: configProvider.setEnableAnalytics,
+          activeThumbColor: KubusColorRoles.of(context).active,
         ),
-        _buildSettingsTile(
-          l10n.settingsCrashReportingTileTitle,
-          l10n.settingsCrashReportingTileSubtitle,
-          Icons.bug_report,
-          trailing: Switch(
-            value: configProvider.enableCrashReporting,
-            onChanged: configProvider.setEnableCrashReporting,
-            activeThumbColor: KubusColorRoles.of(context).active,
-          ),
+      ),
+      _buildSettingsTile(
+        l10n.settingsCrashReportingTileTitle,
+        l10n.settingsCrashReportingTileSubtitle,
+        Icons.bug_report,
+        trailing: Switch(
+          value: configProvider.enableCrashReporting,
+          onChanged: configProvider.setEnableCrashReporting,
+          activeThumbColor: KubusColorRoles.of(context).active,
         ),
-        _buildSettingsTile(
-          l10n.settingsSkipOnboardingTileTitle,
-          l10n.settingsSkipOnboardingTileSubtitle,
-          Icons.fast_forward,
-          trailing: Switch(
-            value: _skipOnboardingForReturningUsers,
-            onChanged: (value) {
-              _applyState(() {
-                _skipOnboardingForReturningUsers = value;
-              });
-              _saveAllSettings();
-            },
-            activeThumbColor: KubusColorRoles.of(context).active,
-          ),
+      ),
+      _buildSettingsTile(
+        l10n.settingsSkipOnboardingTileTitle,
+        l10n.settingsSkipOnboardingTileSubtitle,
+        Icons.fast_forward,
+        trailing: Switch(
+          value: _skipOnboardingForReturningUsers,
+          onChanged: (value) {
+            _applyState(() {
+              _skipOnboardingForReturningUsers = value;
+            });
+            _saveAllSettings();
+          },
+          activeThumbColor: KubusColorRoles.of(context).active,
         ),
-        _buildSettingsTile(
-          l10n.settingsDataExportTileTitle,
-          l10n.settingsDataExportTileSubtitle,
-          Icons.download,
-          onTap: () => _showDataExportDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsResetPermissionFlagsTileTitle,
-          l10n.settingsResetPermissionFlagsTileSubtitle,
-          Icons.location_off,
-          onTap: () => _showResetPermissionFlagsDialog(),
-        ),
-      ],
-    );
+      ),
+      _buildSettingsTile(
+        l10n.settingsDataExportTileTitle,
+        l10n.settingsDataExportTileSubtitle,
+        Icons.download,
+        onTap: () => _showDataExportDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsResetPermissionFlagsTileTitle,
+        l10n.settingsResetPermissionFlagsTileSubtitle,
+        Icons.location_off,
+        onTap: () => _showResetPermissionFlagsDialog(),
+      ),
+    ]);
   }
 
   Widget _buildAboutSection(AppLocalizations l10n) {
-    return _buildSection(
-      l10n.settingsAboutSectionTitle,
-      [
-        _buildSettingsTile(
-          l10n.settingsAboutVersionTileTitle,
-          AppInfo.version,
-          Icons.app_registration,
-          onTap: () => _showVersionDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsAboutTermsTileTitle,
-          l10n.settingsAboutTermsTileSubtitle,
-          Icons.description,
-          onTap: () => _showTermsDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsAboutPrivacyTileTitle,
-          l10n.settingsAboutPrivacyTileSubtitle,
-          Icons.privacy_tip,
-          onTap: () => _showPrivacyPolicyDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsAboutSupportTileTitle,
-          l10n.settingsAboutSupportTileSubtitle,
-          Icons.help,
-          onTap: () => _showSupportDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsAboutLicensesTileTitle,
-          l10n.settingsAboutLicensesTileSubtitle,
-          Icons.code,
-          onTap: () => _showLicensesDialog(),
-        ),
-        _buildSettingsTile(
-          l10n.settingsAboutRateTileTitle,
-          l10n.settingsAboutRateTileSubtitle,
-          Icons.star,
-          onTap: () => _showRateAppDialog(),
-        ),
-      ],
-    );
+    return _buildSection(l10n.settingsAboutSectionTitle, [
+      _buildSettingsTile(
+        l10n.settingsAboutVersionTileTitle,
+        AppInfo.version,
+        Icons.app_registration,
+        onTap: () => _showVersionDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsAboutTermsTileTitle,
+        l10n.settingsAboutTermsTileSubtitle,
+        Icons.description,
+        onTap: () => _showTermsDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsAboutPrivacyTileTitle,
+        l10n.settingsAboutPrivacyTileSubtitle,
+        Icons.privacy_tip,
+        onTap: () => _showPrivacyPolicyDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsAboutSupportTileTitle,
+        l10n.settingsAboutSupportTileSubtitle,
+        Icons.help,
+        onTap: () => _showSupportDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsAboutLicensesTileTitle,
+        l10n.settingsAboutLicensesTileSubtitle,
+        Icons.code,
+        onTap: () => _showLicensesDialog(),
+      ),
+      _buildSettingsTile(
+        l10n.settingsAboutRateTileTitle,
+        l10n.settingsAboutRateTileSubtitle,
+        Icons.star,
+        onTap: () => _showRateAppDialog(),
+      ),
+    ]);
   }
 
   Widget _buildDangerZone(AppLocalizations l10n) {
-    return _buildSection(
-      l10n.settingsDangerZoneSectionTitle,
-      [
-        _buildSettingsTile(
-          l10n.settingsLogoutTileTitle,
-          l10n.settingsLogoutTileSubtitle,
-          Icons.logout,
-          onTap: _handleLogout,
-          isDestructive: true,
-        ),
-        _buildSettingsTile(
-          l10n.settingsResetAppTileTitle,
-          l10n.settingsResetAppTileSubtitle,
-          Icons.refresh,
-          onTap: () => _showResetDialog(),
-          isDestructive: true,
-        ),
-        _buildSettingsTile(
-          l10n.settingsDeleteAccountTileTitle,
-          l10n.settingsDeleteAccountTileSubtitle,
-          Icons.delete_forever,
-          onTap: () => _showDeleteAccountDialog(),
-          isDestructive: true,
-        ),
-      ],
-    );
+    return _buildSection(l10n.settingsDangerZoneSectionTitle, [
+      _buildSettingsTile(
+        l10n.settingsLogoutTileTitle,
+        l10n.settingsLogoutTileSubtitle,
+        Icons.logout,
+        onTap: _handleLogout,
+        isDestructive: true,
+      ),
+      _buildSettingsTile(
+        l10n.settingsResetAppTileTitle,
+        l10n.settingsResetAppTileSubtitle,
+        Icons.refresh,
+        onTap: () => _showResetDialog(),
+        isDestructive: true,
+      ),
+      _buildSettingsTile(
+        l10n.settingsDeleteAccountTileTitle,
+        l10n.settingsDeleteAccountTileSubtitle,
+        Icons.delete_forever,
+        onTap: () => _showDeleteAccountDialog(),
+        isDestructive: true,
+      ),
+    ]);
   }
 
   Widget _buildSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SharedSectionHeader(
-          title: title,
-          padding: EdgeInsets.zero,
-        ),
+        SharedSectionHeader(title: title, padding: EdgeInsets.zero),
         const SizedBox(height: 16),
         ...children,
       ],
@@ -267,8 +255,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
                   SnackBar(
-                      content:
-                          Text(l10n.settingsSwitchedToNetworkToast('Mainnet'))),
+                    content: Text(
+                      l10n.settingsSwitchedToNetworkToast('Mainnet'),
+                    ),
+                  ),
                 );
               },
             ),
@@ -289,8 +279,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
                   SnackBar(
-                      content:
-                          Text(l10n.settingsSwitchedToNetworkToast('Devnet'))),
+                    content: Text(
+                      l10n.settingsSwitchedToNetworkToast('Devnet'),
+                    ),
+                  ),
                 );
               },
             ),
@@ -311,8 +303,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
                   SnackBar(
-                      content:
-                          Text(l10n.settingsSwitchedToNetworkToast('Testnet'))),
+                    content: Text(
+                      l10n.settingsSwitchedToNetworkToast('Testnet'),
+                    ),
+                  ),
                 );
               },
             ),
@@ -334,7 +328,11 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
   }
 
   Widget _buildNetworkOption(
-      String name, String description, bool isSelected, VoidCallback onTap) {
+    String name,
+    String description,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(KubusRadius.sm),
@@ -349,9 +347,9 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           ),
           borderRadius: BorderRadius.circular(KubusRadius.sm),
           color: isSelected
-              ? Provider.of<ThemeProvider>(context)
-                  .accentColor
-                  .withValues(alpha: 0.1)
+              ? Provider.of<ThemeProvider>(
+                  context,
+                ).accentColor.withValues(alpha: 0.1)
               : Theme.of(context).colorScheme.primaryContainer,
         ),
         child: Row(
@@ -378,10 +376,9 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                     description,
                     style: KubusTypography.inter(
                       fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -408,11 +405,13 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
 
   Future<void> _navigateToRecoveryReveal(WalletProvider walletProvider) async {
     final l10n = AppLocalizations.of(context)!;
-    final hasWallet = walletProvider.wallet != null ||
+    final hasWallet =
+        walletProvider.wallet != null ||
         (walletProvider.currentWalletAddress ?? '').isNotEmpty;
     if (!hasWallet) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-          content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)),
+      );
       return;
     }
     await Navigator.of(context).push(
@@ -429,62 +428,62 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
       {
         'label': 'Immediately',
         'seconds': -1,
-        'display': l10n.settingsAutoLockImmediately
+        'display': l10n.settingsAutoLockImmediately,
       },
       {
         'label': '10 seconds',
         'seconds': 10,
-        'display': l10n.settingsAutoLock10Seconds
+        'display': l10n.settingsAutoLock10Seconds,
       },
       {
         'label': '30 seconds',
         'seconds': 30,
-        'display': l10n.settingsAutoLock30Seconds
+        'display': l10n.settingsAutoLock30Seconds,
       },
       {
         'label': '1 minute',
         'seconds': 60,
-        'display': l10n.settingsAutoLock1Minute
+        'display': l10n.settingsAutoLock1Minute,
       },
       {
         'label': '5 minutes',
         'seconds': 5 * 60,
-        'display': l10n.settingsAutoLock5Minutes
+        'display': l10n.settingsAutoLock5Minutes,
       },
       {
         'label': '15 minutes',
         'seconds': 15 * 60,
-        'display': l10n.settingsAutoLock15Minutes
+        'display': l10n.settingsAutoLock15Minutes,
       },
       {
         'label': '30 minutes',
         'seconds': 30 * 60,
-        'display': l10n.settingsAutoLock30Minutes
+        'display': l10n.settingsAutoLock30Minutes,
       },
       {
         'label': '1 hour',
         'seconds': 60 * 60,
-        'display': l10n.settingsAutoLock1Hour
+        'display': l10n.settingsAutoLock1Hour,
       },
       {
         'label': '3 hours',
         'seconds': 3 * 60 * 60,
-        'display': l10n.settingsAutoLock3Hours
+        'display': l10n.settingsAutoLock3Hours,
       },
       {
         'label': '6 hours',
         'seconds': 6 * 60 * 60,
-        'display': l10n.settingsAutoLock6Hours
+        'display': l10n.settingsAutoLock6Hours,
       },
       {
         'label': '12 hours',
         'seconds': 12 * 60 * 60,
-        'display': l10n.settingsAutoLock12Hours
+        'display': l10n.settingsAutoLock12Hours,
       },
       {
         'label': '1 day',
         'seconds': 24 * 60 * 60,
-        'display': l10n.settingsAutoLock1Day
+        'display': l10n.settingsAutoLock1Day,
       },
       {'label': 'Never', 'seconds': 0, 'display': l10n.settingsAutoLockNever},
     ];
@@ -514,9 +513,13 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 ),
               ),
               trailing: isSelected
-                  ? Icon(Icons.check,
-                      color: Provider.of<ThemeProvider>(context, listen: false)
-                          .accentColor)
+                  ? Icon(
+                      Icons.check,
+                      color: Provider.of<ThemeProvider>(
+                        context,
+                        listen: false,
+                      ).accentColor,
+                    )
                   : null,
               onTap: () async {
                 final navigator = Navigator.of(context);
@@ -531,8 +534,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 navigator.pop();
                 messenger.showKubusSnackBar(
                   SnackBar(
-                      content:
-                          Text(l10n.settingsAutoLockSetToToast(displayLabel))),
+                    content: Text(
+                      l10n.settingsAutoLockSetToToast(displayLabel),
+                    ),
+                  ),
                 );
               },
             );
@@ -552,7 +557,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         if (mounted) {
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.settingsConnectOrCreateWalletFirstToast)),
+              content: Text(l10n.settingsConnectOrCreateWalletFirstToast),
+            ),
           );
         }
         _applyState(() => _biometricAuth = false);
@@ -649,11 +655,15 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
-            Icon(Icons.shield_outlined,
-                color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.shield_outlined,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
-            Text(l10n.settingsExportRecoveryPhraseDialogTitle,
-                style: KubusTypography.inter(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.settingsExportRecoveryPhraseDialogTitle,
+              style: KubusTypography.inter(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         content: Column(
@@ -663,25 +673,27 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
             Text(
               l10n.settingsExportRecoveryPhraseDialogBody,
               style: KubusTypography.inter(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.8)),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.lock_outline,
-                    color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.lock_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.settingsExportRecoveryPhraseDialogConfirm,
                     style: KubusTypography.inter(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7)),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
               ],
@@ -690,8 +702,9 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.commonCancel)),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonCancel),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
@@ -716,11 +729,15 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
-            Icon(Icons.report_gmailerrorred,
-                color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.report_gmailerrorred,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
-            Text(l10n.settingsImportWalletDialogTitle,
-                style: KubusTypography.inter(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.settingsImportWalletDialogTitle,
+              style: KubusTypography.inter(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         content: Column(
@@ -730,25 +747,27 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
             Text(
               l10n.settingsImportWalletDialogBody,
               style: KubusTypography.inter(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.8)),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.privacy_tip_outlined,
-                    color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.privacy_tip_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.settingsImportWalletDialogConfirm,
                     style: KubusTypography.inter(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7)),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
               ],
@@ -757,13 +776,17 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.commonCancel)),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonCancel),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const ConnectWallet(initialStep: 1)));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ConnectWallet(initialStep: 1),
+                ),
+              );
             },
             child: Text(l10n.commonProceed),
           ),
@@ -797,9 +820,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               controller: pinController,
               obscureText: true,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.commonPinLabel,
-              ),
+              decoration: InputDecoration(labelText: l10n.commonPinLabel),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -815,46 +836,55 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonCancel,
-                style: KubusTypography.inter(
-                    color: Theme.of(context).colorScheme.outline)),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
           ),
           if (_hasPin)
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-              // Clearing PIN requires verification. If the user forgot it, they
-              // must logout and re-login.
-              await gate.lock(SecurityLockReason.sensitiveAction);
-              final settled = await gate.waitForResolution();
-              if (settled == null || !settled.isSuccess) {
-                return;
-              }
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                // Clearing PIN requires verification. If the user forgot it, they
+                // must logout and re-login.
+                await gate.lock(SecurityLockReason.sensitiveAction);
+                final settled = await gate.waitForResolution();
+                if (settled == null || !settled.isSuccess) {
+                  return;
+                }
 
-              await walletProvider.clearPin();
-              if (!mounted) return;
-              _applyState(() {
-                _requirePin = false;
-                _biometricAuth = false;
-                _useBiometricsOnUnlock = true;
-                _hasPin = false;
-              });
-              await _saveAllSettings();
-              await gate.reloadSettings();
-              navigator.pop();
-              messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsPinClearedToast)));
-            },
-            child: Text(l10n.settingsClearPinButton,
+                await walletProvider.clearPin();
+                if (!mounted) return;
+                _applyState(() {
+                  _requirePin = false;
+                  _biometricAuth = false;
+                  _useBiometricsOnUnlock = true;
+                  _hasPin = false;
+                });
+                await _saveAllSettings();
+                await gate.reloadSettings();
+                navigator.pop();
+                messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinClearedToast)),
+                );
+              },
+              child: Text(
+                l10n.settingsClearPinButton,
                 style: KubusTypography.inter(
-                    color: Theme.of(context).colorScheme.error)),
-          ),
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor),
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
+            ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
@@ -863,20 +893,22 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               if (!RegExp(r'^[0-9]{4,12}$').hasMatch(pin) ||
                   !RegExp(r'^[0-9]{4,12}$').hasMatch(confirm)) {
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                  SnackBar(content: Text(l10n.settingsPinMinLengthError)),
+                );
                 return;
               }
               if (pin != confirm) {
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                  SnackBar(content: Text(l10n.settingsPinMismatchError)),
+                );
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 final hasPin = await walletProvider.hasPin();
-                final biometricsSupported =
-                    await walletProvider.canUseBiometrics();
+                final biometricsSupported = await walletProvider
+                    .canUseBiometrics();
                 if (!mounted) return;
                 _applyState(() {
                   _hasPin = hasPin;
@@ -887,16 +919,21 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 await gate.reloadSettings();
                 navigator.pop();
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+                  SnackBar(content: Text(l10n.settingsPinSetSuccessToast)),
+                );
               } catch (e) {
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+                  SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
+                );
               }
             },
-            child: Text(l10n.commonSave,
-                style: KubusTypography.inter(
-                    color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(
+              l10n.commonSave,
+              style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -934,9 +971,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
@@ -980,15 +1018,19 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.commonCancel,
-                style: KubusTypography.inter(
-                    color: Theme.of(dialogContext).colorScheme.outline)),
+            child: Text(
+              l10n.commonCancel,
+              style: KubusTypography.inter(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
             ),
             onPressed: () async {
               Navigator.of(dialogContext).pop();
@@ -998,9 +1040,12 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
               );
             },
-            child: Text(l10n.settingsResetButton,
-                style: KubusTypography.inter(
-                    color: Theme.of(dialogContext).colorScheme.onPrimary)),
+            child: Text(
+              l10n.settingsResetButton,
+              style: KubusTypography.inter(
+                color: Theme.of(dialogContext).colorScheme.onPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1046,9 +1091,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
@@ -1078,8 +1124,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               navigator.pop();
               messenger.showKubusSnackBar(
                 SnackBar(
-                    content: Text(
-                        l10n.settingsDataExportedToast(exportData.length))),
+                  content: Text(
+                    l10n.settingsDataExportedToast(exportData.length),
+                  ),
+                ),
               );
             },
             child: Text(l10n.settingsExportButton),
@@ -1126,12 +1174,18 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final walletProvider =
-                  Provider.of<WalletProvider>(context, listen: false);
-              final notificationProvider =
-                  Provider.of<NotificationProvider>(context, listen: false);
-              final profileProvider =
-                  Provider.of<ProfileProvider>(context, listen: false);
+              final walletProvider = Provider.of<WalletProvider>(
+                context,
+                listen: false,
+              );
+              final notificationProvider = Provider.of<NotificationProvider>(
+                context,
+                listen: false,
+              );
+              final profileProvider = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
               await SettingsService.resetApp(
                 walletProvider: walletProvider,
                 backendApi: BackendApiService(),
@@ -1215,15 +1269,18 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, false),
-                      child: Text(l10n.commonCancel,
-                          style: KubusTypography.inter()),
+                      child: Text(
+                        l10n.commonCancel,
+                        style: KubusTypography.inter(),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, true),
                       child: Text(
                         l10n.settingsConfirmButton,
                         style: KubusTypography.inter(
-                            color: Theme.of(confirmContext).colorScheme.error),
+                          color: Theme.of(confirmContext).colorScheme.error,
+                        ),
                       ),
                     ),
                   ],
@@ -1232,12 +1289,18 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
 
               if (!mounted) return;
               if (confirmed == true) {
-                final walletProvider =
-                    Provider.of<WalletProvider>(context, listen: false);
-                final notificationProvider =
-                    Provider.of<NotificationProvider>(context, listen: false);
-                final profileProvider =
-                    Provider.of<ProfileProvider>(context, listen: false);
+                final walletProvider = Provider.of<WalletProvider>(
+                  context,
+                  listen: false,
+                );
+                final notificationProvider = Provider.of<NotificationProvider>(
+                  context,
+                  listen: false,
+                );
+                final profileProvider = Provider.of<ProfileProvider>(
+                  context,
+                  listen: false,
+                );
 
                 // Delete the authenticated account (users.id), never just
                 // wallet-scoped data. Requires a valid backend token; local
@@ -1248,8 +1311,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                   debugPrint('SettingsScreen: backend deletion failed: $e');
                   messenger.showKubusSnackBar(
                     SnackBar(
-                        content:
-                            Text(l10n.settingsDeleteAccountBackendFailedToast)),
+                      content: Text(
+                        l10n.settingsDeleteAccountBackendFailedToast,
+                      ),
+                    ),
                   );
                   if (!mounted) return;
                   dialogNavigator.pop();
