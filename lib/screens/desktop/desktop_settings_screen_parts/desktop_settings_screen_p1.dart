@@ -928,74 +928,13 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
   }
 
   void _showSupportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    final rootContext = context;
-    showKubusDialog(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
-        title: Text(
-          l10n.settingsSupportDialogTitle,
-          style: KubusTextStyles.sheetTitle.copyWith(
-            color: Theme.of(dialogContext).colorScheme.onSurface,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.settingsSupportDialogBody,
-              style: KubusTextStyles.detailBody.copyWith(
-                color: Theme.of(dialogContext).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.primary,
-                  foregroundColor:
-                      Theme.of(dialogContext).colorScheme.onPrimary),
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(rootContext).showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
-              },
-              icon: const Icon(Icons.help_outline),
-              label: Text(l10n.settingsViewFaqButton),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.primary,
-                  foregroundColor:
-                      Theme.of(dialogContext).colorScheme.onPrimary),
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(rootContext);
-                Navigator.pop(dialogContext);
+    _openSupport(SupportSection.faq);
+  }
 
-                if (!AppConfig.isFeatureEnabled('supportTickets')) {
-                  messenger.showKubusSnackBar(SnackBar(
-                      content: Text(l10n.settingsOpeningEmailClientToast)));
-                  return;
-                }
-
-                await showKubusDialog<bool>(
-                  context: rootContext,
-                  builder: (_) => const SupportTicketDialog(),
-                );
-              },
-              icon: const Icon(Icons.email),
-              label: Text(l10n.settingsContactSupportButton),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.commonClose)),
-        ],
-      ),
-    );
+  void _openSupport(SupportSection section) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SupportCenterScreen(initialSection: section),
+    ));
   }
 
   void _showLicensesDialog() {
