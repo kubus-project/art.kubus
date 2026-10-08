@@ -10848,6 +10848,111 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerCreatePostFailedToast => 'Failed to create post.';
 
   @override
+  String communityUploadRateLimitedSeconds(int seconds) {
+    return 'Upload limit reached. Try again in $seconds seconds.';
+  }
+
+  @override
+  String communityUploadRateLimitedMinutes(int minutes) {
+    return 'Upload limit reached. Try again in about $minutes minutes.';
+  }
+
+  @override
+  String get communityUploadRateLimitedGeneric =>
+      'Too many uploads right now. Wait a moment and try again.';
+
+  @override
+  String get communityComposerMediaAddPhotos => 'Add photos';
+
+  @override
+  String get communityComposerMediaAddVideo => 'Add video';
+
+  @override
+  String communityComposerMediaLimitReached(int max) {
+    return 'You can add up to $max items to a post.';
+  }
+
+  @override
+  String communityComposerMediaCount(int count, int max) {
+    return '$count of $max selected';
+  }
+
+  @override
+  String get communityComposerMediaMoveEarlier => 'Move earlier';
+
+  @override
+  String get communityComposerMediaMoveLater => 'Move later';
+
+  @override
+  String get communityComposerMediaRetry => 'Retry upload';
+
+  @override
+  String communityComposerMediaUploadFailed(int count) {
+    return '$count files could not be uploaded. Your draft is kept, so you can retry.';
+  }
+
+  @override
+  String get communityComposerMediaStatusPending => 'Waiting to upload';
+
+  @override
+  String get communityComposerMediaStatusUploading => 'Uploading…';
+
+  @override
+  String get communityComposerMediaStatusFailed => 'Upload failed';
+
+  @override
+  String get communityComposerMediaStatusDone => 'Uploaded';
+
+  @override
+  String communityComposerCharactersRemaining(int count) {
+    return '$count characters left';
+  }
+
+  @override
+  String communityComposerCharacterLimitExceeded(int max) {
+    return 'Posts can be up to $max characters. Shorten your text to publish.';
+  }
+
+  @override
+  String get communityPostShowMore => 'more';
+
+  @override
+  String get communityPostShowLess => 'less';
+
+  @override
+  String communityMediaCarouselPosition(int index, int total) {
+    return 'Media $index of $total';
+  }
+
+  @override
+  String get communityMediaPrevious => 'Previous media';
+
+  @override
+  String get communityMediaNext => 'Next media';
+
+  @override
+  String get communityMediaVideoPlay => 'Play video';
+
+  @override
+  String get communityMediaVideoPause => 'Pause video';
+
+  @override
+  String get communityMediaVideoMute => 'Mute video';
+
+  @override
+  String get communityMediaVideoUnmute => 'Unmute video';
+
+  @override
+  String get communityMediaVideoUnavailable =>
+      'This video cannot be played here.';
+
+  @override
+  String get communityMediaImageUnavailable => 'Image unavailable';
+
+  @override
+  String get communityPostOpenOriginal => 'View original post';
+
+  @override
   String get communityToggleLikeFailedToast => 'Failed to update like.';
 
   @override

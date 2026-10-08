@@ -52,6 +52,7 @@ KubusFailureKind classifyKubusFailure(Object? error) {
   if (error is BackendApiRequestException) {
     return kubusFailureKindForStatus(error.statusCode, body: error.body);
   }
+  if (error is UploadRateLimitedException) return KubusFailureKind.rateLimit;
   if (error is TimeoutException) return KubusFailureKind.network;
   if (error is UnsupportedError || error is UnimplementedError) {
     return KubusFailureKind.unsupported;

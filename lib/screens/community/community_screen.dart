@@ -51,6 +51,7 @@ import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_upload_feedback.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/notification_provider.dart';

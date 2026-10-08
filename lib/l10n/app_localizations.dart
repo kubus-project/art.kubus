@@ -18882,6 +18882,180 @@ abstract class AppLocalizations {
   /// **'Failed to create post.'**
   String get communityComposerCreatePostFailedToast;
 
+  /// No description provided for @communityUploadRateLimitedSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in {seconds} seconds.'**
+  String communityUploadRateLimitedSeconds(int seconds);
+
+  /// No description provided for @communityUploadRateLimitedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in about {minutes} minutes.'**
+  String communityUploadRateLimitedMinutes(int minutes);
+
+  /// No description provided for @communityUploadRateLimitedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many uploads right now. Wait a moment and try again.'**
+  String get communityUploadRateLimitedGeneric;
+
+  /// No description provided for @communityComposerMediaAddPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos'**
+  String get communityComposerMediaAddPhotos;
+
+  /// No description provided for @communityComposerMediaAddVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add video'**
+  String get communityComposerMediaAddVideo;
+
+  /// No description provided for @communityComposerMediaLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You can add up to {max} items to a post.'**
+  String communityComposerMediaLimitReached(int max);
+
+  /// No description provided for @communityComposerMediaCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {max} selected'**
+  String communityComposerMediaCount(int count, int max);
+
+  /// No description provided for @communityComposerMediaMoveEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get communityComposerMediaMoveEarlier;
+
+  /// No description provided for @communityComposerMediaMoveLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get communityComposerMediaMoveLater;
+
+  /// No description provided for @communityComposerMediaRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get communityComposerMediaRetry;
+
+  /// No description provided for @communityComposerMediaUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files could not be uploaded. Your draft is kept, so you can retry.'**
+  String communityComposerMediaUploadFailed(int count);
+
+  /// No description provided for @communityComposerMediaStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to upload'**
+  String get communityComposerMediaStatusPending;
+
+  /// No description provided for @communityComposerMediaStatusUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get communityComposerMediaStatusUploading;
+
+  /// No description provided for @communityComposerMediaStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get communityComposerMediaStatusFailed;
+
+  /// No description provided for @communityComposerMediaStatusDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get communityComposerMediaStatusDone;
+
+  /// No description provided for @communityComposerCharactersRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters left'**
+  String communityComposerCharactersRemaining(int count);
+
+  /// No description provided for @communityComposerCharacterLimitExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts can be up to {max} characters. Shorten your text to publish.'**
+  String communityComposerCharacterLimitExceeded(int max);
+
+  /// No description provided for @communityPostShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'more'**
+  String get communityPostShowMore;
+
+  /// No description provided for @communityPostShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'less'**
+  String get communityPostShowLess;
+
+  /// No description provided for @communityMediaCarouselPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Media {index} of {total}'**
+  String communityMediaCarouselPosition(int index, int total);
+
+  /// No description provided for @communityMediaPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous media'**
+  String get communityMediaPrevious;
+
+  /// No description provided for @communityMediaNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next media'**
+  String get communityMediaNext;
+
+  /// No description provided for @communityMediaVideoPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play video'**
+  String get communityMediaVideoPlay;
+
+  /// No description provided for @communityMediaVideoPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause video'**
+  String get communityMediaVideoPause;
+
+  /// No description provided for @communityMediaVideoMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute video'**
+  String get communityMediaVideoMute;
+
+  /// No description provided for @communityMediaVideoUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute video'**
+  String get communityMediaVideoUnmute;
+
+  /// No description provided for @communityMediaVideoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This video cannot be played here.'**
+  String get communityMediaVideoUnavailable;
+
+  /// No description provided for @communityMediaImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Image unavailable'**
+  String get communityMediaImageUnavailable;
+
+  /// No description provided for @communityPostOpenOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'View original post'**
+  String get communityPostOpenOriginal;
+
   /// No description provided for @communityToggleLikeFailedToast.
   ///
   /// In en, this message translates to:

@@ -656,7 +656,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       }
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.communityComposerCreatePostFailedToast)),
+        SnackBar(content: Text(communityComposerFailureMessage(l10n, e))),
       );
     } finally {
       if (!loadingCleared) {

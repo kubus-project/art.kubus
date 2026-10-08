@@ -9,6 +9,7 @@ import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
+import '../../community/community_upload_feedback.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -458,7 +459,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.communityComposerCreatePostFailedToast),
+          content: Text(communityComposerFailureMessage(l10n, e)),
           duration: const Duration(seconds: 3),
         ),
       );
