@@ -248,6 +248,41 @@ void main() {
     });
   });
 
+  group('authorship adds no action', () {
+    testWidgets(
+        'a recorded, unknown or wallet-only artist yields the same actions',
+        (tester) async {
+      final recorded = _ids(await _actions(
+        tester,
+        marker: _marker(),
+        artwork: _artwork(),
+      ));
+      final unknown = _ids(await _actions(
+        tester,
+        marker: _marker(),
+        artwork: _artwork().copyWith(artist: ''),
+      ));
+      final walletOnly = _ids(await _actions(
+        tester,
+        marker: _marker(),
+        artwork: _artwork().copyWith(
+          artist: '',
+          walletAddress: 'uploader-wallet',
+        ),
+      ));
+      // Authorship is shown as text on the card, never as an action: no artist
+      // profile is linked, so nothing may be derived from who made the work.
+      expect(recorded, <String?>[
+        'marker_directions',
+        'marker_save',
+        'marker_share',
+        'marker_like',
+      ]);
+      expect(unknown, recorded);
+      expect(walletOnly, recorded);
+    });
+  });
+
   group('ordering and accessibility', () {
     testWidgets('directions precede the engagement actions', (tester) async {
       final actions = await _actions(
