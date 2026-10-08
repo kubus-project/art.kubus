@@ -261,7 +261,11 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
   }
 
   Future<void> _submitInlinePost() async {
-    if (_composeController.text.trim().isEmpty) return;
+    if (communityPostExceedsLimit(_composeController.text)) {
+      _showComposerTextLimitToast(AppLocalizations.of(context)!);
+      return;
+    }
+    if (!_canSubmitComposer) return;
     // Guests see the contextual account surface; their draft stays in the
     // composer so posting can continue after sign-in.
     final canPost = await const ContextualAuthGate().ensureAuthenticated(
@@ -288,11 +292,25 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
+    final interactions = context.read<CommunityInteractionsProvider>();
     _applyState(() => _isPosting = true);
 
     try {
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
+
+      final rawContent = _composeController.text.trim();
+      final mediaUrls = await _uploadComposerMedia();
+      final content = rawContent.isNotEmpty
+          ? rawContent
+          : (_composerMedia.hasImages
+              ? l10n.desktopCommunitySharedPhotoFallbackContent
+              : '🎥');
+      final postType = communityComposerPostType(
+        hasImage: _composerMedia.hasImages,
+        hasVideo: _composerMedia.hasVideos,
+      );
 
       final draft = hub.draft;
       final location = draft.location;
@@ -303,7 +321,9 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       if (draft.targetGroup != null) {
         final groupPost = await hub.submitGroupPost(
           draft.targetGroup!.id,
-          content: _composeController.text.trim(),
+          content: content,
+          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: postType,
           category: draft.category,
           artworkId: draft.artwork?.id,
           subjectType: draft.subjectType,
@@ -319,22 +339,22 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
         }
         createdPost = groupPost;
       } else {
-        createdPost = await context
-            .read<CommunityInteractionsProvider>()
-            .createCommunityPost(
-              content: _composeController.text.trim(),
-              category: draft.category,
-              artworkId: draft.artwork?.id,
-              subjectType: draft.subjectType,
-              subjectId: draft.subjectId,
-              subjects: draft.subjects,
-              tags: draft.tags,
-              mentions: draft.mentions,
-              location: location,
-              locationName: locationName,
-              locationLat: location?.lat,
-              locationLng: location?.lng,
-            );
+        createdPost = await interactions.createCommunityPost(
+          content: content,
+          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: postType,
+          category: draft.category,
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
+          subjects: draft.subjects,
+          tags: draft.tags,
+          mentions: draft.mentions,
+          location: location,
+          locationName: locationName,
+          locationLat: location?.lat,
+          locationLng: location?.lng,
+        );
       }
       final achievementResult = createdPost.achievementResult;
       if (achievementResult != null && mounted) {
@@ -367,7 +387,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       if (mounted) {
         // Clear composer state
         _composeController.clear();
-        _selectedImages.clear();
+        _composerMedia.clear();
         _selectedLocation = null;
         _selectedCategory = 'post';
         hub.resetDraft();
@@ -394,8 +414,15 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .desktopCommunityPostPublishFailedToast),
+            content: Text(communityComposerFailureMessage(
+              AppLocalizations.of(context)!,
+              e,
+              unuploadedMediaCount: _composerMedia.hasFailedUploads
+                  ? _composerMedia.unuploadedCount
+                  : null,
+              fallback: AppLocalizations.of(context)!
+                  .desktopCommunityPostPublishFailedToast,
+            )),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -1204,7 +1231,8 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
   Widget _buildComposeDialog(ThemeProvider themeProvider) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final user = profileProvider.currentUser;
-    final remainingChars = 280 - _composeController.text.length;
+    final remainingChars = kCommunityPostMaxCharacters -
+        communityPostCharacterCount(_composeController.text);
     final hub = Provider.of<CommunityHubProvider>(context);
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
@@ -1212,7 +1240,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       onTap: () {
         _applyState(() {
           _showComposeDialog = false;
-          _selectedImages.clear();
+          _composerMedia.clear();
           _selectedLocation = null;
         });
       },
@@ -1250,7 +1278,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   onPressed: () {
                     _applyState(() {
                       _showComposeDialog = false;
-                      _selectedImages.clear();
+                      _composerMedia.clear();
                       _selectedLocation = null;
                     });
                   },
@@ -1260,9 +1288,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                 ),
                 trailing: ElevatedButton(
                   onPressed:
-                      _composeController.text.trim().isEmpty || _isPosting
-                          ? null
-                          : _submitPost,
+                      !_canSubmitComposer || _isPosting ? null : _submitPost,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: onPrimary,
@@ -1342,60 +1368,13 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   _buildLocationAttachmentCard(themeProvider, hub),
                   const SizedBox(height: 16),
                   CommunityComposerMediaSection(
-                    showPreview: _selectedImages.isNotEmpty,
+                    showPreview: _composerMedia.isNotEmpty,
                     sectionKey: 'desktop_composer_media',
-                    preview: SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _selectedImages.length,
-                        itemBuilder: (context, index) {
-                          return Stack(
-                            children: [
-                              Container(
-                                width: 100,
-                                height: 100,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                  image: DecorationImage(
-                                    image: MemoryImage(
-                                        _selectedImages[index].bytes),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 4,
-                                right: 12,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    _applyState(() {
-                                      _selectedImages.removeAt(index);
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.6),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 14,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onInverseSurface,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                    preview: CommunityComposerMediaTray(
+                      controller: _composerMedia,
+                      onAddPhotos: _pickPhotos,
+                      onAddVideo: _pickVideo,
+                      showAddActions: false,
                     ),
                     actions: CommunityComposerActionRow(
                       border: Border(
@@ -1408,11 +1387,18 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                       ),
                       actions: [
                         IconButton(
-                          onPressed: _pickImage,
+                          onPressed: _pickPhotos,
                           icon: Icon(Icons.image_outlined,
                               color: themeProvider.accentColor),
                           tooltip: AppLocalizations.of(context)!
                               .desktopCommunityComposerAddImageTooltip,
+                        ),
+                        IconButton(
+                          onPressed: _pickVideo,
+                          icon: Icon(Icons.videocam_outlined,
+                              color: themeProvider.accentColor),
+                          tooltip: AppLocalizations.of(context)!
+                              .communityComposerMediaAddVideo,
                         ),
                         IconButton(
                           onPressed: _showARAttachmentInfo,

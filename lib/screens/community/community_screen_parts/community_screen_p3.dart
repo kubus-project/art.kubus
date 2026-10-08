@@ -141,9 +141,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     }
 
     _newPostController.clear();
-    _selectedPostImage = null;
-    _selectedPostImageBytes = null;
-    _selectedPostVideo = null;
+    _composerMedia.clear();
 
     // Dispose old controllers if they exist and create fresh ones
     _composerTagController?.dispose();
@@ -179,12 +177,14 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                       _buildComposerCategorySelector(draft, provider),
                       const SizedBox(height: 16),
                       _buildComposerTextField(),
+                      CommunityComposerCharacterCounter(
+                        controller: _newPostController,
+                      ),
                       const SizedBox(height: 16),
-                      CommunityComposerMediaSection(
-                        showPreview: _hasSelectedMedia,
-                        preview: _buildComposerMediaPreview(setModalState),
-                        actions: _buildComposerAttachmentRow(setModalState),
-                        sectionKey: 'composer_media',
+                      CommunityComposerMediaTray(
+                        controller: _composerMedia,
+                        onAddPhotos: () => _addComposerPhotos(setModalState),
+                        onAddVideo: () => _addComposerVideo(setModalState),
                       ),
                       const SizedBox(height: 20),
                       _buildComposerGroupSelector(draft, provider),
@@ -306,44 +306,6 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     });
   }
 
-  Widget _buildPostOption(IconData icon, String label, {VoidCallback? onTap}) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.32),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: scheme.onSurface,
-              size: 24,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: KubusTypography.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildComposerHeader(BuildContext sheetContext) {
     final l10n = AppLocalizations.of(sheetContext)!;
     return CommunityComposerHeaderBar(
@@ -399,160 +361,29 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     );
   }
 
-  Widget _buildComposerMediaPreview(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    if (_selectedPostImageBytes != null) {
-      return Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Image.memory(
-              _selectedPostImageBytes!,
-              height: 220,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: IconButton(
-              tooltip: l10n.commonRemove,
-              style: IconButton.styleFrom(
-                backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                foregroundColor: scheme.onSurface,
-              ),
-              onPressed: () => setModalState(() {
-                _selectedPostImage = null;
-                _selectedPostImageBytes = null;
-              }),
-              icon: const Icon(Icons.close),
-            ),
-          ),
-        ],
-      );
+  Future<void> _addComposerPhotos(StateSetter setModalState) async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(kCommunityComposerMaxMediaItems));
+      return;
     }
-    if (_selectedPostVideo != null) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: scheme.primaryContainer.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.videocam_outlined,
-                      size: 42,
-                      color: Provider.of<ThemeProvider>(context, listen: false)
-                          .accentColor),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      _selectedPostVideo!.name,
-                      style: KubusTypography.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: IconButton(
-                tooltip: l10n.commonRemove,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                  foregroundColor: scheme.onSurface,
-                ),
-                onPressed: () => setModalState(() {
-                  _selectedPostVideo = null;
-                }),
-                icon: const Icon(Icons.close),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    _composerMedia.add(picked);
+    setModalState(() {});
   }
 
-  Widget _buildComposerAttachmentRow(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final hasMedia = _hasSelectedMedia;
-    final animationTheme = context.animationTheme;
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      padding: EdgeInsets.all(hasMedia ? 8 : 0),
-      decoration: BoxDecoration(
-        color: hasMedia
-            ? scheme.primaryContainer.withValues(alpha: 0.2)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildPostOption(
-              Icons.image_outlined,
-              l10n.commonImage,
-              onTap: () async {
-                final picker = ImagePicker();
-                final image = await picker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 1920,
-                  maxHeight: 1920,
-                  imageQuality: 85,
-                );
-                if (image != null) {
-                  final bytes = await image.readAsBytes();
-                  setModalState(() {
-                    _selectedPostImage = image;
-                    _selectedPostImageBytes = bytes;
-                    _selectedPostVideo = null;
-                  });
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildPostOption(
-              Icons.videocam_outlined,
-              l10n.commonVideo,
-              onTap: () async {
-                final picker = ImagePicker();
-                final video = await picker.pickVideo(
-                  source: ImageSource.gallery,
-                  maxDuration: const Duration(minutes: 5),
-                );
-                if (video != null) {
-                  setModalState(() {
-                    _selectedPostVideo = video;
-                    _selectedPostImage = null;
-                    _selectedPostImageBytes = null;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _addComposerVideo(StateSetter setModalState) async {
+    if (_composerMedia.isFull) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(kCommunityComposerMaxMediaItems));
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    _composerMedia.add(<CommunityComposerPickedMedia>[picked]);
+    setModalState(() {});
   }
 
   Widget _buildComposerCategorySelector(

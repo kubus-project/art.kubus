@@ -694,7 +694,8 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     dynamic user,
     CommunityHubProvider hub,
   ) {
-    final remainingChars = 280 - _composeController.text.length;
+    final remainingChars = kCommunityPostMaxCharacters -
+        communityPostCharacterCount(_composeController.text);
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
     return Column(
@@ -768,92 +769,16 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
             ),
           ),
 
-        // Selected images preview
-        if (_selectedImages.isNotEmpty)
+        // Selected media tray
+        if (_composerMedia.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: SizedBox(
-              height: 60,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (context, index) {
-                  return Stack(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          image: DecorationImage(
-                            image: MemoryImage(_selectedImages[index].bytes),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 2,
-                        right: 10,
-                        child: GestureDetector(
-                          onTap: () => _applyState(
-                              () => _selectedImages.removeAt(index)),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.close,
-                              size: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onInverseSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-
-        // Location indicator
-        if (_selectedLocation != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.location_on,
-                      size: 14, color: themeProvider.accentColor),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      _selectedLocation!,
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        color: themeProvider.accentColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => _applyState(() => _selectedLocation = null),
-                    child: Icon(Icons.close,
-                        size: 12, color: themeProvider.accentColor),
-                  ),
-                ],
-              ),
+            child: CommunityComposerMediaTray(
+              controller: _composerMedia,
+              onAddPhotos: _pickPhotos,
+              onAddVideo: _pickVideo,
+              showAddActions: false,
+              thumbnailSize: 72,
             ),
           ),
 
@@ -867,7 +792,13 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                 AppLocalizations.of(context)!
                     .desktopCommunityComposerPhotoLabel,
                 themeProvider,
-                onTap: _pickImage,
+                onTap: _pickPhotos,
+              ),
+              _buildCompactActionButton(
+                Icons.videocam_outlined,
+                AppLocalizations.of(context)!.communityComposerMediaAddVideo,
+                themeProvider,
+                onTap: _pickVideo,
               ),
               _buildCompactActionButton(
                 Icons.location_on_outlined,
@@ -908,7 +839,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
               const SizedBox(width: 12),
               // Post button
               ElevatedButton(
-                onPressed: _composeController.text.trim().isEmpty || _isPosting
+                onPressed: !_canSubmitComposer || _isPosting
                     ? null
                     : _submitInlinePost,
                 style: ElevatedButton.styleFrom(

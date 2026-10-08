@@ -484,43 +484,16 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
   }
 
   Future<List<String>> _uploadComposerMedia() async {
-    final mediaUrls = <String>[];
     final api = BackendApiService();
-    if (_selectedPostImage != null && _selectedPostImageBytes != null) {
-      final fileName = _selectedPostImage!.name;
-      final uploadResult = await api.uploadFile(
-        fileBytes: _selectedPostImageBytes!,
-        fileName: fileName,
-        fileType: 'post-image',
-      );
-      final url = uploadResult['uploadedUrl'] as String?;
-      if (url != null) {
-        mediaUrls.add(url);
-      } else {
-        throw Exception('Image upload returned no URL');
-      }
-    }
-    if (_selectedPostVideo != null) {
-      final videoFile = File(_selectedPostVideo!.path);
-      final uploadResult = await api.uploadFile(
-        fileBytes: await videoFile.readAsBytes(),
-        fileName: _selectedPostVideo!.name,
-        fileType: 'post-video',
-      );
-      final url = uploadResult['uploadedUrl'] as String?;
-      if (url != null) {
-        mediaUrls.add(url);
-      } else {
-        throw Exception('Video upload returned no URL');
-      }
-    }
-    return mediaUrls;
+    return _composerMedia.uploadPending(
+      (item) => uploadCommunityComposerMediaItem(api, item),
+    );
   }
 
   String _resolveComposerPostType() {
     return communityComposerPostType(
-      hasImage: _selectedPostImage != null,
-      hasVideo: _selectedPostVideo != null,
+      hasImage: _composerMedia.hasImages,
+      hasVideo: _composerMedia.hasVideos,
     );
   }
 
@@ -599,6 +572,19 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       return;
     }
 
+    if (communityPostExceedsLimit(content)) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.communityComposerCharacterLimitExceeded(
+              kCommunityPostMaxCharacters,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     final walletAddress = await _ensureWalletForPosting(sheetContext);
     if (walletAddress == null) return;
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -620,9 +606,9 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     try {
       final mediaUrls = await _uploadComposerMedia();
       if (content.isEmpty) {
-        content = _selectedPostVideo != null
-            ? '🎥'
-            : (_selectedPostImage != null ? '📷' : 'Shared via art.kubus');
+        content = _composerMedia.hasImages
+            ? '📷'
+            : (_composerMedia.hasVideos ? '🎥' : 'Shared via art.kubus');
       }
 
       final groupName = hub.draft.targetGroup?.name;
@@ -656,7 +642,17 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       }
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(communityComposerFailureMessage(l10n, e))),
+        SnackBar(
+          content: Text(
+            communityComposerFailureMessage(
+              l10n,
+              e,
+              unuploadedMediaCount: _composerMedia.hasFailedUploads
+                  ? _composerMedia.unuploadedCount
+                  : null,
+            ),
+          ),
+        ),
       );
     } finally {
       if (!loadingCleared) {
@@ -745,9 +741,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     subjectProvider.primeFromPosts([resolvedPost]);
     _applyState(() {
       _newPostController.clear();
-      _selectedPostImage = null;
-      _selectedPostImageBytes = null;
-      _selectedPostVideo = null;
+      _composerMedia.clear();
       if (!isGroupPost) {
         if (resolvedPost.id.isNotEmpty) {
           _recentlyCreatedPostIds.add(resolvedPost.id);

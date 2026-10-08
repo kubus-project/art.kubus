@@ -2,14 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
+import '../../community/community_composer_media.dart';
+import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';
+import '../../widgets/community/community_composer_character_counter.dart';
+import '../../widgets/community/community_composer_media_tray.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -25,6 +28,7 @@ import '../../services/contextual_auth_gate.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/community_screen_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
@@ -61,8 +65,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   bool _membershipInFlight = false;
   final TextEditingController _composerController = TextEditingController();
   bool _posting = false;
-  XFile? _selectedImage;
-  Uint8List? _selectedImageBytes;
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController();
   final Set<String> _deleteDialogOpenPostIds = <String>{};
   final Set<String> _deleteInFlightPostIds = <String>{};
 
@@ -315,36 +319,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
             ),
           ),
-          if (_selectedImageBytes != null) ...[
+          CommunityComposerCharacterCounter(controller: _composerController),
+          if (_composerMedia.isNotEmpty) ...[
             const SizedBox(height: KubusSpacing.md),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              child: Stack(
-                children: [
-                  Image.memory(
-                    _selectedImageBytes!,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                      ),
-                      onPressed: _posting
-                          ? null
-                          : () => setState(() {
-                                _selectedImage = null;
-                                _selectedImageBytes = null;
-                              }),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ),
-                ],
-              ),
+            CommunityComposerMediaTray(
+              controller: _composerMedia,
+              onAddPhotos: _pickComposerPhotos,
+              onAddVideo: _pickComposerVideo,
+              showAddActions: false,
+              thumbnailSize: 80,
             ),
           ],
           const SizedBox(height: KubusSpacing.md),
@@ -354,8 +337,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             children: [
               IconButton(
                 tooltip: l10n.commonImage,
-                onPressed: _posting ? null : _pickComposerImage,
+                onPressed: _posting ? null : _pickComposerPhotos,
                 icon: const Icon(Icons.image_outlined),
+              ),
+              IconButton(
+                tooltip: l10n.communityComposerMediaAddVideo,
+                onPressed: _posting ? null : _pickComposerVideo,
+                icon: const Icon(Icons.videocam_outlined),
               ),
               const Spacer(),
               ElevatedButton(
@@ -376,21 +364,35 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  Future<void> _pickComposerImage() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1920,
-      imageQuality: 85,
+  Future<void> _pickComposerPhotos() async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      _showComposerMediaLimit();
+      return;
+    }
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    setState(() => _composerMedia.add(picked));
+  }
+
+  Future<void> _pickComposerVideo() async {
+    if (_composerMedia.isFull) {
+      _showComposerMediaLimit();
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    setState(() => _composerMedia.add(<CommunityComposerPickedMedia>[picked]));
+  }
+
+  void _showComposerMediaLimit() {
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!
+            .communityComposerMediaLimitReached(
+                kCommunityComposerMaxMediaItems)),
+      ),
     );
-    if (image == null) return;
-    final bytes = await image.readAsBytes();
-    if (!mounted) return;
-    setState(() {
-      _selectedImage = image;
-      _selectedImageBytes = bytes;
-    });
   }
 
   Future<void> _submitGroupPost(
@@ -400,10 +402,20 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
-    final content = _composerController.text.trim();
-    if (content.isEmpty) {
+    final typedContent = _composerController.text.trim();
+    if (typedContent.isEmpty && _composerMedia.isEmpty) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      return;
+    }
+    if (communityPostExceedsLimit(typedContent)) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.communityComposerCharacterLimitExceeded(
+            kCommunityPostMaxCharacters,
+          )),
+        ),
+      );
       return;
     }
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -417,23 +429,27 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     setState(() => _posting = true);
     try {
-      String? imageUrl;
-      if (_selectedImageBytes != null && _selectedImage != null) {
-        final upload = await BackendApiService().uploadFile(
-          fileBytes: _selectedImageBytes!,
-          fileName: _selectedImage!.name,
-          fileType: 'community_post_media',
+      final api = BackendApiService();
+      final mediaUrls = await _composerMedia.uploadPending(
+        (item) => uploadCommunityComposerMediaItem(
+          api,
+          item,
           metadata: {'scope': 'group_post', 'groupId': summary.id},
-        );
-        final raw = upload['uploadedUrl']?.toString();
-        imageUrl = MediaUrlResolver.resolve(raw) ?? raw;
-      }
+        ),
+      );
+      final content = typedContent.isNotEmpty
+          ? typedContent
+          : (_composerMedia.hasImages ? '📷' : '🎥');
 
       final draft = hub.draft;
       await hub.submitGroupPost(
         summary.id,
         content: content,
-        imageUrl: imageUrl,
+        mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+        postType: communityComposerPostType(
+          hasImage: _composerMedia.hasImages,
+          hasVideo: _composerMedia.hasVideos,
+        ),
         artworkId: draft.artwork?.id,
         subjectType: draft.subjectType,
         subjectId: draft.subjectId,
@@ -444,8 +460,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       setState(() {
         _posting = false;
         _composerController.clear();
-        _selectedImage = null;
-        _selectedImageBytes = null;
+        _composerMedia.clear();
       });
       hub.setDraftSubject();
       hub.setDraftArtwork(null);
@@ -459,7 +474,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(communityComposerFailureMessage(l10n, e)),
+          content: Text(communityComposerFailureMessage(
+            l10n,
+            e,
+            unuploadedMediaCount: _composerMedia.hasFailedUploads
+                ? _composerMedia.unuploadedCount
+                : null,
+          )),
           duration: const Duration(seconds: 3),
         ),
       );

@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
@@ -27,9 +26,7 @@ import '../../widgets/community/community_subject_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
-import 'dart:io';
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -51,7 +48,11 @@ import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_composer_media.dart';
+import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';
+import '../../widgets/community/community_composer_character_counter.dart';
+import '../../widgets/community/community_composer_media_tray.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/notification_provider.dart';
@@ -170,9 +171,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   TextEditingController? _composerTagController;
   TextEditingController? _composerMentionController;
   bool _isPostingNew = false;
-  XFile? _selectedPostImage;
-  Uint8List? _selectedPostImageBytes; // Store bytes for preview
-  XFile? _selectedPostVideo;
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController();
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
   double? _artFeedLatitude;
@@ -348,6 +348,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     _animationController.dispose();
+    _composerMedia.dispose();
     try {
       SocketService()
           .removeNotificationListener(_onSocketNotificationForCommunity);
@@ -477,6 +478,5 @@ class _CommunityScreenState extends State<CommunityScreen>
     return query.startsWith('#') ? query.substring(1) : query;
   }
 
-  bool get _hasSelectedMedia =>
-      _selectedPostImageBytes != null || _selectedPostVideo != null;
+  bool get _hasSelectedMedia => _composerMedia.isNotEmpty;
 }
