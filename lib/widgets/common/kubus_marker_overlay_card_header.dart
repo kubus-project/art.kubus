@@ -13,7 +13,9 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
     required String? linkedSubjectTypeLabel,
     required String? linkedSubjectTitle,
     required String? linkedSubjectSubtitle,
+    String? placeText,
   }) {
+    final normalizedPlace = placeText?.trim();
     final normalizedLinkedTypeLabel = linkedSubjectTypeLabel?.trim();
     final normalizedLinkedTitle = linkedSubjectTitle?.trim();
     final normalizedLinkedSubtitle = linkedSubjectSubtitle?.trim();
@@ -121,6 +123,33 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                     fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
                     height: 1.15,
                   ),
+                ),
+              ],
+              if (normalizedPlace != null && normalizedPlace.isNotEmpty) ...[
+                SizedBox(height: artwork != null ? 2 : KubusSpacing.xs),
+                Row(
+                  key: const ValueKey<String>('marker_overlay_place'),
+                  children: [
+                    Icon(
+                      Icons.place_outlined,
+                      size: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: KubusSpacing.xxs),
+                    Expanded(
+                      child: Text(
+                        normalizedPlace,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],

@@ -14,7 +14,14 @@ import '../../../providers/saved_items_provider.dart';
 import '../../../services/contextual_auth_gate.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
+import '../../../utils/map_destination_actions.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
+import 'map_marker_overlay_presentation.dart';
+
+/// The quick card offers directions exactly when the marker has a coordinate
+/// a person could be sent to.
+bool markerOverlayHasDirections(ArtMarker marker) =>
+    MapDestination.isValidCoordinate(marker.position);
 
 /// Whether [buildMarkerOverlayActions] would produce at least one secondary
 /// action for this marker.
@@ -30,6 +37,7 @@ bool markerOverlayHasSecondaryActions({
   required bool canPresentExhibition,
   bool canClaimStreetArt = false,
 }) {
+  if (markerOverlayHasDirections(marker)) return true;
   if (canClaimStreetArt &&
       AppConfig.isFeatureEnabled('streetArtClaims') &&
       marker.type == ArtMarkerType.streetArt &&
@@ -72,12 +80,42 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
     actions.add(
       MarkerOverlayActionSpec(
         icon: Icons.gavel_outlined,
+        id: 'marker_claim',
         label: l10n.mapMarkerClaimButton,
         isActive: false,
         activeColor: baseColor,
         tooltip: l10n.mapMarkerClaimButton,
-        semanticsLabel: 'marker_claim',
+        semanticsLabel: l10n.mapMarkerClaimButton,
         onTap: onClaimTap,
+      ),
+    );
+  }
+
+  // Directions come before the engagement actions: where to go is the next
+  // thing a person at a place wants, and it exists for every subject kind
+  // (artwork, event, exhibition, institution) that has a coordinate.
+  if (markerOverlayHasDirections(marker)) {
+    final title = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: event,
+      exhibition: exhibition,
+    ).title;
+    final destination = MapDestination(
+      id: artwork?.id ?? marker.id,
+      title: title,
+      position: marker.position,
+    );
+    actions.add(
+      MarkerOverlayActionSpec(
+        id: 'marker_directions',
+        icon: Icons.navigation_outlined,
+        label: l10n.commonNavigate,
+        isActive: false,
+        activeColor: baseColor,
+        tooltip: l10n.commonGetDirections,
+        semanticsLabel: l10n.artDetailNavigateToTitle(title),
+        onTap: () => unawaited(destination.showNavigationOptions(context)),
       ),
     );
   }
@@ -97,7 +135,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         isActive: isSaved,
         activeColor: baseColor,
         tooltip: l10n.commonSave,
-        semanticsLabel: 'marker_event_save',
+        id: 'marker_event_save',
+        semanticsLabel: isSaved ? l10n.commonSavedToast : l10n.commonSave,
         onTap: () {
           unawaited(() async {
             final authenticated =
@@ -124,7 +163,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         isActive: false,
         activeColor: baseColor,
         tooltip: l10n.commonShare,
-        semanticsLabel: 'marker_event_share',
+        id: 'marker_event_share',
+        semanticsLabel: l10n.commonShare,
         onTap: () {
           ShareService().showShareSheet(
             context,
@@ -146,7 +186,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         isActive: isSaved,
         activeColor: baseColor,
         tooltip: l10n.commonSave,
-        semanticsLabel: 'marker_exhibition_save',
+        id: 'marker_exhibition_save',
+        semanticsLabel: isSaved ? l10n.commonSavedToast : l10n.commonSave,
         onTap: () {
           unawaited(() async {
             final authenticated =
@@ -173,7 +214,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         isActive: false,
         activeColor: baseColor,
         tooltip: l10n.commonShare,
-        semanticsLabel: 'marker_exhibition_share',
+        id: 'marker_exhibition_share',
+        semanticsLabel: l10n.commonShare,
         onTap: () {
           ShareService().showShareSheet(
             context,
@@ -202,7 +244,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
       activeColor: baseColor,
       tooltip: l10n.commonSave,
-      semanticsLabel: 'marker_save',
+      id: 'marker_save',
+      semanticsLabel: l10n.commonSave,
       onTap: () {
         unawaited(() async {
           final authenticated =
@@ -229,7 +272,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       isActive: false,
       activeColor: baseColor,
       tooltip: l10n.commonShare,
-      semanticsLabel: 'marker_share',
+      id: 'marker_share',
+      semanticsLabel: l10n.commonShare,
       onTap: () {
         ShareService().showShareSheet(
           context,
@@ -248,7 +292,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       isActive: artwork.isLikedByCurrentUser,
       activeColor: scheme.error,
       tooltip: l10n.commonLikes,
-      semanticsLabel: 'marker_like',
+      id: 'marker_like',
+      semanticsLabel: '${l10n.commonLikes} ${artwork.likesCount}',
       onTap: () {
         unawaited(() async {
           final authenticated =

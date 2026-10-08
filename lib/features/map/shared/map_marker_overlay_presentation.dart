@@ -46,6 +46,7 @@ class MapMarkerOverlayPresentation {
     required this.primaryTarget,
     this.mediaUrl,
     this.mediaUpdatedAt,
+    this.placeText,
   });
 
   final String title;
@@ -54,6 +55,11 @@ class MapMarkerOverlayPresentation {
   final MapMarkerOverlayPrimaryTarget primaryTarget;
   final String? mediaUrl;
   final DateTime? mediaUpdatedAt;
+
+  /// Where this is, for subjects whose linked context does not already carry a
+  /// place (an artwork marker; events and exhibitions fold their venue into
+  /// the linked subtitle). Null when there is nothing to say or it would repeat.
+  final String? placeText;
 }
 
 MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
@@ -114,6 +120,9 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
 
   return MapMarkerOverlayPresentation(
     title: title,
+    placeText: (linkedSubtitle ?? '').trim().isNotEmpty
+        ? null
+        : _normalizeText(marker.locationName),
     description: description,
     linkedSubject: MapMarkerOverlayLinkedSubjectContext(
       kind: linkedKind,

@@ -30,11 +30,15 @@ class MarkerOverlayActionSpec {
     required this.label,
     required this.isActive,
     required this.activeColor,
+    this.id,
     this.onTap,
     this.tooltip,
     this.semanticsLabel,
   });
 
+  /// Stable identifier for tests and analytics. Never read aloud: the spoken
+  /// name is [semanticsLabel], falling back to [label].
+  final String? id;
   final IconData icon;
   final String label;
   final bool isActive;
@@ -71,6 +75,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.linkedSubjectTypeLabel,
     this.linkedSubjectTitle,
     this.linkedSubjectSubtitle,
+    this.placeText,
     this.maxPreviewChars = MarkerOverlayCardMetrics.maxPreviewChars,
     this.maxPreviewWords = MarkerOverlayCardMetrics.maxPreviewWords,
     this.actions = const <MarkerOverlayActionSpec>[],
@@ -99,6 +104,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   final String? linkedSubjectTypeLabel;
   final String? linkedSubjectTitle;
   final String? linkedSubjectSubtitle;
+
+  /// One-line "where" shown under the byline, when the linked subject context
+  /// does not already carry a place.
+  final String? placeText;
 
   final int maxPreviewChars;
   final int maxPreviewWords;
@@ -183,6 +192,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           linkedTitle.isNotEmpty && linkedTitle != displayTitle.trim(),
       hasLinkedSubtitle: (linkedSubjectSubtitle ?? '').trim().isNotEmpty,
       hasByline: artwork != null,
+      hasPlace: (placeText ?? '').trim().isNotEmpty,
       secondaryActionRows: actions.isEmpty ? 0 : 1,
       hasPager: stackCount > 1,
     );
@@ -345,6 +355,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                   linkedSubjectTypeLabel: linkedSubjectTypeLabel,
                   linkedSubjectTitle: linkedSubjectTitle,
                   linkedSubjectSubtitle: linkedSubjectSubtitle,
+                  placeText: placeText,
                 ),
                 const SizedBox(height: MarkerOverlayCardMetrics.sectionGap),
                 if (previewChildren.isNotEmpty)

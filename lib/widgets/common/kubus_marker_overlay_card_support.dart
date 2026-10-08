@@ -75,13 +75,18 @@ class _OverlayIconButton extends StatelessWidget {
           cursor: onTap == null
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: SizedBox(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              child: Center(child: visual),
+          // InkWell, not GestureDetector: a bare gesture detector is not a
+          // focus target, so the close control was unreachable by keyboard.
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: SizedBox(
+                width: KubusHeaderMetrics.actionHitArea,
+                height: KubusHeaderMetrics.actionHitArea,
+                child: Center(child: visual),
+              ),
             ),
           ),
         ),

@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../features/map/telemetry/map_engagement_tracker.dart';
@@ -49,6 +48,7 @@ import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
+import '../../utils/map_destination_actions.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_perf_tracker.dart';
 import '../../utils/map_performance_debug.dart';
@@ -3565,22 +3565,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  DetailSecondaryAction(
-                    icon: Icons.directions,
-                    label: l10n.commonGetDirections,
-                    onTap: () async {
-                      final uri = Uri.parse(
-                        'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
-                      );
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    tooltip: l10n.commonGetDirections,
-                  ),
+                  if (MapDestination.isValidCoordinate(artwork.position))
+                    DetailSecondaryAction(
+                      icon: Icons.directions,
+                      label: l10n.commonGetDirections,
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: artwork.id,
+                          title: artwork.title,
+                          position: artwork.position,
+                        ).showNavigationOptions(context),
+                      ),
+                      tooltip: l10n.commonGetDirections,
+                    ),
                 ],
               ),
               const SizedBox(height: KubusSpacing.lg),
@@ -3960,21 +3957,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (exhibition.lat != null && exhibition.lng != null)
+                  if (exhibition.lat != null &&
+                      exhibition.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(exhibition.lat!, exhibition.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: exhibition.id,
+                          title: exhibition.title,
+                          position: LatLng(exhibition.lat!, exhibition.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -4169,21 +4166,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (event.lat != null && event.lng != null)
+                  if (event.lat != null &&
+                      event.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(event.lat!, event.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: event.id,
+                          title: event.title,
+                          position: LatLng(event.lat!, event.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -6374,11 +6371,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       closeAccentColor: themeProvider.accentColor,
       onClose: _closeDesktopMarkerDetails,
       actions: <MarkerInfoDetailAction>[
+        if (MapDestination.isValidCoordinate(marker.position))
+          MarkerInfoDetailAction(
+            icon: Icons.directions,
+            label: l10n.commonNavigate,
+            tooltip: l10n.commonGetDirections,
+            semanticsLabel: l10n.artDetailNavigateToTitle(detail.title),
+            onTap: () => unawaited(
+              MapDestination(
+                id: marker.id,
+                title: detail.title,
+                position: marker.position,
+              ).showNavigationOptions(context),
+            ),
+          ),
         MarkerInfoDetailAction(
           icon: Icons.share_outlined,
           label: l10n.commonShare,
           tooltip: l10n.commonShare,
-          semanticsLabel: 'marker_info_share',
+          semanticsLabel: l10n.commonShare,
           onTap: () {
             ShareService().showShareSheet(
               context,

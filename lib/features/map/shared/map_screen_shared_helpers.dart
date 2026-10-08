@@ -946,6 +946,7 @@ class KubusMarkerOverlayHelpers {
           subjectTypeLabel(l10n, presentation.linkedSubject.kind),
       linkedSubjectTitle: presentation.linkedSubject.title,
       linkedSubjectSubtitle: presentation.linkedSubject.subtitle,
+      placeText: presentation.placeText,
       onClose: onClose,
       onPrimaryAction: onOpenDetails,
       onCardTap: onOpenDetails,

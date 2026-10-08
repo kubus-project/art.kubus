@@ -101,6 +101,7 @@ class MarkerOverlayCardContentSpec {
     required this.hasByline,
     required this.secondaryActionRows,
     required this.hasPager,
+    this.hasPlace = false,
     this.attributionLines = 0,
     this.titleLines = MarkerOverlayCardMetrics.headerTitleLines,
   });
@@ -124,6 +125,9 @@ class MarkerOverlayCardContentSpec {
   final bool hasLinkedTitle;
   final bool hasLinkedSubtitle;
   final bool hasByline;
+
+  /// A one-line "where" row under the byline.
+  final bool hasPlace;
   final int secondaryActionRows;
   final bool hasPager;
 
@@ -164,6 +168,7 @@ class MarkerOverlayCardMetrics {
   static const double headerLinkedTitleHeight = 15.0;
   static const double headerLinkedSubtitleHeight = 28.0;
   static const double headerBylineHeight = 15.0;
+  static const double headerPlaceHeight = 15.0;
   static const double headerExtraGap = KubusSpacing.xs;
 
   /// The close control's hit area; the header can never be shorter.
@@ -296,6 +301,10 @@ class MarkerOverlayCardMetrics {
     }
     if (spec.hasByline) {
       height += headerExtraGap + (headerBylineHeight * scale);
+    }
+    if (spec.hasPlace) {
+      height +=
+          (spec.hasByline ? 2.0 : headerExtraGap) + (headerPlaceHeight * scale);
     }
     return math.max(headerMinHeight, height);
   }
@@ -606,6 +615,7 @@ class MarkerOverlayCardMetrics {
       hasLinkedSubtitle:
           (resolved.linkedSubject.subtitle ?? '').trim().isNotEmpty,
       hasByline: artwork != null,
+      hasPlace: (resolved.placeText ?? '').trim().isNotEmpty,
       // `_buildFooter` always collapses the secondary actions onto one row:
       // one or two keep their labels, three or more become icon-only.
       secondaryActionRows: hasSecondaryActions ? 1 : 0,
