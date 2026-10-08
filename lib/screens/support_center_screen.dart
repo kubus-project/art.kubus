@@ -127,6 +127,13 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
               (kIsWeb ? 'web' : defaultTargetPlatform.name),
       ].join('\n\n');
     }
+    if (message.length > 5000) {
+      setState(() => _error = t(
+        'The report is too long. Shorten it to 5,000 characters.',
+        'Poročilo je predolgo. Skrajšajte ga na 5.000 znakov.',
+      ));
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
