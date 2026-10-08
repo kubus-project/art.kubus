@@ -253,6 +253,25 @@ void main() {
     expect(attempts, 1);
   });
   for (final group in [false, true]) {
+    test('creation group=$group retains a long rate limit without retry',
+        () async {
+      var attempts = 0;
+      BackendApiService().setHttpClient(MockClient((request) async {
+        attempts++;
+        return http.Response('{"error":"rate limited"}', 429,
+            headers: {'retry-after': '45'});
+      }));
+      final operation = group
+          ? BackendApiService().createGroupPost('group-1', content: 'draft')
+          : BackendApiService().createCommunityPost(content: 'draft');
+      await expectLater(
+          operation,
+          throwsA(isA<BackendApiRequestException>().having(
+              (e) => e.retryAfter, 'retryAfter', const Duration(seconds: 45))));
+      expect(attempts, 1);
+    });
+  }
+  for (final group in [false, true]) {
     for (final lost in [false, true]) {
       test(
           'creation group=$group connectionLost=$lost never implicitly replays a committed post',

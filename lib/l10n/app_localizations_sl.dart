@@ -10964,6 +10964,14 @@ class AppLocalizationsSl extends AppLocalizations {
       'Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.';
 
   @override
+  String communityComposerRateLimitedSeconds(int seconds) =>
+      'Objavljanje je za?asno omejeno. Poskusite znova ?ez $seconds s. Osnutek je ohranjen.';
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Objavljanje je za?asno omejeno. Pred ponovnim poskusom po?akajte. Osnutek je ohranjen.';
+
+  @override
   String get communityComposerDiscardDraft => 'Zavre?i ta osnutek?';
 
   @override

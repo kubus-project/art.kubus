@@ -111,6 +111,19 @@ void main() {
           isFalse);
     });
 
+    test('a create rate limit preserves the wait in both locales', () {
+      const error = BackendApiRequestException(
+        statusCode: 429,
+        path: '/api/community/posts',
+        retryAfter: Duration(seconds: 45),
+      );
+      for (final locale in ['en', 'sl']) {
+        final localized = lookupAppLocalizations(Locale(locale));
+        expect(communityComposerFailureMessage(localized, error),
+            localized.communityComposerRateLimitedSeconds(45));
+      }
+    });
+
     test('other failures keep the supplied fallback', () {
       expect(
         communityComposerFailureMessage(

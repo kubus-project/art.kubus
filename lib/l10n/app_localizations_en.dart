@@ -10862,6 +10862,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many uploads right now. Wait a moment and try again.';
 
   @override
+  String communityComposerRateLimitedSeconds(int seconds) =>
+      'Posting is temporarily limited. Try again in $seconds seconds. Your draft is kept.';
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Posting is temporarily limited. Wait before trying again. Your draft is kept.';
+
+  @override
   String get communityComposerDiscardDraft => 'Discard this draft?';
 
   @override

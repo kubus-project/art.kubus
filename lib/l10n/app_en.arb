@@ -7355,6 +7355,9 @@
       "count": {}
     }
   },
+  "communityComposerRateLimitedSeconds": "Posting is temporarily limited. Try again in {seconds} seconds. Your draft is kept.",
+  "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "communityComposerRateLimitedGeneric": "Posting is temporarily limited. Wait before trying again. Your draft is kept.",
   "communityComposerDiscardDraft": "Discard this draft?",
   "communityComposerAlreadyCommitted": "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.",
   "communityComposerCheckFeed": "Check feed"

@@ -18905,6 +18905,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add photos'**
   /// Explains that a committed post needs feed inspection before draft restart.
+  String communityComposerRateLimitedSeconds(int seconds);
+
+  String get communityComposerRateLimitedGeneric;
+
   String get communityComposerDiscardDraft;
 
   String get communityComposerAlreadyCommitted;

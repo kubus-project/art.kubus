@@ -92,11 +92,13 @@ class BackendApiRequestException implements Exception {
   final int statusCode;
   final String path;
   final String? body;
+  final Duration? retryAfter;
 
   const BackendApiRequestException({
     required this.statusCode,
     required this.path,
     this.body,
+    this.retryAfter,
   });
 
   String get userMessage {
@@ -6464,6 +6466,7 @@ class BackendApiService
           statusCode: response.statusCode,
           path: '/api/community/posts',
           body: response.body,
+          retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
         );
       }
     } catch (e) {
@@ -6958,6 +6961,7 @@ class BackendApiService
         statusCode: response.statusCode,
         path: '/api/groups/$groupId/posts',
         body: response.body,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');

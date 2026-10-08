@@ -18,6 +18,12 @@ String communityComposerFailureMessage(
   if (communityPostAlreadyCommitted(error)) {
     return l10n.communityComposerAlreadyCommitted;
   }
+  if (error is BackendApiRequestException && error.statusCode == 429) {
+    final seconds = error.retryAfter?.inSeconds;
+    return seconds == null
+        ? l10n.communityComposerRateLimitedGeneric
+        : l10n.communityComposerRateLimitedSeconds(seconds < 1 ? 1 : seconds);
+  }
   if (error is UploadRateLimitedException) {
     return communityUploadRateLimitMessage(l10n, error.retryAfter);
   }
