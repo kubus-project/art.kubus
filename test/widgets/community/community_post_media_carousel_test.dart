@@ -55,10 +55,13 @@ void main() {
     });
 
     test('uses mediaUrls in order and drops empty values', () {
-      final urls = communityPostMediaUrls(_post(
-        mediaUrls: const ['/uploads/1.jpg', '  ', '/uploads/2.mp4'],
-        imageUrl: '/uploads/legacy.jpg',
-      ));
+      final urls = communityPostMediaUrls(
+        _post(
+          mediaUrls: const ['/uploads/1.jpg', '  ', '/uploads/2.mp4'],
+          imageUrl: '/uploads/legacy.jpg',
+        ),
+        multiMediaEnabled: true,
+      );
       expect(urls, ['/uploads/1.jpg', '/uploads/2.mp4']);
     });
 
