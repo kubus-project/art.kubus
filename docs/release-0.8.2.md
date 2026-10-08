@@ -53,9 +53,12 @@ release-preparation commit, as in 0.8.1, not in this feature change.
 
 ## Upload reliability
 
-- **Upload budget.** A signed-in user may send 20 uploads a minute and 120 an
-  hour, so a ten-item carousel does not use up the budget. The per-IP ceiling
-  is 600 an hour and counts writes only.
+- **Upload budget counts files.** A signed-in user may upload 20 files a minute
+  and 120 an hour. A batch of ten spends ten, from the same budget as single
+  uploads. A batch that does not fit is refused whole, before anything is
+  stored, and spends nothing. The per-IP ceiling is 600 files an hour, so
+  batches cannot multiply an address's allowance. Several users behind one
+  NAT each keep their own user budget and share the address ceiling.
 - **Clear waiting message.** A quota rejection tells you how long to wait,
   such as "Try again in 45 seconds" or "about 50 minutes". The app does not
   retry long waits automatically. It retries only very short ones, at most
@@ -77,6 +80,25 @@ release-preparation commit, as in 0.8.1, not in this feature change.
   optionally, `UPLOAD_USER_RATE_LIMIT_PER_MINUTE` (20) and
   `UPLOAD_USER_RATE_LIMIT_PER_HOUR` (120).
 
+## Rollout
+
+Two repositories ship this slice. The backend must be live first.
+
+1. **Deploy backend PR #79** (`art.kubus-backend`, target `master`). It
+   accepts the ordered `mediaUrls` set, the 2,200-character limit and the
+   per-file upload budget.
+2. **Build the frontend with the multi-media switch on.** The switch is
+   `--dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true`. Release builds default to
+   off, so a release built without it keeps the single-attachment composer and
+   shows only the first item of any multi-item post.
+3. **Rollback** needs no source change: rebuild the frontend with
+   `COMMUNITY_MULTI_MEDIA_ENABLED=false`. Stored media is untouched. Multi-item
+   posts simply show their first item.
+
+When the switch is off, composers accept one attachment, a photo or a video,
+as before. Other composer behaviour is unchanged. The flag is read once at
+build time, through `AppConfig.isFeatureEnabled('communityMultiMedia')`.
+
 ## Known limitations
 
 - **Video playback** uses the platform video player. It works on web, Android,
@@ -88,6 +110,16 @@ release-preparation commit, as in 0.8.1, not in this feature change.
   the existing per-user limits are. Several backend instances each keep their
   own count. The nginx upload zone was raised to a burst of 30 and must be
   deployed with the backend.
+- **Over-limit batches are read before they are refused.** Settling a batch
+  needs its files, so a batch that does not fit is buffered in memory and then
+  rejected. Reservations cap how many such requests run at once to the
+  remaining budget. A single batch can still hold up to 10 files at 50 MB each.
+- **Publishing locks the composer, and the mobile sheet closes only from its
+  header.** The mobile composer no longer closes on barrier tap or drag, so a
+  draft cannot be dropped mid-post. Back is blocked while publishing. This is a
+  visible change from before, and the owner should confirm it.
+- **Editing an existing post keeps its media as stored.** The edit sheet does
+  not change a post's media set.
 - **Drag reordering** starts after a long press on any platform. Move buttons
   on each item make the same change with a mouse, a keyboard or a screen
   reader.
@@ -98,5 +130,28 @@ release-preparation commit, as in 0.8.1, not in this feature change.
 
 ## Verification
 
-Test results and visual QA are recorded in the pull request descriptions for
-this release, with the exact commands and outcomes.
+Results at the commit that carries this note:
+
+- **Backend (`art.kubus-backend`, feature branch on `master`):** full Jest run
+  passed, 208 suites, 1,833 tests, 33 skipped, 0 failed. The upload quota tests
+  exercise the real router chain: per-file batch accounting, refusals that
+  spend nothing, shared single and batch budgets, the 120-file hour window with
+  its retry delay, per-user isolation on a shared IP, a file-counted IP ledger,
+  concurrent batches, and unmetered GET retrievals. ESLint is clean on the
+  changed files.
+- **Frontend (`art.kubus`, feature branch merged with `dev`):** full
+  `flutter test` passed, 3,994 tests, 14 skipped, 0 failed. The Community
+  directories also pass with the switch on and with the switch off
+  (`--dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=false|true`, 105 tests each).
+  `flutter analyze` on the whole project reports no issues, and the format
+  check on changed files reports no changes.
+
+Not verified in this pass:
+
+- **Authenticated browser QA.** No authorized staging account was used. The
+  composer is gated for guests, so the publish journey, the failed-upload and
+  retry scenario, and the desktop and group composers were not exercised in a
+  browser. Coverage here is unit and widget tests.
+- **A rate-limit mutation check.** An attempt to show that the batch test fails
+  without settlement was blocked by a permission policy, and the working tree was
+  restored at once. The claim rests on reading the test assertions, not on a run.
