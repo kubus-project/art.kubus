@@ -41,6 +41,7 @@ import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/support/support_ticket_dialog.dart';
+import 'support_center_screen.dart';
 import 'web3/wallet/wallet_backup_protection_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
