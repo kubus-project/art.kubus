@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../l10n/app_localizations.dart';
 import '../services/backend_api_service.dart';
 
@@ -13,6 +15,9 @@ String communityComposerFailureMessage(
   int? unuploadedMediaCount,
   String? fallback,
 }) {
+  if (communityPostAlreadyCommitted(error)) {
+    return l10n.communityComposerAlreadyCommitted;
+  }
   if (error is UploadRateLimitedException) {
     return communityUploadRateLimitMessage(l10n, error.retryAfter);
   }
@@ -37,4 +42,18 @@ String communityUploadRateLimitMessage(
     return l10n.communityUploadRateLimitedSeconds(seconds < 1 ? 1 : seconds);
   }
   return l10n.communityUploadRateLimitedMinutes((seconds / 60).ceil());
+}
+
+/// Only the committed ledger gap needs feed inspection. Other 409s remain errors.
+bool communityPostAlreadyCommitted(Object error) {
+  if (error is! BackendApiRequestException || error.statusCode != 409) {
+    return false;
+  }
+  try {
+    final payload = jsonDecode(error.body ?? '');
+    return payload is Map &&
+        payload['errorCode'] == 'COMMUNITY_POST_ALREADY_COMMITTED';
+  } on FormatException {
+    return false;
+  }
 }

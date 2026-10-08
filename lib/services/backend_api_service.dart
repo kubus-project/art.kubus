@@ -6460,7 +6460,11 @@ class BackendApiService
         }
         return decoratedPost;
       } else {
-        throw Exception('Failed to create post: ${response.statusCode}');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts',
+          body: response.body,
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createCommunityPost failed: $e');
@@ -6950,8 +6954,10 @@ class BackendApiService
         }
         throw Exception('Unexpected group post payload');
       }
-      throw Exception(
-        'Failed to create group post: ${response.statusCode} - ${response.body}',
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/groups/$groupId/posts',
+        body: response.body,
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');

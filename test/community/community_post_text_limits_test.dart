@@ -93,6 +93,24 @@ void main() {
       );
     });
 
+    test(
+        'committed post conflict asks for feed inspection, other conflicts do not',
+        () {
+      const gap = BackendApiRequestException(
+          statusCode: 409,
+          path: '/api/community/posts',
+          body: '{"errorCode":"COMMUNITY_POST_ALREADY_COMMITTED"}');
+      expect(communityPostAlreadyCommitted(gap), isTrue);
+      expect(communityComposerFailureMessage(l10n, gap),
+          l10n.communityComposerAlreadyCommitted);
+      expect(
+          communityPostAlreadyCommitted(const BackendApiRequestException(
+              statusCode: 409,
+              path: '/api/groups/g/posts',
+              body: '{"error":"changed content"}')),
+          isFalse);
+    });
+
     test('other failures keep the supplied fallback', () {
       expect(
         communityComposerFailureMessage(

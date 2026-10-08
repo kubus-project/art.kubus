@@ -770,7 +770,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           ),
 
         // Selected media tray
-        if (_composerMedia.isNotEmpty)
+        if (_composerMedia.isNotEmpty || _composerMedia.publishError != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
             child: CommunityComposerMediaTray(

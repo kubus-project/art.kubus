@@ -7316,5 +7316,8 @@
   "artworkEditArtistHelper": "Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.",
   "artworkDraftArtistHelper": "Pustite prazno, če avtor ni znan.",
   "communitySearchTypeCollections": "Zbirke",
-  "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}"
+  "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}",
+  "communityComposerDiscardDraft": "Zavre?i ta osnutek?",
+  "communityComposerAlreadyCommitted": "Objava je morda ?e objavljena. Osnutek je ohranjen. Preden ga izbri?ete ali za?nete novo objavo, preverite vir objav.",
+  "communityComposerCheckFeed": "Preveri vir objav"
 }

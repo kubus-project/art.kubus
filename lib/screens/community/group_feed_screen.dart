@@ -322,7 +322,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             ),
           ),
           CommunityComposerCharacterCounter(controller: _composerController),
-          if (_composerMedia.isNotEmpty) ...[
+          if (_composerMedia.isNotEmpty ||
+              _composerMedia.publishError != null) ...[
             const SizedBox(height: KubusSpacing.md),
             CommunityComposerMediaTray(
               controller: _composerMedia,

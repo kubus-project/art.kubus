@@ -10862,6 +10862,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many uploads right now. Wait a moment and try again.';
 
   @override
+  String get communityComposerDiscardDraft => 'Discard this draft?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.";
+
+  @override
+  String get communityComposerCheckFeed => "Check feed";
+
+  @override
   String get communityComposerMediaAddPhotos => 'Add photos';
 
   @override

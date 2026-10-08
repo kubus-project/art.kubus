@@ -82,14 +82,18 @@ release-preparation commit, as in 0.8.1, not in this feature change.
 
 ## Rollout
 
-Two repositories ship this slice. The backend must be live first.
+Two repositories ship this slice. Apply the additive migration before deploying the updated backend; only enable the matching frontend after acceptance.
 
-1. **Deploy backend PR #79** (`art.kubus-backend`, target `master`). It
-   accepts the ordered `mediaUrls` set, the 2,200-character limit and the
-   per-file upload budget.
-2. **Apply migration 098 and deploy the backend to every writable instance before enabling the frontend.** The migration adds `community_post_submissions`; both clean-install schema snapshots include it. Run the existing backend migration runner (`node src/db/migrate.js`) with the authorized environment configuration. No production migration or deployment occurred in this pass.
-3. **Complete real authenticated browser acceptance** on staging for mobile, desktop inline, desktop dialog and group composers, with the intended API topology and real picker/uploads.
-4. **Build with an explicit capability.** `scripts/prepare_public_build_config.mjs` accepts `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED=true|false`, validates it, and writes the boolean `COMMUNITY_MULTI_MEDIA_ENABLED` into `.dart_tool/public-build-defines.json`. Its default is false. The immutable web workflow passes its boolean `community_multi_media_enabled` input (default false), and the development and production dispatch workflows expose the same default-disabled input. Push-triggered development builds also default to false. `kubus-community-build.json` inside the checksummed artifact records the exact source SHA and capability.
+1. Verify backup/restore readiness and the migration plan for the intended database.
+2. Apply migration 098 with the existing runner (`node src/db/migrate.js`) using authorized environment configuration.
+3. Verify `community_post_submissions` exists, its wallet/operation/key primary key and post foreign key are correct, and schema parity passes. Migration 098 only adds a ledger table and its constraints: old backend code does not query it and remains compatible during rolling deployment.
+4. Deploy backend PR #79 (`art.kubus-backend`, target `master`) to every writable instance.
+5. Verify backend readiness, writable-role health and migration compatibility on every instance.
+6. Run authenticated staging acceptance for mobile, desktop inline, desktop dialog and group composers using the intended API topology and real picker/uploads.
+7. Enable the matching frontend artifact explicitly. `scripts/prepare_public_build_config.mjs` accepts `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED=true|false`, validates it, and emits `COMMUNITY_MULTI_MEDIA_ENABLED`. The default is false. Reusable, development and production workflow inputs remain default-disabled, including push-triggered development builds.
+8. Verify the enabled artifact's `kubus-community-build.json` source SHA and capability, checksum integrity and actual behavior; monitor errors, uploads and duplicate submissions.
+
+No production migration or deployment is authorized by this QA pass.
 
 PowerShell local build commands (supply the existing required public build variables first):
 

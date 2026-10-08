@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../community/community_composer_media.dart';
+import '../../community/community_upload_feedback.dart';
+import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
 import '../inline_loading.dart';
 import '../../utils/design_tokens.dart';
@@ -43,6 +46,33 @@ class CommunityComposerMediaTray extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (controller.publishError != null) ...[
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  communityComposerFailureMessage(
+                    l10n,
+                    controller.publishError!,
+                    unuploadedMediaCount: controller.hasFailedUploads
+                        ? controller.unuploadedCount
+                        : null,
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.error,
+                      ),
+                ),
+              ),
+              if (communityPostAlreadyCommitted(controller.publishError!))
+                TextButton.icon(
+                  onPressed: () => launchUrl(
+                    Uri.parse(AppConfig.appBaseUrl).resolve('/community'),
+                    webOnlyWindowName: '_blank',
+                  ),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(l10n.communityComposerCheckFeed),
+                ),
+              const SizedBox(height: KubusSpacing.xs),
+            ],
             Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: KubusSpacing.xs,

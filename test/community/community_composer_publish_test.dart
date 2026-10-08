@@ -158,6 +158,24 @@ void main() {
       expect(await first, 'post-1');
     });
 
+    test(
+        'persistent failure feedback retains the submission key until explicit clear',
+        () async {
+      final controller = CommunityComposerMediaController();
+      final key = controller.submissionKey;
+      final failure = StateError('create failed');
+      await expectLater(
+          controller.publish<String>(
+              upload: _uploadByName, submit: (_) async => throw failure),
+          throwsA(same(failure)));
+      expect(controller.publishError, same(failure));
+      expect(controller.submissionKey, key);
+      expect(controller.isLocked, isFalse);
+      controller.clear();
+      expect(controller.publishError, isNull);
+      expect(controller.submissionKey, isNot(key));
+    });
+
     test('a publish after success starts from an empty, unlocked composer',
         () async {
       final controller = CommunityComposerMediaController()

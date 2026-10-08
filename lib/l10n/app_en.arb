@@ -7354,5 +7354,8 @@
     "placeholders": {
       "count": {}
     }
-  }
+  },
+  "communityComposerDiscardDraft": "Discard this draft?",
+  "communityComposerAlreadyCommitted": "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.",
+  "communityComposerCheckFeed": "Check feed"
 }

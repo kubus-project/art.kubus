@@ -162,7 +162,14 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           return PopScope(
-              canPop: !_isPostingNew,
+              canPop: !_isPostingNew &&
+                  _newPostController.text.trim().isEmpty &&
+                  _composerMedia.isEmpty,
+              onPopInvokedWithResult: (didPop, result) {
+                if (!didPop && !_isPostingNew) {
+                  _closeComposer(sheetContext);
+                }
+              },
               child: KeyboardInsetPadding(
                 child: Consumer<CommunityHubProvider>(
                   builder: (context, provider, _) {
@@ -317,6 +324,32 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     });
   }
 
+  Future<void> _closeComposer(BuildContext sheetContext) async {
+    if (_isPostingNew) return;
+    if (_newPostController.text.trim().isNotEmpty ||
+        _composerMedia.isNotEmpty) {
+      final l10n = AppLocalizations.of(sheetContext)!;
+      final discard = await showDialog<bool>(
+        context: sheetContext,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.communityComposerDiscardDraft),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.commonContinue),
+            ),
+          ],
+        ),
+      );
+      if (discard != true || !sheetContext.mounted) return;
+    }
+    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+  }
+
   Widget _buildComposerHeader(BuildContext sheetContext) {
     final l10n = AppLocalizations.of(sheetContext)!;
     return CommunityComposerHeaderBar(
@@ -330,7 +363,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       ),
       trailing: IconButton(
         tooltip: l10n.commonClose,
-        onPressed: () => Navigator.of(sheetContext).maybePop(),
+        onPressed: _isPostingNew ? null : () => _closeComposer(sheetContext),
         icon: const Icon(Icons.close),
         color: Theme.of(context).colorScheme.onSurface,
       ),

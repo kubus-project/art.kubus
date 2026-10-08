@@ -10964,6 +10964,16 @@ class AppLocalizationsSl extends AppLocalizations {
       'Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.';
 
   @override
+  String get communityComposerDiscardDraft => 'Zavre?i ta osnutek?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      "Objava je morda ?e objavljena. Osnutek je ohranjen. Preden ga izbri?ete ali za?nete novo objavo, preverite vir objav.";
+
+  @override
+  String get communityComposerCheckFeed => "Preveri vir objav";
+
+  @override
   String get communityComposerMediaAddPhotos => 'Dodaj fotografije';
 
   @override

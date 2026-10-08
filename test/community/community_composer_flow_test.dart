@@ -456,6 +456,24 @@ void main() {
       },
           skip: _skipUnlessMulti,
           timeout: const Timeout(Duration(seconds: 120)));
+      testWidgets('mobile closing a draft requires explicit discard',
+          (tester) async {
+        await openComposer(tester, 2);
+        await tester.tap(find.byTooltip(_l10n.commonClose));
+        await _settle(tester);
+        expect(find.text(_l10n.communityComposerDiscardDraft), findsOneWidget);
+        await tester.tap(find.text(_l10n.commonCancel));
+        await _settle(tester);
+        expect(find.text('2 of 10 selected'), findsWidgets);
+        await tester.tap(find.byTooltip(_l10n.commonClose));
+        await _settle(tester);
+        await tester.tap(find.text(_l10n.commonContinue));
+        await _settle(tester);
+        expect(find.text(_l10n.communityComposerTitle), findsNothing);
+        await flush(tester);
+      },
+          skip: _skipUnlessMulti || surface != 'mobile',
+          timeout: const Timeout(Duration(seconds: 120)));
       testWidgets('the sheet closes when idle and stays open while publishing',
           (tester) async {
         api.holdCreate = Completer<void>();

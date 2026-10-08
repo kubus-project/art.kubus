@@ -94,6 +94,8 @@ class CommunityComposerMediaController extends ChangeNotifier {
   int _sequence = 0;
   bool _uploading = false;
   bool _publishing = false;
+  Object? _publishError;
+  Object? get publishError => _publishError;
 
   List<CommunityComposerMediaItem> get items =>
       List<CommunityComposerMediaItem>.unmodifiable(_items);
@@ -176,7 +178,7 @@ class CommunityComposerMediaController extends ChangeNotifier {
   void clear() {
     if (isLocked) return;
     _submissionKey = null;
-    if (_items.isEmpty) return;
+    _publishError = null;
     _items.clear();
     notifyListeners();
   }
@@ -237,6 +239,7 @@ class CommunityComposerMediaController extends ChangeNotifier {
     if (isLocked) {
       throw StateError('A Community post is already being published.');
     }
+    _publishError = null;
     _publishing = true;
     notifyListeners();
     try {
@@ -245,6 +248,9 @@ class CommunityComposerMediaController extends ChangeNotifier {
       _items.clear();
       _submissionKey = null;
       return result;
+    } catch (error) {
+      _publishError = error;
+      rethrow;
     } finally {
       _publishing = false;
       notifyListeners();
