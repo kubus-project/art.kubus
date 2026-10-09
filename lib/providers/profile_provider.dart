@@ -1627,17 +1627,24 @@ class ProfileProvider extends foundation.ChangeNotifier {
       var nextArtist = previousArtist;
       var nextInstitution = previousInstitution;
 
+      // Promote only. The backend applies a review decision to the profile's
+      // role flags itself (approval grants the reviewed role, rejection
+      // clears it), and an administrator can grant a second role without a
+      // review. The flags loaded from the server are therefore authoritative;
+      // an approved review only fills in a role the cached profile has not
+      // caught up with yet, and never removes one the server still grants.
       if (daoReview.isApproved) {
-        nextArtist = daoReview.isArtistApplication;
-        nextInstitution = daoReview.isInstitutionApplication;
-        nextPreferences = existingPreferences.copyWith(
-          persona:
-              daoReview.isInstitutionApplication ? 'institution' : 'creator',
-        );
-      } else if (daoReview.isRejected) {
-        nextArtist = false;
-        nextInstitution = false;
-        nextPreferences = existingPreferences.copyWith(persona: 'lover');
+        nextArtist = previousArtist || daoReview.isArtistApplication;
+        nextInstitution =
+            previousInstitution || daoReview.isInstitutionApplication;
+        // The persona is a presentation preference: fill it in from the
+        // approved review only when none was chosen.
+        if ((existingPreferences.persona ?? '').trim().isEmpty) {
+          nextPreferences = existingPreferences.copyWith(
+            persona:
+                daoReview.isInstitutionApplication ? 'institution' : 'creator',
+          );
+        }
       } else {
         return;
       }
