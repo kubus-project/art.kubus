@@ -10,6 +10,12 @@ import 'package:art_kubus/widgets/community/community_composer_media_tray.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+
+import '../../support/fake_video_player_platform.dart';
+
+// ignore_for_file: depend_on_referenced_packages
 
 final Uint8List _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -241,5 +247,66 @@ void counterTests() {
           kCommunityPostMaxCharacters)),
       findsOneWidget,
     );
+  });
+
+  group('video preview', () {
+    late FakeVideoPlayerPlatform platform;
+    late VideoPlayerPlatform previous;
+
+    setUp(() {
+      previous = VideoPlayerPlatform.instance;
+      platform = FakeVideoPlayerPlatform();
+      VideoPlayerPlatform.instance = platform;
+    });
+
+    tearDown(() => VideoPlayerPlatform.instance = previous);
+
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 4)),
+        );
+      }
+    }
+
+    testWidgets('a picked video shows its first frame, then releases it',
+        (tester) async {
+      final controller = CommunityComposerMediaController()
+        ..add([_image('one.png'), _video('clip.mp4')]);
+      await tester.pumpWidget(_harness(controller));
+      await settle(tester);
+
+      expect(find.byType(VideoPlayer), findsOneWidget);
+      expect(platform.live, hasLength(1));
+      expect(platform.playingNow, isEmpty, reason: 'a preview never plays');
+      expect(platform.live.single.volume, 0);
+      expect(platform.live.single.seeks, isNotEmpty,
+          reason: 'it moves past the opening frame');
+      // The tile keeps its accessible name even though the file name is gone.
+      expect(find.bySemanticsLabel(RegExp('^Video, Media 2 of 2')),
+          findsOneWidget);
+
+      controller.remove(controller.items.last.id);
+      await tester.pump();
+      await settle(tester);
+      expect(find.byType(VideoPlayer), findsNothing);
+      expect(platform.live, isEmpty);
+
+      await tester.pumpWidget(const SizedBox());
+      await settle(tester);
+    });
+
+    testWidgets('an undecodable video keeps the typed tile', (tester) async {
+      platform.failInitialize = true;
+      final controller = CommunityComposerMediaController()
+        ..add([_video('clip.mp4')]);
+      await tester.pumpWidget(_harness(controller));
+      await settle(tester);
+
+      expect(find.byType(VideoPlayer), findsNothing);
+      expect(find.text('clip.mp4'), findsOneWidget);
+      expect(platform.live, isEmpty);
+    });
   });
 }
