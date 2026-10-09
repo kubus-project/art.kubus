@@ -853,6 +853,7 @@ class _DesktopArtworkDetailScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SubjectActionGroup(
+          layout: SubjectActionLayout.rowWithPrimary,
           label: l10n.subjectActionsSocialHeading,
           actions: [
             SubjectAction(
@@ -909,6 +910,7 @@ class _DesktopArtworkDetailScreenState
         if (hasLocation || showArPrimaryAction) ...[
           const SizedBox(height: DetailSpacing.md),
           SubjectActionGroup(
+            layout: SubjectActionLayout.rowWithPrimary,
             label: l10n.subjectActionsSpatialHeading,
             actions: [
               if (hasLocation)

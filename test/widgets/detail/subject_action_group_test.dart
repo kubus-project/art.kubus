@@ -1,6 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/detail/subject_action_group.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -155,6 +156,112 @@ void main() {
     expect(tester.widget<Semantics>(action).properties.toggled, isFalse);
     semantics.dispose();
   });
+
+  group('rowWithPrimary layout (desktop artwork sidebar)', () {
+    for (final width in const [320.0, 360.0, 420.0]) {
+      testWidgets(
+          'five actions form one row under a full-width primary at $width px',
+          (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(_app(
+          SizedBox(
+            width: width,
+            child: SubjectActionGroup(
+              label: 'Social',
+              layout: SubjectActionLayout.rowWithPrimary,
+              actions: _fiveActions((_) {}),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final primary = tester.getRect(
+          find.byKey(const ValueKey<String>('subject_action_primary:Like')),
+        );
+        expect(primary.width, closeTo(width, 0.5));
+
+        final icons = [
+          for (final label in _iconLabels)
+            tester.getRect(
+              find.byKey(ValueKey<String>('subject_action_icon:$label')),
+            ),
+        ];
+        // One row: every icon button sits on the same line.
+        expect(icons.map((r) => r.top.round()).toSet(), hasLength(1));
+        // Equal widths, in order, all inside the group and below the primary.
+        for (final rect in icons) {
+          expect(rect.width, closeTo(icons.first.width, 0.5));
+          expect(rect.top, greaterThanOrEqualTo(primary.bottom));
+          expect(rect.right, lessThanOrEqualTo(width + 0.5));
+        }
+        for (var i = 1; i < icons.length; i++) {
+          expect(icons[i].left, greaterThan(icons[i - 1].left));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('icon actions keep the localized spoken label and a tooltip',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_app(
+        SizedBox(
+          width: 360,
+          child: SubjectActionGroup(
+            label: 'Social',
+            layout: SubjectActionLayout.rowWithPrimary,
+            actions: _fiveActions((_) {}),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // The primary keeps its label; icon actions speak the same label.
+      for (final spoken in [
+        'Like',
+        'Saved',
+        'Discuss',
+        'Share',
+        'Open on map'
+      ]) {
+        expect(find.bySemanticsLabel(spoken), findsOneWidget, reason: spoken);
+      }
+      // Tooltips show the same text on hover and long press.
+      expect(find.byTooltip('Discuss'), findsOneWidget);
+      expect(find.byTooltip('Saved'), findsOneWidget);
+      expect(find.byTooltip('Open on map'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('keyboard reaches the primary, then icon actions in order',
+        (tester) async {
+      final fired = <String>[];
+      await tester.pumpWidget(_app(
+        SizedBox(
+          width: 360,
+          child: SubjectActionGroup(
+            label: 'Social',
+            layout: SubjectActionLayout.rowWithPrimary,
+            actions: _fiveActions(fired.add),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      for (final expected in _order) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(fired.last, expected);
+      }
+      expect(fired, _order);
+    });
+  });
 }
 
 Widget _app(Widget child) => MaterialApp(
@@ -165,3 +272,36 @@ Widget _app(Widget child) => MaterialApp(
     );
 
 void _noop() {}
+
+const _iconLabels = ['Save', 'Discuss', 'Share', 'Open on map'];
+const _order = ['Like', 'Save', 'Discuss', 'Share', 'Open on map'];
+
+List<SubjectAction> _fiveActions(void Function(String label) onTap) => [
+      SubjectAction(
+        icon: Icons.favorite_border,
+        label: 'Like',
+        onPressed: () => onTap('Like'),
+      ),
+      SubjectAction(
+        icon: Icons.bookmark_border,
+        label: 'Save',
+        selectedLabel: 'Saved',
+        isSelected: true,
+        onPressed: () => onTap('Save'),
+      ),
+      SubjectAction(
+        icon: Icons.forum_outlined,
+        label: 'Discuss',
+        onPressed: () => onTap('Discuss'),
+      ),
+      SubjectAction(
+        icon: Icons.share_outlined,
+        label: 'Share',
+        onPressed: () => onTap('Share'),
+      ),
+      SubjectAction(
+        icon: Icons.map_outlined,
+        label: 'Open on map',
+        onPressed: () => onTap('Open on map'),
+      ),
+    ];
