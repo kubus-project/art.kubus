@@ -10862,24 +10862,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many uploads right now. Wait a moment and try again.';
 
   @override
-  String communityComposerRateLimitedSeconds(int seconds) =>
-      'Posting is temporarily limited. Try again in $seconds seconds. Your draft is kept.';
-
-  @override
-  String get communityComposerRateLimitedGeneric =>
-      'Posting is temporarily limited. Wait before trying again. Your draft is kept.';
-
-  @override
-  String get communityComposerDiscardDraft => 'Discard this draft?';
-
-  @override
-  String get communityComposerAlreadyCommitted =>
-      "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.";
-
-  @override
-  String get communityComposerCheckFeed => "Check feed";
-
-  @override
   String get communityComposerMediaAddPhotos => 'Add photos';
 
   @override
@@ -10888,6 +10870,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityComposerMediaLimitReached(int max) {
     return 'You can add up to $max items to a post.';
+  }
+
+  @override
+  String communityComposerMediaTrimmed(int added, int picked, int max) {
+    return 'Added $added of $picked files. A post holds up to $max items.';
+  }
+
+  @override
+  String communityComposerValidationRejected(String detail) {
+    return 'The server did not accept this post: $detail. Your draft is kept.';
   }
 
   @override
@@ -10963,6 +10955,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityMediaVideoUnavailable =>
       'This video cannot be played here.';
+
+  @override
+  String get communityMediaVideoReplay => 'Replay video';
+
+  @override
+  String get communityMediaVideoRetry => 'Try again';
+
+  @override
+  String get communityMediaVideoLoading => 'Loading video';
+
+  @override
+  String get communityMediaVideoBuffering => 'Buffering';
+
+  @override
+  String get communityMediaVideoSeek => 'Video position';
+
+  @override
+  String communityMediaVideoTime(String position, String duration) {
+    return '$position of $duration';
+  }
+
+  @override
+  String get communityMediaVideoVolume => 'Volume';
+
+  @override
+  String get communityMediaVideoFullscreen => 'Full screen';
+
+  @override
+  String get communityMediaVideoExitFullscreen => 'Exit full screen';
+
+  @override
+  String get communityMediaVideoControls => 'Video player';
 
   @override
   String get communityMediaImageUnavailable => 'Image unavailable';
@@ -17605,4 +17629,23 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String communityComposerRateLimitedSeconds(int seconds) {
+    return 'Posting is temporarily limited. Try again in $seconds seconds. Your draft is kept.';
+  }
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Posting is temporarily limited. Wait before trying again. Your draft is kept.';
+
+  @override
+  String get communityComposerDiscardDraft => 'Discard this draft?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      'Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.';
+
+  @override
+  String get communityComposerCheckFeed => 'Check feed';
 }
