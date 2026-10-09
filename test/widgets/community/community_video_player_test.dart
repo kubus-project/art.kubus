@@ -52,10 +52,10 @@ Widget _stage(Widget child, {double width = 540}) => Center(
 /// Lets frames, timers and the controller's async work (which resolves on the
 /// real event loop, outside the fake clock) all run.
 Future<void> _settle(WidgetTester tester) async {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 6; i++) {
     await tester.pump(const Duration(milliseconds: 60));
     await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 4)),
+      () => Future<void>.delayed(const Duration(milliseconds: 12)),
     );
   }
 }

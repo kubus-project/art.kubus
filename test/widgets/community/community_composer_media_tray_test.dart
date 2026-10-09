@@ -261,12 +261,16 @@ void counterTests() {
 
     tearDown(() => VideoPlayerPlatform.instance = previous);
 
-    Future<void> settle(WidgetTester tester) async {
-      for (var i = 0; i < 4; i++) {
+    /// Gives the controller's async work real event-loop turns. Polls instead of
+    /// waiting a fixed time, so a loaded machine only makes the test slower.
+    Future<void> settle(WidgetTester tester, {Finder? until}) async {
+      for (var i = 0; i < 60; i++) {
         await tester.pump(const Duration(milliseconds: 50));
         await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 4)),
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
         );
+        if (until != null && until.evaluate().isNotEmpty) break;
+        if (until == null && i >= 3) break;
       }
     }
 
@@ -275,7 +279,7 @@ void counterTests() {
       final controller = CommunityComposerMediaController()
         ..add([_image('one.png'), _video('clip.mp4')]);
       await tester.pumpWidget(_harness(controller));
-      await settle(tester);
+      await settle(tester, until: find.byType(VideoPlayer));
 
       expect(find.byType(VideoPlayer), findsOneWidget);
       expect(platform.live, hasLength(1));

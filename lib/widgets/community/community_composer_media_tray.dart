@@ -201,7 +201,9 @@ class _CommunityComposerMediaThumbnail extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: '$typeLabel, $positionLabel',
+      label: item.isVideo
+          ? '$typeLabel, $positionLabel, ${item.name}'
+          : '$typeLabel, $positionLabel',
       child: SizedBox(
         width: size,
         height: size,
