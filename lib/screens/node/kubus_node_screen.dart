@@ -1,3 +1,4 @@
+import '../../services/contextual_auth_gate.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -55,6 +56,17 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
   }
 
   Future<void> _openPairing() async {
+    // Pairing attaches a Node to an account (the backend's `/account/*`
+    // routes need only the account session), so a visitor is asked for an
+    // account here and for nothing else: never a wallet. The overview above
+    // stays readable without one.
+    final canPair = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: _l10n.kubusNodeConnectAction,
+      returnRoute: '/main',
+      sourceScreen: 'kubus_node',
+    );
+    if (!canPair || !mounted) return;
     final paired = await MyNodesScreen.show(context);
     if (paired == true && mounted) unawaited(_refresh());
   }

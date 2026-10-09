@@ -9,12 +9,9 @@ import '../../../models/artwork.dart';
 import '../../../models/promotion.dart';
 import '../../../models/portfolio_entry.dart';
 import '../../../providers/portfolio_provider.dart';
-import '../../../providers/profile_provider.dart';
-import '../../../providers/wallet_provider.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
-import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_entity_semantics.dart';
@@ -477,7 +474,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             source: 'artist_portfolio');
         return;
       case 'publish':
-        await _runPublishActionWithGuard(
+        await _runPublishAction(
           context: context,
           provider: provider,
           artworkId: artwork.id,
@@ -485,7 +482,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         );
         return;
       case 'unpublish':
-        await _runPublishActionWithGuard(
+        await _runPublishAction(
           context: context,
           provider: provider,
           artworkId: artwork.id,
@@ -639,34 +636,40 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     });
   }
 
-  Future<void> _runPublishActionWithGuard({
+  /// Publishing and unpublishing an artwork are account operations: the
+  /// backend authorizes them against the artwork's owner or a collaborator
+  /// with publish rights, and needs no wallet signature. They used to demand a
+  /// local signer first, which stopped an owner on a read-only session for no
+  /// reason. "Saved" is reported only once the backend returns the updated
+  /// artwork.
+  Future<void> _runPublishAction({
     required BuildContext context,
     required PortfolioProvider provider,
     required String artworkId,
     required bool publish,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
-    final savedToastMessage = AppLocalizations.of(context)!.commonSavedToast;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) {
-      return;
-    }
-
-    if (publish) {
-      await provider.publishArtwork(artworkId);
-    } else {
-      await provider.unpublishArtwork(artworkId);
+    final l10n = AppLocalizations.of(context)!;
+    Artwork? updated;
+    try {
+      updated = publish
+          ? await provider.publishArtwork(artworkId)
+          : await provider.unpublishArtwork(artworkId);
+    } catch (_) {
+      updated = null;
     }
 
     if (!mounted) return;
     messenger.showKubusSnackBar(
-      SnackBar(content: Text(savedToastMessage)),
+      SnackBar(
+        content: Text(
+          updated != null
+              ? l10n.commonSavedToast
+              : l10n.commonActionFailedToast,
+        ),
+      ),
+      tone:
+          updated != null ? KubusSnackBarTone.success : KubusSnackBarTone.error,
     );
   }
 }
