@@ -570,6 +570,69 @@ void main() {
     });
   });
 
+  group('control visibility', () {
+    double stripOpacity(WidgetTester tester) => tester
+        .widget<AnimatedOpacity>(find.ancestor(
+          of: find.byTooltip(_l10n.communityMediaVideoFullscreen),
+          matching: find.byType(AnimatedOpacity),
+        ))
+        .opacity;
+
+    testPlayer('controls show briefly after starting, then fade while playing',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      expect(stripOpacity(tester), 1);
+
+      await tester.pump(const Duration(seconds: 4));
+      expect(stripOpacity(tester), 0);
+    });
+
+    testPlayer('the first touch on a playing clip only reveals the controls',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      await tester.pump(const Duration(seconds: 4));
+      expect(stripOpacity(tester), 0);
+
+      final corner =
+          tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
+              const Offset(20, 20);
+      await tester.tapAt(corner);
+      await _settle(tester);
+      expect(platform.playingNow, hasLength(1), reason: 'still playing');
+      expect(stripOpacity(tester), 1);
+
+      await tester.tapAt(corner);
+      await _settle(tester);
+      expect(platform.playingNow, isEmpty, reason: 'the second touch pauses');
+    });
+
+    testPlayer('a paused clip keeps its controls', (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      await tester.pump(const Duration(seconds: 4));
+      expect(stripOpacity(tester), 0);
+
+      // A mouse tap on the surface pauses it; the strip must come back and stay.
+      await tester.tapAt(
+        tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
+            const Offset(20, 20),
+        kind: PointerDeviceKind.mouse,
+      );
+      await _settle(tester);
+      await tester.pump(const Duration(seconds: 4));
+      expect(platform.playingNow, isEmpty);
+      expect(stripOpacity(tester), 1);
+    });
+  });
+
   group('failure', () {
     testPlayer('an unplayable clip shows the error and can retry',
         (tester) async {

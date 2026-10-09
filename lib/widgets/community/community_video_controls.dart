@@ -107,6 +107,18 @@ class _CommunityVideoPlayerSurfaceState
   bool _stripVisible = true;
 
   @override
+  void initState() {
+    super.initState();
+    // The surface appears because someone just asked to play (or to expand the
+    // clip). Show the controls briefly so they know what is there, then let them
+    // fade while it plays.
+    _revealed = true;
+    _hideTimer = Timer(_revealFor, () {
+      if (mounted) setState(() => _revealed = false);
+    });
+  }
+
+  @override
   void dispose() {
     _hideTimer?.cancel();
     _scrubPosition.dispose();
