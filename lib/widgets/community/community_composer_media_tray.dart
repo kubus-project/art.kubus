@@ -1,5 +1,10 @@
+import 'dart:io' show File;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../community/community_composer_media.dart';
 import '../../community/community_upload_feedback.dart';
@@ -7,6 +12,7 @@ import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
 import '../inline_loading.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 
 /// Ordered thumbnails for the Community composer, shared by mobile and desktop.
 ///
@@ -195,7 +201,9 @@ class _CommunityComposerMediaThumbnail extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: '$typeLabel, $positionLabel',
+      label: item.isVideo
+          ? '$typeLabel, $positionLabel, ${item.name}'
+          : '$typeLabel, $positionLabel',
       child: SizedBox(
         width: size,
         height: size,
@@ -282,11 +290,19 @@ class _CommunityComposerMediaThumbnail extends StatelessWidget {
   }
 
   Widget _buildPreview(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final bytes = item.imageBytes;
     if (item.isImage && bytes != null) {
       return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
     }
+    final typed = _buildTypedTile(context);
+    if (item.isVideo) {
+      return _ComposerVideoPreview(file: item.file, fallback: typed);
+    }
+    return typed;
+  }
+
+  Widget _buildTypedTile(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return ColoredBox(
       color: scheme.primaryContainer.withValues(alpha: 0.4),
       child: Padding(
@@ -376,6 +392,112 @@ class _TileIconButton extends StatelessWidget {
       ),
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
+    );
+  }
+}
+
+/// First frame of a picked video, shown paused and muted behind the tile
+/// chrome. Falls back to the typed tile while the clip loads, and for good if it
+/// cannot be decoded here (the upload still goes ahead; the server is the judge).
+class _ComposerVideoPreview extends StatefulWidget {
+  const _ComposerVideoPreview({required this.file, required this.fallback});
+
+  final XFile file;
+  final Widget fallback;
+
+  @override
+  State<_ComposerVideoPreview> createState() => _ComposerVideoPreviewState();
+}
+
+class _ComposerVideoPreviewState extends State<_ComposerVideoPreview> {
+  VideoPlayerController? _controller;
+  bool _ready = false;
+  bool _disposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    VideoPlayerController? controller;
+    try {
+      final path = widget.file.path;
+      controller = kIsWeb
+          ? VideoPlayerController.networkUrl(Uri.parse(path))
+          : VideoPlayerController.file(File(path));
+      await controller.initialize();
+      await controller.setVolume(0);
+      // A frame past the very first one avoids a black opening frame.
+      await controller.seekTo(const Duration(milliseconds: 100));
+    } catch (_) {
+      await controller?.dispose();
+      return;
+    }
+    if (_disposed) {
+      await controller.dispose();
+      return;
+    }
+    setState(() {
+      _controller = controller;
+      _ready = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    final controller = _controller;
+    _controller = null;
+    if (controller != null) controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (!_ready || controller == null || !controller.value.isInitialized) {
+      return widget.fallback;
+    }
+    final roles = KubusColorRoles.of(context);
+    final size = controller.value.size;
+    return ExcludeSemantics(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: VideoPlayer(controller),
+              ),
+            ),
+          ),
+          Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: roles.surfaceOverlay,
+                borderRadius: BorderRadius.circular(KubusRadius.control),
+                border: Border.all(
+                  color: roles.ruleStrong,
+                  width: KubusSizes.hairline,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.xs),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  size: 18,
+                  color: roles.active,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

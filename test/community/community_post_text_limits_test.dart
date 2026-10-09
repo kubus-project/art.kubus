@@ -1,4 +1,5 @@
 import 'package:art_kubus/community/community_post_text_limits.dart';
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/community/community_upload_feedback.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/l10n/app_localizations_en.dart';
@@ -8,8 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('post text policy', () {
-    test('the canonical maximum is 2200 characters', () {
-      expect(kCommunityPostMaxCharacters, 2200);
+    test('the maximum follows the deployed backend contract', () {
+      expect(kCommunityPostMaxCharacters,
+          AppConfig.enableCommunityMultiMedia ? 2200 : 1000);
+      expect(communityPostExceedsLimit('a' * 1001),
+          !AppConfig.enableCommunityMultiMedia);
+      expect(communityPostExceedsLimit('a' * 2201), isTrue);
     });
 
     test('counts code points so accented Slovenian letters count once', () {
@@ -23,7 +28,7 @@ void main() {
       expect(communityPostCharacterCount('🎨🎨🎨'), 3);
     });
 
-    test('accepts exactly 2200 characters and rejects 2201', () {
+    test('accepts the active limit and rejects the next character', () {
       expect(
         communityPostExceedsLimit('a' * kCommunityPostMaxCharacters),
         isFalse,

@@ -414,8 +414,15 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     }
     final picked = await pickCommunityComposerPhotos(limit: remaining);
     if (picked.isEmpty || !mounted) return;
-    _composerMedia.add(picked);
+    final added = _composerMedia.add(picked);
     setModalState(() {});
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
+    );
+    if (trimmed != null) _showSnack(trimmed);
   }
 
   Future<void> _addComposerVideo(StateSetter setModalState) async {

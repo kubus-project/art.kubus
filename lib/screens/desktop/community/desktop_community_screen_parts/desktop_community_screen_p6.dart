@@ -34,9 +34,21 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     }
     final picked = await pickCommunityComposerPhotos(limit: remaining);
     if (picked.isEmpty || !mounted) return;
+    var added = 0;
     _applyState(() {
-      _composerMedia.add(picked);
+      added = _composerMedia.add(picked);
     });
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
+    );
+    if (trimmed != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(trimmed)),
+      );
+    }
   }
 
   Future<void> _pickVideo() async {

@@ -5,6 +5,7 @@ import '../config/config.dart';
 import '../l10n/app_localizations.dart';
 import '../services/backend_api_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
+import 'community_post_media.dart';
 
 /// Maximum images and videos in one Community post, counted together.
 const int kCommunityComposerMaxMediaItems = 10;
@@ -275,7 +276,7 @@ Future<String> uploadCommunityComposerMediaItem(
   if (url.isEmpty) {
     throw StateError('Media upload returned no URL.');
   }
-  return url;
+  return communityMediaReferenceForPost(url, isVideo: item.isVideo);
 }
 
 /// Opens the photo picker for up to [limit] images, reading bytes once.

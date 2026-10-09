@@ -10964,24 +10964,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.';
 
   @override
-  String communityComposerRateLimitedSeconds(int seconds) =>
-      'Objavljanje je začasno omejeno. Poskusite znova čez $seconds s. Osnutek je ohranjen.';
-
-  @override
-  String get communityComposerRateLimitedGeneric =>
-      'Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.';
-
-  @override
-  String get communityComposerDiscardDraft => 'Želite zavreči ta osnutek?';
-
-  @override
-  String get communityComposerAlreadyCommitted =>
-      "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.";
-
-  @override
-  String get communityComposerCheckFeed => "Preveri vir objav";
-
-  @override
   String get communityComposerMediaAddPhotos => 'Dodaj fotografije';
 
   @override
@@ -10990,6 +10972,16 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String communityComposerMediaLimitReached(int max) {
     return 'V objavo lahko dodate največ $max predstavnih datotek.';
+  }
+
+  @override
+  String communityComposerMediaTrimmed(int added, int picked, int max) {
+    return 'Dodanih: $added od $picked datotek. Objava vsebuje do $max elementov.';
+  }
+
+  @override
+  String communityComposerValidationRejected(String detail) {
+    return 'Strežnik objave ni sprejel: $detail. Osnutek je ohranjen.';
   }
 
   @override
@@ -11065,6 +11057,38 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get communityMediaVideoUnavailable =>
       'Tega videa tukaj ni mogoče predvajati.';
+
+  @override
+  String get communityMediaVideoReplay => 'Ponovno predvajaj video';
+
+  @override
+  String get communityMediaVideoRetry => 'Poskusi znova';
+
+  @override
+  String get communityMediaVideoLoading => 'Nalaganje videa';
+
+  @override
+  String get communityMediaVideoBuffering => 'Medpomnjenje';
+
+  @override
+  String get communityMediaVideoSeek => 'Položaj videa';
+
+  @override
+  String communityMediaVideoTime(String position, String duration) {
+    return '$position od $duration';
+  }
+
+  @override
+  String get communityMediaVideoVolume => 'Glasnost';
+
+  @override
+  String get communityMediaVideoFullscreen => 'Celoten zaslon';
+
+  @override
+  String get communityMediaVideoExitFullscreen => 'Zapri celoten zaslon';
+
+  @override
+  String get communityMediaVideoControls => 'Video predvajalnik';
 
   @override
   String get communityMediaImageUnavailable => 'Slika ni na voljo';
@@ -17788,4 +17812,23 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String communityComposerRateLimitedSeconds(int seconds) {
+    return 'Objavljanje je začasno omejeno. Poskusite znova čez $seconds s. Osnutek je ohranjen.';
+  }
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.';
+
+  @override
+  String get communityComposerDiscardDraft => 'Želite zavreči ta osnutek?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      'Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.';
+
+  @override
+  String get communityComposerCheckFeed => 'Preveri vir objav';
 }

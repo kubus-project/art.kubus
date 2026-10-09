@@ -4188,6 +4188,20 @@
       "max": {"type": "int"}
     }
   },
+  "communityComposerMediaTrimmed": "Dodanih: {added} od {picked} datotek. Objava vsebuje do {max} elementov.",
+  "@communityComposerMediaTrimmed": {
+    "placeholders": {
+      "added": {"type": "int"},
+      "picked": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerValidationRejected": "Strežnik objave ni sprejel: {detail}. Osnutek je ohranjen.",
+  "@communityComposerValidationRejected": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
   "communityComposerMediaCount": "Izbranih: {count} od {max}",
   "@communityComposerMediaCount": {
     "placeholders": {
@@ -4283,6 +4297,50 @@
   "communityMediaVideoUnavailable": "Tega videa tukaj ni mogoče predvajati.",
   "@communityMediaVideoUnavailable": {
     "description": "0.8.2 community media"
+  },
+  "communityMediaVideoReplay": "Ponovno predvajaj video",
+  "@communityMediaVideoReplay": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoRetry": "Poskusi znova",
+  "@communityMediaVideoRetry": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoLoading": "Nalaganje videa",
+  "@communityMediaVideoLoading": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoBuffering": "Medpomnjenje",
+  "@communityMediaVideoBuffering": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoSeek": "Položaj videa",
+  "@communityMediaVideoSeek": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoTime": "{position} od {duration}",
+  "@communityMediaVideoTime": {
+    "description": "0.8.2 community media video player",
+    "placeholders": {
+      "position": {"type": "String"},
+      "duration": {"type": "String"}
+    }
+  },
+  "communityMediaVideoVolume": "Glasnost",
+  "@communityMediaVideoVolume": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoFullscreen": "Celoten zaslon",
+  "@communityMediaVideoFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoExitFullscreen": "Zapri celoten zaslon",
+  "@communityMediaVideoExitFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoControls": "Video predvajalnik",
+  "@communityMediaVideoControls": {
+    "description": "0.8.2 community media video player"
   },
   "communityMediaImageUnavailable": "Slika ni na voljo",
   "@communityMediaImageUnavailable": {

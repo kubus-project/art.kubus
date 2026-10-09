@@ -6,9 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       community_multi_media_enabled:
-        description: Enable Community multi-media only after backend deployment and acceptance
+        description: >-
+          Community multi-media (up to ten photos and videos, 2200-character
+          captions). Needs backend art.kubus-backend#79 on every writable
+          instance. Set false only for the emergency rollback build.
         required: false
-        default: false
+        default: true
         type: boolean
       bootstrap_web_root:
         description: One-time physical Netcup document root preflight
@@ -51,7 +54,9 @@ jobs:
     with:
       deployment_environment: development
       source_sha: ${{ needs.source.outputs.sha }}
-      community_multi_media_enabled: ${{ inputs.community_multi_media_enabled == true }}
+      # Push builds carry no inputs: they take the default (enabled). Only a manual
+      # dispatch can build the rollback variant.
+      community_multi_media_enabled: ${{ github.event_name != 'workflow_dispatch' || inputs.community_multi_media_enabled }}
       full_browser_matrix: false
 
   deploy:

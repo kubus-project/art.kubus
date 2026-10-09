@@ -375,7 +375,19 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
     final picked = await pickCommunityComposerPhotos(limit: remaining);
     if (picked.isEmpty || !mounted) return;
-    setState(() => _composerMedia.add(picked));
+    var added = 0;
+    setState(() => added = _composerMedia.add(picked));
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
+    );
+    if (trimmed != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(trimmed)),
+      );
+    }
   }
 
   Future<void> _pickComposerVideo() async {
