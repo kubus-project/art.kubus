@@ -248,6 +248,9 @@ class _CommunityVideoPlayerSurfaceState
     if (!value.isInitialized) {
       return const Center(child: _BusyIndicator());
     }
+    // While the handle is being dragged the clip is paused on purpose; a big
+    // play control over the frame the viewer is searching for would be noise.
+    if (_scrubbing) return const SizedBox.shrink();
     if (value.isCompleted && !value.isPlaying) {
       return Center(
         child: CommunityVideoLargeButton(
@@ -388,8 +391,18 @@ class _CommunityVideoPlayerSurfaceState
           children: [
             _playPause(context),
             const SizedBox(width: KubusSpacing.xs),
-            _timeLabel(),
-            const Spacer(),
+            // Large text or an hour-long clip shrinks the label rather than
+            // pushing the buttons off the strip.
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: _timeLabel(),
+                ),
+              ),
+            ),
             CommunityVideoVolumeControl(
               audio: widget.audio,
               showSlider: false,

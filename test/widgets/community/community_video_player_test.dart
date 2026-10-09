@@ -20,8 +20,18 @@ final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 const String _clip = 'https://example.test/uploads/clip.mp4';
 const String _otherClip = 'https://example.test/uploads/other.mp4';
 
-Widget _app(Widget child, {ThemeMode mode = ThemeMode.light}) {
+Widget _app(
+  Widget child, {
+  ThemeMode mode = ThemeMode.light,
+  double textScale = 1,
+}) {
   return MaterialApp(
+    builder: (context, page) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: page!,
+    ),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
@@ -714,6 +724,44 @@ void main() {
 
       expect(find.text('2 / 2'), findsOneWidget);
     });
+  });
+
+  group('small stages and large text', () {
+    for (final scale in <double>[1, 1.5, 2]) {
+      testPlayer('a 320 px stage with an hour-long clip fits at ${scale}x text',
+          (tester) async {
+        platform.duration = const Duration(hours: 1, minutes: 2, seconds: 3);
+        await tester.pumpWidget(_app(
+          _stage(
+            const CommunityPostVideoSlide(url: _clip, isActive: true),
+            width: 320,
+          ),
+          textScale: scale,
+        ));
+        await startPlayback(tester);
+
+        // No RenderFlex overflow is reported as a test exception.
+        expect(tester.takeException(), isNull);
+        expect(find.text('0:00 / 1:02:03'), findsOneWidget);
+        for (final tooltip in <String>[
+          _l10n.communityMediaVideoPause,
+          _l10n.communityMediaVideoUnmute,
+          _l10n.communityMediaVideoFullscreen,
+        ]) {
+          final rect = tester.getRect(find.byTooltip(tooltip));
+          expect(
+              rect.right,
+              lessThanOrEqualTo(tester
+                      .getRect(
+                        find.byType(CommunityVideoPlayerSurface),
+                      )
+                      .right +
+                  0.5),
+              reason: '$tooltip stays inside the stage');
+          expect(rect.width, KubusSizes.mediaControlTarget);
+        }
+      });
+    }
   });
 
   group('tokens', () {

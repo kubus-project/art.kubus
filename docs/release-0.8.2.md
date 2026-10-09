@@ -90,12 +90,12 @@ Two repositories ship this slice. Apply the additive migration before deploying 
 4. Deploy backend PR #79 (`art.kubus-backend`, target `master`) to every writable instance.
 5. Verify backend readiness, writable-role health and migration compatibility on every instance.
 6. Run authenticated staging acceptance for mobile, desktop inline, desktop dialog and group composers using the intended API topology and real picker/uploads.
-7. Enable the matching frontend artifact explicitly. `scripts/prepare_public_build_config.mjs` accepts `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED=true|false`, validates it, and emits `COMMUNITY_MULTI_MEDIA_ENABLED`. The default is false. Reusable, development and production workflow inputs remain default-disabled, including push-triggered development builds.
-8. Verify the enabled artifact's `kubus-community-build.json` source SHA and capability, checksum integrity and actual behavior; monitor errors, uploads and duplicate submissions.
+7. Build the frontend. Community multi-media is **enabled by default** in the public build pipeline once backend #79 is live: `scripts/prepare_public_build_config.mjs` reads `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED` (default `true`, validated as `true|false`) and emits `COMMUNITY_MULTI_MEDIA_ENABLED`; the reusable, development and production workflow inputs default to `true`, and a push to `dev` builds the enabled artifact. The Dart source default is unchanged (`!isProduction`), so a build that skips the pipeline and ships release mode without the define still comes out disabled. `false` is the emergency rollback switch.
+8. Verify the artifact's `kubus-community-build.json` source SHA and capability, checksum integrity and actual behavior; monitor errors, uploads and duplicate submissions.
 
-No production migration or deployment is authorized by this QA pass.
+Compatibility gate. Before any enabled build is promoted to an environment, confirm that environment's backend runs #79 on **every** writable instance, with migration 098 applied. The create route authenticates before it validates, so the contract can only be read with a session: `KUBUS_API_BASE=<origin> KUBUS_CONTRACT_TOKEN=<test-account access token> node scripts/verify_community_backend_contract.mjs` sends only requests that validation rejects (2,201 code points, 1,500 characters with a bad media reference, eleven media items), creates nothing, and exits 0 when compatible, 1 when not, and 2 when it could not be verified (no token). Without a token it checks only that creation requires authentication.
 
-PowerShell local build commands (supply the existing required public build variables first):
+PowerShell local build commands (supply the existing required public build variables first). The pipeline default is already `true`; set it explicitly to document intent:
 
 ```powershell
 $env:KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED = 'true'
@@ -103,14 +103,14 @@ node scripts/prepare_public_build_config.mjs --web
 flutter build web --release --dart-define-from-file=.dart_tool/public-build-defines.json
 ```
 
-For an authorized workflow activation after backend deployment and acceptance:
+Workflow dispatch (the inputs default to `true`):
 
 ```text
-gh workflow run deploy-development.yml --ref dev -f community_multi_media_enabled=true
-gh workflow run release-production.yml --ref master -f community_multi_media_enabled=true
+gh workflow run deploy-development.yml --ref dev
+gh workflow run release-production.yml --ref master
 ```
 
-Rollback commands rebuild with the switch disabled; they do not delete stored media or revert the migration:
+Rollback rebuilds with the switch disabled; it does not delete stored media or revert the migration. Roll the frontend back first, then the backend only if needed:
 
 ```powershell
 $env:KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED = 'false'
@@ -119,13 +119,14 @@ flutter build web --release --dart-define-from-file=.dart_tool/public-build-defi
 ```
 
 ```text
+gh workflow run deploy-development.yml --ref dev -f community_multi_media_enabled=false
 gh workflow run release-production.yml --ref master -f community_multi_media_enabled=false
 ```
 
-The equivalent direct local flag is `flutter build web --release --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true|false`. Omit the switch only when the intended result is the default-disabled release. Existing protected deployment gates still apply to workflow dispatch. These commands were documented, not dispatched in this pass.
+The equivalent direct local flag is `flutter build web --release --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true|false`. Existing protected deployment gates still apply to workflow dispatch.
 
 When the switch is off, composers accept one attachment, a photo or a video,
-as before. Other composer behaviour is unchanged. The flag is read once at
+and captions of up to 1,000 characters (the pre-#79 backend limit), as before. Other composer behaviour is unchanged. The flag is read once at
 build time, through `AppConfig.isFeatureEnabled('communityMultiMedia')`.
 
 ## Known limitations
