@@ -69,6 +69,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
   bool _hasSetInitialTabByPersona = false;
   final TextEditingController _organizationController = TextEditingController();
   bool _capabilityViewTracked = false;
+
+  /// True once the backend contract and the account's creator status have been
+  /// read. The first build runs before that, with the old-backend fallback and
+  /// no review, so a stage computed then would misclassify pending or approved
+  /// creators; the capability-viewed event waits for it.
+  bool _creatorStatusSettled = false;
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _missionController = TextEditingController();
   final TextEditingController _focusController = TextEditingController();
@@ -92,7 +98,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     if (supported && BackendApiService().hasAuthSession) {
       await _loadInstitutionReviewStatus(forceRefresh: true);
     }
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _creatorStatusSettled = true);
   }
 
   @override
@@ -278,7 +284,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               daoProvider.hasServerCapability(DaoRoleType.institution),
       accountApplications: accountApps,
     );
-    if (!_capabilityViewTracked) {
+    if (!_capabilityViewTracked && _creatorStatusSettled && !_reviewLoading) {
       _capabilityViewTracked = true;
       try {
         unawaited(TelemetryService().trackCreatorCapabilityViewed(

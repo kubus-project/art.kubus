@@ -3330,6 +3330,20 @@ class BackendApiService
     return _tryDecodeJwtPayload(token);
   }
 
+  /// Stable identity of the signed-in account, or an empty string with no
+  /// session. Read from the session token (`id`/`userId`/`sub`, never a wallet),
+  /// so state cached per account can tell when a different account signed in
+  /// without anyone having to remember to reset it on logout.
+  String get authAccountKey {
+    final claims = getCurrentAuthTokenClaims();
+    if (claims == null) return '';
+    for (final key in const ['id', 'userId', 'user_id', 'sub']) {
+      final value = (claims[key] ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
   /// Returns normalized email claim from current auth token, if present.
   String? getCurrentAuthEmail() {
     final claims = getCurrentAuthTokenClaims();

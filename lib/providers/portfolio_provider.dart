@@ -20,6 +20,7 @@ class PortfolioProvider extends ChangeNotifier {
   /// True when the portfolio is loaded for the signed-in account instead of a
   /// wallet: a wallet-free artist's work is owned by the account.
   bool _accountScope = false;
+  String _accountKey = '';
   ArtworkProvider? _artworkProvider;
   AppRefreshProvider? _appRefreshProvider;
   int _lastPortfolioRefreshVersion = -1;
@@ -119,10 +120,27 @@ class PortfolioProvider extends ChangeNotifier {
 
   /// Loads the portfolio for the signed-in account (no wallet needed). Call
   /// only when the backend authorises creator reads by account.
-  void setAccountScope(bool enabled) {
-    if (_accountScope == enabled) return;
+  ///
+  /// [accountKey] identifies that account. Portfolio data is private and cached
+  /// here for the life of the app, so a different account (or none) clears it
+  /// before anything else happens; otherwise the next person to sign in on this
+  /// device would be shown the previous account's drafts and collections.
+  void setAccountScope(bool enabled, {String accountKey = ''}) {
+    final nextKey = enabled ? accountKey : '';
+    final changed = _accountScope != enabled || _accountKey != nextKey;
+    if (!changed) return;
+    final hadAccountData = _accountScope || _accountKey.isNotEmpty;
     _accountScope = enabled;
-    if (enabled && _walletAddress.isEmpty && !_loading) {
+    _accountKey = nextKey;
+    if (hadAccountData) {
+      _artworks = const <Artwork>[];
+      _collections = const <CollectionRecord>[];
+      _exhibitions = const <Exhibition>[];
+      _cachedEntries = null;
+      _error = null;
+      notifyListeners();
+    }
+    if (enabled && !_loading) {
       Future.microtask(() => refresh(force: true));
     }
   }
@@ -167,6 +185,9 @@ class PortfolioProvider extends ChangeNotifier {
   Future<void> refresh({bool force = false}) async {
     if (_loading) return;
     if (_walletAddress.isEmpty && !_accountScope) return;
+    final startedKey = _accountKey;
+    final startedWallet = _walletAddress;
+    var refreshAgain = false;
 
     _loading = true;
     _error = null;
@@ -198,6 +219,12 @@ class PortfolioProvider extends ChangeNotifier {
         exhibitionsFuture,
       ]);
 
+      // The account (or wallet) may have changed while this was loading; its
+      // result then belongs to someone else and must not be shown.
+      if (startedKey != _accountKey || startedWallet != _walletAddress) {
+        refreshAgain = true;
+        return;
+      }
       _artworks = (results[0] as List<Artwork>);
       _collections = (results[1] as List<CollectionRecord>);
       _exhibitions = (results[2] as List<Exhibition>);
@@ -209,6 +236,8 @@ class PortfolioProvider extends ChangeNotifier {
     } finally {
       _loading = false;
       notifyListeners();
+      // The scope changed mid-flight; load it for whoever is current now.
+      if (refreshAgain) Future.microtask(() => refresh(force: true));
     }
   }
 
@@ -218,7 +247,7 @@ class PortfolioProvider extends ChangeNotifier {
     final results = <Artwork>[];
 
     for (var page = 1; page <= maxPages; page++) {
-      final batch = walletAddress.isEmpty
+      final batch = _accountScope
           ? await _api.getMyArtworks(page: page, limit: pageSize)
           : await _api.getArtworks(
               page: page,
@@ -240,7 +269,7 @@ class PortfolioProvider extends ChangeNotifier {
     final results = <CollectionRecord>[];
 
     for (var page = 1; page <= maxPages; page++) {
-      final batch = walletAddress.isEmpty
+      final batch = _accountScope
           ? await _api.getMyCollections(page: page, limit: pageSize)
           : await _api.getCollections(
               walletAddress: walletAddress,

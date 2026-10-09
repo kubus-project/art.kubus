@@ -92,6 +92,12 @@ class ArtistStudio extends StatefulWidget {
 
 class _ArtistStudioState extends State<ArtistStudio> {
   bool _capabilityViewTracked = false;
+
+  /// True once the backend contract and the account's creator status have been
+  /// read. The first build runs before that, with the old-backend fallback and
+  /// no review, so a stage computed then would misclassify pending or approved
+  /// creators; the capability-viewed event waits for it.
+  bool _creatorStatusSettled = false;
   int _selectedIndex = 0;
   DAOReview? _artistReview;
   bool _reviewLoading = false;
@@ -115,7 +121,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     if (supported && BackendApiService().hasAuthSession) {
       await _loadArtistReviewStatus(forceRefresh: true);
     }
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _creatorStatusSettled = true);
   }
 
   @override
@@ -294,7 +300,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           daoProvider.hasServerCapability(DaoRoleType.artist),
       accountApplications: accountApps,
     );
-    if (!_capabilityViewTracked) {
+    if (!_capabilityViewTracked && _creatorStatusSettled && !_reviewLoading) {
       _capabilityViewTracked = true;
       try {
         unawaited(TelemetryService().trackCreatorCapabilityViewed(

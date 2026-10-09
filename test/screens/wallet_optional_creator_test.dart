@@ -168,7 +168,16 @@ UserProfile _walletFreeUser({String displayName = 'Ana'}) => UserProfile(
       updatedAt: DateTime.utc(2026, 10, 9),
     );
 
-void _use(_FakeBackend backend, {String? token = 'jwt'}) {
+/// A token shaped like the backend's (header.payload.signature) so the app can
+/// read the account id from it, as it does for real sessions.
+String _jwt(String accountId) {
+  String b64(Map<String, Object?> m) =>
+      base64Url.encode(utf8.encode(jsonEncode(m))).replaceAll('=', '');
+  return '${b64({'alg': 'HS256'})}.${b64({'id': accountId})}.sig';
+}
+
+void _use(_FakeBackend backend, {String? token}) {
+  token ??= _jwt('account-a');
   final api = BackendApiService();
   api.setAuthTokenForTesting(token);
   api.setHttpClient(backend.client);
@@ -451,6 +460,93 @@ void main() {
       expect(provider.hasServerCapability(DaoRoleType.institution), isTrue);
       // Dual role: a pending artist review does not remove the institution.
       expect(provider.hasServerCapability(DaoRoleType.artist), isFalse);
+    });
+  });
+
+  group('state never outlives its account', () {
+    final grantedArtist = {
+      'capabilities': {'artist': true, 'institution': false},
+      'applications': {'artist': null, 'institution': null},
+      'reviews': <Object?>[],
+    };
+
+    test('a second account does not inherit the first account\'s roles',
+        () async {
+      _use(_FakeBackend(mine: grantedArtist), token: _jwt('account-a'));
+      await BackendApiService()
+          .ensureWalletOptionalCreatorKnown(forceRefresh: true);
+      final provider =
+          DAOProvider(solanaWalletService: _TestSolanaWalletService());
+      await provider.loadMyApplications();
+      expect(provider.hasServerCapability(DaoRoleType.artist), isTrue);
+
+      // Account B signs in; its status request fails.
+      BackendApiService().setAuthTokenForTesting(_jwt('account-b'));
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/health') {
+          return http.Response(
+              jsonEncode({
+                'contracts': {'walletOptionalCreator': 1}
+              }),
+              200,
+              headers: _json);
+        }
+        return http.Response('boom', 500);
+      }));
+
+      // Even before B's status is read, A's role is not B's.
+      expect(provider.hasServerCapability(DaoRoleType.artist), isFalse);
+      await provider.loadMyApplications();
+      expect(provider.hasServerCapability(DaoRoleType.artist), isFalse);
+      expect(provider.myReviewFor(DaoRoleType.artist), isNull);
+    });
+
+    test('signing out drops the status', () async {
+      _use(_FakeBackend(mine: grantedArtist));
+      await BackendApiService()
+          .ensureWalletOptionalCreatorKnown(forceRefresh: true);
+      final provider =
+          DAOProvider(solanaWalletService: _TestSolanaWalletService());
+      await provider.loadMyApplications();
+      expect(provider.hasServerCapability(DaoRoleType.artist), isTrue);
+
+      BackendApiService().setAuthTokenForTesting(null);
+      expect(provider.hasServerCapability(DaoRoleType.artist), isFalse);
+      await provider.loadMyApplications();
+      expect(provider.hasServerCapability(DaoRoleType.artist), isFalse);
+    });
+
+    test('the portfolio of one account is cleared when another signs in',
+        () async {
+      final backend = _FakeBackend();
+      _use(backend, token: _jwt('account-a'));
+      final portfolio = PortfolioProvider()
+        ..setAccountScope(true, accountKey: 'account-a');
+      await portfolio.refresh(force: true);
+      expect(portfolio.artworks, isNotEmpty);
+
+      portfolio.setAccountScope(true, accountKey: 'account-b');
+      expect(portfolio.artworks, isEmpty,
+          reason: 'A\'s private work is gone the moment B is current');
+      portfolio.setAccountScope(false);
+      expect(portfolio.artworks, isEmpty);
+      expect(portfolio.collections, isEmpty);
+    });
+
+    test(
+        'an account that later links a wallet still sees its account-owned work',
+        () async {
+      final backend = _FakeBackend();
+      _use(backend, token: _jwt('account-a'));
+      final portfolio = PortfolioProvider()
+        ..setAccountScope(true, accountKey: 'account-a')
+        ..setWalletAddress('LinkedWallet111111111111111111111111111111111');
+      await portfolio.refresh(force: true);
+
+      expect(portfolio.artworks.map((a) => a.title), ['Wall piece']);
+      final listed = backend.to('/api/artworks').last.url.queryParameters;
+      expect(listed['mine'], 'true');
+      expect(listed.containsKey('wallet'), isFalse);
     });
   });
 

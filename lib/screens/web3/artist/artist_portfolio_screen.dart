@@ -57,7 +57,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = context.read<PortfolioProvider>();
-    provider.setAccountScope(_accountScoped);
+    provider.setAccountScope(_accountScoped,
+        accountKey: BackendApiService().authAccountKey);
     provider.setWalletAddress(widget.walletAddress);
   }
 
@@ -65,7 +66,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   void didUpdateWidget(covariant ArtistPortfolioScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     final provider = context.read<PortfolioProvider>();
-    provider.setAccountScope(_accountScoped);
+    provider.setAccountScope(_accountScoped,
+        accountKey: BackendApiService().authAccountKey);
     if (oldWidget.walletAddress.trim() == widget.walletAddress.trim()) return;
     provider.setWalletAddress(widget.walletAddress);
   }

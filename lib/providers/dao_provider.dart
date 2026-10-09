@@ -33,6 +33,11 @@ class DAOProvider extends ChangeNotifier {
   final Set<DaoRoleType> _myCapabilities = {};
   String? _lastApplicationErrorCode;
 
+  /// The account the maps above belong to. Anything read for a different
+  /// account (or with no session) is treated as absent, so a previous account's
+  /// pending reviews or granted roles can never open a workspace for the next.
+  String _myStatusAccountKey = '';
+
   DAOProvider({
     SolanaWalletService? solanaWalletService,
     DAOSignedEnvelopeService? signedEnvelopeService,
@@ -325,20 +330,48 @@ class DAOProvider extends ChangeNotifier {
   String? get lastApplicationErrorCode => _lastApplicationErrorCode;
 
   /// The caller's own application for [role], regardless of wallet.
-  DAOReview? myReviewFor(DaoRoleType role) => _myReviewsByRole[role];
+  DAOReview? myReviewFor(DaoRoleType role) =>
+      _statusIsCurrent ? _myReviewsByRole[role] : null;
 
   /// Roles the backend grants the signed-in account.
-  bool hasServerCapability(DaoRoleType role) => _myCapabilities.contains(role);
+  bool hasServerCapability(DaoRoleType role) =>
+      _statusIsCurrent && _myCapabilities.contains(role);
+
+  bool get _statusIsCurrent {
+    final key = BackendApiService().authAccountKey;
+    return key.isNotEmpty && key == _myStatusAccountKey;
+  }
+
+  void _clearMyStatus() {
+    _myReviewsByRole.clear();
+    _myCapabilities.clear();
+    _myStatusAccountKey = '';
+  }
 
   /// Loads the caller's applications and capabilities (no wallet needed).
   /// Soft-fails: an older backend simply has no such endpoint.
   Future<void> loadMyApplications() async {
+    final api = BackendApiService();
+    final accountKey = api.authAccountKey;
     try {
-      final api = BackendApiService();
-      if (!api.hasAuthSession) return;
+      // No session, or a different account than the cached status: drop it
+      // before anything can fail, so stale state never outlives its account.
+      if (accountKey.isEmpty || accountKey != _myStatusAccountKey) {
+        final hadStatus =
+            _myReviewsByRole.isNotEmpty || _myCapabilities.isNotEmpty;
+        _clearMyStatus();
+        if (hadStatus) notifyListeners();
+      }
+      if (accountKey.isEmpty || !api.hasAuthSession) return;
       if (!await api.ensureWalletOptionalCreatorKnown()) return;
       final payload = await api.getMyCreatorStatus();
-      if (payload == null) return;
+      // The session may have changed while the request was in flight.
+      if (api.authAccountKey != accountKey) return;
+      if (payload == null) {
+        _clearMyStatus();
+        notifyListeners();
+        return;
+      }
       _myReviewsByRole.clear();
       _myCapabilities.clear();
       final capabilities = payload['capabilities'];
@@ -361,8 +394,11 @@ class DAOProvider extends ChangeNotifier {
           _myReviewsByRole.putIfAbsent(role, () => review);
         }
       }
+      _myStatusAccountKey = accountKey;
       notifyListeners();
     } catch (e) {
+      // A failed read must not leave another account's status standing.
+      if (api.authAccountKey != _myStatusAccountKey) _clearMyStatus();
       debugPrint('DAOProvider.loadMyApplications error: $e');
     }
   }
@@ -392,6 +428,11 @@ class DAOProvider extends ChangeNotifier {
       final review = DAOReview.fromJson(payload);
       final roleType =
           role == 'institution' ? DaoRoleType.institution : DaoRoleType.artist;
+      if (!_statusIsCurrent) {
+        // First status for this account: start from a clean slate.
+        _clearMyStatus();
+        _myStatusAccountKey = BackendApiService().authAccountKey;
+      }
       _myReviewsByRole[roleType] = review;
       try {
         unawaited(TelemetryService().trackCreatorApplicationSubmitted(
