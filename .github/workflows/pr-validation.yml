@@ -188,7 +188,7 @@ jobs:
           if [ "$RELEASE_CANDIDATE" = true ]; then flutter test --coverage; else flutter test; fi
       - name: Community feature flag contracts in both configurations
         run: |
-          node --test scripts/prepare_public_build_config.test.mjs
+          node --test scripts/prepare_public_build_config.test.mjs scripts/verify_community_backend_contract.test.mjs
           flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/community test/widgets/community
           flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=false test/community test/widgets/community
       - name: Upload release-candidate coverage

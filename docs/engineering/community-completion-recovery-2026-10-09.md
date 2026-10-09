@@ -10,7 +10,8 @@ The clean local branch had one unpushed commit, `7d6784b1`, after remote
   token, and returns UNKNOWN (exit 2). It cannot attest publishing validation,
   revision, migration or HA safety. The former authenticated validator probes
   were unsafe against precisely the incompatible servers they attempted to
-  detect. Four regression tests cover permissive servers and redirects.
+  detect. Four regression tests cover permissive servers and redirects and run
+  in the required PR workflow alongside build-configuration tests.
 - Fullscreen entry unmounts inline before pushing. Exit waits for
   `TransitionRoute.completed`, which includes the reverse animation and overlay
   removal, before remounting inline. Playback restoration waits for the next
@@ -53,6 +54,9 @@ play button rather than the target clip's button. The corrected scenario passes.
   wasm dry-run findings remain visible (the deliverable is JavaScript).
 - Chromium desktop player: 22/22; mobile visual/player scenarios: 11/11;
   tablet and desktop portrait pass; accessibility: 10/10 checks.
+- English and Slovenian accessibility each pass 10/10; mixed-media carousel
+  and playback coordination each pass 5/5. Five repeated Chromium fullscreen
+  cycles retain playback, position and mute, and a paused transfer stays paused.
 - Existing authenticated isolated composer evidence is retained: desktop dialog
   14/14, desktop inline 10/10, mobile 5/5, group 5/5, preview 4/4 and feed 5/5.
   These use local test accounts, real uploads and disposable PostgreSQL,
