@@ -77,19 +77,18 @@ void main() {
       expect(MediaUrlResolver.resolve('placeholder://image'), isNull);
     });
 
-    test('passes through data: URIs', () {
+    test('rejects data: URIs', () {
       const dataUri = 'data:image/png;base64,abc123';
-      expect(MediaUrlResolver.resolve(dataUri), equals(dataUri));
+      expect(MediaUrlResolver.resolve(dataUri), isNull);
+      expect(MediaUrlResolver.resolveDisplayUrl(dataUri), isNull);
     });
 
-    test('passes through blob: URIs', () {
-      const blobUri = 'blob:https://example.com/abc-123';
-      expect(MediaUrlResolver.resolve(blobUri), equals(blobUri));
-    });
-
-    test('passes through asset: URIs', () {
-      const assetUri = 'asset:images/logo.png';
-      expect(MediaUrlResolver.resolve(assetUri), equals(assetUri));
+    test('rejects blob: and asset: URIs', () {
+      expect(
+        MediaUrlResolver.resolve('blob:https://example.com/abc-123'),
+        isNull,
+      );
+      expect(MediaUrlResolver.resolve('asset:images/logo.png'), isNull);
     });
 
     test('normalizes protocol-relative URLs to https', () {
@@ -279,6 +278,151 @@ void main() {
       } finally {
         StorageConfig.customHttpBackend = originalCustom;
       }
+    });
+  });
+
+  group('MediaUrlResolver resolver matrix', () {
+    const cidV1 = 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi';
+    const cidV0 = 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG';
+    const primaryGateway = 'https://dweb.link/ipfs/';
+    final originalCustom = StorageConfig.customHttpBackend;
+
+    setUp(() {
+      StorageConfig.customHttpBackend = null;
+      StorageConfig.setHttpBackend('https://api.example.test');
+    });
+
+    tearDown(() {
+      StorageConfig.customHttpBackend = originalCustom;
+    });
+
+    test('absolute https is kept as given', () {
+      const raw = 'https://cdn.example.com/a/photo.jpg';
+      expect(MediaUrlResolver.resolve(raw), equals(raw));
+      expect(MediaUrlResolver.resolveDisplayUrl(raw), equals(raw));
+    });
+
+    test('protocol-relative URLs become https', () {
+      expect(
+        MediaUrlResolver.resolveDisplayUrl('//cdn.example.com/a.jpg'),
+        equals('https://cdn.example.com/a.jpg'),
+      );
+    });
+
+    test('ipfs:// goes through the primary gateway', () {
+      expect(
+        MediaUrlResolver.resolveDisplayUrl('ipfs://$cidV1'),
+        equals('$primaryGateway$cidV1'),
+      );
+    });
+
+    test('ipfs:<cid> without slashes is accepted as ipfs://', () {
+      expect(
+        MediaUrlResolver.resolve('ipfs:$cidV0'),
+        equals('$primaryGateway$cidV0'),
+      );
+    });
+
+    test('a bare CIDv1 is resolved through the gateway', () {
+      expect(
+        MediaUrlResolver.resolve(cidV1),
+        equals('$primaryGateway$cidV1'),
+      );
+    });
+
+    test('a bare CIDv0 is resolved through the gateway', () {
+      expect(
+        MediaUrlResolver.resolve(cidV0),
+        equals('$primaryGateway$cidV0'),
+      );
+    });
+
+    test('an IPFS reference lists every configured gateway as a candidate', () {
+      final candidates =
+          MediaUrlResolver.resolveDisplayCandidates('ipfs://$cidV1');
+      expect(candidates, hasLength(3));
+      expect(candidates.first, equals('$primaryGateway$cidV1'));
+      expect(candidates[1], equals('https://ipfs.io/ipfs/$cidV1'));
+      expect(
+        candidates[2],
+        equals('https://gateway.pinata.cloud/ipfs/$cidV1'),
+      );
+    });
+
+    test('a plain absolute URL has exactly one candidate', () {
+      expect(
+        MediaUrlResolver.resolveDisplayCandidates(
+            'https://cdn.example.com/a.jpg'),
+        equals(['https://cdn.example.com/a.jpg']),
+      );
+    });
+
+    test('backend-relative paths are prefixed with the storage backend', () {
+      expect(
+        MediaUrlResolver.resolve('/uploads/a.jpg'),
+        equals('https://api.example.test/uploads/a.jpg'),
+      );
+      expect(
+        MediaUrlResolver.resolve('uploads/a.jpg'),
+        equals('https://api.example.test/uploads/a.jpg'),
+      );
+    });
+
+    test('javascript:, data:, file:, blob: and vbscript: are rejected', () {
+      const unsafe = <String>[
+        'javascript:alert(1)',
+        'JavaScript:alert(1)',
+        'data:image/svg+xml;base64,PHN2Zz4=',
+        'DATA:text/html,<script>x</script>',
+        'file:///etc/passwd',
+        'blob:https://example.com/abc',
+        'vbscript:msgbox',
+      ];
+      for (final raw in unsafe) {
+        expect(MediaUrlResolver.resolve(raw), isNull, reason: raw);
+        expect(MediaUrlResolver.resolveDisplayUrl(raw), isNull, reason: raw);
+        expect(
+          MediaUrlResolver.resolveDisplayCandidates(raw),
+          isEmpty,
+          reason: raw,
+        );
+      }
+    });
+
+    test('placeholder, empty and whitespace references resolve to nothing', () {
+      expect(MediaUrlResolver.resolveDisplayUrl('placeholder://x'), isNull);
+      expect(MediaUrlResolver.resolveDisplayUrl(''), isNull);
+      expect(MediaUrlResolver.resolveDisplayUrl('   '), isNull);
+      expect(MediaUrlResolver.resolveDisplayCandidates('  '), isEmpty);
+    });
+
+    test('a missing reference resolves to nothing', () {
+      expect(MediaUrlResolver.resolve(null), isNull);
+      expect(MediaUrlResolver.resolveDisplayUrl(null), isNull);
+      expect(MediaUrlResolver.resolveDisplayCandidates(null), isEmpty);
+    });
+
+    test('firstDisplayUrl skips unsafe and empty entries in order', () {
+      expect(
+        MediaUrlResolver.firstDisplayUrl(
+          <String?>['javascript:x', null, '  ', 'ipfs://$cidV1'],
+        ),
+        equals('$primaryGateway$cidV1'),
+      );
+      expect(
+        MediaUrlResolver.firstDisplayUrl(
+          <String?>['/uploads/a.jpg', 'https://b.example.com/x.jpg'],
+        ),
+        equals('https://api.example.test/uploads/a.jpg'),
+      );
+    });
+
+    test('firstDisplayUrl is null when no entry is usable', () {
+      expect(
+        MediaUrlResolver.firstDisplayUrl(<String?>['javascript:x', null]),
+        isNull,
+      );
+      expect(MediaUrlResolver.firstDisplayUrl(const <String?>[]), isNull);
     });
   });
 }

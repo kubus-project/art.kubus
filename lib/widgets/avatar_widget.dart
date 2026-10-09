@@ -579,9 +579,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
       return candidate;
     }
 
-    return MediaUrlResolver.resolveDisplayUrl(candidate) ??
-        MediaUrlResolver.resolve(candidate) ??
-        candidate;
+    return MediaUrlResolver.resolveDisplayUrl(candidate);
   }
 
   bool _isUsableNetworkUrl(String? candidate) {

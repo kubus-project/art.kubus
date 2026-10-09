@@ -180,7 +180,6 @@ class InstitutionProvider extends ChangeNotifier {
         longitude: 21.0122,
         contactEmail: 'hello@kubus.site',
         website: 'https://art.kubus.site',
-        imageUrls: const [],
         stats: InstitutionStats(
           totalVisitors: 1200,
           activeEvents: 1,
@@ -214,7 +213,6 @@ class InstitutionProvider extends ChangeNotifier {
         currentAttendees: 156,
         isPublic: true,
         allowRegistration: true,
-        imageUrls: const [],
         featuredArtworkIds: const [],
         artistIds: const [],
         createdAt: now.subtract(const Duration(days: 7)),
@@ -239,7 +237,6 @@ class InstitutionProvider extends ChangeNotifier {
         currentAttendees: 28,
         isPublic: true,
         allowRegistration: true,
-        imageUrls: const [],
         featuredArtworkIds: const [],
         artistIds: const [],
         createdAt: now.subtract(const Duration(days: 14)),
@@ -263,7 +260,6 @@ class InstitutionProvider extends ChangeNotifier {
         currentAttendees: 67,
         isPublic: true,
         allowRegistration: true,
-        imageUrls: const [],
         featuredArtworkIds: const [],
         artistIds: const [],
         createdAt: now.subtract(const Duration(days: 30)),
@@ -340,10 +336,6 @@ class InstitutionProvider extends ChangeNotifier {
     final username = profile.username.trim();
     final coverImage = (profile.coverImage ?? '').trim();
     final avatarImage = profile.avatar.trim();
-    final images = <String>[
-      if (coverImage.isNotEmpty) coverImage,
-      if (avatarImage.isNotEmpty) avatarImage,
-    ];
 
     return Institution(
       id: wallet,
@@ -357,7 +349,8 @@ class InstitutionProvider extends ChangeNotifier {
       longitude: 0,
       contactEmail: '',
       website: (profile.social['website'] ?? '').trim(),
-      imageUrls: images,
+      coverImageUrl: coverImage.isEmpty ? null : coverImage,
+      logoUrl: avatarImage.isEmpty ? null : avatarImage,
       stats: InstitutionStats(
         totalVisitors: 0,
         activeEvents: 0,
@@ -384,7 +377,8 @@ class InstitutionProvider extends ChangeNotifier {
         a.longitude == b.longitude &&
         a.contactEmail == b.contactEmail &&
         a.website == b.website &&
-        listEquals(a.imageUrls, b.imageUrls) &&
+        a.coverImageUrl == b.coverImageUrl &&
+        a.logoUrl == b.logoUrl &&
         a.stats.totalVisitors == b.stats.totalVisitors &&
         a.stats.activeEvents == b.stats.activeEvents &&
         a.stats.artworkViews == b.stats.artworkViews &&

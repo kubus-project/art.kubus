@@ -338,7 +338,10 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
               ? resolved.name
               : l10n.userProfileCollectionFallbackTitle;
           final description = (resolved.description ?? '').trim();
-          final thumbnailUrl = MediaUrlResolver.resolve(resolved.thumbnailUrl);
+          final thumbnailUrl = MediaUrlResolver.resolveDisplayUrl(
+            resolved.thumbnailUrl,
+            maxWidth: MediaUrlResolver.cardMaxWidth,
+          );
           final artworks = resolved.artworks;
 
           final walletAddress = walletProvider.currentWalletAddress;
@@ -534,11 +537,10 @@ class _ArtworkRow extends StatelessWidget {
     final id = artwork.id;
     final title =
         artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled;
-    final rawUrl = artwork.imageUrl ??
-        (artwork.imageCid != null && artwork.imageCid!.isNotEmpty
-            ? 'ipfs://${artwork.imageCid}'
-            : null);
-    final imageUrl = MediaUrlResolver.resolve(rawUrl);
+    final imageUrl = MediaUrlResolver.firstDisplayUrl(
+      <String?>[artwork.imageUrl, artwork.imageCid],
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DetailSpacing.md),

@@ -977,8 +977,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         return CommunitySubjectPreview(
           ref: CommunitySubjectRef(type: 'artwork', id: post.artwork!.id),
           title: post.artwork!.title,
-          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
-              post.artwork!.imageUrl,
+          imageUrl: MediaUrlResolver.resolveDisplayUrl(post.artwork!.imageUrl),
         );
       }
       return null;
@@ -1126,15 +1125,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                           child: Row(
                             children: [
-                              if (preview?.imageUrl != null &&
-                                  preview!.imageUrl!.isNotEmpty)
+                              if (MediaUrlResolver.resolveDisplayUrl(
+                                      preview?.imageUrl) !=
+                                  null)
                                 ClipRRect(
                                   borderRadius:
                                       BorderRadius.circular(KubusRadius.sm),
                                   child: Image.network(
                                     MediaUrlResolver.resolveDisplayUrl(
-                                            preview.imageUrl) ??
-                                        preview.imageUrl!,
+                                        preview?.imageUrl)!,
                                     width: 44,
                                     height: 44,
                                     fit: BoxFit.cover,
@@ -1664,16 +1663,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 style: KubusTypography.inter(fontSize: 14),
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
-                            if (_post!.imageUrl != null &&
-                                _post!.imageUrl!.isNotEmpty) ...[
+                            if (MediaUrlResolver.resolveDisplayUrl(
+                                    _post!.imageUrl) !=
+                                null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius:
                                     BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                          _post!.imageUrl) ??
-                                      _post!.imageUrl!,
+                                      _post!.imageUrl)!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,

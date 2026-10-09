@@ -11,7 +11,12 @@ class Institution {
   final double longitude;
   final String contactEmail;
   final String website;
-  final List<String> imageUrls;
+
+  /// Schema-backed cover (`institutions.cover_image_url`), raw reference.
+  final String? coverImageUrl;
+
+  /// Schema-backed logo (`institutions.logo_url`), raw reference.
+  final String? logoUrl;
   final InstitutionStats stats;
   final bool isVerified;
   final DateTime createdAt;
@@ -26,13 +31,20 @@ class Institution {
     required this.longitude,
     required this.contactEmail,
     required this.website,
-    this.imageUrls = const [],
+    this.coverImageUrl,
+    this.logoUrl,
     required this.stats,
     this.isVerified = false,
     required this.createdAt,
   });
 
+  /// Hero imagery for an institution: the cover, else the logo.
+  ///
+  /// Every surface (detail hero, search thumbnail) uses this one order.
+  String? get heroImageRef => coverImageUrl ?? logoUrl;
+
   factory Institution.fromJson(Map<String, dynamic> json) {
+    final boundary = _InstitutionImageBoundary.read(json);
     return Institution(
       id: json['id'],
       name: json['name'],
@@ -43,7 +55,8 @@ class Institution {
       longitude: json['longitude'].toDouble(),
       contactEmail: json['contactEmail'],
       website: json['website'],
-      imageUrls: List<String>.from(json['imageUrls'] ?? []),
+      coverImageUrl: boundary.coverImageUrl,
+      logoUrl: boundary.logoUrl,
       stats: InstitutionStats.fromJson(json['stats']),
       isVerified: json['isVerified'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
@@ -61,7 +74,8 @@ class Institution {
       'longitude': longitude,
       'contactEmail': contactEmail,
       'website': website,
-      'imageUrls': imageUrls,
+      'coverImageUrl': coverImageUrl,
+      'logoUrl': logoUrl,
       'stats': stats.toJson(),
       'isVerified': isVerified,
       'createdAt': createdAt.toIso8601String(),
@@ -78,7 +92,8 @@ class Institution {
     double? longitude,
     String? contactEmail,
     String? website,
-    List<String>? imageUrls,
+    String? coverImageUrl,
+    String? logoUrl,
     InstitutionStats? stats,
     bool? isVerified,
     DateTime? createdAt,
@@ -93,11 +108,56 @@ class Institution {
       longitude: longitude ?? this.longitude,
       contactEmail: contactEmail ?? this.contactEmail,
       website: website ?? this.website,
-      imageUrls: imageUrls ?? this.imageUrls,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      logoUrl: logoUrl ?? this.logoUrl,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+}
+
+/// Normalization boundary for institution imagery.
+///
+/// Typed schema names (`coverImageUrl`/`cover_image_url`, `logoUrl`/`logo_url`)
+/// are canonical. The legacy `imageUrls` array (what the backend sent before it
+/// exposed the schema fields) is read only here: its first entry is the cover
+/// and its second entry the logo, the order the backend has always used.
+class _InstitutionImageBoundary {
+  final String? coverImageUrl;
+  final String? logoUrl;
+
+  const _InstitutionImageBoundary({this.coverImageUrl, this.logoUrl});
+
+  static _InstitutionImageBoundary read(Map<String, dynamic> json) {
+    final legacy = json['imageUrls'];
+    final legacyRefs = legacy is List
+        ? legacy
+            .whereType<String>()
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false)
+        : const <String>[];
+    final cover = _firstString([
+          json['coverImageUrl'],
+          json['cover_image_url'],
+        ]) ??
+        (legacyRefs.isNotEmpty ? legacyRefs.first : null);
+    final logo = _firstString([
+          json['logoUrl'],
+          json['logo_url'],
+        ]) ??
+        (legacyRefs.length > 1 ? legacyRefs[1] : null);
+    return _InstitutionImageBoundary(coverImageUrl: cover, logoUrl: logo);
+  }
+
+  static String? _firstString(List<dynamic> values) {
+    for (final value in values) {
+      if (value is! String) continue;
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
   }
 }
 
@@ -159,8 +219,23 @@ class InstitutionStats {
   }
 }
 
-enum EventType { exhibition, workshop, conference, performance, galleryOpening, auction }
-enum EventCategory { art, photography, sculpture, digital, mixedMedia, installation }
+enum EventType {
+  exhibition,
+  workshop,
+  conference,
+  performance,
+  galleryOpening,
+  auction
+}
+
+enum EventCategory {
+  art,
+  photography,
+  sculpture,
+  digital,
+  mixedMedia,
+  installation
+}
 
 class Event {
   final String id;
@@ -180,7 +255,10 @@ class Event {
   final int currentAttendees;
   final bool isPublic;
   final bool allowRegistration;
+
+  /// Gallery images only. The cover is held separately in [coverUrl].
   final List<String> imageUrls;
+  final String? coverUrl;
   final List<String> featuredArtworkIds;
   final List<String> artistIds;
   final DateTime createdAt;
@@ -205,17 +283,28 @@ class Event {
     this.isPublic = true,
     this.allowRegistration = true,
     this.imageUrls = const [],
+    this.coverUrl,
     this.featuredArtworkIds = const [],
     this.artistIds = const [],
     required this.createdAt,
     required this.createdBy,
   });
 
+  /// Hero imagery for an event: the cover, else the first gallery image.
+  ///
+  /// Search thumbnails, map cards and detail headers all use this order.
+  String? get heroImageRef {
+    final cover = coverUrl?.trim();
+    if (cover != null && cover.isNotEmpty) return cover;
+    return imageUrls.isNotEmpty ? imageUrls.first : null;
+  }
+
   bool get isFree => price == null || price == 0;
   bool get hasCapacity => capacity == null || currentAttendees < capacity!;
-  bool get isActive => DateTime.now().isBefore(endDate) && DateTime.now().isAfter(startDate);
+  bool get isActive =>
+      DateTime.now().isBefore(endDate) && DateTime.now().isAfter(startDate);
   bool get isUpcoming => DateTime.now().isBefore(startDate);
-  
+
   String get formattedPrice {
     if (isFree) return 'Free';
     return '\$${price!.toStringAsFixed(2)}';
@@ -227,10 +316,11 @@ class Event {
       title: json['title'],
       description: json['description'],
       type: EventType.values.firstWhere((e) => e.name == json['type']),
-      category: EventCategory.values.firstWhere((e) => e.name == json['category']),
+      category:
+          EventCategory.values.firstWhere((e) => e.name == json['category']),
       institutionId: json['institutionId'],
-      institution: json['institution'] != null 
-          ? Institution.fromJson(json['institution']) 
+      institution: json['institution'] != null
+          ? Institution.fromJson(json['institution'])
           : null,
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
@@ -243,6 +333,7 @@ class Event {
       isPublic: json['isPublic'] ?? true,
       allowRegistration: json['allowRegistration'] ?? true,
       imageUrls: List<String>.from(json['imageUrls'] ?? []),
+      coverUrl: _nullableEventString(json['coverUrl'] ?? json['cover_url']),
       featuredArtworkIds: List<String>.from(json['featuredArtworkIds'] ?? []),
       artistIds: List<String>.from(json['artistIds'] ?? []),
       createdAt: DateTime.parse(json['createdAt']),
@@ -326,11 +417,8 @@ class Event {
           ) ??
           true,
       imageUrls: _eventStringList(
-          raw['imageUrls'] ?? raw['image_urls'] ?? raw['images'])
-        ..addAll([
-          if (_eventString(event.coverUrl).isNotEmpty)
-            _eventString(event.coverUrl),
-        ]),
+          raw['imageUrls'] ?? raw['image_urls'] ?? raw['images']),
+      coverUrl: _nullableEventString(event.coverUrl),
       featuredArtworkIds: _eventStringList(
         raw['featuredArtworkIds'] ?? raw['featured_artwork_ids'],
       ),
@@ -368,6 +456,7 @@ class Event {
       'isPublic': isPublic,
       'allowRegistration': allowRegistration,
       'imageUrls': imageUrls,
+      'coverUrl': coverUrl,
       'featuredArtworkIds': featuredArtworkIds,
       'artistIds': artistIds,
       'createdAt': createdAt.toIso8601String(),
@@ -394,6 +483,7 @@ class Event {
     bool? isPublic,
     bool? allowRegistration,
     List<String>? imageUrls,
+    String? coverUrl,
     List<String>? featuredArtworkIds,
     List<String>? artistIds,
     DateTime? createdAt,
@@ -418,6 +508,7 @@ class Event {
       isPublic: isPublic ?? this.isPublic,
       allowRegistration: allowRegistration ?? this.allowRegistration,
       imageUrls: imageUrls ?? this.imageUrls,
+      coverUrl: coverUrl ?? this.coverUrl,
       featuredArtworkIds: featuredArtworkIds ?? this.featuredArtworkIds,
       artistIds: artistIds ?? this.artistIds,
       createdAt: createdAt ?? this.createdAt,
@@ -427,6 +518,11 @@ class Event {
 }
 
 String _eventString(dynamic value) => (value ?? '').toString().trim();
+
+String? _nullableEventString(dynamic value) {
+  final trimmed = _eventString(value);
+  return trimmed.isEmpty ? null : trimmed;
+}
 
 DateTime? _eventDate(dynamic value) {
   if (value == null) return null;

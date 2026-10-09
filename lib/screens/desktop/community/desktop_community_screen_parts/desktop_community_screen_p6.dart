@@ -376,11 +376,12 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
           hub.setDraftArtwork(null);
         }
       },
-      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+      leading: previewValue != null &&
+              MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,

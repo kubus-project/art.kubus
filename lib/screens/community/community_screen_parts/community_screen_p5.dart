@@ -216,16 +216,16 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                                 style: KubusTypography.inter(fontSize: 14),
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
-                            if (post.imageUrl != null &&
-                                post.imageUrl!.isNotEmpty) ...[
+                            if (MediaUrlResolver.resolveDisplayUrl(
+                                    post.imageUrl) !=
+                                null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius:
                                     BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                          post.imageUrl) ??
-                                      post.imageUrl!,
+                                      post.imageUrl)!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,

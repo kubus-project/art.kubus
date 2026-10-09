@@ -693,7 +693,10 @@ class _ExhibitionCard extends StatelessWidget {
 
     final location = (exhibition.locationName ?? '').trim();
     final isPublished = exhibition.isPublished;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      exhibition.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

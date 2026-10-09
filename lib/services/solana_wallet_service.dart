@@ -10,12 +10,12 @@ import 'package:solana/metaplex.dart';
 import '../config/api_keys.dart';
 import '../config/config.dart';
 import '../models/wallet.dart';
-import 'storage_config.dart';
 import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/token_amounts.dart';
 import 'ipfs_metadata_resolver.dart';
 import '../utils/token_identity_rules.dart';
+import '../utils/media_url_resolver.dart';
 
 enum DerivationPathType { standard, legacy }
 
@@ -3034,46 +3034,10 @@ class SolanaWalletService {
     return 'Token ${short.toUpperCase()}';
   }
 
+  /// Token image references (https, ipfs and CIDs) go through the canonical
+  /// media resolver, the same one every other image uses.
   String? _resolveTokenImage(String? candidate) {
-    if (candidate == null) return null;
-    final trimmed = candidate.trim();
-    if (trimmed.isEmpty) return null;
-    if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) {
-      return trimmed;
-    }
-    if (trimmed.startsWith('//')) {
-      return 'https:$trimmed';
-    }
-    if (trimmed.startsWith('ipfs://')) {
-      final cid = _normalizeIpfsPath(trimmed.substring(7));
-      return StorageConfig.resolveUrl('ipfs://$cid');
-    }
-    if (trimmed.startsWith('ipfs/')) {
-      final cid = _normalizeIpfsPath(trimmed.substring(5));
-      return StorageConfig.resolveUrl('ipfs://$cid');
-    }
-    if (trimmed.startsWith('/ipfs/')) {
-      final cid = _normalizeIpfsPath(trimmed.substring(6));
-      return StorageConfig.resolveUrl('ipfs://$cid');
-    }
-    if (trimmed.contains('/ipfs/') && !trimmed.startsWith('http')) {
-      return StorageConfig.resolveUrl(trimmed);
-    }
-    if (StorageConfig.isLikelyCid(trimmed)) {
-      return StorageConfig.resolveUrl(trimmed);
-    }
-    return trimmed;
-  }
-
-  String _normalizeIpfsPath(String value) {
-    var normalized = value.trim();
-    if (normalized.startsWith('ipfs/')) {
-      normalized = normalized.substring(5);
-    }
-    while (normalized.startsWith('/')) {
-      normalized = normalized.substring(1);
-    }
-    return normalized;
+    return MediaUrlResolver.resolveDisplayUrl(candidate);
   }
 
   Future<Map<String, dynamic>> _getTokenInfo(String mint,

@@ -143,9 +143,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
 
   Widget _buildHeaderCard(BuildContext context, Institution institution) {
     final scheme = Theme.of(context).colorScheme;
-    final resolvedImage = MediaUrlResolver.resolve(
-      institution.imageUrls.isNotEmpty ? institution.imageUrls.first : null,
-    );
+    final resolvedImage =
+        MediaUrlResolver.resolveDisplayUrl(institution.heroImageRef);
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,

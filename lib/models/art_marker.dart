@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'promotion.dart';
 import '../providers/storage_provider.dart';
+import '../utils/artwork_media_resolver.dart';
 import '../utils/media_url_resolver.dart';
 
 /// High-level category for an art marker shown on the map
@@ -725,19 +726,11 @@ class ArtMarker {
     return value;
   }
 
+  /// First raw cover reference in the shared artwork/marker cover chain
+  /// (see `ArtworkMediaResolver.resolveCover`). Callers resolve it for display.
   String? get coverImageUrl {
-    final value = _metadataString(const [
-      'coverImageUrl',
-      'cover_image_url',
-      'coverUrl',
-      'cover_url',
-      'coverImage',
-      'cover_image',
-      'imageUrl',
-      'image_url',
-    ]);
-    if (value == null || value.isEmpty) return null;
-    return value;
+    final refs = ArtworkMediaResolver.coverRefsFromMetadata(metadata);
+    return refs.isEmpty ? null : refs.first;
   }
 
   /// Artwork artist attribution (e.g. muralist, sculptor, architect).

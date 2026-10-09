@@ -1613,7 +1613,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
 
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(exhibition.coverUrl);
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {

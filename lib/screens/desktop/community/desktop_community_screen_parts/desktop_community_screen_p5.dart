@@ -1166,13 +1166,12 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   ),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: group.coverImage != null
+                child: MediaUrlResolver.resolveDisplayUrl(group.coverImage) !=
+                        null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(KubusRadius.md),
                         child: Image.network(
-                          MediaUrlResolver.resolveDisplayUrl(
-                                  group.coverImage) ??
-                              group.coverImage!,
+                          MediaUrlResolver.resolveDisplayUrl(group.coverImage)!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.group,

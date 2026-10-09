@@ -700,7 +700,7 @@ class _EventDetailsCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(event.coverUrl);
 
     String? dateRange;
     if (event.startsAt != null || event.endsAt != null) {
@@ -1157,7 +1157,7 @@ class _LinkedExhibitionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(exhibition.coverUrl);
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {

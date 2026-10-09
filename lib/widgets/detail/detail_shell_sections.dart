@@ -285,6 +285,7 @@ class CollaboratorsRow extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context, CollaboratorData collab) {
     final scheme = Theme.of(context).colorScheme;
+    final resolvedAvatar = MediaUrlResolver.resolveDisplayUrl(collab.avatarUrl);
 
     return GestureDetector(
       onTap: onTap != null ? () => onTap!(collab) : null,
@@ -306,11 +307,9 @@ class CollaboratorsRow extends StatelessWidget {
           ],
         ),
         child: ClipOval(
-          child: collab.avatarUrl != null && collab.avatarUrl!.isNotEmpty
+          child: resolvedAvatar != null
               ? Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(collab.avatarUrl) ??
-                      MediaUrlResolver.resolve(collab.avatarUrl) ??
-                      collab.avatarUrl!,
+                  resolvedAvatar,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _buildInitials(context, collab),
                 )
@@ -551,6 +550,7 @@ class DetailArtworkCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final effectiveAccent = accentColor ?? scheme.primary;
     final imageSize = isCompact ? 48.0 : 64.0;
+    final resolvedImage = MediaUrlResolver.resolveDisplayUrl(imageUrl);
 
     return Material(
       color: scheme.surface,
@@ -584,11 +584,9 @@ class DetailArtworkCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  child: imageUrl != null && imageUrl!.isNotEmpty
+                  child: resolvedImage != null
                       ? Image.network(
-                          MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
-                              MediaUrlResolver.resolve(imageUrl) ??
-                              imageUrl!,
+                          resolvedImage,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) =>
                               _buildPlaceholder(context, effectiveAccent),

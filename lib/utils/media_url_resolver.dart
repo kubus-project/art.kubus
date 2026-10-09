@@ -53,6 +53,10 @@ class MediaUrlResolver {
 
   static const int _defaultMaxDisplayWidth = 1600;
 
+  /// Width cap for list rows, cards and thumbnails. Heroes and detail headers
+  /// use the default display cap.
+  static const int cardMaxWidth = 960;
+
   // Wikimedia originals are frequently multi-megabyte scans; always request a
   // server-side thumbnail for display so 4G clients don't download 5MB+ per
   // card. Formats that Wikimedia can thumbnail with the same file extension.
@@ -334,11 +338,10 @@ class MediaUrlResolver {
 
   /// Resolves a raw media reference into an absolute URL when possible.
   ///
-  /// - Passes through `data:`, `blob:`, and `asset:` URIs unchanged.
-  /// - Supports `ipfs://`, `ipfs/`, `/ipfs/` and backend-relative paths via `StorageConfig`.
-  /// - Normalizes protocol-relative URLs (`//...`) to `https://`.
+  /// Non-display variant: used for models, files and any reference that is not
+  /// rendered as a size-clamped image. See [_resolveCandidates] for the rules.
   static String? resolve(String? raw) {
-    return _resolveInternal(raw, forDisplay: false);
+    return _firstCandidate(_resolveCandidates(raw, forDisplay: false));
   }
 
   /// Resolves an image/display URL.
@@ -346,54 +349,121 @@ class MediaUrlResolver {
   /// For Flutter Web, this routes non-allowlisted external hosts through the
   /// backend media proxy to avoid CORS/image decode failures in CanvasKit.
   static String? resolveDisplayUrl(String? raw, {int? maxWidth}) {
-    return _resolveInternal(raw, forDisplay: true, maxWidth: maxWidth);
+    return _firstCandidate(
+      _resolveCandidates(raw, forDisplay: true, maxWidth: maxWidth),
+    );
   }
 
-  static String? _resolveInternal(
+  /// Every display URL for [raw], in preference order.
+  ///
+  /// IPFS references resolve to one candidate per configured gateway so an
+  /// image widget can step to the next gateway when the first one fails. All
+  /// other references yield at most one candidate.
+  static List<String> resolveDisplayCandidates(String? raw, {int? maxWidth}) {
+    return _resolveCandidates(raw, forDisplay: true, maxWidth: maxWidth);
+  }
+
+  /// The single fallback walker for entity media fields.
+  ///
+  /// Callers pass their field chain in preference order (for example an
+  /// artwork's `imageUrl`, then its CID, then fallbacks). The first reference
+  /// that resolves to a safe URL wins. Unsafe, empty and placeholder entries
+  /// are skipped, never passed through.
+  static String? firstDisplayUrl(
+    Iterable<String?> refs, {
+    int? maxWidth,
+  }) {
+    for (final raw in refs) {
+      final resolved = resolveDisplayUrl(raw, maxWidth: maxWidth);
+      if (resolved != null) return resolved;
+    }
+    return null;
+  }
+
+  static String? _firstCandidate(List<String> candidates) {
+    return candidates.isEmpty ? null : candidates.first;
+  }
+
+  /// URL safety and normalization shared by every media consumer.
+  ///
+  /// Accepted: absolute `https:` and `http:` (upgraded by [StorageConfig] on
+  /// secure web), `ipfs://`, `ipns://`, bare CIDs and `ipfs/` paths (expanded
+  /// through the configured gateways), protocol-relative `//host/...`, and
+  /// backend-relative paths (prefixed with the storage backend).
+  ///
+  /// Rejected (returns no candidates): `javascript:`, `data:`, `file:`,
+  /// `blob:`, `asset:`, `vbscript:` and every other scheme, `placeholder://`,
+  /// empty and null input.
+  static List<String> _resolveCandidates(
     String? raw, {
     required bool forDisplay,
     int? maxWidth,
   }) {
-    if (raw == null) return null;
-    final candidate = raw.trim();
-    if (candidate.isEmpty) return null;
+    if (raw == null) return const <String>[];
+    var candidate = raw.trim();
+    if (candidate.isEmpty) return const <String>[];
 
     final lower = candidate.toLowerCase();
-    if (lower.startsWith('placeholder://')) return null;
-    if (lower.startsWith('data:') ||
-        lower.startsWith('blob:') ||
-        lower.startsWith('asset:')) {
-      return candidate;
-    }
+    if (lower.startsWith('placeholder://')) return const <String>[];
 
-    if (candidate.startsWith('//')) {
-      return StorageConfig.resolveUrl('https:$candidate');
-    }
-
-    final resolved = StorageConfig.resolveUrl(candidate);
-    if (resolved == null) return null;
-    var normalized = _canonicalizeHttpUrl(resolved);
-    if (forDisplay && _isHttpUrl(normalized)) {
-      normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
-      normalized = rewriteWikimediaThumb(normalized, maxWidth: maxWidth);
-    }
-
-    // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore
-    // requires upstream CORS headers. Route external display media through
-    // backend proxy unless the host is explicitly allowlisted.
-    if (foundation.kIsWeb && AppConfig.isFeatureEnabled('externalImageProxy')) {
-      if (_isHttpUrl(normalized)) {
-        if (forDisplay) {
-          if (shouldProxyDisplayUrl(normalized)) {
-            return _proxyImageUrl(normalized);
-          }
-        } else if (_looksLikeImageUrl(normalized) &&
-            shouldProxyDisplayUrl(normalized)) {
-          return _proxyImageUrl(normalized);
+    final scheme = _schemeOf(candidate);
+    if (scheme != null) {
+      if (scheme == 'ipfs' || scheme == 'ipns') {
+        // `ipfs:<cid>` and `ipfs:/<cid>` are accepted as `ipfs://<cid>`; the
+        // same for `ipns:`.
+        if (!lower.startsWith('$scheme://')) {
+          final rest = candidate.substring(scheme.length + 1);
+          candidate = '$scheme://${rest.replaceFirst(RegExp(r'^/+'), '')}';
         }
+      } else if (!_allowedSchemes.contains(scheme)) {
+        return const <String>[];
       }
     }
 
-    return normalized;
+    if (candidate.startsWith('//')) {
+      candidate = 'https:$candidate';
+    }
+
+    final resolvedCandidates = StorageConfig.resolveAllUrls(candidate);
+    final out = <String>[];
+    for (final resolved in resolvedCandidates) {
+      var normalized = _canonicalizeHttpUrl(resolved);
+      if (forDisplay && _isHttpUrl(normalized)) {
+        normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
+        normalized = rewriteWikimediaThumb(normalized, maxWidth: maxWidth);
+      }
+
+      // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore
+      // requires upstream CORS headers. Route external display media through
+      // backend proxy unless the host is explicitly allowlisted.
+      if (foundation.kIsWeb &&
+          AppConfig.isFeatureEnabled('externalImageProxy') &&
+          _isHttpUrl(normalized)) {
+        if (forDisplay) {
+          if (shouldProxyDisplayUrl(normalized)) {
+            normalized = _proxyImageUrl(normalized);
+          }
+        } else if (_looksLikeImageUrl(normalized) &&
+            shouldProxyDisplayUrl(normalized)) {
+          normalized = _proxyImageUrl(normalized);
+        }
+      }
+
+      if (normalized.isNotEmpty && !out.contains(normalized)) {
+        out.add(normalized);
+      }
+    }
+    return out;
+  }
+
+  static const Set<String> _allowedSchemes = {'http', 'https', 'ipfs', 'ipns'};
+
+  static final RegExp _schemePattern = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.\-]*):');
+
+  /// Lower-cased scheme of [candidate] when it carries one (`javascript`,
+  /// `data`, `https`, ...), otherwise null. Relative paths and CIDs have none.
+  static String? _schemeOf(String candidate) {
+    final match = _schemePattern.firstMatch(candidate);
+    return match?.group(1)!.toLowerCase();
   }
 }

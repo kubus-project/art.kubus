@@ -193,9 +193,10 @@ class DetailHeader extends StatelessWidget {
       return gradientBackground;
     }
 
-    final resolvedCoverUrl = MediaUrlResolver.resolveDisplayUrl(coverUrl) ??
-        MediaUrlResolver.resolve(coverUrl) ??
-        coverUrl!;
+    final resolvedCoverUrl = MediaUrlResolver.resolveDisplayUrl(coverUrl);
+    if (resolvedCoverUrl == null) {
+      return gradientBackground;
+    }
 
     final imageWidget = Image.network(
       resolvedCoverUrl,
@@ -211,10 +212,13 @@ class DetailHeader extends StatelessWidget {
               child: SizedBox(
                 width: 32,
                 height: 32,
-                child: InlineLoading(tileSize: 4, progress: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null, color: accentColor),
+                child: InlineLoading(
+                    tileSize: 4,
+                    progress: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: accentColor),
               ),
             ),
           ],

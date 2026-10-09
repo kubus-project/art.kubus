@@ -10,12 +10,12 @@
 > public presentation/bootstrap data where safe. The same canonical URL is the
 > preferred verified native-app link.
 >
-> The current implementation still contains a 1500 ms readiness fallback in
-> `web/public_flutter_takeover.js` that can synthesize
-> `kubus:public-entity-ready` before the entity screen itself declares a
-> meaningful frame. This is a known implementation violation of the readiness
-> contract below and is scheduled for removal in the public-entry phase. Until
-> that work lands, do not cite the fallback as intended architecture.
+> Current implementation: `web/public_flutter_takeover.js` only listens for
+> `kubus:public-entity-ready` and never synthesizes it; there is no timed
+> readiness fallback. The event is dispatched by
+> `lib/widgets/public_entity_takeover_ready.dart` at the end of the frame that
+> builds the requested entity, so it follows a meaningful frame as the contract
+> below requires.
 >
 > Canonical planning detail: `APP_NATIVE_PUBLIC_ENTRY.md`; bounded work:
 > `AGENT_EXECUTION_PLAN.md` Waves 1–3. No indexing or canonical policy change
@@ -63,9 +63,8 @@ complete semantic document, an inert full-viewport Flutter host, and
 non-blocking root-relative bootstrap resources. Flutter 3.44.2 uses the
 single-view `hostElement` engine option; multi-view mode is not needed. The
 application **must** dispatch `kubus:public-entity-ready` only after the requested
-entity screen has produced a meaningful frame. Today
-`web/public_flutter_takeover.js` can synthesize that event after 1500 ms;
-Wave 2 removes that violation. The controller validates entity
+entity screen has produced a meaningful frame. The controller in
+`web/public_flutter_takeover.js` listens for that event and validates entity
 type, stable ID, and current pathname before atomically switching accessibility
 state and crossfading for 200 ms. Reduced-motion clients switch without the
 crossfade. A generic engine frame, loader completion, or fixed delay is never a

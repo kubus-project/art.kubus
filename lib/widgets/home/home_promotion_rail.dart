@@ -248,8 +248,7 @@ String? resolveHomeRailIdentityCover(HomeRailItem item) {
   ]) {
     final raw = item.raw[key]?.toString().trim();
     if (raw == null || raw.isEmpty) continue;
-    final resolved = MediaUrlResolver.resolveDisplayUrl(raw) ??
-        MediaUrlResolver.resolve(raw);
+    final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
     if (resolved != null && resolved.isNotEmpty) {
       return resolved;
     }

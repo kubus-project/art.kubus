@@ -560,11 +560,12 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
           hub.setDraftArtwork(null);
         }
       },
-      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+      leading: previewValue != null &&
+              MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                 width: 44,
                 height: 44,
                 fit: BoxFit.cover,

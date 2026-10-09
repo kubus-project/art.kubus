@@ -645,7 +645,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final profile = user!;
     final roles = KubusColorRoles.of(context);
     final placeLabel = _publicEntryPlaceLabel();
-    final coverImageUrl = _normalizeMediaUrl(profile.coverImageUrl);
+    final coverImageUrl =
+        MediaUrlResolver.resolveDisplayUrl(profile.coverImageUrl);
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
       KubusTypography.content(
@@ -945,7 +946,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   /// read as four unrelated bands.
   Widget _buildProfileCard(ThemeProvider themeProvider, bool isArtist,
       bool isInstitution, AppLocalizations l10n) {
-    final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
+    final coverImageUrl =
+        MediaUrlResolver.resolveDisplayUrl(user!.coverImageUrl);
     final coverUrlIsKnownBad =
         coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
     const avatarRadius = 44.0;
@@ -1929,10 +1931,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)));
     }
-  }
-
-  String? _normalizeMediaUrl(String? url) {
-    return MediaUrlResolver.resolve(url);
   }
 
   String _formatCount(int count) {
