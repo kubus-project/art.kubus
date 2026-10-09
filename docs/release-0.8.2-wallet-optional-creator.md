@@ -74,31 +74,74 @@ backend document).
   is allowlisted in the backend but **not emitted yet**.
 * Strings: `creatorApplicationProfileIncompleteToast` (EN/SL).
 
+## Completion pass (public content, attribution, session restore)
+
+Stacked on the backend's migrations 099-102 (`WALLET_OPTIONAL_ACCOUNT_ARCHITECTURE.md`
+section 13 there).
+
+* **Attribution is shown apart.** The artwork parser keeps the backend's
+  `contributor` (the responsible account) and `verifiedArtist` (an explicit claim)
+  in metadata. The byline stays the *recorded* artist ("Unknown artist" when
+  unknown); a verified claim links that name to the artist's profile; a new
+  `ArtworkContributorLine` shows "Documented by <account>" (EN/SL) on the mobile
+  and desktop detail screens and is hidden when the contributor *is* the verified
+  artist. Uploading or documenting never credits anyone as the artist.
+* **Wallet-free profiles are reachable.** A public profile opened by profile id
+  lists the account's contributions, collections and public counters (the
+  backend resolves the id). Nothing in the app needed a wallet for this.
+* **Session restore without a wallet.** `ProfileProvider.initialize()` only
+  hydrated a profile for a persisted wallet, so after a reload or deep link a
+  wallet-free account's profile was missing and Artist Studio asked for a public
+  name the account already had. It now restores the account profile from the
+  session token (3 tests; found by driving the real app against the real
+  backend).
+* `KubusSheetHeader` allows four subtitle lines (the artist-application sheet
+  clipped its explanation on a 390 px phone).
+
 ## Verification
 
-* `flutter analyze` — no issues.
-* `dart format --set-exit-if-changed` on every changed file — clean.
-* New `test/screens/wallet_optional_creator_test.dart` (21 tests) drives the
-  providers and the Artist Studio / Institution Hub widgets against a fake HTTP
-  backend: the request actually sent (no envelope, no wallet, bounded error
-  code), old-backend fallback, wallet-free publish, account-scoped portfolio,
-  and a regression for a reload loop found while writing them
-  (`didChangeDependencies` re-triggered the status load on every provider
-  notification).
-* Existing creator, telemetry and activation suites pass; see the PR for the
-  full-suite result.
+Run on this branch (head recorded in the PR description):
+
+* `flutter analyze` - no issues; `dart run custom_lint` - no issues.
+* Full `flutter test` - see the PR description for the executed counts.
+* `flutter build web --release` against the real backend (below).
+* New/changed tests: `test/screens/wallet_optional_creator_test.dart` (28:
+  provider/HTTP-contract tests incl. session restore) and
+  `test/widgets/artwork_contributor_line_test.dart` (5).
+
+### Real full-stack run (this pass)
+
+Flutter web release build served locally, driven by Chromium/Playwright against
+the real backend on PostgreSQL 16 + PostGIS (disposable DB, migrations 099-102):
+
+* Guest and signed-out viewers: public profile by profile id (wallet-free
+  contributor), documented artwork ("by Unknown muralist" + "Documented by Ana
+  Documenter"), verified-claim artwork ("by Ana Documenter"), public collection,
+  map list - at 320, 390, 768, 1024 and 1440 px, English and Slovenian, light
+  and dark; no horizontal overflow at any size. A private draft is not
+  retrievable (the app shows its generic load-error state; see limitations).
+* Email sign-in with no wallet; reload at `/artist-studio`; *Apply for governance
+  review* (no wallet step) -> `POST /api/dao/reviews/account` -> *Pending*;
+  reviewer decision (wallet-signed, outside the app) -> *Approved* with the
+  reviewer's note and an open workspace; `/api/saved`, `/api/messages`,
+  `/api/notifications` answer `200` for the wallet-free account (they were
+  `401`/`400` before this pass).
+* Backend side of the same journey (publish, drafts, collections, markers,
+  claims, rename, wallet link, saved items, notifications, archival identity,
+  negative tests): `scripts/e2e/` in the backend repository.
 
 ### Not verified here
 
-* No browser run against a live backend: the backend needs PostgreSQL with
-  PostGIS, which this sandbox lacks. The wire contract is covered by the
-  backend's own route tests and the fake-backend tests above, **not** by a
-  combined end-to-end run. The release owner should run the smoke below on a
-  staging stack.
-* No visual QA screenshots (narrow screens, EN/SL, dark/light, text scale, back
-  navigation) were produced. The changes reuse existing widgets and only remove
-  or change which step is shown; the layouts are unchanged but unreviewed.
-* Android release compilation and the Flutter web release build are left to CI.
+* Creating an artwork **through the browser UI**: the cover picker uses the
+  browser's file dialog, which the headless automation could not drive (the app
+  reported a generic error). The publish contract is covered by the backend
+  journey and by the fake-HTTP tests above; it is **not** covered by a combined
+  UI + backend run. The release owner should include it in the staging smoke.
+* Text-scale and keyboard focus states were not exercised in the browser (Flutter
+  web does not follow the OS text-size setting under automation). The new line
+  has a 32 px minimum touch target and a semantic link label; widget tests cover
+  its text and visibility.
+* Android compilation: left to CI (see the PR description).
 
 ### Staging smoke (release owner)
 
@@ -111,12 +154,14 @@ backend document).
 
 ## Known limitations
 
-* Wallet **unlink** is not implemented (see the backend document).
-* Wallet-free **profiles** are not replicated to OrbitDB; their artworks and
-  markers are.
-* A public page for a wallet-free collection does not exist; the owner sees it.
-* Other wallet-keyed read surfaces (a public profile's artworks by wallet,
-  marker-subject loading, community feeds) still key on wallet and will not
-  list a wallet-free account's work there yet.
-* Decision notifications for wallet-free applicants are not delivered
-  in-app; the Studio shows the status.
+* Wallet **unlink is blocked** and has no UI (see the backend inventory:
+  `WALLET_COLUMN_INVENTORY.md`).
+* Wallet-free **profiles** are published to IPFS and the registry under their
+  profile id but not mirrored to OrbitDB; their artworks and markers are.
+* Community posts, direct messages (empty inbox), achievements and presence are
+  still wallet-keyed on the backend; a wallet-free account cannot yet author a
+  post or message.
+* A private or unavailable artwork shows the generic "failed to load" state with
+  *Retry* instead of an "unavailable" message.
+* Decision notifications for wallet-free applicants are stored against the
+  account and listed in-app; there is no realtime push for them.

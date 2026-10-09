@@ -575,9 +575,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// account already has.
   Future<void> _restoreAccountProfileWithoutWallet() async {
     try {
-      final api = BackendApiService();
-      await api.ensureAuthLoaded();
-      if (!api.hasAuthSession) return;
+      // The token is already in memory: start-up loads it (AppInitializer
+      // `loadAuthToken`) before the profile step, so no storage read is needed
+      // here and a signed-out start makes no request.
+      if (!BackendApiService().hasAuthSession) return;
       await loadAuthenticatedProfile();
     } catch (e) {
       // Offline or expired: stay signed-out of the profile; the next explicit

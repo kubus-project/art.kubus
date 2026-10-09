@@ -444,6 +444,9 @@ class KubusSheetHeader extends StatelessWidget {
                   compact: false,
                   titleStyle: titleStyle ?? KubusTextStyles.sheetTitle,
                   subtitleStyle: subtitleStyle ?? KubusTextStyles.sheetSubtitle,
+                  // A sheet explains what the action does; clipping that to two
+                  // lines hid the end of the sentence on phone widths.
+                  maxSubtitleLines: 4,
                   minHeight: 0,
                 ),
               ),
