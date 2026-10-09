@@ -16,6 +16,14 @@ on:
         required: false
         default: false
         type: boolean
+      community_multi_media_enabled:
+        description: >-
+          Community multi-media. Enabled by default; backend
+          art.kubus-backend#79 must be live on every writable instance. Pass
+          false for the emergency rollback build.
+        required: false
+        default: true
+        type: boolean
       browser_set:
         description: Comma-separated Playwright browsers
         required: false
@@ -110,6 +118,7 @@ jobs:
 
       - name: Prepare public build configuration
         env:
+          KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED: ${{ inputs.community_multi_media_enabled }}
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
           KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
@@ -135,6 +144,10 @@ jobs:
           --environment '${{ inputs.deployment_environment }}'
           --source-sha '${{ inputs.source_sha }}'
           --directory build/web
+
+      - name: Record Community build capability in artifact
+        run: |
+          node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; const defines = JSON.parse(readFileSync('.dart_tool/public-build-defines.json')); writeFileSync('build/web/kubus-community-build.json', JSON.stringify({ sourceSha: '${{ inputs.source_sha }}', COMMUNITY_MULTI_MEDIA_ENABLED: defines.COMMUNITY_MULTI_MEDIA_ENABLED }) + '\n');"
 
       - name: Seal Netcup-compatible WebAssembly and generate checksums
         shell: bash

@@ -141,9 +141,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     }
 
     _newPostController.clear();
-    _selectedPostImage = null;
-    _selectedPostImageBytes = null;
-    _selectedPostVideo = null;
+    _composerMedia.clear();
 
     // Dispose old controllers if they exist and create fresh ones
     _composerTagController?.dispose();
@@ -157,137 +155,157 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      // A composer with unsent text or media must not close by tap or drag.
+      // Its header close button and back gesture are guarded by PopScope.
+      isDismissible: false,
+      enableDrag: false,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
-          return KeyboardInsetPadding(
-            child: Consumer<CommunityHubProvider>(
-              builder: (context, provider, _) {
-                final draft = provider.draft;
-                final themeProvider = Provider.of<ThemeProvider>(context);
-                return CommunityComposerSurface(
-                  showHandle: true,
-                  maxHeight: MediaQuery.of(context).size.height * 0.9,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(KubusRadius.xl),
-                  ),
-                  bodyPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  header: _buildComposerHeader(sheetContext),
-                  body: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildComposerCategorySelector(draft, provider),
-                      const SizedBox(height: 16),
-                      _buildComposerTextField(),
-                      const SizedBox(height: 16),
-                      CommunityComposerMediaSection(
-                        showPreview: _hasSelectedMedia,
-                        preview: _buildComposerMediaPreview(setModalState),
-                        actions: _buildComposerAttachmentRow(setModalState),
-                        sectionKey: 'composer_media',
+          return PopScope(
+              canPop: !_isPostingNew &&
+                  _newPostController.text.trim().isEmpty &&
+                  _composerMedia.isEmpty,
+              onPopInvokedWithResult: (didPop, result) {
+                if (!didPop && !_isPostingNew) {
+                  _closeComposer(sheetContext);
+                }
+              },
+              child: KeyboardInsetPadding(
+                child: Consumer<CommunityHubProvider>(
+                  builder: (context, provider, _) {
+                    final draft = provider.draft;
+                    final themeProvider = Provider.of<ThemeProvider>(context);
+                    return CommunityComposerSurface(
+                      showHandle: true,
+                      maxHeight: MediaQuery.of(context).size.height * 0.9,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(KubusRadius.xl),
                       ),
-                      const SizedBox(height: 20),
-                      _buildComposerGroupSelector(draft, provider),
-                      const SizedBox(height: 16),
-                      _buildComposerSubjectSelector(draft),
-                      const SizedBox(height: 16),
-                      _buildComposerLocationSection(draft, setModalState),
-                      const SizedBox(height: 16),
-                      _buildChipEditor(
-                        label: AppLocalizations.of(context)!
-                            .communityComposerTagsLabel,
-                        hint: AppLocalizations.of(context)!
-                            .communityComposerTagsHint,
-                        values: draft.tags,
-                        controller: tagController,
-                        prefix: '#',
-                        onAdd: (value) {
-                          final sanitized = value.replaceFirst('#', '');
-                          provider.addTag(sanitized);
-                        },
-                        onRemove: provider.removeTag,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildChipEditor(
-                        label: AppLocalizations.of(context)!
-                            .communityComposerMentionsLabel,
-                        hint: AppLocalizations.of(context)!
-                            .communityComposerMentionsHint,
-                        values: draft.mentions,
-                        controller: mentionController,
-                        prefix: '@',
-                        onAdd: (value) {
-                          final normalized = value.startsWith('@')
-                              ? value.substring(1)
-                              : value;
-                          provider.addMention(normalized);
-                        },
-                        onRemove: provider.removeMention,
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                  footer: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isPostingNew
-                              ? null
-                              : () => _submitComposer(
-                                    sheetContext: sheetContext,
-                                    setModalState: setModalState,
-                                    hub: provider,
-                                  ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            disabledBackgroundColor: themeProvider.accentColor
-                                .withValues(alpha: 0.4),
-                            disabledForegroundColor: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withValues(alpha: 0.7),
+                      bodyPadding: const EdgeInsets.symmetric(horizontal: 24),
+                      header: _buildComposerHeader(sheetContext),
+                      body: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildComposerCategorySelector(draft, provider),
+                          const SizedBox(height: 16),
+                          _buildComposerTextField(),
+                          CommunityComposerCharacterCounter(
+                            controller: _newPostController,
                           ),
-                          child: AnimatedSwitcher(
-                            duration: context.animationTheme.short,
-                            switchInCurve: context.animationTheme.defaultCurve,
-                            switchOutCurve: context.animationTheme.fadeCurve,
-                            child: _isPostingNew
-                                ? SizedBox(
-                                    key: const ValueKey(
-                                        'composer_posting_spinner'),
-                                    width: 20,
-                                    height: 20,
-                                    child: InlineLoading(
-                                      expand: true,
-                                      shape: BoxShape.circle,
-                                      tileSize: 3.5,
-                                    ),
-                                  )
-                                : Text(
-                                    AppLocalizations.of(context)!
-                                        .communityComposerSubmitPostButton,
-                                    key: ValueKey('composer_post_label'),
-                                    style: KubusTextStyles.navLabel.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                    ),
-                                  ),
+                          const SizedBox(height: 16),
+                          CommunityComposerMediaTray(
+                            controller: _composerMedia,
+                            onAddPhotos: () =>
+                                _addComposerPhotos(setModalState),
+                            onAddVideo: () => _addComposerVideo(setModalState),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildComposerGroupSelector(draft, provider),
+                          const SizedBox(height: 16),
+                          _buildComposerSubjectSelector(draft),
+                          const SizedBox(height: 16),
+                          _buildComposerLocationSection(draft, setModalState),
+                          const SizedBox(height: 16),
+                          _buildChipEditor(
+                            label: AppLocalizations.of(context)!
+                                .communityComposerTagsLabel,
+                            hint: AppLocalizations.of(context)!
+                                .communityComposerTagsHint,
+                            values: draft.tags,
+                            controller: tagController,
+                            prefix: '#',
+                            onAdd: (value) {
+                              final sanitized = value.replaceFirst('#', '');
+                              provider.addTag(sanitized);
+                            },
+                            onRemove: provider.removeTag,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildChipEditor(
+                            label: AppLocalizations.of(context)!
+                                .communityComposerMentionsLabel,
+                            hint: AppLocalizations.of(context)!
+                                .communityComposerMentionsHint,
+                            values: draft.mentions,
+                            controller: mentionController,
+                            prefix: '@',
+                            onAdd: (value) {
+                              final normalized = value.startsWith('@')
+                                  ? value.substring(1)
+                                  : value;
+                              provider.addMention(normalized);
+                            },
+                            onRemove: provider.removeMention,
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                      footer: SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isPostingNew
+                                  ? null
+                                  : () => _submitComposer(
+                                        sheetContext: sheetContext,
+                                        setModalState: setModalState,
+                                        hub: provider,
+                                      ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: themeProvider.accentColor,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                disabledBackgroundColor: themeProvider
+                                    .accentColor
+                                    .withValues(alpha: 0.4),
+                                disabledForegroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary
+                                    .withValues(alpha: 0.7),
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: context.animationTheme.short,
+                                switchInCurve:
+                                    context.animationTheme.defaultCurve,
+                                switchOutCurve:
+                                    context.animationTheme.fadeCurve,
+                                child: _isPostingNew
+                                    ? SizedBox(
+                                        key: const ValueKey(
+                                            'composer_posting_spinner'),
+                                        width: 20,
+                                        height: 20,
+                                        child: InlineLoading(
+                                          expand: true,
+                                          shape: BoxShape.circle,
+                                          tileSize: 3.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        AppLocalizations.of(context)!
+                                            .communityComposerSubmitPostButton,
+                                        key: ValueKey('composer_post_label'),
+                                        style:
+                                            KubusTextStyles.navLabel.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary,
+                                        ),
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
+                    );
+                  },
+                ),
+              ));
         },
       ),
     );
@@ -306,42 +324,30 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     });
   }
 
-  Widget _buildPostOption(IconData icon, String label, {VoidCallback? onTap}) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.32),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: scheme.onSurface,
-              size: 24,
+  Future<void> _closeComposer(BuildContext sheetContext) async {
+    if (_isPostingNew) return;
+    if (_newPostController.text.trim().isNotEmpty ||
+        _composerMedia.isNotEmpty) {
+      final l10n = AppLocalizations.of(sheetContext)!;
+      final discard = await showDialog<bool>(
+        context: sheetContext,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.communityComposerDiscardDraft),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: KubusTypography.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.commonContinue),
             ),
           ],
         ),
-      ),
-    );
+      );
+      if (discard != true || !sheetContext.mounted) return;
+    }
+    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
   }
 
   Widget _buildComposerHeader(BuildContext sheetContext) {
@@ -357,7 +363,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       ),
       trailing: IconButton(
         tooltip: l10n.commonClose,
-        onPressed: () => Navigator.of(sheetContext).maybePop(),
+        onPressed: _isPostingNew ? null : () => _closeComposer(sheetContext),
         icon: const Icon(Icons.close),
         color: Theme.of(context).colorScheme.onSurface,
       ),
@@ -399,160 +405,36 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     );
   }
 
-  Widget _buildComposerMediaPreview(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    if (_selectedPostImageBytes != null) {
-      return Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Image.memory(
-              _selectedPostImageBytes!,
-              height: 220,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: IconButton(
-              tooltip: l10n.commonRemove,
-              style: IconButton.styleFrom(
-                backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                foregroundColor: scheme.onSurface,
-              ),
-              onPressed: () => setModalState(() {
-                _selectedPostImage = null;
-                _selectedPostImageBytes = null;
-              }),
-              icon: const Icon(Icons.close),
-            ),
-          ),
-        ],
-      );
+  Future<void> _addComposerPhotos(StateSetter setModalState) async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(_composerMedia.maxItems));
+      return;
     }
-    if (_selectedPostVideo != null) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: scheme.primaryContainer.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.videocam_outlined,
-                      size: 42,
-                      color: Provider.of<ThemeProvider>(context, listen: false)
-                          .accentColor),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      _selectedPostVideo!.name,
-                      style: KubusTypography.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: IconButton(
-                tooltip: l10n.commonRemove,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                  foregroundColor: scheme.onSurface,
-                ),
-                onPressed: () => setModalState(() {
-                  _selectedPostVideo = null;
-                }),
-                icon: const Icon(Icons.close),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    final added = _composerMedia.add(picked);
+    setModalState(() {});
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
+    );
+    if (trimmed != null) _showSnack(trimmed);
   }
 
-  Widget _buildComposerAttachmentRow(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final hasMedia = _hasSelectedMedia;
-    final animationTheme = context.animationTheme;
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      padding: EdgeInsets.all(hasMedia ? 8 : 0),
-      decoration: BoxDecoration(
-        color: hasMedia
-            ? scheme.primaryContainer.withValues(alpha: 0.2)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildPostOption(
-              Icons.image_outlined,
-              l10n.commonImage,
-              onTap: () async {
-                final picker = ImagePicker();
-                final image = await picker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 1920,
-                  maxHeight: 1920,
-                  imageQuality: 85,
-                );
-                if (image != null) {
-                  final bytes = await image.readAsBytes();
-                  setModalState(() {
-                    _selectedPostImage = image;
-                    _selectedPostImageBytes = bytes;
-                    _selectedPostVideo = null;
-                  });
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildPostOption(
-              Icons.videocam_outlined,
-              l10n.commonVideo,
-              onTap: () async {
-                final picker = ImagePicker();
-                final video = await picker.pickVideo(
-                  source: ImageSource.gallery,
-                  maxDuration: const Duration(minutes: 5),
-                );
-                if (video != null) {
-                  setModalState(() {
-                    _selectedPostVideo = video;
-                    _selectedPostImage = null;
-                    _selectedPostImageBytes = null;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _addComposerVideo(StateSetter setModalState) async {
+    if (_composerMedia.isFull) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(_composerMedia.maxItems));
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    _composerMedia.add(<CommunityComposerPickedMedia>[picked]);
+    setModalState(() {});
   }
 
   Widget _buildComposerCategorySelector(

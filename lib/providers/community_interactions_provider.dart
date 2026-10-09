@@ -85,6 +85,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
   Future<CommunityPost> createCommunityPost({
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -104,6 +105,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   }) async {
     final created = await _api.createCommunityPost(
       content: content,
+      idempotencyKey: idempotencyKey,
       imageUrl: imageUrl,
       mediaUrls: mediaUrls,
       mediaCids: mediaCids,

@@ -23,6 +23,16 @@ class AppConfig {
   static const bool enableLiking = true;
   static const bool enableCommenting = true;
   static const bool enableSharing = true;
+
+  /// Multi-media Community posts: ordered sets of up to ten images and videos,
+  /// the swipeable carousel and 2200-character captions. Release builds default
+  /// to off until backend PR #79 is live. Staging and emergency rollback use
+  /// --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true|false, not a source edit.
+  /// When off, composers accept one attachment and posts show their first item.
+  static const bool enableCommunityMultiMedia = bool.fromEnvironment(
+    'COMMUNITY_MULTI_MEDIA_ENABLED',
+    defaultValue: !isProduction,
+  );
   static const bool enableSeoPublicPages = bool.fromEnvironment(
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
@@ -558,6 +568,8 @@ class AppConfig {
         return enableIPFS;
       case 'collabInvites':
         return enableCollabInvites;
+      case 'communityMultiMedia':
+        return enableCommunityMultiMedia;
       case 'collabInviteNotifications':
         return enableCollabInviteNotifications;
       case 'season0':

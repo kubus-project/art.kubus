@@ -4,8 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
@@ -59,6 +57,10 @@ import '../../../utils/wallet_utils.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
+import '../../../widgets/community/community_composer_media_tray.dart';
+import '../../../community/community_composer_media.dart';
+import '../../../community/community_post_text_limits.dart';
+import '../../../community/community_upload_feedback.dart';
 import '../../../widgets/community/community_composer_layout.dart';
 import '../../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../../widgets/search/kubus_search_config.dart';
@@ -91,16 +93,6 @@ part 'desktop_community_screen_parts/desktop_community_screen_p4.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p5.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p6.dart';
 
-class _ComposerImagePayload {
-  final Uint8List bytes;
-  final String fileName;
-
-  const _ComposerImagePayload({
-    required this.bytes,
-    required this.fileName,
-  });
-}
-
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
 class DesktopCommunityScreen extends StatefulWidget {
@@ -131,7 +123,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _isPosting = false;
   int _lastHandledComposerOpenNonce = 0;
   final TextEditingController _composeController = TextEditingController();
-  final List<_ComposerImagePayload> _selectedImages = [];
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
+  bool _composerSubmitInFlight = false;
   String? _selectedLocation;
   String _selectedCategory = 'post';
   final TextEditingController _tagController = TextEditingController();
@@ -234,6 +230,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _tagController.dispose();
     _mentionController.dispose();
     _composeController.dispose();
+    _composerMedia.dispose();
     super.dispose();
   }
 

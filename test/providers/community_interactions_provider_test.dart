@@ -37,6 +37,7 @@ class _FakeBackendApiService implements BackendApiService {
   @override
   Future<CommunityPost> createCommunityPost({
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,

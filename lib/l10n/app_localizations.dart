@@ -18882,6 +18882,252 @@ abstract class AppLocalizations {
   /// **'Failed to create post.'**
   String get communityComposerCreatePostFailedToast;
 
+  /// No description provided for @communityUploadRateLimitedSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in {seconds} seconds.'**
+  String communityUploadRateLimitedSeconds(int seconds);
+
+  /// No description provided for @communityUploadRateLimitedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in about {minutes} minutes.'**
+  String communityUploadRateLimitedMinutes(int minutes);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Too many uploads right now. Wait a moment and try again.'**
+  String get communityUploadRateLimitedGeneric;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos'**
+  String get communityComposerMediaAddPhotos;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Add video'**
+  String get communityComposerMediaAddVideo;
+
+  /// No description provided for @communityComposerMediaLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You can add up to {max} items to a post.'**
+  String communityComposerMediaLimitReached(int max);
+
+  /// No description provided for @communityComposerMediaTrimmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {added} of {picked} files. A post holds up to {max} items.'**
+  String communityComposerMediaTrimmed(int added, int picked, int max);
+
+  /// No description provided for @communityComposerValidationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The server did not accept this post: {detail}. Your draft is kept.'**
+  String communityComposerValidationRejected(String detail);
+
+  /// No description provided for @communityComposerMediaCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {max} selected'**
+  String communityComposerMediaCount(int count, int max);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get communityComposerMediaMoveEarlier;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get communityComposerMediaMoveLater;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get communityComposerMediaRetry;
+
+  /// No description provided for @communityComposerMediaUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files could not be uploaded. Your draft is kept, so you can retry.'**
+  String communityComposerMediaUploadFailed(int count);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to upload'**
+  String get communityComposerMediaStatusPending;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get communityComposerMediaStatusUploading;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get communityComposerMediaStatusFailed;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get communityComposerMediaStatusDone;
+
+  /// No description provided for @communityComposerCharactersRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters left'**
+  String communityComposerCharactersRemaining(int count);
+
+  /// No description provided for @communityComposerCharacterLimitExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts can be up to {max} characters. Shorten your text to publish.'**
+  String communityComposerCharacterLimitExceeded(int max);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'more'**
+  String get communityPostShowMore;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'less'**
+  String get communityPostShowLess;
+
+  /// No description provided for @communityMediaCarouselPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Media {index} of {total}'**
+  String communityMediaCarouselPosition(int index, int total);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Previous media'**
+  String get communityMediaPrevious;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Next media'**
+  String get communityMediaNext;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Play video'**
+  String get communityMediaVideoPlay;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Pause video'**
+  String get communityMediaVideoPause;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Mute video'**
+  String get communityMediaVideoMute;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute video'**
+  String get communityMediaVideoUnmute;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'This video cannot be played here.'**
+  String get communityMediaVideoUnavailable;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Replay video'**
+  String get communityMediaVideoReplay;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get communityMediaVideoRetry;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Loading video'**
+  String get communityMediaVideoLoading;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Buffering'**
+  String get communityMediaVideoBuffering;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Video position'**
+  String get communityMediaVideoSeek;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'{position} of {duration}'**
+  String communityMediaVideoTime(String position, String duration);
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get communityMediaVideoVolume;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get communityMediaVideoFullscreen;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get communityMediaVideoExitFullscreen;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Video player'**
+  String get communityMediaVideoControls;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Image unavailable'**
+  String get communityMediaImageUnavailable;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'View original post'**
+  String get communityPostOpenOriginal;
+
   /// No description provided for @communityToggleLikeFailedToast.
   ///
   /// In en, this message translates to:
@@ -30358,6 +30604,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 artwork} other{{count} artworks}}'**
   String searchCollectionArtworkCount(num count);
+
+  /// No description provided for @communityComposerRateLimitedSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting is temporarily limited. Try again in {seconds} seconds. Your draft is kept.'**
+  String communityComposerRateLimitedSeconds(int seconds);
+
+  /// No description provided for @communityComposerRateLimitedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting is temporarily limited. Wait before trying again. Your draft is kept.'**
+  String get communityComposerRateLimitedGeneric;
+
+  /// No description provided for @communityComposerDiscardDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this draft?'**
+  String get communityComposerDiscardDraft;
+
+  /// No description provided for @communityComposerAlreadyCommitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.'**
+  String get communityComposerAlreadyCommitted;
+
+  /// No description provided for @communityComposerCheckFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Check feed'**
+  String get communityComposerCheckFeed;
 }
 
 class _AppLocalizationsDelegate

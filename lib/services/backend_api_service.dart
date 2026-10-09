@@ -28,6 +28,7 @@ import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/http_retry_after.dart';
 import 'share/share_types.dart';
 import '../config/config.dart';
 import 'encrypted_wallet_backup_service.dart';
@@ -91,11 +92,13 @@ class BackendApiRequestException implements Exception {
   final int statusCode;
   final String path;
   final String? body;
+  final Duration? retryAfter;
 
   const BackendApiRequestException({
     required this.statusCode,
     required this.path,
     this.body,
+    this.retryAfter,
   });
 
   String get userMessage {
@@ -1598,6 +1601,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool allowImplicitBackendFailover = true,
     Duration timeout = AppConfig.requestTimeout,
   }) {
     return _request(
@@ -1608,6 +1612,7 @@ class BackendApiService
       body: body,
       encoding: encoding,
       isIdempotent: isIdempotent,
+      allowImplicitBackendFailover: allowImplicitBackendFailover,
       timeout: timeout,
     );
   }
@@ -6375,6 +6380,7 @@ class BackendApiService
   /// POST /api/community/posts
   Future<CommunityPost> createCommunityPost({
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6419,8 +6425,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      requestBody['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(requestBody),
       );
@@ -6453,7 +6462,12 @@ class BackendApiService
         }
         return decoratedPost;
       } else {
-        throw Exception('Failed to create post: ${response.statusCode}');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts',
+          body: response.body,
+          retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createCommunityPost failed: $e');
@@ -6853,6 +6867,7 @@ class BackendApiService
   Future<CommunityPost> createGroupPost(
     String groupId, {
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6900,8 +6915,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      body['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(body),
       );
@@ -6939,8 +6957,11 @@ class BackendApiService
         }
         throw Exception('Unexpected group post payload');
       }
-      throw Exception(
-        'Failed to create group post: ${response.statusCode} - ${response.body}',
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/groups/$groupId/posts',
+        body: response.body,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');

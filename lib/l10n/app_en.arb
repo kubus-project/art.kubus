@@ -4446,6 +4446,198 @@
   "communityGroupPickerJoinFirstToast": "Join a group to target your drop.",
   "communityComposerPostCreatedToast": "Post created",
   "communityComposerCreatePostFailedToast": "Failed to create post.",
+  "communityUploadRateLimitedSeconds": "Upload limit reached. Try again in {seconds} seconds.",
+  "@communityUploadRateLimitedSeconds": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "communityUploadRateLimitedMinutes": "Upload limit reached. Try again in about {minutes} minutes.",
+  "@communityUploadRateLimitedMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "communityUploadRateLimitedGeneric": "Too many uploads right now. Wait a moment and try again.",
+  "@communityUploadRateLimitedGeneric": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaAddPhotos": "Add photos",
+  "@communityComposerMediaAddPhotos": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaAddVideo": "Add video",
+  "@communityComposerMediaAddVideo": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaLimitReached": "You can add up to {max} items to a post.",
+  "@communityComposerMediaLimitReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerMediaTrimmed": "Added {added} of {picked} files. A post holds up to {max} items.",
+  "@communityComposerMediaTrimmed": {
+    "placeholders": {
+      "added": {"type": "int"},
+      "picked": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerValidationRejected": "The server did not accept this post: {detail}. Your draft is kept.",
+  "@communityComposerValidationRejected": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "communityComposerMediaCount": "{count} of {max} selected",
+  "@communityComposerMediaCount": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerMediaMoveEarlier": "Move earlier",
+  "@communityComposerMediaMoveEarlier": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaMoveLater": "Move later",
+  "@communityComposerMediaMoveLater": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaRetry": "Retry upload",
+  "@communityComposerMediaRetry": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaUploadFailed": "{count} files could not be uploaded. Your draft is kept, so you can retry.",
+  "@communityComposerMediaUploadFailed": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityComposerMediaStatusPending": "Waiting to upload",
+  "@communityComposerMediaStatusPending": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusUploading": "Uploading…",
+  "@communityComposerMediaStatusUploading": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusFailed": "Upload failed",
+  "@communityComposerMediaStatusFailed": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusDone": "Uploaded",
+  "@communityComposerMediaStatusDone": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerCharactersRemaining": "{count} characters left",
+  "@communityComposerCharactersRemaining": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityComposerCharacterLimitExceeded": "Posts can be up to {max} characters. Shorten your text to publish.",
+  "@communityComposerCharacterLimitExceeded": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "communityPostShowMore": "more",
+  "@communityPostShowMore": {
+    "description": "0.8.2 community media"
+  },
+  "communityPostShowLess": "less",
+  "@communityPostShowLess": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaCarouselPosition": "Media {index} of {total}",
+  "@communityMediaCarouselPosition": {
+    "placeholders": {
+      "index": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "communityMediaPrevious": "Previous media",
+  "@communityMediaPrevious": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaNext": "Next media",
+  "@communityMediaNext": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoPlay": "Play video",
+  "@communityMediaVideoPlay": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoPause": "Pause video",
+  "@communityMediaVideoPause": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoMute": "Mute video",
+  "@communityMediaVideoMute": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoUnmute": "Unmute video",
+  "@communityMediaVideoUnmute": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoUnavailable": "This video cannot be played here.",
+  "@communityMediaVideoUnavailable": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoReplay": "Replay video",
+  "@communityMediaVideoReplay": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoRetry": "Try again",
+  "@communityMediaVideoRetry": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoLoading": "Loading video",
+  "@communityMediaVideoLoading": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoBuffering": "Buffering",
+  "@communityMediaVideoBuffering": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoSeek": "Video position",
+  "@communityMediaVideoSeek": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoTime": "{position} of {duration}",
+  "@communityMediaVideoTime": {
+    "description": "0.8.2 community media video player",
+    "placeholders": {
+      "position": {"type": "String"},
+      "duration": {"type": "String"}
+    }
+  },
+  "communityMediaVideoVolume": "Volume",
+  "@communityMediaVideoVolume": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoFullscreen": "Full screen",
+  "@communityMediaVideoFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoExitFullscreen": "Exit full screen",
+  "@communityMediaVideoExitFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoControls": "Video player",
+  "@communityMediaVideoControls": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaImageUnavailable": "Image unavailable",
+  "@communityMediaImageUnavailable": {
+    "description": "0.8.2 community media"
+  },
+  "communityPostOpenOriginal": "View original post",
+  "@communityPostOpenOriginal": {
+    "description": "0.8.2 community media"
+  },
   "communityToggleLikeFailedToast": "Failed to update like.",
   "communityPostLikesTitle": "Post likes",
   "communityCommentLikesTitle": "Comment likes",
@@ -7220,5 +7412,11 @@
     "placeholders": {
       "count": {}
     }
-  }
+  },
+  "communityComposerRateLimitedSeconds": "Posting is temporarily limited. Try again in {seconds} seconds. Your draft is kept.",
+  "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "communityComposerRateLimitedGeneric": "Posting is temporarily limited. Wait before trying again. Your draft is kept.",
+  "communityComposerDiscardDraft": "Discard this draft?",
+  "communityComposerAlreadyCommitted": "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.",
+  "communityComposerCheckFeed": "Check feed"
 }

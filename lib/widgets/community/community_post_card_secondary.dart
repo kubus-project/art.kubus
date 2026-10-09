@@ -74,31 +74,20 @@ class _RepostInnerCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: KubusSpacing.sm),
-            Text(
-              post.content,
+            CommunityPostCaption(
+              text: post.content,
+              hasMedia: communityPostMediaUrls(post).isNotEmpty,
               style: KubusTextStyles.navMetaLabel.copyWith(
                 color: scheme.onSurface,
               ),
             ),
-            if (post.imageUrl != null) ...[
+            if (communityPostMediaUrls(post).isNotEmpty) ...[
               const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-                child: Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
-                      post.imageUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 140,
-                    color: accentColor.withValues(alpha: 0.1),
-                    child: Icon(
-                      Icons.image_not_supported,
-                      color: accentColor,
-                    ),
-                  ),
-                ),
+              CommunityPostMediaCarousel(
+                key: ValueKey<String>('quoted-media-${post.id}'),
+                mediaUrls: communityPostMediaUrls(post),
+                compact: true,
+                onOpenMedia: () => onOpenPostDetail(post),
               ),
             ],
           ],
