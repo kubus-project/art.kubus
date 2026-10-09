@@ -1,8 +1,12 @@
-/// Canonical maximum length of Community post text, in Unicode code points.
+import '../config/config.dart';
+
+/// Maximum length of Community post text for the selected backend contract.
 ///
-/// Mirrors `COMMUNITY_POST_CONTENT_MAX_CHARACTERS` on the backend. Both sides
-/// count code points, so accented Slovenian letters and emoji agree.
-const int kCommunityPostMaxCharacters = 2200;
+/// The disabled rollout uses the existing backend's 1000-character limit.
+/// Enable 2200 characters together with multi-media only after backend #79 is
+/// deployed. Both contracts count Unicode code points.
+const int kCommunityPostMaxCharacters =
+    AppConfig.enableCommunityMultiMedia ? 2200 : 1000;
 
 /// Number of code points in [text], the same policy as the backend.
 int communityPostCharacterCount(String text) => text.runes.length;
