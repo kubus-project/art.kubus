@@ -17648,4 +17648,229 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityComposerCheckFeed => 'Check feed';
+
+  @override
+  String get supportCenterTitle => 'Help & support';
+
+  @override
+  String get supportCenterEntrySubtitle =>
+      'FAQ, contact support, bug reports and your requests';
+
+  @override
+  String get supportCenterSectionsLabel => 'Help sections';
+
+  @override
+  String get supportCenterSectionFaq => 'FAQ';
+
+  @override
+  String get supportCenterSectionContact => 'Contact support';
+
+  @override
+  String get supportCenterSectionBug => 'Report a bug';
+
+  @override
+  String get supportCenterSectionRequests => 'My requests';
+
+  @override
+  String get supportFaqQuestion1 => 'What is art.kubus?';
+
+  @override
+  String get supportFaqAnswer1 =>
+      'An open art map for exploring artworks, exhibitions and cultural spaces.';
+
+  @override
+  String get supportFaqQuestion2 => 'Can I browse without signing in?';
+
+  @override
+  String get supportFaqAnswer2 =>
+      'Yes. Public discovery works without an account. Content-changing actions require sign-in.';
+
+  @override
+  String get supportFaqQuestion3 => 'Do I need a wallet?';
+
+  @override
+  String get supportFaqAnswer3 =>
+      'No wallet is needed to browse the public art map.';
+
+  @override
+  String get supportFaqQuestion4 => 'How do I report an issue?';
+
+  @override
+  String get supportFaqAnswer4 =>
+      'Choose Report a bug and describe the steps to reproduce it. You can follow the report under My requests.';
+
+  @override
+  String get supportFaqQuestion5 => 'Where are support replies?';
+
+  @override
+  String get supportFaqAnswer5 =>
+      'Open My requests and select a request to read replies and respond.';
+
+  @override
+  String get supportFormSubjectLabel => 'Subject';
+
+  @override
+  String get supportFormMessageLabel => 'Message';
+
+  @override
+  String get supportFormSubmitContact => 'Send request';
+
+  @override
+  String get supportFormSubmitBug => 'Send bug report';
+
+  @override
+  String get supportFormSending => 'Sending…';
+
+  @override
+  String get supportFormRequiredError => 'This field is required.';
+
+  @override
+  String get supportFormSubjectTooLong => 'Use 255 characters or fewer.';
+
+  @override
+  String get supportFormMessageTooLong => 'Use 5000 characters or fewer.';
+
+  @override
+  String get supportFormReportTooLong =>
+      'The report is too long. Shorten it to 5000 characters.';
+
+  @override
+  String get supportBugWhatHappenedLabel => 'What happened?';
+
+  @override
+  String get supportBugStepsLabel => 'Steps to reproduce';
+
+  @override
+  String get supportBugExpectedLabel => 'Expected behaviour';
+
+  @override
+  String get supportBugActualLabel => 'Actual behaviour';
+
+  @override
+  String get supportBugPlatformLabel => 'Include device platform';
+
+  @override
+  String get supportBugPlatformHint =>
+      'Optional. No logs, credentials or personal data are collected.';
+
+  @override
+  String get supportRequestSentToast => 'Request sent to support.';
+
+  @override
+  String get supportBugSentToast => 'Bug report sent. Thank you.';
+
+  @override
+  String get supportRequestsEmpty => 'No requests yet.';
+
+  @override
+  String get supportRequestsRefresh => 'Refresh';
+
+  @override
+  String get supportRequestsBack => 'Back to all requests';
+
+  @override
+  String supportRequestUpdatedOn(Object date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String supportRequestOpenedOn(Object date) {
+    return 'Opened $date';
+  }
+
+  @override
+  String get supportRequestKindSupport => 'Support request';
+
+  @override
+  String get supportRequestKindBug => 'Bug report';
+
+  @override
+  String get supportStatusOpen => 'Open';
+
+  @override
+  String get supportStatusPending => 'Waiting for your reply';
+
+  @override
+  String get supportStatusResolved => 'Resolved';
+
+  @override
+  String get supportStatusClosed => 'Closed';
+
+  @override
+  String get supportSenderYou => 'You';
+
+  @override
+  String get supportSenderSupport => 'Support team';
+
+  @override
+  String get supportReplyLabel => 'Reply';
+
+  @override
+  String get supportReplySend => 'Send reply';
+
+  @override
+  String get supportClosedTitle => 'This request is closed';
+
+  @override
+  String get supportClosedHint =>
+      'Closed requests are read-only. If you still need help, send a new request.';
+
+  @override
+  String get supportClosedNewRequest => 'Send a new request';
+
+  @override
+  String get supportErrorLoadRequests =>
+      'Your requests could not be loaded. Check your connection and try again.';
+
+  @override
+  String get supportErrorLoadRequest =>
+      'This request could not be opened. Check your connection and try again.';
+
+  @override
+  String get supportErrorNotFound =>
+      'This request could not be found. It may have been removed.';
+
+  @override
+  String get supportErrorInvalid =>
+      'Check the highlighted fields and try again.';
+
+  @override
+  String get supportErrorRateLimited =>
+      'Too many requests. Wait a few minutes and try again.';
+
+  @override
+  String get supportErrorClosedReply =>
+      'This request is closed, so it cannot take a reply.';
+
+  @override
+  String get supportErrorGeneric =>
+      'Something went wrong. Check your connection and try again.';
+
+  @override
+  String get supportRetry => 'Try again';
+
+  @override
+  String get supportUnavailable =>
+      'Support requests are not available right now. The FAQ is still open.';
+
+  @override
+  String get supportSignInTitle => 'Sign in to contact support';
+
+  @override
+  String get supportSignInBody =>
+      'Support requests are linked to your account. You can read the FAQ without signing in.';
+
+  @override
+  String get supportSignInAction => 'Sign in';
+
+  @override
+  String get supportSignInActionLabel => 'send a support request';
+
+  @override
+  String get supportSignInRequired =>
+      'Sign in to send requests and see your history.';
+
+  @override
+  String get supportErrorAccountIdentity =>
+      'Your session cannot be used for support requests. Sign out, sign in again, then retry.';
 }

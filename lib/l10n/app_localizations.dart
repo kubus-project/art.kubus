@@ -30634,6 +30634,408 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check feed'**
   String get communityComposerCheckFeed;
+
+  /// No description provided for @supportCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & support'**
+  String get supportCenterTitle;
+
+  /// No description provided for @supportCenterEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ, contact support, bug reports and your requests'**
+  String get supportCenterEntrySubtitle;
+
+  /// No description provided for @supportCenterSectionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Help sections'**
+  String get supportCenterSectionsLabel;
+
+  /// No description provided for @supportCenterSectionFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get supportCenterSectionFaq;
+
+  /// No description provided for @supportCenterSectionContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get supportCenterSectionContact;
+
+  /// No description provided for @supportCenterSectionBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get supportCenterSectionBug;
+
+  /// No description provided for @supportCenterSectionRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'My requests'**
+  String get supportCenterSectionRequests;
+
+  /// No description provided for @supportFaqQuestion1.
+  ///
+  /// In en, this message translates to:
+  /// **'What is art.kubus?'**
+  String get supportFaqQuestion1;
+
+  /// No description provided for @supportFaqAnswer1.
+  ///
+  /// In en, this message translates to:
+  /// **'An open art map for exploring artworks, exhibitions and cultural spaces.'**
+  String get supportFaqAnswer1;
+
+  /// No description provided for @supportFaqQuestion2.
+  ///
+  /// In en, this message translates to:
+  /// **'Can I browse without signing in?'**
+  String get supportFaqQuestion2;
+
+  /// No description provided for @supportFaqAnswer2.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Public discovery works without an account. Content-changing actions require sign-in.'**
+  String get supportFaqAnswer2;
+
+  /// No description provided for @supportFaqQuestion3.
+  ///
+  /// In en, this message translates to:
+  /// **'Do I need a wallet?'**
+  String get supportFaqQuestion3;
+
+  /// No description provided for @supportFaqAnswer3.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is needed to browse the public art map.'**
+  String get supportFaqAnswer3;
+
+  /// No description provided for @supportFaqQuestion4.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I report an issue?'**
+  String get supportFaqQuestion4;
+
+  /// No description provided for @supportFaqAnswer4.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Report a bug and describe the steps to reproduce it. You can follow the report under My requests.'**
+  String get supportFaqAnswer4;
+
+  /// No description provided for @supportFaqQuestion5.
+  ///
+  /// In en, this message translates to:
+  /// **'Where are support replies?'**
+  String get supportFaqQuestion5;
+
+  /// No description provided for @supportFaqAnswer5.
+  ///
+  /// In en, this message translates to:
+  /// **'Open My requests and select a request to read replies and respond.'**
+  String get supportFaqAnswer5;
+
+  /// No description provided for @supportFormSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get supportFormSubjectLabel;
+
+  /// No description provided for @supportFormMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get supportFormMessageLabel;
+
+  /// No description provided for @supportFormSubmitContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get supportFormSubmitContact;
+
+  /// No description provided for @supportFormSubmitBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Send bug report'**
+  String get supportFormSubmitBug;
+
+  /// No description provided for @supportFormSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get supportFormSending;
+
+  /// No description provided for @supportFormRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get supportFormRequiredError;
+
+  /// No description provided for @supportFormSubjectTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 255 characters or fewer.'**
+  String get supportFormSubjectTooLong;
+
+  /// No description provided for @supportFormMessageTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 5000 characters or fewer.'**
+  String get supportFormMessageTooLong;
+
+  /// No description provided for @supportFormReportTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The report is too long. Shorten it to 5000 characters.'**
+  String get supportFormReportTooLong;
+
+  /// No description provided for @supportBugWhatHappenedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened?'**
+  String get supportBugWhatHappenedLabel;
+
+  /// No description provided for @supportBugStepsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps to reproduce'**
+  String get supportBugStepsLabel;
+
+  /// No description provided for @supportBugExpectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected behaviour'**
+  String get supportBugExpectedLabel;
+
+  /// No description provided for @supportBugActualLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual behaviour'**
+  String get supportBugActualLabel;
+
+  /// No description provided for @supportBugPlatformLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Include device platform'**
+  String get supportBugPlatformLabel;
+
+  /// No description provided for @supportBugPlatformHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. No logs, credentials or personal data are collected.'**
+  String get supportBugPlatformHint;
+
+  /// No description provided for @supportRequestSentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent to support.'**
+  String get supportRequestSentToast;
+
+  /// No description provided for @supportBugSentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report sent. Thank you.'**
+  String get supportBugSentToast;
+
+  /// No description provided for @supportRequestsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests yet.'**
+  String get supportRequestsEmpty;
+
+  /// No description provided for @supportRequestsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get supportRequestsRefresh;
+
+  /// No description provided for @supportRequestsBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to all requests'**
+  String get supportRequestsBack;
+
+  /// No description provided for @supportRequestUpdatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String supportRequestUpdatedOn(Object date);
+
+  /// No description provided for @supportRequestOpenedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened {date}'**
+  String supportRequestOpenedOn(Object date);
+
+  /// No description provided for @supportRequestKindSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support request'**
+  String get supportRequestKindSupport;
+
+  /// No description provided for @supportRequestKindBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report'**
+  String get supportRequestKindBug;
+
+  /// No description provided for @supportStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get supportStatusOpen;
+
+  /// No description provided for @supportStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your reply'**
+  String get supportStatusPending;
+
+  /// No description provided for @supportStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get supportStatusResolved;
+
+  /// No description provided for @supportStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get supportStatusClosed;
+
+  /// No description provided for @supportSenderYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get supportSenderYou;
+
+  /// No description provided for @supportSenderSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support team'**
+  String get supportSenderSupport;
+
+  /// No description provided for @supportReplyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get supportReplyLabel;
+
+  /// No description provided for @supportReplySend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reply'**
+  String get supportReplySend;
+
+  /// No description provided for @supportClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is closed'**
+  String get supportClosedTitle;
+
+  /// No description provided for @supportClosedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed requests are read-only. If you still need help, send a new request.'**
+  String get supportClosedHint;
+
+  /// No description provided for @supportClosedNewRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new request'**
+  String get supportClosedNewRequest;
+
+  /// No description provided for @supportErrorLoadRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Your requests could not be loaded. Check your connection and try again.'**
+  String get supportErrorLoadRequests;
+
+  /// No description provided for @supportErrorLoadRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'This request could not be opened. Check your connection and try again.'**
+  String get supportErrorLoadRequest;
+
+  /// No description provided for @supportErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This request could not be found. It may have been removed.'**
+  String get supportErrorNotFound;
+
+  /// No description provided for @supportErrorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the highlighted fields and try again.'**
+  String get supportErrorInvalid;
+
+  /// No description provided for @supportErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Wait a few minutes and try again.'**
+  String get supportErrorRateLimited;
+
+  /// No description provided for @supportErrorClosedReply.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is closed, so it cannot take a reply.'**
+  String get supportErrorClosedReply;
+
+  /// No description provided for @supportErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Check your connection and try again.'**
+  String get supportErrorGeneric;
+
+  /// No description provided for @supportRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get supportRetry;
+
+  /// No description provided for @supportUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Support requests are not available right now. The FAQ is still open.'**
+  String get supportUnavailable;
+
+  /// No description provided for @supportSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to contact support'**
+  String get supportSignInTitle;
+
+  /// No description provided for @supportSignInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Support requests are linked to your account. You can read the FAQ without signing in.'**
+  String get supportSignInBody;
+
+  /// No description provided for @supportSignInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get supportSignInAction;
+
+  /// No description provided for @supportSignInActionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'send a support request'**
+  String get supportSignInActionLabel;
+
+  /// No description provided for @supportSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to send requests and see your history.'**
+  String get supportSignInRequired;
+
+  /// No description provided for @supportErrorAccountIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session cannot be used for support requests. Sign out, sign in again, then retry.'**
+  String get supportErrorAccountIdentity;
 }
 
 class _AppLocalizationsDelegate

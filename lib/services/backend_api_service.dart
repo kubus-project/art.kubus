@@ -7792,50 +7792,108 @@ class BackendApiService
     }
   }
 
-  /// Create a support ticket
-  /// POST /api/support/tickets
+  /// Create a support or bug ticket for the signed-in account.
+  /// POST /api/support/tickets (Support Center contract, requester endpoint 1)
+  ///
+  /// [kind] is `support` (default) or `bug`; any other value is sent as
+  /// `support`. Failures throw [BackendApiRequestException] carrying the HTTP
+  /// status so the Support Center can map 400/401/403/429 to copy.
   Future<Map<String, dynamic>> createSupportTicket({
     required String subject,
     required String message,
-    String? email,
+    String kind = 'support',
   }) async {
+    const path = '/api/support/tickets';
     try {
-      final payload = <String, dynamic>{
-        'subject': subject.trim(),
-        'message': message.trim(),
-      };
-      final emailTrimmed = (email ?? '').trim();
-      if (emailTrimmed.isNotEmpty) {
-        payload['email'] = emailTrimmed;
-      }
-
       final response = await _post(
-        Uri.parse('$baseUrl/api/support/tickets'),
+        Uri.parse('$baseUrl$path'),
         headers: _getHeaders(),
-        body: jsonEncode(payload),
+        body: jsonEncode(<String, dynamic>{
+          'subject': subject.trim(),
+          'message': message.trim(),
+          'kind': kind == 'bug' ? 'bug' : 'support',
+        }),
         isIdempotent: false,
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'];
-          if (data is Map<String, dynamic>) {
-            return data;
-          }
-        }
-        return <String, dynamic>{};
-      }
-
-      final body =
-          response.body.isNotEmpty ? response.body : 'No response body';
-      throw Exception(
-        'Failed to create support ticket (${response.statusCode}): $body',
-      );
+      return _asSupportMap(_supportEnvelopeData(response, path: path), path);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
       rethrow;
     }
+  }
+
+  /// The signed-in account's support requests, newest update first.
+  /// GET /api/support/tickets (requester endpoint 2)
+  Future<List<Map<String, dynamic>>> getMySupportTickets() async {
+    const path = '/api/support/tickets';
+    final response = await _get(
+      Uri.parse('$baseUrl$path'),
+      headers: _getHeaders(),
+    );
+    final data = _supportEnvelopeData(response, path: path);
+    if (data is! List) {
+      throw FormatException('Unexpected support response shape for $path');
+    }
+    return data
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+  }
+
+  /// One support request with its full `messages` conversation (ascending).
+  /// GET /api/support/tickets/:id (requester endpoint 3)
+  Future<Map<String, dynamic>> getMySupportTicket(String id) async {
+    const path = '/api/support/tickets/:id';
+    final response = await _get(
+      Uri.parse('$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}'),
+      headers: _getHeaders(),
+    );
+    return _asSupportMap(_supportEnvelopeData(response, path: path), path);
+  }
+
+  /// Adds a requester reply; the ticket becomes `open` again.
+  /// POST /api/support/tickets/:id/replies (requester endpoint 4)
+  ///
+  /// Returns the created message. A closed ticket fails with status 409.
+  Future<Map<String, dynamic>> replyToSupportTicket(
+    String id,
+    String message,
+  ) async {
+    const path = '/api/support/tickets/:id/replies';
+    final response = await _post(
+      Uri.parse(
+        '$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}/replies',
+      ),
+      headers: _getHeaders(),
+      body: jsonEncode(<String, dynamic>{'message': message.trim()}),
+      isIdempotent: false,
+    );
+    return _asSupportMap(_supportEnvelopeData(response, path: path), path);
+  }
+
+  /// Unwraps the `{ success, data }` envelope. Non-2xx responses become
+  /// [BackendApiRequestException] with the parsed `Retry-After` delay.
+  Object? _supportEnvelopeData(http.Response response, {required String path}) {
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map && decoded.containsKey('data')) {
+      return decoded['data'];
+    }
+    throw FormatException('Unexpected support response shape for $path');
+  }
+
+  Map<String, dynamic> _asSupportMap(Object? data, String path) {
+    if (data is! Map) {
+      throw FormatException('Unexpected support response shape for $path');
+    }
+    return Map<String, dynamic>.from(data);
   }
 
   // ==================== Achievement Endpoints ====================

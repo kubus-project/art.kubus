@@ -512,31 +512,11 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
           ),
           const SizedBox(height: 32),
           _buildSettingsRow(
-            l10n.desktopSettingsFaqTileTitle,
-            l10n.desktopSettingsFaqTileSubtitle,
+            l10n.supportCenterTitle,
+            l10n.supportCenterEntrySubtitle,
             Icons.help_outline,
             onTap: _showSupportDialog,
           ),
-          const SizedBox(height: 12),
-          _buildSettingsRow(
-            l10n.settingsContactSupportButton,
-            l10n.desktopSettingsContactSupportTileSubtitle,
-            Icons.email_outlined,
-            onTap: _showSupportDialog,
-          ),
-          const SizedBox(height: 12),
-          _buildSettingsRow(
-            l10n.desktopSettingsReportBugTileTitle,
-            l10n.desktopSettingsReportBugTileSubtitle,
-            Icons.bug_report_outlined,
-            onTap: () {
-              ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(
-                    content: Text(l10n.desktopSettingsOpeningBugReportToast)),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
         ],
       ),
     );
@@ -633,23 +613,6 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
           ),
 
           const SizedBox(height: 32),
-
-          // Support Section
-          Text(
-            l10n.settingsSupportDialogTitle,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-
-          _buildSettingsRow(
-            l10n.settingsAboutSupportTileTitle,
-            l10n.settingsAboutSupportTileSubtitle,
-            Icons.help,
-            onTap: _showSupportDialog,
-          ),
-          const SizedBox(height: 12),
 
           _buildSettingsRow(
             l10n.settingsAboutRateTileTitle,

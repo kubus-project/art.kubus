@@ -17831,4 +17831,229 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityComposerCheckFeed => 'Preveri vir objav';
+
+  @override
+  String get supportCenterTitle => 'Pomoč in podpora';
+
+  @override
+  String get supportCenterEntrySubtitle =>
+      'Pogosta vprašanja, kontakt s podporo, prijave napak in vaši zahtevki';
+
+  @override
+  String get supportCenterSectionsLabel => 'Razdelki pomoči';
+
+  @override
+  String get supportCenterSectionFaq => 'Pogosta vprašanja';
+
+  @override
+  String get supportCenterSectionContact => 'Kontakt s podporo';
+
+  @override
+  String get supportCenterSectionBug => 'Prijava napake';
+
+  @override
+  String get supportCenterSectionRequests => 'Moji zahtevki';
+
+  @override
+  String get supportFaqQuestion1 => 'Kaj je art.kubus?';
+
+  @override
+  String get supportFaqAnswer1 =>
+      'Odprt zemljevid za raziskovanje umetniških del, razstav in kulturnih prostorov.';
+
+  @override
+  String get supportFaqQuestion2 => 'Lahko brskam brez prijave?';
+
+  @override
+  String get supportFaqAnswer2 =>
+      'Da. Javno vsebino lahko raziskujete brez računa. Dejanja, ki spreminjajo vsebino, zahtevajo prijavo.';
+
+  @override
+  String get supportFaqQuestion3 => 'Ali potrebujem denarnico?';
+
+  @override
+  String get supportFaqAnswer3 =>
+      'Za brskanje po javnem zemljevidu denarnica ni potrebna.';
+
+  @override
+  String get supportFaqQuestion4 => 'Kako prijavim težavo?';
+
+  @override
+  String get supportFaqAnswer4 =>
+      'Izberite Prijava napake in opišite korake, s katerimi jo lahko ponovite. Prijavo spremljate v razdelku Moji zahtevki.';
+
+  @override
+  String get supportFaqQuestion5 => 'Kje so odgovori podpore?';
+
+  @override
+  String get supportFaqAnswer5 =>
+      'Odprite Moji zahtevki in izberite zahtevek, če želite prebrati odgovore ali odgovoriti.';
+
+  @override
+  String get supportFormSubjectLabel => 'Zadeva';
+
+  @override
+  String get supportFormMessageLabel => 'Sporočilo';
+
+  @override
+  String get supportFormSubmitContact => 'Pošlji zahtevek';
+
+  @override
+  String get supportFormSubmitBug => 'Pošlji prijavo napake';
+
+  @override
+  String get supportFormSending => 'Pošiljanje…';
+
+  @override
+  String get supportFormRequiredError => 'To polje je obvezno.';
+
+  @override
+  String get supportFormSubjectTooLong => 'Uporabite največ 255 znakov.';
+
+  @override
+  String get supportFormMessageTooLong => 'Uporabite največ 5000 znakov.';
+
+  @override
+  String get supportFormReportTooLong =>
+      'Poročilo je predolgo. Skrajšajte ga na 5000 znakov.';
+
+  @override
+  String get supportBugWhatHappenedLabel => 'Kaj se je zgodilo?';
+
+  @override
+  String get supportBugStepsLabel => 'Koraki za ponovitev';
+
+  @override
+  String get supportBugExpectedLabel => 'Pričakovano delovanje';
+
+  @override
+  String get supportBugActualLabel => 'Dejansko delovanje';
+
+  @override
+  String get supportBugPlatformLabel => 'Vključi platformo naprave';
+
+  @override
+  String get supportBugPlatformHint =>
+      'Neobvezno. Ne zbiramo dnevnikov, poverilnic ali osebnih podatkov.';
+
+  @override
+  String get supportRequestSentToast => 'Zahtevek je poslan podpori.';
+
+  @override
+  String get supportBugSentToast => 'Prijava napake je poslana. Hvala.';
+
+  @override
+  String get supportRequestsEmpty => 'Zahtevkov še ni.';
+
+  @override
+  String get supportRequestsRefresh => 'Osveži';
+
+  @override
+  String get supportRequestsBack => 'Nazaj na vse zahtevke';
+
+  @override
+  String supportRequestUpdatedOn(Object date) {
+    return 'Posodobljeno $date';
+  }
+
+  @override
+  String supportRequestOpenedOn(Object date) {
+    return 'Odprto $date';
+  }
+
+  @override
+  String get supportRequestKindSupport => 'Zahtevek za podporo';
+
+  @override
+  String get supportRequestKindBug => 'Prijava napake';
+
+  @override
+  String get supportStatusOpen => 'Odprt';
+
+  @override
+  String get supportStatusPending => 'Čaka na vaš odgovor';
+
+  @override
+  String get supportStatusResolved => 'Rešen';
+
+  @override
+  String get supportStatusClosed => 'Zaprt';
+
+  @override
+  String get supportSenderYou => 'Vi';
+
+  @override
+  String get supportSenderSupport => 'Ekipa podpore';
+
+  @override
+  String get supportReplyLabel => 'Odgovor';
+
+  @override
+  String get supportReplySend => 'Pošlji odgovor';
+
+  @override
+  String get supportClosedTitle => 'Zahtevek je zaprt';
+
+  @override
+  String get supportClosedHint =>
+      'Zaprte zahtevke lahko samo preberete. Če še potrebujete pomoč, pošljite nov zahtevek.';
+
+  @override
+  String get supportClosedNewRequest => 'Pošljite nov zahtevek';
+
+  @override
+  String get supportErrorLoadRequests =>
+      'Zahtevkov ni bilo mogoče naložiti. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportErrorLoadRequest =>
+      'Zahtevka ni bilo mogoče odpreti. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportErrorNotFound =>
+      'Zahtevka ni bilo mogoče najti. Morda je bil odstranjen.';
+
+  @override
+  String get supportErrorInvalid =>
+      'Preverite označena polja in poskusite znova.';
+
+  @override
+  String get supportErrorRateLimited =>
+      'Preveč poskusov. Počakajte nekaj minut in poskusite znova.';
+
+  @override
+  String get supportErrorClosedReply =>
+      'Zahtevek je zaprt, zato nanj ni mogoče odgovoriti.';
+
+  @override
+  String get supportErrorGeneric =>
+      'Prišlo je do napake. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportRetry => 'Poskusi znova';
+
+  @override
+  String get supportUnavailable =>
+      'Zahtevki za podporo trenutno niso na voljo. FAQ je še vedno odprt.';
+
+  @override
+  String get supportSignInTitle => 'Prijavite se za stik s podporo';
+
+  @override
+  String get supportSignInBody =>
+      'Zahtevki za podporo so povezani z vašim računom. FAQ lahko preberete tudi brez prijave.';
+
+  @override
+  String get supportSignInAction => 'Prijava';
+
+  @override
+  String get supportSignInActionLabel => 'pošljete zahtevek za podporo';
+
+  @override
+  String get supportSignInRequired =>
+      'Za pošiljanje zahtevkov in ogled zgodovine se prijavite.';
+
+  @override
+  String get supportErrorAccountIdentity =>
+      'Vaša seja ni primerna za zahtevke za podporo. Odjavite se, znova se prijavite in poskusite znova.';
 }
