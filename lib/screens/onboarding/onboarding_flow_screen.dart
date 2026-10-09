@@ -691,6 +691,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await OnboardingStateService.saveCapabilityScope(
         explicit.storageValue,
         prefs: prefs,
+        returnRoute: widget.completionRoute,
       );
       return;
     }

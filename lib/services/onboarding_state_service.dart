@@ -1,3 +1,4 @@
+import '../models/creator_workspace.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
@@ -62,6 +63,12 @@ class OnboardingStateService {
   /// interrupted journey resumes with the same, narrow scope instead of
   /// widening into the full structured flow.
   static const String capabilityScopeKey = 'onboarding_capability_scope_v1';
+
+  /// Creator workspace an interrupted journey was started from, so an email
+  /// verification (often in another tab or app) returns there. Stored and
+  /// cleared with [capabilityScopeKey].
+  static const String capabilityReturnRouteKey =
+      'onboarding_capability_return_route_v1';
   static const String _pendingEmailVerificationKey =
       'onboarding_pending_email_verification_v1';
 
@@ -144,6 +151,7 @@ class OnboardingStateService {
       scopeKey: authOnboardingScopeKey,
     );
     await p.remove(capabilityScopeKey);
+    await p.remove(capabilityReturnRouteKey);
     // A user who finished onboarding (created/linked an account) is no longer a
     // guest; subsequent launches use the normal returning-user flow.
     await GuestSessionService.clearGuestMode(prefs: p);
@@ -167,22 +175,43 @@ class OnboardingStateService {
     await p.setBool(PreferenceKeys.isFirstLaunch, true);
     await _clearPendingAuthOnboardingKeys(p);
     await p.remove(capabilityScopeKey);
+    await p.remove(capabilityReturnRouteKey);
   }
 
   /// Remembers the capability scope of the journey that is starting.
+  ///
+  /// [returnRoute] is kept only when it names a creator workspace; any other
+  /// origin is the screen the journey opened above and needs no record.
   static Future<void> saveCapabilityScope(
     String scope, {
     SharedPreferences? prefs,
+    String? returnRoute,
   }) async {
     final normalized = scope.trim();
     if (normalized.isEmpty) return;
     final p = prefs ?? await SharedPreferences.getInstance();
     await p.setString(capabilityScopeKey, normalized);
+    final workspace = CreatorWorkspace.fromRoute(returnRoute);
+    if (workspace != null) {
+      await p.setString(capabilityReturnRouteKey, workspace.route);
+    } else {
+      await p.remove(capabilityReturnRouteKey);
+    }
+  }
+
+  /// The creator workspace the open journey returns to, under the same
+  /// "journey still open" rule as [capabilityScopeSync].
+  static String? capabilityReturnRouteSync(SharedPreferences prefs) {
+    if (capabilityScopeSync(prefs) == null) return null;
+    return CreatorWorkspace.fromRoute(
+      prefs.getString(capabilityReturnRouteKey),
+    )?.route;
   }
 
   static Future<void> clearCapabilityScope({SharedPreferences? prefs}) async {
     final p = prefs ?? await SharedPreferences.getInstance();
     await p.remove(capabilityScopeKey);
+    await p.remove(capabilityReturnRouteKey);
   }
 
   /// The remembered scope, but only while a journey is genuinely still open:
@@ -382,6 +411,7 @@ class OnboardingStateService {
     }
     // The scope describes the pending journey; without one it is meaningless.
     await p.remove(capabilityScopeKey);
+    await p.remove(capabilityReturnRouteKey);
   }
 
   static bool hasActiveGoogleOnboardingRegistrationGuardSync(

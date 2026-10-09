@@ -120,7 +120,7 @@
   # Generated from web/web_interactive_routes.json. Do not edit this rule by hand.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^(?:ar|artwork|community|connect_wallet|connect-wallet|exhibition|explore|forgot-password|home|import-wallet|main|map|marketplace|onboarding|post-auth-loading|promotions|register|reset-password|secure-account|settings|settings/availability-node|sign-in|verify-email|verify-email/success|wallet|wallet_connect|wallet/availability-node|web3)/?$ index.html [L]
+  RewriteRule ^(?:ar|artist-studio|artwork|community|connect_wallet|connect-wallet|exhibition|explore|forgot-password|home|import-wallet|institution-hub|main|map|marketplace|onboarding|post-auth-loading|promotions|register|reset-password|secure-account|settings|settings/availability-node|sign-in|verify-email|verify-email/success|wallet|wallet_connect|wallet/availability-node|web3)/?$ index.html [L]
   # END GENERATED WEB INTERACTIVE ROUTES
 
   # Unknown paths are real 404s, not indexable Flutter-shell soft 404s.

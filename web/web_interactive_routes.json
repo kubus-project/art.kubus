@@ -11,6 +11,8 @@
     { "path": "/main", "group": "finite", "classification": "interactive", "testUrl": "/main" },
     { "path": "/map", "group": "finite", "classification": "interactive", "testUrl": "/map?mode=guest&intent=discover&utm_source=meta&utm_medium=paid_social&utm_campaign=map_discovery_test&utm_content=creative_1" },
     { "path": "/community", "group": "finite", "classification": "interactive", "testUrl": "/community" },
+    { "path": "/artist-studio", "group": "finite", "classification": "interactive", "testUrl": "/artist-studio" },
+    { "path": "/institution-hub", "group": "finite", "classification": "interactive", "testUrl": "/institution-hub" },
     { "path": "/onboarding", "group": "finite", "classification": "interactive", "testUrl": "/onboarding" },
     { "path": "/post-auth-loading", "group": "finite", "classification": "interactive", "testUrl": "/post-auth-loading" },
 

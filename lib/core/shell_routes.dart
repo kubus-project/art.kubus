@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../main_app.dart';
+import '../models/creator_workspace.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'shell_entry_screen.dart';
@@ -20,12 +21,20 @@ class ShellRoutes {
   static const String map = '/map';
   static const String community = '/community';
 
+  /// Creator workspaces. Public entries: each explains itself to a visitor,
+  /// so a refresh, a shared link or the end of an account journey can land on
+  /// one directly.
+  static const String artistStudio = '/artist-studio';
+  static const String institutionHub = '/institution-hub';
+
   /// Routes that should go through [AppInitializer] on cold start so providers
   /// hydrate before the shell renders.
   static const Set<String> initializerWrapped = <String>{
     main,
     map,
     community,
+    artistStudio,
+    institutionHub,
   };
 
   static bool shouldWrapInitialUri(Uri uri) {
@@ -56,6 +65,8 @@ class ShellRoutes {
     final normalized = (preferred ?? '').trim();
     if (normalized == map) return map;
     if (normalized == community) return community;
+    if (normalized == artistStudio) return artistStudio;
+    if (normalized == institutionHub) return institutionHub;
     return main;
   }
 
@@ -75,5 +86,9 @@ class ShellRoutes {
     // their canonical `/m/<id>` route identity.
     map: (_) => const ShellEntryScreen.map(),
     community: (_) => const ShellEntryScreen.community(),
+    artistStudio: (_) =>
+        const ShellEntryScreen.workspace(CreatorWorkspace.artistStudio),
+    institutionHub: (_) =>
+        const ShellEntryScreen.workspace(CreatorWorkspace.institutionHub),
   };
 }
