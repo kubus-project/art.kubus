@@ -227,6 +227,9 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       controller = VideoPlayerController.networkUrl(Uri.parse(url));
       await controller.initialize();
       await controller.setLooping(false);
+      // A blocked-sound retry keeps the browser's mute; every explicit play
+      // starts from the viewer's current choice, not this slide's older copy.
+      if (!afterBlockedSound) _audio.adoptSessionChoice();
       await controller.setVolume(_audio.effectiveVolume);
     } catch (_) {
       await controller?.dispose();

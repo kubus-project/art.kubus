@@ -235,6 +235,43 @@ void main() {
     });
 
     _testPlayer(
+        'a clip mounted before the viewer muted another clip starts '
+        'muted after its own explicit play', (tester) async {
+      // Both slides are mounted up front, as cached feed items are, so the
+      // second one captured the session's sound before the first was muted.
+      await tester.pumpWidget(_app(Column(
+        children: [
+          _stage(
+            const CommunityPostVideoSlide(url: _clipA, isActive: true),
+            width: 300,
+          ),
+          _stage(
+            const CommunityPostVideoSlide(url: _clipB, isActive: true),
+            width: 300,
+          ),
+        ],
+      )));
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoPlay).first);
+      await _settle(tester);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(tester.getCenter(find.byKey(_frameKey).first));
+      await tester.pump();
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoMute));
+      await _settle(tester);
+      await gesture.removePointer();
+
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoPlay).first);
+      await _settle(tester);
+      final second = platform.live.singleWhere(
+        (player) => player.uri.endsWith('/uploads/b.mp4'),
+      );
+      expect(second.playing, isTrue);
+      expect(second.volume, 0,
+          reason: 'the viewer muted, so the next clip must not sound');
+    });
+
+    _testPlayer(
         'a browser that refuses sound gets the clip muted, once, and says so',
         (tester) async {
       platform.blockSoundedPlay = true;

@@ -56,6 +56,15 @@ class CommunityVideoAudio extends ChangeNotifier {
   /// What the controller should be set to.
   double get effectiveVolume => _muted ? 0 : _volume;
 
+  /// Takes the viewer's latest choice from the session. Feed items are cached,
+  /// so a clip can be mounted before the viewer mutes or changes the level on
+  /// another clip; call this right before a clip starts, so it never plays
+  /// with the values it captured when it was created. Does not notify.
+  void adoptSessionChoice() {
+    _volume = _sessionVolume;
+    _muted = _sessionMuted;
+  }
+
   void toggleMute() {
     _muted = !_muted;
     if (!_muted && _volume <= 0) _volume = 1;
