@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:art_kubus/community/community_composer_media.dart';
+import 'package:art_kubus/community/community_post_text_limits.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_composer_character_counter.dart';
 import 'package:art_kubus/widgets/community/community_composer_media_tray.dart';
@@ -229,14 +230,15 @@ void counterTests() {
     );
     expect(find.textContaining('characters left'), findsNothing);
 
-    controller.text = 'a' * 2150;
+    controller.text = 'a' * (kCommunityPostMaxCharacters - 50);
     await tester.pump();
     expect(find.text('50 characters left'), findsOneWidget);
 
-    controller.text = 'a' * 2201;
+    controller.text = 'a' * (kCommunityPostMaxCharacters + 1);
     await tester.pump();
     expect(
-      find.text(_l10n.communityComposerCharacterLimitExceeded(2200)),
+      find.text(_l10n.communityComposerCharacterLimitExceeded(
+          kCommunityPostMaxCharacters)),
       findsOneWidget,
     );
   });
