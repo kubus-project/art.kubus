@@ -290,6 +290,37 @@ class KubusSizes {
 
   /// Height of the preview surface at the top of a spatial detail screen.
   static const double detailPreviewHeight = 320.0;
+
+  // --- Media player chrome (Community video) ---
+
+  /// Hit target of a media control (the 44dp touch guideline).
+  static const double mediaControlTarget = 44.0;
+
+  /// Icon inside a media control.
+  static const double mediaControlIcon = 22.0;
+
+  /// Large initial play / replay control.
+  static const double mediaPlayLarge = 56.0;
+
+  /// Icon inside [mediaPlayLarge].
+  static const double mediaPlayLargeIcon = 32.0;
+
+  /// Timeline track thickness at rest and while hovered or scrubbed.
+  static const double mediaTimelineTrack = 4.0;
+  static const double mediaTimelineTrackActive = 6.0;
+
+  /// Timeline scrub handle diameter.
+  static const double mediaTimelineHandle = 12.0;
+
+  /// Vertical hit area of the timeline, so a thin track is easy to grab.
+  static const double mediaTimelineHitHeight = 32.0;
+
+  /// Width of the desktop volume track.
+  static const double mediaVolumeTrackWidth = 72.0;
+
+  /// Stage width below which the control strip drops the volume track and the
+  /// elapsed/duration pair to a single compact line.
+  static const double mediaCompactStageWidth = 360.0;
 }
 
 /// Canonical Material elevations.

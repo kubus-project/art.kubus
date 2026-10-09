@@ -4476,6 +4476,20 @@
       "max": {"type": "int"}
     }
   },
+  "communityComposerMediaTrimmed": "Added {added} of {picked} files. A post holds up to {max} items.",
+  "@communityComposerMediaTrimmed": {
+    "placeholders": {
+      "added": {"type": "int"},
+      "picked": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerValidationRejected": "The server did not accept this post: {detail}. Your draft is kept.",
+  "@communityComposerValidationRejected": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
   "communityComposerMediaCount": "{count} of {max} selected",
   "@communityComposerMediaCount": {
     "placeholders": {
@@ -4571,6 +4585,50 @@
   "communityMediaVideoUnavailable": "This video cannot be played here.",
   "@communityMediaVideoUnavailable": {
     "description": "0.8.2 community media"
+  },
+  "communityMediaVideoReplay": "Replay video",
+  "@communityMediaVideoReplay": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoRetry": "Try again",
+  "@communityMediaVideoRetry": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoLoading": "Loading video",
+  "@communityMediaVideoLoading": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoBuffering": "Buffering",
+  "@communityMediaVideoBuffering": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoSeek": "Video position",
+  "@communityMediaVideoSeek": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoTime": "{position} of {duration}",
+  "@communityMediaVideoTime": {
+    "description": "0.8.2 community media video player",
+    "placeholders": {
+      "position": {"type": "String"},
+      "duration": {"type": "String"}
+    }
+  },
+  "communityMediaVideoVolume": "Volume",
+  "@communityMediaVideoVolume": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoFullscreen": "Full screen",
+  "@communityMediaVideoFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoExitFullscreen": "Exit full screen",
+  "@communityMediaVideoExitFullscreen": {
+    "description": "0.8.2 community media video player"
+  },
+  "communityMediaVideoControls": "Video player",
+  "@communityMediaVideoControls": {
+    "description": "0.8.2 community media video player"
   },
   "communityMediaImageUnavailable": "Image unavailable",
   "@communityMediaImageUnavailable": {

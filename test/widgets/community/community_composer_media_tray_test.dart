@@ -3,12 +3,19 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:art_kubus/community/community_composer_media.dart';
+import 'package:art_kubus/community/community_post_text_limits.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_composer_character_counter.dart';
 import 'package:art_kubus/widgets/community/community_composer_media_tray.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+
+import '../../support/fake_video_player_platform.dart';
+
+// ignore_for_file: depend_on_referenced_packages
 
 final Uint8List _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -229,15 +236,81 @@ void counterTests() {
     );
     expect(find.textContaining('characters left'), findsNothing);
 
-    controller.text = 'a' * 2150;
+    controller.text = 'a' * (kCommunityPostMaxCharacters - 50);
     await tester.pump();
     expect(find.text('50 characters left'), findsOneWidget);
 
-    controller.text = 'a' * 2201;
+    controller.text = 'a' * (kCommunityPostMaxCharacters + 1);
     await tester.pump();
     expect(
-      find.text(_l10n.communityComposerCharacterLimitExceeded(2200)),
+      find.text(_l10n.communityComposerCharacterLimitExceeded(
+          kCommunityPostMaxCharacters)),
       findsOneWidget,
     );
+  });
+
+  group('video preview', () {
+    late FakeVideoPlayerPlatform platform;
+    late VideoPlayerPlatform previous;
+
+    setUp(() {
+      previous = VideoPlayerPlatform.instance;
+      platform = FakeVideoPlayerPlatform();
+      VideoPlayerPlatform.instance = platform;
+    });
+
+    tearDown(() => VideoPlayerPlatform.instance = previous);
+
+    /// Gives the controller's async work real event-loop turns. Polls instead of
+    /// waiting a fixed time, so a loaded machine only makes the test slower.
+    Future<void> settle(WidgetTester tester, {Finder? until}) async {
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        if (until != null && until.evaluate().isNotEmpty) break;
+        if (until == null && i >= 3) break;
+      }
+    }
+
+    testWidgets('a picked video shows its first frame, then releases it',
+        (tester) async {
+      final controller = CommunityComposerMediaController()
+        ..add([_image('one.png'), _video('clip.mp4')]);
+      await tester.pumpWidget(_harness(controller));
+      await settle(tester, until: find.byType(VideoPlayer));
+
+      expect(find.byType(VideoPlayer), findsOneWidget);
+      expect(platform.live, hasLength(1));
+      expect(platform.playingNow, isEmpty, reason: 'a preview never plays');
+      expect(platform.live.single.volume, 0);
+      expect(platform.live.single.seeks, isNotEmpty,
+          reason: 'it moves past the opening frame');
+      // The tile keeps its accessible name even though the file name is gone.
+      expect(find.bySemanticsLabel(RegExp('^Video, Media 2 of 2')),
+          findsOneWidget);
+
+      controller.remove(controller.items.last.id);
+      await tester.pump();
+      await settle(tester);
+      expect(find.byType(VideoPlayer), findsNothing);
+      expect(platform.live, isEmpty);
+
+      await tester.pumpWidget(const SizedBox());
+      await settle(tester);
+    });
+
+    testWidgets('an undecodable video keeps the typed tile', (tester) async {
+      platform.failInitialize = true;
+      final controller = CommunityComposerMediaController()
+        ..add([_video('clip.mp4')]);
+      await tester.pumpWidget(_harness(controller));
+      await settle(tester);
+
+      expect(find.byType(VideoPlayer), findsNothing);
+      expect(find.text('clip.mp4'), findsOneWidget);
+      expect(platform.live, isEmpty);
+    });
   });
 }

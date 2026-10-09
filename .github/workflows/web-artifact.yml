@@ -17,9 +17,12 @@ on:
         default: false
         type: boolean
       community_multi_media_enabled:
-        description: Explicit Community multi-media opt-in; backend must be deployed first
+        description: >-
+          Community multi-media. Enabled by default; backend
+          art.kubus-backend#79 must be live on every writable instance. Pass
+          false for the emergency rollback build.
         required: false
-        default: false
+        default: true
         type: boolean
       browser_set:
         description: Comma-separated Playwright browsers

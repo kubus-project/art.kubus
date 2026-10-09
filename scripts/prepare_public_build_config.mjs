@@ -17,7 +17,7 @@ if (!['true', 'false'].includes(analyticsBuildEnabled)) {
   console.error('KUBUS_ANALYTICS_APP_ENABLED must be true or false when set.');
   process.exit(1);
 }
-const communityMultiMediaEnabled = (process.env.KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED || 'false')
+const communityMultiMediaEnabled = (process.env.KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED || 'true')
   .trim().toLowerCase();
 if (!['true', 'false'].includes(communityMultiMediaEnabled)) {
   console.error('KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED must be true or false when set.');
