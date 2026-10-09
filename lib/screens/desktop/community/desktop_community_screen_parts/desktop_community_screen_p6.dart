@@ -4,38 +4,56 @@ part of '../desktop_community_screen.dart';
 // private state access is intact. setState is routed through
 // the State's _applyState shim.
 extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      final fileName = (image.name.trim().isNotEmpty)
-          ? image.name.trim()
-          : 'post-image-${DateTime.now().millisecondsSinceEpoch}.jpg';
-      _applyState(() {
-        _selectedImages
-            .add(_ComposerImagePayload(bytes: bytes, fileName: fileName));
-      });
-    }
+  bool get _canSubmitComposer =>
+      (_composeController.text.trim().isNotEmpty ||
+          _composerMedia.isNotEmpty) &&
+      !communityPostExceedsLimit(_composeController.text);
+
+  void _showComposerTextLimitToast(AppLocalizations l10n) {
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.communityComposerCharacterLimitExceeded(
+            kCommunityPostMaxCharacters,
+          ),
+        ),
+      ),
+    );
   }
 
-  Future<List<String>> _uploadComposerMedia() async {
-    if (_selectedImages.isEmpty) return const <String>[];
-    final api = BackendApiService();
-    final mediaUrls = <String>[];
-    for (final image in _selectedImages) {
-      final uploadResult = await api.uploadFile(
-        fileBytes: image.bytes,
-        fileName: image.fileName,
-        fileType: 'post-image',
+  Future<void> _pickPhotos() async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!
+              .communityComposerMediaLimitReached(_composerMedia.maxItems)),
+        ),
       );
-      final url = uploadResult['uploadedUrl'] as String?;
-      if (url == null || url.trim().isEmpty) {
-        throw Exception('Image upload returned no URL');
-      }
-      mediaUrls.add(url);
+      return;
     }
-    return mediaUrls;
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    _applyState(() {
+      _composerMedia.add(picked);
+    });
+  }
+
+  Future<void> _pickVideo() async {
+    if (_composerMedia.isFull) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!
+              .communityComposerMediaLimitReached(_composerMedia.maxItems)),
+        ),
+      );
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    _applyState(() {
+      _composerMedia.add(<CommunityComposerPickedMedia>[picked]);
+    });
   }
 
   Future<void> _pickLocation() async {
@@ -657,9 +675,25 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Sends the full composer once. See [_submitInlinePost] for why the flag is
+  /// set before the first await.
   Future<void> _submitPost() async {
+    if (_composerSubmitInFlight) return;
+    _composerSubmitInFlight = true;
+    try {
+      await _runPost();
+    } finally {
+      _composerSubmitInFlight = false;
+    }
+  }
+
+  Future<void> _runPost() async {
     final rawContent = _composeController.text.trim();
-    if (rawContent.isEmpty && _selectedImages.isEmpty) return;
+    if (rawContent.isEmpty && _composerMedia.isEmpty) return;
+    if (communityPostExceedsLimit(rawContent)) {
+      _showComposerTextLimitToast(AppLocalizations.of(context)!);
+      return;
+    }
     // Guests see the contextual account surface; their draft stays in the
     // composer so posting can continue after sign-in.
     final canPost = await const ContextualAuthGate().ensureAuthenticated(
@@ -693,39 +727,49 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
-      final mediaUrls = await _uploadComposerMedia();
-      if (!mounted) return;
-      final postType =
-          communityComposerPostType(hasImage: mediaUrls.isNotEmpty);
-      var content = rawContent;
-      if (content.isEmpty && mediaUrls.isNotEmpty) {
-        content = l10n.desktopCommunitySharedPhotoFallbackContent;
-      }
+      final api = BackendApiService();
+      final interactions = context.read<CommunityInteractionsProvider>();
+      final postType = communityComposerPostType(
+        hasImage: _composerMedia.hasImages,
+        hasVideo: _composerMedia.hasVideos,
+      );
 
       final draft = hub.draft;
       final location = draft.location;
       final locationName =
           _selectedLocation ?? draft.locationLabel ?? location?.name;
 
-      if (draft.targetGroup != null) {
-        await hub.submitGroupPost(
-          draft.targetGroup!.id,
-          content: content,
-          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-          postType: postType,
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationLabel: locationName,
-        );
-      } else {
-        await context.read<CommunityInteractionsProvider>().createCommunityPost(
+      await _composerMedia.publish<void>(
+        upload: (item) => uploadCommunityComposerMediaItem(api, item),
+        submit: (mediaUrls) async {
+          final content = rawContent.isNotEmpty
+              ? rawContent
+              : communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                );
+          if (draft.targetGroup != null) {
+            await hub.submitGroupPost(
+              draft.targetGroup!.id,
               content: content,
+              idempotencyKey: _composerMedia.submissionKey,
+              mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+              postType: postType,
+              category: draft.category,
+              artworkId: draft.artwork?.id,
+              subjectType: draft.subjectType,
+              subjectId: draft.subjectId,
+              subjects: draft.subjects,
+              tags: draft.tags,
+              mentions: draft.mentions,
+              location: location,
+              locationLabel: locationName,
+            );
+          } else {
+            await interactions.createCommunityPost(
+              content: content,
+              idempotencyKey: _composerMedia.submissionKey,
               mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
               postType: postType,
               category: draft.category,
@@ -740,14 +784,16 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
               locationLat: location?.lat,
               locationLng: location?.lng,
             );
-      }
+          }
+        },
+      );
 
       if (mounted) {
         _applyState(() {
           _showComposeDialog = false;
           _isPosting = false;
           _composeController.clear();
-          _selectedImages.clear();
+          _composerMedia.clear();
           _selectedLocation = null;
         });
         hub.resetDraft();
@@ -769,8 +815,15 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .desktopCommunityPostCreateFailedToast),
+            content: Text(communityComposerFailureMessage(
+              AppLocalizations.of(context)!,
+              e,
+              unuploadedMediaCount: _composerMedia.hasFailedUploads
+                  ? _composerMedia.unuploadedCount
+                  : null,
+              fallback: AppLocalizations.of(context)!
+                  .desktopCommunityPostCreateFailedToast,
+            )),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

@@ -10950,6 +10950,129 @@ class AppLocalizationsSl extends AppLocalizations {
       'Objave ni bilo mogoče ustvariti.';
 
   @override
+  String communityUploadRateLimitedSeconds(int seconds) {
+    return 'Dosežena je omejitev nalaganja. Poskusite znova čez $seconds s.';
+  }
+
+  @override
+  String communityUploadRateLimitedMinutes(int minutes) {
+    return 'Dosežena je omejitev nalaganja. Poskusite znova čez približno $minutes min.';
+  }
+
+  @override
+  String get communityUploadRateLimitedGeneric =>
+      'Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.';
+
+  @override
+  String communityComposerRateLimitedSeconds(int seconds) =>
+      'Objavljanje je začasno omejeno. Poskusite znova čez $seconds s. Osnutek je ohranjen.';
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.';
+
+  @override
+  String get communityComposerDiscardDraft => 'Želite zavreči ta osnutek?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.";
+
+  @override
+  String get communityComposerCheckFeed => "Preveri vir objav";
+
+  @override
+  String get communityComposerMediaAddPhotos => 'Dodaj fotografije';
+
+  @override
+  String get communityComposerMediaAddVideo => 'Dodaj video';
+
+  @override
+  String communityComposerMediaLimitReached(int max) {
+    return 'V objavo lahko dodate največ $max predstavnih datotek.';
+  }
+
+  @override
+  String communityComposerMediaCount(int count, int max) {
+    return 'Izbranih: $count od $max';
+  }
+
+  @override
+  String get communityComposerMediaMoveEarlier => 'Premakni nazaj';
+
+  @override
+  String get communityComposerMediaMoveLater => 'Premakni naprej';
+
+  @override
+  String get communityComposerMediaRetry => 'Ponovi nalaganje';
+
+  @override
+  String communityComposerMediaUploadFailed(int count) {
+    return '$count datotek ni bilo mogoče naložiti. Osnutek je ohranjen, lahko poskusite znova.';
+  }
+
+  @override
+  String get communityComposerMediaStatusPending => 'Čaka na nalaganje';
+
+  @override
+  String get communityComposerMediaStatusUploading => 'Nalaganje…';
+
+  @override
+  String get communityComposerMediaStatusFailed => 'Nalaganje ni uspelo';
+
+  @override
+  String get communityComposerMediaStatusDone => 'Naloženo';
+
+  @override
+  String communityComposerCharactersRemaining(int count) {
+    return 'Še $count znakov';
+  }
+
+  @override
+  String communityComposerCharacterLimitExceeded(int max) {
+    return 'Objava je lahko dolga največ $max znakov. Za objavo skrajšajte besedilo.';
+  }
+
+  @override
+  String get communityPostShowMore => 'več';
+
+  @override
+  String get communityPostShowLess => 'manj';
+
+  @override
+  String communityMediaCarouselPosition(int index, int total) {
+    return 'Predstavnost $index od $total';
+  }
+
+  @override
+  String get communityMediaPrevious => 'Prejšnja predstavnost';
+
+  @override
+  String get communityMediaNext => 'Naslednja predstavnost';
+
+  @override
+  String get communityMediaVideoPlay => 'Predvajaj video';
+
+  @override
+  String get communityMediaVideoPause => 'Ustavi video';
+
+  @override
+  String get communityMediaVideoMute => 'Utišaj video';
+
+  @override
+  String get communityMediaVideoUnmute => 'Vklopi zvok';
+
+  @override
+  String get communityMediaVideoUnavailable =>
+      'Tega videa tukaj ni mogoče predvajati.';
+
+  @override
+  String get communityMediaImageUnavailable => 'Slika ni na voljo';
+
+  @override
+  String get communityPostOpenOriginal => 'Odpri izvirno objavo';
+
+  @override
   String get communityToggleLikeFailedToast =>
       'Všečka ni bilo mogoče posodobiti.';
 

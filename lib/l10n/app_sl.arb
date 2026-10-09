@@ -4158,6 +4158,140 @@
   "communityGroupPickerJoinFirstToast": "Pridruži se skupini, da usmeriš objavo.",
   "communityComposerPostCreatedToast": "Objava ustvarjena",
   "communityComposerCreatePostFailedToast": "Objave ni bilo mogoče ustvariti.",
+  "communityUploadRateLimitedSeconds": "Dosežena je omejitev nalaganja. Poskusite znova čez {seconds} s.",
+  "@communityUploadRateLimitedSeconds": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "communityUploadRateLimitedMinutes": "Dosežena je omejitev nalaganja. Poskusite znova čez približno {minutes} min.",
+  "@communityUploadRateLimitedMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "communityUploadRateLimitedGeneric": "Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.",
+  "@communityUploadRateLimitedGeneric": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaAddPhotos": "Dodaj fotografije",
+  "@communityComposerMediaAddPhotos": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaAddVideo": "Dodaj video",
+  "@communityComposerMediaAddVideo": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaLimitReached": "V objavo lahko dodate največ {max} predstavnih datotek.",
+  "@communityComposerMediaLimitReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerMediaCount": "Izbranih: {count} od {max}",
+  "@communityComposerMediaCount": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "communityComposerMediaMoveEarlier": "Premakni nazaj",
+  "@communityComposerMediaMoveEarlier": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaMoveLater": "Premakni naprej",
+  "@communityComposerMediaMoveLater": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaRetry": "Ponovi nalaganje",
+  "@communityComposerMediaRetry": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaUploadFailed": "{count} datotek ni bilo mogoče naložiti. Osnutek je ohranjen, lahko poskusite znova.",
+  "@communityComposerMediaUploadFailed": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityComposerMediaStatusPending": "Čaka na nalaganje",
+  "@communityComposerMediaStatusPending": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusUploading": "Nalaganje…",
+  "@communityComposerMediaStatusUploading": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusFailed": "Nalaganje ni uspelo",
+  "@communityComposerMediaStatusFailed": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerMediaStatusDone": "Naloženo",
+  "@communityComposerMediaStatusDone": {
+    "description": "0.8.2 community media"
+  },
+  "communityComposerCharactersRemaining": "Še {count} znakov",
+  "@communityComposerCharactersRemaining": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityComposerCharacterLimitExceeded": "Objava je lahko dolga največ {max} znakov. Za objavo skrajšajte besedilo.",
+  "@communityComposerCharacterLimitExceeded": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "communityPostShowMore": "več",
+  "@communityPostShowMore": {
+    "description": "0.8.2 community media"
+  },
+  "communityPostShowLess": "manj",
+  "@communityPostShowLess": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaCarouselPosition": "Predstavnost {index} od {total}",
+  "@communityMediaCarouselPosition": {
+    "placeholders": {
+      "index": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "communityMediaPrevious": "Prejšnja predstavnost",
+  "@communityMediaPrevious": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaNext": "Naslednja predstavnost",
+  "@communityMediaNext": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoPlay": "Predvajaj video",
+  "@communityMediaVideoPlay": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoPause": "Ustavi video",
+  "@communityMediaVideoPause": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoMute": "Utišaj video",
+  "@communityMediaVideoMute": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoUnmute": "Vklopi zvok",
+  "@communityMediaVideoUnmute": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaVideoUnavailable": "Tega videa tukaj ni mogoče predvajati.",
+  "@communityMediaVideoUnavailable": {
+    "description": "0.8.2 community media"
+  },
+  "communityMediaImageUnavailable": "Slika ni na voljo",
+  "@communityMediaImageUnavailable": {
+    "description": "0.8.2 community media"
+  },
+  "communityPostOpenOriginal": "Odpri izvirno objavo",
+  "@communityPostOpenOriginal": {
+    "description": "0.8.2 community media"
+  },
   "communityToggleLikeFailedToast": "Všečka ni bilo mogoče posodobiti.",
   "communityPostLikesTitle": "Všečki objave",
   "communityCommentLikesTitle": "Všečki komentarja",
@@ -7182,5 +7316,11 @@
   "artworkEditArtistHelper": "Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.",
   "artworkDraftArtistHelper": "Pustite prazno, če avtor ni znan.",
   "communitySearchTypeCollections": "Zbirke",
-  "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}"
+  "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}",
+  "communityComposerRateLimitedSeconds": "Objavljanje je začasno omejeno. Poskusite znova čez {seconds} s. Osnutek je ohranjen.",
+  "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "communityComposerRateLimitedGeneric": "Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.",
+  "communityComposerDiscardDraft": "Želite zavreči ta osnutek?",
+  "communityComposerAlreadyCommitted": "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.",
+  "communityComposerCheckFeed": "Preveri vir objav"
 }

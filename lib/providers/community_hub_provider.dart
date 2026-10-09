@@ -248,6 +248,7 @@ class CommunityHubProvider extends ChangeNotifier {
   Future<CommunityPost?> submitGroupPost(
     String groupId, {
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -265,6 +266,7 @@ class CommunityHubProvider extends ChangeNotifier {
     final created = await _apiService.createGroupPost(
       groupId,
       content: content,
+      idempotencyKey: idempotencyKey,
       imageUrl: imageUrl,
       mediaUrls: mediaUrls,
       mediaCids: mediaCids,

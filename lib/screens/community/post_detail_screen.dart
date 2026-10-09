@@ -12,6 +12,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_post_text_limits.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../services/backend_api_service.dart';
@@ -29,6 +30,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_comment_row.dart';
+import '../../widgets/community/community_composer_character_counter.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
@@ -1053,16 +1055,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
-                      child: TextField(
-                        controller: controller,
-                        maxLines: null,
-                        style: KubusTypography.inter(),
-                        decoration: InputDecoration(
-                          hintText: l10n.communityComposerTextHint,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: controller,
+                              maxLines: null,
+                              style: KubusTypography.inter(),
+                              decoration: InputDecoration(
+                                hintText: l10n.communityComposerTextHint,
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          CommunityComposerCharacterCounter(
+                            controller: controller,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1240,6 +1252,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         subjectTypePayload == 'artwork'
                                             ? subjectIdPayload
                                             : null;
+                                    if (communityPostExceedsLimit(content)) {
+                                      messenger.showKubusSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.communityComposerCharacterLimitExceeded(
+                                              kCommunityPostMaxCharacters,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     if (content.isEmpty &&
                                         existingMediaUrls.isEmpty) {
                                       messenger.showKubusSnackBar(
@@ -1492,6 +1516,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
+                            if (communityPostExceedsLimit(content)) {
+                              ScaffoldMessenger.of(sheetContext)
+                                  .showKubusSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(sheetContext)!
+                                        .communityComposerCharacterLimitExceeded(
+                                      kCommunityPostMaxCharacters,
+                                    ),
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             Navigator.pop(sheetContext);
 
                             try {
@@ -1561,6 +1599,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
+                      ),
+                      CommunityComposerCharacterCounter(
+                        controller: repostContentController,
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -1838,6 +1879,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               CommunityPostCard(
                                 post: _post!,
                                 accentColor: themeProvider.accentColor,
+                                expandCaption: true,
                                 onOpenPostDetail: (target) {
                                   // In detail, avoid pushing the same post.
                                   if (_post != null && target.id == _post!.id) {

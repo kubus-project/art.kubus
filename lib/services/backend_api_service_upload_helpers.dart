@@ -6,6 +6,60 @@ String? _backendApiTrimmedString(dynamic value) {
   return next.isEmpty ? null : next;
 }
 
+/// The longest server-advised wait the upload path absorbs silently. Longer
+/// windows are surfaced to the composer instead of being retried.
+const Duration _kUploadAutoRetryCeiling = Duration(seconds: 2);
+
+/// An upload was refused with HTTP 429. [retryAfter] is the server's wait when
+/// it provided one, and [errorCode] is its machine-readable reason.
+class UploadRateLimitedException implements Exception {
+  const UploadRateLimitedException({
+    required this.path,
+    this.retryAfter,
+    this.errorCode,
+  });
+
+  final String path;
+  final Duration? retryAfter;
+  final String? errorCode;
+
+  @override
+  String toString() =>
+      'UploadRateLimitedException(errorCode: ${errorCode ?? 'unknown'}, '
+      'retryAfter: ${retryAfter == null ? 'unknown' : '${retryAfter!.inSeconds}s'}, '
+      'path: $path)';
+}
+
+/// Builds the exception for a 429 upload, preferring the `Retry-After` header
+/// and falling back to the structured body (`retryAfterSeconds`, `errorCode`).
+UploadRateLimitedException _backendApiUploadRateLimitFromResponse(
+  http.Response response,
+  String path,
+) {
+  final decoded = _backendApiDecodeResponseObject(response.body);
+  final headerWait = parseHttpRetryAfter(response.headers['retry-after']);
+  final bodySeconds = decoded?['retryAfterSeconds'];
+  final bodyWait = bodySeconds is num && bodySeconds >= 0
+      ? Duration(seconds: bodySeconds.ceil())
+      : null;
+  return UploadRateLimitedException(
+    path: path,
+    retryAfter: headerWait ?? bodyWait,
+    errorCode: _backendApiTrimmedString(decoded?['errorCode']),
+  );
+}
+
+/// Quota and client errors are final: a retry cannot succeed and only adds
+/// load. Timeouts (408), server errors and transport failures stay retryable.
+bool _backendApiIsNonRetryableUploadFailure(Object error) {
+  if (error is UploadRateLimitedException) return true;
+  if (error is BackendApiRequestException) {
+    final status = error.statusCode;
+    return status >= 400 && status < 500 && status != 408;
+  }
+  return false;
+}
+
 String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
   try {
     if (data.containsKey('relativeUrl') &&
@@ -326,18 +380,22 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       }
 
       if (response.statusCode == 429) {
-        final retryAfter = response.headers['retry-after'];
-        final waitSeconds =
-            int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
-        if (attempt < maxRetries) {
+        final rateLimit = _backendApiUploadRateLimitFromResponse(
+          response,
+          '/api/upload',
+        );
+        final wait = rateLimit.retryAfter;
+        if (attempt < maxRetries &&
+            wait != null &&
+            wait <= _kUploadAutoRetryCeiling) {
           service._debugLogThrottled(
             'uploadFile:429',
-            'BackendApiService.uploadFile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
+            'BackendApiService.uploadFile: short 429 (${wait.inSeconds}s), retrying (attempt $attempt/$maxRetries)',
           );
-          await Future.delayed(Duration(seconds: waitSeconds));
+          await Future.delayed(wait);
           continue;
         }
-        throw Exception('Too many requests (429) while uploading file.');
+        throw rateLimit;
       }
 
       final currentUri =
@@ -381,6 +439,9 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         rethrow;
       }
       if (_backendApiIsNodeNotWritableException(e)) {
+        rethrow;
+      }
+      if (_backendApiIsNonRetryableUploadFailure(e)) {
         rethrow;
       }
 
@@ -579,18 +640,22 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
       }
 
       if (response.statusCode == 429) {
-        final retryAfter = response.headers['retry-after'];
-        final waitSeconds =
-            int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
-        if (attempt < maxRetries) {
+        final rateLimit = _backendApiUploadRateLimitFromResponse(
+          response,
+          '/api/profiles/avatars',
+        );
+        final wait = rateLimit.retryAfter;
+        if (attempt < maxRetries &&
+            wait != null &&
+            wait <= _kUploadAutoRetryCeiling) {
           service._debugLogThrottled(
             'uploadAvatarToProfile:429',
-            'BackendApiService.uploadAvatarToProfile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
+            'BackendApiService.uploadAvatarToProfile: short 429 (${wait.inSeconds}s), retrying (attempt $attempt/$maxRetries)',
           );
-          await Future.delayed(Duration(seconds: waitSeconds));
+          await Future.delayed(wait);
           continue;
         }
-        throw Exception('Too many requests (429) while uploading avatar.');
+        throw rateLimit;
       }
 
       final currentUri = Uri.parse(
@@ -635,6 +700,9 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         rethrow;
       }
       if (_backendApiIsNodeNotWritableException(e)) {
+        rethrow;
+      }
+      if (_backendApiIsNonRetryableUploadFailure(e)) {
         rethrow;
       }
 
