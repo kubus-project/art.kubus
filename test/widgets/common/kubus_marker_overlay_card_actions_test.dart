@@ -1,3 +1,4 @@
+import 'package:art_kubus/features/map/shared/map_overlay_sizing.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
@@ -45,6 +46,15 @@ MarkerOverlayActionSpec _action(
       activeColor: Colors.teal,
       onTap: onTap,
     );
+
+List<MarkerOverlayActionSpec> _fiveActions(void Function(String id) onTap) => [
+      _action('claim', 'Claim', Icons.gavel_outlined, () => onTap('claim')),
+      _action('directions', 'Navigate', Icons.navigation_outlined,
+          () => onTap('directions')),
+      _action('save', 'Save', Icons.bookmark_border, () => onTap('save')),
+      _action('share', 'Share', Icons.share_outlined, () => onTap('share')),
+      _action('like', 'Likes 3', Icons.favorite_border, () => onTap('like')),
+    ];
 
 Widget _card({
   required double width,
@@ -224,5 +234,77 @@ void main() {
       matching: find.byType(InkWell),
     );
     expect(byline, findsNothing);
+  });
+
+  // The card's real width at each viewport, from the same sizing the map uses:
+  // 336 at 390, 820 and 1440; 288 at 320.
+  for (final viewport in <double>[320, 390, 820, 1440]) {
+    testWidgets('five actions share one row at a $viewport viewport',
+        (tester) async {
+      final width = MapOverlaySizing.resolveCardWidth(
+        BoxConstraints(maxWidth: viewport),
+      );
+      await tester.pumpWidget(
+        _card(width: width, actions: _fiveActions((_) {})),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final buttons = find.byKey(
+        const ValueKey<String>('marker_overlay_secondary_action'),
+      );
+      expect(buttons, findsNWidgets(5));
+      final rows = <double>{
+        for (final element in buttons.evaluate())
+          tester.getTopLeft(find.byWidget(element.widget)).dy,
+      };
+      expect(rows, hasLength(1), reason: 'one row, no ragged wrap');
+
+      final card = tester.getRect(
+        find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+      );
+      for (final element in buttons.evaluate()) {
+        final hit = tester.getRect(find.byWidget(element.widget));
+        expect(card.contains(hit.center), isTrue);
+      }
+    });
+  }
+
+  testWidgets('five actions are reached by keyboard in visual order',
+      (tester) async {
+    final fired = <String>[];
+    await tester.pumpWidget(
+      _card(width: 336, actions: _fiveActions(fired.add)),
+    );
+    await tester.pumpAndSettle();
+
+    // The first focus stop is the close control; it is passed over here, not
+    // activated. The actions follow in visual order, the primary action last.
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    const order = ['claim', 'directions', 'save', 'share', 'like'];
+    for (final id in order) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(fired.last, id);
+    }
+    expect(fired, order);
+  });
+
+  testWidgets('an unknown artist stays unknown and never reads the uploader',
+      (tester) async {
+    await tester.pumpWidget(
+      _card(
+        width: 320,
+        artwork:
+            _artwork(artist: '').copyWith(walletAddress: 'uploader-wallet'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unknown artist'), findsOneWidget);
+    expect(find.textContaining('uploader-wallet', findRichText: true),
+        findsNothing);
+    expect(find.textContaining('Miron', findRichText: true), findsNothing);
   });
 }

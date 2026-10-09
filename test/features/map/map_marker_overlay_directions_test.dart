@@ -190,6 +190,21 @@ void main() {
       expect(_ids(actions), contains('marker_save'));
     });
 
+    test('only a finite, in-range, non-sentinel coordinate offers directions',
+        () {
+      expect(markerOverlayHasDirections(_marker()), isTrue);
+      for (final bad in <LatLng>[
+        LatLng(double.nan, 14.5),
+        LatLng(46, double.infinity),
+        LatLng(91, 14.5),
+        LatLng(46, -181),
+        LatLng(0, 0),
+      ]) {
+        expect(markerOverlayHasDirections(_marker(position: bad)), isFalse,
+            reason: '$bad');
+      }
+    });
+
     testWidgets(
         'a located institution with a null-island marker has no actions',
         (tester) async {
