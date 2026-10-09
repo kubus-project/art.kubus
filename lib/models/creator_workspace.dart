@@ -61,9 +61,11 @@ enum CreatorWorkspaceStage {
   /// are reviewed under a public identity.
   completeProfile,
 
-  /// Ready to apply, but no wallet is linked. The application is the first
-  /// step that needs one: the backend accepts it only as a wallet-signed
-  /// request.
+  /// Ready to apply, but no wallet is linked and the backend still accepts
+  /// applications only as a wallet-signed request. Never produced once the
+  /// backend advertises account-authorised applications
+  /// (`accountApplications` in [resolveCreatorWorkspaceStage]): a wallet is
+  /// then not a prerequisite of applying.
   linkWalletToApply,
 
   /// Ready to submit the application.
@@ -96,6 +98,10 @@ extension CreatorWorkspaceStageX on CreatorWorkspaceStage {
 /// opens the workspace even when this wallet's review concerns the other role:
 /// a person who holds both roles keeps both workspaces. Nothing here is taken
 /// from a role or persona the viewer merely selected.
+///
+/// [accountApplications] is true when the backend accepts applications from an
+/// authenticated account without a wallet signature. Then a missing wallet is
+/// never a step; it stays one only against an older backend.
 CreatorWorkspaceStage resolveCreatorWorkspaceStage({
   required CreatorWorkspace workspace,
   required bool hasAccountSession,
@@ -103,6 +109,7 @@ CreatorWorkspaceStage resolveCreatorWorkspaceStage({
   required String walletAddress,
   required DAOReview? review,
   required bool profileGrantsRole,
+  bool accountApplications = false,
 }) {
   if (!hasAccountSession) return CreatorWorkspaceStage.discover;
   if (profileGrantsRole) return CreatorWorkspaceStage.open;
@@ -125,7 +132,7 @@ CreatorWorkspaceStage resolveCreatorWorkspaceStage({
     return CreatorWorkspaceStage.rejected;
   }
   if (!hasUsableProfile) return CreatorWorkspaceStage.completeProfile;
-  if (walletAddress.trim().isEmpty) {
+  if (!accountApplications && walletAddress.trim().isEmpty) {
     return CreatorWorkspaceStage.linkWalletToApply;
   }
   return CreatorWorkspaceStage.apply;

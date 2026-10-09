@@ -2626,6 +2626,176 @@ class BackendApiService
     }
   }
 
+  // ==================== Wallet-optional creator contract ====================
+
+  bool _walletOptionalCreatorSupported = false;
+  DateTime? _walletOptionalCreatorCheckedAt;
+
+  /// Notifies when the backend starts (or stops) advertising the
+  /// wallet-optional creator contract.
+  final ValueNotifier<bool> walletOptionalCreatorListenable =
+      ValueNotifier<bool>(false);
+
+  /// Last known answer. False until the backend has advertised
+  /// `contracts.walletOptionalCreator` in `GET /health`, so a new app build
+  /// never exposes a wallet-free creator workflow that an older backend would
+  /// reject; it keeps the previous wallet step instead.
+  bool get walletOptionalCreatorSupported => _walletOptionalCreatorSupported;
+
+  /// Reads the backend's contract markers. Never throws. A positive answer is
+  /// cached for ten minutes, a negative or failed one for one minute so a
+  /// freshly deployed backend is picked up without restarting the app.
+  Future<bool> ensureWalletOptionalCreatorKnown({
+    bool forceRefresh = false,
+  }) async {
+    final checkedAt = _walletOptionalCreatorCheckedAt;
+    if (!forceRefresh && checkedAt != null) {
+      final ttl = _walletOptionalCreatorSupported
+          ? const Duration(minutes: 10)
+          : const Duration(minutes: 1);
+      if (DateTime.now().difference(checkedAt) < ttl) {
+        return _walletOptionalCreatorSupported;
+      }
+    }
+    var supported = false;
+    try {
+      supported = await _performPublicRead<bool>(
+        liveRead: (candidateBaseUrl) async {
+          final response = await _get(
+            _buildApiUri(candidateBaseUrl, '/health'),
+            includeAuth: false,
+            headers: _getHeaders(includeAuth: false),
+            timeout: const Duration(seconds: 4),
+          );
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            throw Exception('Request failed: ${response.statusCode}');
+          }
+          return parseWalletOptionalCreatorContract(jsonDecode(response.body));
+        },
+        snapshotRead: () async => false,
+        allowSnapshot: false,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.ensureWalletOptionalCreatorKnown failed: $e',
+      );
+    }
+    _walletOptionalCreatorCheckedAt = DateTime.now();
+    _walletOptionalCreatorSupported = supported;
+    if (walletOptionalCreatorListenable.value != supported) {
+      walletOptionalCreatorListenable.value = supported;
+    }
+    return supported;
+  }
+
+  @visibleForTesting
+  void resetWalletOptionalCreatorForTesting() {
+    _walletOptionalCreatorSupported = false;
+    _walletOptionalCreatorCheckedAt = null;
+    walletOptionalCreatorListenable.value = false;
+  }
+
+  /// Pure parser for the `/health` body; exposed for tests.
+  @visibleForTesting
+  static bool parseWalletOptionalCreatorContract(dynamic decoded) {
+    if (decoded is! Map) return false;
+    final contracts = decoded['contracts'];
+    if (contracts is! Map) return false;
+    final level = contracts['walletOptionalCreator'];
+    return level is num && level >= 1;
+  }
+
+  /// The signed-in account's own artworks, drafts included, whether or not a
+  /// wallet is linked. GET /api/artworks?mine=true&publicOnly=false
+  Future<List<Artwork>> getMyArtworks({int page = 1, int limit = 50}) async {
+    await _ensureAuthBeforeRequest();
+    final queryParams = <String, String>{
+      'mine': 'true',
+      'publicOnly': 'false',
+      'limit': limit.toString(),
+      'offset': ((page - 1) * limit).toString(),
+    };
+    return _performPublicRead<List<Artwork>>(
+      liveRead: (candidateBaseUrl) async {
+        final data = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/artworks',
+          queryParameters: queryParams,
+          includeAuth: true,
+        );
+        final dynamic listCandidate =
+            data['artworks'] ?? data['data'] ?? data['items'];
+        final List<dynamic> artworks =
+            listCandidate is List ? listCandidate : <dynamic>[];
+        return artworks
+            .map((json) =>
+                parseArtworkFromBackendJson(json as Map<String, dynamic>))
+            .toList(growable: false);
+      },
+      snapshotRead: () async => throw Exception(
+        'Private artwork data is unavailable in public snapshot fallback.',
+      ),
+      allowSnapshot: false,
+    );
+  }
+
+  /// The signed-in account's own collections, private ones included.
+  /// GET /api/collections?mine=true
+  Future<List<Map<String, dynamic>>> getMyCollections({
+    int page = 1,
+    int limit = 50,
+  }) async {
+    await _ensureAuthBeforeRequest();
+    return _performPublicRead<List<Map<String, dynamic>>>(
+      liveRead: (candidateBaseUrl) async {
+        final jsonData = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/collections',
+          queryParameters: <String, String>{
+            'mine': 'true',
+            'page': page.toString(),
+            'limit': limit.toString(),
+          },
+          includeAuth: true,
+        );
+        final rawData = jsonData['data'];
+        if (rawData is! List) return const <Map<String, dynamic>>[];
+        return rawData
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(growable: false);
+      },
+      snapshotRead: () async => throw Exception(
+        'Private collection data is unavailable in public snapshot fallback.',
+      ),
+      allowSnapshot: false,
+    );
+  }
+
+  /// Submits an artist or institution application as an account (no wallet,
+  /// no signed envelope). POST /api/dao/reviews/account
+  Future<Map<String, dynamic>?> submitAccountDAOReview({
+    required String role,
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+    String? title,
+    Map<String, dynamic>? metadata,
+  }) =>
+      _backendApiSubmitAccountDAOReview(
+        this,
+        role: role,
+        portfolioUrl: portfolioUrl,
+        medium: medium,
+        statement: statement,
+        title: title,
+        metadata: metadata,
+      );
+
+  /// The caller's own applications and approved capabilities.
+  /// GET /api/dao/reviews/mine
+  Future<Map<String, dynamic>?> getMyCreatorStatus() =>
+      _backendApiGetMyCreatorStatus(this);
+
   // ==================== User/Profile Endpoints ====================
 
   /// Create a new user profile with wallet
@@ -3158,6 +3328,20 @@ class BackendApiService
     final token = (_authToken ?? '').trim();
     if (token.isEmpty) return null;
     return _tryDecodeJwtPayload(token);
+  }
+
+  /// Stable identity of the signed-in account, or an empty string with no
+  /// session. Read from the session token (`id`/`userId`/`sub`, never a wallet),
+  /// so state cached per account can tell when a different account signed in
+  /// without anyone having to remember to reset it on logout.
+  String get authAccountKey {
+    final claims = getCurrentAuthTokenClaims();
+    if (claims == null) return '';
+    for (final key in const ['id', 'userId', 'user_id', 'sub']) {
+      final value = (claims[key] ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   /// Returns normalized email claim from current auth token, if present.
@@ -5654,7 +5838,9 @@ class BackendApiService
         'description': description,
         'imageUrl': imageUrl,
         if (imageCid != null) 'imageCid': imageCid,
-        'walletAddress': walletAddress,
+        // Optional legacy link. The backend owns the artwork by the session's
+        // account; a wallet-free account sends none.
+        if (walletAddress.trim().isNotEmpty) 'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
         if (imageAuthor != null && imageAuthor.trim().isNotEmpty)
@@ -10652,6 +10838,33 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       json['publicRegistry'] ?? json['public_registry'],
     );
     addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
+    // Who documented the work (the responsible account) is separate from who
+    // made it. `contributor` is never the byline; a verified artist claim is
+    // the only identity that links the recorded artist name to a profile.
+    final contributor = json['contributor'];
+    if (contributor is Map) addMeta('contributor', contributor);
+    final verifiedArtist = json['verifiedArtist'];
+    if (verifiedArtist is Map) {
+      addMeta('verifiedArtist', verifiedArtist);
+      final profileId = verifiedArtist['profileId']?.toString().trim() ?? '';
+      final name = (verifiedArtist['displayName'] ??
+              verifiedArtist['username'] ??
+              '')
+          .toString()
+          .trim();
+      if (profileId.isNotEmpty && name.isNotEmpty) {
+        metadata.putIfAbsent(
+          'artists',
+          () => <Map<String, dynamic>>[
+            <String, dynamic>{
+              'userId': profileId,
+              'displayName': name,
+              'username': verifiedArtist['username'],
+            },
+          ],
+        );
+      }
+    }
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
     // Image attribution (photographer / licence), surfaced in detail screens.

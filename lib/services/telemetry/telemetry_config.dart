@@ -140,6 +140,12 @@ class AppTelemetryEventTypes {
   // Completes the public discovery view taxonomy alongside artwork/event.
   static const String exhibitionViewed = 'exhibition_viewed';
 
+  // Wallet-optional creator journey. A submission is a pending application,
+  // never an approval, an authorship claim or a wallet requirement.
+  static const String creatorCapabilityViewed = 'creator_capability_viewed';
+  static const String creatorApplicationSubmitted =
+      'creator_application_submitted';
+
   static const Set<String> allowed = {
     screenView,
     screenDuration,
@@ -191,5 +197,7 @@ class AppTelemetryEventTypes {
     activationPromptDismissed,
     activationPromptAccepted,
     exhibitionViewed,
+    creatorCapabilityViewed,
+    creatorApplicationSubmitted,
   };
 }

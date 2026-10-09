@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../config/api_keys.dart';
 import '../config/config.dart';
 import '../models/dao.dart';
 import '../services/backend_api_service.dart';
 import '../services/dao_signed_envelope_service.dart';
+import '../services/telemetry/telemetry_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
+import '../utils/dao_role_verification.dart';
 import '../utils/wallet_utils.dart';
 import '../services/solana_wallet_service.dart';
 import 'wallet_provider.dart';
@@ -22,6 +25,18 @@ class DAOProvider extends ChangeNotifier {
   double? _treasuryOnChainBalance;
   bool _canModerateReviews = false;
   WalletProvider? _walletProvider;
+
+  // Account-based applications (no wallet). `_myReviewsByRole` holds the
+  // caller's own application per role as returned by `GET /reviews/mine`;
+  // `_myCapabilities` is what the backend grants the account.
+  final Map<DaoRoleType, DAOReview> _myReviewsByRole = {};
+  final Set<DaoRoleType> _myCapabilities = {};
+  String? _lastApplicationErrorCode;
+
+  /// The account the maps above belong to. Anything read for a different
+  /// account (or with no session) is treated as absent, so a previous account's
+  /// pending reviews or granted roles can never open a workspace for the next.
+  String _myStatusAccountKey = '';
 
   DAOProvider({
     SolanaWalletService? solanaWalletService,
@@ -305,6 +320,145 @@ class DAOProvider extends ChangeNotifier {
     throw StateError('DAO proposal creation did not return a proposal.');
   }
 
+  /// True once the backend advertises account-authorised applications. Until
+  /// then applications keep the previous wallet-signed path.
+  bool get accountApplicationsSupported =>
+      BackendApiService().walletOptionalCreatorSupported;
+
+  /// Bounded backend error code of the last failed application
+  /// (`PROFILE_INCOMPLETE`, `APPLICATION_INCOMPLETE`, `AUTH_REQUIRED`, …).
+  String? get lastApplicationErrorCode => _lastApplicationErrorCode;
+
+  /// The caller's own application for [role], regardless of wallet.
+  DAOReview? myReviewFor(DaoRoleType role) =>
+      _statusIsCurrent ? _myReviewsByRole[role] : null;
+
+  /// Roles the backend grants the signed-in account.
+  bool hasServerCapability(DaoRoleType role) =>
+      _statusIsCurrent && _myCapabilities.contains(role);
+
+  bool get _statusIsCurrent {
+    final key = BackendApiService().authAccountKey;
+    return key.isNotEmpty && key == _myStatusAccountKey;
+  }
+
+  void _clearMyStatus() {
+    _myReviewsByRole.clear();
+    _myCapabilities.clear();
+    _myStatusAccountKey = '';
+  }
+
+  /// Loads the caller's applications and capabilities (no wallet needed).
+  /// Soft-fails: an older backend simply has no such endpoint.
+  Future<void> loadMyApplications() async {
+    final api = BackendApiService();
+    final accountKey = api.authAccountKey;
+    try {
+      // No session, or a different account than the cached status: drop it
+      // before anything can fail, so stale state never outlives its account.
+      if (accountKey.isEmpty || accountKey != _myStatusAccountKey) {
+        final hadStatus =
+            _myReviewsByRole.isNotEmpty || _myCapabilities.isNotEmpty;
+        _clearMyStatus();
+        if (hadStatus) notifyListeners();
+      }
+      if (accountKey.isEmpty || !api.hasAuthSession) return;
+      if (!await api.ensureWalletOptionalCreatorKnown()) return;
+      final payload = await api.getMyCreatorStatus();
+      // The session may have changed while the request was in flight.
+      if (api.authAccountKey != accountKey) return;
+      if (payload == null) {
+        _clearMyStatus();
+        notifyListeners();
+        return;
+      }
+      _myReviewsByRole.clear();
+      _myCapabilities.clear();
+      final capabilities = payload['capabilities'];
+      if (capabilities is Map) {
+        if (capabilities['artist'] == true) {
+          _myCapabilities.add(DaoRoleType.artist);
+        }
+        if (capabilities['institution'] == true) {
+          _myCapabilities.add(DaoRoleType.institution);
+        }
+      }
+      final reviews = payload['reviews'];
+      if (reviews is List) {
+        // Newest first from the backend; keep the first per role.
+        for (final raw in reviews.whereType<Map>()) {
+          final review = DAOReview.fromJson(Map<String, dynamic>.from(raw));
+          final role = review.isInstitutionApplication
+              ? DaoRoleType.institution
+              : DaoRoleType.artist;
+          _myReviewsByRole.putIfAbsent(role, () => review);
+        }
+      }
+      _myStatusAccountKey = accountKey;
+      notifyListeners();
+    } catch (e) {
+      // A failed read must not leave another account's status standing.
+      if (api.authAccountKey != _myStatusAccountKey) _clearMyStatus();
+      debugPrint('DAOProvider.loadMyApplications error: $e');
+    }
+  }
+
+  /// Applies as an account: no wallet, no signature. The result is a pending
+  /// application; it grants nothing until a reviewer decides.
+  Future<DAOReview?> _submitAccountReview({
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+    required String role,
+    String? title,
+    Map<String, dynamic>? metadata,
+  }) async {
+    _lastApplicationErrorCode = null;
+    try {
+      final api = BackendApiService();
+      final payload = await api.submitAccountDAOReview(
+        role: role,
+        portfolioUrl: _normalizePortfolioUrl(portfolioUrl),
+        medium: medium,
+        statement: statement,
+        title: title,
+        metadata: metadata,
+      );
+      if (payload == null) return null;
+      final review = DAOReview.fromJson(payload);
+      final roleType =
+          role == 'institution' ? DaoRoleType.institution : DaoRoleType.artist;
+      if (!_statusIsCurrent) {
+        // First status for this account: start from a clean slate.
+        _clearMyStatus();
+        _myStatusAccountKey = BackendApiService().authAccountKey;
+      }
+      _myReviewsByRole[roleType] = review;
+      try {
+        unawaited(TelemetryService().trackCreatorApplicationSubmitted(
+          capability: role,
+          walletFree: review.walletAddress.trim().isEmpty,
+        ));
+      } catch (_) {}
+      _reviews.removeWhere((r) => r.id == review.id);
+      _reviews.insert(0, review);
+      notifyListeners();
+      return review;
+    } on BackendApiRequestException catch (e) {
+      _lastApplicationErrorCode = _applicationErrorCode(e.body);
+      debugPrint('DAOProvider account application rejected: ${e.statusCode}');
+    } catch (e) {
+      debugPrint('DAOProvider account application error: $e');
+    }
+    return null;
+  }
+
+  static String? _applicationErrorCode(String? body) {
+    if (body == null || body.isEmpty) return null;
+    final match = RegExp(r'"errorCode"\s*:\s*"([A-Z_]+)"').firstMatch(body);
+    return match?.group(1);
+  }
+
   Future<DAOReview?> submitReview({
     required String portfolioUrl,
     required String medium,
@@ -313,6 +467,18 @@ class DAOProvider extends ChangeNotifier {
     Map<String, dynamic>? metadata,
     String role = 'artist',
   }) async {
+    // Account-authorised path: no wallet, no local signer. Used whenever the
+    // backend advertises it; otherwise the wallet-signed path below applies.
+    if (await BackendApiService().ensureWalletOptionalCreatorKnown()) {
+      return _submitAccountReview(
+        portfolioUrl: portfolioUrl,
+        medium: medium,
+        statement: statement,
+        role: role,
+        title: title,
+        metadata: metadata,
+      );
+    }
     try {
       // Review applications are signed locally, but they are not token-governance actions.
       final api = BackendApiService();

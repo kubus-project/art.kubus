@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/map_marker_subject.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../services/map_marker_service.dart';
 import '../../../utils/grid_utils.dart';
 import '../../../widgets/map_marker_dialog.dart';
@@ -113,6 +114,7 @@ class KubusMapMarkerCreationCoordinator {
     KubusStreetArtArtworkCreator? artworkCreator,
     KubusStreetArtArtworkRollback? artworkRollback,
     KubusMarkerPersister? markerPersister,
+    bool Function()? walletOptional,
   })  : assert(
           mapMarkerService != null || markerPersister != null,
           'A map marker service or marker persister is required.',
@@ -123,7 +125,9 @@ class KubusMapMarkerCreationCoordinator {
             KubusMapMarkerCreationHelpers.createStreetArtArtwork,
         _artworkRollback = artworkRollback ??
             KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork,
-        _markerPersister = markerPersister ?? mapMarkerService!.createMarker;
+        _markerPersister = markerPersister ?? mapMarkerService!.createMarker,
+        _walletOptional = walletOptional ??
+            (() => BackendApiService().walletOptionalCreatorSupported);
 
   static const String _source = 'map_marker_creation_coordinator';
   static const String _debugLabel = 'KubusMapMarkerCreationCoordinator';
@@ -132,6 +136,10 @@ class KubusMapMarkerCreationCoordinator {
   final KubusStreetArtArtworkCreator _artworkCreator;
   final KubusStreetArtArtworkRollback _artworkRollback;
   final KubusMarkerPersister _markerPersister;
+
+  /// True when the backend authorises marker and artwork creation by account,
+  /// so a missing wallet is not an error. Documentation never needs a wallet.
+  final bool Function() _walletOptional;
 
   Future<KubusMapMarkerCreationOutcome> createMarker({
     required LatLng position,
@@ -193,7 +201,7 @@ class KubusMapMarkerCreationCoordinator {
         if (coverImageUrl == null || coverImageUrl.isEmpty) {
           throw StateError(messages.createFailed);
         }
-        if (normalizedWallet.isEmpty) {
+        if (normalizedWallet.isEmpty && !_walletOptional()) {
           throw StateError(messages.walletRequired);
         }
         if (normalizedAuthor.isEmpty) {

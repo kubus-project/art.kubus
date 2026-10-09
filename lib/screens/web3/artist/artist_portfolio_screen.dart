@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -46,17 +47,29 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
 
+  /// A wallet-free artist's work is owned by the account, so the portfolio
+  /// loads for the signed-in account whenever the backend authorises that.
+  bool get _accountScoped =>
+      BackendApiService().walletOptionalCreatorSupported &&
+      BackendApiService().hasAuthSession;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    context.read<PortfolioProvider>().setWalletAddress(widget.walletAddress);
+    final provider = context.read<PortfolioProvider>();
+    provider.setAccountScope(_accountScoped,
+        accountKey: BackendApiService().authAccountKey);
+    provider.setWalletAddress(widget.walletAddress);
   }
 
   @override
   void didUpdateWidget(covariant ArtistPortfolioScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final provider = context.read<PortfolioProvider>();
+    provider.setAccountScope(_accountScoped,
+        accountKey: BackendApiService().authAccountKey);
     if (oldWidget.walletAddress.trim() == widget.walletAddress.trim()) return;
-    context.read<PortfolioProvider>().setWalletAddress(widget.walletAddress);
+    provider.setWalletAddress(widget.walletAddress);
   }
 
   @override

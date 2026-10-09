@@ -24,6 +24,7 @@ import '../../../services/nft_minting_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/art_map_view.dart';
 import '../../../widgets/draft_collaboration_invite_panel.dart';
@@ -569,8 +570,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (!_validateLocation(drafts: drafts, draft: draft)) return;
 
+    // Publishing is an account operation. A wallet is needed only against an
+    // older backend that still keys artwork ownership on one.
     final wallet = _resolveWalletAddress(context);
-    if (wallet.isEmpty) {
+    final api = BackendApiService();
+    await api.ensureWalletOptionalCreatorKnown();
+    if (!mounted) return;
+    final canPublish = api.walletOptionalCreatorSupported
+        ? api.hasAuthSession
+        : wallet.isNotEmpty;
+    if (!canPublish) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
       );

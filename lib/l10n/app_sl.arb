@@ -1516,6 +1516,12 @@
       "artist": {}
     }
   },
+  "artworkDocumentedByLabel": "Dokumentiral/a {contributor}",
+  "@artworkDocumentedByLabel": {
+    "placeholders": {
+      "contributor": {}
+    }
+  },
   "commonKub8PointsReward": "+{points} priznanja KUB8",
   "@commonKub8PointsReward": {
     "placeholders": {
@@ -7349,6 +7355,7 @@
   "creatorWorkspaceCompleteProfileDetail": "Prijave se pregledujejo pod tvojim javnim imenom. Najprej ga dodaj v profil.",
   "creatorWorkspaceLinkWalletCta": "Ustvari ali poveži denarnico za prijavo",
   "creatorWorkspaceLinkWalletDetail": "Prijave se podpišejo z denarnico. Ustvari ali poveži jo, nato tukaj oddaj prijavo.",
+  "creatorApplicationProfileIncompleteToast": "Pred prijavo v profil dodaj javno ime.",
   "homeCreateSectionTitle": "Ustvarjaj in organiziraj",
   "homeCapabilityStatusOpen": "Odprto",
   "homeCapabilityStatusPending": "V pregledu",

@@ -4324,6 +4324,11 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String artworkDocumentedByLabel(Object contributor) {
+    return 'Dokumentiral/a $contributor';
+  }
+
+  @override
   String commonKub8PointsReward(Object points) {
     return '+$points priznanja KUB8';
   }
@@ -17885,6 +17890,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get creatorWorkspaceLinkWalletDetail =>
       'Prijave se podpišejo z denarnico. Ustvari ali poveži jo, nato tukaj oddaj prijavo.';
+
+  @override
+  String get creatorApplicationProfileIncompleteToast =>
+      'Pred prijavo v profil dodaj javno ime.';
 
   @override
   String get homeCreateSectionTitle => 'Ustvarjaj in organiziraj';

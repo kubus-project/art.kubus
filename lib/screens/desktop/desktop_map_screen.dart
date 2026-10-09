@@ -6425,8 +6425,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _snapshotMarkerSubjectData();
     if (!mounted) return;
 
+    // Documenting public art is an account operation. A wallet is asked for
+    // only by an older backend that still keys marker creation on one.
+    final markerApi = BackendApiService();
+    await markerApi.ensureWalletOptionalCreatorKnown();
+    if (!mounted) return;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
-    if (wallet == null || wallet.isEmpty) {
+    final canCreateMarker = markerApi.walletOptionalCreatorSupported
+        ? markerApi.hasAuthSession
+        : (wallet != null && wallet.isNotEmpty);
+    if (!canCreateMarker) {
       final messenger = ScaffoldMessenger.of(context);
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.mapMarkerCreateWalletRequired)),

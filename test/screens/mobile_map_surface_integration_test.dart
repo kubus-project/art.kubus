@@ -158,8 +158,7 @@ void main() {
     });
 
     test('create marker becomes dominant only after prerequisites', () {
-      final walletGuard =
-          source.indexOf('if (wallet == null || wallet.isEmpty)');
+      final walletGuard = source.indexOf('if (!canCreateMarker)');
       final begin =
           source.indexOf('_mapUiStateCoordinator.beginCreateMarker()');
       final dialog = source.indexOf('result = await MapMarkerDialog.show(');

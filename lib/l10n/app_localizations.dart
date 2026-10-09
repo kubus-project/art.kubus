@@ -7645,6 +7645,12 @@ abstract class AppLocalizations {
   /// **'by {artist}'**
   String commonByArtist(Object artist);
 
+  /// No description provided for @artworkDocumentedByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Documented by {contributor}'**
+  String artworkDocumentedByLabel(Object contributor);
+
   /// No description provided for @commonKub8PointsReward.
   ///
   /// In en, this message translates to:
@@ -30700,6 +30706,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Applications are signed with a wallet. Create or link one, then submit your application here.'**
   String get creatorWorkspaceLinkWalletDetail;
+
+  /// No description provided for @creatorApplicationProfileIncompleteToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your public name to your profile before applying.'**
+  String get creatorApplicationProfileIncompleteToast;
 
   /// No description provided for @homeCreateSectionTitle.
   ///

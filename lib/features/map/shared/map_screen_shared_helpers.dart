@@ -292,6 +292,9 @@ class KubusMapMarkerCreationHelpers {
     required String imageAuthor,
     required String imageLicense,
   }) async {
+    // `walletAddress` may be empty for a wallet-free account; the backend owns
+    // the record by the session's account and the submitter is never recorded
+    // as the artist (artistName stays explicit).
     final normalizedCategory =
         category.trim().isEmpty ? 'Street Art' : category.trim();
     final attribution = '$imageAuthor / $imageLicense';

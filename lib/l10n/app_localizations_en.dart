@@ -4292,6 +4292,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String artworkDocumentedByLabel(Object contributor) {
+    return 'Documented by $contributor';
+  }
+
+  @override
   String commonKub8PointsReward(Object points) {
     return '+$points KUB8 recognition';
   }
@@ -17703,6 +17708,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get creatorWorkspaceLinkWalletDetail =>
       'Applications are signed with a wallet. Create or link one, then submit your application here.';
+
+  @override
+  String get creatorApplicationProfileIncompleteToast =>
+      'Add your public name to your profile before applying.';
 
   @override
   String get homeCreateSectionTitle => 'Create and organize';

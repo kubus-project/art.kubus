@@ -453,8 +453,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     if (draft == null) return null;
     if (draft.isSubmitting) return null;
 
+    // A wallet is optional once the backend authorises creator operations by
+    // account; an older backend still keys artwork ownership on a wallet.
     final wallet = walletAddress.trim();
-    if (wallet.isEmpty) return null;
+    if (wallet.isEmpty && !_api.walletOptionalCreatorSupported) return null;
+    if (wallet.isEmpty && !_api.hasAuthSession) return null;
 
     draft.isSubmitting = true;
     draft.submitError = null;

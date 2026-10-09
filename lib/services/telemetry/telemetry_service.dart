@@ -498,6 +498,30 @@ class TelemetryService {
     );
   }
 
+  /// A creator workspace was opened. [capability] is `artist` or
+  /// `institution`; [stage] is the bounded `CreatorWorkspaceStage` name.
+  Future<void> trackCreatorCapabilityViewed({
+    required String capability,
+    required String stage,
+  }) async {
+    await trackEvent(
+      AppTelemetryEventTypes.creatorCapabilityViewed,
+      extra: {'capability': capability, 'stage': stage},
+    );
+  }
+
+  /// An application reached the backend as *pending*. This is not an approval
+  /// and says nothing about authorship or about a wallet.
+  Future<void> trackCreatorApplicationSubmitted({
+    required String capability,
+    required bool walletFree,
+  }) async {
+    await trackEvent(
+      AppTelemetryEventTypes.creatorApplicationSubmitted,
+      extra: {'capability': capability, 'wallet_free': walletFree},
+    );
+  }
+
   Future<void> trackExhibitionViewed(
     String exhibitionId, {
     String? institutionId,
