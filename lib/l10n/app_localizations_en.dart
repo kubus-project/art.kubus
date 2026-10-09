@@ -11435,7 +11435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'unread notifications';
 
   @override
-  String get homeWeb3SectionTitle => 'Wallet and Web3 access';
+  String get homeWeb3SectionTitle => 'Network and infrastructure';
 
   @override
   String get homeAccountRequiredLabel => 'Wallet';
@@ -11453,7 +11453,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeb3ArtistSubtitle => 'Publish and document';
 
   @override
-  String get homeWeb3InstitutionTitle => 'Institution';
+  String get homeWeb3InstitutionTitle => 'Institution Hub';
 
   @override
   String get homeWeb3InstitutionSubtitle => 'Programs and exhibitions';
@@ -17605,4 +17605,117 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get creatorWorkspaceArtistStartCta => 'Start as an artist';
+
+  @override
+  String get creatorWorkspaceInstitutionStartCta => 'Start as an institution';
+
+  @override
+  String get creatorWorkspaceArtistGateTitle =>
+      'Publish your work on art.kubus';
+
+  @override
+  String get creatorWorkspaceArtistGateBody =>
+      'Start with a free account and a public profile. Then apply as an artist. Artist Studio opens when the application is approved.';
+
+  @override
+  String get creatorWorkspaceInstitutionGateTitle =>
+      'Run your programme on art.kubus';
+
+  @override
+  String get creatorWorkspaceInstitutionGateBody =>
+      'Start with a free account and a public profile. Then apply as an institution. Institution Hub opens when the application is approved.';
+
+  @override
+  String get creatorWorkspaceGateHint =>
+      'You return to this workspace after each step. Public art stays open without an account.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverTitle =>
+      'Publish and document your practice';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint1 =>
+      'Publish artworks with their place, media and authorship.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint2 =>
+      'Group work into collections and exhibitions.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint3 =>
+      'See how people find and view your work.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverTitle =>
+      'Run a public programme';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint1 =>
+      'Publish events and exhibitions with dates and places.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint2 =>
+      'Invite collaborators and manage your programme.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint3 =>
+      'See interest and attendance across your programme.';
+
+  @override
+  String get creatorWorkspaceStepsTitle => 'How it opens';
+
+  @override
+  String get creatorWorkspaceStepAccount => 'Free account';
+
+  @override
+  String get creatorWorkspaceStepProfile => 'Public profile with your name';
+
+  @override
+  String get creatorWorkspaceStepArtistApplication =>
+      'Artist application, signed with a wallet';
+
+  @override
+  String get creatorWorkspaceStepInstitutionApplication =>
+      'Institution application, signed with a wallet';
+
+  @override
+  String get creatorWorkspaceStepReview =>
+      'Governance review, then the tools open';
+
+  @override
+  String get creatorWorkspaceWalletNote =>
+      'A wallet is needed only to sign the application. You can create or link one at that step. Browsing art, your account and your profile need none.';
+
+  @override
+  String get creatorWorkspaceCompleteProfileCta => 'Add your public name';
+
+  @override
+  String get creatorWorkspaceCompleteProfileDetail =>
+      'Applications are reviewed under your public name. Add it to your profile first.';
+
+  @override
+  String get creatorWorkspaceLinkWalletCta =>
+      'Create or link a wallet to apply';
+
+  @override
+  String get creatorWorkspaceLinkWalletDetail =>
+      'Applications are signed with a wallet. Create or link one, then submit your application here.';
+
+  @override
+  String get homeCreateSectionTitle => 'Create and organize';
+
+  @override
+  String get homeCapabilityStatusOpen => 'Open';
+
+  @override
+  String get homeCapabilityStatusPending => 'In review';
+
+  @override
+  String get homeCapabilityStatusRejected => 'Declined';
+
+  @override
+  String get homeWalletCardSubtitle => 'Keys, tokens and signing';
 }

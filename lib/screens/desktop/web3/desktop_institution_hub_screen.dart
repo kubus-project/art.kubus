@@ -6,6 +6,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
@@ -234,7 +235,10 @@ class _DesktopInstitutionHubScreenState
                 ),
 
                 // Right: Quick actions, stats, and analytics
-                if (isLarge)
+                // The rail is the working dashboard (status, tools, numbers).
+                // A visitor without an account reads the discovery panel in
+                // full width instead of an empty "not applied" rail.
+                if (isLarge && BackendApiService().hasAuthSession)
                   SizedBox(
                     width: 380,
                     child: _buildRightPanel(themeProvider),
@@ -276,8 +280,11 @@ class _DesktopInstitutionHubScreenState
       walletAddress: wallet,
       review: review,
     );
-    final isApprovedInstitution =
-        verification.isApprovedFor(DaoRoleType.institution);
+    // The server-held role flag opens the tools as it does in the hub, so a
+    // person who holds both roles keeps both workspaces.
+    final isApprovedInstitution = verification
+            .isApprovedFor(DaoRoleType.institution) ||
+        (context.watch<ProfileProvider>().currentUser?.isInstitution ?? false);
     final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
     final hasConflictingArtistReview =
         verification.isPendingFor(DaoRoleType.artist);
@@ -516,7 +523,8 @@ class _DesktopInstitutionHubScreenState
       walletAddress: wallet,
       review: review,
     );
-    final isApproved = verification.isApprovedFor(DaoRoleType.institution);
+    final isApproved = verification.isApprovedFor(DaoRoleType.institution) ||
+        (context.watch<ProfileProvider>().currentUser?.isInstitution ?? false);
     final isPending = verification.isPendingFor(DaoRoleType.institution);
     final isRejected = verification.isRejectedFor(DaoRoleType.institution);
 

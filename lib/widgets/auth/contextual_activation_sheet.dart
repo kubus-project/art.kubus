@@ -20,11 +20,23 @@ enum ActivationGateChoice { google, email, wallet, signIn, dismissed }
 /// to your collection") rather than what the app requires. Dismissing is always
 /// one tap and always returns to exactly where they were — public browsing is
 /// never interrupted or degraded.
+/// Copy for a gate whose purpose the save/follow wording does not describe,
+/// such as starting in a creator workspace. Any field left null keeps the
+/// default wording.
+class ActivationGateCopy {
+  const ActivationGateCopy({this.title, this.body, this.hint});
+
+  final String? title;
+  final String? body;
+  final String? hint;
+}
+
 Future<ActivationGateChoice> showContextualActivationSheet(
   BuildContext context, {
   required PendingActionType? actionType,
   required PendingActionTargetType? targetType,
   required String fallbackActionLabel,
+  ActivationGateCopy? copy,
 }) async {
   final choice = await showModalBottomSheet<ActivationGateChoice>(
     context: context,
@@ -35,6 +47,7 @@ Future<ActivationGateChoice> showContextualActivationSheet(
       actionType: actionType,
       targetType: targetType,
       fallbackActionLabel: fallbackActionLabel,
+      copy: copy,
     ),
   );
   return choice ?? ActivationGateChoice.dismissed;
@@ -45,11 +58,13 @@ class _ContextualActivationSheet extends StatelessWidget {
     required this.actionType,
     required this.targetType,
     required this.fallbackActionLabel,
+    this.copy,
   });
 
   final PendingActionType? actionType;
   final PendingActionTargetType? targetType;
   final String fallbackActionLabel;
+  final ActivationGateCopy? copy;
 
   @override
   Widget build(BuildContext context) {
@@ -59,12 +74,13 @@ class _ContextualActivationSheet extends StatelessWidget {
     final media = MediaQuery.of(context);
     final isWide = media.size.width >= 720;
 
-    final title = ActivationCopy.gateTitle(
-      l10n,
-      actionType: actionType,
-      targetType: targetType,
-      fallbackActionLabel: fallbackActionLabel,
-    );
+    final title = copy?.title ??
+        ActivationCopy.gateTitle(
+          l10n,
+          actionType: actionType,
+          targetType: targetType,
+          fallbackActionLabel: fallbackActionLabel,
+        );
 
     final content = Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -100,7 +116,7 @@ class _ContextualActivationSheet extends StatelessWidget {
           ),
           const SizedBox(height: KubusSpacing.sm),
           Text(
-            ActivationCopy.gateBody(l10n),
+            copy?.body ?? ActivationCopy.gateBody(l10n),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -157,7 +173,7 @@ class _ContextualActivationSheet extends StatelessWidget {
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
-            l10n.activationGateKeepBrowsingHint,
+            copy?.hint ?? l10n.activationGateKeepBrowsingHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,

@@ -11548,7 +11548,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'neprebrana obvestila';
 
   @override
-  String get homeWeb3SectionTitle => 'Denarnica in Splet 3';
+  String get homeWeb3SectionTitle => 'Omrežje in infrastruktura';
 
   @override
   String get homeAccountRequiredLabel => 'Denarnica';
@@ -11566,7 +11566,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeWeb3ArtistSubtitle => 'Ustvarjaj in upravljaj';
 
   @override
-  String get homeWeb3InstitutionTitle => 'Institucije';
+  String get homeWeb3InstitutionTitle => 'Institucijsko središče';
 
   @override
   String get homeWeb3InstitutionSubtitle => 'Dogodki in zbirke';
@@ -17788,4 +17788,116 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get creatorWorkspaceArtistStartCta => 'Začni v umetniškem studiu';
+
+  @override
+  String get creatorWorkspaceInstitutionStartCta => 'Začni kot institucija';
+
+  @override
+  String get creatorWorkspaceArtistGateTitle =>
+      'Objavi svoje delo na art.kubus';
+
+  @override
+  String get creatorWorkspaceArtistGateBody =>
+      'Začni z brezplačnim računom in javnim profilom. Nato oddaj umetniško prijavo. Umetniški studio se odpre, ko je prijava odobrena.';
+
+  @override
+  String get creatorWorkspaceInstitutionGateTitle =>
+      'Vodi svoj program na art.kubus';
+
+  @override
+  String get creatorWorkspaceInstitutionGateBody =>
+      'Začni z brezplačnim računom in javnim profilom. Nato oddaj prijavo institucije. Institucijsko središče se odpre, ko je prijava odobrena.';
+
+  @override
+  String get creatorWorkspaceGateHint =>
+      'Po vsakem koraku se vrneš v ta prostor. Javna umetnost ostaja odprta tudi brez računa.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverTitle =>
+      'Objavljaj in dokumentiraj svojo prakso';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint1 =>
+      'Objavi umetnine z lokacijo, mediji in avtorstvom.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint2 =>
+      'Poveži dela v zbirke in razstave.';
+
+  @override
+  String get creatorWorkspaceArtistDiscoverPoint3 =>
+      'Poglej, kako ljudje najdejo in si ogledajo tvoje delo.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverTitle => 'Vodi javni program';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint1 =>
+      'Objavi dogodke in razstave z datumi in kraji.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint2 =>
+      'Povabi sodelavce in upravljaj svoj program.';
+
+  @override
+  String get creatorWorkspaceInstitutionDiscoverPoint3 =>
+      'Spremljaj zanimanje in obisk v svojem programu.';
+
+  @override
+  String get creatorWorkspaceStepsTitle => 'Kako se odpre';
+
+  @override
+  String get creatorWorkspaceStepAccount => 'Brezplačen račun';
+
+  @override
+  String get creatorWorkspaceStepProfile => 'Javni profil z imenom';
+
+  @override
+  String get creatorWorkspaceStepArtistApplication =>
+      'Umetniška prijava, podpisana z denarnico';
+
+  @override
+  String get creatorWorkspaceStepInstitutionApplication =>
+      'Prijava institucije, podpisana z denarnico';
+
+  @override
+  String get creatorWorkspaceStepReview =>
+      'Pregled upravljanja, nato se orodja odprejo';
+
+  @override
+  String get creatorWorkspaceWalletNote =>
+      'Denarnica je potrebna le za podpis prijave. Ustvariš ali povežeš jo lahko v tistem koraku. Za ogled umetnosti, račun in profil je ne potrebuješ.';
+
+  @override
+  String get creatorWorkspaceCompleteProfileCta => 'Dodaj javno ime';
+
+  @override
+  String get creatorWorkspaceCompleteProfileDetail =>
+      'Prijave se pregledujejo pod tvojim javnim imenom. Najprej ga dodaj v profil.';
+
+  @override
+  String get creatorWorkspaceLinkWalletCta =>
+      'Ustvari ali poveži denarnico za prijavo';
+
+  @override
+  String get creatorWorkspaceLinkWalletDetail =>
+      'Prijave se podpišejo z denarnico. Ustvari ali poveži jo, nato tukaj oddaj prijavo.';
+
+  @override
+  String get homeCreateSectionTitle => 'Ustvarjaj in organiziraj';
+
+  @override
+  String get homeCapabilityStatusOpen => 'Odprto';
+
+  @override
+  String get homeCapabilityStatusPending => 'V pregledu';
+
+  @override
+  String get homeCapabilityStatusRejected => 'Zavrnjeno';
+
+  @override
+  String get homeWalletCardSubtitle => 'Ključi, žetoni in podpisi';
 }

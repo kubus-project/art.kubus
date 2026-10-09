@@ -23,6 +23,8 @@ export '../models/pending_action_intent.dart'
     show PendingActionType, PendingActionTargetType;
 export '../models/preferred_auth_method.dart' show PreferredAuthMethod;
 export '../models/protected_action_requirements.dart';
+export '../widgets/auth/contextual_activation_sheet.dart'
+    show ActivationGateCopy;
 
 /// Gates identity-required actions without blocking public content viewing.
 ///
@@ -54,6 +56,9 @@ class ContextualAuthGate {
   /// Actions that need more (a public identity, a creator role, a wallet) pass
   /// the matching named requirement and acquire exactly that.
   ///
+  /// [copy] replaces the sheet's save/follow wording for gates with another
+  /// purpose, such as starting in a creator workspace.
+  ///
   /// [onAuthJourneyStarted] runs only when the visitor actually continues into
   /// sign-in or onboarding (never when they dismiss the surface), so a caller
   /// can remember a non-replayable surface, such as a composer, to reopen
@@ -72,6 +77,7 @@ class ContextualAuthGate {
     ProtectedActionRequirements requirements =
         ProtectedActionRequirements.accountOnly,
     VoidCallback? onAuthJourneyStarted,
+    ActivationGateCopy? copy,
   }) async {
     final missingStep = _missingCapabilityStep(context, requirements);
     if (missingStep == null) return true;
@@ -164,6 +170,7 @@ class ContextualAuthGate {
       actionType: actionType,
       targetType: targetType,
       fallbackActionLabel: actionLabel,
+      copy: copy,
     );
     if (!context.mounted) return false;
 

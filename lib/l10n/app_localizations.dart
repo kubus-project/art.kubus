@@ -19923,7 +19923,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3SectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet and Web3 access'**
+  /// **'Network and infrastructure'**
   String get homeWeb3SectionTitle;
 
   /// No description provided for @homeAccountRequiredLabel.
@@ -19959,7 +19959,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3InstitutionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Institution'**
+  /// **'Institution Hub'**
   String get homeWeb3InstitutionTitle;
 
   /// No description provided for @homeWeb3InstitutionSubtitle.
@@ -30544,6 +30544,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 artwork} other{{count} artworks}}'**
   String searchCollectionArtworkCount(num count);
+
+  /// No description provided for @creatorWorkspaceArtistStartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start as an artist'**
+  String get creatorWorkspaceArtistStartCta;
+
+  /// No description provided for @creatorWorkspaceInstitutionStartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start as an institution'**
+  String get creatorWorkspaceInstitutionStartCta;
+
+  /// No description provided for @creatorWorkspaceArtistGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish your work on art.kubus'**
+  String get creatorWorkspaceArtistGateTitle;
+
+  /// No description provided for @creatorWorkspaceArtistGateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a free account and a public profile. Then apply as an artist. Artist Studio opens when the application is approved.'**
+  String get creatorWorkspaceArtistGateBody;
+
+  /// No description provided for @creatorWorkspaceInstitutionGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run your programme on art.kubus'**
+  String get creatorWorkspaceInstitutionGateTitle;
+
+  /// No description provided for @creatorWorkspaceInstitutionGateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a free account and a public profile. Then apply as an institution. Institution Hub opens when the application is approved.'**
+  String get creatorWorkspaceInstitutionGateBody;
+
+  /// No description provided for @creatorWorkspaceGateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You return to this workspace after each step. Public art stays open without an account.'**
+  String get creatorWorkspaceGateHint;
+
+  /// No description provided for @creatorWorkspaceArtistDiscoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish and document your practice'**
+  String get creatorWorkspaceArtistDiscoverTitle;
+
+  /// No description provided for @creatorWorkspaceArtistDiscoverPoint1.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish artworks with their place, media and authorship.'**
+  String get creatorWorkspaceArtistDiscoverPoint1;
+
+  /// No description provided for @creatorWorkspaceArtistDiscoverPoint2.
+  ///
+  /// In en, this message translates to:
+  /// **'Group work into collections and exhibitions.'**
+  String get creatorWorkspaceArtistDiscoverPoint2;
+
+  /// No description provided for @creatorWorkspaceArtistDiscoverPoint3.
+  ///
+  /// In en, this message translates to:
+  /// **'See how people find and view your work.'**
+  String get creatorWorkspaceArtistDiscoverPoint3;
+
+  /// No description provided for @creatorWorkspaceInstitutionDiscoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run a public programme'**
+  String get creatorWorkspaceInstitutionDiscoverTitle;
+
+  /// No description provided for @creatorWorkspaceInstitutionDiscoverPoint1.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish events and exhibitions with dates and places.'**
+  String get creatorWorkspaceInstitutionDiscoverPoint1;
+
+  /// No description provided for @creatorWorkspaceInstitutionDiscoverPoint2.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite collaborators and manage your programme.'**
+  String get creatorWorkspaceInstitutionDiscoverPoint2;
+
+  /// No description provided for @creatorWorkspaceInstitutionDiscoverPoint3.
+  ///
+  /// In en, this message translates to:
+  /// **'See interest and attendance across your programme.'**
+  String get creatorWorkspaceInstitutionDiscoverPoint3;
+
+  /// No description provided for @creatorWorkspaceStepsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How it opens'**
+  String get creatorWorkspaceStepsTitle;
+
+  /// No description provided for @creatorWorkspaceStepAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Free account'**
+  String get creatorWorkspaceStepAccount;
+
+  /// No description provided for @creatorWorkspaceStepProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Public profile with your name'**
+  String get creatorWorkspaceStepProfile;
+
+  /// No description provided for @creatorWorkspaceStepArtistApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist application, signed with a wallet'**
+  String get creatorWorkspaceStepArtistApplication;
+
+  /// No description provided for @creatorWorkspaceStepInstitutionApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution application, signed with a wallet'**
+  String get creatorWorkspaceStepInstitutionApplication;
+
+  /// No description provided for @creatorWorkspaceStepReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Governance review, then the tools open'**
+  String get creatorWorkspaceStepReview;
+
+  /// No description provided for @creatorWorkspaceWalletNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet is needed only to sign the application. You can create or link one at that step. Browsing art, your account and your profile need none.'**
+  String get creatorWorkspaceWalletNote;
+
+  /// No description provided for @creatorWorkspaceCompleteProfileCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your public name'**
+  String get creatorWorkspaceCompleteProfileCta;
+
+  /// No description provided for @creatorWorkspaceCompleteProfileDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications are reviewed under your public name. Add it to your profile first.'**
+  String get creatorWorkspaceCompleteProfileDetail;
+
+  /// No description provided for @creatorWorkspaceLinkWalletCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Create or link a wallet to apply'**
+  String get creatorWorkspaceLinkWalletCta;
+
+  /// No description provided for @creatorWorkspaceLinkWalletDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications are signed with a wallet. Create or link one, then submit your application here.'**
+  String get creatorWorkspaceLinkWalletDetail;
+
+  /// No description provided for @homeCreateSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and organize'**
+  String get homeCreateSectionTitle;
+
+  /// No description provided for @homeCapabilityStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get homeCapabilityStatusOpen;
+
+  /// No description provided for @homeCapabilityStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'In review'**
+  String get homeCapabilityStatusPending;
+
+  /// No description provided for @homeCapabilityStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get homeCapabilityStatusRejected;
+
+  /// No description provided for @homeWalletCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keys, tokens and signing'**
+  String get homeWalletCardSubtitle;
 }
 
 class _AppLocalizationsDelegate
