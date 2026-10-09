@@ -1,3 +1,4 @@
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/features/analytics/analytics_view_models.dart';
 import 'package:art_kubus/features/analytics/widgets/analytics_overview_grid.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -239,10 +240,15 @@ void main() {
       await drain(tester);
     });
 
+    // The locked state belongs to a signed-in account that does not hold the
+    // role. A role granted on the server opens the workspace, and a visitor
+    // without a session gets the discovery panel instead.
     testWidgets('studio (mobile): one review CTA for the locked state',
         (tester) async {
+      BackendApiService().setAuthTokenForTesting('qa-session');
+      addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
       final l10n = await pumpScreen(tester, const ArtistStudio(),
-          size: const Size(390, 1300), signedIn: qaOwner(isArtist: true));
+          size: const Size(390, 1300), signedIn: qaOwner());
       expect(textCount(tester, l10n.artistStudioCtaApplyForDaoReview), 1);
       expect(find.text(l10n.artistStudioLockedTitle), findsOneWidget);
       await drain(tester);
@@ -250,8 +256,10 @@ void main() {
 
     testWidgets('institution hub (mobile): one review CTA, lock is named',
         (tester) async {
+      BackendApiService().setAuthTokenForTesting('qa-session');
+      addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
       final l10n = await pumpScreen(tester, const InstitutionHub(),
-          size: const Size(390, 1300), signedIn: qaOwner(isInstitution: true));
+          size: const Size(390, 1300), signedIn: qaOwner());
       expect(textCount(tester, l10n.institutionHubApplyForReviewAction), 1);
       expect(find.text(l10n.institutionHubLockedTitle), findsOneWidget);
       // The page title is said by the dashboard header, not again by the bar.

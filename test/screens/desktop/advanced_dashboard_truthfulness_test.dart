@@ -1,3 +1,5 @@
+import 'package:art_kubus/providers/portfolio_provider.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/models/stats/stats_models.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/stats_provider.dart';
@@ -73,6 +75,10 @@ Future<void> _pumpDashboard(
   SharedPreferences.setMockInitialValues(<String, Object>{
     '${onboardingKey}_onboarding_completed': true,
   });
+  // The owner is signed in: the desktop rail is the working dashboard of an
+  // account session (a visitor gets the discovery panel instead).
+  BackendApiService().setAuthTokenForTesting('qa-session');
+  addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
   final priorOnError = FlutterError.onError;
   final renderErrors = await pumpProductSurface(
     tester,
@@ -81,6 +87,12 @@ Future<void> _pumpDashboard(
     extraProviders: [
       ChangeNotifierProvider<StatsProvider>(
         create: (_) => StatsProvider(api: api),
+      ),
+      // An owner holding the role opens the workspace itself, whose gallery
+      // reads the portfolio.
+      ChangeNotifierProvider<PortfolioProvider>(
+        create: (_) =>
+            PortfolioProvider()..setWalletAddress(owner.walletAddress),
       ),
     ],
     child: child,
