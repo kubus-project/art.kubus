@@ -173,30 +173,16 @@ Both creation API methods disable implicit backend replay on ambiguous 5xx and t
 
 A crash between post commit and response persistence returns 409 on subsequent keyed retries instead of inserting again. Check the feed before clearing a draft or starting a new submission. This provides at-most-one insertion per key, not guaranteed delivery of asynchronous side effects after a process crash. The existing background side-effect mechanism has no durable outbox. The guarantee also assumes failover preserves the committed PostgreSQL ledger; replica data loss or a fresh key cannot be deduplicated. Manual retries against an old backend remain ambiguous until all writable instances have the new code and migration.
 
-## Verification
+## Final acceptance verification
 
-Fresh local correction-pass results:
+Actual authenticated browser acceptance succeeded against the isolated real Flutter/Node/PostgreSQL/HTTP-storage topology. Mobile, desktop inline, desktop dialog and group publishing, real media uploads, ordered persisted payloads, manual failure recovery, permissions, two writable backends and browser video playback were exercised. This is distinct from the earlier mock-authenticated widget coverage.
 
-- Full Flutter suite: **4,027 passed, 22 skipped, zero failures**. `flutter analyze`: no issues. Changed Dart files pass the format check.
-- Enabled focused Community, creation failover and upload Retry-After tests: **140 passed, 7 skipped**. Disabled Community/widget configuration: **102 passed, 32 skipped**. Intentional skips select the opposite flag mode and mobile-only dismissal cases.
-- Full backend Jest suite with the new PostgreSQL contract enabled: **209 passed suites, 5 skipped suites; 1,853 passed tests, 33 skipped tests, zero failures**. ESLint is clean. Both schema snapshots bootstrap with 95 migrations and matching 134-table catalogs; schema parity has zero drift.
-- Real PostgreSQL route/service idempotency contract: **17 passed**. Covers normal Community/group creation, completed replay, eight concurrent requests, separate keys/users/operations, validation/auth/group permission rejection, legacy callers, transaction rollback, HTTP 500 and connection loss after committed success, side effects once, and failure before response persistence.
-- Public-build configuration executable tests: **5 passed** (default, disabled, enabled, uppercase boolean normalization, invalid input). Existing web runtime/locale contracts: **32 passed**. Local release web builds succeed with `COMMUNITY_MULTI_MEDIA_ENABLED=true` and `false`. Existing wasm dry-run compatibility warnings remain; these were JavaScript release builds.
-- Mock-authenticated real composer flows cover **mobile, desktop inline, desktop full dialog and group feed** using existing profile/token seams, fake picker and mock HTTP client. All four cover ten photos, limit enforcement, ordered mixed image/video submission (`postType: video` when a video is present), visible reordering/removal, empty-caption fallback, publishing lock, upload/create failure retention, manual retry with the same key and reused uploads, double-tap prevention, and controlled 429/45-second Retry-After retention without implicit retry. The intentional mobile dismissal contract remains unchanged.
-- Thumbnail visual QA: **8 scenarios passed**. Valid distinct numbered 160x120 PNG fixtures replace indistinguishable swatches. The harness waits for actual asynchronous image codec completion and asserts that decoded `RawImage` frames reach `Image.memory` before capture. `XFile.fromData` and preview byte loading work; missing pictures were a capture/decoder scheduling issue. Captures now scroll the entire thumbnail strip into view. Reviewed evidence includes 390x844 light, 320px dark Slovenian, increased 1.5x text, 1440x1000 desktop light/dark, and 320px tray at 2x text. Mixed videos are distinct placeholders, and reordered/removed images match their items. Square previews use `BoxFit.cover`, without stretching. Ten items remain horizontally scrollable.
-- Broader QA reproduced and corrected two compact-layout regressions: the desktop inline action row now wraps instead of overflowing, and 72px tiles have bounded icon-button sizes and video-placeholder padding. No composer redesign was performed.
+Fresh final validation: full Flutter 4,035 passed/25 skipped/zero failures; enabled focused 148 passed/10 skipped; disabled focused 107 passed/36 skipped; visual scenarios 8 passed; analysis and formatting clean. Backend Jest 1,853 passed/33 skipped/zero failures, 209 passed/5 skipped suites. Both final capability artifacts built and their 192-file manifests verified at source `cca7ae13d5f4aa66a4500f5d5b8007352285fd93`.
 
-Reproduce visual evidence:
+See [the complete acceptance report](community-082-e2e-qa.md) for exact commands, reproduction topology, database/network assertions, corrections, artifact hashes and limits. See [46 reviewed real browser screenshots](../output/qa/community-082-e2e/README.md). Earlier widget evidence remains available under [evidence/community-082-final](evidence/community-082-final/README.md).
 
-```powershell
-$env:KUBUS_RUN_VISUAL_QA = '1'
-flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/qa/community_composer_visual_test.dart
-```
+## Remaining deployment gates
 
-Generated screenshots are in `output/qa/community-composer/`; selected reviewed captures are checked in under [evidence/community-082-final](evidence/community-082-final/README.md). CI runs the enabled and disabled Community contracts, and the backend database job runs the real PostgreSQL creation contract.
+No merge, tag, version bump, production migration/deployment or production secret change occurred. Owner-controlled integration must still verify backups, apply migration 098 before updated writable backends, run deployed authenticated staging acceptance, verify the exact matching frontend artifact and explicitly enable it. Isolated browser QA does not establish deployed staging, Google SSO, physical-device or OS-level text-scale acceptance. Browser page zoom and separately identified widget text-scale tests were exercised.
 
-## Remaining acceptance gates
-
-Real authenticated browser QA was **not performed**. Mock-authenticated widget tests do not establish real session, picker, upload or multi-backend browser acceptance. Before production activation, merge under owner control, migrate/deploy all writable backends, run real staging acceptance on all composer surfaces, verify the new exact frontend artifact and its capability metadata, then explicitly enable the production flag. No merge, tag, version bump, production deployment or production secret change occurred here.
-
-The previously documented extensionless IPFS-only video limitation, native platform video constraints, per-process upload budgets and owner/native Slovenian copy review remain unchanged. A hung upload still holds the composer until the existing request timeout.
+Extensionless IPFS-only video, native platform playback limits, per-process upload budgets and owner/native Slovenian copy review remain documented limitations. A hung upload retains the composer until the existing request timeout. The wider 0.8.2 release remains outside this Community acceptance pass.
