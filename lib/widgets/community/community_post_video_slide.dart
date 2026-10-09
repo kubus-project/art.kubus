@@ -7,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/viewport_visibility.dart';
-import '../inline_loading.dart';
 import 'community_video_controls.dart';
 import 'community_video_fullscreen.dart';
 
@@ -295,12 +294,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
         container: true,
         liveRegion: true,
         label: l10n.communityMediaVideoLoading,
-        child: const SizedBox(
-          width: 36,
-          height: 36,
-          child:
-              InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4),
-        ),
+        child: const CommunityVideoBusyIndicator(),
       );
     } else {
       content = CommunityVideoLargeButton(

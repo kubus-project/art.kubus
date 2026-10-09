@@ -246,7 +246,7 @@ class _CommunityVideoPlayerSurfaceState
       );
     }
     if (!value.isInitialized) {
-      return const Center(child: _BusyIndicator());
+      return const Center(child: CommunityVideoBusyIndicator());
     }
     // While the handle is being dragged the clip is paused on purpose; a big
     // play control over the frame the viewer is searching for would be noise.
@@ -269,7 +269,7 @@ class _CommunityVideoPlayerSurfaceState
           container: true,
           liveRegion: true,
           label: l10n.communityMediaVideoBuffering,
-          child: const IgnorePointer(child: _BusyIndicator()),
+          child: const IgnorePointer(child: CommunityVideoBusyIndicator()),
         ),
       );
     }
@@ -423,15 +423,32 @@ BoxDecoration communityVideoStageDecoration(KubusColorRoles roles) =>
       border: Border.all(color: roles.rule, width: KubusSizes.hairline),
     );
 
-class _BusyIndicator extends StatelessWidget {
-  const _BusyIndicator();
+/// Loading and buffering mark, on the overlay surface so it reads over any
+/// frame, light or dark.
+class CommunityVideoBusyIndicator extends StatelessWidget {
+  const CommunityVideoBusyIndicator({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 36,
-      height: 36,
-      child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4),
+    final roles = KubusColorRoles.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: roles.surfaceOverlay,
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        border: Border.all(color: roles.ruleStrong, width: KubusSizes.hairline),
+      ),
+      child: const SizedBox(
+        width: KubusSizes.mediaPlayLarge,
+        height: KubusSizes.mediaPlayLarge,
+        child: Padding(
+          padding: EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+          child: InlineLoading(
+            expand: true,
+            shape: BoxShape.circle,
+            tileSize: 4,
+          ),
+        ),
+      ),
     );
   }
 }
