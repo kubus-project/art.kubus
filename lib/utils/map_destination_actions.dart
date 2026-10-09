@@ -110,12 +110,15 @@ class MapDestination {
                     queryParameters: <String, String>{'q': coordinates},
                   )
                 : null;
+        // Web fallback is the directions form, so desktop opens route
+        // planning rather than a bare search pin. No destination_place_id is
+        // carried (MapDestination has no Google place id), so coordinates only.
         return <Uri>[
           if (appUri != null) appUri,
           Uri.https(
             'www.google.com',
-            '/maps/search/',
-            <String, String>{'api': '1', 'query': coordinates},
+            '/maps/dir/',
+            <String, String>{'api': '1', 'destination': coordinates},
           ),
         ];
       case ArtworkExternalMapDestination.appleMaps:

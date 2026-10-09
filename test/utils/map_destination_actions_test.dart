@@ -100,6 +100,21 @@ void main() {
       expect(uris.every((u) => u.toString().contains('46.0569')), isTrue);
     });
 
+    test('the Google Maps web fallback opens directions, not a search pin', () {
+      final uris = _destination().externalUris(
+        ArtworkExternalMapDestination.googleMaps,
+        platform: TargetPlatform.windows,
+      );
+      final web = uris.singleWhere((u) => u.scheme == 'https');
+      expect(web.scheme, 'https');
+      expect(web.host, 'www.google.com');
+      expect(web.path, '/maps/dir/');
+      expect(web.queryParameters['api'], '1');
+      expect(web.queryParameters['destination'], '46.0569,14.5058');
+      expect(web.path, isNot(contains('search')));
+      expect(web.queryParameters.containsKey('query'), isFalse);
+    });
+
     test('web-safe https fallbacks exist for every provider', () {
       for (final provider in [
         ArtworkExternalMapDestination.googleMaps,
