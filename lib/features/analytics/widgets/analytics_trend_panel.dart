@@ -89,6 +89,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
       height: height,
       gridColor: scheme.onSurface.withValues(alpha: 0.12),
       valueFormatter: metric.formatValue,
+      emptyLabel: l10n.analyticsNoDataYetTitle,
     );
   }
 }
