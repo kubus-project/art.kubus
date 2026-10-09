@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -688,6 +689,8 @@ class CommunityMediaSlider extends StatefulWidget {
 }
 
 class _CommunityMediaSliderState extends State<CommunityMediaSlider> {
+  static int _nextSemanticsId = 0;
+  final int _semanticsId = _nextSemanticsId++;
   final FocusNode _focusNode = FocusNode(debugLabel: 'community-media-slider');
   bool _hovering = false;
   bool _focused = false;
@@ -754,6 +757,13 @@ class _CommunityMediaSliderState extends State<CommunityMediaSlider> {
     return Semantics(
       container: true,
       slider: true,
+      // The pinned web engine labels the wrapper rather than its range input.
+      // community_slider_accessibility.js uses this marker to label that input.
+      identifier: 'community-media-slider:${jsonEncode({
+            'id': _semanticsId,
+            'label': widget.semanticLabel,
+            'value': widget.semanticValue,
+          })}',
       enabled: enabled,
       label: widget.semanticLabel,
       value: widget.semanticValue,

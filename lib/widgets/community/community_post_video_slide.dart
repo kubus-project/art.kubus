@@ -54,6 +54,9 @@ class CommunityPostVideoSlide extends StatefulWidget {
   @visibleForTesting
   static Duration guardInterval = const Duration(milliseconds: 400);
 
+  @visibleForTesting
+  static int activeVisibilityGuards = 0;
+
   @override
   State<CommunityPostVideoSlide> createState() =>
       _CommunityPostVideoSlideState();
@@ -123,12 +126,31 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
 
   void _releaseController() {
     _generation++;
-    _guard?.cancel();
-    _guard = null;
+    _stopGuard();
     final controller = _controller;
+    controller?.removeListener(_syncGuard);
     _controller = null;
     CommunityVideoPlaybackCoordinator.release(controller);
     unawaited(controller?.dispose());
+  }
+
+  void _stopGuard() {
+    if (_guard == null) return;
+    _guard!.cancel();
+    _guard = null;
+    CommunityPostVideoSlide.activeVisibilityGuards--;
+  }
+
+  void _syncGuard() {
+    if (!mounted || _controller?.value.isPlaying != true) {
+      _stopGuard();
+    } else if (_guard == null) {
+      CommunityPostVideoSlide.activeVisibilityGuards++;
+      _guard = Timer.periodic(
+        CommunityPostVideoSlide.guardInterval,
+        (_) => _guardTick(),
+      );
+    }
   }
 
   void _pauseIfPlaying() {
@@ -193,10 +215,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       _controller = controller;
       _initializing = false;
     });
-    _guard = Timer.periodic(
-      CommunityPostVideoSlide.guardInterval,
-      (_) => _guardTick(),
-    );
+    controller.addListener(_syncGuard);
     await controller.play();
   }
 
@@ -232,6 +251,8 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     final controller = _controller;
     if (controller == null || _fullscreen) return;
     final navigator = Navigator.of(context, rootNavigator: true);
+    final wasPlaying = controller.value.isPlaying;
+    var retryAfterClose = false;
     final route = communityVideoFullscreenRoute(
       animate: !MediaQuery.disableAnimationsOf(context),
       controller: controller,
@@ -239,8 +260,8 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       onTogglePlayback: _togglePlayback,
       onReplay: _replay,
       onRetry: () {
+        retryAfterClose = true;
         navigator.pop();
-        unawaited(_retry());
       },
     );
     _fullscreenRoute = route;
@@ -249,17 +270,47 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       _fullscreen = true;
       _inlineVideoHidden = true;
     });
-    await navigator.push<void>(route);
+    // Unmount the inline platform view before the new route can build its view.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !identical(_controller, controller)) return;
+    final popped = navigator.push<void>(route);
+    await WidgetsBinding.instance.endOfFrame;
+    // Web platform views attach after the framework frame. Allow the next
+    // composited frame (and its queued media pause event) before restoring play.
+    WidgetsBinding.instance.scheduleFrame();
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted &&
+        identical(_controller, controller) &&
+        route.isCurrent &&
+        wasPlaying &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+      // Reattaching a web video element may pause it without changing position.
+      CommunityVideoPlaybackCoordinator.claim(controller);
+      await controller.play();
+    }
+    await popped;
+    final resume = controller.value.isPlaying;
+    // push completes at pop, but completed waits for the reverse animation and
+    // overlay removal. The fullscreen view must be gone before inline remounts.
+    await route.completed;
     _fullscreenRoute = null;
     _fullscreenNavigator = null;
-    // Put the feed view back as soon as the route is popped, while the expanded
-    // view is still fading out. A browser pauses a <video> that is detached from
-    // the page, so the clip must move from one view to the other without a
-    // frame in between.
-    if (mounted) setState(() => _inlineVideoHidden = false);
-    // The feed route is re-enabled on the frame after the pop. Until then it
-    // still reads as covered, which the guard would take for navigating away.
+    if (!mounted || !identical(_controller, controller)) return;
+    setState(() {
+      _inlineVideoHidden = false;
+    });
     await WidgetsBinding.instance.endOfFrame;
+    WidgetsBinding.instance.scheduleFrame();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !identical(_controller, controller)) return;
+    if (retryAfterClose) {
+      await _retry();
+    } else if (resume &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+      // Web pauses a detached video element; retain the user's playback state.
+      CommunityVideoPlaybackCoordinator.claim(controller);
+      await controller.play();
+    }
     if (mounted) setState(() => _fullscreen = false);
   }
 

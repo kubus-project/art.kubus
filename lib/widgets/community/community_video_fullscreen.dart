@@ -13,7 +13,7 @@ import 'community_video_controls.dart';
 /// the clip nor mounts a second player: the feed stage hides its video view
 /// while this route is open. The route is opaque and sits on the root
 /// navigator, which keeps desktop chrome out of the way.
-Route<void> communityVideoFullscreenRoute({
+TransitionRoute<void> communityVideoFullscreenRoute({
   required VideoPlayerController controller,
   required CommunityVideoAudio audio,
   required VoidCallback onTogglePlayback,

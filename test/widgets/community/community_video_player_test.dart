@@ -1,4 +1,4 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show PointerDeviceKind, SemanticsActionEvent;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -81,6 +81,8 @@ void testPlayer(String name, Future<void> Function(WidgetTester) body) {
     await body(tester);
     await tester.pumpWidget(const SizedBox());
     await _settle(tester);
+    expect(CommunityPostVideoSlide.activeVisibilityGuards, 0,
+        reason: 'disposed players retain no visibility timers');
   });
 }
 
@@ -131,6 +133,27 @@ void main() {
   });
 
   group('lifecycle', () {
+    testPlayer('visibility polling stops on pause and restarts on resume',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 1);
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoPause));
+      await _settle(tester);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
+      await tester.pump(const Duration(seconds: 3));
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoPlay).first);
+      await _settle(tester);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 1);
+      platform.live.single.events.add(VideoEvent(
+        eventType: VideoEventType.completed,
+      ));
+      await _settle(tester);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
+    });
     testPlayer('creates no player until the user asks to play', (tester) async {
       await tester.pumpWidget(_app(_stage(
         const CommunityPostVideoSlide(url: _clip, isActive: true),
@@ -212,6 +235,7 @@ void main() {
 
       expect(platform.live, hasLength(2));
       expect(platform.playingNow.single.uri, endsWith('/uploads/other.mp4'));
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 1);
     });
 
     testPlayer('a theme change keeps the same controller', (tester) async {
@@ -251,6 +275,7 @@ void main() {
       await _realWait(tester);
 
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
     });
 
     testPlayer('pauses when another route covers it', (tester) async {
@@ -276,6 +301,7 @@ void main() {
       await _realWait(tester);
 
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
     });
 
     testPlayer('pauses when the app is backgrounded', (tester) async {
@@ -288,6 +314,7 @@ void main() {
       await tester.pump();
 
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
 
       await tester.pumpWidget(const SizedBox());
       await _settle(tester);
@@ -308,6 +335,7 @@ void main() {
       await tester.pump();
 
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
     });
   });
 
@@ -443,8 +471,11 @@ void main() {
       expect(node.value, '0%');
       expect(node.increasedValue, '5%');
 
-      tester.binding.pipelineOwner.semanticsOwner!
-          .performAction(node.id, SemanticsAction.increase);
+      tester.binding.performSemanticsAction(SemanticsActionEvent(
+        type: SemanticsAction.increase,
+        nodeId: node.id,
+        viewId: tester.view.viewId,
+      ));
       await _settle(tester);
       node = tester.getSemantics(volume);
       expect(node.value, '5%');
@@ -654,6 +685,7 @@ void main() {
       await _settle(tester);
       await tester.pump(const Duration(seconds: 4));
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
       expect(stripOpacity(tester), 1);
     });
   });
@@ -699,6 +731,36 @@ void main() {
   });
 
   group('fullscreen', () {
+    testPlayer('animated handoffs never mount duplicate platform views',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      final player = platform.live.single;
+      final view = find.byKey(ValueKey<String>('fake-video-view-${player.id}'),
+          skipOffstage: false);
+      await _hover(tester, find.byType(CommunityVideoPlayerSurface));
+      for (var cycle = 0; cycle < 3; cycle++) {
+        await tester.tap(find.byTooltip(_l10n.communityMediaVideoFullscreen));
+        for (var frame = 0; frame < 20; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          expect(view.evaluate().length, lessThanOrEqualTo(1));
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(find.byType(CommunityVideoFullscreenPage), findsOneWidget,
+            reason: 'reverse transition has started but not finished');
+        for (var frame = 0; frame < 20; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          expect(view.evaluate().length, lessThanOrEqualTo(1));
+        }
+        expect(view, findsOneWidget);
+        expect(platform.players, hasLength(1));
+        expect(player.seeks, isEmpty);
+        expect(player.volume, 0);
+      }
+    });
     testPlayer('expands the same player, keeps playing, and returns',
         (tester) async {
       await tester.pumpWidget(_app(_stage(
@@ -710,6 +772,7 @@ void main() {
       await _hover(tester, find.byType(CommunityVideoPlayerSurface));
 
       await tester.tap(find.byTooltip(_l10n.communityMediaVideoFullscreen));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -728,6 +791,7 @@ void main() {
       expect(platform.players, hasLength(1));
       expect(player.playing, isTrue, reason: 'leaving does not restart');
       expect(player.seeks, isEmpty, reason: 'and does not seek');
+      await _settle(tester);
       expect(find.byKey(ValueKey<String>('fake-video-view-${player.id}')),
           findsOneWidget);
     });
@@ -739,6 +803,7 @@ void main() {
       await startPlayback(tester);
       await _hover(tester, find.byType(CommunityVideoPlayerSurface));
       await tester.tap(find.byTooltip(_l10n.communityMediaVideoFullscreen));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -795,6 +860,7 @@ void main() {
       expect(find.text('2 / 2'), findsOneWidget);
       expect(player.disposed, isTrue);
       expect(platform.playingNow, isEmpty);
+      expect(CommunityPostVideoSlide.activeVisibilityGuards, 0);
     });
 
     testPlayer('left and right keys on the player still move the carousel',
