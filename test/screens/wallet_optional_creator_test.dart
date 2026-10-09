@@ -249,6 +249,79 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  group('session restore without a wallet', () {
+    test('initialize() hydrates the account profile from the token alone',
+        () async {
+      final calls = <String>[];
+      final api = BackendApiService();
+      api.setAuthTokenForTesting(_jwt('account-a'));
+      api.setHttpClient(MockClient((request) async {
+        calls.add(request.url.path);
+        if (request.url.path == '/api/profiles/me') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'id': 'profile-1',
+                'userId': 'account-a',
+                'username': 'ana',
+                'displayName': 'Ana',
+              },
+            }),
+            200,
+            headers: _json,
+          );
+        }
+        return http.Response('{}', 404, headers: _json);
+      }));
+      addTearDown(() {
+        api.setAuthTokenForTesting(null);
+        api.setHttpClient(createPlatformHttpClient());
+      });
+
+      final profile = ProfileProvider();
+      await profile.initialize();
+
+      expect(calls, contains('/api/profiles/me'));
+      expect(profile.hasUsablePublicProfile, isTrue);
+      expect(profile.currentUser?.displayName, 'Ana');
+    });
+
+    test('without a session nothing is requested and nothing is hydrated',
+        () async {
+      final calls = <String>[];
+      final api = BackendApiService();
+      api.setAuthTokenForTesting(null);
+      api.setHttpClient(MockClient((request) async {
+        calls.add(request.url.path);
+        return http.Response('{}', 404, headers: _json);
+      }));
+      addTearDown(() => api.setHttpClient(createPlatformHttpClient()));
+
+      final profile = ProfileProvider();
+      await profile.initialize();
+
+      expect(calls.where((p) => p == '/api/profiles/me'), isEmpty);
+      expect(profile.hasUsablePublicProfile, isFalse);
+    });
+
+    test('a failing restore does not break start-up', () async {
+      final api = BackendApiService();
+      api.setAuthTokenForTesting(_jwt('account-a'));
+      api.setHttpClient(MockClient((request) async {
+        return http.Response('{"success":false}', 500, headers: _json);
+      }));
+      addTearDown(() {
+        api.setAuthTokenForTesting(null);
+        api.setHttpClient(createPlatformHttpClient());
+      });
+
+      final profile = ProfileProvider();
+      await expectLater(profile.initialize(), completes);
+      expect(profile.hasUsablePublicProfile, isFalse);
+    });
+  });
+
   group('stage resolution', () {
     CreatorWorkspaceStage stage({
       required bool accountApplications,

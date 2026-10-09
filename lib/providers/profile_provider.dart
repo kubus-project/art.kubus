@@ -561,9 +561,29 @@ class ProfileProvider extends foundation.ChangeNotifier {
       await loadProfile(walletAddress);
       // Load additional stats from backend
       await _loadBackendStats(walletAddress);
+    } else {
+      await _restoreAccountProfileWithoutWallet();
     }
 
     notifyListeners();
+  }
+
+  /// An email or Google session is restored from its token alone: there is no
+  /// persisted wallet to load a profile by. Hydrate the account's own profile so
+  /// gates that depend on it (Artist Studio, Institution Hub, publishing) are
+  /// right on a cold start or a deep link instead of asking for a name the
+  /// account already has.
+  Future<void> _restoreAccountProfileWithoutWallet() async {
+    try {
+      final api = BackendApiService();
+      await api.ensureAuthLoaded();
+      if (!api.hasAuthSession) return;
+      await loadAuthenticatedProfile();
+    } catch (e) {
+      // Offline or expired: stay signed-out of the profile; the next explicit
+      // load (sign-in, pull to refresh) reports the failure.
+      debugPrint('ProfileProvider: account profile restore skipped: $e');
+    }
   }
 
   /// Load additional stats from backend (collections, followers, following)
