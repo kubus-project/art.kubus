@@ -27,11 +27,28 @@ String formatCommunityVideoTime(Duration value) {
 /// Sound state of one Community video, shared between the feed player and its
 /// expanded view so toggling in one is reflected in the other.
 ///
-/// Players start muted. Dragging the volume to zero mutes; unmuting after that
+/// Playback only ever starts from an explicit tap, which is the user gesture
+/// browsers require for sound, so a clip starts audible at the last volume the
+/// viewer chose. A viewer who mutes (or drags the volume to zero) keeps that
+/// choice for the next clip in the session. Unmuting after a drag to zero
 /// restores full volume instead of staying silent.
 class CommunityVideoAudio extends ChangeNotifier {
-  double _volume = 1;
-  bool _muted = true;
+  CommunityVideoAudio()
+      : _volume = _sessionVolume,
+        _muted = _sessionMuted;
+
+  static double _sessionVolume = 1;
+  static bool _sessionMuted = false;
+
+  /// Forgets the viewer's choice. For tests and sign-out.
+  @visibleForTesting
+  static void resetSession() {
+    _sessionVolume = 1;
+    _sessionMuted = false;
+  }
+
+  double _volume;
+  bool _muted;
 
   double get volume => _volume;
   bool get muted => _muted;
@@ -42,6 +59,7 @@ class CommunityVideoAudio extends ChangeNotifier {
   void toggleMute() {
     _muted = !_muted;
     if (!_muted && _volume <= 0) _volume = 1;
+    _remember();
     notifyListeners();
   }
 
@@ -49,8 +67,44 @@ class CommunityVideoAudio extends ChangeNotifier {
     final next = value.clamp(0.0, 1.0);
     _volume = next;
     _muted = next <= 0;
+    _remember();
     notifyListeners();
   }
+
+  /// The browser refused to start playback with sound. Plays muted instead and
+  /// shows it as muted; the viewer's own choice is not overwritten, so one
+  /// refusal does not silence later clips.
+  void muteForBrowserPolicy() {
+    if (_muted) return;
+    _muted = true;
+    notifyListeners();
+  }
+
+  void _remember() {
+    _sessionVolume = _volume;
+    _sessionMuted = _muted;
+  }
+}
+
+/// The largest box with [aspect] (width / height) that fits [available].
+///
+/// This is the displayed size of a video: it never crops, never distorts and
+/// never leaves bars inside the box. An unbounded side is derived from the
+/// bounded one, and an unusable [aspect] falls back to 16:9.
+Size communityVideoFrameSize(Size available, double aspect) {
+  final ratio = aspect.isFinite && aspect > 0 ? aspect : 16 / 9;
+  var width = available.width;
+  var height = available.height;
+  if (!width.isFinite && !height.isFinite) return Size.zero;
+  if (!width.isFinite) {
+    width = height * ratio;
+  } else if (!height.isFinite) {
+    height = width / ratio;
+  }
+  if (width <= 0 || height <= 0) return Size.zero;
+  return width / height > ratio
+      ? Size(height * ratio, height)
+      : Size(width, width / ratio);
 }
 
 /// The playable face of a Community video once its controller is ready: the
@@ -96,6 +150,15 @@ class _CommunityVideoPlayerSurfaceState
     extends State<CommunityVideoPlayerSurface> {
   static const Duration _revealFor = Duration(seconds: 3);
 
+  /// From this frame width the strip is the timeline over one row of buttons
+  /// and the time. Narrower frames (a portrait clip in a short stage) stack the
+  /// time as well, so every control keeps its full target. The timeline always
+  /// spans the frame, whatever its shape.
+  static const double _columnMinWidth = 232;
+
+  /// The volume track needs a roomy row so the timeline keeps a usable length.
+  static const double _sliderMinWidth = 480;
+
   final FocusNode _surfaceFocus = FocusNode(debugLabel: 'community-video');
   final ValueNotifier<Duration?> _scrubPosition =
       ValueNotifier<Duration?>(null);
@@ -106,6 +169,10 @@ class _CommunityVideoPlayerSurfaceState
   bool _scrubbing = false;
   bool _revealed = false;
   bool _stripVisible = true;
+
+  /// Last real aspect of the clip, so an error or buffering state keeps the
+  /// frame the size the viewer was already looking at.
+  double _aspect = 16 / 9;
 
   @override
   void initState() {
@@ -184,68 +251,97 @@ class _CommunityVideoPlayerSurfaceState
       onFocusChange: (focused) {
         if (_focusWithin != focused) setState(() => _focusWithin = focused);
       },
-      child: MouseRegion(
-        onEnter: (_) => setState(() {
-          _hasMouse = true;
-          _hovering = true;
-        }),
-        onExit: (_) => setState(() => _hovering = false),
-        child: DecoratedBox(
-          decoration: communityVideoStageDecoration(roles),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (widget.showVideo)
-                ValueListenableBuilder<VideoPlayerValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) {
-                    if (!value.isInitialized) return const SizedBox.shrink();
-                    return Center(
-                      child: AspectRatio(
-                        aspectRatio: value.aspectRatio,
-                        child: VideoPlayer(controller),
-                      ),
-                    );
-                  },
+      // The surface only claims the room it is given. The frame inside it is
+      // sized to the clip, so the picture, the centre control and the control
+      // strip are one component however the surrounding stage is shaped.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              if (value.isInitialized && value.size.height > 0) {
+                _aspect = value.aspectRatio;
+              }
+              final frame = communityVideoFrameSize(
+                constraints.biggest,
+                _aspect,
+              );
+              return Center(
+                child: SizedBox(
+                  key: const ValueKey<String>('community-video-frame'),
+                  width: frame.width,
+                  height: frame.height,
+                  child: _buildFrame(context, roles, controller, fade),
                 ),
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: _handleTapUp,
-                ),
-              ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFrame(
+    BuildContext context,
+    KubusColorRoles roles,
+    VideoPlayerController controller,
+    Duration fade,
+  ) {
+    return MouseRegion(
+      onEnter: (_) => setState(() {
+        _hasMouse = true;
+        _hovering = true;
+      }),
+      onExit: (_) => setState(() => _hovering = false),
+      child: DecoratedBox(
+        decoration: communityVideoStageDecoration(roles),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (widget.showVideo)
               ValueListenableBuilder<VideoPlayerValue>(
                 valueListenable: controller,
                 builder: (context, value, _) {
-                  final visible = !value.isPlaying ||
-                      _hovering ||
-                      _focusWithin ||
-                      _scrubbing ||
-                      _revealed;
-                  _stripVisible = visible;
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _buildCentre(context, value),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: IgnorePointer(
-                          ignoring: !visible,
-                          child: AnimatedOpacity(
-                            duration: fade,
-                            opacity: visible ? 1 : 0,
-                            child: _buildStrip(context),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
+                  if (!value.isInitialized) return const SizedBox.shrink();
+                  // The frame already has the clip's aspect, so the video
+                  // fills it exactly: no bars, no crop.
+                  return SizedBox.expand(child: VideoPlayer(controller));
                 },
               ),
-            ],
-          ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: _handleTapUp,
+              ),
+            ),
+            ValueListenableBuilder<VideoPlayerValue>(
+              valueListenable: controller,
+              builder: (context, value, _) {
+                final visible = !value.isPlaying ||
+                    _hovering ||
+                    _focusWithin ||
+                    _scrubbing ||
+                    _revealed;
+                _stripVisible = visible;
+                // The centre control gets the picture above the strip, so a
+                // short frame (an ultrawide clip on a phone) never has the
+                // strip sitting on top of its play button.
+                return Column(
+                  children: [
+                    Expanded(child: _buildCentre(context, value)),
+                    IgnorePointer(
+                      ignoring: !visible,
+                      child: AnimatedOpacity(
+                        duration: fade,
+                        opacity: visible ? 1 : 0,
+                        child: _buildStrip(context),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -312,18 +408,30 @@ class _CommunityVideoPlayerSurfaceState
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 480;
+          final width = constraints.maxWidth;
           return Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.sm,
               vertical: KubusSpacing.xxs,
             ),
-            child: wide ? _wideRow(context) : _narrowColumn(context),
+            child: FocusTraversalGroup(
+              policy: OrderedTraversalPolicy(),
+              child: width >= _columnMinWidth
+                  ? _stackedStrip(context, roomy: width >= _sliderMinWidth)
+                  : _compactColumn(context),
+            ),
           );
         },
       ),
     );
   }
+
+  /// Keyboard order is play, timeline, volume, full screen, whichever way the
+  /// strip is stacked on screen.
+  Widget _ordered(double order, Widget child) => FocusTraversalOrder(
+        order: NumericFocusOrder(order),
+        child: child,
+      );
 
   Widget _timeline() => CommunityVideoTimeline(
         controller: widget.controller,
@@ -376,33 +484,49 @@ class _CommunityVideoPlayerSurfaceState
         scrubPosition: _scrubPosition,
       );
 
-  Widget _wideRow(BuildContext context) {
-    return Row(
-      children: [
-        _playPause(context),
-        const SizedBox(width: KubusSpacing.xs),
-        _timeLabel(),
-        const SizedBox(width: KubusSpacing.sm),
-        Expanded(child: _timeline()),
-        const SizedBox(width: KubusSpacing.sm),
-        CommunityVideoVolumeControl(
-          audio: widget.audio,
-          showSlider: _hasMouse,
-        ),
-        _fullscreenButton(context),
-      ],
-    );
-  }
-
-  Widget _narrowColumn(BuildContext context) {
+  Widget _compactColumn(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _timeline(),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: _timeLabel(),
+          ),
+        ),
+        _ordered(2, _timeline()),
+        // Wraps rather than overflows in a frame narrower than three targets.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _ordered(1, _playPause(context)),
+            _ordered(
+              3,
+              CommunityVideoVolumeControl(
+                audio: widget.audio,
+                showSlider: false,
+              ),
+            ),
+            _ordered(4, _fullscreenButton(context)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _stackedStrip(BuildContext context, {required bool roomy}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ordered(2, _timeline()),
         Row(
           children: [
-            _playPause(context),
+            _ordered(1, _playPause(context)),
             const SizedBox(width: KubusSpacing.xs),
             // Large text or an hour-long clip shrinks the label rather than
             // pushing the buttons off the strip.
@@ -416,11 +540,14 @@ class _CommunityVideoPlayerSurfaceState
                 ),
               ),
             ),
-            CommunityVideoVolumeControl(
-              audio: widget.audio,
-              showSlider: false,
+            _ordered(
+              3,
+              CommunityVideoVolumeControl(
+                audio: widget.audio,
+                showSlider: _hasMouse && roomy,
+              ),
             ),
-            _fullscreenButton(context),
+            _ordered(4, _fullscreenButton(context)),
           ],
         ),
       ],

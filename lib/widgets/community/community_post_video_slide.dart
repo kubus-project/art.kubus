@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/viewport_visibility.dart';
 import 'community_video_controls.dart';
@@ -35,7 +34,9 @@ class CommunityVideoPlaybackCoordinator {
 /// A playable video inside the media carousel.
 ///
 /// The player is created on first play, not when the page is built, so a feed
-/// does not download every clip. It starts muted, stops at the end with a
+/// does not download every clip. Playback starts from the viewer's own tap, so
+/// it starts with sound at the volume they last chose; if the browser refuses
+/// sound anyway the clip plays muted and says so. It stops at the end with a
 /// replay control instead of looping, and is released as soon as its page is no
 /// longer the active one. While playing it also pauses itself when the post
 /// scrolls out of view, another route covers it, the tab is hidden, or the app
@@ -74,6 +75,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
   bool _failed = false;
   bool _fullscreen = false;
   bool _inlineVideoHidden = false;
+  bool _retriedMuted = false;
   bool _tickersEnabled = true;
   int _generation = 0;
   Route<void>? _fullscreenRoute;
@@ -129,6 +131,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     _stopGuard();
     final controller = _controller;
     controller?.removeListener(_syncGuard);
+    controller?.removeListener(_recoverBlockedSound);
     _controller = null;
     CommunityVideoPlaybackCoordinator.release(controller);
     unawaited(controller?.dispose());
@@ -151,6 +154,36 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
         (_) => _guardTick(),
       );
     }
+  }
+
+  /// Browsers word the refusal differently; none of them put a code in the
+  /// message `video_player` keeps.
+  static final RegExp _blockedSound = RegExp(
+    r"interact|not allowed|user denied|gesture|NotAllowed",
+    caseSensitive: false,
+  );
+
+  /// The browser refused to start the clip with sound (strict autoplay policy,
+  /// or the tap's user activation expired while the clip loaded). Reload it
+  /// muted, once, instead of showing a broken player.
+  void _recoverBlockedSound() {
+    final controller = _controller;
+    if (controller == null || _retriedMuted || _audio.effectiveVolume <= 0) {
+      return;
+    }
+    final value = controller.value;
+    if (!value.hasError || !_blockedSound.hasMatch(value.errorDescription!)) {
+      return;
+    }
+    _retriedMuted = true;
+    _audio.muteForBrowserPolicy();
+    // The controller notifies from inside its own update; restart afterwards.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(_controller, controller)) return;
+      setState(_releaseController);
+      unawaited(_startPlayback(afterBlockedSound: true));
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   void _pauseIfPlaying() {
@@ -179,8 +212,9 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     }
   }
 
-  Future<void> _startPlayback() async {
+  Future<void> _startPlayback({bool afterBlockedSound = false}) async {
     if (_initializing) return;
+    if (!afterBlockedSound) _retriedMuted = false;
     final generation = ++_generation;
     setState(() {
       _initializing = true;
@@ -216,6 +250,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       _initializing = false;
     });
     controller.addListener(_syncGuard);
+    controller.addListener(_recoverBlockedSound);
     await controller.play();
   }
 
@@ -336,7 +371,6 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
   }
 
   Widget _buildIdle(BuildContext context, AppLocalizations l10n) {
-    final roles = KubusColorRoles.of(context);
     final Widget content;
     if (_failed) {
       content = CommunityVideoErrorBlock(onRetry: _retry);
@@ -357,8 +391,10 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _failed ? null : _startPlayback,
-      child: DecoratedBox(
-        decoration: communityVideoStageDecoration(roles),
+      // Before the clip loads its shape is unknown, so there is no player to
+      // frame yet: the slide shows the same neutral stage an image would.
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Center(child: content),
       ),
     );

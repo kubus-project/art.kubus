@@ -20,6 +20,7 @@ import '../../support/fake_video_player_platform.dart';
 
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 const String _clip = 'https://example.test/uploads/clip.mp4';
+const ValueKey<String> _frameKey = ValueKey<String>('community-video-frame');
 const String _otherClip = 'https://example.test/uploads/other.mp4';
 
 Widget _app(
@@ -100,6 +101,7 @@ void main() {
   late VideoPlayerPlatform previous;
 
   setUp(() {
+    CommunityVideoAudio.resetSession();
     CommunityPostVideoSlide.guardInterval = const Duration(milliseconds: 20);
     previous = VideoPlayerPlatform.instance;
     platform = FakeVideoPlayerPlatform();
@@ -107,6 +109,7 @@ void main() {
   });
 
   tearDown(() {
+    CommunityVideoAudio.resetSession();
     CommunityPostVideoSlide.guardInterval = const Duration(milliseconds: 400);
     VideoPlayerPlatform.instance = previous;
   });
@@ -165,7 +168,7 @@ void main() {
       expect(find.byType(CommunityVideoTimeline), findsNothing);
     });
 
-    testPlayer('starts muted, without looping, on the first play',
+    testPlayer('starts audible, without looping, on the first play',
         (tester) async {
       await tester.pumpWidget(_app(_stage(
         const CommunityPostVideoSlide(url: _clip, isActive: true),
@@ -175,7 +178,9 @@ void main() {
       final player = platform.players.values.single;
       expect(player.uri, endsWith('/uploads/clip.mp4'));
       expect(player.playing, isTrue);
-      expect(player.volume, 0);
+      expect(player.volume, 1,
+          reason:
+              'the tap that starts playback is the gesture that allows sound');
       expect(player.looping, isFalse);
     });
 
@@ -468,33 +473,33 @@ void main() {
       );
       var node = tester.getSemantics(volume);
       expect(node.label, _l10n.communityMediaVideoVolume);
-      expect(node.value, '0%');
-      expect(node.increasedValue, '5%');
+      expect(node.value, '100%');
+      expect(node.decreasedValue, '95%');
 
       tester.binding.performSemanticsAction(SemanticsActionEvent(
-        type: SemanticsAction.increase,
+        type: SemanticsAction.decrease,
         nodeId: node.id,
         viewId: tester.view.viewId,
       ));
       await _settle(tester);
       node = tester.getSemantics(volume);
-      expect(node.value, '5%');
-      expect(platform.live.single.volume, closeTo(0.05, 0.001));
+      expect(node.value, '95%');
+      expect(platform.live.single.volume, closeTo(0.95, 0.001));
       semantics.dispose();
     });
 
     testPlayer('mute and unmute change the player volume', (tester) async {
       await playing(tester);
       final player = platform.players.values.single;
-      expect(player.volume, 0);
-
-      await tester.tap(find.byTooltip(_l10n.communityMediaVideoUnmute));
-      await _settle(tester);
       expect(player.volume, 1);
 
       await tester.tap(find.byTooltip(_l10n.communityMediaVideoMute));
       await _settle(tester);
       expect(player.volume, 0);
+
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoUnmute));
+      await _settle(tester);
+      expect(player.volume, 1);
     });
 
     testPlayer('a mouse gets a volume track that keeps its level',
@@ -539,7 +544,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.byTooltip(_l10n.communityMediaVideoUnmute), findsOneWidget);
+      expect(find.byTooltip(_l10n.communityMediaVideoMute), findsOneWidget);
     });
 
     testPlayer('space on the player toggles playback', (tester) async {
@@ -547,8 +552,7 @@ void main() {
       final player = platform.players.values.single;
       // Click the surface (a mouse tap pauses) to focus it, then use the key.
       await tester.tapAt(
-          tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
-              const Offset(20, 20));
+          tester.getTopLeft(find.byKey(_frameKey)) + const Offset(20, 20));
       await _settle(tester);
       expect(player.playing, isFalse);
 
@@ -656,8 +660,7 @@ void main() {
       expect(stripOpacity(tester), 0);
 
       final corner =
-          tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
-              const Offset(20, 20);
+          tester.getTopLeft(find.byKey(_frameKey)) + const Offset(20, 20);
       await tester.tapAt(corner);
       await _settle(tester);
       expect(platform.playingNow, hasLength(1), reason: 'still playing');
@@ -678,8 +681,7 @@ void main() {
 
       // A mouse tap on the surface pauses it; the strip must come back and stay.
       await tester.tapAt(
-        tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
-            const Offset(20, 20),
+        tester.getTopLeft(find.byKey(_frameKey)) + const Offset(20, 20),
         kind: PointerDeviceKind.mouse,
       );
       await _settle(tester);
@@ -758,7 +760,7 @@ void main() {
         expect(view, findsOneWidget);
         expect(platform.players, hasLength(1));
         expect(player.seeks, isEmpty);
-        expect(player.volume, 0);
+        expect(player.volume, 1);
       }
     });
     testPlayer('expands the same player, keeps playing, and returns',
@@ -869,8 +871,7 @@ void main() {
       await startPlayback(tester);
       // Focus the player surface itself (not the timeline).
       await tester.tapAt(
-          tester.getTopLeft(find.byType(CommunityVideoPlayerSurface)) +
-              const Offset(20, 20));
+          tester.getTopLeft(find.byKey(_frameKey)) + const Offset(20, 20));
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -914,7 +915,7 @@ void main() {
       expect(order, <String>[
         'button:${_l10n.communityMediaVideoPause}',
         'slider:${_l10n.communityMediaVideoSeek}',
-        'button:${_l10n.communityMediaVideoUnmute}',
+        'button:${_l10n.communityMediaVideoMute}',
         'slider:${_l10n.communityMediaVideoVolume}',
         'button:${_l10n.communityMediaVideoFullscreen}',
       ]);
@@ -959,21 +960,19 @@ void main() {
         // No RenderFlex overflow is reported as a test exception.
         expect(tester.takeException(), isNull);
         expect(find.text('0:00 / 1:02:03'), findsOneWidget);
+        final frame = tester.getRect(find.byKey(_frameKey));
         for (final tooltip in <String>[
           _l10n.communityMediaVideoPause,
-          _l10n.communityMediaVideoUnmute,
+          _l10n.communityMediaVideoMute,
           _l10n.communityMediaVideoFullscreen,
         ]) {
           final rect = tester.getRect(find.byTooltip(tooltip));
-          expect(
-              rect.right,
-              lessThanOrEqualTo(tester
-                      .getRect(
-                        find.byType(CommunityVideoPlayerSurface),
-                      )
-                      .right +
-                  0.5),
-              reason: '$tooltip stays inside the stage');
+          expect(rect.left, greaterThanOrEqualTo(frame.left - 0.5),
+              reason: '$tooltip stays inside the video');
+          expect(rect.right, lessThanOrEqualTo(frame.right + 0.5),
+              reason: '$tooltip stays inside the video');
+          expect(rect.bottom, lessThanOrEqualTo(frame.bottom + 0.5),
+              reason: '$tooltip stays inside the video');
           expect(rect.width, KubusSizes.mediaControlTarget);
         }
       });
