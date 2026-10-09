@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -72,6 +71,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
   bool _initializing = false;
   bool _failed = false;
   bool _fullscreen = false;
+  bool _inlineVideoHidden = false;
   bool _tickersEnabled = true;
   int _generation = 0;
   Route<void>? _fullscreenRoute;
@@ -246,10 +246,18 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     );
     _fullscreenRoute = route;
     _fullscreenNavigator = navigator;
-    setState(() => _fullscreen = true);
+    setState(() {
+      _fullscreen = true;
+      _inlineVideoHidden = true;
+    });
     await navigator.push<void>(route);
     _fullscreenRoute = null;
     _fullscreenNavigator = null;
+    // Put the feed view back as soon as the route is popped, while the expanded
+    // view is still fading out. A browser pauses a <video> that is detached from
+    // the page, so the clip must move from one view to the other without a
+    // frame in between.
+    if (mounted) setState(() => _inlineVideoHidden = false);
     // The feed route is re-enabled on the frame after the pop. Until then it
     // still reads as covered, which the guard would take for navigating away.
     await WidgetsBinding.instance.endOfFrame;
@@ -268,7 +276,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
           : CommunityVideoPlayerSurface(
               controller: controller,
               audio: _audio,
-              showVideo: !_fullscreen,
+              showVideo: !_inlineVideoHidden,
               onTogglePlayback: _togglePlayback,
               onReplay: _replay,
               onRetry: _retry,
@@ -304,8 +312,8 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _failed ? null : _startPlayback,
-      child: ColoredBox(
-        color: roles.surface,
+      child: DecoratedBox(
+        decoration: communityVideoStageDecoration(roles),
         child: Center(child: content),
       ),
     );

@@ -177,8 +177,8 @@ class _CommunityVideoPlayerSurfaceState
           _hovering = true;
         }),
         onExit: (_) => setState(() => _hovering = false),
-        child: ColoredBox(
-          color: roles.surface,
+        child: DecoratedBox(
+          decoration: communityVideoStageDecoration(roles),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -402,6 +402,14 @@ class _CommunityVideoPlayerSurfaceState
   }
 }
 
+/// The media stage: the page ground, so a clip that has not loaded still reads
+/// as a stage inside its card, with the structural hairline around it.
+BoxDecoration communityVideoStageDecoration(KubusColorRoles roles) =>
+    BoxDecoration(
+      color: roles.ground,
+      border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+    );
+
 class _BusyIndicator extends StatelessWidget {
   const _BusyIndicator();
 
@@ -441,6 +449,7 @@ class CommunityVideoTimeLabel extends StatelessWidget {
             final duration =
                 known ? formatCommunityVideoTime(value.duration) : '--:--';
             return Semantics(
+              container: true,
               label: l10n.communityMediaVideoTime(position, duration),
               excludeSemantics: true,
               child: Text(
@@ -701,6 +710,7 @@ class _CommunityMediaSliderState extends State<CommunityMediaSlider> {
     final shown = _dragging ? _dragFraction : widget.value;
 
     return Semantics(
+      container: true,
       slider: true,
       enabled: enabled,
       label: widget.semanticLabel,
@@ -944,27 +954,36 @@ class CommunityVideoControlButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: Icon(icon, size: KubusSizes.mediaControlIcon),
-      style: IconButton.styleFrom(
-        foregroundColor: roles.foreground,
-        disabledForegroundColor: roles.foregroundSubtle,
-        hoverColor: roles.foreground.withValues(alpha: 0.08),
-        highlightColor: roles.foreground.withValues(alpha: 0.14),
-        focusColor: roles.foreground.withValues(alpha: 0.08),
-        fixedSize: const Size.square(KubusSizes.mediaControlTarget),
-        minimumSize: const Size.square(KubusSizes.mediaControlTarget),
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.control),
+    return Tooltip(
+      message: tooltip,
+      // The icon carries the accessible name; the tooltip would repeat it.
+      excludeFromSemantics: true,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          size: KubusSizes.mediaControlIcon,
+          semanticLabel: tooltip,
         ),
-      ).copyWith(
-        side: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.focused)
-              ? BorderSide(color: roles.focus, width: 2)
-              : null,
+        style: IconButton.styleFrom(
+          foregroundColor: roles.foreground,
+          disabledForegroundColor: roles.foregroundSubtle,
+          hoverColor: roles.foreground.withValues(alpha: 0.08),
+          highlightColor: roles.foreground.withValues(alpha: 0.14),
+          focusColor: roles.foreground.withValues(alpha: 0.08),
+          fixedSize: const Size.square(KubusSizes.mediaControlTarget),
+          minimumSize: const Size.square(KubusSizes.mediaControlTarget),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.control),
+          ),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.focused)
+                ? BorderSide(color: roles.focus, width: 2)
+                : null,
+          ),
         ),
       ),
     );
@@ -987,30 +1006,38 @@ class CommunityVideoLargeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: Icon(icon, size: KubusSizes.mediaPlayLargeIcon),
-      style: IconButton.styleFrom(
-        foregroundColor: roles.active,
-        backgroundColor: roles.surfaceOverlay,
-        hoverColor: roles.active.withValues(alpha: 0.12),
-        highlightColor: roles.active.withValues(alpha: 0.2),
-        focusColor: roles.active.withValues(alpha: 0.12),
-        fixedSize: const Size.square(KubusSizes.mediaPlayLarge),
-        minimumSize: const Size.square(KubusSizes.mediaPlayLarge),
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-          side: BorderSide(color: roles.ruleStrong),
+    return Tooltip(
+      message: tooltip,
+      excludeFromSemantics: true,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          size: KubusSizes.mediaPlayLargeIcon,
+          semanticLabel: tooltip,
         ),
-      ).copyWith(
-        side: WidgetStateProperty.resolveWith(
-          (states) => BorderSide(
-            color: states.contains(WidgetState.focused)
-                ? roles.focus
-                : roles.ruleStrong,
-            width: states.contains(WidgetState.focused) ? 2 : 1,
+        style: IconButton.styleFrom(
+          foregroundColor: roles.active,
+          backgroundColor: roles.surfaceOverlay,
+          hoverColor: roles.active.withValues(alpha: 0.12),
+          highlightColor: roles.active.withValues(alpha: 0.2),
+          focusColor: roles.active.withValues(alpha: 0.12),
+          fixedSize: const Size.square(KubusSizes.mediaPlayLarge),
+          minimumSize: const Size.square(KubusSizes.mediaPlayLarge),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            side: BorderSide(color: roles.ruleStrong),
+          ),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith(
+            (states) => BorderSide(
+              color: states.contains(WidgetState.focused)
+                  ? roles.focus
+                  : roles.ruleStrong,
+              width: states.contains(WidgetState.focused) ? 2 : 1,
+            ),
           ),
         ),
       ),

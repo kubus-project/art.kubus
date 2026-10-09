@@ -293,9 +293,8 @@ class KubusSizes {
 
   // --- Media player chrome (Community video) ---
 
-  /// Hit target of a media control. Meets the 44dp touch guideline once the
-  /// [KubusSpacing.xxs] gutter between neighbours is added.
-  static const double mediaControlTarget = 40.0;
+  /// Hit target of a media control (the 44dp touch guideline).
+  static const double mediaControlTarget = 44.0;
 
   /// Icon inside a media control.
   static const double mediaControlIcon = 22.0;
