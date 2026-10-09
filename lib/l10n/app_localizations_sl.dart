@@ -4324,6 +4324,11 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String artworkDocumentedByLabel(Object contributor) {
+    return 'Dokumentiral/a $contributor';
+  }
+
+  @override
   String commonKub8PointsReward(Object points) {
     return '+$points priznanja KUB8';
   }

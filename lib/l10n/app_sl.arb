@@ -1516,6 +1516,12 @@
       "artist": {}
     }
   },
+  "artworkDocumentedByLabel": "Dokumentiral/a {contributor}",
+  "@artworkDocumentedByLabel": {
+    "placeholders": {
+      "contributor": {}
+    }
+  },
   "commonKub8PointsReward": "+{points} priznanja KUB8",
   "@commonKub8PointsReward": {
     "placeholders": {

@@ -10838,6 +10838,33 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       json['publicRegistry'] ?? json['public_registry'],
     );
     addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
+    // Who documented the work (the responsible account) is separate from who
+    // made it. `contributor` is never the byline; a verified artist claim is
+    // the only identity that links the recorded artist name to a profile.
+    final contributor = json['contributor'];
+    if (contributor is Map) addMeta('contributor', contributor);
+    final verifiedArtist = json['verifiedArtist'];
+    if (verifiedArtist is Map) {
+      addMeta('verifiedArtist', verifiedArtist);
+      final profileId = verifiedArtist['profileId']?.toString().trim() ?? '';
+      final name = (verifiedArtist['displayName'] ??
+              verifiedArtist['username'] ??
+              '')
+          .toString()
+          .trim();
+      if (profileId.isNotEmpty && name.isNotEmpty) {
+        metadata.putIfAbsent(
+          'artists',
+          () => <Map<String, dynamic>>[
+            <String, dynamic>{
+              'userId': profileId,
+              'displayName': name,
+              'username': verifiedArtist['username'],
+            },
+          ],
+        );
+      }
+    }
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
     // Image attribution (photographer / licence), surfaced in detail screens.

@@ -1552,6 +1552,12 @@
       "artist": {}
     }
   },
+  "artworkDocumentedByLabel": "Documented by {contributor}",
+  "@artworkDocumentedByLabel": {
+    "placeholders": {
+      "contributor": {}
+    }
+  },
   "commonKub8PointsReward": "+{points} KUB8 recognition",
   "@commonKub8PointsReward": {
     "placeholders": {

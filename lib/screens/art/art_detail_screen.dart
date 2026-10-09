@@ -8,6 +8,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/artwork_contributor_line.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -548,6 +549,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
+          artwork: artwork,
+          style: DetailTypography.caption(context),
+        ),
+        ArtworkContributorLine(
           artwork: artwork,
           style: DetailTypography.caption(context),
         ),

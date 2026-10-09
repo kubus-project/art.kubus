@@ -7645,6 +7645,12 @@ abstract class AppLocalizations {
   /// **'by {artist}'**
   String commonByArtist(Object artist);
 
+  /// No description provided for @artworkDocumentedByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Documented by {contributor}'**
+  String artworkDocumentedByLabel(Object contributor);
+
   /// No description provided for @commonKub8PointsReward.
   ///
   /// In en, this message translates to:
