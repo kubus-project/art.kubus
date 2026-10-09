@@ -26,6 +26,7 @@ import '../../../config/config.dart';
 import '../../../models/creator_workspace.dart';
 import '../../../models/dao.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/creator_workspace_navigation.dart';
 import '../../../widgets/creator/creator_workspace_discovery_panel.dart';
 import '../../../models/promotion.dart';
@@ -67,6 +68,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   String _lastReviewWallet = '';
   bool _hasSetInitialTabByPersona = false;
   final TextEditingController _organizationController = TextEditingController();
+  bool _capabilityViewTracked = false;
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _missionController = TextEditingController();
   final TextEditingController _focusController = TextEditingController();
@@ -78,6 +80,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
     _checkOnboarding();
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => _loadInstitutionReviewStatus(forceRefresh: true));
+    _refreshBackendContract();
+  }
+
+  /// Learns whether applications are account-authorised (no wallet) and, if so,
+  /// loads the caller's own applications. Re-renders either way.
+  Future<void> _refreshBackendContract() async {
+    final supported =
+        await BackendApiService().ensureWalletOptionalCreatorKnown();
+    if (!mounted) return;
+    if (supported && BackendApiService().hasAuthSession) {
+      await _loadInstitutionReviewStatus(forceRefresh: true);
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -96,7 +111,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
     }
 
     if (!walletChanged && _hasFetchedReviewForWallet) return;
-    if (wallet.isNotEmpty) {
+    if (wallet.isNotEmpty ||
+        (BackendApiService().walletOptionalCreatorSupported &&
+            BackendApiService().hasAuthSession)) {
       _loadInstitutionReviewStatus(forceRefresh: true);
     }
   }
@@ -165,6 +182,25 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
+    if (BackendApiService().walletOptionalCreatorSupported) {
+      // Account-keyed: works with or without a wallet.
+      if (_reviewLoading || !BackendApiService().hasAuthSession) return;
+      setState(() => _reviewLoading = true);
+      try {
+        await context.read<DAOProvider>().loadMyApplications();
+      } finally {
+        // `_hasFetchedReviewForWallet` also gates didChangeDependencies, which
+        // fires on every DAOProvider notification: without it each load would
+        // trigger the next one.
+        if (mounted) {
+          setState(() {
+            _reviewLoading = false;
+            _hasFetchedReviewForWallet = true;
+          });
+        }
+      }
+      return;
+    }
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
     if (!forceRefresh &&
@@ -217,8 +253,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final l10n = AppLocalizations.of(context)!;
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _institutionReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    // With account-authorised applications each role has its own review, so a
+    // review for the other role never blocks this workspace.
+    final accountApps = BackendApiService().walletOptionalCreatorSupported;
+    final review = accountApps
+        ? daoProvider.myReviewFor(DaoRoleType.institution)
+        : (_institutionReview ??
+            (wallet.isNotEmpty
+                ? daoProvider.findReviewForWallet(wallet)
+                : null));
     final verification = DaoRoleVerification(
       walletAddress: wallet,
       review: review,
@@ -230,8 +273,20 @@ class _InstitutionHubState extends State<InstitutionHub> {
       hasUsableProfile: profileProvider.hasUsablePublicProfile,
       walletAddress: wallet,
       review: review,
-      profileGrantsRole: profileProvider.currentUser?.isInstitution ?? false,
+      profileGrantsRole:
+          (profileProvider.currentUser?.isInstitution ?? false) ||
+              daoProvider.hasServerCapability(DaoRoleType.institution),
+      accountApplications: accountApps,
     );
+    if (!_capabilityViewTracked) {
+      _capabilityViewTracked = true;
+      try {
+        unawaited(TelemetryService().trackCreatorCapabilityViewed(
+          capability: 'institution',
+          stage: stage.name,
+        ));
+      } catch (_) {}
+    }
     final isDiscover = stage == CreatorWorkspaceStage.discover;
     final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
     final isApprovedInstitution = stage.isOpen;
@@ -771,27 +826,32 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         final walletProvider = context.read<WalletProvider>();
                         final web3Provider = context.read<Web3Provider>();
                         final daoProvider = context.read<DAOProvider>();
-                        final wallet =
-                            profileProvider.currentUser?.walletAddress ??
-                                web3Provider.walletAddress;
-                        if (wallet.isEmpty) {
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.institutionHubApplicationWalletRequired,
+                        // Account-authorised applications need no wallet and
+                        // no signer. Only an older backend still takes a
+                        // wallet-signed application.
+                        if (!daoProvider.accountApplicationsSupported) {
+                          final wallet =
+                              profileProvider.currentUser?.walletAddress ??
+                                  web3Provider.walletAddress;
+                          if (wallet.isEmpty) {
+                            scaffold.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.institutionHubApplicationWalletRequired,
+                                ),
                               ),
-                            ),
+                            );
+                            return;
+                          }
+                          final canProceed =
+                              await WalletActionGuard.ensureSignerAccess(
+                            context: context,
+                            profileProvider: profileProvider,
+                            walletProvider: walletProvider,
                           );
-                          return;
-                        }
-                        final canProceed =
-                            await WalletActionGuard.ensureSignerAccess(
-                          context: context,
-                          profileProvider: profileProvider,
-                          walletProvider: walletProvider,
-                        );
-                        if (!mounted || !canProceed) {
-                          return;
+                          if (!mounted || !canProceed) {
+                            return;
+                          }
                         }
                         sheetNavigator.pop();
                         try {
@@ -815,8 +875,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
                                 review != null
                                     ? l10n
                                         .institutionHubApplicationSubmittedToast
-                                    : l10n
-                                        .institutionHubApplicationSubmitUnavailableToast,
+                                    : daoProvider.lastApplicationErrorCode ==
+                                            'PROFILE_INCOMPLETE'
+                                        ? l10n
+                                            .creatorApplicationProfileIncompleteToast
+                                        : l10n
+                                            .institutionHubApplicationSubmitUnavailableToast,
                               ),
                               backgroundColor: review != null
                                   ? roles.positiveAction

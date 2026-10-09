@@ -17705,6 +17705,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Applications are signed with a wallet. Create or link one, then submit your application here.';
 
   @override
+  String get creatorApplicationProfileIncompleteToast =>
+      'Add your public name to your profile before applying.';
+
+  @override
   String get homeCreateSectionTitle => 'Create and organize';
 
   @override

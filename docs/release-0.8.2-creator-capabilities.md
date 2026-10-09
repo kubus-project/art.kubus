@@ -1,5 +1,9 @@
 # art.kubus 0.8.2: creator capabilities
 
+> **Update:** the wallet requirements below describe the backend as of this
+> slice. They are superseded, behind a backend contract check, by
+> [`release-0.8.2-wallet-optional-creator.md`](release-0.8.2-wallet-optional-creator.md).
+
 Status: **draft, not released.** This slice belongs to 0.8.2. Version files
 are bumped in the release-preparation commit, not here.
 

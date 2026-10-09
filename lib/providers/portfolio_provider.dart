@@ -16,6 +16,10 @@ class PortfolioProvider extends ChangeNotifier {
       : _api = api ?? BackendApiService();
 
   String _walletAddress = '';
+
+  /// True when the portfolio is loaded for the signed-in account instead of a
+  /// wallet: a wallet-free artist's work is owned by the account.
+  bool _accountScope = false;
   ArtworkProvider? _artworkProvider;
   AppRefreshProvider? _appRefreshProvider;
   int _lastPortfolioRefreshVersion = -1;
@@ -29,6 +33,7 @@ class PortfolioProvider extends ChangeNotifier {
   List<PortfolioEntry>? _cachedEntries;
 
   String get walletAddress => _walletAddress;
+  bool get accountScope => _accountScope;
   bool get isLoading => _loading;
   String? get error => _error;
 
@@ -71,7 +76,10 @@ class PortfolioProvider extends ChangeNotifier {
 
   void _handleAppRefreshChanged() {
     final appRefreshProvider = _appRefreshProvider;
-    if (appRefreshProvider == null || _walletAddress.isEmpty) return;
+    if (appRefreshProvider == null ||
+        (_walletAddress.isEmpty && !_accountScope)) {
+      return;
+    }
     final currentVersion = appRefreshProvider.portfolioVersion;
     if (currentVersion > _lastPortfolioRefreshVersion) {
       _lastPortfolioRefreshVersion = currentVersion;
@@ -109,12 +117,22 @@ class PortfolioProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads the portfolio for the signed-in account (no wallet needed). Call
+  /// only when the backend authorises creator reads by account.
+  void setAccountScope(bool enabled) {
+    if (_accountScope == enabled) return;
+    _accountScope = enabled;
+    if (enabled && _walletAddress.isEmpty && !_loading) {
+      Future.microtask(() => refresh(force: true));
+    }
+  }
+
   void setWalletAddress(String? walletAddress) {
     final next = (walletAddress ?? '').trim();
 
     if (next == _walletAddress) {
       // Wallet didn't change, but ensure we have data if this is the first time
-      if (_walletAddress.isNotEmpty &&
+      if ((_walletAddress.isNotEmpty || _accountScope) &&
           _artworks.isEmpty &&
           _collections.isEmpty &&
           _exhibitions.isEmpty &&
@@ -134,7 +152,7 @@ class PortfolioProvider extends ChangeNotifier {
     _cachedEntries = null;
     notifyListeners();
 
-    if (_walletAddress.isNotEmpty) {
+    if (_walletAddress.isNotEmpty || _accountScope) {
       // Avoid doing work in widget build; schedule microtask.
       Future.microtask(() => refresh(force: true));
     }
@@ -148,7 +166,7 @@ class PortfolioProvider extends ChangeNotifier {
 
   Future<void> refresh({bool force = false}) async {
     if (_loading) return;
-    if (_walletAddress.isEmpty) return;
+    if (_walletAddress.isEmpty && !_accountScope) return;
 
     _loading = true;
     _error = null;
@@ -200,12 +218,14 @@ class PortfolioProvider extends ChangeNotifier {
     final results = <Artwork>[];
 
     for (var page = 1; page <= maxPages; page++) {
-      final batch = await _api.getArtworks(
-        page: page,
-        limit: pageSize,
-        walletAddress: walletAddress,
-        includePrivateForWallet: true,
-      );
+      final batch = walletAddress.isEmpty
+          ? await _api.getMyArtworks(page: page, limit: pageSize)
+          : await _api.getArtworks(
+              page: page,
+              limit: pageSize,
+              walletAddress: walletAddress,
+              includePrivateForWallet: true,
+            );
       results.addAll(batch);
       if (batch.length < pageSize) break;
     }
@@ -220,11 +240,13 @@ class PortfolioProvider extends ChangeNotifier {
     final results = <CollectionRecord>[];
 
     for (var page = 1; page <= maxPages; page++) {
-      final batch = await _api.getCollections(
-        walletAddress: walletAddress,
-        page: page,
-        limit: pageSize,
-      );
+      final batch = walletAddress.isEmpty
+          ? await _api.getMyCollections(page: page, limit: pageSize)
+          : await _api.getCollections(
+              walletAddress: walletAddress,
+              page: page,
+              limit: pageSize,
+            );
       results.addAll(batch.map(CollectionRecord.fromMap));
       if (batch.length < pageSize) break;
     }

@@ -7387,6 +7387,7 @@
   "creatorWorkspaceCompleteProfileDetail": "Applications are reviewed under your public name. Add it to your profile first.",
   "creatorWorkspaceLinkWalletCta": "Create or link a wallet to apply",
   "creatorWorkspaceLinkWalletDetail": "Applications are signed with a wallet. Create or link one, then submit your application here.",
+  "creatorApplicationProfileIncompleteToast": "Add your public name to your profile before applying.",
   "homeCreateSectionTitle": "Create and organize",
   "homeCapabilityStatusOpen": "Open",
   "homeCapabilityStatusPending": "In review",

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -28,6 +29,7 @@ import '../../../utils/dao_role_verification.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/creator_workspace_navigation.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/creator/creator_workspace_discovery_panel.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
@@ -89,6 +91,7 @@ class ArtistStudio extends StatefulWidget {
 }
 
 class _ArtistStudioState extends State<ArtistStudio> {
+  bool _capabilityViewTracked = false;
   int _selectedIndex = 0;
   DAOReview? _artistReview;
   bool _reviewLoading = false;
@@ -100,6 +103,19 @@ class _ArtistStudioState extends State<ArtistStudio> {
   void initState() {
     super.initState();
     _checkOnboarding();
+    _refreshBackendContract();
+  }
+
+  /// Learns whether applications are account-authorised (no wallet) and, if so,
+  /// loads the caller's own applications. Re-renders either way.
+  Future<void> _refreshBackendContract() async {
+    final supported =
+        await BackendApiService().ensureWalletOptionalCreatorKnown();
+    if (!mounted) return;
+    if (supported && BackendApiService().hasAuthSession) {
+      await _loadArtistReviewStatus(forceRefresh: true);
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -130,7 +146,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
       _hasFetchedReviewForWallet = cachedReview != null;
     });
 
-    if (wallet.isNotEmpty) {
+    if (wallet.isNotEmpty ||
+        (BackendApiService().walletOptionalCreatorSupported &&
+            BackendApiService().hasAuthSession)) {
       _loadArtistReviewStatus(forceRefresh: true);
     }
   }
@@ -189,6 +207,25 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Future<void> _loadArtistReviewStatus({bool forceRefresh = false}) async {
+    if (BackendApiService().walletOptionalCreatorSupported) {
+      // Account-keyed: works with or without a wallet.
+      if (_reviewLoading || !BackendApiService().hasAuthSession) return;
+      setState(() => _reviewLoading = true);
+      try {
+        await context.read<DAOProvider>().loadMyApplications();
+      } finally {
+        // `_hasFetchedReviewForWallet` also gates didChangeDependencies, which
+        // fires on every DAOProvider notification: without it each load would
+        // trigger the next one.
+        if (mounted) {
+          setState(() {
+            _reviewLoading = false;
+            _hasFetchedReviewForWallet = true;
+          });
+        }
+      }
+      return;
+    }
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
     if (!forceRefresh &&
@@ -233,8 +270,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final l10n = AppLocalizations.of(context)!;
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _artistReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    // With account-authorised applications each role has its own review, so a
+    // review for the other role never blocks this workspace.
+    final accountApps = BackendApiService().walletOptionalCreatorSupported;
+    final review = accountApps
+        ? daoProvider.myReviewFor(DaoRoleType.artist)
+        : (_artistReview ??
+            (wallet.isNotEmpty
+                ? daoProvider.findReviewForWallet(wallet)
+                : null));
     final verification = DaoRoleVerification(
       walletAddress: wallet,
       review: review,
@@ -246,8 +290,19 @@ class _ArtistStudioState extends State<ArtistStudio> {
       hasUsableProfile: profileProvider.hasUsablePublicProfile,
       walletAddress: wallet,
       review: review,
-      profileGrantsRole: profileProvider.currentUser?.isArtist ?? false,
+      profileGrantsRole: (profileProvider.currentUser?.isArtist ?? false) ||
+          daoProvider.hasServerCapability(DaoRoleType.artist),
+      accountApplications: accountApps,
     );
+    if (!_capabilityViewTracked) {
+      _capabilityViewTracked = true;
+      try {
+        unawaited(TelemetryService().trackCreatorCapabilityViewed(
+          capability: 'artist',
+          stage: stage.name,
+        ));
+      } catch (_) {}
+    }
     final isDiscover = stage == CreatorWorkspaceStage.discover;
     final isApprovedArtist = stage.isOpen;
     final hasInstitutionBadge =
@@ -811,27 +866,33 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                   final roles = KubusColorRoles.of(context);
                                   final successColor = roles.positiveAction;
                                   final errorColor = roles.negativeAction;
-                                  final wallet = profileProvider
-                                          .currentUser?.walletAddress ??
-                                      web3Provider.walletAddress;
-                                  if (wallet.isEmpty) {
-                                    scaffold.showKubusSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          l10n.artistStudioApplicationWalletRequiredToast,
+                                  // Account-authorised applications need no
+                                  // wallet and no signer. Only an older backend
+                                  // still takes a wallet-signed application.
+                                  if (!daoProvider
+                                      .accountApplicationsSupported) {
+                                    final wallet = profileProvider
+                                            .currentUser?.walletAddress ??
+                                        web3Provider.walletAddress;
+                                    if (wallet.isEmpty) {
+                                      scaffold.showKubusSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.artistStudioApplicationWalletRequiredToast,
+                                          ),
                                         ),
-                                      ),
+                                      );
+                                      return;
+                                    }
+                                    final canProceed = await WalletActionGuard
+                                        .ensureSignerAccess(
+                                      context: context,
+                                      profileProvider: profileProvider,
+                                      walletProvider: walletProvider,
                                     );
-                                    return;
-                                  }
-                                  final canProceed = await WalletActionGuard
-                                      .ensureSignerAccess(
-                                    context: context,
-                                    profileProvider: profileProvider,
-                                    walletProvider: walletProvider,
-                                  );
-                                  if (!mounted || !canProceed) {
-                                    return;
+                                    if (!mounted || !canProceed) {
+                                      return;
+                                    }
                                   }
                                   setModalState(() => isSubmitting = true);
                                   try {
@@ -864,8 +925,13 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                           review != null
                                               ? l10n
                                                   .artistStudioApplicationSubmittedToast
-                                              : l10n
-                                                  .artistStudioApplicationUnableToSubmitToast,
+                                              : daoProvider
+                                                          .lastApplicationErrorCode ==
+                                                      'PROFILE_INCOMPLETE'
+                                                  ? l10n
+                                                      .creatorApplicationProfileIncompleteToast
+                                                  : l10n
+                                                      .artistStudioApplicationUnableToSubmitToast,
                                         ),
                                         backgroundColor: review != null
                                             ? successColor

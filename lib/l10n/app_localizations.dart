@@ -30701,6 +30701,12 @@ abstract class AppLocalizations {
   /// **'Applications are signed with a wallet. Create or link one, then submit your application here.'**
   String get creatorWorkspaceLinkWalletDetail;
 
+  /// No description provided for @creatorApplicationProfileIncompleteToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your public name to your profile before applying.'**
+  String get creatorApplicationProfileIncompleteToast;
+
   /// No description provided for @homeCreateSectionTitle.
   ///
   /// In en, this message translates to:

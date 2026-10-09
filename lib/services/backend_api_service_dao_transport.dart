@@ -254,6 +254,83 @@ Future<Map<String, dynamic>?> _backendApiSubmitDAOReview(
   }
 }
 
+/// Submits an artist or institution application as an authenticated account.
+///
+/// No wallet and no signed envelope: the backend only records a *pending*
+/// application for the session's account and never grants a role from it.
+/// Throws [BackendApiRequestException] for non-2xx answers so callers can map
+/// the bounded `errorCode` (for example `PROFILE_INCOMPLETE`).
+Future<Map<String, dynamic>?> _backendApiSubmitAccountDAOReview(
+  BackendApiService service, {
+  required String role,
+  required String portfolioUrl,
+  required String medium,
+  required String statement,
+  String? title,
+  Map<String, dynamic>? metadata,
+}) async {
+  try {
+    await service._ensureAuthBeforeRequest();
+    final uri = Uri.parse('${service.baseUrl}/api/dao/reviews/account');
+    final body = jsonEncode(<String, dynamic>{
+      'role': role,
+      'portfolioUrl': portfolioUrl,
+      'medium': medium,
+      'statement': statement,
+      if (title != null && title.isNotEmpty) 'title': title,
+      if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
+    });
+    final response = await service._post(
+      uri,
+      headers: service._getHeaders(),
+      body: body,
+    );
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      if (response.body.isEmpty) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final payload = data['data'];
+      return payload is Map<String, dynamic> ? payload : null;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint('BackendApiService.submitAccountDAOReview failed: $e');
+    rethrow;
+  }
+}
+
+/// The caller's own applications (per role) and approved capabilities.
+/// Works without a wallet; also finds legacy wallet-keyed reviews.
+Future<Map<String, dynamic>?> _backendApiGetMyCreatorStatus(
+  BackendApiService service,
+) async {
+  try {
+    await service._ensureAuthBeforeRequest();
+    final uri = Uri.parse('${service.baseUrl}/api/dao/reviews/mine');
+    final response = await service._get(
+      uri,
+      headers: service._getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final payload = data['data'];
+      return payload is Map<String, dynamic> ? payload : null;
+    }
+    if (response.statusCode == 404 || response.statusCode == 401) return null;
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint('BackendApiService.getMyCreatorStatus failed: $e');
+    rethrow;
+  }
+}
+
 Future<List<Map<String, dynamic>>> _backendApiGetDAOReviews(
   BackendApiService service, {
   int limit = 50,
