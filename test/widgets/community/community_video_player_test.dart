@@ -2,11 +2,13 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_video_slide.dart';
 import 'package:art_kubus/widgets/community/community_video_controls.dart';
 import 'package:art_kubus/widgets/community/community_video_fullscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meta/meta.dart';
@@ -427,6 +429,29 @@ void main() {
       semantics.dispose();
     });
 
+    testPlayer('the volume track announces its level and steps by five percent',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await playing(tester);
+      final volume = find.byWidgetPredicate(
+        (w) =>
+            w is CommunityMediaSlider &&
+            w.semanticLabel == _l10n.communityMediaVideoVolume,
+      );
+      var node = tester.getSemantics(volume);
+      expect(node.label, _l10n.communityMediaVideoVolume);
+      expect(node.value, '0%');
+      expect(node.increasedValue, '5%');
+
+      tester.binding.pipelineOwner.semanticsOwner!
+          .performAction(node.id, SemanticsAction.increase);
+      await _settle(tester);
+      node = tester.getSemantics(volume);
+      expect(node.value, '5%');
+      expect(platform.live.single.volume, closeTo(0.05, 0.001));
+      semantics.dispose();
+    });
+
     testPlayer('mute and unmute change the player volume', (tester) async {
       await playing(tester);
       final player = platform.players.values.single;
@@ -786,6 +811,68 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
       expect(find.text('2 / 2'), findsOneWidget);
+    });
+  });
+
+  group('keyboard focus', () {
+    testPlayer('Tab walks play, timeline, volume, full screen in order',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      // A mouse over the stage reveals the controls and the volume track.
+      final hoverGesture = await _hover(
+        tester,
+        find.byType(CommunityVideoPlayerSurface),
+      );
+
+      String? labelOf(BuildContext context) {
+        final slider =
+            context.findAncestorWidgetOfExactType<CommunityMediaSlider>();
+        if (slider != null) return 'slider:${slider.semanticLabel}';
+        final icon = context.findAncestorWidgetOfExactType<Tooltip>();
+        return icon == null ? null : 'button:${icon.message}';
+      }
+
+      final order = <String>[];
+      for (var i = 0; i < 12; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focus = FocusManager.instance.primaryFocus?.context;
+        final label = focus == null ? null : labelOf(focus);
+        if (label != null && !order.contains(label)) order.add(label);
+      }
+      await hoverGesture.removePointer();
+
+      expect(order, <String>[
+        'button:${_l10n.communityMediaVideoPause}',
+        'slider:${_l10n.communityMediaVideoSeek}',
+        'button:${_l10n.communityMediaVideoUnmute}',
+        'slider:${_l10n.communityMediaVideoVolume}',
+        'button:${_l10n.communityMediaVideoFullscreen}',
+      ]);
+    });
+
+    testPlayer('the focus ring uses the focus role on a focused control',
+        (tester) async {
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+      )));
+      await startPlayback(tester);
+      await _hover(tester, find.byType(CommunityVideoPlayerSurface));
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+
+      final button = tester.widget<IconButton>(find.descendant(
+        of: find.byTooltip(_l10n.communityMediaVideoPause),
+        matching: find.byType(IconButton),
+      ));
+      final side = button.style!.side!.resolve(<WidgetState>{
+        WidgetState.focused,
+      });
+      expect(side!.color, KubusColorRoles.light.focus);
+      expect(side.width, 2);
     });
   });
 
