@@ -20,11 +20,15 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../models/creator_workspace.dart';
 import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/creator_workspace_navigation.dart';
+import '../../../services/backend_api_service.dart';
+import '../../../widgets/creator/creator_workspace_discovery_panel.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -132,6 +136,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Future<void> _checkOnboarding() async {
+    // A visitor without an account reads the discovery panel instead; the
+    // feature tour stays one tap away behind the help action.
+    if (!BackendApiService().hasAuthSession) return;
     if (await isOnboardingNeeded(ArtistStudioOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
@@ -232,13 +239,22 @@ class _ArtistStudioState extends State<ArtistStudio> {
       walletAddress: wallet,
       review: review,
     );
-    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
+    final profileProvider = context.watch<ProfileProvider>();
+    final stage = resolveCreatorWorkspaceStage(
+      workspace: CreatorWorkspace.artistStudio,
+      hasAccountSession: BackendApiService().hasAuthSession,
+      hasUsableProfile: profileProvider.hasUsablePublicProfile,
+      walletAddress: wallet,
+      review: review,
+      profileGrantsRole: profileProvider.currentUser?.isArtist ?? false,
+    );
+    final isDiscover = stage == CreatorWorkspaceStage.discover;
+    final isApprovedArtist = stage.isOpen;
     final hasInstitutionBadge =
         verification.isApprovedFor(DaoRoleType.institution);
     final hasConflictingInstitutionReview =
         verification.isPendingFor(DaoRoleType.institution);
-    final isCrossRoleBlocked =
-        hasInstitutionBadge || hasConflictingInstitutionReview;
+    final isCrossRoleBlocked = stage == CreatorWorkspaceStage.otherRoleReview;
     final canSelfServeArtistPromotion = isApprovedArtist && !isCrossRoleBlocked;
 
     // Build pages list - Exhibitions tab is optional based on feature flag
@@ -281,7 +297,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   ),
                   onPressed: _showOnboarding,
                 ),
-                if (AppConfig.isFeatureEnabled('collabInvites'))
+                if (!isDiscover && AppConfig.isFeatureEnabled('collabInvites'))
                   Consumer<CollabProvider>(
                     builder: (context, collabProvider, _) {
                       final pendingCount = collabProvider.pendingInviteCount;
@@ -313,15 +329,16 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     tooltip: l10n.artistStudioPromoteTooltip,
                     onPressed: _openProfilePromotionFlow,
                   ),
-                TopBarIcon(
-                  icon: Icon(
-                    Icons.settings,
-                    color: Theme.of(context).colorScheme.onSurface,
+                if (!isDiscover)
+                  TopBarIcon(
+                    icon: Icon(
+                      Icons.settings,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    tooltip:
+                        MaterialLocalizations.of(context).openAppDrawerTooltip,
+                    onPressed: _showSettings,
                   ),
-                  tooltip:
-                      MaterialLocalizations.of(context).openAppDrawerTooltip,
-                  onPressed: _showSettings,
-                ),
               ],
             ),
       body: NestedScrollView(
@@ -333,38 +350,48 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   _buildStudioHeader(
                     canSelfServeArtistPromotion: canSelfServeArtistPromotion,
                   ),
-                  if (widget.showVerificationCard)
+                  if (widget.showVerificationCard && !isDiscover)
                     _buildArtistApplicationCard(
                       review,
                       isApprovedArtist,
+                      stage: stage,
                       isCrossRoleBlocked: isCrossRoleBlocked,
                       hasInstitutionBadge: hasInstitutionBadge,
                       hasConflictingInstitutionReview:
                           hasConflictingInstitutionReview,
                     ),
-                  if (!isCrossRoleBlocked)
+                  if (!isCrossRoleBlocked && !isDiscover)
                     _buildNavigationTabs(isApprovedArtist),
                 ],
               ),
             ),
           ];
         },
-        body: isCrossRoleBlocked
-            ? _buildRoleBlockedContent(
-                title: hasInstitutionBadge
-                    ? l10n.artistStudioInstitutionRoleActiveTitle
-                    : l10n.artistStudioInstitutionReviewInProgressTitle,
-                description: hasInstitutionBadge
-                    ? l10n.artistStudioInstitutionRoleActiveDescription
-                    : l10n.artistStudioInstitutionReviewInProgressDescription,
-                icon: Icons.domain_disabled,
+        body: isDiscover
+            ? _buildStateSlot(
+                CreatorWorkspaceDiscoveryPanel(
+                  workspace: CreatorWorkspace.artistStudio,
+                  onStart: () => _acquireNextCapability(stage),
+                ),
+                maxWidth: 560,
+                // Reads as the page, directly under the header, rather than
+                // a state floating in the middle of a tall desktop pane.
+                alignment: Alignment.topCenter,
               )
-            : isApprovedArtist
-                ? pages[_selectedIndex]
-                : _buildLockedContent(
-                    reviewPending:
-                        verification.isPendingFor(DaoRoleType.artist),
-                  ),
+            : isCrossRoleBlocked
+                ? _buildRoleBlockedContent(
+                    title: hasInstitutionBadge
+                        ? l10n.artistStudioInstitutionRoleActiveTitle
+                        : l10n.artistStudioInstitutionReviewInProgressTitle,
+                    description: hasInstitutionBadge
+                        ? l10n.artistStudioInstitutionRoleActiveDescription
+                        : l10n
+                            .artistStudioInstitutionReviewInProgressDescription,
+                    icon: Icons.domain_disabled,
+                  )
+                : isApprovedArtist
+                    ? pages[_selectedIndex]
+                    : _buildLockedContent(stage: stage),
       ),
     );
   }
@@ -395,6 +422,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   Widget _buildArtistApplicationCard(
     DAOReview? review,
     bool isApprovedArtist, {
+    required CreatorWorkspaceStage stage,
     required bool isCrossRoleBlocked,
     required bool hasInstitutionBadge,
     required bool hasConflictingInstitutionReview,
@@ -419,7 +447,6 @@ class _ArtistStudioState extends State<ArtistStudio> {
       );
     }
 
-    final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
     final isApproved = isApprovedArtist;
@@ -440,19 +467,24 @@ class _ArtistStudioState extends State<ArtistStudio> {
             : isPending
                 ? KubusStatusTone.warning
                 : KubusStatusTone.neutral;
-    final hasWallet = wallet.isNotEmpty;
-    final canSubmit = hasWallet &&
-        !_reviewLoading &&
-        (!isPending && !isApproved || isRejected);
-    final ctaLabel = !hasWallet
-        ? l10n.artistStudioCtaConnectWalletToApply
-        : isApproved
-            ? l10n.artistStudioCtaApprovedByDao
-            : isPending
-                ? l10n.artistStudioCtaPendingDaoReview
-                : isRejected
-                    ? l10n.artistStudioCtaResubmitForReview
-                    : l10n.artistStudioCtaApplyForDaoReview;
+    final acquiresCapability =
+        CreatorWorkspaceNavigation.requirementsFor(stage) != null;
+    final canSubmit = !_reviewLoading &&
+        (stage == CreatorWorkspaceStage.apply ||
+            stage == CreatorWorkspaceStage.rejected);
+    final ctaLabel = switch (stage) {
+      CreatorWorkspaceStage.completeProfile =>
+        l10n.creatorWorkspaceCompleteProfileCta,
+      CreatorWorkspaceStage.linkWalletToApply =>
+        l10n.creatorWorkspaceLinkWalletCta,
+      _ => isApproved
+          ? l10n.artistStudioCtaApprovedByDao
+          : isPending
+              ? l10n.artistStudioCtaPendingDaoReview
+              : isRejected
+                  ? l10n.artistStudioCtaResubmitForReview
+                  : l10n.artistStudioCtaApplyForDaoReview,
+    };
     final IconData ctaIcon = isApproved
         ? Icons.verified_outlined
         : isPending
@@ -470,8 +502,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
               : isRejected
                   ? l10n.artistStudioReviewRejectedInfo
                   : null;
-    } else if (!hasWallet) {
-      detail = l10n.artistStudioConnectWalletToSubmitForDaoReview;
+    } else if (stage == CreatorWorkspaceStage.completeProfile) {
+      detail = l10n.creatorWorkspaceCompleteProfileDetail;
+    } else if (stage == CreatorWorkspaceStage.linkWalletToApply) {
+      detail = l10n.creatorWorkspaceLinkWalletDetail;
     }
 
     return KubusStatusPanel(
@@ -483,11 +517,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
       meta: review != null ? l10n.artistStudioStatusSyncedFromDao : null,
       detail: detail,
       action: KubusButton(
-        onPressed: canSubmit ? () => _showArtistApplicationModal() : null,
+        onPressed: acquiresCapability
+            ? () => _acquireNextCapability(stage)
+            : canSubmit
+                ? () => _showArtistApplicationModal()
+                : null,
         label: ctaLabel,
-        icon: ctaIcon,
+        icon: acquiresCapability ? Icons.arrow_forward_rounded : ctaIcon,
         isFullWidth: true,
-        variant: canSubmit
+        variant: canSubmit || acquiresCapability
             ? KubusButtonVariant.primary
             : KubusButtonVariant.secondary,
       ),
@@ -547,32 +585,71 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 
-  Widget _buildLockedContent({required bool reviewPending}) {
+  Widget _buildLockedContent({required CreatorWorkspaceStage stage}) {
     final l10n = AppLocalizations.of(context)!;
+    final acquiresCapability =
+        CreatorWorkspaceNavigation.requirementsFor(stage) != null;
+    final canApply = stage == CreatorWorkspaceStage.apply ||
+        stage == CreatorWorkspaceStage.rejected;
     return _buildStateSlot(
       EmptyStateCard(
         icon: Icons.lock_outline,
         title: l10n.artistStudioLockedTitle,
-        description: l10n.artistStudioLockedDescription,
-        // The application panel above owns the review CTA (and knows when
-        // it is pending or rejected); this surface only explains the lock.
-        // Without that panel (the desktop shell) it carries the action,
+        // With the application panel above, that panel already explains the
+        // step; the lock only names what opens. Without it (desktop) the lock
+        // carries the step's explanation.
+        description: widget.showVerificationCard
+            ? l10n.artistStudioLockedDescription
+            : switch (stage) {
+                CreatorWorkspaceStage.completeProfile =>
+                  l10n.creatorWorkspaceCompleteProfileDetail,
+                CreatorWorkspaceStage.linkWalletToApply =>
+                  l10n.creatorWorkspaceLinkWalletDetail,
+                _ => l10n.artistStudioLockedDescription,
+              },
+        // The application panel above owns the next step (and knows when a
+        // review is pending); this surface only explains the lock. Without
+        // that panel (the desktop shell) it carries the same next step,
         // except while a review is already pending.
-        showAction: !widget.showVerificationCard && !reviewPending,
-        actionLabel: l10n.artistStudioCtaApplyForDaoReview,
-        onAction: _showArtistApplicationModal,
+        showAction:
+            !widget.showVerificationCard && (acquiresCapability || canApply),
+        actionLabel: switch (stage) {
+          CreatorWorkspaceStage.completeProfile =>
+            l10n.creatorWorkspaceCompleteProfileCta,
+          CreatorWorkspaceStage.linkWalletToApply =>
+            l10n.creatorWorkspaceLinkWalletCta,
+          CreatorWorkspaceStage.rejected =>
+            l10n.artistStudioCtaResubmitForReview,
+          _ => l10n.artistStudioCtaApplyForDaoReview,
+        },
+        onAction: acquiresCapability
+            ? () => _acquireNextCapability(stage)
+            : _showArtistApplicationModal,
       ),
+    );
+  }
+
+  Future<void> _acquireNextCapability(CreatorWorkspaceStage stage) {
+    return CreatorWorkspaceNavigation.acquireNextCapability(
+      context,
+      workspace: CreatorWorkspace.artistStudio,
+      stage: stage,
     );
   }
 
   /// Centers a flat state card and lets it scroll when the slot is short,
   /// so long copy or large text never overflows.
-  Widget _buildStateSlot(Widget card) {
-    return Center(
+  Widget _buildStateSlot(
+    Widget card, {
+    double maxWidth = 520,
+    AlignmentGeometry alignment = Alignment.center,
+  }) {
+    return Align(
+      alignment: alignment,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: BoxConstraints(maxWidth: maxWidth),
           child: card,
         ),
       ),

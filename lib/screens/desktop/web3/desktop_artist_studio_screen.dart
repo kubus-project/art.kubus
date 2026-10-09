@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
@@ -218,7 +219,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 ),
 
                 // Right: Quick actions, stats, and analytics
-                if (isLarge)
+                // The rail is the working dashboard (status, tools, numbers).
+                // A visitor without an account reads the discovery panel in
+                // full width instead of an empty "not applied" rail.
+                if (isLarge && BackendApiService().hasAuthSession)
                   SizedBox(
                     width: 380,
                     child: _buildRightPanel(themeProvider),
@@ -250,7 +254,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       walletAddress: wallet,
       review: review,
     );
-    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
+    // The server-held role flag opens the tools as it does in the studio, so a
+    // person who holds both roles keeps both workspaces.
+    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist) ||
+        (context.watch<ProfileProvider>().currentUser?.isArtist ?? false);
 
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
@@ -481,7 +488,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       walletAddress: wallet,
       review: review,
     );
-    final isApproved = verification.isApprovedFor(DaoRoleType.artist);
+    final isApproved = verification.isApprovedFor(DaoRoleType.artist) ||
+        (context.watch<ProfileProvider>().currentUser?.isArtist ?? false);
     final isPending = verification.isPendingFor(DaoRoleType.artist);
     final isRejected = verification.isRejectedFor(DaoRoleType.artist);
 

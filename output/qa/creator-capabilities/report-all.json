@@ -1,0 +1,304 @@
+{
+  "commit": "f04c458ce627c25bd487c760396d38ef04eb3854",
+  "treeDirty": true,
+  "fontFamiliesLoaded": [
+    "Sofia Sans",
+    "Space Mono",
+    "Outfit_regular",
+    "Outfit_100",
+    "Outfit_200",
+    "Outfit_300",
+    "Outfit_500",
+    "Outfit_600",
+    "Outfit_700",
+    "Outfit_800",
+    "Outfit_900",
+    "Outfit",
+    "Roboto",
+    "MaterialIcons",
+    "Material Symbols Outlined"
+  ],
+  "captureCount": 28,
+  "captures": [
+    {
+      "name": "guest-home-capabilities-phone-dark",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "dark",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-phone-dark",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "dark",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-hub-phone-dark",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "dark",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-desktop-dark",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "dark",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-hub-desktop-dark",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "dark",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-home-capabilities-phone-light",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-phone-light",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-hub-phone-light",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-desktop-light",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-hub-desktop-light",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-phone-sl",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "sl",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-home-capabilities-phone-sl",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "sl",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-studio-narrow-320",
+      "width": 320.0,
+      "height": 640.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-hub-narrow-320-a11y200",
+      "width": 320.0,
+      "height": 640.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 2.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-home-capabilities-narrow-320",
+      "width": 320.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "guest-gate-studio-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": false,
+      "renderErrors": []
+    },
+    {
+      "name": "lover-home-capabilities-phone",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "nowallet-studio-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "nowallet-hub-desktop",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "lover-studio-apply-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "artist-home-capabilities-phone",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "artist-studio-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "artist-studio-desktop",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "institution-hub-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "institution-hub-desktop",
+      "width": 1440.0,
+      "height": 900.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "dual-home-capabilities-phone",
+      "width": 390.0,
+      "height": 420.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "dual-studio-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    },
+    {
+      "name": "dual-hub-phone",
+      "width": 390.0,
+      "height": 844.0,
+      "locale": "en",
+      "brightness": "light",
+      "textScale": 1.0,
+      "session": true,
+      "renderErrors": []
+    }
+  ]
+}

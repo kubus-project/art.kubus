@@ -44,18 +44,25 @@ ColdStartEntry resolveColdStartEntry({
   required bool hasLocalAccount,
 }) {
   final preferred = (preferredShellRoute ?? '').trim();
+  // The creator workspaces are public entries for everyone: a visitor reads
+  // what the workspace is for, a signed-in account continues where it is.
+  final isCreatorWorkspace =
+      preferred == '/artist-studio' || preferred == '/institution-hub';
   if (hasValidSession) {
     final route = switch (preferred) {
       '/map' => '/map',
       '/community' => '/community',
+      _ when isCreatorWorkspace => preferred,
       _ => '/main',
     };
     return ColdStartEntry(shellRoute: route, activateGuestMode: false);
   }
   return ColdStartEntry(
-    // `/community` is a public destination in its own right; every other
-    // anonymous entry (`/`, `/main`, `/map`, an unknown path) opens discovery.
-    shellRoute: preferred == '/community' ? '/community' : '/map',
+    // `/community` and the creator workspaces are public destinations in
+    // their own right; every other anonymous entry (`/`, `/main`, `/map`, an
+    // unknown path) opens discovery.
+    shellRoute:
+        preferred == '/community' || isCreatorWorkspace ? preferred : '/map',
     // Guest mode is the "no account yet" flag. A returning account whose
     // session merely lapsed is not a guest and must not be relabelled as one.
     activateGuestMode: !hasLocalAccount,

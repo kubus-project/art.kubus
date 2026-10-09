@@ -1,0 +1,15 @@
+shot phone-studio-cold url=http://localhost:8241/artist-studio
+shot phone-studio-after-refresh url=http://localhost:8241/artist-studio
+writes ["POST https://api.kubus.site/api/analytics/app","POST https://api.kubus.site/api/analytics/app"]
+shot phone-hub-cold-320 url=http://localhost:8241/institution-hub
+shot phone-studio-sl-dark url=http://localhost:8241/artist-studio
+shot phone-home-guest-top url=http://localhost:8241/map
+shot desktop-studio-cold url=http://localhost:8241/artist-studio
+shot desktop-hub-cold-dark url=http://localhost:8241/institution-hub
+shot desktop-1024-studio url=http://localhost:8241/artist-studio
+shot phone-studio-start-sheet url=http://localhost:8241/artist-studio
+shot phone-studio-after-dismiss url=http://localhost:8241/artist-studio
+shot phone-studio-back url=http://localhost:8241/main
+shot desktop-nav-organize url=http://localhost:8241/map
+shot desktop-nav-node url=http://localhost:8241/map
+shot tablet-768-studio url=http://localhost:8241/artist-studio

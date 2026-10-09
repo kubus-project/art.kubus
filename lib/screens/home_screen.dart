@@ -20,9 +20,17 @@ import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
 import '../models/user_profile.dart';
 import '../models/promotion.dart';
+import '../models/creator_workspace.dart';
+import '../models/dao.dart';
+import '../providers/dao_provider.dart';
+import '../services/backend_api_service.dart';
+import '../utils/creator_workspace_navigation.dart';
+import '../utils/wallet_utils.dart';
+import '../widgets/common/kubus_badge.dart';
+import '../widgets/dashboard/kubus_dashboard_chrome.dart'
+    show KubusStatusTone, kubusStatusToneColor;
 import 'web3/dao/governance_hub.dart';
-import 'web3/artist/artist_studio.dart';
-import 'web3/institution/institution_hub.dart';
+import 'web3/wallet/wallet_home.dart';
 import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
 import 'node/kubus_node_screen.dart';
@@ -93,113 +101,143 @@ bool shouldShowHomeStatCardIcon({
   return showIconOnly || isVerticalLayout;
 }
 
+/// Order of the two creator workspaces on home. Both are always listed: a
+/// prospective artist or institution discovers the workspace, and what it
+/// asks for, before holding the role. A held role leads; with neither or both,
+/// the persona the person chose decides.
 @visibleForTesting
-List<String> resolveHomeWeb3CardOrder({
+List<CreatorWorkspace> resolveHomeCreatorWorkspaceOrder({
   required UserPersona? persona,
   required bool isArtist,
   required bool isInstitution,
-  bool nodeEnabled = false,
 }) {
-  final ordered = <String>[];
-  final preferInstitutionFirst =
-      isArtist && isInstitution && persona == UserPersona.institution;
-
-  if (isArtist && isInstitution) {
-    ordered.add(preferInstitutionFirst ? 'institution' : 'artist');
-  } else if (isArtist) {
-    ordered.add('artist');
-  } else if (isInstitution) {
-    ordered.add('institution');
-  }
-
-  ordered.add('dao');
-
-  if (isArtist && isInstitution) {
-    ordered.add(preferInstitutionFirst ? 'artist' : 'institution');
-  }
-
-  ordered.add('marketplace');
-
-  // kubus Node sits with the other advanced capabilities rather than becoming
-  // a sixth permanent bottom tab, which is the pattern the existing four
-  // follow. It is last because it is infrastructure, not practice.
-  if (nodeEnabled) ordered.add('node');
-
-  return ordered;
+  final institutionFirst = (isInstitution && !isArtist) ||
+      (isArtist == isInstitution && persona == UserPersona.institution);
+  return institutionFirst
+      ? const <CreatorWorkspace>[
+          CreatorWorkspace.institutionHub,
+          CreatorWorkspace.artistStudio,
+        ]
+      : const <CreatorWorkspace>[
+          CreatorWorkspace.artistStudio,
+          CreatorWorkspace.institutionHub,
+        ];
 }
 
+/// Network and infrastructure destinations, after the creator workspaces.
+/// kubus Node leads where its rollout flag is on: it is runtime ownership
+/// against the account, not a wallet capability, so it never sits behind the
+/// wallet lock the financial destinations carry.
+@visibleForTesting
+List<String> resolveHomeInfrastructureCardOrder({bool nodeEnabled = false}) {
+  return <String>[
+    if (nodeEnabled) 'node',
+    'dao',
+    'marketplace',
+    'wallet',
+  ];
+}
+
+/// Artist Studio and Institution Hub as their own entries. Opening one never
+/// asks for a wallet or an account: the workspace explains itself and offers
+/// the next step. A card states only a confirmed stage (open, in review,
+/// declined); it never shows a lock.
+@visibleForTesting
+class HomeCreatorCardStrip extends StatelessWidget {
+  const HomeCreatorCardStrip({
+    super.key,
+    required this.persona,
+    required this.isArtist,
+    required this.isInstitution,
+    required this.onOpenWorkspace,
+    this.artistStage,
+    this.institutionStage,
+  });
+
+  final UserPersona? persona;
+  final bool isArtist;
+  final bool isInstitution;
+  final ValueChanged<CreatorWorkspace> onOpenWorkspace;
+  final CreatorWorkspaceStage? artistStage;
+  final CreatorWorkspaceStage? institutionStage;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final cardWidth = _homeCapabilityCardWidth(context);
+    final ordered = resolveHomeCreatorWorkspaceOrder(
+      persona: persona,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+    );
+
+    Widget card(CreatorWorkspace workspace) {
+      final isArtistStudio = workspace == CreatorWorkspace.artistStudio;
+      return SizedBox(
+        width: cardWidth,
+        child: _HomeWeb3Card(
+          cardKey: ValueKey<String>(
+            isArtistStudio ? 'home_web3_artist' : 'home_web3_institution',
+          ),
+          title: isArtistStudio
+              ? l10n.homeWeb3ArtistTitle
+              : l10n.homeWeb3InstitutionTitle,
+          subtitle: isArtistStudio
+              ? l10n.homeWeb3ArtistSubtitle
+              : l10n.homeWeb3InstitutionSubtitle,
+          icon: isArtistStudio ? Icons.palette : Icons.museum,
+          color: isArtistStudio
+              ? roles.web3ArtistStudioAccent
+              : roles.web3InstitutionAccent,
+          stage: isArtistStudio ? artistStage : institutionStage,
+          onTap: () => onOpenWorkspace(workspace),
+        ),
+      );
+    }
+
+    return KubusShadowSafeStrip(
+      equalHeight: true,
+      gap: KubusSpacing.sm,
+      children: ordered.map(card).toList(growable: false),
+    );
+  }
+}
+
+/// Node, governance, digital editions and the wallet. Governance, digital
+/// editions and the wallet need a wallet identity and say so with the wallet
+/// lock; Node does not.
 @visibleForTesting
 class HomeWeb3CardStrip extends StatelessWidget {
   const HomeWeb3CardStrip({
     super.key,
     required this.isEffectivelyConnected,
-    required this.persona,
-    required this.isArtist,
-    required this.isInstitution,
     required this.onOpenDao,
-    required this.onOpenArtistStudio,
-    required this.onOpenInstitutionHub,
     required this.onOpenMarketplace,
     required this.onOpenNode,
+    required this.onOpenWallet,
     required this.onShowWalletOnboarding,
   });
 
   final bool isEffectivelyConnected;
-  final UserPersona? persona;
-  final bool isArtist;
-  final bool isInstitution;
   final VoidCallback onOpenDao;
-  final VoidCallback onOpenArtistStudio;
-  final VoidCallback onOpenInstitutionHub;
   final VoidCallback onOpenMarketplace;
   final VoidCallback onOpenNode;
+  final VoidCallback onOpenWallet;
   final VoidCallback onShowWalletOnboarding;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final nodeEnabled = AppConfig.isFeatureEnabled('availabilityNodes');
-    final orderedCards = resolveHomeWeb3CardOrder(
-      persona: persona,
-      isArtist: isArtist,
-      isInstitution: isInstitution,
+    final orderedCards = resolveHomeInfrastructureCardOrder(
       nodeEnabled: nodeEnabled,
     );
-    final cardWidth = MediaQuery.of(context).size.width < 375 ? 196.0 : 208.0;
+    final cardWidth = _homeCapabilityCardWidth(context);
     final roles = KubusColorRoles.of(context);
 
     Widget buildWeb3CardEntry(String cardKey) {
       switch (cardKey) {
-        case 'artist':
-          return SizedBox(
-            width: cardWidth,
-            child: _HomeWeb3Card(
-              title: l10n.homeWeb3ArtistTitle,
-              subtitle: l10n.homeWeb3ArtistSubtitle,
-              icon: Icons.palette,
-              color: roles.web3ArtistStudioAccent,
-              onTap: isEffectivelyConnected
-                  ? onOpenArtistStudio
-                  : onShowWalletOnboarding,
-              isLocked: !isEffectivelyConnected,
-              cardKey: const ValueKey<String>('home_web3_artist'),
-            ),
-          );
-        case 'institution':
-          return SizedBox(
-            width: cardWidth,
-            child: _HomeWeb3Card(
-              title: l10n.homeWeb3InstitutionTitle,
-              subtitle: l10n.homeWeb3InstitutionSubtitle,
-              icon: Icons.museum,
-              color: roles.web3InstitutionAccent,
-              onTap: isEffectivelyConnected
-                  ? onOpenInstitutionHub
-                  : onShowWalletOnboarding,
-              isLocked: !isEffectivelyConnected,
-              cardKey: const ValueKey<String>('home_web3_institution'),
-            ),
-          );
         case 'marketplace':
           return SizedBox(
             width: cardWidth,
@@ -234,6 +272,21 @@ class HomeWeb3CardStrip extends StatelessWidget {
               cardKey: const ValueKey<String>('home_web3_node'),
             ),
           );
+        case 'wallet':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.walletHomeTitle,
+              subtitle: l10n.homeWalletCardSubtitle,
+              icon: Icons.account_balance_wallet_outlined,
+              color: roles.web3MarketplaceAccent,
+              onTap: isEffectivelyConnected
+                  ? onOpenWallet
+                  : onShowWalletOnboarding,
+              isLocked: !isEffectivelyConnected,
+              cardKey: const ValueKey<String>('home_web3_wallet'),
+            ),
+          );
         case 'dao':
         default:
           return SizedBox(
@@ -263,6 +316,9 @@ class HomeWeb3CardStrip extends StatelessWidget {
   }
 }
 
+double _homeCapabilityCardWidth(BuildContext context) =>
+    MediaQuery.of(context).size.width < 375 ? 196.0 : 208.0;
+
 class _HomeWeb3Card extends StatelessWidget {
   const _HomeWeb3Card({
     required this.title,
@@ -272,6 +328,7 @@ class _HomeWeb3Card extends StatelessWidget {
     required this.onTap,
     this.isLocked = false,
     this.labsFeature,
+    this.stage,
     this.cardKey,
   });
 
@@ -282,27 +339,55 @@ class _HomeWeb3Card extends StatelessWidget {
   final VoidCallback onTap;
   final bool isLocked;
   final KubusLabsFeature? labsFeature;
+  final CreatorWorkspaceStage? stage;
   final Key? cardKey;
 
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final showLabs = labsFeature?.showLabsMarker ?? false;
-    // Identity is the destination's colour and cropped glyph. Labs and the
-    // wallet lock are states that coexist with it, not a second identity.
-    final status = showLabs || isLocked
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
+    // A creator workspace states a confirmed stage only. "Not applied yet" or
+    // "signed out" is not a lock: the workspace is open to read.
+    final (String, KubusStatusTone)? stageLabel = switch (stage) {
+      CreatorWorkspaceStage.open => (
+          l10n.homeCapabilityStatusOpen,
+          KubusStatusTone.positive,
+        ),
+      CreatorWorkspaceStage.pending => (
+          l10n.homeCapabilityStatusPending,
+          KubusStatusTone.warning,
+        ),
+      CreatorWorkspaceStage.rejected => (
+          l10n.homeCapabilityStatusRejected,
+          KubusStatusTone.negative,
+        ),
+      _ => null,
+    };
+    // Identity is the destination's colour and cropped glyph. Labs, the
+    // wallet lock and a workspace stage are states that coexist with it, not
+    // a second identity.
+    final status = showLabs || isLocked || stageLabel != null
+        ? Wrap(
+            spacing: KubusSpacing.xs,
+            runSpacing: KubusSpacing.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (showLabs)
                 KubusLabsAdornment.inlinePill(
                   feature: labsFeature!,
                   emphasized: !isLocked,
                 ),
-              if (showLabs && isLocked) const SizedBox(width: KubusSpacing.xs),
+              if (stageLabel != null)
+                KubusBadge(
+                  text: stageLabel.$1,
+                  variant: KubusBadgeVariant.status,
+                  compact: true,
+                  accent: kubusStatusToneColor(roles, stageLabel.$2),
+                ),
               if (isLocked)
                 Semantics(
-                  label: AppLocalizations.of(context)!.homeAccountRequiredLabel,
+                  label: l10n.homeAccountRequiredLabel,
                   child: ExcludeSemantics(
                     child: Icon(Icons.lock_outline,
                         size: 14, color: roles.lockedFeature),
@@ -544,9 +629,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onOpenCommunity: () => context.read<MainTabProvider>().setIndex(2),
     )));
     sections.add(SizedBox(height: spacing));
+    // Creating and organizing rank above infrastructure: a creator opens
+    // their workspace first, everyone else meets it right after discovery.
+    if (dashboardFirst && !desktopGuidedLayout) {
+      sections.add(animated(_buildCreateSection()));
+      sections.add(SizedBox(height: spacing));
+    }
     if (!dashboardFirst) {
       sections.add(animated(_buildHomeRails()));
       sections.add(SizedBox(height: spacing));
+      if (!desktopGuidedLayout) {
+        sections.add(animated(_buildCreateSection()));
+        sections.add(SizedBox(height: spacing));
+      }
     }
     if (desktopGuidedLayout) {
       sections.add(
@@ -573,6 +668,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildStatsCards(),
                     SizedBox(height: spacing),
+                    _buildCreateSection(),
+                    SizedBox(height: spacing),
                     _buildWeb3Section(),
                   ],
                 ),
@@ -598,8 +695,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildHomeRails()));
     }
-    // Wallet, marketplace and governance are infrastructure: offered after
-    // the cultural content, never as the landing experience.
+    // Node, wallet, digital editions and governance are infrastructure:
+    // offered after the cultural content, never as the landing experience.
     if (!desktopGuidedLayout) {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildWeb3Section()));
@@ -1501,86 +1598,95 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return l10n.commonGreetingEvening;
   }
 
+  /// The stage each creator workspace is at for this viewer, from the same
+  /// resolver the workspaces use. Only a cached DAO review is read here; a
+  /// card shows no stage rather than guess one.
+  CreatorWorkspaceStage _homeWorkspaceStage(
+    CreatorWorkspace workspace, {
+    required ProfileProvider profileProvider,
+    required String walletAddress,
+    required DAOReview? review,
+  }) {
+    final user = profileProvider.currentUser;
+    return resolveCreatorWorkspaceStage(
+      workspace: workspace,
+      hasAccountSession: BackendApiService().hasAuthSession,
+      hasUsableProfile: profileProvider.hasUsablePublicProfile,
+      walletAddress: walletAddress,
+      review: review,
+      profileGrantsRole: switch (workspace) {
+        CreatorWorkspace.artistStudio => user?.isArtist ?? false,
+        CreatorWorkspace.institutionHub => user?.isInstitution ?? false,
+      },
+    );
+  }
+
+  Widget _buildCreateSection() {
+    final l10n = AppLocalizations.of(context)!;
+    final profileProvider = context.watch<ProfileProvider>();
+    final web3Provider = context.watch<Web3Provider>();
+    final daoProvider = context.watch<DAOProvider>();
+    final user = profileProvider.currentUser;
+    final wallet = WalletUtils.coalesce(
+      walletAddress: user?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+    final review =
+        wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null;
+    CreatorWorkspaceStage stageFor(CreatorWorkspace workspace) =>
+        _homeWorkspaceStage(
+          workspace,
+          profileProvider: profileProvider,
+          walletAddress: wallet,
+          review: review,
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.homeCreateSectionTitle,
+          style: KubusTextStyles.screenTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        HomeCreatorCardStrip(
+          persona: profileProvider.userPersona,
+          isArtist: user?.isArtist ?? false,
+          isInstitution: user?.isInstitution ?? false,
+          artistStage: stageFor(CreatorWorkspace.artistStudio),
+          institutionStage: stageFor(CreatorWorkspace.institutionHub),
+          onOpenWorkspace: (workspace) => unawaited(
+            CreatorWorkspaceNavigation.open(context, workspace),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildWeb3Section() {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, child) {
         final l10n = AppLocalizations.of(context)!;
-        final profileProvider = context.watch<ProfileProvider>();
-        // Show as connected if wallet is connected (mock or real)
         final bool hasWalletIdentity = web3Provider.hasWalletIdentity;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    l10n.homeWeb3SectionTitle,
-                    style: KubusTextStyles.screenTitle.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                if (!hasWalletIdentity)
-                  Builder(
-                    builder: (context) {
-                      final roles = KubusColorRoles.of(context);
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: roles.lockedFeature.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: Border.all(
-                              color:
-                                  roles.lockedFeature.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.lock,
-                                size: 12, color: roles.lockedFeature),
-                            Text(
-                              l10n.homeAccountRequiredLabel,
-                              style: KubusTextStyles.badgeCount.copyWith(
-                                color: roles.lockedFeature,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-              ],
+            Text(
+              l10n.homeWeb3SectionTitle,
+              style: KubusTextStyles.screenTitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 16),
             HomeWeb3CardStrip(
               isEffectivelyConnected: hasWalletIdentity,
-              persona: profileProvider.userPersona,
-              isArtist: profileProvider.currentUser?.isArtist ?? false,
-              isInstitution:
-                  profileProvider.currentUser?.isInstitution ?? false,
               onOpenDao: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const GovernanceHub(),
-                ),
-              ),
-              onOpenArtistStudio: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ArtistStudio(),
-                ),
-              ),
-              onOpenInstitutionHub: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const InstitutionHub(),
                 ),
               ),
               onOpenMarketplace: () => Navigator.push(
@@ -1593,6 +1699,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const KubusNodeScreen(),
+                ),
+              ),
+              onOpenWallet: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WalletHome(),
                 ),
               ),
               onShowWalletOnboarding: () => _showWalletOnboarding(context),

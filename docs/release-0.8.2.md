@@ -5,6 +5,9 @@ slice that is part of the 0.8.2 release. Version files (`version.json`,
 `pubspec.yaml`, `package.json` and the app version constant) are bumped in the
 release-preparation commit, as in 0.8.1, not in this feature change.
 
+Other 0.8.2 slices: [creator capabilities](release-0.8.2-creator-capabilities.md)
+(Artist Studio, Institution Hub and kubus Node discovery without a wallet).
+
 ## Community posts with several photos and videos
 
 - **One ordered set of up to ten items.** A post can hold photos and videos in

@@ -23,7 +23,11 @@ import '../../../providers/recent_activity_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
+import '../../../models/creator_workspace.dart';
 import '../../../models/dao.dart';
+import '../../../services/backend_api_service.dart';
+import '../../../utils/creator_workspace_navigation.dart';
+import '../../../widgets/creator/creator_workspace_discovery_panel.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/activity_navigation.dart';
@@ -98,6 +102,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Future<void> _checkOnboarding() async {
+    // A visitor without an account reads the discovery panel instead; the
+    // feature tour stays one tap away behind the help action.
+    if (!BackendApiService().hasAuthSession) return;
     if (await isOnboardingNeeded(InstitutionHubOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
@@ -216,13 +223,21 @@ class _InstitutionHubState extends State<InstitutionHub> {
       walletAddress: wallet,
       review: review,
     );
-    final hasInstitutionBadge =
-        verification.isApprovedFor(DaoRoleType.institution);
+    final profileProvider = context.watch<ProfileProvider>();
+    final stage = resolveCreatorWorkspaceStage(
+      workspace: CreatorWorkspace.institutionHub,
+      hasAccountSession: BackendApiService().hasAuthSession,
+      hasUsableProfile: profileProvider.hasUsablePublicProfile,
+      walletAddress: wallet,
+      review: review,
+      profileGrantsRole: profileProvider.currentUser?.isInstitution ?? false,
+    );
+    final isDiscover = stage == CreatorWorkspaceStage.discover;
     final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
-    final isApprovedInstitution = hasInstitutionBadge;
+    final isApprovedInstitution = stage.isOpen;
     final hasConflictingArtistReview =
         verification.isPendingFor(DaoRoleType.artist);
-    final isCrossRoleBlocked = hasArtistBadge || hasConflictingArtistReview;
+    final isCrossRoleBlocked = stage == CreatorWorkspaceStage.otherRoleReview;
     final canSelfServeInstitutionPromotion =
         isApprovedInstitution && !isCrossRoleBlocked;
 
@@ -254,62 +269,66 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   onPressed: _showOnboarding,
                 ),
-                TopBarIcon(
-                  tooltip: l10n.manageMarkersTitle,
-                  icon: Icon(
-                    Icons.place_outlined,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  onPressed: () {
-                    unawaited(
-                      CreatorShellNavigation.openManageMarkersWorkspace(
-                          context),
-                    );
-                  },
-                ),
-                if (AppConfig.isFeatureEnabled('collabInvites'))
-                  Consumer<CollabProvider>(
-                    builder: (context, collabProvider, _) {
-                      final pendingCount = collabProvider.pendingInviteCount;
-                      return TopBarIcon(
-                        tooltip: l10n.institutionHubInvitesTooltip,
-                        badgeCount: pendingCount,
-                        badgeColor: Theme.of(context).colorScheme.error,
-                        icon: Icon(
-                          Icons.inbox_outlined,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const InvitesInboxScreen(),
-                            ),
-                          );
-                        },
+                // A visitor without an account has no markers, invites or
+                // notifications here yet; the discovery panel is the page.
+                if (!isDiscover) ...<Widget>[
+                  TopBarIcon(
+                    tooltip: l10n.manageMarkersTitle,
+                    icon: Icon(
+                      Icons.place_outlined,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: () {
+                      unawaited(
+                        CreatorShellNavigation.openManageMarkersWorkspace(
+                            context),
                       );
                     },
                   ),
-                if (canSelfServeInstitutionPromotion)
-                  TopBarIcon(
-                    tooltip: l10n.desktopInstitutionPromoteProfileTitle,
-                    icon: Icon(
-                      Icons.campaign_outlined,
-                      color: Theme.of(context).colorScheme.onSurface,
+                  if (AppConfig.isFeatureEnabled('collabInvites'))
+                    Consumer<CollabProvider>(
+                      builder: (context, collabProvider, _) {
+                        final pendingCount = collabProvider.pendingInviteCount;
+                        return TopBarIcon(
+                          tooltip: l10n.institutionHubInvitesTooltip,
+                          badgeCount: pendingCount,
+                          badgeColor: Theme.of(context).colorScheme.error,
+                          icon: Icon(
+                            Icons.inbox_outlined,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const InvitesInboxScreen(),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
-                    onPressed: _openInstitutionPromotionFlow,
-                  ),
-                Consumer<NotificationProvider>(
-                  builder: (context, notificationProvider, _) => TopBarIcon(
-                    tooltip: l10n.commonNotifications,
-                    badgeCount: notificationProvider.unreadCount,
-                    badgeColor: Theme.of(context).colorScheme.error,
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: Theme.of(context).colorScheme.onSurface,
+                  if (canSelfServeInstitutionPromotion)
+                    TopBarIcon(
+                      tooltip: l10n.desktopInstitutionPromoteProfileTitle,
+                      icon: Icon(
+                        Icons.campaign_outlined,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onPressed: _openInstitutionPromotionFlow,
                     ),
-                    onPressed: () => unawaited(_showNotifications()),
+                  Consumer<NotificationProvider>(
+                    builder: (context, notificationProvider, _) => TopBarIcon(
+                      tooltip: l10n.commonNotifications,
+                      badgeCount: notificationProvider.unreadCount,
+                      badgeColor: Theme.of(context).colorScheme.error,
+                      icon: Icon(
+                        Icons.notifications_outlined,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onPressed: () => unawaited(_showNotifications()),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
       body: NestedScrollView(
@@ -322,37 +341,46 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     canSelfServeInstitutionPromotion:
                         canSelfServeInstitutionPromotion,
                   ),
-                  if (widget.showVerificationCard)
+                  if (widget.showVerificationCard && !isDiscover)
                     _buildInstitutionApplicationCard(
                       review,
                       isApprovedInstitution,
+                      stage: stage,
                       isCrossRoleBlocked: isCrossRoleBlocked,
                       hasArtistBadge: hasArtistBadge,
                       hasConflictingArtistReview: hasConflictingArtistReview,
                     ),
-                  if (!isCrossRoleBlocked)
+                  if (!isCrossRoleBlocked && !isDiscover)
                     _buildNavigationTabs(isApprovedInstitution),
                 ],
               ),
             ),
           ];
         },
-        body: isCrossRoleBlocked
-            ? _buildRoleBlockedContent(
-                title: hasArtistBadge
-                    ? l10n.institutionHubArtistBadgeActiveTitle
-                    : l10n.institutionHubArtistReviewInProgressTitle,
-                description: hasArtistBadge
-                    ? l10n.institutionHubArtistBadgeActiveDescription
-                    : l10n.institutionHubArtistReviewInProgressDescription,
-                icon: Icons.palette_outlined,
+        body: isDiscover
+            ? _buildStateSlot(
+                CreatorWorkspaceDiscoveryPanel(
+                  workspace: CreatorWorkspace.institutionHub,
+                  onStart: () => _acquireNextCapability(stage),
+                ),
+                maxWidth: 560,
+                // Reads as the page, directly under the header, rather than
+                // a state floating in the middle of a tall desktop pane.
+                alignment: Alignment.topCenter,
               )
-            : isApprovedInstitution
-                ? pages[_selectedIndex]
-                : _buildLockedContent(
-                    reviewPending:
-                        verification.isPendingFor(DaoRoleType.institution),
-                  ),
+            : isCrossRoleBlocked
+                ? _buildRoleBlockedContent(
+                    title: hasArtistBadge
+                        ? l10n.institutionHubArtistBadgeActiveTitle
+                        : l10n.institutionHubArtistReviewInProgressTitle,
+                    description: hasArtistBadge
+                        ? l10n.institutionHubArtistBadgeActiveDescription
+                        : l10n.institutionHubArtistReviewInProgressDescription,
+                    icon: Icons.palette_outlined,
+                  )
+                : isApprovedInstitution
+                    ? pages[_selectedIndex]
+                    : _buildLockedContent(stage: stage),
       ),
     );
   }
@@ -390,6 +418,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   Widget _buildInstitutionApplicationCard(
     DAOReview? review,
     bool isApprovedInstitution, {
+    required CreatorWorkspaceStage stage,
     required bool isCrossRoleBlocked,
     required bool hasArtistBadge,
     required bool hasConflictingArtistReview,
@@ -414,7 +443,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
       );
     }
 
-    final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
@@ -430,16 +458,20 @@ class _InstitutionHubState extends State<InstitutionHub> {
             : isPending
                 ? KubusStatusTone.warning
                 : KubusStatusTone.neutral;
-    final canSubmit = wallet.isNotEmpty &&
-        !_reviewLoading &&
-        (!isPending && !isApprovedInstitution || isRejected);
-    final ctaLabel = !canSubmit
-        ? (isApprovedInstitution
-            ? l10n.institutionHubCtaApprovedByDao
-            : isPending
-                ? l10n.institutionHubCtaPendingDaoReview
-                : l10n.institutionHubCtaConnectWalletToApply)
-        : l10n.institutionHubApplyForReviewAction;
+    final acquiresCapability =
+        CreatorWorkspaceNavigation.requirementsFor(stage) != null;
+    final canSubmit = !_reviewLoading &&
+        (stage == CreatorWorkspaceStage.apply ||
+            stage == CreatorWorkspaceStage.rejected);
+    final ctaLabel = switch (stage) {
+      CreatorWorkspaceStage.completeProfile =>
+        l10n.creatorWorkspaceCompleteProfileCta,
+      CreatorWorkspaceStage.linkWalletToApply =>
+        l10n.creatorWorkspaceLinkWalletCta,
+      CreatorWorkspaceStage.open => l10n.institutionHubCtaApprovedByDao,
+      CreatorWorkspaceStage.pending => l10n.institutionHubCtaPendingDaoReview,
+      _ => l10n.institutionHubApplyForReviewAction,
+    };
     final IconData ctaIcon = isApprovedInstitution
         ? Icons.verified_outlined
         : isPending
@@ -457,6 +489,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
               : isRejected
                   ? l10n.institutionHubRejectedResubmitMessage
                   : null;
+    } else if (stage == CreatorWorkspaceStage.completeProfile) {
+      detail = l10n.creatorWorkspaceCompleteProfileDetail;
+    } else if (stage == CreatorWorkspaceStage.linkWalletToApply) {
+      detail = l10n.creatorWorkspaceLinkWalletDetail;
     }
 
     return KubusStatusPanel(
@@ -468,11 +504,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
       meta: review != null ? l10n.institutionHubDaoStatusSyncedLabel : null,
       detail: detail,
       action: KubusButton(
-        onPressed: canSubmit ? () => _showInstitutionApplicationModal() : null,
+        onPressed: acquiresCapability
+            ? () => _acquireNextCapability(stage)
+            : canSubmit
+                ? () => _showInstitutionApplicationModal()
+                : null,
         label: ctaLabel,
-        icon: ctaIcon,
+        icon: acquiresCapability ? Icons.arrow_forward_rounded : ctaIcon,
         isFullWidth: true,
-        variant: canSubmit
+        variant: canSubmit || acquiresCapability
             ? KubusButtonVariant.primary
             : KubusButtonVariant.secondary,
       ),
@@ -549,12 +589,25 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
   /// Centers a flat state card and lets it scroll when the slot is short,
   /// so long copy or large text never overflows.
-  Widget _buildStateSlot(Widget card) {
-    return Center(
+  Future<void> _acquireNextCapability(CreatorWorkspaceStage stage) {
+    return CreatorWorkspaceNavigation.acquireNextCapability(
+      context,
+      workspace: CreatorWorkspace.institutionHub,
+      stage: stage,
+    );
+  }
+
+  Widget _buildStateSlot(
+    Widget card, {
+    double maxWidth = 520,
+    AlignmentGeometry alignment = Alignment.center,
+  }) {
+    return Align(
+      alignment: alignment,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(KubusSpacing.lg),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: BoxConstraints(maxWidth: maxWidth),
           child: card,
         ),
       ),
@@ -799,21 +852,45 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildLockedContent({required bool reviewPending}) {
+  Widget _buildLockedContent({required CreatorWorkspaceStage stage}) {
     final l10n = AppLocalizations.of(context)!;
+    final acquiresCapability =
+        CreatorWorkspaceNavigation.requirementsFor(stage) != null;
+    final canApply = stage == CreatorWorkspaceStage.apply ||
+        stage == CreatorWorkspaceStage.rejected;
     return _buildStateSlot(
       EmptyStateCard(
         icon: Icons.lock_outline,
         // Names the lock, not the review status: the status panel (or the
         // desktop rail) already says "Not applied" and why.
         title: l10n.institutionHubLockedTitle,
-        description: l10n.institutionHubLockedDescription,
-        // The application panel above owns the review CTA; without it (the
-        // desktop shell) this surface carries the action, except while a
+        // With the application panel above, that panel already explains the
+        // step; the lock only names what opens. Without it (desktop) the lock
+        // carries the step's explanation.
+        description: widget.showVerificationCard
+            ? l10n.institutionHubLockedDescription
+            : switch (stage) {
+                CreatorWorkspaceStage.completeProfile =>
+                  l10n.creatorWorkspaceCompleteProfileDetail,
+                CreatorWorkspaceStage.linkWalletToApply =>
+                  l10n.creatorWorkspaceLinkWalletDetail,
+                _ => l10n.institutionHubLockedDescription,
+              },
+        // The application panel above owns the next step; without it (the
+        // desktop shell) this surface carries the same step, except while a
         // review is already pending.
-        showAction: !widget.showVerificationCard && !reviewPending,
-        actionLabel: l10n.institutionHubApplyForReviewAction,
-        onAction: _showInstitutionApplicationModal,
+        showAction:
+            !widget.showVerificationCard && (acquiresCapability || canApply),
+        actionLabel: switch (stage) {
+          CreatorWorkspaceStage.completeProfile =>
+            l10n.creatorWorkspaceCompleteProfileCta,
+          CreatorWorkspaceStage.linkWalletToApply =>
+            l10n.creatorWorkspaceLinkWalletCta,
+          _ => l10n.institutionHubApplyForReviewAction,
+        },
+        onAction: acquiresCapability
+            ? () => _acquireNextCapability(stage)
+            : _showInstitutionApplicationModal,
       ),
     );
   }

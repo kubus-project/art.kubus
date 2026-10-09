@@ -162,6 +162,10 @@ class _EmailVerificationSuccessScreenState
         // The journey resumes inside the scope it was started for; with none
         // recorded it is an account-only one, so verifying an email never
         // walks the visitor on into role, profile or wallet setup.
+        // A journey started from a creator workspace returns there, not to
+        // Home. Read before anything below clears the scope.
+        final workspaceReturnRoute =
+            OnboardingStateService.capabilityReturnRouteSync(prefs);
         final scope = accountLinkGuardActive && hasSession
             ? ProtectedActionRequirements.wallet
             : (ProtectedActionRequirements.fromStorage(
@@ -201,7 +205,10 @@ class _EmailVerificationSuccessScreenState
               );
               await OnboardingStateService.clearCapabilityScope(prefs: prefs);
               if (!mounted) return;
-              navigator.pushNamedAndRemoveUntil(ShellRoutes.main, (_) => false);
+              navigator.pushNamedAndRemoveUntil(
+                workspaceReturnRoute ?? ShellRoutes.main,
+                (_) => false,
+              );
               return;
             }
             initialStepId = resume.nextStepId ?? 'account';
@@ -213,6 +220,7 @@ class _EmailVerificationSuccessScreenState
             builder: (_) => OnboardingFlowScreen(
               forceDesktop: isDesktop,
               initialStepId: initialStepId,
+              completionRoute: workspaceReturnRoute,
               requiresWalletSetup:
                   accountLinkGuardActive && walletAddress.isEmpty,
               requirements: scope,

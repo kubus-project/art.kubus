@@ -74,25 +74,23 @@ class DesktopBreakpoints {
 @visibleForTesting
 List<DesktopNavItem> resolveDesktopNavItems(bool isSignedIn,
     {required bool isArtist, required bool isInstitution}) {
-  if (!isSignedIn) {
-    return _DesktopShellState._guestNavItems;
-  }
-
-  // Start with all signed-in items
-  var items = List<DesktopNavItem>.of(_DesktopShellState._signedInNavItems);
-
-  // If user has both badges, hide Organize (Institution Hub)
-  // If only Institution badge is active, hide Create (Artist Studio)
-  // If only Artist badge is active, hide Organize (Institution Hub)
-  if (isArtist && isInstitution) {
-    // Both badges are active - hide Organize, keep Create
-    items = items.where((item) => item.route != '/institution').toList();
-  } else if (isInstitution && !isArtist) {
-    // Only institution badge is active - hide Create
-    items = items.where((item) => item.route != '/artist-studio').toList();
-  } else if (isArtist && !isInstitution) {
-    // Only artist badge is active - hide Organize
-    items = items.where((item) => item.route != '/institution').toList();
+  // Create and Organize are offered to everyone, whatever role is held:
+  // each workspace explains itself to a visitor and states the account's real
+  // stage (see `resolveCreatorWorkspaceStage`). Holding one role never hides
+  // the other workspace, and a person with both keeps both. [isArtist] and
+  // [isInstitution] only order them: a held role leads.
+  var items = List<DesktopNavItem>.of(
+    isSignedIn
+        ? _DesktopShellState._signedInNavItems
+        : _DesktopShellState._guestNavItems,
+  );
+  if (isInstitution && !isArtist) {
+    final create = items.indexWhere((item) => item.route == '/artist-studio');
+    final organize = items.indexWhere((item) => item.route == '/institution');
+    if (create >= 0 && organize >= 0 && create < organize) {
+      final organizeItem = items.removeAt(organize);
+      items.insert(create, organizeItem);
+    }
   }
 
   // Node follows its own rollout flag, like every other Node entry point.
@@ -109,7 +107,12 @@ List<DesktopNavItem> resolveDesktopNavItems(bool isSignedIn,
 class DesktopShell extends StatefulWidget {
   final int initialIndex;
 
-  const DesktopShell({super.key, this.initialIndex = 0});
+  const DesktopShell({super.key, this.initialIndex = 0, this.initialRoute});
+
+  /// In-shell route to open on, such as `/artist-studio` for a creator
+  /// workspace link. Takes precedence over [initialIndex]; a route the
+  /// account's navigation does not offer falls back to its first item.
+  final String? initialRoute;
 
   @override
   State<DesktopShell> createState() => _DesktopShellState();
@@ -212,7 +215,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// In-shell route for the kubus Node dashboard.
   static const String _nodeRoute = '/kubus-node';
 
-  static const List<DesktopNavItem> _guestNavItems = [
+  static final List<DesktopNavItem> _guestNavItems = [
     DesktopNavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
@@ -231,6 +234,30 @@ class _DesktopShellState extends State<DesktopShell>
       labelKey: DesktopNavLabelKey.connect,
       route: '/community',
     ),
+    // Creating and organizing are discovered before any account or wallet:
+    // the workspaces explain themselves and offer the next step. They are
+    // not grouped under Infrastructure, which is the wallet-backed network.
+    DesktopNavItem(
+      icon: Icons.palette_outlined,
+      activeIcon: Icons.palette,
+      labelKey: DesktopNavLabelKey.create,
+      route: '/artist-studio',
+    ),
+    DesktopNavItem(
+      icon: Icons.apartment_outlined,
+      activeIcon: Icons.apartment,
+      labelKey: DesktopNavLabelKey.organize,
+      route: '/institution',
+    ),
+    // Node explains itself to a visitor; pairing asks for an account at the
+    // pairing step, never a wallet.
+    DesktopNavItem(
+      icon: KubusLabsFeature.node.navIcon,
+      activeIcon: KubusLabsFeature.node.navActiveIcon,
+      labelKey: DesktopNavLabelKey.node,
+      route: _nodeRoute,
+      labsFeature: KubusLabsFeature.node,
+    ),
     DesktopNavItem(
       icon: Icons.hub_outlined,
       activeIcon: Icons.hub,
@@ -243,9 +270,11 @@ class _DesktopShellState extends State<DesktopShell>
   void initState() {
     super.initState();
     _tutorialOverlayController = TutorialOverlayController();
-    _activeRoute = _signedInNavItems[
-            widget.initialIndex.clamp(0, _signedInNavItems.length - 1)]
-        .route;
+    _activeRoute = (widget.initialRoute ?? '').trim().isNotEmpty
+        ? widget.initialRoute!.trim()
+        : _signedInNavItems[
+                widget.initialIndex.clamp(0, _signedInNavItems.length - 1)]
+            .route;
     _navExpandController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -1106,7 +1135,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// path that bypassed the contextual account/role/profile/wallet gate the
   /// rest of the app uses. The gate now owns capability acquisition; it opens
   /// Google/email/wallet/existing-account choice, then routes into structured
-  /// onboarding with wallet capability requested, landing back on `/web3`
+  /// onboarding with wallet capability requested, returning to this shell
   /// once the visitor is signer-capable. The educational Web3 tutorial screen
   /// is intentionally no longer part of this path — it never owned auth or
   /// wallet acquisition and dropping it here removes the double-flow, not an
@@ -1117,7 +1146,10 @@ class _DesktopShellState extends State<DesktopShell>
     await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.authConnectWalletButton,
-      returnRoute: _web3EntryRoute,
+      // `/web3` is not a page (its named route is a placeholder), so an
+      // account journey that cannot return to this shell lands on `/main`,
+      // which is this shell on a wide screen.
+      returnRoute: '/main',
       sourceScreen: 'desktop_shell',
       requirements: ProtectedActionRequirements.wallet,
     );

@@ -1,5 +1,4 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_navigation.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
@@ -20,34 +19,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('mobile capability strip', () {
-    test('Node sits last, after the practice and financial capabilities', () {
+    test('Node leads the network strip, apart from the creator workspaces', () {
       expect(
-        resolveHomeWeb3CardOrder(
-          persona: UserPersona.creator,
-          isArtist: true,
-          isInstitution: false,
-          nodeEnabled: true,
-        ),
-        <String>['artist', 'dao', 'marketplace', 'node'],
-      );
-      expect(
-        resolveHomeWeb3CardOrder(
-          persona: null,
-          isArtist: false,
-          isInstitution: false,
-          nodeEnabled: true,
-        ),
-        <String>['dao', 'marketplace', 'node'],
+        resolveHomeInfrastructureCardOrder(nodeEnabled: true),
+        <String>['node', 'dao', 'marketplace', 'wallet'],
       );
     });
 
     test('Node is absent when its rollout flag is off', () {
       expect(
-        resolveHomeWeb3CardOrder(
-          persona: null,
-          isArtist: false,
-          isInstitution: false,
-        ),
+        resolveHomeInfrastructureCardOrder(),
         isNot(contains('node')),
       );
     });
@@ -68,14 +49,10 @@ void main() {
               child: HomeWeb3CardStrip(
                 // Signed out of any wallet: Node must still open directly.
                 isEffectivelyConnected: false,
-                persona: null,
-                isArtist: false,
-                isInstitution: false,
                 onOpenDao: () {},
-                onOpenArtistStudio: () {},
-                onOpenInstitutionHub: () {},
                 onOpenMarketplace: () {},
                 onOpenNode: () => nodeOpened += 1,
+                onOpenWallet: () {},
                 onShowWalletOnboarding: () => walletOnboarding += 1,
               ),
             ),
@@ -123,14 +100,10 @@ void main() {
           home: Scaffold(
             body: HomeWeb3CardStrip(
               isEffectivelyConnected: false,
-              persona: null,
-              isArtist: false,
-              isInstitution: false,
               onOpenDao: () {},
-              onOpenArtistStudio: () {},
-              onOpenInstitutionHub: () {},
               onOpenMarketplace: () {},
               onOpenNode: () {},
+              onOpenWallet: () {},
               onShowWalletOnboarding: () {},
             ),
           ),
@@ -193,14 +166,49 @@ void main() {
       }
     });
 
-    test('a guest is not offered Node', () {
+    test('a guest discovers Node, Create and Organize before any wallet', () {
+      final order = keys(resolveDesktopNavItems(
+        false,
+        isArtist: false,
+        isInstitution: false,
+      ));
+      // Node explains itself to a visitor; pairing asks for an account at
+      // the pairing step. Infrastructure (the wallet-backed network) stays
+      // last and separate from creating and organizing.
+      expect(order, contains(DesktopNavLabelKey.node));
+      expect(order, contains(DesktopNavLabelKey.create));
+      expect(order, contains(DesktopNavLabelKey.organize));
+      expect(order.last, DesktopNavLabelKey.web3);
       expect(
-        keys(resolveDesktopNavItems(
-          false,
-          isArtist: false,
-          isInstitution: false,
-        )),
-        isNot(contains(DesktopNavLabelKey.node)),
+        order.indexOf(DesktopNavLabelKey.create),
+        lessThan(order.indexOf(DesktopNavLabelKey.web3)),
+      );
+    });
+
+    test('no role hides a creator workspace; a held role leads', () {
+      for (final roles in const [
+        (false, false),
+        (true, false),
+        (false, true),
+        (true, true),
+      ]) {
+        final order = keys(resolveDesktopNavItems(
+          true,
+          isArtist: roles.$1,
+          isInstitution: roles.$2,
+        ));
+        expect(order, contains(DesktopNavLabelKey.create), reason: '$roles');
+        expect(order, contains(DesktopNavLabelKey.organize),
+            reason: 'roles $roles: holding one role must not hide the other');
+      }
+      final institutionOnly = keys(resolveDesktopNavItems(
+        true,
+        isArtist: false,
+        isInstitution: true,
+      ));
+      expect(
+        institutionOnly.indexOf(DesktopNavLabelKey.organize),
+        lessThan(institutionOnly.indexOf(DesktopNavLabelKey.create)),
       );
     });
   });
