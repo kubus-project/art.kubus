@@ -110,6 +110,26 @@ void main() {
     expect(find.byIcon(Icons.location_city), findsOneWidget);
   });
 
+  testWidgets('an IPFS logo starts on the first gateway, never the raw ref',
+      (tester) async {
+    await _pump(
+      tester,
+      _row(
+        bannerUrl: null,
+        logoUrl:
+            'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+      ),
+    );
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(
+      (image.image as NetworkImage).url,
+      startsWith(
+        'https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+      ),
+    );
+  });
+
   testWidgets('tapping the row calls onTap', (tester) async {
     var taps = 0;
     await _pump(tester, _row(), onTap: () => taps++);

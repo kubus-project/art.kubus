@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../common/kubus_cached_image.dart';
 import '../../utils/media_url_resolver.dart';
 
 /// One institution row in the community search picker, read from the migrated
@@ -32,6 +33,16 @@ class CommunitySearchInstitutionTile extends StatelessWidget {
     return null;
   }
 
+  /// The first reference the resolver accepts, as given. An unsafe or
+  /// unresolvable reference is skipped, so the next field can still show.
+  static String? _firstResolvableRef(Iterable<String?> refs) {
+    for (final raw in refs) {
+      if (raw == null) continue;
+      if (MediaUrlResolver.resolveDisplayUrl(raw) != null) return raw;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -41,11 +52,13 @@ class CommunitySearchInstitutionTile extends StatelessWidget {
       _text(institution, const ['location', 'address']),
     ].whereType<String>().join(' - ');
 
-    final coverRaw = _text(institution, const ['bannerUrl', 'logoUrl']);
-    final coverUrl = coverRaw == null
-        ? null
-        : MediaUrlResolver.resolveDisplayUrl(coverRaw) ??
-            MediaUrlResolver.resolve(coverRaw);
+    // The first safe reference wins, so an unsafe or missing banner falls
+    // through to the logo. The image then walks the shared candidate chain
+    // (IPFS gateways) through KubusCachedImage.
+    final coverRef = _firstResolvableRef(<String?>[
+      _text(institution, const ['bannerUrl']),
+      _text(institution, const ['logoUrl']),
+    ]);
     final fallbackIcon =
         Icon(Icons.location_city, color: accentColor, size: 20);
 
@@ -59,13 +72,14 @@ class CommunitySearchInstitutionTile extends StatelessWidget {
           color: accentColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: coverUrl == null
+        child: coverRef == null
             ? Center(child: fallbackIcon)
-            : Image.network(
-                coverUrl,
+            : KubusCachedImage(
+                imageUrl: coverRef,
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
+                placeholderBuilder: (_) => Center(child: fallbackIcon),
                 errorBuilder: (_, __, ___) => Center(child: fallbackIcon),
               ),
       ),
