@@ -118,6 +118,10 @@ class _PendingActionContinuationHostState
     _presenting = false;
     if (!mounted) return;
 
+    // A restored entry point is its own feedback: the composer is already on
+    // screen. A toast here would sit over the composer's send button and take
+    // the visitor's first tap.
+    if (result.outcome == PendingActionOutcome.entryRestored) return;
     messenger.showKubusSnackBar(
       SnackBar(content: Text(_feedbackFor(l10n, intent, result))),
       tone: result.didSucceed

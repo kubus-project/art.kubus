@@ -222,6 +222,10 @@ class PendingActionProvider extends ChangeNotifier {
       // action on every return to the screen.
       await _finish(intent);
     } else {
+      // The stored copy is dropped now: a reload must never replay an attempt
+      // the visitor has already seen fail. The in-page retry stays available
+      // through the memory copy until the page is left or the attempt cancelled.
+      await _service.clear();
       notifyListeners();
     }
     return result;

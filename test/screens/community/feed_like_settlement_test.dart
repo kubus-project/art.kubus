@@ -6,6 +6,7 @@ import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/pending_action_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/auth/pending_action_continuation.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
@@ -23,15 +24,19 @@ import '../../support/product_surface_harness.dart';
 /// shows a like, so the feed starts unliked; [likedOnServer] is what the
 /// account already holds.
 class _FakeBackend {
-  _FakeBackend({required this.likedOnServer});
+  _FakeBackend({required this.likedOnServer, this.failAfterInsert = false});
 
   bool likedOnServer;
+
+  /// The like route writes the like, then answers with a server error (the
+  /// browser run's behaviour).
+  final bool failAfterInsert;
   int serverLikeCount = 3;
   int likeRequests = 0;
 
-  http.Response _json(Object body) => http.Response(
+  http.Response _json(Object body, [int status = 200]) => http.Response(
         jsonEncode(body),
-        200,
+        status,
         headers: const {'content-type': 'application/json'},
       );
 
@@ -70,8 +75,15 @@ class _FakeBackend {
     if (request.method == 'POST' &&
         path == '/api/community/posts/post-1/like') {
       likeRequests += 1;
+      // The like route is idempotent: a repeated like never counts twice.
+      if (!likedOnServer) serverLikeCount += 1;
       likedOnServer = true;
-      serverLikeCount += 1;
+      if (failAfterInsert) {
+        return _json(<String, dynamic>{
+          'success': false,
+          'error': 'Internal server error',
+        }, 500);
+      }
       return _json(<String, dynamic>{
         'success': true,
         'data': <String, dynamic>{'likesCount': serverLikeCount},
@@ -255,8 +267,11 @@ void main() {
     BackendApiService().setHttpClient(http.Client());
   });
 
-  void useBackend(bool likedOnServer) {
-    backend = _FakeBackend(likedOnServer: likedOnServer);
+  void useBackend(bool likedOnServer, {bool failAfterInsert = false}) {
+    backend = _FakeBackend(
+      likedOnServer: likedOnServer,
+      failAfterInsert: failAfterInsert,
+    );
     BackendApiService().setHttpClient(MockClient(backend.handle));
   }
 
@@ -283,6 +298,29 @@ void main() {
           findsOneWidget,
         );
       });
+    });
+
+    testWidgets(
+        'a like recorded before a 500 fills the heart once and clears the slot',
+        (tester) async {
+      useBackend(false, failAfterInsert: true);
+      await _runFeed(
+        tester,
+        feed: CommunityScreen(),
+        size: const Size(390, 844),
+        body: (_) async {
+          await _likeAsGuestAndConfirm(tester);
+
+          final card = tester.widget<CommunityPostCard>(
+            find.byType(CommunityPostCard),
+          );
+          expect(card.post.isLiked, isTrue);
+          expect(card.post.likeCount, 4);
+          expect(backend.serverLikeCount, 4);
+          final prefs = await SharedPreferences.getInstance();
+          expect(prefs.getString(PendingActionService.storageKey), isNull);
+        },
+      );
     });
 
     testWidgets('a post the account already likes stays liked, count unchanged',

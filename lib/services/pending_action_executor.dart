@@ -239,11 +239,45 @@ class PendingActionExecutor {
         postLike: current,
       );
     }
-    final likeCount = await _sendPostLike(postId);
-    return PendingActionExecutionResult(
-      PendingActionOutcome.completed,
-      postLike: (isLiked: true, likeCount: likeCount),
-    );
+
+    Object? sendFailure;
+    int? reportedCount;
+    try {
+      reportedCount = await _sendPostLike(postId);
+    } catch (error) {
+      sendFailure = error;
+    }
+
+    // The like route records the like before a later step can fail, and a
+    // response can be lost after the write. The server's state is what counts:
+    // a like it holds is a success, whatever the response said.
+    final after = await _readPostLikedOrNull(postId);
+    if (after != null && after.isLiked) {
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: (isLiked: true, likeCount: after.likeCount ?? reportedCount),
+      );
+    }
+    if (sendFailure != null) {
+      return PendingActionExecutionResult(_classify(sendFailure));
+    }
+    if (after == null) {
+      // The request succeeded and the state could not be read to contradict it.
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: (isLiked: true, likeCount: reportedCount),
+      );
+    }
+    return const PendingActionExecutionResult(PendingActionOutcome.failed);
+  }
+
+  /// A state read that cannot fail the caller: null when it could not be read.
+  Future<PostLikeSnapshot?> _readPostLikedOrNull(String postId) async {
+    try {
+      return await _readPostLiked(postId);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<PendingActionExecutionResult> _executeFollow(
