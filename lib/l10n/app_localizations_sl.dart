@@ -478,7 +478,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationConfirmComment => 'Želiš napisati komentar?';
 
   @override
-  String get activationConfirmSupportRequest => 'Nadaljujete z zahtevkom za podporo?';
+  String get activationConfirmSupportRequest =>
+      'Nadaljujete z zahtevkom za podporo?';
 
   @override
   String get activationConfirmSupportBug => 'Nadaljujete s prijavo napake?';

@@ -476,7 +476,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationConfirmComment => 'Write your comment?';
 
   @override
-  String get activationConfirmSupportRequest => 'Continue your support request?';
+  String get activationConfirmSupportRequest =>
+      'Continue your support request?';
 
   @override
   String get activationConfirmSupportBug => 'Continue your bug report?';
