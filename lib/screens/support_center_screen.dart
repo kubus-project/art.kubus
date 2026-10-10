@@ -998,7 +998,6 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                           child: Semantics(
                             role: SemanticsRole.tab,
                             selected: _section == section,
-                            label: sectionLabels[section],
                             onTap: () => _go(section),
                             child: ChoiceChip(
                               selected: _section == section,
