@@ -3702,7 +3702,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final location = (exhibition.locationName ?? '').trim().isNotEmpty
         ? exhibition.locationName!.trim()
         : null;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      exhibition.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
     final poap = context.watch<ExhibitionsProvider>().poapStatusFor(
           exhibition.id,
         );
@@ -4016,7 +4019,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if ((event.country ?? '').trim().isNotEmpty) event.country!.trim(),
     ];
     final location = locationBits.isNotEmpty ? locationBits.join(', ') : null;
-    final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      event.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
