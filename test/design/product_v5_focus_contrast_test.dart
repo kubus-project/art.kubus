@@ -92,4 +92,37 @@ void main() {
       }
     }
   });
+
+  testWidgets(
+      'theme focus fill (ThemeData.focusColor) clears 3:1 against every page '
+      'surface, in light and dark', (tester) async {
+    final provider = ThemeProvider();
+    await tester.runAsync(() async {
+      while (!provider.isInitialized) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    });
+    for (final entry in <String, (ThemeData, KubusColorRoles)>{
+      'dark': (provider.darkTheme, KubusColorRoles.dark),
+      'light': (provider.lightTheme, KubusColorRoles.light),
+    }.entries) {
+      final (theme, roles) = entry.value;
+      final fill = theme.focusColor;
+      final pages = <String, Color>{
+        'ground': roles.ground,
+        'surface': roles.surface,
+        'surfaceRaised': roles.surfaceRaised,
+      };
+      for (final page in pages.entries) {
+        final composed = Color.alphaBlend(fill, page.value);
+        final ratio = _contrast(composed, page.value);
+        expect(
+          ratio,
+          greaterThanOrEqualTo(3.0),
+          reason: '${entry.key} focus fill on ${page.key} is '
+              '${ratio.toStringAsFixed(2)}:1',
+        );
+      }
+    }
+  });
 }

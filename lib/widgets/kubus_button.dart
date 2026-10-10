@@ -202,6 +202,8 @@ class KubusButton extends StatelessWidget {
           return Colors.transparent;
         }),
         shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+        // The shared KubusFocusRing draws the keyboard indicator.
+        side: const WidgetStatePropertyAll(BorderSide.none),
         // Core actions keep a 44 px minimum target on every platform.
         minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
         tapTargetSize: MaterialTapTargetSize.padded,

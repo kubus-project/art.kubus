@@ -143,6 +143,7 @@ class KubusAuthMethodButton extends StatelessWidget {
           alpha: style.isDark ? 0.10 : 0.08,
         ),
         shadowColor: Colors.transparent,
+        side: BorderSide.none,
         disabledBackgroundColor: Colors.transparent,
         disabledForegroundColor: style.foregroundColor.withValues(alpha: 0.55),
         padding: const EdgeInsets.symmetric(
