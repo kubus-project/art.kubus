@@ -4,6 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import 'chart_scale.dart';
+import 'stats_chart_shared.dart';
 
 @immutable
 class StatsBarEntry {
@@ -20,35 +22,113 @@ class StatsInteractiveBarChart extends StatelessWidget {
   final double height;
   final Color gridColor;
 
+  /// Shown on the baseline when every entry is zero. Localized by the caller.
+  final String emptyLabel;
+
   const StatsInteractiveBarChart({
     super.key,
     required this.entries,
     required this.xLabels,
     required this.barColor,
     required this.gridColor,
+    required this.emptyLabel,
     this.height = 140,
   }) : assert(entries.length == xLabels.length);
+
+  static const double _bottomReserved = 34;
+  static const double _minYReserved = 52;
+  static const double _edgePadding = 20;
+  static const double _slotMinWidth = 22;
+
+  /// A bar clipped to the domain top gets a thin gap just under its top, the
+  /// same break a broken axis uses, so it does not read as a value of exactly
+  /// the top. Line charts mark clipped points with a dot instead. The tooltip
+  /// shows the true value for both.
+  static List<BarChartRodStackItem> _clipBreak(ChartDomain domain, Color gap) {
+    return <BarChartRodStackItem>[
+      BarChartRodStackItem(
+        domain.max - domain.step * 0.4,
+        domain.max - domain.step * 0.2,
+        gap,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final pointCount = entries.length;
 
-    if (entries.isEmpty) {
-      return SizedBox(height: height);
+    if (pointCount == 0) {
+      return StatsChartEmptyState(
+        height: height,
+        gridColor: gridColor,
+        label: emptyLabel,
+      );
     }
 
-    final maxY =
-        entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
-    final yTop = maxY <= 0 ? 1.0 : maxY.toDouble() * 1.2;
-
-    final pointCount = entries.length;
-    final chartWidth = math.max(0, pointCount - 1) * 34.0 + 84;
+    final locale = Localizations.localeOf(context).languageCode;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final chartDuration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 150);
+    final values =
+        entries.map((e) => e.value.toDouble()).toList(growable: false);
+    final bottomLabelStyle = KubusTextStyles.navMetaLabel.copyWith(
+      fontSize: math.max(KubusChromeMetrics.navMetaLabel - 1, 11),
+      color: scheme.onSurface.withValues(alpha: 0.55),
+    );
+    final bottomLabelWidth =
+        statsChartWidestLabel(context, xLabels, bottomLabelStyle);
+    final minWidth = 52 + pointCount * _slotMinWidth;
 
     return SizedBox(
       height: height,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = math.max(constraints.maxWidth, chartWidth);
+          final available = constraints.maxWidth;
+          final domain = ChartScale.domain(
+            values,
+            targetTicks: ChartScale.ticksFor(available),
+            minStep: 1,
+            padFlat: false,
+            clipOutliers: true,
+          );
+          if (!domain.hasData) {
+            return StatsChartEmptyState(
+              height: height,
+              gridColor: gridColor,
+              label: emptyLabel,
+            );
+          }
+
+          final yLabels = domain.ticks
+              .map((tick) => ChartScale.compactLabel(tick, locale: locale))
+              .toList(growable: false);
+          final yReserved = math.max(
+            _minYReserved,
+            statsChartWidestLabel(
+                    context, yLabels, KubusTextStyles.navMetaLabel) +
+                10,
+          );
+          final width = ChartScale.contentWidth(
+            available: available,
+            minWidth: minWidth,
+          );
+          final plotWidth = math.max(0.0, width - yReserved - _edgePadding);
+          final rodWidth = ChartScale.barWidth(plotWidth, pointCount);
+          final slotSpacing = plotWidth / pointCount;
+          final stride = ChartScale.labelStride(
+            count: pointCount,
+            pointSpacing: slotSpacing,
+            labelWidth: bottomLabelWidth,
+          );
+          final labelled = ChartScale.labelIndices(
+            count: pointCount,
+            stride: stride,
+            pointSpacing: slotSpacing,
+            labelWidth: bottomLabelWidth,
+          );
 
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -59,12 +139,12 @@ class StatsInteractiveBarChart extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: BarChart(
                   BarChartData(
-                    minY: 0,
-                    maxY: yTop,
+                    minY: domain.min,
+                    maxY: domain.max,
                     gridData: FlGridData(
                       show: true,
                       drawVerticalLine: false,
-                      horizontalInterval: _niceInterval(yTop),
+                      horizontalInterval: domain.step,
                       getDrawingHorizontalLine: (_) => FlLine(
                         color: gridColor,
                         strokeWidth: 1,
@@ -89,14 +169,16 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          interval: _niceInterval(yTop),
-                          reservedSize: 52,
+                          interval: domain.step,
+                          reservedSize: yReserved,
                           getTitlesWidget: (value, meta) {
-                            if (value < 0) return const SizedBox.shrink();
+                            if (value < domain.min || value > domain.max) {
+                              return const SizedBox.shrink();
+                            }
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: Text(
-                                value.round().toString(),
+                                ChartScale.compactLabel(value, locale: locale),
                                 style: KubusTextStyles.navMetaLabel.copyWith(
                                   color:
                                       scheme.onSurface.withValues(alpha: 0.65),
@@ -109,22 +191,22 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 34,
-                          interval: _bottomInterval(pointCount),
+                          reservedSize: _bottomReserved,
+                          // Every x value is offered; only the chosen indices
+                          // (stride grid plus the newest bucket) are painted.
+                          interval: 1,
                           getTitlesWidget: (value, meta) {
                             final idx = value.round();
-                            if (idx < 0 || idx >= xLabels.length) {
+                            if (idx < 0 ||
+                                idx >= xLabels.length ||
+                                !labelled.contains(idx)) {
                               return const SizedBox.shrink();
                             }
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 xLabels[idx],
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  fontSize: KubusChromeMetrics.navMetaLabel - 2,
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.55),
-                                ),
+                                style: bottomLabelStyle,
                                 textAlign: TextAlign.center,
                               ),
                             );
@@ -140,11 +222,14 @@ class StatsInteractiveBarChart extends StatelessWidget {
                         fitInsideHorizontally: true,
                         fitInsideVertically: true,
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final label =
-                              groupIndex >= 0 && groupIndex < xLabels.length
-                                  ? xLabels[groupIndex]
-                                  : '';
-                          final value = rod.toY.round();
+                          final inRange =
+                              groupIndex >= 0 && groupIndex < xLabels.length;
+                          final label = inRange ? xLabels[groupIndex] : '';
+                          // The rod may be clipped to the domain top; the
+                          // tooltip always reports the true entry value.
+                          final value = inRange
+                              ? entries[groupIndex].value
+                              : rod.toY.round();
                           return BarTooltipItem(
                             '$label\n$value',
                             KubusTextStyles.navMetaLabel.copyWith(
@@ -156,19 +241,22 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       ),
                     ),
                     barGroups: List<BarChartGroupData>.generate(
-                      entries.length,
+                      pointCount,
                       (i) {
                         return BarChartGroupData(
                           x: i,
                           barRods: [
                             BarChartRodData(
-                              toY: entries[i].value.toDouble(),
+                              toY: domain.plot(values[i]),
                               color: barColor,
-                              width: 16,
+                              width: rodWidth,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(4),
                                 topRight: Radius.circular(4),
                               ),
+                              rodStackItems: domain.isClippedValue(values[i])
+                                  ? _clipBreak(domain, scheme.surface)
+                                  : const <BarChartRodStackItem>[],
                             ),
                           ],
                         );
@@ -176,6 +264,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       growable: false,
                     ),
                   ),
+                  duration: chartDuration,
                 ),
               ),
             ),
@@ -183,28 +272,5 @@ class StatsInteractiveBarChart extends StatelessWidget {
         },
       ),
     );
-  }
-
-  static double _niceInterval(double maxY) {
-    if (maxY <= 0) return 1;
-    final rough = maxY / 4;
-    final power =
-        math.pow(10, (math.log(rough) / math.ln10).floor()).toDouble();
-    final scaled = rough / power;
-    final base = scaled <= 1
-        ? 1
-        : scaled <= 2
-            ? 2
-            : scaled <= 5
-                ? 5
-                : 10;
-    return base * power;
-  }
-
-  static double _bottomInterval(int count) {
-    if (count <= 7) return 1;
-    if (count <= 14) return 2;
-    if (count <= 30) return 5;
-    return (count / 6).ceilToDouble();
   }
 }
