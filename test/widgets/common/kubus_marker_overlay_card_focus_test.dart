@@ -413,6 +413,52 @@ void main() {
     expect(state.row.hasPrimaryFocus, isFalse);
   });
 
+  testWidgets('Escape inside the card calls onEscape only when it is set',
+      (tester) async {
+    var escaped = 0;
+    Widget card({VoidCallback? onEscape}) => MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: KubusMarkerOverlayCard(
+                  marker: _marker(),
+                  artwork: null,
+                  baseColor: Colors.teal,
+                  displayTitle: _title,
+                  canPresentExhibition: false,
+                  onClose: () {},
+                  onPrimaryAction: () {},
+                  primaryActionIcon: Icons.arrow_forward,
+                  primaryActionLabel: 'View details',
+                  onEscape: onEscape,
+                ),
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(card(onEscape: () => escaped += 1));
+    await tester.pump();
+    // Tab into the card: its first stop is the close control.
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_focusedLabel(), 'Close');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(escaped, 1);
+
+    await tester.pumpWidget(card());
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(escaped, 1);
+  });
+
   testWidgets('the title is announced as a heading', (tester) async {
     final handle = tester.ensureSemantics();
     final log = <String>[];

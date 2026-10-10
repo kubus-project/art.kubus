@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../features/map/shared/marker_overlay_card_metrics.dart';
 import '../../l10n/app_localizations.dart';
@@ -90,6 +91,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.maxWidth,
     this.maxHeight,
     this.fallbackFocusNode,
+    this.onEscape,
   });
 
   final ArtMarker marker;
@@ -140,6 +142,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   /// Where keyboard focus goes when a card opened from the keyboard closes and
   /// the control that opened it is gone (the map search field, for example).
   final FocusNode? fallbackFocusNode;
+
+  /// Closes the card on Escape while focus is inside it. Null leaves Escape to
+  /// the screen (the desktop map handles it at its root).
+  final VoidCallback? onEscape;
 
   /// Resolves the vertical composition for this card inside [availableHeight].
   ///
@@ -451,6 +457,16 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       wrapped = GestureDetector(
         behavior: HitTestBehavior.opaque,
         onHorizontalDragEnd: onHorizontalDragEnd,
+        child: wrapped,
+      );
+    }
+
+    if (onEscape != null) {
+      // Scoped to the card: Escape is only taken while focus is inside it.
+      wrapped = CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.escape): onEscape!,
+        },
         child: wrapped,
       );
     }

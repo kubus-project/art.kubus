@@ -924,6 +924,7 @@ class KubusMarkerOverlayHelpers {
     GestureDragEndCallback? onHorizontalDragEnd,
     required double maxCardHeight,
     FocusNode? fallbackFocusNode,
+    bool escapeCloses = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final presentation = resolveMarkerOverlayPresentation(
@@ -968,6 +969,7 @@ class KubusMarkerOverlayHelpers {
       onHorizontalDragEnd: onHorizontalDragEnd,
       maxHeight: maxCardHeight,
       fallbackFocusNode: fallbackFocusNode,
+      onEscape: escapeCloses ? onClose : null,
     );
   }
 }
