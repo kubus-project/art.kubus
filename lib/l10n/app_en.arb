@@ -4586,6 +4586,10 @@
   "@communityMediaVideoUnavailable": {
     "description": "0.8.2 community media"
   },
+  "communityMediaVideoPreviewUnavailable": "Preview unavailable",
+  "@communityMediaVideoPreviewUnavailable": {
+    "description": "0.8.2 community video poster: shown on a video that has no still preview"
+  },
   "communityMediaVideoReplay": "Replay video",
   "@communityMediaVideoReplay": {
     "description": "0.8.2 community media video player"

@@ -33,6 +33,16 @@ class AppConfig {
     'COMMUNITY_MULTI_MEDIA_ENABLED',
     defaultValue: !isProduction,
   );
+
+  /// Muted autoplay of Community videos in the feed: a clip that is clearly on
+  /// screen starts silently, and the viewer's first tap brings sound. It is on
+  /// in every build and exists as a kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_AUTOPLAY_ENABLED=false. Reduced motion always
+  /// turns it off, whatever this says.
+  static const bool enableCommunityVideoAutoplay = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_AUTOPLAY_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableSeoPublicPages = bool.fromEnvironment(
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
@@ -570,6 +580,8 @@ class AppConfig {
         return enableCollabInvites;
       case 'communityMultiMedia':
         return enableCommunityMultiMedia;
+      case 'communityVideoAutoplay':
+        return enableCommunityVideoAutoplay;
       case 'collabInviteNotifications':
         return enableCollabInviteNotifications;
       case 'season0':

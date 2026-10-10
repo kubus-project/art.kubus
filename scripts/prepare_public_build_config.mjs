@@ -23,6 +23,12 @@ if (!['true', 'false'].includes(communityMultiMediaEnabled)) {
   console.error('KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED must be true or false when set.');
   process.exit(1);
 }
+const communityVideoAutoplayEnabled = (process.env.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED || 'true')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(communityVideoAutoplayEnabled)) {
+  console.error('KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED must be true or false when set.');
+  process.exit(1);
+}
 const buildMetadata = [
   'KUBUS_APP_VERSION',
   'KUBUS_BUILD_NUMBER',
@@ -79,6 +85,7 @@ values.KUBUS_ENABLE_WEB_SEMANTICS = false;
 // user preference and TelemetryService requires both layers to be enabled.
 values.ANALYTICS_APP_ENABLED = analyticsBuildEnabled === 'true';
 values.COMMUNITY_MULTI_MEDIA_ENABLED = communityMultiMediaEnabled === 'true';
+values.COMMUNITY_VIDEO_AUTOPLAY_ENABLED = communityVideoAutoplayEnabled === 'true';
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');
 mkdirSync(dirname(outputPath), { recursive: true });

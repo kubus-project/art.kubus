@@ -19056,6 +19056,12 @@ abstract class AppLocalizations {
   /// **'This video cannot be played here.'**
   String get communityMediaVideoUnavailable;
 
+  /// 0.8.2 community video poster: shown on a video that has no still preview
+  ///
+  /// In en, this message translates to:
+  /// **'Preview unavailable'**
+  String get communityMediaVideoPreviewUnavailable;
+
   /// 0.8.2 community media video player
   ///
   /// In en, this message translates to:
