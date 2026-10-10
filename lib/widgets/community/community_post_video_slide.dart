@@ -223,7 +223,12 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
 
     VideoPlayerController? controller;
     try {
-      final url = MediaUrlResolver.resolveDisplayUrl(widget.url) ?? widget.url;
+      // Fail closed: an unsafe or unresolvable reference never reaches the
+      // player. The catch below shows the unavailable state.
+      final url = MediaUrlResolver.resolveDisplayUrl(widget.url);
+      if (url == null) {
+        throw const FormatException('Video reference is not a safe URL.');
+      }
       controller = VideoPlayerController.networkUrl(Uri.parse(url));
       await controller.initialize();
       await controller.setLooping(false);
