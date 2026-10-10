@@ -223,11 +223,10 @@ class PendingActionProvider extends ChangeNotifier {
       await _finish(intent);
     } else {
       // The stored copy is dropped now: a reload must never replay an attempt
-      // the visitor has already seen fail. The attempt is not offered again
-      // over the feedback: the confirmation host would re-open the sheet on
-      // top of the failure toast, which sits under it and never shows. The
-      // visitor retries from the control itself (now signed in).
-      _pending = null;
+      // the visitor has already seen fail. The in-memory copy stays so a
+      // further confirm() can retry it, but the attempt is no longer offered
+      // as awaiting confirmation: the host would re-open the sheet on top of
+      // the failure feedback, which sits under it and never shows.
       _awaitingConfirmation = false;
       await _service.clear();
       notifyListeners();
