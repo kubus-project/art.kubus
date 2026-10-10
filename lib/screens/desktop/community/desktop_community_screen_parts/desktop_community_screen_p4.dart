@@ -498,6 +498,8 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     // gate runs before the dialog so a guest never fills one in.
     final allowed = await const ContextualAuthGate().ensureAuthenticated(
       context,
+      // Same scope as the profile message button: a usable public identity.
+      requirements: ProtectedActionRequirements.participant,
       actionLabel: AppLocalizations.of(context)!
           .messagesEmptyStartChatAction
           .toLowerCase(),

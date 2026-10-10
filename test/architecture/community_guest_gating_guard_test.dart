@@ -163,4 +163,69 @@ void main() {
           lessThan(body.indexOf('showKubusDialog')));
     });
   });
+
+  group('review follow-ups', () {
+    test('a comment typed before sign-in is kept for the journey', () {
+      for (final entry in <(String, String, int)>[
+        (postDetail, 'Future<void> _submitComment() async {', 2),
+        (mobileFeed, 'Future<void> submitInlineComment() async {', 4),
+        (desktopFeedP3, 'Future<void> submitInlineComment() async {', 4),
+      ]) {
+        final body = memberBody(read(entry.$1), entry.$2, indent: entry.$3);
+        expect(body, contains('rememberCommentDraftForAuth('),
+            reason: entry.$1);
+      }
+      // A sent comment clears the draft, so it cannot come back on a later
+      // visit. Mobile and desktop feeds clear it in their submit paths too.
+      expect(
+        memberBody(read(postDetail), 'Future<void> _submitComment() async {'),
+        contains('takeCommentDraftForAuth('),
+      );
+      expect(
+        read(mobileFeed),
+        contains('takeCommentDraftForAuth('),
+      );
+      expect(
+        read(desktopFeedP3),
+        contains('takeCommentDraftForAuth('),
+      );
+    });
+
+    test('a restored settled intent is taken only once the post is shown', () {
+      final body = memberBody(
+        read(postDetail),
+        'void _onPendingActionsChanged() {',
+      );
+      expect(
+        body.indexOf('if (post == null) return;'),
+        lessThan(body.indexOf('takeSettled()')),
+        reason: 'taking first drops the follow-up while the post is loading',
+      );
+    });
+
+    test('chat creation requires the same scope as the profile message button',
+        () {
+      expect(
+        memberBody(read(messages), 'Future<void> _startConversation() async {'),
+        contains('ProtectedActionRequirements.participant'),
+      );
+      expect(
+        memberBody(read(desktopFeedP4),
+            'Future<void> _startNewConversation() async {'),
+        contains('ProtectedActionRequirements.participant'),
+      );
+    });
+
+    test('an art drop resumes with its attachment guidance', () {
+      final p2 = read(desktopFeedP2);
+      expect(
+        memberBody(p2, 'void _resumeComposeIntent('),
+        contains('_openArtDropComposer'),
+      );
+      expect(
+        memberBody(p2, 'void _openArtDropComposer()'),
+        contains('_showARAttachmentInfo()'),
+      );
+    });
+  });
 }

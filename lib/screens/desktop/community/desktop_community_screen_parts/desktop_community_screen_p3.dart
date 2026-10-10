@@ -153,6 +153,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
         targetType: PendingActionTargetType.post,
         targetId: post.id,
         sourceScreen: 'desktop_community_feed',
+        onAuthJourneyStarted: () => context
+            .read<CommunityHubProvider>()
+            .rememberCommentDraftForAuth(post.id, controller.text),
       );
       if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
@@ -168,6 +171,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
         post.commentCount = commentsProvider.totalCountForPost(post.id);
         ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
+        if (mounted) {
+          context.read<CommunityHubProvider>().takeCommentDraftForAuth(post.id);
+        }
         if (!mounted) return;
         _applyState(() {
           _inlineReplyToCommentIds.remove(post.id);

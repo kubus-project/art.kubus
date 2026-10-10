@@ -23,6 +23,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
+import '../../providers/community_hub_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/pending_action_provider.dart';
@@ -111,10 +112,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _post = widget.post;
       _loading = false;
       _maybeRunInitialAction();
+      _restoreCommentDraft(widget.post!.id);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final post = _post;
         if (!mounted || post == null) return;
+        _onPendingActionsChanged();
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
@@ -185,9 +188,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   /// shows what was actually recorded; a comment puts the cursor back into the
   /// composer the visitor was writing in.
   void _onPendingActionsChanged() {
-    final settled = _pendingActions?.takeSettled();
+    // Nothing to attach a follow-up to until the post is on screen. Leaving the
+    // settled intent in place keeps it for the load that completes later.
     final post = _post;
-    if (settled == null || post == null) return;
+    if (post == null) return;
+    final settled = _pendingActions?.takeSettled();
+    if (settled == null) return;
     if (settled.targetType != PendingActionTargetType.post ||
         settled.targetId != post.id) {
       return;
@@ -217,6 +223,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
     if (!mounted) return;
     setState(() {});
+  }
+
+  /// Puts back a comment the guest typed before sign-in, once, for this post.
+  void _restoreCommentDraft(String postId) {
+    final draft = _readCommunityHub()?.takeCommentDraftForAuth(postId);
+    if (draft == null || _commentController.text.trim().isNotEmpty) return;
+    _commentController.text = draft;
+  }
+
+  CommunityHubProvider? _readCommunityHub() {
+    try {
+      return Provider.of<CommunityHubProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -259,6 +280,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _post = post;
         _loading = false;
       });
+      _restoreCommentDraft(post.id);
+      _onPendingActionsChanged();
       if (mounted) {
         // Load comments via provider so edited/original fields and nesting are
         // consistent and mutations can update UI without manual refresh.
@@ -418,14 +441,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
+    final hub = context.read<CommunityHubProvider>();
+    final postId = _post!.id;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      returnRoute: '/p/${Uri.encodeComponent(postId)}',
       actionType: PendingActionType.comment,
       targetType: PendingActionTargetType.post,
-      targetId: _post!.id,
+      targetId: postId,
       sourceScreen: 'post_detail',
+      onAuthJourneyStarted: () =>
+          hub.rememberCommentDraftForAuth(postId, _commentController.text),
     );
     if (!authenticated || !mounted) return;
     _commentController.clear();
@@ -441,6 +468,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             content: text,
             parentCommentId: parentId,
           );
+      // Sent: a draft kept for sign-in must not come back on a later visit.
+      hub.takeCommentDraftForAuth(postId);
       ProfilePackageMutationTracker.postUpdated(post: _post!);
       if (!mounted) return;
       messenger.showKubusSnackBar(

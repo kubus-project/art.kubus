@@ -790,6 +790,12 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     _applyState(() => _showComposeDialog = true);
   }
 
+  /// The art drop composer also explains how the AR attachment works.
+  void _openArtDropComposer() {
+    _openComposeDialog();
+    _showARAttachmentInfo();
+  }
+
   List<CommunityFabOption> _getFabOptions(
     int tabIndex, {
     required AppLocalizations l10n,
@@ -827,10 +833,7 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
               _applyState(() => _isFabExpanded = false);
               unawaited(_requestComposer(
                 intent: CommunityComposeIntent.artDrop,
-                open: () {
-                  _openComposeDialog();
-                  _showARAttachmentInfo();
-                },
+                open: _openArtDropComposer,
               ));
             },
           ),
@@ -1024,9 +1027,14 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
         unawaited(_requestComposerExpansion());
         break;
       case CommunityComposeIntent.groupPost:
-      case CommunityComposeIntent.artDrop:
       case CommunityComposeIntent.review:
         unawaited(_requestComposer(intent: intent, open: _openComposeDialog));
+        break;
+      case CommunityComposeIntent.artDrop:
+        unawaited(_requestComposer(
+          intent: intent,
+          open: _openArtDropComposer,
+        ));
         break;
     }
   }

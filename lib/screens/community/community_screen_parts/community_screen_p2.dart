@@ -690,6 +690,9 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
         targetType: PendingActionTargetType.post,
         targetId: post.id,
         sourceScreen: 'community_feed',
+        onAuthJourneyStarted: () => context
+            .read<CommunityHubProvider>()
+            .rememberCommentDraftForAuth(post.id, controller.text),
       );
       if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
@@ -705,6 +708,9 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
         post.commentCount = commentsProvider.totalCountForPost(post.id);
         ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
+        if (mounted) {
+          context.read<CommunityHubProvider>().takeCommentDraftForAuth(post.id);
+        }
         if (!mounted) return;
         _applyState(() {
           _inlineReplyToCommentIds.remove(post.id);

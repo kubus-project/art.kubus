@@ -328,6 +328,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // gate runs before the composer dialog so a guest never fills one in.
     final allowed = await const ContextualAuthGate().ensureAuthenticated(
       context,
+      // Same scope as the profile message button: a usable public identity.
+      requirements: ProtectedActionRequirements.participant,
       actionLabel: AppLocalizations.of(context)!
           .messagesEmptyStartChatAction
           .toLowerCase(),
