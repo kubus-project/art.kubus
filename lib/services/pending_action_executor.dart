@@ -2,6 +2,7 @@ import '../config/config.dart';
 import '../models/pending_action_intent.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
+import 'backend_api_service.dart';
 import 'user_service.dart';
 
 /// Why a confirmed pending action did or did not complete.
@@ -42,6 +43,13 @@ class PendingActionExecutionResult {
       };
 }
 
+/// Reads whether the signed-in account already likes [postId]. Resolves to
+/// `null` when the post is no longer available.
+typedef PostLikedLoader = Future<bool?> Function(String postId);
+
+/// Records a like on [postId]. The backend treats a repeated like as a no-op.
+typedef PostLiker = Future<void> Function(String postId);
+
 /// Applies a confirmed [PendingActionIntent].
 ///
 /// Two invariants matter here:
@@ -53,7 +61,28 @@ class PendingActionExecutionResult {
 ///   target; the backend still authenticates and authorizes the mutation, and a
 ///   rejection surfaces as [PendingActionOutcome.unauthorized].
 class PendingActionExecutor {
-  const PendingActionExecutor();
+  const PendingActionExecutor({
+    PostLikedLoader? loadPostLiked,
+    PostLiker? likePost,
+  })  : _loadPostLiked = loadPostLiked,
+        _likePost = likePost;
+
+  final PostLikedLoader? _loadPostLiked;
+  final PostLiker? _likePost;
+
+  Future<bool?> _readPostLiked(String postId) {
+    final override = _loadPostLiked;
+    if (override != null) return override(postId);
+    return BackendApiService().getCommunityInteractionStates(postIds: <String>[
+      postId
+    ]).then((batch) => batch.posts[postId]?.isLiked);
+  }
+
+  Future<void> _sendPostLike(String postId) {
+    final override = _likePost;
+    if (override != null) return override(postId);
+    return BackendApiService().likePost(postId).then((_) {});
+  }
 
   Future<PendingActionExecutionResult> execute({
     required PendingActionIntent intent,
@@ -164,6 +193,9 @@ class PendingActionExecutor {
     required PendingActionIntent intent,
     required ArtworkProvider artworkProvider,
   }) async {
+    if (intent.targetType == PendingActionTargetType.post) {
+      return _executePostLike(intent.targetId);
+    }
     if (intent.targetType != PendingActionTargetType.artwork) {
       return const PendingActionExecutionResult(
         PendingActionOutcome.targetUnavailable,
@@ -179,6 +211,22 @@ class PendingActionExecutor {
     return PendingActionExecutionResult(
       ok ? PendingActionOutcome.completed : PendingActionOutcome.failed,
     );
+  }
+
+  /// Drives the post to "liked" rather than toggling it. A post the account
+  /// already likes is left alone, so a replayed or doubly confirmed like can
+  /// never take the like back off.
+  Future<PendingActionExecutionResult> _executePostLike(String postId) async {
+    final liked = await _readPostLiked(postId);
+    if (liked == null) {
+      return const PendingActionExecutionResult(
+        PendingActionOutcome.targetUnavailable,
+      );
+    }
+    if (!liked) {
+      await _sendPostLike(postId);
+    }
+    return const PendingActionExecutionResult(PendingActionOutcome.completed);
   }
 
   Future<PendingActionExecutionResult> _executeFollow(

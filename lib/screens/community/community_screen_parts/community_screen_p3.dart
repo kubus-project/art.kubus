@@ -13,14 +13,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     String? actionLabel,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final hub = context.read<CommunityHubProvider>();
-    return const ContextualAuthGate().ensureAuthenticated(
-      requirements: ProtectedActionRequirements.participant,
+    return ensureCommunityComposeAccess(
       context,
+      intent: intent,
       actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
-      returnRoute: '/community',
       sourceScreen: 'community_screen',
-      onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
     );
   }
 

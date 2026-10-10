@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/chat_provider.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
 import '../../providers/app_mode_provider.dart';
@@ -323,6 +324,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _startConversation() async {
+    // Starting a conversation is an account action on every entry point; the
+    // gate runs before the composer dialog so a guest never fills one in.
+    final allowed = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: AppLocalizations.of(context)!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
+      returnRoute: '/community',
+      sourceScreen: 'messages_screen',
+    );
+    if (!allowed || !mounted) return;
     final result = await showKubusDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => _CreateConversationDialog(),

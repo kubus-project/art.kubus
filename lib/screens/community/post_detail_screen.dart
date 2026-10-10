@@ -25,6 +25,7 @@ import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
+import '../../providers/pending_action_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -90,6 +91,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _didRunInitialAction = false;
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
   final Set<String> _deleteInFlightCommentIds = <String>{};
+  PendingActionProvider? _pendingActions;
 
   String? _currentWalletAddress() {
     final override = widget.currentWalletAddressOverride;
@@ -161,7 +163,65 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final pending = _readPendingActions();
+    if (identical(pending, _pendingActions)) return;
+    _pendingActions?.removeListener(_onPendingActionsChanged);
+    _pendingActions = pending;
+    _pendingActions?.addListener(_onPendingActionsChanged);
+  }
+
+  PendingActionProvider? _readPendingActions() {
+    try {
+      return Provider.of<PendingActionProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The visitor came back from sign-in and confirmed a continuation that was
+  /// captured on this post. A like is re-read from the server so the heart
+  /// shows what was actually recorded; a comment puts the cursor back into the
+  /// composer the visitor was writing in.
+  void _onPendingActionsChanged() {
+    final settled = _pendingActions?.takeSettled();
+    final post = _post;
+    if (settled == null || post == null) return;
+    if (settled.targetType != PendingActionTargetType.post ||
+        settled.targetId != post.id) {
+      return;
+    }
+    switch (settled.actionType) {
+      case PendingActionType.like:
+        unawaited(_refreshPostStateFromServer(post));
+        break;
+      case PendingActionType.comment:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _commentFocusNode.requestFocus();
+        });
+        break;
+      case PendingActionType.save:
+      case PendingActionType.follow:
+      case PendingActionType.contribute:
+        break;
+    }
+  }
+
+  Future<void> _refreshPostStateFromServer(CommunityPost post) async {
+    final interactions = context.read<CommunityInteractionsProvider>();
+    try {
+      await interactions.refreshPostStates([post], force: true);
+    } catch (_) {
+      // The heart keeps the last known state; the next open re-reads it.
+    }
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _pendingActions?.removeListener(_onPendingActionsChanged);
     _commentController.dispose();
     _commentFocusNode.dispose();
     super.dispose();
@@ -270,6 +330,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: _post!.id,
+      sourceScreen: 'post_detail',
     );
     if (!authenticated || !mounted) return;
     try {

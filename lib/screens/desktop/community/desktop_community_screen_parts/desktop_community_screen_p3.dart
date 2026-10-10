@@ -47,6 +47,10 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'desktop_community_feed',
     );
     if (!authenticated || !mounted) return;
     final wasLiked = post.isLiked;
@@ -138,6 +142,19 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     Future<void> submitInlineComment() async {
       final text = controller.text.trim();
       if (text.isEmpty) return;
+      // Guests meet the account gate before a comment is sent. The text stays
+      // in the field, so it is still there when they come back from sign-in.
+      final authenticated =
+          await const ContextualAuthGate().ensureAuthenticated(
+        context,
+        actionLabel: l10n.commonComments.toLowerCase(),
+        returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+        actionType: PendingActionType.comment,
+        targetType: PendingActionTargetType.post,
+        targetId: post.id,
+        sourceScreen: 'desktop_community_feed',
+      );
+      if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       final commentsProvider = context.read<CommunityCommentsProvider>();
       final parentId = _inlineReplyToCommentIds[post.id];
@@ -420,12 +437,11 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_isComposerExpanded) return;
-      _applyState(() {
-        _isComposerExpanded = true;
+      unawaited(_requestComposerExpansion(beforeOpen: () {
         _selectedCategory = hub.draft.category.isNotEmpty
             ? hub.draft.category
             : _selectedCategory;
-      });
+      }));
     });
   }
 

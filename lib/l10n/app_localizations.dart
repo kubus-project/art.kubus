@@ -762,6 +762,12 @@ abstract class AppLocalizations {
   /// **'Like this artwork'**
   String get activationGateLikeArtworkTitle;
 
+  /// No description provided for @activationGateLikePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post'**
+  String get activationGateLikePostTitle;
+
   /// No description provided for @activationGateFollowTitle.
   ///
   /// In en, this message translates to:
@@ -863,6 +869,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Like this artwork?'**
   String get activationConfirmLikeArtwork;
+
+  /// No description provided for @activationConfirmLikePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post?'**
+  String get activationConfirmLikePost;
 
   /// No description provided for @activationConfirmFollow.
   ///

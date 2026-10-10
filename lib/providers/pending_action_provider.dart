@@ -41,6 +41,7 @@ class PendingActionProvider extends ChangeNotifier {
   PendingActionIntent? _pending;
   bool _awaitingConfirmation = false;
   bool _executing = false;
+  PendingActionIntent? _settled;
 
   /// In-memory exactly-once guard. Complements the persisted marker so a
   /// double tap within one session cannot start two mutations.
@@ -53,6 +54,18 @@ class PendingActionProvider extends ChangeNotifier {
   bool get isAwaitingConfirmation => _awaitingConfirmation && _pending != null;
 
   bool get isExecuting => _executing;
+
+  /// The most recently confirmed intent that succeeded (or that only restored
+  /// an entry point, such as a comment composer), until a screen takes it.
+  ///
+  /// Lets the screen the visitor was returned to react to the outcome, for
+  /// example by refreshing a like or focusing its composer, without the screen
+  /// having to know about the continuation host.
+  PendingActionIntent? takeSettled() {
+    final settled = _settled;
+    _settled = null;
+    return settled;
+  }
 
   /// Persists the action a guest just attempted.
   Future<void> capture(PendingActionIntent intent) async {
@@ -161,6 +174,7 @@ class PendingActionProvider extends ChangeNotifier {
     }
 
     if (result.didSucceed) {
+      _settled = intent;
       await _service.markCompleted(intent);
       unawaited(_telemetry.trackPendingActionCompleted(
         actionType: intent.actionType.storageValue,

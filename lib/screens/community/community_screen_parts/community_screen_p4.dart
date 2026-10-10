@@ -788,6 +788,10 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'community_feed',
     );
     if (!authenticated || !mounted) return;
 

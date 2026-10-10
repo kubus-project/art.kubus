@@ -414,6 +414,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Like this artwork';
 
   @override
+  String get activationGateLikePostTitle => 'Like this post';
+
+  @override
   String get activationGateFollowTitle => 'Follow this artist';
 
   @override
@@ -468,6 +471,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activationConfirmLikeArtwork => 'Like this artwork?';
+
+  @override
+  String get activationConfirmLikePost => 'Like this post?';
 
   @override
   String get activationConfirmFollow => 'Follow this artist?';

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/community_hub_provider.dart';
+import '../../services/contextual_auth_gate.dart';
 
 /// Reopens a Community creation surface that a guest requested before they
 /// went through sign-in.
@@ -39,4 +40,26 @@ class CommunityComposeIntentResumer extends StatelessWidget {
     }
     return child;
   }
+}
+
+/// Asks a guest for an account before a Community composer opens, the same on
+/// mobile and desktop. A signed-in visitor with a usable profile passes
+/// straight through. When they continue into sign-in, the requested surface is
+/// remembered on [CommunityHubProvider] and reopened by
+/// [CommunityComposeIntentResumer] once the account exists.
+Future<bool> ensureCommunityComposeAccess(
+  BuildContext context, {
+  required CommunityComposeIntent intent,
+  required String actionLabel,
+  required String sourceScreen,
+}) {
+  final hub = context.read<CommunityHubProvider>();
+  return const ContextualAuthGate().ensureAuthenticated(
+    context,
+    requirements: ProtectedActionRequirements.participant,
+    actionLabel: actionLabel,
+    returnRoute: '/community',
+    sourceScreen: sourceScreen,
+    onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
+  );
 }

@@ -679,6 +679,19 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     Future<void> submitInlineComment() async {
       final text = controller.text.trim();
       if (text.isEmpty) return;
+      // Guests meet the account gate before a comment is sent. The text stays
+      // in the field, so it is still there when they come back from sign-in.
+      final authenticated =
+          await const ContextualAuthGate().ensureAuthenticated(
+        context,
+        actionLabel: l10n.commonComments.toLowerCase(),
+        returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+        actionType: PendingActionType.comment,
+        targetType: PendingActionTargetType.post,
+        targetId: post.id,
+        sourceScreen: 'community_feed',
+      );
+      if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       final commentsProvider = context.read<CommunityCommentsProvider>();
       final parentId = _inlineReplyToCommentIds[post.id];

@@ -416,6 +416,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Všečkaj to umetnino';
 
   @override
+  String get activationGateLikePostTitle => 'Všečkaj to objavo';
+
+  @override
   String get activationGateFollowTitle => 'Spremljaj tega umetnika';
 
   @override
@@ -470,6 +473,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get activationConfirmLikeArtwork => 'Želiš všečkati to umetnino?';
+
+  @override
+  String get activationConfirmLikePost => 'Želiš všečkati to objavo?';
 
   @override
   String get activationConfirmFollow => 'Želiš spremljati tega umetnika?';

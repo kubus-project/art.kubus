@@ -770,6 +770,26 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Guests meet the contextual account surface before any composer opens,
+  /// as on mobile. Signed-in visitors pass straight through.
+  Future<void> _requestComposer({
+    required CommunityComposeIntent intent,
+    required VoidCallback open,
+  }) async {
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: intent,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
+    open();
+  }
+
+  void _openComposeDialog() {
+    _applyState(() => _showComposeDialog = true);
+  }
+
   List<CommunityFabOption> _getFabOptions(
     int tabIndex, {
     required AppLocalizations l10n,
@@ -790,10 +810,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.post_add_outlined,
             label: l10n.desktopCommunityCreateOptionGroupPost,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.groupPost,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -803,21 +824,25 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.place_outlined,
             label: l10n.desktopCommunityCreateOptionArtDrop,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
-              _showARAttachmentInfo();
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.artDrop,
+                open: () {
+                  _openComposeDialog();
+                  _showARAttachmentInfo();
+                },
+              ));
             },
           ),
           CommunityFabOption(
             icon: Icons.rate_review_outlined,
             label: l10n.desktopCommunityCreateOptionPostReview,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.review,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -827,10 +852,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.edit_outlined,
             label: l10n.desktopCommunityCreateOptionPost,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.post,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -987,14 +1013,22 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   /// Reopens the creation surface a guest requested before signing in
   /// (delivered by `CommunityComposeIntentResumer`).
   void _resumeComposeIntent(CommunityComposeIntent intent) {
-    if (intent == CommunityComposeIntent.createGroup) {
-      unawaited(_requestCreateGroup(
-        Provider.of<ThemeProvider>(context, listen: false),
-      ));
-      return;
+    switch (intent) {
+      case CommunityComposeIntent.createGroup:
+        unawaited(_requestCreateGroup(
+          Provider.of<ThemeProvider>(context, listen: false),
+        ));
+        break;
+      case CommunityComposeIntent.post:
+        // The inline composer keeps any draft still held by this screen.
+        unawaited(_requestComposerExpansion());
+        break;
+      case CommunityComposeIntent.groupPost:
+      case CommunityComposeIntent.artDrop:
+      case CommunityComposeIntent.review:
+        unawaited(_requestComposer(intent: intent, open: _openComposeDialog));
+        break;
     }
-    // The inline composer keeps any draft still held by this screen.
-    _applyState(() => _isComposerExpanded = true);
   }
 
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {
