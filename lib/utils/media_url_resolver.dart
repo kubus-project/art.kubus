@@ -409,7 +409,7 @@ class MediaUrlResolver {
     }
     value = value.replaceFirst(RegExp(r'^/+'), '');
     final cid = value.split(RegExp(r'[/?#]')).first;
-    if (!_cidSegment.hasMatch(cid)) return null;
+    if (!_cidFieldSegment.hasMatch(cid)) return null;
     return 'ipfs://$value';
   }
 
@@ -439,9 +439,10 @@ class MediaUrlResolver {
   /// Accepted:
   /// - absolute `https:` on a public host (a host that is not an IP literal,
   ///   `localhost`, a single-label name, or `*.local` / `*.internal`);
-  /// - `ipfs://<cid>[/path]`, `ipfs:<cid>`, `/ipfs/<cid>`, `ipfs/<cid>`, any
-  ///   `https://<host>/ipfs/<cid>` and bare CIDv0/CIDv1 values. Every IPFS form
-  ///   goes through the one configured gateway chain (see [_ipfsCandidates]);
+  /// - `ipfs://<cid>[/path]`, `ipfs:<cid>`, `/ipfs/<cid>`, `ipfs/<cid>` and bare
+  ///   CIDv0/CIDv1 values go through the configured gateway chain (see
+  ///   [_ipfsCandidates]). A stored `https://<host>/ipfs/<cid>` is tried as
+  ///   stored first, then the same chain;
   /// - backend-relative paths and bare names, resolved against the storage
   ///   API host. `/uploads/`, `/profiles/` and `/avatars/` on any absolute
   ///   host are canonicalized to that API host;
@@ -505,9 +506,15 @@ class MediaUrlResolver {
     r'^[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}$',
   );
 
-  /// One IPFS CID segment: CIDv0 (`Qm...`) and CIDv1 (`bafy...`, `bafk...`)
-  /// are both base-alphanumeric, so anything else is not a CID.
-  static final RegExp _cidSegment = RegExp(r'^[A-Za-z0-9]{20,}$');
+  /// One CID segment of an explicit IPFS reference (`ipfs://`, `/ipfs/`,
+  /// `https://host/ipfs/`). Real CIDs (CIDv0 `Qm...`, CIDv1 `bafy...`) are
+  /// base-alphanumeric; anything else is not a CID and is dropped.
+  static final RegExp _ipfsSegment = RegExp(r'^[A-Za-z0-9]+$');
+
+  /// A stored CID field (`image_cid`, `cid`) is only read as a CID when it
+  /// looks like one: at least 20 base-alphanumeric characters. Shorter values
+  /// are never mistaken for an IPFS reference.
+  static final RegExp _cidFieldSegment = RegExp(r'^[A-Za-z0-9]{20,}$');
 
   static String get _backslash => String.fromCharCode(92);
 
@@ -571,7 +578,13 @@ class MediaUrlResolver {
         return StorageConfig.resolveAllUrls(relative);
       }
       final ipfsRest = _ipfsPathRest(relative);
-      if (ipfsRest != null) return _ipfsCandidates(ipfsRest);
+      if (ipfsRest != null) {
+        // The stored URL is tried as given; the configured gateway chain
+        // follows, so a failed gateway falls back to the next one.
+        final chain = _ipfsCandidates(ipfsRest);
+        if (chain.isEmpty) return const <String>[];
+        return <String>[value, ...chain];
+      }
       // Public https stays as given; a dev http base is upgraded on secure web
       // by StorageConfig, exactly as before.
       return StorageConfig.resolveAllUrls(value);
@@ -594,7 +607,7 @@ class MediaUrlResolver {
     var rest = cidAndPath.trim().replaceFirst(RegExp(r'^/+'), '');
     rest = rest.replaceFirst(RegExp(r'^ipfs/'), '');
     final cid = rest.split(RegExp(r'[/?#]')).first;
-    if (!_cidSegment.hasMatch(cid)) return const <String>[];
+    if (!_ipfsSegment.hasMatch(cid)) return const <String>[];
     return StorageConfig.resolveAllUrls('ipfs://$rest');
   }
 

@@ -446,7 +446,8 @@ void main() {
         'ipfs://$cidV1/meta/a.json': '$primaryGateway$cidV1/meta/a.json',
         'ipfs:$cidV0': '$primaryGateway$cidV0',
         '/ipfs/$cidV1': '$primaryGateway$cidV1',
-        'https://gateway.example.com/ipfs/$cidV1': '$primaryGateway$cidV1',
+        'https://gateway.example.com/ipfs/$cidV1':
+            'https://gateway.example.com/ipfs/$cidV1',
         cidV1: '$primaryGateway$cidV1',
         cidV0: '$primaryGateway$cidV0',
       };
@@ -537,18 +538,26 @@ void main() {
       );
     });
 
-    test(
-        'an IPFS reference from an https host is re-routed through the gateway chain',
+    test('a stored IPFS https URL is tried as stored, then the gateway chain',
         () {
       expect(
         MediaUrlResolver.resolveDisplayCandidates(
           'https://gateway.example.com/ipfs/$cidV0/a.png?x=1',
         ),
         equals([
+          'https://gateway.example.com/ipfs/$cidV0/a.png?x=1',
           '$primaryGateway$cidV0/a.png?x=1',
           'https://ipfs.io/ipfs/$cidV0/a.png?x=1',
           'https://gateway.pinata.cloud/ipfs/$cidV0/a.png?x=1',
         ]),
+      );
+    });
+
+    test('a short fixture CID is accepted for an explicit ipfs:// reference',
+        () {
+      expect(
+        MediaUrlResolver.resolve('ipfs://bafykub8image'),
+        equals('${primaryGateway}bafykub8image'),
       );
     });
 
