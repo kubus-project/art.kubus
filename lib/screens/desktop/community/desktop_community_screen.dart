@@ -34,6 +34,8 @@ import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_compose_intent_resumer.dart';
+import '../../../widgets/community/post_like_settlement.dart';
+import '../../../services/pending_action_executor.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
@@ -159,6 +161,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
   List<CommunityPost> _followingPosts = [];
+  // A like the continuation confirms for a post in this feed is shown on its
+  // card at once, without reloading the list or moving the scroll position.
+  late final PostLikeSettlementWatcher _likeSettlements =
+      PostLikeSettlementWatcher(_applySettledPostLike);
   bool _isLoadingDiscover = false;
   bool _isLoadingFollowing = false;
   bool _discoverFeedLoaded = false;
@@ -171,6 +177,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   final Map<String, TextEditingController> _inlineCommentControllers =
       <String, TextEditingController>{};
   final Map<String, String?> _inlineReplyToCommentIds = <String, String?>{};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _likeSettlements.attach(readPendingActionsOrNull(context));
+  }
 
   @override
   void initState() {
@@ -217,6 +229,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   @override
   void dispose() {
+    _likeSettlements.detach();
     _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
     _animationController.dispose();
     _tabController.dispose();

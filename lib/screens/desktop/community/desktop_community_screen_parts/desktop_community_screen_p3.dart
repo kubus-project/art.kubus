@@ -39,6 +39,27 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Shows a like the continuation confirmed for a post in this feed. Every
+  /// copy of the post in the feed's lists is updated; nothing is reloaded.
+  void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      final seen = Set<CommunityPost>.identity();
+      for (final list in <List<CommunityPost>>[
+        _followingPosts,
+        _discoverPosts,
+      ]) {
+        for (final post in list) {
+          if (post.id != postId || !seen.add(post)) continue;
+          applyConfirmedPostLike(post, snapshot);
+          interactions.applyServerPostState(post);
+        }
+      }
+    });
+  }
+
   Future<void> _togglePostLike(CommunityPost post) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);

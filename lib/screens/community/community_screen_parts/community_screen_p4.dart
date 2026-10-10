@@ -829,6 +829,28 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
   }
 
+  /// Shows a like the continuation confirmed for a post in this feed. Every
+  /// copy of the post in the feed's lists is updated; nothing is reloaded.
+  void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      final seen = Set<CommunityPost>.identity();
+      for (final list in <List<CommunityPost>>[
+        _followingFeedPosts,
+        _discoverFeedPosts,
+        _communityPosts,
+      ]) {
+        for (final post in list) {
+          if (post.id != postId || !seen.add(post)) continue;
+          applyConfirmedPostLike(post, snapshot);
+          interactions.applyServerPostState(post);
+        }
+      }
+    });
+  }
+
   void _showPostLikes(String postId) {
     final l10n = AppLocalizations.of(context)!;
     _showLikesDialog(

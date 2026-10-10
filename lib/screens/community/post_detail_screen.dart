@@ -27,6 +27,8 @@ import '../../providers/community_hub_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/pending_action_provider.dart';
+import '../../services/pending_action_executor.dart';
+import '../../widgets/community/post_like_settlement.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -198,20 +200,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         settled.targetId != post.id) {
       return;
     }
-    switch (settled.actionType) {
-      case PendingActionType.like:
+    // Compared one by one rather than switched on: other continuations add
+    // action types, and an exhaustive switch here would stop compiling.
+    if (settled.actionType == PendingActionType.like) {
+      final confirmed = _pendingActions?.lastSettledResult?.postLike;
+      if (confirmed != null) {
+        _applySettledLike(post, confirmed);
+      } else {
         unawaited(_refreshPostStateFromServer(post));
-        break;
-      case PendingActionType.comment:
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _commentFocusNode.requestFocus();
-        });
-        break;
-      case PendingActionType.save:
-      case PendingActionType.follow:
-      case PendingActionType.contribute:
-        break;
+      }
+    } else if (settled.actionType == PendingActionType.comment) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _commentFocusNode.requestFocus();
+      });
     }
+  }
+
+  /// Shows the like the backend confirmed, without a second read.
+  void _applySettledLike(CommunityPost post, PostLikeSnapshot snapshot) {
+    applyConfirmedPostLike(post, snapshot);
+    context.read<CommunityInteractionsProvider>().applyServerPostState(post);
+    setState(() {});
   }
 
   Future<void> _refreshPostStateFromServer(CommunityPost post) async {

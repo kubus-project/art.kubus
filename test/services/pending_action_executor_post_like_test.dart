@@ -37,33 +37,44 @@ void main() {
 
     test('likes a post the account has not liked yet', () async {
       final executor = PendingActionExecutor(
-        loadPostLiked: (postId) async => false,
-        likePost: (postId) async => likedPostIds.add(postId),
+        loadPostLiked: (postId) async => (isLiked: false, likeCount: 3),
+        likePost: (postId) async {
+          likedPostIds.add(postId);
+          return 4;
+        },
       );
 
       final result = await run(executor, _postLike());
 
       expect(result.outcome, PendingActionOutcome.completed);
       expect(likedPostIds, <String>['post-1']);
+      expect(result.postLike, (isLiked: true, likeCount: 4));
     });
 
     test('an already liked post is left liked: no like call, no unlike',
         () async {
       final executor = PendingActionExecutor(
-        loadPostLiked: (postId) async => true,
-        likePost: (postId) async => likedPostIds.add(postId),
+        loadPostLiked: (postId) async => (isLiked: true, likeCount: 3),
+        likePost: (postId) async {
+          likedPostIds.add(postId);
+          return 4;
+        },
       );
 
       final result = await run(executor, _postLike());
 
       expect(result.outcome, PendingActionOutcome.completed);
       expect(likedPostIds, isEmpty);
+      expect(result.postLike, (isLiked: true, likeCount: 3));
     });
 
     test('a post that no longer exists is reported unavailable', () async {
       final executor = PendingActionExecutor(
         loadPostLiked: (postId) async => null,
-        likePost: (postId) async => likedPostIds.add(postId),
+        likePost: (postId) async {
+          likedPostIds.add(postId);
+          return 4;
+        },
       );
 
       final result = await run(executor, _postLike());
@@ -76,7 +87,10 @@ void main() {
         () async {
       final executor = PendingActionExecutor(
         loadPostLiked: (postId) async => throw Exception('401 unauthorized'),
-        likePost: (postId) async => likedPostIds.add(postId),
+        likePost: (postId) async {
+          likedPostIds.add(postId);
+          return 4;
+        },
       );
 
       final result = await run(executor, _postLike());

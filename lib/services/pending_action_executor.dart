@@ -24,10 +24,17 @@ enum PendingActionOutcome {
   failed,
 }
 
+/// The account's like on a post as the backend confirmed it.
+typedef PostLikeSnapshot = ({bool isLiked, int? likeCount});
+
 class PendingActionExecutionResult {
-  const PendingActionExecutionResult(this.outcome);
+  const PendingActionExecutionResult(this.outcome, {this.postLike});
 
   final PendingActionOutcome outcome;
+
+  /// For a confirmed post like: the like state the backend holds now, so a
+  /// screen showing the post can reflect it without reloading.
+  final PostLikeSnapshot? postLike;
 
   bool get didSucceed =>
       outcome == PendingActionOutcome.completed ||
@@ -43,12 +50,13 @@ class PendingActionExecutionResult {
       };
 }
 
-/// Reads whether the signed-in account already likes [postId]. Resolves to
-/// `null` when the post is no longer available.
-typedef PostLikedLoader = Future<bool?> Function(String postId);
+/// Reads the account's like state on [postId]. Resolves to `null` when the
+/// post is no longer available.
+typedef PostLikedLoader = Future<PostLikeSnapshot?> Function(String postId);
 
-/// Records a like on [postId]. The backend treats a repeated like as a no-op.
-typedef PostLiker = Future<void> Function(String postId);
+/// Records a like on [postId] and resolves to the new like count when the
+/// backend reports one. The backend treats a repeated like as a no-op.
+typedef PostLiker = Future<int?> Function(String postId);
 
 /// Applies a confirmed [PendingActionIntent].
 ///
@@ -70,18 +78,20 @@ class PendingActionExecutor {
   final PostLikedLoader? _loadPostLiked;
   final PostLiker? _likePost;
 
-  Future<bool?> _readPostLiked(String postId) {
+  Future<PostLikeSnapshot?> _readPostLiked(String postId) async {
     final override = _loadPostLiked;
     if (override != null) return override(postId);
-    return BackendApiService().getCommunityInteractionStates(postIds: <String>[
-      postId
-    ]).then((batch) => batch.posts[postId]?.isLiked);
+    final batch = await BackendApiService()
+        .getCommunityInteractionStates(postIds: <String>[postId]);
+    final state = batch.posts[postId];
+    if (state == null) return null;
+    return (isLiked: state.isLiked, likeCount: state.likeCount);
   }
 
-  Future<void> _sendPostLike(String postId) {
+  Future<int?> _sendPostLike(String postId) {
     final override = _likePost;
     if (override != null) return override(postId);
-    return BackendApiService().likePost(postId).then((_) {});
+    return BackendApiService().likePost(postId);
   }
 
   Future<PendingActionExecutionResult> execute({
@@ -217,16 +227,23 @@ class PendingActionExecutor {
   /// already likes is left alone, so a replayed or doubly confirmed like can
   /// never take the like back off.
   Future<PendingActionExecutionResult> _executePostLike(String postId) async {
-    final liked = await _readPostLiked(postId);
-    if (liked == null) {
+    final current = await _readPostLiked(postId);
+    if (current == null) {
       return const PendingActionExecutionResult(
         PendingActionOutcome.targetUnavailable,
       );
     }
-    if (!liked) {
-      await _sendPostLike(postId);
+    if (current.isLiked) {
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: current,
+      );
     }
-    return const PendingActionExecutionResult(PendingActionOutcome.completed);
+    final likeCount = await _sendPostLike(postId);
+    return PendingActionExecutionResult(
+      PendingActionOutcome.completed,
+      postLike: (isLiked: true, likeCount: likeCount),
+    );
   }
 
   Future<PendingActionExecutionResult> _executeFollow(

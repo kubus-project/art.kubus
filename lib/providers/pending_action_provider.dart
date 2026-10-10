@@ -42,6 +42,9 @@ class PendingActionProvider extends ChangeNotifier {
   bool _awaitingConfirmation = false;
   bool _executing = false;
   PendingActionIntent? _settled;
+  PendingActionIntent? _lastSettled;
+  PendingActionExecutionResult? _lastSettledResult;
+  int _settledRevision = 0;
 
   /// In-memory exactly-once guard. Complements the persisted marker so a
   /// double tap within one session cannot start two mutations.
@@ -66,6 +69,17 @@ class PendingActionProvider extends ChangeNotifier {
     _settled = null;
     return settled;
   }
+
+  /// Increases each time an intent succeeds. A screen that needs every outcome,
+  /// not just the first to take it, compares this with the revision it last
+  /// handled and then reads [lastSettled] and [lastSettledResult].
+  int get settledRevision => _settledRevision;
+
+  /// The most recent successful intent, kept after [takeSettled] runs.
+  PendingActionIntent? get lastSettled => _lastSettled;
+
+  /// The outcome of [lastSettled], including any confirmed post like state.
+  PendingActionExecutionResult? get lastSettledResult => _lastSettledResult;
 
   /// Persists the action a guest just attempted.
   Future<void> capture(PendingActionIntent intent) async {
@@ -175,6 +189,9 @@ class PendingActionProvider extends ChangeNotifier {
 
     if (result.didSucceed) {
       _settled = intent;
+      _lastSettled = intent;
+      _lastSettledResult = result;
+      _settledRevision += 1;
       await _service.markCompleted(intent);
       unawaited(_telemetry.trackPendingActionCompleted(
         actionType: intent.actionType.storageValue,

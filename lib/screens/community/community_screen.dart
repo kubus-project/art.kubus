@@ -20,6 +20,8 @@ import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../widgets/community/community_compose_intent_resumer.dart';
+import '../../widgets/community/post_like_settlement.dart';
+import '../../services/pending_action_executor.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
@@ -135,6 +137,10 @@ class _CommunityScreenState extends State<CommunityScreen>
   List<CommunityPost> _communityPosts = [];
   List<CommunityPost> _followingFeedPosts = [];
   List<CommunityPost> _discoverFeedPosts = [];
+  // A like the continuation confirms for a post in this feed is shown on its
+  // card at once, without reloading the list or moving the scroll position.
+  late final PostLikeSettlementWatcher _likeSettlements =
+      PostLikeSettlementWatcher(_applySettledPostLike);
   List<CommunityPost> _artFeedPosts = [];
   final Set<String> _expandedCommentPostIds = <String>{};
   final Map<String, TextEditingController> _inlineCommentControllers =
@@ -286,6 +292,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _likeSettlements.attach(readPendingActionsOrNull(context));
     if (!_animationsInitialized) {
       _animationsInitialized = true;
       final animationTheme = context.animationTheme;
@@ -341,6 +348,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   void dispose() {
+    _likeSettlements.detach();
     // Remove config provider listener
     try {
       final configProvider =
