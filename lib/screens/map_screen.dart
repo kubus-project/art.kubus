@@ -4230,8 +4230,9 @@ class _MapScreenState extends State<MapScreen>
                     if (!_isWalkingFocusedMode)
                       _buildTopOverlays(theme, themeProvider, taskProvider),
                     // Engagement prompt. Only in the plain browse state, and
-                    // seated above the Nearby peek, the nav bar and the map credit,
-                    // so it never covers map chrome or credit.
+                    // seated above the Nearby peek, the nav bar and the map credit
+                    // (which is one control height tall), so it never covers map
+                    // chrome or credit.
                     if (!_isWalkingFocusedMode &&
                         ui.contextSurface == MapContextSurface.none)
                       Positioned(
@@ -4239,8 +4240,8 @@ class _MapScreenState extends State<MapScreen>
                         right: 0,
                         bottom: attributionBottomMargin +
                             KubusLayout.mainBottomNavBarHeight +
-                            KubusSpacing.md +
-                            KubusSpacing.xs,
+                            KubusHeaderMetrics.actionHitArea +
+                            KubusSpacing.md,
                         child: const KubusActivationPromptCard(),
                       ),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
@@ -4259,10 +4260,15 @@ class _MapScreenState extends State<MapScreen>
                         // The sheet is padded above the nav bar, so clear both.
                         bottom: attributionBottomMargin +
                             KubusLayout.mainBottomNavBarHeight,
-                        child: KubusMapAttributionControl(
-                          semanticsLabel: l10n.mapAttributionsTitle,
-                          onPressed: () =>
-                              unawaited(showKubusMapAttributionDialog(context)),
+                        // Blocked like every other control over the platform view,
+                        // so taps open the sheet instead of reaching the map.
+                        child: MapOverlayBlocker(
+                          child: KubusMapAttributionControl(
+                            semanticsLabel: l10n.mapAttributionsTitle,
+                            onPressed: () => unawaited(
+                              showKubusMapAttributionDialog(context),
+                            ),
+                          ),
                         ),
                       ),
                   ],
