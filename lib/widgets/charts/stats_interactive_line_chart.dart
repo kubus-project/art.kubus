@@ -63,6 +63,12 @@ class StatsInteractiveLineChart extends StatelessWidget {
     }
 
     final locale = Localizations.localeOf(context).languageCode;
+    // Data changes (range switches, refreshes) tween over 150 ms. Reduced
+    // motion turns the tween off, the same as the rest of the app.
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final chartDuration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 150);
     final formatValue = valueFormatter ?? ((value) => value.round().toString());
     final padded = series
         .map((s) => _padOrTrim(ChartScale.sanitize(s.values), pointCount))
@@ -117,9 +123,17 @@ class StatsInteractiveLineChart extends StatelessWidget {
             0.0,
             width - yReserved - edge.horizontal,
           );
+          final pointSpacing =
+              pointCount > 1 ? plotWidth / (pointCount - 1) : 0.0;
           final stride = ChartScale.labelStride(
             count: pointCount,
-            pointSpacing: pointCount > 1 ? plotWidth / (pointCount - 1) : 0,
+            pointSpacing: pointSpacing,
+            labelWidth: bottomLabelWidth,
+          );
+          final labelled = ChartScale.labelIndices(
+            count: pointCount,
+            stride: stride,
+            pointSpacing: pointSpacing,
             labelWidth: bottomLabelWidth,
           );
           final singlePoint = pointCount == 1;
@@ -189,15 +203,14 @@ class StatsInteractiveLineChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: _bottomReserved,
-                          interval: stride.toDouble(),
+                          // Every x value is offered; only the chosen indices
+                          // (stride grid plus the newest bucket) are painted.
+                          interval: 1,
                           getTitlesWidget: (value, meta) {
                             final idx = value.round();
-                            // Only the stride grid is labelled. fl_chart also
-                            // reports the last x value, which would collide
-                            // with the grid label next to it.
                             if (idx < 0 ||
                                 idx >= xLabels.length ||
-                                idx % stride != 0) {
+                                !labelled.contains(idx)) {
                               return const SizedBox.shrink();
                             }
                             return Padding(
@@ -252,18 +265,19 @@ class StatsInteractiveLineChart extends StatelessWidget {
                               .round()
                               .clamp(0, xLabels.length - 1);
                           final header = xLabels[x];
-
-                          final items = <LineTooltipItem>[
-                            LineTooltipItem(
-                              '$header\n',
+                          final headerStyle =
                               KubusTextStyles.navMetaLabel.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                          ];
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          );
 
-                          for (final spot in spots) {
+                          // fl_chart paints exactly one tooltip item per
+                          // touched spot (it throws otherwise), so the header
+                          // rides on the first item instead of being an extra
+                          // item of its own.
+                          final items = <LineTooltipItem>[];
+                          for (var i = 0; i < spots.length; i++) {
+                            final spot = spots[i];
                             final index = spot.barIndex;
                             final label = index >= 0 && index < series.length
                                 ? series[index].label
@@ -276,11 +290,20 @@ class StatsInteractiveLineChart extends StatelessWidget {
                                     : spot.y;
                             items.add(
                               LineTooltipItem(
-                                '$label: ${formatValue(trueValue)}\n',
-                                KubusTextStyles.navMetaLabel.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: spot.bar.color ?? scheme.primary,
-                                ),
+                                i == 0 ? '$header\n' : '',
+                                headerStyle,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    // fl_chart stacks the items itself; a
+                                    // newline here would add a blank line.
+                                    text: '$label: ${formatValue(trueValue)}',
+                                    style:
+                                        KubusTextStyles.navMetaLabel.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: spot.bar.color ?? scheme.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }
@@ -302,8 +325,14 @@ class StatsInteractiveLineChart extends StatelessWidget {
                           ),
                           growable: false,
                         );
+                        // A sparse series (one to three non-zero buckets)
+                        // would otherwise draw those values as a slope that
+                        // touches the axis, so each of them gets a marker.
+                        final sparse = raw.where((v) => v > 0).length <= 3;
                         bool isMarked(int index) =>
-                            singlePoint || domain.isClippedValue(raw[index]);
+                            singlePoint ||
+                            domain.isClippedValue(raw[index]) ||
+                            (sparse && raw[index] > 0);
 
                         return LineChartBarData(
                           spots: spots,
@@ -314,9 +343,12 @@ class StatsInteractiveLineChart extends StatelessWidget {
                           barWidth: 2.8,
                           isStrokeCapRound: true,
                           // Dots only where the line cannot show the point:
-                          // a single value, or a value clipped at the top.
+                          // a single value, a sparse value, or a value clipped
+                          // at the top.
                           dotData: FlDotData(
-                            show: singlePoint || raw.any(domain.isClippedValue),
+                            show: singlePoint ||
+                                sparse ||
+                                raw.any(domain.isClippedValue),
                             checkToShowDot: (spot, _) => isMarked(spot.x
                                 .round()
                                 .clamp(0, pointCount - 1)
@@ -338,6 +370,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                       growable: false,
                     ),
                   ),
+                  duration: chartDuration,
                 ),
               ),
             ),

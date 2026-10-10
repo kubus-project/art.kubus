@@ -68,6 +68,10 @@ class StatsInteractiveBarChart extends StatelessWidget {
     }
 
     final locale = Localizations.localeOf(context).languageCode;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final chartDuration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 150);
     final values =
         entries.map((e) => e.value.toDouble()).toList(growable: false);
     final bottomLabelStyle = KubusTextStyles.navMetaLabel.copyWith(
@@ -113,9 +117,16 @@ class StatsInteractiveBarChart extends StatelessWidget {
           );
           final plotWidth = math.max(0.0, width - yReserved - _edgePadding);
           final rodWidth = ChartScale.barWidth(plotWidth, pointCount);
+          final slotSpacing = plotWidth / pointCount;
           final stride = ChartScale.labelStride(
             count: pointCount,
-            pointSpacing: plotWidth / pointCount,
+            pointSpacing: slotSpacing,
+            labelWidth: bottomLabelWidth,
+          );
+          final labelled = ChartScale.labelIndices(
+            count: pointCount,
+            stride: stride,
+            pointSpacing: slotSpacing,
             labelWidth: bottomLabelWidth,
           );
 
@@ -181,15 +192,14 @@ class StatsInteractiveBarChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: _bottomReserved,
-                          interval: stride.toDouble(),
+                          // Every x value is offered; only the chosen indices
+                          // (stride grid plus the newest bucket) are painted.
+                          interval: 1,
                           getTitlesWidget: (value, meta) {
                             final idx = value.round();
-                            // Only the stride grid is labelled. fl_chart also
-                            // reports the last x value, which would collide
-                            // with the grid label next to it.
                             if (idx < 0 ||
                                 idx >= xLabels.length ||
-                                idx % stride != 0) {
+                                !labelled.contains(idx)) {
                               return const SizedBox.shrink();
                             }
                             return Padding(
@@ -254,6 +264,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       growable: false,
                     ),
                   ),
+                  duration: chartDuration,
                 ),
               ),
             ),

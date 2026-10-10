@@ -474,4 +474,74 @@ void main() {
       expect(slovene, contains(','));
     });
   });
+
+  group('labelIndices', () {
+    test('keeps the stride grid and adds the newest bucket when it fits', () {
+      // 30 points, a grid label every 5th bucket, 10 px apart: a 24 px label
+      // plus gap needs 32 px, and the newest bucket is 5 slots after the last
+      // grid label (index 25), i.e. 50 px away.
+      final labelled = ChartScale.labelIndices(
+        count: 30,
+        stride: 5,
+        pointSpacing: 10,
+        labelWidth: 24,
+      );
+      expect(labelled, <int>{0, 5, 10, 15, 20, 25, 29});
+    });
+
+    test('replaces the last grid label when the newest would collide', () {
+      // Newest bucket is only 2 slots after the last grid label (index 28):
+      // 20 px, too close for a 24 px label, so the newest takes its place.
+      final labelled = ChartScale.labelIndices(
+        count: 31,
+        stride: 7,
+        pointSpacing: 10,
+        labelWidth: 24,
+      );
+      expect(labelled, <int>{0, 7, 14, 21, 30});
+      expect(labelled, isNot(contains(28)));
+    });
+
+    test('does not change a series whose grid already ends on the newest', () {
+      expect(
+        ChartScale.labelIndices(
+          count: 29,
+          stride: 7,
+          pointSpacing: 10,
+          labelWidth: 24,
+        ),
+        <int>{0, 7, 14, 21, 28},
+      );
+    });
+
+    test('labels every bucket when the stride is one, and a lone bucket', () {
+      expect(
+        ChartScale.labelIndices(
+          count: 7,
+          stride: 1,
+          pointSpacing: 40,
+          labelWidth: 20,
+        ),
+        <int>{0, 1, 2, 3, 4, 5, 6},
+      );
+      expect(
+        ChartScale.labelIndices(
+          count: 1,
+          stride: 4,
+          pointSpacing: 0,
+          labelWidth: 20,
+        ),
+        <int>{0},
+      );
+      expect(
+        ChartScale.labelIndices(
+          count: 0,
+          stride: 4,
+          pointSpacing: 10,
+          labelWidth: 20,
+        ),
+        isEmpty,
+      );
+    });
+  });
 }

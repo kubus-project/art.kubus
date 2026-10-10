@@ -31,6 +31,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final compact = MediaQuery.sizeOf(context).width < 720;
     final height = compact ? 260.0 : 360.0;
@@ -42,12 +43,37 @@ class AnalyticsTrendPanel extends StatelessWidget {
       // A refresh with previous data keeps the chart in place; only the
       // small kit loader signals the update.
       isRefreshing: isLoading && summary.hasData,
-      child: SizedBox(
-        height: height,
-        child: _buildChart(context, height),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: height,
+            child: _buildChart(context, height),
+          ),
+          if (summary.hasData) ...[
+            const SizedBox(height: KubusSpacing.sm),
+            // The chart draws two lines. Without a key nothing says which
+            // one is this period and which one is the previous period.
+            _TrendLegend(
+              entries: <_TrendLegendEntry>[
+                _TrendLegendEntry(
+                  label: l10n.analyticsSeriesCurrentLabel,
+                  color: AnalyticsMetricColors.resolve(context, metric.id),
+                ),
+                _TrendLegendEntry(
+                  label: l10n.analyticsSeriesPreviousLabel,
+                  color: _previousColor(scheme),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
+
+  static Color _previousColor(ColorScheme scheme) =>
+      scheme.secondary.withValues(alpha: 0.72);
 
   Widget _buildChart(BuildContext context, double height) {
     final scheme = Theme.of(context).colorScheme;
@@ -82,7 +108,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
         StatsLineSeries(
           label: l10n.analyticsSeriesPreviousLabel,
           values: summary.previousValues,
-          color: scheme.secondary.withValues(alpha: 0.72),
+          color: _previousColor(scheme),
         ),
       ],
       xLabels: labels,
@@ -90,6 +116,53 @@ class AnalyticsTrendPanel extends StatelessWidget {
       gridColor: scheme.onSurface.withValues(alpha: 0.12),
       valueFormatter: metric.formatValue,
       emptyLabel: l10n.analyticsNoDataYetTitle,
+    );
+  }
+}
+
+class _TrendLegendEntry {
+  const _TrendLegendEntry({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+}
+
+/// Key for the two trend lines: a short swatch in the series colour and its
+/// label. Quiet, like the rest of the report; no box or chip.
+class _TrendLegend extends StatelessWidget {
+  const _TrendLegend({required this.entries});
+
+  final List<_TrendLegendEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: KubusSpacing.md,
+      runSpacing: KubusSpacing.xs,
+      children: [
+        for (final entry in entries)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 14,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: entry.color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.xs),
+              Text(
+                entry.label,
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }
@@ -109,9 +182,15 @@ class _TrendValue extends StatelessWidget {
     final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
     final change = summary.changePercent;
+    // A flat period (0 %) is neither a gain nor a loss: no arrow, no sign,
+    // neutral colour. Showing "+0.0 %" in green read as growth.
+    final isFlat = change == 0;
     final changeLabel = change == null
         ? l10n.commonNotAvailableShort
-        : '${change >= 0 ? '+' : '-'}${change.abs().toStringAsFixed(1)}%';
+        : isFlat
+            ? '0.0%'
+            : '${change >= 0 ? '+' : '-'}${change.abs().toStringAsFixed(1)}%';
+    final neutral = change == null || isFlat;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -128,7 +207,7 @@ class _TrendValue extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (change != null)
+            if (!neutral)
               Icon(
                 change >= 0
                     ? Icons.arrow_upward_rounded
@@ -144,7 +223,7 @@ class _TrendValue extends StatelessWidget {
               style: KubusTypography.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: change == null
+                color: neutral
                     ? scheme.onSurface.withValues(alpha: 0.62)
                     : change >= 0
                         ? roles.positiveAction

@@ -180,6 +180,35 @@ abstract final class ChartScale {
     return math.max(minWidth, capped);
   }
 
+  /// Which x indices get a label: every [stride]th bucket, plus the newest
+  /// bucket. The newest one is what a reader checks first ("today"), so it is
+  /// never left without a date. When it would collide with the last grid
+  /// label it replaces that label instead.
+  static Set<int> labelIndices({
+    required int count,
+    required int stride,
+    required double pointSpacing,
+    required double labelWidth,
+    double gap = 8,
+  }) {
+    if (count <= 0) return <int>{};
+    final last = count - 1;
+    final step = math.max(1, stride);
+    final grid = <int>{for (var i = 0; i < count; i += step) i};
+    if (count == 1 || step == 1 || grid.contains(last)) return grid;
+    final lastGrid = grid.reduce(math.max);
+    final needed = math.max(labelWidth, 1) + gap;
+    final spacing = (last - lastGrid) * pointSpacing;
+    if (pointSpacing.isFinite && spacing >= needed) {
+      grid.add(last);
+    } else {
+      grid
+        ..remove(lastGrid)
+        ..add(last);
+    }
+    return grid;
+  }
+
   /// Compact axis label in [locale] (a language code such as `en` or `sl`).
   /// Thousands use the locale's compact form (1.2K, 1,2 tis.); small values
   /// keep their decimals.
