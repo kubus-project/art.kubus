@@ -39,8 +39,15 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform
   Duration duration;
   Size size;
 
+  /// Gives each clip its own size, keyed by its URL. Falls back to [size].
+  Size Function(String uri)? sizeFor;
+
   /// Makes the next `initialize()` fail, like an unreachable or invalid file.
   bool failInitialize = false;
+
+  /// Refuses to start a clip whose volume is above zero, the way a browser
+  /// with a strict autoplay policy rejects `play()` with sound.
+  bool blockSoundedPlay = false;
 
   final Map<int, FakeVideoPlayer> players = <int, FakeVideoPlayer>{};
   int _nextId = 1;
@@ -69,7 +76,7 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform
       player.events.add(VideoEvent(
         eventType: VideoEventType.initialized,
         duration: duration,
-        size: size,
+        size: sizeFor?.call(player.uri) ?? size,
       ));
     });
     return player.id;
@@ -103,6 +110,16 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform
   @override
   Future<void> play(int playerId) async {
     final player = players[playerId]!;
+    if (blockSoundedPlay && player.volume > 0) {
+      if (!player.events.isClosed) {
+        player.events.addError(PlatformException(
+          code: 'NotAllowedError',
+          message: "play() failed because the user didn't interact with the "
+              'document first.',
+        ));
+      }
+      return;
+    }
     player.playing = true;
     if (!player.events.isClosed) {
       player.events.add(VideoEvent(
