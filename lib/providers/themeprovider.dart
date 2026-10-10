@@ -155,6 +155,15 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Keyboard focus style for Material text buttons, for surfaces that replace
+  /// the theme's text button style (for example the auth entry shell) so they
+  /// keep the same focus indicator.
+  static ButtonStyle keyboardFocusTextButtonStyle(Color focus) => ButtonStyle(
+        backgroundColor:
+            const WidgetStatePropertyAll<Color>(Colors.transparent),
+        side: _keyboardFocusSide(focus),
+      );
+
   /// Keyboard focus ring for Material text and outlined buttons: a 2 px
   /// family focus side. [WidgetState.focused] is true whenever the button
   /// holds focus, including after a pointer press, so the side also requires

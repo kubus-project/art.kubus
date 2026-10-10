@@ -1,6 +1,7 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
@@ -40,10 +41,15 @@ class AuthEntryShell extends StatelessWidget {
         !isDesktop && KeyboardInsetResolver.isKeyboardVisible(context);
     final shellTheme = theme.copyWith(
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: theme.colorScheme.onSurface,
-          textStyle: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
+        // Keeps the family focus side that the app theme gives text buttons.
+        style: ThemeProvider.keyboardFocusTextButtonStyle(
+          KubusColorRoles.of(context).focus,
+        ).merge(
+          TextButton.styleFrom(
+            foregroundColor: theme.colorScheme.onSurface,
+            textStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),
