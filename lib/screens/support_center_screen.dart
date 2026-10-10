@@ -994,7 +994,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                         Semantics(
                           role: SemanticsRole.tab,
                           selected: _section == section,
+                          label: sectionLabels[section],
                           onTap: () => _go(section),
+                          // The chip's own checkbox-style node is replaced by
+                          // this tab, so each section is announced once.
+                          excludeSemantics: true,
                           child: ChoiceChip(
                             selected: _section == section,
                             label: Text(sectionLabels[section]!),
