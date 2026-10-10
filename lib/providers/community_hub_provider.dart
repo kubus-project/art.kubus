@@ -618,4 +618,11 @@ class CommunityHubProvider extends ChangeNotifier {
 }
 
 /// Creation surfaces in Community that a guest can request before signing in.
-enum CommunityComposeIntent { post, groupPost, artDrop, review, createGroup }
+enum CommunityComposeIntent {
+  post,
+  groupPost,
+  artDrop,
+  review,
+  createGroup,
+  startChat
+}

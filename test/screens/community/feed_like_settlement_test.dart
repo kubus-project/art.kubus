@@ -338,6 +338,28 @@ void main() {
         expect(backend.likeRequests, 0);
       });
     });
+
+    testWidgets(
+        'a signed-in visitor sees the heart filled for a post already liked',
+        (tester) async {
+      // The discover feed is read anonymously (isLiked false); the account's own
+      // like comes from the interaction state and must reach the card.
+      useBackend(true);
+      BackendApiService().setAuthTokenForTesting('test-token');
+      await _runFeed(tester,
+          feed: CommunityScreen(), size: const Size(390, 844), body: (_) async {
+        expect(
+          find.descendant(
+            of: find.byType(CommunityPostCard),
+            matching: find.byIcon(Icons.favorite),
+          ),
+          findsOneWidget,
+        );
+        final card =
+            tester.widget<CommunityPostCard>(find.byType(CommunityPostCard));
+        expect(card.post.isLiked, isTrue);
+      });
+    });
   });
 
   group('desktop community feed', () {
@@ -380,6 +402,24 @@ void main() {
           expect(backend.likeRequests, 0);
         },
       );
+    });
+
+    testWidgets(
+        'a signed-in visitor sees the heart filled for a post already liked',
+        (tester) async {
+      useBackend(true);
+      BackendApiService().setAuthTokenForTesting('test-token');
+      await _runFeed(tester,
+          feed: DesktopCommunityScreen(),
+          size: const Size(1440, 900), body: (_) async {
+        expect(
+          find.descendant(
+            of: find.byType(CommunityPostCard),
+            matching: find.byIcon(Icons.favorite),
+          ),
+          findsOneWidget,
+        );
+      });
     });
   });
 }

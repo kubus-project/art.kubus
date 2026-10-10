@@ -2,7 +2,6 @@ import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/community_hub_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
-import 'package:art_kubus/services/contextual_auth_gate.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/community/community_compose_intent_resumer.dart';
 import 'package:flutter/material.dart';
@@ -84,11 +83,10 @@ class _Origin extends StatelessWidget {
             ),
             Builder(
               builder: (context) => TextButton(
-                onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+                onPressed: () => ensureCommunityComposeAccess(
                   context,
-                  requirements: ProtectedActionRequirements.participant,
+                  intent: CommunityComposeIntent.startChat,
                   actionLabel: 'start a chat',
-                  returnRoute: '/community',
                   sourceScreen: 'messages_screen',
                 ),
                 child: const Text('Start a chat'),
@@ -200,7 +198,7 @@ void main() {
   });
 
   testWidgets(
-      'Start a chat leaves no request behind and the gate is not left stuck',
+      'Start a chat returns to Messages after the profile step, once, and the gate is free',
       (tester) async {
     await pumpOrigin(tester);
 
@@ -215,9 +213,11 @@ void main() {
     await _drain(tester);
     await tester.pumpAndSettle();
 
-    // A chat is not replayed: nothing is captured, nothing reopens.
+    // The chat request comes back to the origin once: Messages is reopened, and
+    // nothing is left pending or on screen.
     expect(hubOf(tester).hasPendingComposeIntent, isFalse);
-    expect(_resumed, isEmpty);
+    expect(
+        _resumed, <CommunityComposeIntent>[CommunityComposeIntent.startChat]);
     expect(find.byType(BottomSheet), findsNothing);
 
     // The gate is free again: the completed account passes straight through.

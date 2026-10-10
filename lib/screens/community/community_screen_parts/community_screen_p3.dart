@@ -33,6 +33,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
         return _handleReviewFabPressed();
       case CommunityComposeIntent.createGroup:
         return _handleCreateGroupPressed();
+      case CommunityComposeIntent.startChat:
+        // The chat start the guest asked for: back in Messages, where the
+        // new-conversation entry is.
+        _openMessagesOverlay();
+        return Future<void>.value();
     }
   }
 

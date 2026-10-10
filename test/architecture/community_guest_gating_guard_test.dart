@@ -148,8 +148,9 @@ void main() {
         read(messages),
         'Future<void> _startConversation() async {',
       );
-      expect(body, contains('ContextualAuthGate()'));
-      expect(body.indexOf('ensureAuthenticated('),
+      expect(body, contains('ensureCommunityComposeAccess('));
+      expect(body, contains('CommunityComposeIntent.startChat'));
+      expect(body.indexOf('ensureCommunityComposeAccess('),
           lessThan(body.indexOf('showKubusDialog')));
     });
 
@@ -158,8 +159,9 @@ void main() {
         read(desktopFeedP4),
         'Future<void> _startNewConversation() async {',
       );
-      expect(body, contains('ContextualAuthGate()'));
-      expect(body.indexOf('ensureAuthenticated('),
+      expect(body, contains('ensureCommunityComposeAccess('));
+      expect(body, contains('CommunityComposeIntent.startChat'));
+      expect(body.indexOf('ensureCommunityComposeAccess('),
           lessThan(body.indexOf('showKubusDialog')));
     });
   });
@@ -205,13 +207,10 @@ void main() {
 
     test('chat creation requires the same scope as the profile message button',
         () {
+      // The chat gate runs through the shared compose helper, which requires
+      // the participant scope; the helper itself is the one place that names it.
       expect(
-        memberBody(read(messages), 'Future<void> _startConversation() async {'),
-        contains('ProtectedActionRequirements.participant'),
-      );
-      expect(
-        memberBody(read(desktopFeedP4),
-            'Future<void> _startNewConversation() async {'),
+        read('lib/widgets/community/community_compose_intent_resumer.dart'),
         contains('ProtectedActionRequirements.participant'),
       );
     });

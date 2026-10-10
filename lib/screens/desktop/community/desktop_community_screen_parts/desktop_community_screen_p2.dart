@@ -1036,6 +1036,10 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
           open: _openArtDropComposer,
         ));
         break;
+      case CommunityComposeIntent.startChat:
+        // Back in the Messages panel, where the new-conversation entry is.
+        _handleSidebarTabChange(true);
+        break;
     }
   }
 

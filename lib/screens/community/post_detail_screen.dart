@@ -127,9 +127,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context
               .read<CommunityInteractionsProvider>()
               .hydratePostsFromServer([post]);
-          unawaited(context
-              .read<CommunityInteractionsProvider>()
-              .refreshPostStates([post], force: true));
+          _refreshViewerState(post);
         } catch (_) {}
         context
             .read<CommunityCommentsProvider>()
@@ -216,6 +214,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
+  /// Reads the viewer's own like and count for [post], which the anonymous post
+  /// read does not carry, and repaints once they land: the card reads the post
+  /// object on build, and nothing else rebuilds it when the state arrives.
+  void _refreshViewerState(CommunityPost post) {
+    final interactions = context.read<CommunityInteractionsProvider>();
+    unawaited(interactions.refreshPostStates([post], force: true).then((_) {
+      if (mounted) setState(() {});
+    }));
+  }
+
   /// Shows the like the backend confirmed, without a second read.
   void _applySettledLike(CommunityPost post, PostLikeSnapshot snapshot) {
     applyConfirmedPostLike(post, snapshot);
@@ -279,9 +287,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context
               .read<CommunityInteractionsProvider>()
               .hydratePostsFromServer([post]);
-          unawaited(context
-              .read<CommunityInteractionsProvider>()
-              .refreshPostStates([post], force: true));
+          _refreshViewerState(post);
         } catch (_) {}
       }
       if (!mounted) return;

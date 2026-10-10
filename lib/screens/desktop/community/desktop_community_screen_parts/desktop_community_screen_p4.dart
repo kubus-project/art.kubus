@@ -496,14 +496,15 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
   Future<void> _startNewConversation() async {
     // Starting a conversation is an account action on every entry point; the
     // gate runs before the dialog so a guest never fills one in.
-    final allowed = await const ContextualAuthGate().ensureAuthenticated(
+    // A guest who starts a chat signs in and comes back to Messages, through the
+    // same compose-access mechanism as New post; it is the participant scope the
+    // profile message button uses.
+    final allowed = await ensureCommunityComposeAccess(
       context,
-      // Same scope as the profile message button: a usable public identity.
-      requirements: ProtectedActionRequirements.participant,
+      intent: CommunityComposeIntent.startChat,
       actionLabel: AppLocalizations.of(context)!
           .messagesEmptyStartChatAction
           .toLowerCase(),
-      returnRoute: '/community',
       sourceScreen: 'desktop_community_screen',
     );
     if (!allowed || !mounted) return;

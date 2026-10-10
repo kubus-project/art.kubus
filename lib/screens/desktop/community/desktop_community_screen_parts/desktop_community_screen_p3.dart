@@ -39,6 +39,16 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Reads the viewer's own likes for [posts] (the feed is read anonymously)
+  /// and repaints when they land; the lists are not reloaded.
+  void _refreshViewerStates(List<CommunityPost> posts) {
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    unawaited(interactions.refreshPostStates(posts, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
+  }
+
   /// Shows a like the continuation confirmed for a post in this feed. Every
   /// copy of the post in the feed's lists is updated; nothing is reloaded.
   void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
