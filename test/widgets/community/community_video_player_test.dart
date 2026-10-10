@@ -693,6 +693,19 @@ void main() {
   });
 
   group('failure', () {
+    testPlayer('an unresolvable reference never reaches the player',
+        (tester) async {
+      // An empty reference resolves to nothing under every resolver version.
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: '', isActive: true),
+      )));
+      await startPlayback(tester);
+
+      expect(platform.players, isEmpty,
+          reason: 'no controller is created for an unresolvable URL');
+      expect(find.text(_l10n.communityMediaVideoUnavailable), findsOneWidget);
+    });
+
     testPlayer('an unplayable clip shows the error and can retry',
         (tester) async {
       platform.failInitialize = true;
