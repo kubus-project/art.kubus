@@ -47,7 +47,6 @@ class StatsInteractiveLineChart extends StatelessWidget {
 
   static const double _bottomReserved = 34;
   static const double _minYReserved = 52;
-  static const double _pointSpacing = 8;
   static const double _baseMinWidth = 84;
 
   @override
@@ -77,8 +76,10 @@ class StatsInteractiveLineChart extends StatelessWidget {
     );
     final bottomLabelWidth =
         statsChartWidestLabel(context, xLabels, bottomLabelStyle);
-    final minWidth =
-        _baseMinWidth + math.max(0, pointCount - 1) * _pointSpacing;
+    // Lines never scroll sideways. The label stride already thins the x labels
+    // to whatever fits, so a longer series only gets denser, not wider. A
+    // per-point minimum would scroll 52-week and 90-day series on phones.
+    const minWidth = _baseMinWidth;
 
     return SizedBox(
       height: height,

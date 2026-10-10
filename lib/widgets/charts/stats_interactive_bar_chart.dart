@@ -40,6 +40,20 @@ class StatsInteractiveBarChart extends StatelessWidget {
   static const double _edgePadding = 20;
   static const double _slotMinWidth = 22;
 
+  /// A bar clipped to the domain top gets a thin gap just under its top, the
+  /// same break a broken axis uses, so it does not read as a value of exactly
+  /// the top. Line charts mark clipped points with a dot instead. The tooltip
+  /// shows the true value for both.
+  static List<BarChartRodStackItem> _clipBreak(ChartDomain domain, Color gap) {
+    return <BarChartRodStackItem>[
+      BarChartRodStackItem(
+        domain.max - domain.step * 0.4,
+        domain.max - domain.step * 0.2,
+        gap,
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -230,6 +244,9 @@ class StatsInteractiveBarChart extends StatelessWidget {
                                 topLeft: Radius.circular(4),
                                 topRight: Radius.circular(4),
                               ),
+                              rodStackItems: domain.isClippedValue(values[i])
+                                  ? _clipBreak(domain, scheme.surface)
+                                  : const <BarChartRodStackItem>[],
                             ),
                           ],
                         );

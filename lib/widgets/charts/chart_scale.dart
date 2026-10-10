@@ -17,9 +17,20 @@ abstract final class ChartScale {
   /// Containers narrower than this are "compact" (phones): fewer ticks.
   static const double compactWidth = 420;
 
-  /// Values above `outlierRatio * p95` are clipped to a robust top instead of
-  /// flattening the rest of the series.
+  /// Values above `outlierRatio * cutoff` are clipped to a robust top instead
+  /// of flattening the rest of the series. The cutoff is described on
+  /// [_outlierCutoff].
   static const double outlierRatio = 4;
+
+  /// Series with at least this many values take the nearest-rank p95 of all of
+  /// them as the outlier cutoff. Below it the top value is left out first: the
+  /// nearest-rank p95 of fewer than 20 values is the maximum itself, so a spike
+  /// would otherwise be compared with itself and never clip.
+  static const int robustMinSamples = 20;
+
+  /// Fewest values that can judge an outlier: the top value plus at least three
+  /// values to compare it with. Shorter series are never clipped.
+  static const int outlierMinSamples = 4;
 
   /// Headroom above the top value so a peak never sits on the frame.
   static const double headroom = 1.15;
@@ -64,8 +75,7 @@ abstract final class ChartScale {
   }
 
   /// Nearest-rank percentile of an ascending [sorted] list, p in 0..1. Nearest
-  /// rank (not interpolated) so a single spike cannot pull the robust bound up
-  /// to itself in small series.
+  /// rank (not interpolated), so the result is always a value from the list.
   static double percentile(List<double> sorted, double p) {
     if (sorted.isEmpty) return 0;
     final rank = (p.clamp(0.0, 1.0) * sorted.length).ceil();
@@ -81,9 +91,10 @@ abstract final class ChartScale {
   ///   value (lines). Without it the domain runs from 0 to the value (bars).
   /// - Otherwise: nice ticks from [includeZero] (or the data minimum), with
   ///   headroom above the top.
-  /// - Outlier-dominated data (top > [outlierRatio] x p95): the domain stops
+  /// - Outlier-dominated data (top > [outlierRatio] x cutoff): the domain stops
   ///   at a robust bound and [ChartDomain.clipAbove] marks where values are
-  ///   clipped. True values stay available to the caller for tooltips.
+  ///   clipped. True values stay available to the caller for tooltips. The
+  ///   cutoff depends on the sample count (see [_outlierCutoff]).
   static ChartDomain domain(
     Iterable<num> values, {
     int targetTicks = 5,
@@ -118,9 +129,9 @@ abstract final class ChartScale {
     }
 
     final sorted = List<double>.of(data)..sort();
-    final p95 = percentile(sorted, 0.95);
-    final clipped = clipOutliers && p95 > 0 && hi > outlierRatio * p95;
-    hi = clipped ? lo + (p95 - lo) * headroom : lo + (hi - lo) * headroom;
+    final cutoff = _outlierCutoff(sorted);
+    final clipped = clipOutliers && cutoff > 0 && hi > outlierRatio * cutoff;
+    hi = clipped ? lo + (cutoff - lo) * headroom : lo + (hi - lo) * headroom;
 
     final fitted =
         _fit(lo, hi, targetTicks: targetTicks, minStep: minStep, hasData: true);
@@ -237,6 +248,21 @@ abstract final class ChartScale {
       ticks: ticks,
       hasData: hasData,
     );
+  }
+
+  /// The value the top point is judged against, or 0 when no robust reference
+  /// exists (fewer than [outlierMinSamples] values, so 0 never clips).
+  ///
+  /// Short series (fewer than [robustMinSamples]) take the nearest-rank p95 of
+  /// the values without the top one. For those counts that is the second
+  /// highest value, so the top value clips only when it is more than
+  /// [outlierRatio] times the next highest. Long series take the plain
+  /// nearest-rank p95. From 20 to 39 values that is also the second highest,
+  /// so the rule does not change at the boundary.
+  static double _outlierCutoff(List<double> sorted) {
+    if (sorted.length < outlierMinSamples) return 0;
+    if (sorted.length >= robustMinSamples) return percentile(sorted, 0.95);
+    return percentile(sorted.sublist(0, sorted.length - 1), 0.95);
   }
 
   static double _powerOfTen(double exponent) {

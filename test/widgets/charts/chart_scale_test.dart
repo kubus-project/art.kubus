@@ -213,6 +213,186 @@ void main() {
     });
   });
 
+  group('domain: short series outliers', () {
+    test('a spike more than 4x the next value is clipped in a 7-day series',
+        () {
+      final values = <num>[3, 8, 5, 13, 9, 120, 17];
+      final domain = ChartScale.domain(values, minStep: 1);
+
+      expect(domain.isClipped, isTrue);
+      expect(domain.max, lessThan(120));
+      expect(domain.max, greaterThanOrEqualTo(17));
+      expect(domain.isClippedValue(120), isTrue);
+      expect(domain.isClippedValue(17), isFalse);
+      expect(domain.plot(120), domain.max);
+      _expectValidDomain(domain);
+    });
+
+    test('a spike within 4x of the next value is drawn in full', () {
+      final domain = ChartScale.domain(
+        const <num>[3, 8, 5, 13, 9, 40, 17],
+        minStep: 1,
+      );
+      expect(domain.isClipped, isFalse);
+      expect(domain.max, greaterThanOrEqualTo(40));
+      _expectValidDomain(domain);
+    });
+
+    test('two equal high values do not clip each other', () {
+      final domain = ChartScale.domain(
+        const <num>[2, 2, 2, 50, 50, 2, 2],
+        minStep: 1,
+      );
+      expect(domain.isClipped, isFalse);
+      expect(domain.max, greaterThanOrEqualTo(50));
+    });
+
+    test('a lone spike on a zero base is not clipped to zero', () {
+      final domain = ChartScale.domain(
+        const <num>[0, 0, 0, 0, 0, 0, 50],
+        minStep: 1,
+      );
+      expect(domain.isClipped, isFalse);
+      expect(domain.max, greaterThanOrEqualTo(50));
+    });
+
+    test('series shorter than four values are never clipped', () {
+      expect(
+        ChartScale.domain(const <num>[1, 100], minStep: 1).isClipped,
+        isFalse,
+      );
+      expect(
+        ChartScale.domain(const <num>[1, 1, 100], minStep: 1).isClipped,
+        isFalse,
+      );
+    });
+
+    test('the rule does not jump between 19 and 20 values', () {
+      List<num> ofOnes(int count, List<num> tail) => <num>[
+            for (var i = 0; i < count - tail.length; i++) 1,
+            ...tail,
+          ];
+
+      // One spike: clipped on both sides of the boundary.
+      expect(
+        ChartScale.domain(ofOnes(19, const <num>[50]), minStep: 1).isClipped,
+        isTrue,
+      );
+      expect(
+        ChartScale.domain(ofOnes(20, const <num>[50]), minStep: 1).isClipped,
+        isTrue,
+      );
+      // Two equal spikes: not clipped on either side.
+      expect(
+        ChartScale.domain(ofOnes(19, const <num>[50, 50]), minStep: 1)
+            .isClipped,
+        isFalse,
+      );
+      expect(
+        ChartScale.domain(ofOnes(20, const <num>[50, 50]), minStep: 1)
+            .isClipped,
+        isFalse,
+      );
+    });
+
+    test('a long series with one spike clips against its p95', () {
+      final domain = ChartScale.domain(
+        <num>[for (var i = 0; i < 39; i++) 1 + (i % 3), 80],
+        minStep: 1,
+      );
+      expect(domain.isClipped, isTrue);
+      expect(domain.isClippedValue(80), isTrue);
+      _expectValidDomain(domain);
+    });
+  });
+
+  group('domain: line and bar share one scale', () {
+    final inputs = <String, List<num>>{
+      'week': <num>[3, 8, 5, 13, 9, 21, 17],
+      'short spike': <num>[3, 8, 5, 13, 9, 120, 17],
+      'two-series week': <num>[3, 8, 5, 13, 9, 21, 17, 2, 4, 3, 6, 5, 2, 4],
+      'zero based': <num>[0, 0, 0, 0, 0, 0, 50],
+      'long spike': <num>[for (var i = 0; i < 30; i++) (i * 37 % 23), 400],
+      'fractional': <double>[0.0, 0.3, 0.9, 0.4],
+    };
+
+    for (final targetTicks in const <int>[4, 5]) {
+      test('same domain for the same non-flat data (ticks $targetTicks)', () {
+        for (final entry in inputs.entries) {
+          final line = ChartScale.domain(
+            entry.value,
+            targetTicks: targetTicks,
+            minStep: 1,
+            padFlat: true,
+          );
+          final bar = ChartScale.domain(
+            entry.value,
+            targetTicks: targetTicks,
+            minStep: 1,
+            padFlat: false,
+            clipOutliers: true,
+          );
+          reason(String field) => '${entry.key}: $field';
+          expect(line.min, bar.min, reason: reason('min'));
+          expect(line.max, bar.max, reason: reason('max'));
+          expect(line.step, bar.step, reason: reason('step'));
+          expect(line.ticks, bar.ticks, reason: reason('ticks'));
+          expect(line.clipAbove, bar.clipAbove, reason: reason('clipAbove'));
+          expect(line.hasData, bar.hasData, reason: reason('hasData'));
+        }
+      });
+    }
+
+    test('flat data is the one exception: lines pad, bars keep the baseline',
+        () {
+      final line = ChartScale.domain(const <num>[7, 7, 7], padFlat: true);
+      final bar = ChartScale.domain(const <num>[7, 7, 7]);
+      expect(line.min, greaterThan(0));
+      expect(bar.min, 0);
+    });
+  });
+
+  group('domain: negative and non-finite guards', () {
+    test('negative values keep a valid domain and no clip below zero', () {
+      final domain = ChartScale.domain(const <num>[-100, -4, -6, -5]);
+      _expectValidDomain(domain);
+      expect(domain.isClipped, isFalse);
+      expect(domain.min, lessThanOrEqualTo(-100));
+      expect(domain.max, greaterThanOrEqualTo(0));
+    });
+
+    test('a single negative point pads around the value', () {
+      final domain = ChartScale.domain(
+        const <num>[-4],
+        padFlat: true,
+        minStep: 1,
+      );
+      expect(domain.hasData, isTrue);
+      expect(domain.min, lessThan(-4));
+      expect(domain.max, greaterThan(-4));
+      _expectValidDomain(domain);
+    });
+
+    test('NaN and infinity next to a short spike are ignored for the cutoff',
+        () {
+      final domain = ChartScale.domain(
+        <double>[3, double.nan, 8, 5, double.infinity, 9, 120, 17],
+        minStep: 1,
+      );
+      _expectValidDomain(domain);
+      expect(domain.isClipped, isTrue);
+      expect(domain.min, 0);
+    });
+
+    test('negative infinity input has no data and a finite domain', () {
+      final domain = ChartScale.domain(
+        <double>[double.negativeInfinity, double.negativeInfinity],
+      );
+      expect(domain.hasData, isFalse);
+      expect(domain.max.isFinite, isTrue);
+    });
+  });
+
   group('percentile', () {
     test('uses nearest rank, so one spike cannot define its own bound', () {
       expect(ChartScale.percentile(<double>[1, 2, 3, 4, 5], 0.5), 3);

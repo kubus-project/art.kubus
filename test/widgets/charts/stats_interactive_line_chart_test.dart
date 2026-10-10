@@ -149,4 +149,89 @@ void main() {
       expect(chart.width, lessThanOrEqualTo(ChartScale.maxContentWidth));
     });
   }
+
+  for (final size in const <Size>[
+    Size(390, 844),
+    Size(820, 1180),
+    Size(1440, 900),
+  ]) {
+    for (final count in const <int>[7, 24, 30, 52, 90]) {
+      testWidgets(
+          'line chart with $count points does not scroll at ${size.width.round()} px',
+          (tester) async {
+        final values = List<double>.generate(
+          count,
+          (i) => (i * 37 % 23).toDouble() + 1,
+        );
+        await _pumpAt(tester, size, _trend(values));
+
+        expect(tester.takeException(), isNull);
+        expect(
+          _scrollable(tester, StatsInteractiveLineChart)
+              .position
+              .maxScrollExtent,
+          0,
+        );
+      });
+    }
+
+    testWidgets(
+        'bar chart with a week of buckets does not scroll at ${size.width.round()} px',
+        (tester) async {
+      await _pumpAt(tester, size, _bar(week));
+
+      expect(tester.takeException(), isNull);
+      expect(
+        _scrollable(tester, StatsInteractiveBarChart).position.maxScrollExtent,
+        0,
+      );
+    });
+  }
+
+  for (final size in const <Size>[Size(390, 844), Size(1440, 900)]) {
+    testWidgets(
+        'line and bar charts draw the same y scale at ${size.width.round()} px',
+        (tester) async {
+      const spike = <double>[3, 8, 5, 13, 9, 120, 17];
+
+      await _pumpAt(tester, size, _trend(spike));
+      final line = tester.widget<LineChart>(find.byType(LineChart)).data;
+
+      await _pumpAt(tester, size, _bar(spike));
+      final bar = tester.widget<BarChart>(find.byType(BarChart)).data;
+
+      expect(bar.minY, line.minY);
+      expect(bar.maxY, line.maxY);
+      expect(line.maxY, lessThan(120));
+      // The spike is drawn on the clipped top; its true value is in tooltips.
+      expect(line.lineBarsData.single.spots[5].y, closeTo(line.maxY, 1e-9));
+      expect(bar.barGroups[5].barRods.single.toY, closeTo(bar.maxY, 1e-9));
+      // The clipped bar carries a break; an unclipped neighbour does not.
+      expect(bar.barGroups[5].barRods.single.rodStackItems, isNotEmpty);
+      expect(bar.barGroups[0].barRods.single.rodStackItems, isEmpty);
+    });
+  }
+}
+
+ScrollableState _scrollable(WidgetTester tester, Type chart) {
+  return tester.state<ScrollableState>(
+    find.descendant(of: find.byType(chart), matching: find.byType(Scrollable)),
+  );
+}
+
+StatsInteractiveBarChart _bar(List<double> values) {
+  return StatsInteractiveBarChart(
+    entries: <StatsBarEntry>[
+      for (var i = 0; i < values.length; i++)
+        StatsBarEntry(
+          bucketStart: DateTime.utc(2026, 10, 1 + i),
+          value: values[i].round(),
+        ),
+    ],
+    xLabels: _labels(values.length),
+    barColor: Colors.teal,
+    gridColor: Colors.black12,
+    emptyLabel: _emptyLabel,
+    height: 200,
+  );
 }
