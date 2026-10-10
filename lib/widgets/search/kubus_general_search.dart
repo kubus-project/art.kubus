@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import '../inline_loading.dart';
-import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../providers/themeprovider.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
+import '../common/kubus_cached_image.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
@@ -298,45 +297,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   /// token ([KubusRadius.lg]).
   final double? panelRadius;
 
-  Widget _buildIconBadge(
-    BuildContext context,
-    KubusSearchResult result,
-    Color resolvedAccent,
-  ) {
-    final roles = KubusColorRoles.of(context);
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: roles.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.surface),
-        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
-      ),
-      child: Icon(result.icon, color: roles.foregroundMuted, size: 20),
-    );
-  }
-
-  String? _resolvePreviewUrl(KubusSearchResult result) {
-    switch (result.kind) {
-      case KubusSearchResultKind.artwork:
-        return ArtworkMediaResolver.resolveCover(
-          metadata: result.data,
-          fallbackUrl: result.previewImageUrl,
-          additionalUrls: <String?>[result.previewImageUrl],
-        );
-      case KubusSearchResultKind.collection:
-      case KubusSearchResultKind.post:
-      case KubusSearchResultKind.institution:
-      case KubusSearchResultKind.event:
-      case KubusSearchResultKind.exhibition:
-      case KubusSearchResultKind.marker:
-        return MediaUrlResolver.resolveDisplayUrl(result.previewImageUrl);
-      case KubusSearchResultKind.profile:
-      case KubusSearchResultKind.screen:
-        return null;
-    }
-  }
-
   /// The secondary line of a result row. An artwork names its recorded artist
   /// or says the author is unknown, never the uploader. A collection names its
   /// owner and how many artworks it holds.
@@ -365,54 +325,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     }
   }
 
-  Widget _buildResultLeading(
-    BuildContext context,
-    KubusSearchResult result,
-    Color resolvedAccent,
-  ) {
-    if (result.kind == KubusSearchResultKind.profile ||
-        (result.kind == KubusSearchResultKind.post &&
-            (result.avatarUrl?.trim().isNotEmpty ?? false))) {
-      final wallet = (result.walletSeed ?? result.id ?? result.label).trim();
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: AvatarWidget(
-          avatarUrl: result.avatarUrl,
-          wallet: wallet.isEmpty ? result.label : wallet,
-          radius: 22,
-          allowFabricatedFallback: true,
-          enableProfileNavigation: false,
-          showStatusIndicator: false,
-        ),
-      );
-    }
-
-    final previewUrl = _resolvePreviewUrl(result);
-    if (previewUrl == null || previewUrl.isEmpty) {
-      return _buildIconBadge(context, result, resolvedAccent);
-    }
-
-    final roles = KubusColorRoles.of(context);
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: roles.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.surface),
-        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Image.network(
-        previewUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildIconBadge(context, result, resolvedAccent);
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -428,8 +340,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final l10n = AppLocalizations.of(context)!;
-        final resolvedAccent = accentColor ??
-            Provider.of<ThemeProvider>(context, listen: false).accentColor;
         final resolvedPanelRadius =
             BorderRadius.circular(panelRadius ?? KubusRadius.lg);
 
@@ -546,10 +456,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                     horizontal: KubusSpacing.md,
                                     vertical: KubusSpacing.xxs,
                                   ),
-                                  leading: _buildResultLeading(
-                                    context,
-                                    result,
-                                    resolvedAccent,
+                                  leading: KubusSearchResultLeading(
+                                    result: result,
                                   ),
                                   title: Text(
                                     result.label,
@@ -765,6 +673,91 @@ class _SearchGroupHeading extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Leading slot of a search result row.
+///
+/// A profile (and a post with an avatar) shows the avatar, with initials from
+/// the display name. Every other kind shows its image when one resolves, or
+/// its kind glyph on the same surface. A loading or failed image shows that
+/// same glyph, so the row keeps one 44 px slot and never shows a broken-image
+/// icon. Image candidates (IPFS gateways) come from [KubusCachedImage].
+class KubusSearchResultLeading extends StatelessWidget {
+  const KubusSearchResultLeading({super.key, required this.result});
+
+  final KubusSearchResult result;
+
+  /// The image reference for a non-profile row, resolved for display.
+  static String? previewUrlFor(KubusSearchResult result) {
+    switch (result.kind) {
+      case KubusSearchResultKind.artwork:
+        return ArtworkMediaResolver.resolveCover(
+          metadata: result.data,
+          fallbackUrl: result.previewImageUrl,
+          additionalUrls: <String?>[result.previewImageUrl],
+        );
+      case KubusSearchResultKind.collection:
+      case KubusSearchResultKind.post:
+      case KubusSearchResultKind.institution:
+      case KubusSearchResultKind.event:
+      case KubusSearchResultKind.exhibition:
+      case KubusSearchResultKind.marker:
+        return MediaUrlResolver.resolveDisplayUrl(result.previewImageUrl);
+      case KubusSearchResultKind.profile:
+      case KubusSearchResultKind.screen:
+        return null;
+    }
+  }
+
+  Widget _glyph(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    return Center(
+      child: Icon(result.icon, color: roles.foregroundMuted, size: 20),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (result.kind == KubusSearchResultKind.profile ||
+        (result.kind == KubusSearchResultKind.post &&
+            (result.avatarUrl?.trim().isNotEmpty ?? false))) {
+      final wallet = (result.walletSeed ?? result.id ?? result.label).trim();
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: AvatarWidget(
+          avatarUrl: result.avatarUrl,
+          wallet: wallet.isEmpty ? result.label : wallet,
+          displayName: result.label,
+          radius: 22,
+          allowFabricatedFallback: true,
+          enableProfileNavigation: false,
+          showStatusIndicator: false,
+        ),
+      );
+    }
+
+    final roles = KubusColorRoles.of(context);
+    final previewUrl = previewUrlFor(result);
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: roles.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.surface),
+        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: previewUrl == null || previewUrl.isEmpty
+          ? _glyph(context)
+          : KubusCachedImage(
+              imageUrl: previewUrl,
+              fit: BoxFit.cover,
+              placeholderBuilder: _glyph,
+              errorBuilder: (context, error, stackTrace) => _glyph(context),
+            ),
     );
   }
 }
