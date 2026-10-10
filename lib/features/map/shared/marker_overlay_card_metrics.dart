@@ -171,8 +171,12 @@ class MarkerOverlayCardMetrics {
   static const double headerPlaceHeight = 15.0;
   static const double headerExtraGap = KubusSpacing.xs;
 
+  /// Smallest touch target for any control on the card (close, actions, pager,
+  /// primary). 48 is the platform minimum a thumb can hit reliably.
+  static const double touchTargetHeight = 48;
+
   /// The close control's hit area; the header can never be shorter.
-  static const double headerMinHeight = KubusHeaderMetrics.actionHitArea;
+  static const double headerMinHeight = touchTargetHeight;
 
   // --- Media ---
   /// Preferred cover height. The card is a discovery surface: the image is a
@@ -259,12 +263,11 @@ class MarkerOverlayCardMetrics {
   }
 
   // --- Footer ---
-  static const double actionRowHeight = KubusHeaderMetrics.actionHitArea;
+  static const double actionRowHeight = touchTargetHeight;
   static const double actionRowGap = KubusSpacing.xs;
   static const double footerBlockGap = KubusSpacing.sm;
-  static const double pagerHeight =
-      KubusHeaderMetrics.actionHitArea - KubusSpacing.xs;
-  static const double primaryActionHeight = KubusHeaderMetrics.actionHitArea;
+  static const double pagerHeight = touchTargetHeight;
+  static const double primaryActionHeight = touchTargetHeight;
 
   /// Preview budget applied before layout so a novel-length description cannot
   /// make the estimator walk a huge string.

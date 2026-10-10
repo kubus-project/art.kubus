@@ -43,9 +43,9 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
-                onPressed: () => ArtworkLocationActions.showNavigationOptions(
+                onPressed: () =>
+                    MapDestination.ofArtwork(_artwork()).showNavigationOptions(
                   context,
-                  _artwork(),
                   walkingOpener: (context, {required intent}) {
                     openedIntent = intent;
                   },
@@ -144,13 +144,11 @@ void main() {
 
     test('external navigation URIs encode labels and coordinates safely', () {
       final artwork = _artwork();
-      final appleUris = ArtworkLocationActions.destinationUris(
-        artwork,
+      final appleUris = MapDestination.ofArtwork(artwork).externalUris(
         ArtworkExternalMapDestination.appleMaps,
         platform: TargetPlatform.iOS,
       );
-      final androidUris = ArtworkLocationActions.destinationUris(
-        artwork,
+      final androidUris = MapDestination.ofArtwork(artwork).externalUris(
         ArtworkExternalMapDestination.platformDefault,
         platform: TargetPlatform.android,
       );
@@ -166,26 +164,26 @@ void main() {
 
     test('platform policies expose only appropriate native map choices', () {
       expect(
-        ArtworkLocationActions.shouldShowAppleMaps(TargetPlatform.iOS),
+        MapDestination.shouldShowAppleMaps(TargetPlatform.iOS),
         isTrue,
       );
       expect(
-        ArtworkLocationActions.shouldShowAppleMaps(TargetPlatform.macOS),
+        MapDestination.shouldShowAppleMaps(TargetPlatform.macOS),
         isTrue,
       );
       expect(
-        ArtworkLocationActions.shouldShowAppleMaps(TargetPlatform.android),
+        MapDestination.shouldShowAppleMaps(TargetPlatform.android),
         isTrue,
       );
       expect(
-        ArtworkLocationActions.shouldShowPlatformDefaultMaps(
+        MapDestination.shouldShowPlatformDefaultMaps(
           TargetPlatform.android,
           isWeb: false,
         ),
         isTrue,
       );
       expect(
-        ArtworkLocationActions.shouldShowPlatformDefaultMaps(
+        MapDestination.shouldShowPlatformDefaultMaps(
           TargetPlatform.android,
           isWeb: true,
         ),
@@ -197,8 +195,7 @@ void main() {
       final launched = <Uri>[];
       final modes = <LaunchMode>[];
 
-      final didLaunch = await ArtworkLocationActions.launchDestination(
-        _artwork(),
+      final didLaunch = await MapDestination.ofArtwork(_artwork()).launch(
         ArtworkExternalMapDestination.googleMaps,
         platform: TargetPlatform.android,
         canLaunch: (_) async => true,
@@ -225,9 +222,9 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
-                onPressed: () => ArtworkLocationActions.showNavigationOptions(
+                onPressed: () =>
+                    MapDestination.ofArtwork(_artwork()).showNavigationOptions(
                   context,
-                  _artwork(),
                   platform: TargetPlatform.android,
                   isWeb: false,
                   clipboardWriter: (_) async => throw StateError('blocked'),

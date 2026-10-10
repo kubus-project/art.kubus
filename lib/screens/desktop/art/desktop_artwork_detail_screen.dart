@@ -925,10 +925,8 @@ class _DesktopArtworkDetailScreenState
                   icon: Icons.navigation_outlined,
                   label: l10n.commonNavigate,
                   onPressed: () => unawaited(
-                    ArtworkLocationActions.showNavigationOptions(
-                      context,
-                      artwork,
-                    ),
+                    MapDestination.ofArtwork(artwork)
+                        .showNavigationOptions(context),
                   ),
                 ),
               if (showArPrimaryAction)

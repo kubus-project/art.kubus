@@ -530,9 +530,9 @@ void main() {
       expect(secondary, findsOneWidget);
       expect(primary, findsOneWidget);
       expect(tester.getSize(secondary).height,
-          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
+          greaterThanOrEqualTo(MarkerOverlayCardMetrics.touchTargetHeight));
       expect(tester.getSize(primary).height,
-          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
+          greaterThanOrEqualTo(MarkerOverlayCardMetrics.touchTargetHeight));
     },
   );
 
@@ -812,7 +812,7 @@ void main() {
                   .first,
             )
             .height,
-        KubusHeaderMetrics.actionHitArea,
+        MarkerOverlayCardMetrics.touchTargetHeight,
       );
       expect(
         tester
@@ -821,7 +821,7 @@ void main() {
                   const ValueKey<String>('marker_overlay_primary_action')),
             )
             .height,
-        KubusHeaderMetrics.actionHitArea,
+        MarkerOverlayCardMetrics.touchTargetHeight,
       );
     },
   );

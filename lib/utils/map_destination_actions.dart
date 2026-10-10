@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/config.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
+import '../models/artwork.dart';
 import '../l10n/app_localizations.dart';
 import '../services/walking_navigation_diagnostics.dart';
 import '../widgets/glass_components.dart';
@@ -61,6 +62,13 @@ class MapDestination {
 
   /// The destination of an in-app walking route, so "open externally" from the
   /// route goes through this same navigation path.
+  /// The destination for an artwork: its id, title and recorded coordinate.
+  factory MapDestination.ofArtwork(Artwork artwork) => MapDestination(
+        id: artwork.id,
+        title: artwork.title,
+        position: artwork.position,
+      );
+
   factory MapDestination.fromWalkingIntent(WalkingNavigationIntent intent) =>
       MapDestination(
         id: intent.destinationId,

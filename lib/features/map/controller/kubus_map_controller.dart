@@ -80,6 +80,22 @@ class KubusMapCameraState {
   final double zoom;
   final double bearing;
   final double pitch;
+
+  /// Whether [other] is a different camera beyond rounding noise.
+  ///
+  /// MapLibre also emits move events that leave the camera where it was (the
+  /// canvas re-measuring itself when the map becomes visible again). Those are
+  /// not gestures, so they must not dismiss the open marker card.
+  bool differsFrom(KubusMapCameraState other) {
+    const double centerEpsilonDeg = 1e-7;
+    const double zoomEpsilon = 1e-4;
+    const double angleEpsilonDeg = 1e-3;
+    return (center.latitude - other.center.latitude).abs() > centerEpsilonDeg ||
+        (center.longitude - other.center.longitude).abs() > centerEpsilonDeg ||
+        (zoom - other.zoom).abs() > zoomEpsilon ||
+        (bearing - other.bearing).abs() > angleEpsilonDeg ||
+        (pitch - other.pitch).abs() > angleEpsilonDeg;
+  }
 }
 
 @immutable
@@ -919,26 +935,31 @@ class KubusMapController {
     _cameraIsMoving = true;
     _hasCameraFrame = true;
 
-    final bool hasGesture = !_programmaticCameraMove;
-    if (hasGesture && _autoFollow) {
-      _autoFollow = false;
-      onAutoFollowChanged?.call(_autoFollow);
-    }
-
     final nextCenter =
         LatLng(position.target.latitude, position.target.longitude);
     final nextZoom = position.zoom;
     final nextBearing = position.bearing;
     final nextPitch = position.tilt;
 
-    final bearingChanged = (nextBearing - _camera.bearing).abs() > 0.1;
-
-    _camera = KubusMapCameraState(
+    final previousCamera = _camera;
+    final nextCamera = KubusMapCameraState(
       center: nextCenter,
       zoom: nextZoom,
       bearing: nextBearing,
       pitch: nextPitch,
     );
+    // A move that leaves the camera unchanged is not a gesture (see
+    // [KubusMapCameraState.differsFrom]); it must not close the card.
+    final bool hasGesture =
+        !_programmaticCameraMove && nextCamera.differsFrom(previousCamera);
+    if (hasGesture && _autoFollow) {
+      _autoFollow = false;
+      onAutoFollowChanged?.call(_autoFollow);
+    }
+
+    final bearingChanged = (nextBearing - previousCamera.bearing).abs() > 0.1;
+
+    _camera = nextCamera;
 
     if (bearingChanged) {
       bearingDegrees.value = nextBearing;
