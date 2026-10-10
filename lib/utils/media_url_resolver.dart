@@ -397,7 +397,8 @@ class MediaUrlResolver {
   /// CID. A CID field is read as `ipfs://<cid>` (bare, `ipfs:`, `ipfs://`,
   /// `/ipfs/` and `ipfs/` forms), never as a file name or a backend path.
   static String? ipfsReferenceForCid(String? raw) {
-    var value = raw?.trim() ?? '';
+    if (raw == null || _hasControlCharacter(raw)) return null;
+    var value = raw.trim();
     if (value.isEmpty) return null;
     final lower = value.toLowerCase();
     if (lower.startsWith('ipfs:')) {
@@ -421,8 +422,9 @@ class MediaUrlResolver {
   /// instead of hiding it.
   static String? firstSafeRef(Iterable<String?> refs) {
     for (final raw in refs) {
-      final trimmed = raw?.trim();
-      if (trimmed == null || trimmed.isEmpty) continue;
+      if (raw == null || _hasControlCharacter(raw)) continue;
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) continue;
       if (_resolveCandidates(trimmed, forDisplay: false).isNotEmpty) {
         return trimmed;
       }
@@ -503,9 +505,37 @@ class MediaUrlResolver {
     '/avatars/',
   ];
 
-  static final RegExp _ipv4Literal = RegExp(
-    r'^[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}$',
+  /// A numeric or hex host label, in any form inet_aton accepts: decimal
+  /// (`2130706433`, `127`), octal (`0177`) or hex (`0x7f`).
+  static final RegExp _numericHostLabel = RegExp(
+    r'^(0x[0-9a-f]*|[0-9]+)$',
+    caseSensitive: false,
   );
+
+  /// A host whose last label is numeric is an IPv4 number in some form
+  /// (`127.0.0.1`, `127.1`, `0x7f.1`, `2130706433`, `0177.0.0.1`). Such a host
+  /// is never a public name, so it is not accepted as an external reference.
+  static bool _endsInNumber(String host) {
+    final labels = host.split('.');
+    return _numericHostLabel.hasMatch(labels.last);
+  }
+
+  /// Lower-case host with one trailing root dot removed, so `localhost.` is
+  /// checked as `localhost`. A second dot is left in place and is rejected by
+  /// the empty-label check.
+  static String _normalizeHost(String host) {
+    final h = host.toLowerCase();
+    return h.endsWith('.') ? h.substring(0, h.length - 1) : h;
+  }
+
+  /// True when [text] holds a control character (U+0000 to U+001F or U+007F),
+  /// including an embedded newline or tab. Such a reference is never a URL.
+  static bool _hasControlCharacter(String text) {
+    for (final unit in text.codeUnits) {
+      if (unit < 0x20 || unit == 0x7f) return true;
+    }
+    return false;
+  }
 
   /// One CID segment of an explicit IPFS reference (`ipfs://`, `/ipfs/`,
   /// `https://host/ipfs/`). Real CIDs (CIDv0 `Qm...`, CIDv1 `bafy...`) are
@@ -523,6 +553,9 @@ class MediaUrlResolver {
   /// otherwise null. Hosts and gateways are checked when candidates are built.
   static String? _admissibleReference(String? raw) {
     if (raw == null) return null;
+    // Checked before trimming: an embedded or trailing control character is
+    // rejected, not stripped or percent-encoded into the URL.
+    if (_hasControlCharacter(raw)) return null;
     final value = raw.trim();
     if (value.isEmpty) return null;
     final lower = value.toLowerCase();
@@ -606,6 +639,11 @@ class MediaUrlResolver {
     if (lower.startsWith('/ipfs/') || lower.startsWith('ipfs/')) {
       return _ipfsCandidates(value);
     }
+    // A bare file name with no slash is a legacy upload: it lives under
+    // /uploads on the storage API host, as the backend resolves it.
+    if (!value.contains('/')) {
+      return StorageConfig.resolveAllUrls('/uploads/$value');
+    }
     return StorageConfig.resolveAllUrls(value)
         .where((url) => url.startsWith('https://') || url.startsWith('http://'))
         .toList(growable: false);
@@ -665,8 +703,8 @@ class MediaUrlResolver {
 
   static bool _isStorageBackendHost(String host) {
     final backend = Uri.tryParse(StorageConfig.httpBackend);
-    final backendHost = backend?.host.toLowerCase() ?? '';
-    return backendHost.isNotEmpty && backendHost == host;
+    final backendHost = _normalizeHost(backend?.host ?? '');
+    return backendHost.isNotEmpty && backendHost == _normalizeHost(host);
   }
 
   /// Test seam: a unit test can run the release rules inside a debug test run
@@ -677,7 +715,7 @@ class MediaUrlResolver {
   static bool get _devBuild => debugDevBuildOverride ?? AppConfig.isDevelopment;
 
   static bool _isLoopbackHost(String host) {
-    final h = host.toLowerCase();
+    final h = _normalizeHost(host);
     return h == 'localhost' ||
         h.endsWith('.localhost') ||
         h == '::1' ||
@@ -688,7 +726,7 @@ class MediaUrlResolver {
   /// host: the API host itself, and in development builds any loopback host.
   /// Any other host is an ordinary external reference and is never rewritten.
   static bool _isOwnMediaHost(String host) {
-    final h = host.toLowerCase();
+    final h = _normalizeHost(host);
     if (h.isEmpty) return false;
     if (_isStorageBackendHost(h)) return true;
     return _devBuild && _isLoopbackHost(h);
@@ -704,7 +742,7 @@ class MediaUrlResolver {
       return false;
     }
     return backend.host.isNotEmpty &&
-        backend.host.toLowerCase() == uri.host.toLowerCase() &&
+        _normalizeHost(backend.host) == _normalizeHost(uri.host) &&
         backend.port == uri.port;
   }
 
@@ -712,11 +750,12 @@ class MediaUrlResolver {
   /// allowed; other IP literals, `localhost`, single-label names and local
   /// or internal suffixes are not.
   static bool _isPublicHost(String host) {
-    final h = host.toLowerCase();
+    final h = _normalizeHost(host);
     if (h.isEmpty) return false;
     if (_isStorageBackendHost(h)) return true;
     if (h.contains(':')) return false; // IPv6 literal
-    if (_ipv4Literal.hasMatch(h)) return false;
+    if (h.split('.').any((label) => label.isEmpty)) return false; // `a..b`
+    if (_endsInNumber(h)) return false; // IPv4 in any numeric or hex form
     if (!h.contains('.')) return false; // localhost and other single labels
     return !(h.endsWith('.local') ||
         h.endsWith('.internal') ||

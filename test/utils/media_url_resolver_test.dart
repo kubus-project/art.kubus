@@ -437,7 +437,7 @@ void main() {
             'https://api.example.test/profiles/cover/a.png',
         '/avatars/a.png': 'https://api.example.test/avatars/a.png',
         'avatars/a.png': 'https://api.example.test/avatars/a.png',
-        'a.png': 'https://api.example.test/a.png',
+        'a.png': 'https://api.example.test/uploads/a.png',
         'https://api.example.test/uploads/a.jpg':
             'https://api.example.test/uploads/a.jpg',
         'https://old.example.test/uploads/a.jpg':
@@ -508,6 +508,124 @@ void main() {
           reason: raw,
         );
       }
+    });
+
+    group('QA matrix defects (backend contract parity)', () {
+      // Control characters are built from code units, so the test source
+      // holds no escape sequences.
+      final lf = String.fromCharCode(10);
+      final tab = String.fromCharCode(9);
+      final cr = String.fromCharCode(13);
+      final nul = String.fromCharCode(0);
+      final del = String.fromCharCode(0x7f);
+
+      void expectRejected(Iterable<String> refs) {
+        for (final raw in refs) {
+          expect(MediaUrlResolver.resolve(raw), isNull, reason: raw);
+          expect(MediaUrlResolver.resolveDisplayUrl(raw), isNull, reason: raw);
+          expect(
+            MediaUrlResolver.resolveDisplayCandidates(raw),
+            isEmpty,
+            reason: raw,
+          );
+        }
+      }
+
+      test('(c) a bare file name with no slash resolves under /uploads', () {
+        final cases = <String, String>{
+          'x.jpg': 'https://api.example.test/uploads/x.jpg',
+          'photo.png?v=2': 'https://api.example.test/uploads/photo.png?v=2',
+          // A name that already has a directory keeps its own path.
+          'uploads/art/x.jpg': 'https://api.example.test/uploads/art/x.jpg',
+          'avatars/a.png': 'https://api.example.test/avatars/a.png',
+        };
+        cases.forEach((raw, expected) {
+          expect(MediaUrlResolver.resolve(raw), equals(expected), reason: raw);
+          expect(
+            MediaUrlResolver.resolveDisplayUrl(raw),
+            equals(expected),
+            reason: raw,
+          );
+        });
+      });
+
+      test('(d) numeric and hex IPv4 forms are never accepted as hosts', () {
+        expectRejected(<String>[
+          'https://0x7f.1/a.jpg',
+          'https://0x7f.0.0.1/a.jpg',
+          'https://0x7f000001/a.jpg',
+          'https://2130706433/a.jpg',
+          'https://017700000001/a.jpg',
+          'https://0177.0.0.1/a.jpg',
+          'https://127.1/a.jpg',
+          'https://127.0.0.1/a.jpg',
+          'https://10.0.0.5/x.png',
+          'https://93.184.216.34/x.png',
+        ]);
+      });
+
+      test('(d) ordinary public names with digits are still accepted', () {
+        const cases = <String, String>{
+          'https://cdn.example.com/a.jpg': 'https://cdn.example.com/a.jpg',
+          'https://v2.images.example.org/a.jpg':
+              'https://v2.images.example.org/a.jpg',
+          'https://123abc.example.com/a.jpg':
+              'https://123abc.example.com/a.jpg',
+        };
+        cases.forEach((raw, expected) {
+          expect(MediaUrlResolver.resolve(raw), equals(expected), reason: raw);
+        });
+      });
+
+      test('(e) one trailing root dot is ignored for the host checks', () {
+        expectRejected(<String>[
+          'https://localhost./a.jpg',
+          'https://localhost../a.jpg',
+          'https://files.local./a.jpg',
+          'https://db.internal./a.jpg',
+          'https://minio./a.jpg',
+          'https://a..b.example.com/a.jpg',
+        ]);
+        expect(
+          MediaUrlResolver.resolve('https://cdn.example.com./a.jpg'),
+          equals('https://cdn.example.com./a.jpg'),
+          reason: 'a public host with a trailing dot is still public',
+        );
+        // The storage API host with a trailing dot is still the own host, so an
+        // upload path on it is rewritten to the API host.
+        expect(
+          MediaUrlResolver.resolve('https://api.example.test./uploads/x.jpg'),
+          equals('https://api.example.test/uploads/x.jpg'),
+        );
+      });
+
+      test('(f) an embedded or trailing control character is rejected', () {
+        expectRejected(<String>[
+          'https://images.example.test/a$lf.jpg',
+          'https://images.example.test/a$tab.jpg',
+          'https://images.example.test/a$cr.jpg',
+          'https://images.example.test/a.jpg$lf',
+          '/uploads/a$cr.jpg',
+          'x.jpg$nul',
+          'x$del.jpg',
+          'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi$lf',
+        ]);
+        // firstSafeRef and the CID-field reader apply the same rule before any
+        // trimming, so the bad entry falls through to the next one.
+        expect(
+          MediaUrlResolver.firstSafeRef(<String?>[
+            'https://images.example.test/a$lf.jpg',
+            '/uploads/ok.jpg',
+          ]),
+          equals('/uploads/ok.jpg'),
+        );
+        expect(
+          MediaUrlResolver.ipfsReferenceForCid(
+            'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi$lf',
+          ),
+          isNull,
+        );
+      });
     });
 
     group('storage host rewrite: own host and dev loopback only', () {
