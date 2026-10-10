@@ -30,9 +30,12 @@ release-preparation commit, as in 0.8.1, not in this feature change.
   not cropped away.
 - **Controls.** Swipe, a `1 / N` counter and dots, hover arrows on pointer
   devices, and left and right arrow keys when the carousel has focus.
-- **Videos play.** A video starts muted and plays on tap. Its player loads on
-  first play and is released when you scroll away. Only one video plays at a
-  time.
+- **Videos play.** A video plays on tap, with sound, at the volume you last
+  chose; muting or lowering it carries to the next clip. If a browser refuses
+  sound, the clip plays muted and shows it as muted. The player is exactly the
+  shape of the video: the seek bar and controls sit inside the picture, never
+  across the empty part of the stage. Its player loads on first play and is
+  released when you scroll away. Only one video plays at a time.
 - **Quoted posts.** A reposted post shows a compact preview of its first item
   with a `+N` badge that opens the original. The original's media is no longer
   shown twice in a repost.
