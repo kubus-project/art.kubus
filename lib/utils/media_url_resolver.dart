@@ -583,7 +583,12 @@ class MediaUrlResolver {
     if (value.startsWith('//')) return null;
 
     final scheme = _schemeOf(value);
-    if (scheme == null) return _hasTraversalSegment(value) ? null : value;
+    if (scheme == null) {
+      // A colon in a relative reference is a scheme in disguise: the backend's
+      // bare-name rule turns `javascript:alert(1)` into `/uploads/javascript:alert(1)`.
+      if (value.contains(':')) return null;
+      return _hasTraversalSegment(value) ? null : value;
+    }
     if (scheme == 'ipfs' || scheme == 'ipns') return value;
     if (scheme == 'http' || scheme == 'https') {
       return _admissibleAbsoluteHttp(value, scheme);

@@ -377,6 +377,9 @@ void main() {
         'file:///etc/passwd',
         'blob:https://example.com/abc',
         'vbscript:msgbox',
+        // The backend prefixes a bare name with /uploads/; a colon stays a scheme.
+        '/uploads/javascript:alert(1)',
+        '/uploads/data:text/html,x',
       ];
       for (final raw in unsafe) {
         expect(MediaUrlResolver.resolve(raw), isNull, reason: raw);
