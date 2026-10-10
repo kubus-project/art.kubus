@@ -24,6 +24,7 @@ import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/map/controls/kubus_map_primary_controls.dart';
 import 'package:art_kubus/widgets/map/kubus_activation_prompt_card.dart';
 import 'package:art_kubus/widgets/map/kubus_map_chrome.dart';
+import 'package:art_kubus/widgets/search/kubus_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -374,6 +375,71 @@ void main() {
         tester.getSize(find.byType(IconButton)).height,
         greaterThanOrEqualTo(KubusMapMetrics.mobileControlSize),
       );
+    });
+  });
+
+  group('map chrome: search field semantics', () {
+    // The desktop header title sits beside the search field. The field must be
+    // its own semantics container: its label is the hint alone and its node is
+    // the field's own size. A merged neighbour made the engine size the text
+    // input to the whole map, so map and marker taps hit the input instead.
+    testWidgets(
+        'the desktop search field is its own container: label is the hint and '
+        'the node is field-sized', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => ArtworkProvider()),
+            ChangeNotifierProvider(create: (_) => TaskProvider()),
+            ChangeNotifierProvider(create: (_) => WalletProvider()),
+            ChangeNotifierProvider(create: (_) => MainTabProvider()),
+            ChangeNotifierProvider(create: (_) => MapDeepLinkProvider()),
+            ChangeNotifierProvider(create: (_) => NavigationProvider()),
+            ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
+            ChangeNotifierProvider(create: (_) => EventsProvider()),
+            ChangeNotifierProvider(
+              create: (_) => ActivationPromptProvider(
+                hasAuthSession: () => false,
+              ),
+            ),
+            ChangeNotifierProvider(create: (_) => MarkerManagementProvider()),
+            ChangeNotifierProvider(create: (_) => PresenceProvider()),
+            Provider<TileProviders>(
+              create: (context) => TileProviders(context.read<ThemeProvider>()),
+              dispose: (_, value) => value.dispose(),
+            ),
+          ],
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(1280, 900)),
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const DesktopMapScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(seconds: 1));
+
+      final bar = tester.getSize(find.byType(KubusSearchBar).first);
+      final node = tester.getSemantics(find.byType(EditableText).first);
+      // The field's own node is the immediate semantics parent of the editable.
+      // Before the fix that parent was the merged title ("Discover").
+      final parent = node.parent;
+      expect(parent, isNotNull);
+      expect(parent!.label, isNot(contains('Discover')));
+      expect(parent.label, contains('Search artworks'));
+      expect(parent.rect.height, lessThanOrEqualTo(bar.height + 1));
+      expect(parent.rect.width, lessThanOrEqualTo(bar.width + 1));
+      handle.dispose();
     });
   });
 }

@@ -387,7 +387,11 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
             ),
           );
 
+    // The field is its own semantics container: its label and rect are the field
+    // alone. Without a boundary, a neighbouring header label is merged into this
+    // node and the engine sizes the text input to the whole map area.
     return Semantics(
+      container: true,
       label: widget.semanticsLabel,
       textField: widget.semanticsLabel != null,
       child: MouseRegion(

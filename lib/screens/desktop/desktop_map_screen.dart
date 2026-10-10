@@ -3012,10 +3012,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             const EdgeInsets.symmetric(vertical: KubusSpacing.md),
         rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
         // The shell rail owns the brand mark; the map header is title only.
-        leading: Text(
-          l10n.desktopMapTitleDiscover,
-          style: KubusTextStyles.screenTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
+        leading: Semantics(
+          header: true,
+          child: Text(
+            l10n.desktopMapTitleDiscover,
+            style: KubusTextStyles.screenTitle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ),
         searchField: _buildDesktopSearchField(l10n, themeProvider),
