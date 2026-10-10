@@ -17836,7 +17836,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportErrorRateLimited =>
-      'Too many requests. Wait a few minutes and try again.';
+      'Too many requests. Try again in about an hour.';
 
   @override
   String get supportErrorClosedReply =>

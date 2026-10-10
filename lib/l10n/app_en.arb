@@ -7477,7 +7477,7 @@
   "supportErrorLoadRequest": "This request could not be opened. Check your connection and try again.",
   "supportErrorNotFound": "This request could not be found. It may have been removed.",
   "supportErrorInvalid": "Check the highlighted fields and try again.",
-  "supportErrorRateLimited": "Too many requests. Wait a few minutes and try again.",
+  "supportErrorRateLimited": "Too many requests. Try again in about an hour.",
   "supportErrorClosedReply": "This request is closed, so it cannot take a reply.",
   "supportErrorGeneric": "Something went wrong. Check your connection and try again.",
   "supportRetry": "Try again",

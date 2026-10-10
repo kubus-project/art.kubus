@@ -18019,7 +18019,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get supportErrorRateLimited =>
-      'Preveč poskusov. Počakajte nekaj minut in poskusite znova.';
+      'Preveč poskusov. Poskusite znova čez približno uro.';
 
   @override
   String get supportErrorClosedReply =>

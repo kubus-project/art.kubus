@@ -30974,7 +30974,7 @@ abstract class AppLocalizations {
   /// No description provided for @supportErrorRateLimited.
   ///
   /// In en, this message translates to:
-  /// **'Too many requests. Wait a few minutes and try again.'**
+  /// **'Too many requests. Try again in about an hour.'**
   String get supportErrorRateLimited;
 
   /// No description provided for @supportErrorClosedReply.

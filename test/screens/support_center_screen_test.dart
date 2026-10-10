@@ -343,7 +343,7 @@ void main() {
       await settle(tester);
 
       expect(
-        find.text('Too many requests. Wait a few minutes and try again.'),
+        find.text('Too many requests. Try again in about an hour.'),
         findsOneWidget,
       );
       expect(

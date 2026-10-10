@@ -7439,7 +7439,7 @@
   "supportErrorLoadRequest": "Zahtevka ni bilo mogoče odpreti. Preverite povezavo in poskusite znova.",
   "supportErrorNotFound": "Zahtevka ni bilo mogoče najti. Morda je bil odstranjen.",
   "supportErrorInvalid": "Preverite označena polja in poskusite znova.",
-  "supportErrorRateLimited": "Preveč poskusov. Počakajte nekaj minut in poskusite znova.",
+  "supportErrorRateLimited": "Preveč poskusov. Poskusite znova čez približno uro.",
   "supportErrorClosedReply": "Zahtevek je zaprt, zato nanj ni mogoče odgovoriti.",
   "supportErrorGeneric": "Prišlo je do napake. Preverite povezavo in poskusite znova.",
   "supportRetry": "Poskusi znova",
