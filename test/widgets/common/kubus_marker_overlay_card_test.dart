@@ -5,7 +5,6 @@ import 'package:art_kubus/features/map/shared/marker_overlay_card_metrics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
-import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/common/kubus_marker_overlay_card.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
