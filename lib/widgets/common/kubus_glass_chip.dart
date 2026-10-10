@@ -82,8 +82,11 @@ class KubusGlassChip extends StatelessWidget {
           : KubusGlassEffects.fallbackOpaqueOpacity,
     );
 
+    // Map chips are one flat surface (see useMapAwareGlass below): no fallback
+    // sheen is painted inside them, in either blur mode. Other chips keep the
+    // glass fallback when real blur is unavailable.
     final child = wrapWithKubusMapGlassSheen(
-      show: !(enableBlur && allowBlur),
+      show: !useMapAwareGlass && !(enableBlur && allowBlur),
       borderRadius: radius,
       isDark: isDark,
       child: Row(

@@ -53,6 +53,18 @@ void main() {
 
       expect(find.textContaining('KUB8'), findsNothing);
 
+      // Mobile header controls are flat 48px map-chrome targets.
+      final radarTarget = tester.getSize(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.radar),
+              matching: find.byType(SizedBox),
+            )
+            .first,
+      );
+      expect(radarTarget.width, greaterThanOrEqualTo(48));
+      expect(radarTarget.height, greaterThanOrEqualTo(48));
+
       await tester.tap(find.byIcon(Icons.radar));
       await tester.pump();
 

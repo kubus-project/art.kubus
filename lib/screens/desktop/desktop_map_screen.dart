@@ -2614,8 +2614,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     // always render above it.
                     // Basemap credit: bottom-left, clear of the control cluster and
                     // of the engagement prompt that sits above it.
-                    Positioned(
-                      left: _hasLeftDetailPanel
+                    AnimatedPositioned(
+                      // Clears the left side panel whether it shows marker
+                      // details or filters, so the credit never sits on it.
+                      // Moves with the panel's own motion.
+                      duration: mapMotion.panelEnter.duration,
+                      curve: mapMotion.panelEnter.curve,
+                      left: _isLeftPanelVisible
                           ? contextPanelWidth +
                               KubusMapMetrics.desktopChromeInset
                           : KubusMapMetrics.desktopChromeInset,

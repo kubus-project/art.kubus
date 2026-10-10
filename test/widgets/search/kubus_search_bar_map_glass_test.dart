@@ -402,5 +402,47 @@ void main() {
       expect(find.byType(BackdropFilter), findsOneWidget);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
+
+    // Analytics and spatial chips keep the glass fallback; only the map-aware
+    // chips (filter strip, layer chips, discovery card) are flat.
+    testWidgets('map-aware chip is one flat surface with blur off',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          KubusGlassChip(
+            label: 'Nearby',
+            icon: Icons.near_me,
+            active: false,
+            enableBlur: false,
+            useMapAwareGlass: true,
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+      expect(find.text('Nearby'), findsOneWidget);
+    });
+
+    testWidgets('map-aware chip is flat even when blur is available',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          KubusGlassChip(
+            label: 'Street Art',
+            icon: Icons.brush,
+            active: true,
+            enableBlur: true,
+            useMapAwareGlass: true,
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      // Map chrome never blurs or sheens, even when the device could blur.
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+    });
   });
 }
