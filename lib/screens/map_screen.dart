@@ -4230,15 +4230,17 @@ class _MapScreenState extends State<MapScreen>
                     if (!_isWalkingFocusedMode)
                       _buildTopOverlays(theme, themeProvider, taskProvider),
                     // Engagement prompt. Only in the plain browse state, and
-                    // seated above the Nearby peek and the map attribution
-                    // (attributionBottomMargin already accounts for both), so
-                    // it never covers map chrome or credit.
+                    // seated above the Nearby peek, the nav bar and the map credit,
+                    // so it never covers map chrome or credit.
                     if (!_isWalkingFocusedMode &&
                         ui.contextSurface == MapContextSurface.none)
                       Positioned(
                         left: 0,
                         right: 0,
-                        bottom: attributionBottomMargin + KubusSpacing.md,
+                        bottom: attributionBottomMargin +
+                            KubusLayout.mainBottomNavBarHeight +
+                            KubusSpacing.md +
+                            KubusSpacing.xs,
                         child: const KubusActivationPromptCard(),
                       ),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
@@ -4254,7 +4256,9 @@ class _MapScreenState extends State<MapScreen>
                     if (!_isWalkingFocusedMode)
                       Positioned(
                         left: kIsWeb ? 12.0 : 44.0,
-                        bottom: attributionBottomMargin,
+                        // The sheet is padded above the nav bar, so clear both.
+                        bottom: attributionBottomMargin +
+                            KubusLayout.mainBottomNavBarHeight,
                         child: KubusMapAttributionControl(
                           semanticsLabel: l10n.mapAttributionsTitle,
                           onPressed: () =>
