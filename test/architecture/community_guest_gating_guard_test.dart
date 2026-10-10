@@ -56,6 +56,19 @@ void main() {
     }
   });
 
+  group('a feed like returns the visitor to the feed', () {
+    for (final entry in <(String, String, String)>[
+      (mobileFeedLike, 'void _toggleLike(int index)', 'mobile feed'),
+      (desktopFeedP3, 'Future<void> _togglePostLike(', 'desktop feed'),
+    ]) {
+      test('${entry.$3} like gate returns to /community, not the post', () {
+        final body = memberBody(read(entry.$1), entry.$2);
+        expect(body, contains("returnRoute: '/community'"), reason: entry.$3);
+        expect(body, isNot(contains("returnRoute: '/p/")), reason: entry.$3);
+      });
+    }
+  });
+
   group('inline comments meet the gate before they are sent', () {
     test('mobile feed inline comment submit is gated', () {
       final body = memberBody(

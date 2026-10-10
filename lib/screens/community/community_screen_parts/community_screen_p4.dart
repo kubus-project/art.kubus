@@ -787,7 +787,10 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      // The visitor returns to the feed they tapped; the confirmed like is
+      // applied to its card. Returning to the post opened a second screen
+      // that showed the pre-like state.
+      returnRoute: '/community',
       actionType: PendingActionType.like,
       targetType: PendingActionTargetType.post,
       targetId: post.id,

@@ -77,7 +77,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      // Back to the feed the like was tapped on, as on mobile (the card shows
+      // the confirmed like there).
+      returnRoute: '/community',
       actionType: PendingActionType.like,
       targetType: PendingActionTargetType.post,
       targetId: post.id,
