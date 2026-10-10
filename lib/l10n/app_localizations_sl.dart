@@ -487,7 +487,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationConfirmContribute => 'Želiš nadaljevati svoj prispevek?';
 
   @override
-  String get activationConfirmLikeCta => 'Všeček';
+  String get activationConfirmLikeCta => 'Všečkaj';
 
   @override
   String get activationConfirmContinueCta => 'Nadaljuj';

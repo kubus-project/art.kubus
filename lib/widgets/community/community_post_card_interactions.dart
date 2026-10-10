@@ -3,7 +3,8 @@ part of 'community_post_card.dart';
 /// One post action (like, comment, repost, share, save).
 ///
 /// An icon-only button with a text label for assistive technology and a
-/// 44 px square hit area. Persistent relationship actions (like, save) pass
+/// 48 px square hit area (the mobile minimum; a 44 px target missed it on a
+/// phone). Persistent relationship actions (like, save) pass
 /// [toggled]; one-shot actions (comment, repost, share) leave it `null` so
 /// they never announce a toggle state. Counts live in [_PostStatsLine], so an
 /// action never has to share its hit area with a count.
@@ -46,7 +47,7 @@ class _InteractionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(KubusRadius.surface),
             focusColor: roles.focus.withValues(alpha: 0.16),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+              constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
               child: Center(child: Icon(icon, color: finalColor, size: 20)),
             ),
           ),

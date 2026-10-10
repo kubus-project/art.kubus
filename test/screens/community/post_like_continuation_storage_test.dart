@@ -335,6 +335,37 @@ void main() {
   });
 
   testWidgets(
+      'a failed like closes the confirmation and reports once, never re-prompts',
+      (tester) async {
+    final backend = _Backend(likedOnServer: false, failWithoutInsert: true);
+    final collab = CollabProvider();
+    final chat = _SilentChat();
+    try {
+      await _load(
+        tester,
+        backend: backend,
+        pending: PendingActionProvider(),
+        collab: collab,
+        chat: chat,
+      );
+      await _guestLikeToConfirmation(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Like'));
+      await _drain(tester);
+
+      // The confirmation must not come back over the failure feedback: its
+      // toast sits under the sheet, so a re-shown sheet hides the only message.
+      expect(find.text('Like this post?'), findsNothing);
+      final card =
+          tester.widget<CommunityPostCard>(find.byType(CommunityPostCard));
+      expect(card.post.isLiked, isFalse);
+    } finally {
+      collab.stopInvitePolling();
+      chat.dispose();
+      SocketService().disconnect();
+    }
+  });
+
+  testWidgets(
       'cancelling the confirmation clears the slot; reload offers nothing',
       (tester) async {
     final backend = _Backend(likedOnServer: false);

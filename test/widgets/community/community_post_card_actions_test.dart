@@ -85,7 +85,8 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('post actions meet the 44 px target and fire their callbacks',
+  testWidgets(
+      'post actions meet the 48 px mobile target and fire their callbacks',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -111,8 +112,8 @@ void main() {
         matching: find.byType(InkWell),
       );
       final size = tester.getSize(target.first);
-      expect(size.height, greaterThanOrEqualTo(44), reason: '$icon');
-      expect(size.width, greaterThanOrEqualTo(44), reason: '$icon');
+      expect(size.height, greaterThanOrEqualTo(48), reason: '$icon');
+      expect(size.width, greaterThanOrEqualTo(48), reason: '$icon');
     }
 
     await tester.tap(find.byIcon(Icons.favorite_border));
