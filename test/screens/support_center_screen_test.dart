@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show CheckedState, SemanticsRole, Tristate;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/support_center_provider.dart';
@@ -85,7 +86,10 @@ class _Backend {
 /// Stands in for the sign-in route. Completing it establishes a session, as
 /// the real journey does, then returns to the screen that asked for it.
 class _FakeSignInRoute extends StatelessWidget {
-  const _FakeSignInRoute();
+  const _FakeSignInRoute({this.token = _authToken});
+
+  /// The session the journey establishes. A different token models a new sign-in.
+  final String token;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +97,7 @@ class _FakeSignInRoute extends StatelessWidget {
       body: Center(
         child: FilledButton(
           onPressed: () {
-            api.setAuthTokenForTesting(_authToken);
+            api.setAuthTokenForTesting(token);
             Navigator.of(context).pop();
           },
           child: const Text('Complete sign-in'),
@@ -149,6 +153,7 @@ void main() {
     bool signedIn = true,
     bool supportEnabled = true,
     bool dark = false,
+    Map<String, WidgetBuilder>? routes,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -171,9 +176,10 @@ void main() {
             ),
             child: child!,
           ),
-          routes: <String, WidgetBuilder>{
-            '/sign-in': (_) => const _FakeSignInRoute(),
-          },
+          routes: routes ??
+              <String, WidgetBuilder>{
+                '/sign-in': (_) => const _FakeSignInRoute(),
+              },
           home: SupportCenterScreen(initialSection: section),
         ),
       ),
@@ -800,6 +806,184 @@ void main() {
       expect(find.text('Zadeva'), findsOneWidget);
       expect(find.text('Sporočilo'), findsOneWidget);
       expect(find.text('Pošlji zahtevek'), findsOneWidget);
+    });
+  });
+
+  group('section tabs and refused sessions', () {
+    const freshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
+        'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MjIyMjIyMjIyMjIyMjIyMjIyMjIyIn0.'
+        'signature';
+
+    /// Sign-in route for a journey that establishes [freshToken].
+    Map<String, WidgetBuilder> freshSignIn() => <String, WidgetBuilder>{
+          '/sign-in': (_) => const _FakeSignInRoute(token: freshToken),
+        };
+
+    testWidgets('section chips are tabs in a tab bar, not checkboxes',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      backend((_) async => _ok(<Object?>[]));
+      await pumpScreen(tester, section: SupportSection.contact);
+
+      final tabFinder = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.role == SemanticsRole.tab,
+      );
+      expect(tabFinder, findsNWidgets(4));
+      final selectedTab = find.byWidgetPredicate(
+        (w) =>
+            w is Semantics &&
+            w.properties.role == SemanticsRole.tab &&
+            w.properties.selected == true,
+      );
+      expect(selectedTab, findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.role == SemanticsRole.tabBar,
+        ),
+        findsOneWidget,
+      );
+      final contactTab = tester.getSemantics(find
+          .ancestor(
+            of: find.text('Contact support'),
+            matching: find.byWidgetPredicate(
+              (w) => w is Semantics && w.properties.role == SemanticsRole.tab,
+            ),
+          )
+          .first);
+      final flags = contactTab.getSemanticsData().flagsCollection;
+      expect(flags.isSelected, Tristate.isTrue);
+      expect(flags.isChecked, CheckedState.none);
+      handle.dispose();
+    });
+
+    testWidgets(
+        'a 401 from the history opens sign-in without repeating the call',
+        (tester) async {
+      var calls = 0;
+      backend((_) async {
+        calls += 1;
+        return _error(401, 'Invalid or expired token');
+      });
+      await pumpScreen(tester, section: SupportSection.requests);
+      expect(find.text('Sign in to contact support'), findsOneWidget);
+      expect(calls, 1);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+      await settle(tester);
+
+      // The stored session was refused, so the route opens directly; the
+      // protected-action gate would see a token and do nothing.
+      expect(find.text('Complete sign-in'), findsOneWidget);
+      expect(calls, 1, reason: 'opening sign-in must not repeat the request');
+    });
+
+    testWidgets('a fresh sign-in after a refused session reloads the history',
+        (tester) async {
+      final fake = backend((request) async {
+        final authorised =
+            request.headers['authorization'] == 'Bearer $freshToken';
+        if (!authorised) return _error(401, 'Invalid or expired token');
+        return _ok(<Object?>[_ticket()]);
+      });
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        routes: freshSignIn(),
+      );
+      expect(find.text('Sign in to contact support'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+      await settle(tester);
+      await tester.tap(find.text('Complete sign-in'));
+      await settle(tester);
+
+      expect(find.text('Map does not load'), findsOneWidget);
+      expect(fake.requestsTo('GET', '/api/support/tickets'), hasLength(2));
+    });
+
+    testWidgets('a 401 on an open request offers sign-in instead of a dead end',
+        (tester) async {
+      final fake = backend((request) async {
+        if (request.url.path.endsWith('/$_ticketId')) {
+          return _error(401, 'Invalid or expired token');
+        }
+        return _ok(<Object?>[_ticket()]);
+      });
+      await pumpScreen(tester, section: SupportSection.requests);
+
+      await tester.tap(find.text('Map does not load'));
+      await settle(tester);
+
+      expect(find.text('Sign in to contact support'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
+      expect(
+        fake.requestsTo('GET', '/api/support/tickets/$_ticketId'),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('a refused session on send opens sign-in and keeps the draft',
+        (tester) async {
+      backend((request) async {
+        if (request.method == 'POST') return _error(401, 'Invalid token');
+        return _ok(<Object?>[]);
+      });
+      await pumpScreen(
+        tester,
+        section: SupportSection.contact,
+        routes: freshSignIn(),
+      );
+      await tester.enterText(field('Subject'), 'Kept subject');
+      await tester.enterText(field('Message'), 'Kept message');
+      await tester.tap(find.text('Send request'));
+      await settle(tester);
+
+      expect(find.text('Complete sign-in'), findsOneWidget);
+      await tester.tap(find.text('Complete sign-in'));
+      await settle(tester);
+
+      expect(
+        tester.widget<TextFormField>(field('Subject')).controller!.text,
+        'Kept subject',
+      );
+      expect(
+        tester.widget<TextFormField>(field('Message')).controller!.text,
+        'Kept message',
+      );
+    });
+
+    testWidgets('a refused session on reply opens sign-in for the request',
+        (tester) async {
+      backend((request) async {
+        if (request.method == 'POST') return _error(401, 'Invalid token');
+        if (request.url.path.endsWith('/$_ticketId')) {
+          return _ok(_ticket(
+            messages: <Map<String, Object?>>[_openingMessage()],
+          ));
+        }
+        return _ok(<Object?>[_ticket()]);
+      });
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        routes: freshSignIn(),
+      );
+      await tester.tap(find.text('Map does not load'));
+      await settle(tester);
+      await tester.enterText(replyField(), 'Reply that was refused');
+      await tester.tap(find.text('Send reply'));
+      await settle(tester);
+
+      expect(find.text('Complete sign-in'), findsOneWidget);
+      await tester.tap(find.text('Complete sign-in'));
+      await settle(tester);
+
+      expect(find.text('Map does not load'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(replyField()).controller!.text,
+        'Reply that was refused',
+      );
     });
   });
 }

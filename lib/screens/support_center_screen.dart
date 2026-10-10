@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -224,14 +225,65 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   /// completed the sign-in journey, so the history is refreshed whenever a
   /// session exists afterwards, not only when the gate returned true.
   Future<void> _signInThenRefresh() async {
-    await _ensureSignedIn();
-    if (!mounted || !_signedIn) return;
     final support = _support;
+    final tokenBefore = BackendApiService().getAuthToken();
+    if (_signedIn && _sessionRefused(support)) {
+      await _openSignIn(ticketId: support.openId);
+      // Backing out of the sign-in route with the same refused session changes
+      // nothing, so no request is repeated.
+      if (BackendApiService().getAuthToken() == tokenBefore) return;
+    } else {
+      await _ensureSignedIn();
+    }
+    if (!mounted || !_signedIn) return;
     final id = support.openId;
     if (id != null) {
       await support.openTicket(id);
     } else {
       await support.loadTickets();
+    }
+  }
+
+  /// True when the server refused the stored session (HTTP 401) for the
+  /// history or the open request. The app still holds the token, so the
+  /// protected-action gate would report a signed-in visitor and do nothing.
+  bool _sessionRefused(SupportCenterProvider support) =>
+      support.listFailure == SupportFailure.signIn ||
+      support.ticketFailure == SupportFailure.signIn;
+
+  /// Opens the sign-in route for a refused session, returning to this section
+  /// (and the request, for a reply). The same route the other screens use for a
+  /// 401; an interrupted draft is stashed first so it is restored on return.
+  Future<void> _openSignIn({SupportDraft? draft, String? ticketId}) async {
+    if (draft != null) _support.stashDraft(draft);
+    await Navigator.of(context).pushNamed(
+      '/sign-in',
+      arguments: <String, Object?>{
+        'redirectRoute': '/support',
+        'redirectArguments': <String, String>{
+          'section': _section.name,
+          if (ticketId != null) 'ticketId': ticketId,
+        },
+      },
+    );
+  }
+
+  /// Recovers from a 401 on a create or reply: a refused session goes to the
+  /// sign-in route, a visitor without a session goes through the gate.
+  Future<void> _recoverFromSignIn({
+    PendingActionType? actionType,
+    String? ticketId,
+    required SupportDraft draft,
+  }) async {
+    if (!mounted) return;
+    if (_signedIn) {
+      await _openSignIn(draft: draft, ticketId: ticketId);
+    } else {
+      await _ensureSignedIn(
+        actionType: actionType,
+        ticketId: ticketId,
+        draft: draft,
+      );
     }
   }
 
@@ -305,7 +357,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       _formError = _failureText(l10n, failure, l10n.supportErrorGeneric);
     });
     if (failure == SupportFailure.signIn) {
-      await _ensureSignedIn(
+      await _recoverFromSignIn(
         actionType: actionType,
         draft: _contactDraft(bug: bug),
       );
@@ -343,6 +395,17 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     final failure = await support.replyToTicket(id, text);
     if (!mounted) return;
     if (failure == null) _reply.clear();
+    if (failure == SupportFailure.signIn) {
+      await _recoverFromSignIn(
+        actionType: PendingActionType.supportReply,
+        ticketId: id,
+        draft: SupportDraft(
+          section: SupportSection.requests.name,
+          ticketId: id,
+          fields: <String, String>{'reply': _reply.text},
+        ),
+      );
+    }
   }
 
   String _date(Object? value) {
@@ -750,7 +813,9 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _backToList(l10n, support),
-            if (ticketFailure != null)
+            if (ticketFailure == SupportFailure.signIn)
+              _signInCard(l10n)
+            else if (ticketFailure != null)
               _failureWithRetry(
                 _failureText(l10n, ticketFailure, l10n.supportErrorLoadRequest),
                 ticketFailure,
@@ -874,19 +939,27 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             child: ListView(
               padding: const EdgeInsets.all(KubusSpacing.md),
               children: [
+                // The four sections switch the panel below, so they are tabs
+                // (not checkboxes): one selected tab at a time.
                 Semantics(
                   container: true,
                   explicitChildNodes: true,
+                  role: SemanticsRole.tabBar,
                   label: l10n.supportCenterSectionsLabel,
                   child: Wrap(
                     spacing: KubusSpacing.sm,
                     runSpacing: KubusSpacing.sm,
                     children: [
                       for (final section in SupportSection.values)
-                        ChoiceChip(
+                        Semantics(
+                          role: SemanticsRole.tab,
                           selected: _section == section,
-                          label: Text(sectionLabels[section]!),
-                          onSelected: (_) => _go(section),
+                          onTap: () => _go(section),
+                          child: ChoiceChip(
+                            selected: _section == section,
+                            label: Text(sectionLabels[section]!),
+                            onSelected: (_) => _go(section),
+                          ),
                         ),
                     ],
                   ),
