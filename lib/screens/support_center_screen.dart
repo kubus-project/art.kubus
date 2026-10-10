@@ -991,18 +991,20 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                     runSpacing: KubusSpacing.sm,
                     children: [
                       for (final section in SupportSection.values)
-                        Semantics(
-                          role: SemanticsRole.tab,
-                          selected: _section == section,
-                          label: sectionLabels[section],
-                          onTap: () => _go(section),
-                          // The chip's own checkbox-style node is replaced by
-                          // this tab, so each section is announced once.
-                          excludeSemantics: true,
-                          child: ChoiceChip(
+                        // MergeSemantics folds the chip into this tab, so each
+                        // section is one node (announced once) and it keeps the
+                        // chip's focus, which keyboard users need to see.
+                        MergeSemantics(
+                          child: Semantics(
+                            role: SemanticsRole.tab,
                             selected: _section == section,
-                            label: Text(sectionLabels[section]!),
-                            onSelected: (_) => _go(section),
+                            label: sectionLabels[section],
+                            onTap: () => _go(section),
+                            child: ChoiceChip(
+                              selected: _section == section,
+                              label: Text(sectionLabels[section]!),
+                              onSelected: (_) => _go(section),
+                            ),
                           ),
                         ),
                     ],
