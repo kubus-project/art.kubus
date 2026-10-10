@@ -444,10 +444,11 @@ class MediaUrlResolver {
   ///   [_ipfsCandidates]). A stored `https://<host>/ipfs/<cid>` is tried as
   ///   stored first, then the same chain;
   /// - backend-relative paths and bare names, resolved against the storage
-  ///   API host. `/uploads/`, `/profiles/` and `/avatars/` on any absolute
-  ///   host are canonicalized to that API host;
+  ///   API host. `/uploads/`, `/profiles/` and `/avatars/` on the storage API
+  ///   host (or loopback in a development build) are rewritten to that relative
+  ///   path. The same path on any other https host is kept exactly as given;
   /// - `http:` only when the app's own development API base is `http:` and
-  ///   the reference points at that same host (see [_isDevHttpBackendHost]).
+  ///   the reference points at that same origin (see [_isDevHttpBackendOrigin]).
   ///
   /// Rejected (no candidates): every other scheme (`javascript:`, `data:`,
   /// `blob:`, `file:`, `asset:`, `vbscript:`, `ftp:`, `placeholder:`, ...),
@@ -546,10 +547,14 @@ class MediaUrlResolver {
     if (_hasTraversalSegment(value)) return null;
 
     final relative = _pathAndSuffix(value);
-    // Backend-managed paths and IPFS paths never use the absolute host, so
-    // the host is not checked for them: they are re-routed to the API host or
-    // the gateway chain.
-    if (_isBackendManagedPath(relative)) return value;
+    // A backend-managed path on the storage API host (or on loopback in a dev
+    // build) is rewritten to the relative path, so its host is not checked.
+    // The same path on any other host is an ordinary external reference.
+    if (_isBackendManagedPath(relative) && _isOwnMediaHost(uri.host)) {
+      return value;
+    }
+    // A stored IPFS https URL is kept as given, with the gateway chain behind
+    // it, whatever its host.
     if (_ipfsPathRest(relative) != null) {
       return scheme == 'https' ? value : null;
     }
@@ -573,8 +578,12 @@ class MediaUrlResolver {
       return StorageConfig.resolveAllUrls('ipns://$rest');
     }
     if (scheme == 'http' || scheme == 'https') {
+      final uri = Uri.tryParse(value);
       final relative = _pathAndSuffix(value);
-      if (_isBackendManagedPath(relative)) {
+      if (uri != null &&
+          _isBackendManagedPath(relative) &&
+          _isOwnMediaHost(uri.host)) {
+        // Rewritten to the relative path, which resolves on the API host.
         return StorageConfig.resolveAllUrls(relative);
       }
       final ipfsRest = _ipfsPathRest(relative);
@@ -585,9 +594,11 @@ class MediaUrlResolver {
         if (chain.isEmpty) return const <String>[];
         return <String>[value, ...chain];
       }
-      // Public https stays as given; a dev http base is upgraded on secure web
-      // by StorageConfig, exactly as before.
-      return StorageConfig.resolveAllUrls(value);
+      // Any other https reference, including a third-party URL that merely
+      // contains /uploads/, stays exactly as given. A dev http base is upgraded
+      // on secure web by StorageConfig, as before.
+      if (scheme == 'http') return StorageConfig.resolveAllUrls(value);
+      return <String>[value];
     }
 
     final lower = value.toLowerCase();
@@ -658,11 +669,36 @@ class MediaUrlResolver {
     return backendHost.isNotEmpty && backendHost == host;
   }
 
+  /// Test seam: a unit test can run the release rules inside a debug test run
+  /// by setting this to false (and must reset it to null afterwards).
+  @foundation.visibleForTesting
+  static bool? debugDevBuildOverride;
+
+  static bool get _devBuild => debugDevBuildOverride ?? AppConfig.isDevelopment;
+
+  static bool _isLoopbackHost(String host) {
+    final h = host.toLowerCase();
+    return h == 'localhost' ||
+        h.endsWith('.localhost') ||
+        h == '::1' ||
+        h.startsWith('127.');
+  }
+
+  /// Whether a backend-managed path on [host] is rewritten to the storage API
+  /// host: the API host itself, and in development builds any loopback host.
+  /// Any other host is an ordinary external reference and is never rewritten.
+  static bool _isOwnMediaHost(String host) {
+    final h = host.toLowerCase();
+    if (h.isEmpty) return false;
+    if (_isStorageBackendHost(h)) return true;
+    return _devBuild && _isLoopbackHost(h);
+  }
+
   /// Development only: an `http:` reference is accepted when the app's own API
   /// base is `http:` and the reference is on that same origin (host and port,
   /// for example `http://localhost:3000`). Release builds never accept http.
   static bool _isDevHttpBackendOrigin(Uri uri) {
-    if (!AppConfig.isDevelopment) return false;
+    if (!_devBuild) return false;
     final backend = Uri.tryParse(StorageConfig.httpBackend);
     if (backend == null || backend.scheme.toLowerCase() != 'http') {
       return false;

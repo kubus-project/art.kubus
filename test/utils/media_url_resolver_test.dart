@@ -438,10 +438,10 @@ void main() {
         '/avatars/a.png': 'https://api.example.test/avatars/a.png',
         'avatars/a.png': 'https://api.example.test/avatars/a.png',
         'a.png': 'https://api.example.test/a.png',
+        'https://api.example.test/uploads/a.jpg':
+            'https://api.example.test/uploads/a.jpg',
         'https://old.example.test/uploads/a.jpg':
-            'https://api.example.test/uploads/a.jpg',
-        'http://old.example.test/uploads/a.jpg':
-            'https://api.example.test/uploads/a.jpg',
+            'https://old.example.test/uploads/a.jpg',
         'ipfs://$cidV1': '$primaryGateway$cidV1',
         'ipfs://$cidV1/meta/a.json': '$primaryGateway$cidV1/meta/a.json',
         'ipfs:$cidV0': '$primaryGateway$cidV0',
@@ -463,6 +463,7 @@ void main() {
 
     test('contract: rejected references resolve to nothing', () {
       final rejected = <String>[
+        'http://other.example/uploads/x.jpg',
         'http://cdn.example.com/a.jpg',
         'HTTP://cdn.example.com/a.jpg',
         'http://localhost:8080/a.jpg',
@@ -507,6 +508,68 @@ void main() {
           reason: raw,
         );
       }
+    });
+
+    group('storage host rewrite: own host and dev loopback only', () {
+      setUp(() {
+        StorageConfig.setHttpBackend('https://api.example.test');
+      });
+
+      tearDown(() {
+        MediaUrlResolver.debugDevBuildOverride = null;
+        StorageConfig.setHttpBackend('https://api.example.test');
+      });
+
+      void expectTable(Map<String, String?> table) {
+        table.forEach((raw, expected) {
+          expect(MediaUrlResolver.resolve(raw), equals(expected), reason: raw);
+          expect(
+            MediaUrlResolver.resolveDisplayUrl(raw),
+            equals(expected),
+            reason: raw,
+          );
+        });
+      }
+
+      test('development build: own host and loopback uploads are rewritten',
+          () {
+        MediaUrlResolver.debugDevBuildOverride = true;
+        expectTable({
+          // Own API host: rewritten, so http never loads and the API host wins.
+          'https://api.example.test/uploads/x.jpg':
+              'https://api.example.test/uploads/x.jpg',
+          'http://api.example.test/uploads/x.jpg':
+              'https://api.example.test/uploads/x.jpg',
+          // Loopback in a dev build: rewritten to the storage API host.
+          'https://localhost/uploads/x.jpg':
+              'https://api.example.test/uploads/x.jpg',
+          'http://127.0.0.1:4000/profiles/p.png':
+              'https://api.example.test/profiles/p.png',
+          // Third party, merely containing /uploads/: kept exactly as given.
+          'https://other.example/uploads/x.jpg':
+              'https://other.example/uploads/x.jpg',
+          // Plain http to another host: dropped.
+          'http://other.example/uploads/x.jpg': null,
+        });
+      });
+
+      test(
+          'release build: loopback is dropped, own host and third parties keep their rules',
+          () {
+        MediaUrlResolver.debugDevBuildOverride = false;
+        expectTable({
+          'https://api.example.test/uploads/x.jpg':
+              'https://api.example.test/uploads/x.jpg',
+          'http://api.example.test/uploads/x.jpg':
+              'https://api.example.test/uploads/x.jpg',
+          'https://other.example/uploads/x.jpg':
+              'https://other.example/uploads/x.jpg',
+          'https://localhost/uploads/x.jpg': null,
+          'http://localhost/uploads/x.jpg': null,
+          'http://127.0.0.1:4000/profiles/p.png': null,
+          'http://other.example/uploads/x.jpg': null,
+        });
+      });
     });
 
     test('http is accepted only for the dev API base host, in dev builds', () {
