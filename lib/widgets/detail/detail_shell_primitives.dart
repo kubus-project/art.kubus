@@ -729,7 +729,7 @@ class DetailSecondaryActionCluster extends StatelessWidget {
       case DetailSecondaryActionLayout.grid:
         final tiles = <Widget>[
           for (final action in parts.shown)
-            _GridActionTile(action: action, scheme: scheme, isDark: isDark),
+            _GridActionCell(action: action, scheme: scheme, isDark: isDark),
           if (parts.overflow.isNotEmpty)
             _MoreActionsButton(
               actions: parts.overflow,
@@ -784,8 +784,10 @@ class _TileGrid extends StatelessWidget {
   }
 }
 
-class _GridActionTile extends StatelessWidget {
-  const _GridActionTile({
+/// One secondary action in the grid. A quiet cell like [_QuietActionButton], not
+/// a destination card: destinations are `KubusActionTile`.
+class _GridActionCell extends StatelessWidget {
+  const _GridActionCell({
     required this.action,
     required this.scheme,
     required this.isDark,
