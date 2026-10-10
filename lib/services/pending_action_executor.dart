@@ -76,7 +76,10 @@ class PendingActionExecutor {
         // the visitor's text was never stored, so there is nothing to replay.
         // Restoring them means landing back on the composer.
         PendingActionType.comment ||
-        PendingActionType.contribute =>
+        PendingActionType.contribute ||
+        PendingActionType.supportContact ||
+        PendingActionType.supportBug ||
+        PendingActionType.supportReply =>
           const PendingActionExecutionResult(
             PendingActionOutcome.entryRestored,
           ),
@@ -154,6 +157,7 @@ class PendingActionExecutor {
         );
       case PendingActionTargetType.user:
       case PendingActionTargetType.marker:
+      case PendingActionTargetType.supportRequest:
         return const PendingActionExecutionResult(
           PendingActionOutcome.targetUnavailable,
         );

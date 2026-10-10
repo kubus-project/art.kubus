@@ -95,6 +95,7 @@ import 'screens/node/kubus_node_screen.dart';
 import 'screens/spatial/spatial_library_detail_screen.dart';
 import 'screens/spatial/spatial_library_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
+import 'screens/support_center_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
@@ -1073,6 +1074,21 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/import-wallet': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen(initialStep: 1)
             : const ConnectWallet(initialStep: 1),
+        // Post-auth return target for Support Center continuations. Arguments are
+        // string-only and identify the section and request, never the draft.
+        '/support': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final map = args is Map ? args : const <Object?, Object?>{};
+          final section =
+              SupportSection.values.asNameMap()[map['section']?.toString()] ??
+                  SupportSection.faq;
+          final ticketId = (map['ticketId'] ?? '').toString().trim();
+          return SupportCenterScreen(
+            initialSection: section,
+            resumeInterrupted: true,
+            resumeTicketId: ticketId.isEmpty ? null : ticketId,
+          );
+        },
         '/sign-in': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Map) {

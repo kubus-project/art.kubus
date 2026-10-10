@@ -876,6 +876,24 @@ abstract class AppLocalizations {
   /// **'Write your comment?'**
   String get activationConfirmComment;
 
+  /// No description provided for @activationConfirmSupportRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your support request?'**
+  String get activationConfirmSupportRequest;
+
+  /// No description provided for @activationConfirmSupportBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your bug report?'**
+  String get activationConfirmSupportBug;
+
+  /// No description provided for @activationConfirmSupportReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your reply?'**
+  String get activationConfirmSupportReply;
+
   /// No description provided for @activationConfirmContribute.
   ///
   /// In en, this message translates to:

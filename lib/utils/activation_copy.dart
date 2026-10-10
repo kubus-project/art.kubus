@@ -31,6 +31,7 @@ class ActivationCopy {
           case PendingActionTargetType.artwork:
           case PendingActionTargetType.user:
           case PendingActionTargetType.marker:
+          case PendingActionTargetType.supportRequest:
           case null:
             return l10n.activationGateSaveArtworkTitle;
         }
@@ -42,6 +43,10 @@ class ActivationCopy {
         return l10n.activationGateCommentTitle;
       case PendingActionType.contribute:
         return l10n.activationGateContributeTitle;
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
+        return l10n.activationGateGenericTitle(fallbackActionLabel);
       case null:
         return l10n.activationGateGenericTitle(fallbackActionLabel);
     }
@@ -68,6 +73,7 @@ class ActivationCopy {
           case PendingActionTargetType.artwork:
           case PendingActionTargetType.user:
           case PendingActionTargetType.marker:
+          case PendingActionTargetType.supportRequest:
             return l10n.activationConfirmSaveArtwork;
         }
       case PendingActionType.like:
@@ -78,6 +84,12 @@ class ActivationCopy {
         return l10n.activationConfirmComment;
       case PendingActionType.contribute:
         return l10n.activationConfirmContribute;
+      case PendingActionType.supportContact:
+        return l10n.activationConfirmSupportRequest;
+      case PendingActionType.supportBug:
+        return l10n.activationConfirmSupportBug;
+      case PendingActionType.supportReply:
+        return l10n.activationConfirmSupportReply;
     }
   }
 
@@ -95,6 +107,9 @@ class ActivationCopy {
         return l10n.commonFollow;
       case PendingActionType.comment:
       case PendingActionType.contribute:
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
         return l10n.activationConfirmContinueCta;
     }
   }
@@ -113,6 +128,9 @@ class ActivationCopy {
         return l10n.activationActionFollowedToast;
       case PendingActionType.comment:
       case PendingActionType.contribute:
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
         return l10n.activationConfirmHeading;
     }
   }

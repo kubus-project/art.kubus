@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/support_center_provider.dart';
@@ -27,9 +30,18 @@ class SupportCenterScreen extends StatefulWidget {
   const SupportCenterScreen({
     super.key,
     this.initialSection = SupportSection.faq,
+    this.resumeInterrupted = false,
+    this.resumeTicketId,
   });
 
   final SupportSection initialSection;
+
+  /// True when this screen was opened by the sign-in continuation. Only then
+  /// may it restore a draft the gate interrupted; an ordinary open never does.
+  final bool resumeInterrupted;
+
+  /// The request whose reply was interrupted by sign-in, reopened on return.
+  final String? resumeTicketId;
 
   @override
   State<SupportCenterScreen> createState() => _SupportCenterScreenState();
@@ -63,7 +75,66 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         if (mounted) _support.loadTickets();
       });
     }
+    if (widget.resumeInterrupted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_resumeInterruptedDraft());
+      });
+    }
   }
+
+  /// Restores a draft the sign-in gate interrupted, when this screen was opened
+  /// by the continuation. Ordinary opens find nothing to restore.
+  Future<void> _resumeInterruptedDraft() async {
+    final support = _support;
+    final draft = support.takeDraft(
+      section: _section.name,
+      ticketId: widget.resumeTicketId,
+      currentUserId: await _currentUserId(),
+    );
+    if (draft == null || !mounted) return;
+    setState(() {
+      _subject.text = draft.fields['subject'] ?? '';
+      _message.text = draft.fields['message'] ?? '';
+      _steps.text = draft.fields['steps'] ?? '';
+      _expected.text = draft.fields['expected'] ?? '';
+      _actual.text = draft.fields['actual'] ?? '';
+      _reply.text = draft.fields['reply'] ?? '';
+      _includePlatform = draft.includePlatform;
+    });
+    final ticketId = draft.ticketId;
+    if (ticketId != null) {
+      support.loadTickets();
+      await support.openTicket(ticketId);
+    }
+  }
+
+  /// The signed-in account, or null for a guest. Read the way the pending
+  /// action provider reads it, so the two agree on ownership.
+  Future<String?> _currentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = (prefs.getString('user_id') ?? '').trim();
+      return value.isEmpty ? null : value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The raw contact or bug form text, kept so the restored form shows the
+  /// same fields the visitor filled in (not the composed bug report).
+  SupportDraft _contactDraft({required bool bug}) => SupportDraft(
+        section: bug ? SupportSection.bug.name : SupportSection.contact.name,
+        fields: <String, String>{
+          'subject': _subject.text,
+          'message': _message.text,
+          if (bug) ...<String, String>{
+            'steps': _steps.text,
+            'expected': _expected.text,
+            'actual': _actual.text,
+          },
+        },
+        includePlatform: bug && _includePlatform,
+      );
 
   @override
   void dispose() {
@@ -93,13 +164,31 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   /// Runs the existing protected-action flow for a visitor without a session.
   /// Returns true when the action may proceed now.
-  Future<bool> _ensureSignedIn() async {
+  ///
+  /// A submit or reply passes [actionType] and [draft]. The draft is stashed
+  /// before the gate can route away, because the sign-in redirect replaces this
+  /// screen; the redirect reopens [SupportSection] with the same arguments and
+  /// the continuation restores the draft there.
+  Future<bool> _ensureSignedIn({
+    PendingActionType? actionType,
+    String? ticketId,
+    SupportDraft? draft,
+  }) async {
     if (_signedIn) return true;
     final l10n = AppLocalizations.of(context)!;
+    if (draft != null) _support.stashDraft(draft);
     final proceed = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.supportSignInActionLabel,
-      returnRoute: '/main',
+      actionType: actionType,
+      targetType:
+          actionType == null ? null : PendingActionTargetType.supportRequest,
+      targetId: actionType == null ? null : (ticketId ?? 'new'),
+      returnRoute: '/support',
+      returnArguments: <String, String>{
+        'section': _section.name,
+        if (ticketId != null) 'ticketId': ticketId,
+      },
       sourceScreen: 'support_center',
     );
     if (!mounted) return false;
@@ -164,7 +253,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       setState(() => _formError = l10n.supportFormReportTooLong);
       return;
     }
-    if (!await _ensureSignedIn() || !mounted) return;
+    final actionType =
+        bug ? PendingActionType.supportBug : PendingActionType.supportContact;
+    if (!await _ensureSignedIn(
+          actionType: actionType,
+          draft: _contactDraft(bug: bug),
+        ) ||
+        !mounted) {
+      return;
+    }
 
     setState(() => _submitting = true);
     final failure = await _support.createTicket(
@@ -199,7 +296,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       _formError = _failureText(l10n, failure, l10n.supportErrorGeneric);
     });
     if (failure == SupportFailure.signIn) {
-      await _ensureSignedIn();
+      await _ensureSignedIn(
+        actionType: actionType,
+        draft: _contactDraft(bug: bug),
+      );
     }
   }
 
@@ -217,7 +317,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       setState(() => _replyFormError = l10n.supportFormMessageTooLong);
       return;
     }
-    if (!await _ensureSignedIn() || !mounted) return;
+    if (!await _ensureSignedIn(
+          actionType: PendingActionType.supportReply,
+          ticketId: id,
+          draft: SupportDraft(
+            section: SupportSection.requests.name,
+            ticketId: id,
+            fields: <String, String>{'reply': _reply.text},
+          ),
+        ) ||
+        !mounted) {
+      return;
+    }
 
     setState(() => _replyFormError = null);
     final failure = await support.replyToTicket(id, text);

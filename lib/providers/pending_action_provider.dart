@@ -241,5 +241,9 @@ class PendingActionProvider extends ChangeNotifier {
         PendingActionType.contribute => PendingActionMilestone.contribution,
         PendingActionType.like => null,
         PendingActionType.comment => null,
+        PendingActionType.supportContact ||
+        PendingActionType.supportBug ||
+        PendingActionType.supportReply =>
+          null,
       };
 }

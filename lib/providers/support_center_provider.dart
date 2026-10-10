@@ -35,6 +35,32 @@ SupportFailure classifySupportFailure(Object error) {
   return SupportFailure.generic;
 }
 
+/// A Support request or reply that the sign-in gate interrupted.
+///
+/// Held in memory only, so the visitor's text never reaches storage (the same
+/// rule the pending-action intents follow). The sign-in redirect replaces the
+/// Support screen, which is why the draft lives here rather than in the screen.
+@immutable
+class SupportDraft {
+  const SupportDraft({
+    required this.section,
+    required this.fields,
+    this.ticketId,
+    this.includePlatform = false,
+  });
+
+  /// [SupportSection] name the draft belongs to: contact, bug or requests.
+  final String section;
+
+  /// Raw field text by name: subject, message, steps, expected, actual, reply.
+  final Map<String, String> fields;
+
+  /// The request a reply belongs to; null for a new request.
+  final String? ticketId;
+
+  final bool includePlatform;
+}
+
 /// Requester-side Support Center workflow: the signed-in account's request
 /// history, one request's conversation, and the create and reply actions.
 ///
@@ -84,6 +110,41 @@ class SupportCenterProvider extends ChangeNotifier {
 
   bool get replying => _replying;
   SupportFailure? get replyFailure => _replyFailure;
+
+  /// The interrupted draft, with the account that wrote it (null for a guest).
+  ({SupportDraft draft, String? ownerUserId})? _stash;
+
+  /// Holds [draft] until the sign-in continuation restores it. Overwrites any
+  /// earlier stash: only the most recent interrupted action is continuable.
+  void stashDraft(SupportDraft draft, {String? ownerUserId}) {
+    _stash = (draft: draft, ownerUserId: ownerUserId);
+  }
+
+  /// Returns and clears the stashed draft when it belongs to [section] and
+  /// [ticketId] and was written by [currentUserId] or by a guest. A draft that
+  /// belongs to another account is dropped; one for another screen stays put.
+  SupportDraft? takeDraft({
+    required String section,
+    String? ticketId,
+    String? currentUserId,
+  }) {
+    final stash = _stash;
+    if (stash == null) return null;
+    final owner = stash.ownerUserId;
+    if (owner != null && owner != (currentUserId ?? '').trim()) {
+      _stash = null;
+      return null;
+    }
+    final draft = stash.draft;
+    if (draft.section != section || draft.ticketId != ticketId) return null;
+    _stash = null;
+    return draft;
+  }
+
+  /// Drops any interrupted draft, e.g. when the visitor cancels the continuation.
+  void clearDraft() {
+    _stash = null;
+  }
 
   /// The signed-in account's requests, newest update first. Does nothing
   /// while the feature is off, so a disabled build sends no ticket traffic.
