@@ -268,4 +268,54 @@ void main() {
     expect(
         await _pixel(tester, x, y), isNot(_rgba(KubusColorRoles.dark.focus)));
   });
+
+  testWidgets('the ring passes tight parent constraints to its child',
+      (tester) async {
+    // A loose Stack would shrink the child to 0x0 here; the ring must keep
+    // the 300x48 slot it was given.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              height: 48,
+              child: KubusFocusRing(
+                borderRadius: BorderRadius.circular(8),
+                child: const SizedBox.expand(key: Key('ring-child')),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('ring-child'))),
+      const Size(300, 48),
+    );
+  });
+
+  testWidgets('a full-width KubusButton stays full width inside the ring',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              child: KubusButton(
+                onPressed: () {},
+                label: 'Continue',
+                isFullWidth: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    // The control's own box (ring wrapper) keeps the full slot; the button
+    // inside keeps its hairline border.
+    expect(tester.getSize(find.byType(KubusButton)).width, 300);
+    expect(tester.getSize(find.byType(ElevatedButton)).width, greaterThan(290));
+  });
 }

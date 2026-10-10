@@ -90,7 +90,10 @@ class _KubusFocusRingState extends State<KubusFocusRing> {
       canRequestFocus: false,
       skipTraversal: true,
       onFocusChange: _handleFocusChange,
+      // passthrough keeps the parent's tight constraints (full-width CTAs,
+      // Expanded nav slots) instead of loosening them for the child.
       child: Stack(
+        fit: StackFit.passthrough,
         clipBehavior: Clip.none,
         children: [
           widget.child,
