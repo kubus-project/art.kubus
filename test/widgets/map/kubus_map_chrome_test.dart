@@ -19,14 +19,17 @@ import 'package:art_kubus/providers/tile_providers.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/kubus_map_tokens.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/map/controls/kubus_map_primary_controls.dart';
+import 'package:art_kubus/widgets/map/kubus_activation_prompt_card.dart';
 import 'package:art_kubus/widgets/map/kubus_map_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Map chrome correction (0.8.2 E): one logo, one flat surface level per
 /// cluster, visible attribution, and a grouped control cluster with a logical
@@ -107,6 +110,32 @@ void main() {
         },
       );
     }
+
+    testWidgets('mobile credit target is at least 48px high', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: <ThemeExtension<dynamic>>[KubusColorRoles.light],
+          ),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: KubusMapAttributionControl(
+                semanticsLabel: 'Map attributions',
+                onPressed: () {},
+                // The mobile map passes its 48px touch target.
+                minHeight: 48,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tapTarget = tester.getSize(find.byType(KubusMapAttributionControl));
+      expect(tapTarget.height, greaterThanOrEqualTo(48));
+    });
 
     test('credit matches the vendored Kubus styles attribution', () {
       for (final style in const <String>[
@@ -301,6 +330,50 @@ void main() {
       expect(find.byType(AppLogo), findsNothing);
       // The visible credit is present once in the composition.
       expect(find.byType(KubusMapAttributionControl), findsOneWidget);
+    });
+  });
+
+  group('map chrome: activation prompt', () {
+    testWidgets('prompt CTA and dismiss targets are at least 48px high',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final provider = ActivationPromptProvider(hasAuthSession: () => false);
+      addTearDown(provider.dispose);
+      await tester.runAsync(() async {
+        for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
+          await provider.recordEntityView();
+        }
+      });
+      expect(provider.shouldPrompt, isTrue);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<ActivationPromptProvider>.value(
+          value: provider,
+          child: MaterialApp(
+            theme: ThemeData(
+              extensions: <ThemeExtension<dynamic>>[KubusColorRoles.light],
+            ),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: Align(
+                alignment: Alignment.bottomCenter,
+                child: KubusActivationPromptCard(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.getSize(find.byType(FilledButton)).height,
+        greaterThanOrEqualTo(KubusMapMetrics.mobileControlSize),
+      );
+      expect(
+        tester.getSize(find.byType(IconButton)).height,
+        greaterThanOrEqualTo(KubusMapMetrics.mobileControlSize),
+      );
     });
   });
 }

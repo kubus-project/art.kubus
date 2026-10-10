@@ -2632,9 +2632,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       bottom: KubusMapMetrics.desktopChromeInset +
                           KubusHeaderMetrics.actionHitArea +
                           KubusSpacing.sm,
-                      child: const SizedBox(
-                        width: 360,
-                        child: KubusActivationPromptCard(maxWidth: 360),
+                      // Blocked like the other chrome over the platform view.
+                      child: MapOverlayBlocker(
+                        child: const SizedBox(
+                          width: 360,
+                          child: KubusActivationPromptCard(maxWidth: 360),
+                        ),
                       ),
                     ),
                     Positioned(

@@ -355,14 +355,12 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
 
     // Map chrome is one flat, near-opaque surface with a single hairline: no
     // backdrop blur, sheen or shadow (blur-over-blur was the stacking defect).
+    // On the map the fill is painted by the outer AnimatedContainer below, so
+    // the fill and the hairline share one box. A DecoratedBox around the field
+    // would size to the field's intrinsic height and leave a second outline
+    // offset from the first.
     final Widget surface = widget.useMapGlassSurface
-        ? DecoratedBox(
-            decoration: BoxDecoration(
-              color: style.backgroundColor,
-              borderRadius: style.borderRadius,
-            ),
-            child: textField,
-          )
+        ? Align(alignment: Alignment.centerLeft, child: textField)
         : LiquidGlassPanel(
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
@@ -390,6 +388,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
           duration: widget.animationDuration,
           curve: widget.animationCurve,
           decoration: BoxDecoration(
+            color: widget.useMapGlassSurface ? style.backgroundColor : null,
             borderRadius: style.borderRadius,
             boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
           ),

@@ -6,14 +6,16 @@ import '../../models/onboarding_completion_navigation.dart';
 import '../../models/protected_action_requirements.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_map_tokens.dart';
 import 'kubus_map_chrome.dart';
 
 /// Non-blocking invitation to create an account, shown after a visitor has
 /// demonstrated interest.
 ///
 /// Renders nothing until [ActivationPromptProvider] arms it. It is a card, not
-/// a modal: the map stays fully interactive underneath, and callers position it
-/// so it never covers map attribution or the primary controls.
+/// a modal: the map stays interactive everywhere except the card's own surface
+/// (callers wrap it in a map overlay blocker), and callers position it so it
+/// never covers map attribution or the primary controls.
 class KubusActivationPromptCard extends StatefulWidget {
   const KubusActivationPromptCard({super.key, this.maxWidth = 420});
 
@@ -88,8 +90,8 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                       tooltip: l10n.activationPromptDismiss,
                       color: scheme.onSurfaceVariant,
                       constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
+                        minWidth: KubusMapMetrics.mobileControlSize,
+                        minHeight: KubusMapMetrics.mobileControlSize,
                       ),
                     ),
                   ],
@@ -129,7 +131,9 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                       );
                     },
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
+                      minimumSize: const Size.fromHeight(
+                          KubusMapMetrics.mobileControlSize),
+                      tapTargetSize: MaterialTapTargetSize.padded,
                     ),
                     child: Text(l10n.activationPromptCta),
                   ),

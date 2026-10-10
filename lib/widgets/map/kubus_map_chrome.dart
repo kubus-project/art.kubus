@@ -257,18 +257,23 @@ class _KubusMapChromeIconButtonState extends State<KubusMapChromeIconButton> {
 /// The credit is drawn as text on the same near-opaque chrome surface as the
 /// other clusters, so its contrast comes from theme tokens rather than from
 /// whatever map pixels are underneath. The whole row is the tap target (at
-/// least 44px high) and opens the attribution sheet.
+/// least [minHeight] high, 44px on desktop and 48px on mobile) and opens the
+/// attribution sheet.
 class KubusMapAttributionControl extends StatelessWidget {
   const KubusMapAttributionControl({
     super.key,
     required this.onPressed,
     required this.semanticsLabel,
     this.credit = kubusMapAttributionCredit,
+    this.minHeight = KubusHeaderMetrics.actionHitArea,
   });
 
   final VoidCallback onPressed;
   final String semanticsLabel;
   final String credit;
+
+  /// Minimum tap height. The mobile map passes its 48px touch target.
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +301,7 @@ class KubusMapAttributionControl extends StatelessWidget {
               borderRadius: radius,
               onTap: onPressed,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
+                constraints: BoxConstraints(minHeight: minHeight),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: KubusSpacing.sm + KubusSpacing.xs,

@@ -4237,12 +4237,21 @@ class _MapScreenState extends State<MapScreen>
                         ui.contextSurface == MapContextSurface.none)
                       Positioned(
                         left: 0,
-                        right: 0,
+                        // Stops short of the control rail (its inset, its 48px
+                        // width and a gap) so the prompt never covers a button.
+                        right: KubusSpacing.md -
+                            KubusSpacing.xxs +
+                            KubusMapMetrics.mobileControlSize +
+                            KubusSpacing.md,
                         bottom: attributionBottomMargin +
                             KubusLayout.mainBottomNavBarHeight +
                             KubusHeaderMetrics.actionHitArea +
                             KubusSpacing.md,
-                        child: const KubusActivationPromptCard(),
+                        // Blocked like the other chrome over the platform view:
+                        // a tap or drag on the prompt must not reach the map.
+                        child: MapOverlayBlocker(
+                          child: const KubusActivationPromptCard(),
+                        ),
                       ),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
                       _buildMarkerOverlay(themeProvider, ui.markerSelection),
@@ -4265,6 +4274,7 @@ class _MapScreenState extends State<MapScreen>
                         child: MapOverlayBlocker(
                           child: KubusMapAttributionControl(
                             semanticsLabel: l10n.mapAttributionsTitle,
+                            minHeight: KubusMapMetrics.mobileControlSize,
                             onPressed: () => unawaited(
                               showKubusMapAttributionDialog(context),
                             ),
@@ -5679,7 +5689,7 @@ class _MapScreenState extends State<MapScreen>
       icon: Icons.close,
       tooltip: l10n.mapClearSearchTooltip,
       semanticsLabel: l10n.mapClearSearchTooltip,
-      size: KubusHeaderMetrics.actionHitArea,
+      size: KubusMapMetrics.mobileControlSize,
       iconColor: hintColor,
       borderRadius: KubusMapMetrics.headerSurfaceRadius,
       tooltipPreferBelow: false,
@@ -5706,7 +5716,7 @@ class _MapScreenState extends State<MapScreen>
             : l10n.mapFilterActiveCountLabel(activeFilterCount),
         active: active,
         badgeCount: activeFilterCount,
-        size: KubusHeaderMetrics.actionHitArea,
+        size: KubusMapMetrics.mobileControlSize,
         accentColor: accent,
         iconColor: hintColor,
         borderRadius: KubusMapMetrics.headerSurfaceRadius,

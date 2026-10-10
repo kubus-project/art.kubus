@@ -173,6 +173,41 @@ void main() {
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
+    testWidgets('map field fill shares the hairline box (one boundary)',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox(
+            width: 360,
+            height: KubusHeaderMetrics.searchBarHeight,
+            child: KubusSearchBar(
+              hintText: 'Search',
+              enableBlur: false,
+              useMapGlassSurface: true,
+            ),
+          ),
+        ),
+      );
+
+      // The fill is painted by the same box that draws the hairline, so the
+      // two can never disagree on size. A separate filled child inside the
+      // bordered box sized to the field's own height drew a second outline.
+      final box = tester.widget<AnimatedContainer>(
+        find
+            .descendant(
+              of: find.byType(KubusSearchBar),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      final decoration = box.decoration as BoxDecoration;
+      expect(decoration.color, isNotNull);
+      expect(
+        tester.getSize(find.byType(AnimatedContainer).first).height,
+        KubusHeaderMetrics.searchBarHeight,
+      );
+    });
+
     testWidgets('normal search bar fallback does NOT use the map sheen',
         (tester) async {
       await tester.pumpWidget(
@@ -302,6 +337,19 @@ void main() {
       );
       expect(
         find.descendant(of: overlay, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
+      // Flat map chrome: one hairline rule, no drop shadow lifting the panel.
+      expect(
+        find.descendant(
+          of: overlay,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).boxShadow != null,
+          ),
+        ),
         findsNothing,
       );
 
