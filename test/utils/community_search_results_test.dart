@@ -87,20 +87,32 @@ void main() {
       expect(communitySearchRows(response, 'institutions'), isEmpty);
     });
 
-    test('falls back to the legacy data list only when results has no key', () {
-      final legacy = {
+    test('never reads a legacy data payload, even a mixed one', () {
+      // Obsolete shapes the backend does not send. Reading them could render
+      // rows of other kinds under the requested kind, so they are ignored.
+      final legacyList = {
         'success': true,
         'data': [
-          {'id': 'legacy-1', 'name': 'Legacy'},
+          {'id': 'legacy-1', 'name': 'Legacy institution'},
+          {'type': 'profile', 'walletAddress': 'Wallet1', 'username': 'rok'},
           'not-a-map',
         ],
       };
+      final legacyKeyed = {
+        'success': true,
+        'data': {
+          'institutions': [
+            {'id': 'legacy-2', 'name': 'Legacy keyed'},
+          ],
+        },
+      };
 
-      expect(
-          communitySearchRows(legacy, 'institutions').single['id'], 'legacy-1');
+      expect(communitySearchRows(legacyList, 'institutions'), isEmpty);
+      expect(communitySearchRows(legacyList, 'profiles'), isEmpty);
+      expect(communitySearchRows(legacyKeyed, 'institutions'), isEmpty);
     });
 
-    test('keeps an empty results key empty instead of falling back', () {
+    test('does not read data when the kind key is present but empty', () {
       final response = {
         'success': true,
         'data': [
@@ -110,6 +122,23 @@ void main() {
       };
 
       expect(communitySearchRows(response, 'institutions'), isEmpty);
+    });
+
+    test('keeps only rows of the requested kind from a mixed results map', () {
+      final response = {
+        'success': true,
+        'results': {
+          'profiles': [
+            {'type': 'profile', 'walletAddress': 'Wallet1', 'username': 'rok'},
+          ],
+          'institutions': [
+            {'type': 'institution', 'id': 'inst-moderna', 'name': 'Moderna'},
+          ],
+        },
+      };
+
+      final institutions = communitySearchRows(response, 'institutions');
+      expect(institutions.map((row) => row['id']), ['inst-moderna']);
     });
 
     test('tolerates malformed containers without throwing', () {
