@@ -91,7 +91,7 @@ void main() {
     expect(controller.regionCount, 0);
   });
 
-  testWidgets('open filter slot registers exactly one backdrop region',
+  testWidgets('open filter slot is flat chrome: no backdrop region, no blur',
       (tester) async {
     final controller = KubusMapBackdropHostController();
     addTearDown(controller.dispose);
@@ -106,12 +106,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Filter content'), findsOneWidget);
-    expect(find.byType(KubusMapBackdropRegionTracker), findsOneWidget);
-    expect(controller.regionCount, 1);
-    expect(controller.regions.single.id, 'desktop-map-filter-panel');
+    // Map chrome is one flat, near-opaque surface: nothing blurs the map under
+    // it, so there is no region for the host to measure or keep in sync.
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
+    expect(controller.regionCount, 0);
   });
 
-  testWidgets('tearing down the open filter panel clears its region',
+  testWidgets('tearing down the open filter panel leaves no region behind',
       (tester) async {
     final controller = KubusMapBackdropHostController();
     addTearDown(controller.dispose);
@@ -120,11 +122,10 @@ void main() {
       _DesktopFilterSlotHost(controller: controller, open: true),
     );
     await tester.pump();
-    expect(controller.regionCount, 1);
+    expect(controller.regionCount, 0);
 
-    // Replace the whole scope subtree (closing the panel ultimately tears down
-    // its region tracker). The tracker's dispose removes its region, so no
-    // stale backdrop region is left behind.
+    // Replace the whole scope subtree (closing the panel). A flat panel never
+    // registers a region, so none is left behind.
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: SizedBox.shrink())),
     );

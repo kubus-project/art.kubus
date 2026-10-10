@@ -137,16 +137,18 @@ void main() {
       // Exactly one bordered box inside the field: the field boundary itself.
       expect(bordered, hasLength(1));
 
-      final sheens = tester
-          .widgetList<KubusMapGlassMaterialSheen>(
-            find.descendant(
-              of: field,
-              matching: find.byType(KubusMapGlassMaterialSheen),
-            ),
-          )
-          .toList();
-      expect(sheens, isNotEmpty);
-      expect(sheens.every((s) => !s.showRim), isTrue);
+      // Flat map chrome: no sheen layer and no rim on top of the boundary.
+      expect(
+        find.descendant(
+          of: field,
+          matching: find.byType(KubusMapGlassMaterialSheen),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: field, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
     });
 
     testWidgets('focusing the field does not move or resize it',

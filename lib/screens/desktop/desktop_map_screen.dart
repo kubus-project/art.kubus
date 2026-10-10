@@ -68,7 +68,6 @@ import '../../widgets/map/panels/kubus_create_marker_panel.dart';
 import '../../widgets/map_overlay_blocker.dart';
 import '../../widgets/map/navigation/kubus_walking_navigation_panel.dart';
 import '../../widgets/map/navigation/kubus_walking_navigation_binding.dart';
-import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -122,11 +121,11 @@ import '../../widgets/map/filters/kubus_map_filter_content.dart';
 import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
     show KubusDiscoveryExpansionDirection;
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../../widgets/map/kubus_map_chrome.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
-import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../features/map/detail/marker_info_detail_presentation.dart';
 import '../../widgets/map/panels/marker_info_detail_view.dart';
 import '../../widgets/common/kubus_cached_image.dart';
@@ -2613,13 +2612,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     // control toolbar and attribution cluster on the right stay
                     // clear. Declared before that cluster so the controls
                     // always render above it.
+                    // Basemap credit: bottom-left, clear of the control cluster and
+                    // of the engagement prompt that sits above it.
                     Positioned(
                       left: _hasLeftDetailPanel
                           ? contextPanelWidth +
                               KubusMapMetrics.desktopChromeInset
                           : KubusMapMetrics.desktopChromeInset,
-                      bottom:
-                          KubusMapMetrics.desktopChromeInset + KubusSpacing.xxl,
+                      bottom: KubusMapMetrics.desktopChromeInset,
+                      child: MapOverlayBlocker(
+                        child: _buildDesktopAttributionButton(),
+                      ),
+                    ),
+                    Positioned(
+                      left: _hasLeftDetailPanel
+                          ? contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset
+                          : KubusMapMetrics.desktopChromeInset,
+                      bottom: KubusMapMetrics.desktopChromeInset +
+                          KubusHeaderMetrics.actionHitArea +
+                          KubusSpacing.sm,
                       child: const SizedBox(
                         width: 360,
                         child: KubusActivationPromptCard(maxWidth: 360),
@@ -2646,13 +2658,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  // Custom attribution button, left of the controls.
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: KubusSpacing.sm,
-                                    ),
-                                    child: _buildDesktopAttributionButton(),
-                                  ),
                                   Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -2998,87 +3003,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         sidePanelInnerPadding:
             const EdgeInsets.symmetric(vertical: KubusSpacing.md),
         rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
-        leading: Row(
-          children: [
-            const AppLogo(
-              width: KubusSpacing.xl + KubusSpacing.xs,
-              height: KubusSpacing.xl + KubusSpacing.xs,
-            ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            Text(
-              l10n.desktopMapTitleDiscover,
-              style: KubusTextStyles.screenTitle.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-        searchField: _buildDesktopSearchField(l10n),
-        // Advanced filters and layer visibility live behind one deliberate
-        // affordance instead of six permanently competing quick chips.
-        mapToggle: KeyedSubtree(
-          key: _tutorialFilterChipsKey,
-          child: KeyedSubtree(
-            key: _tutorialFiltersButtonKey,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                KubusGlassIconButton(
-                  icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                  tooltip: _showFiltersPanel
-                      ? l10n.commonClose
-                      : (_filterState.activeFilterCount == 0
-                          ? l10n.mapFiltersTitle
-                          : l10n.mapFilterActiveCountLabel(
-                              _filterState.activeFilterCount,
-                            )),
-                  active: _showFiltersPanel,
-                  accentColor: themeProvider.accentColor,
-                  borderRadius: KubusRadius.sm,
-                  enableBlur: kubusMapBlurEnabled(context),
-                  onPressed: () {
-                    if (_showFiltersPanel) {
-                      _closeDesktopFiltersPanel();
-                    } else {
-                      _openDesktopFiltersPanel();
-                    }
-                  },
-                  tooltipPreferBelow: true,
-                  tooltipVerticalOffset: 18,
-                  tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
-                ),
-                if (_filterState.activeFilterCount > 0)
-                  Positioned(
-                    right: -5,
-                    top: -5,
-                    child: ExcludeSemantics(
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${_filterState.activeFilterCount}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+        // The shell rail owns the brand mark; the map header is title only.
+        leading: Text(
+          l10n.desktopMapTitleDiscover,
+          style: KubusTextStyles.screenTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
+        searchField: _buildDesktopSearchField(l10n, themeProvider),
         // What is narrowing the map, with a clear for each. Hidden while the
         // filters panel is open: it shows and resets the same state.
         extraContent: _showFiltersPanel
@@ -3100,21 +3032,72 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildDesktopSearchField(AppLocalizations l10n) {
-    final useMapBlur = kubusMapBlurEnabled(context);
+  Widget _buildDesktopSearchField(
+    AppLocalizations l10n,
+    ThemeProvider themeProvider,
+  ) {
     // No hard width cap here: the side-panel assembly resolves the field width
     // (comfortable when idle, expanded toward the right when focused / a query
     // is active) and the scaffold lays the field out at that width.
+    //
+    // The filter control lives INSIDE the field's flat surface (as on mobile),
+    // so search and filter read as one bar instead of two stacked glass boxes.
     return KeyedSubtree(
       key: _tutorialSearchKey,
       child: KubusGeneralSearch(
         controller: _mapSearchController,
         hintText: l10n.mapSearchHint,
         semanticsLabel: l10n.mapSearchHint,
-        enableBlur: useMapBlur,
+        enableBlur: false,
         useMapGlassSurface: true,
         mouseCursor: SystemMouseCursors.text,
         onSubmitted: _handleSearchSubmit,
+        trailingBuilder: (context, query) {
+          if (query.trim().isNotEmpty) {
+            return _buildDesktopSearchClear(l10n);
+          }
+          return _buildDesktopFilterToggle(l10n, themeProvider.accentColor);
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopSearchClear(AppLocalizations l10n) {
+    return KubusMapChromeIconButton(
+      icon: Icons.close,
+      tooltip: l10n.mapClearSearchTooltip,
+      onPressed: () => _mapSearchController.clearQueryWithContext(context),
+    );
+  }
+
+  Widget _buildDesktopFilterToggle(AppLocalizations l10n, Color accent) {
+    final count = _filterState.activeFilterCount;
+    final tooltip = _showFiltersPanel
+        ? l10n.commonClose
+        : (count == 0
+            ? l10n.mapFiltersTitle
+            : l10n.mapFilterActiveCountLabel(count));
+    return KeyedSubtree(
+      key: _tutorialFilterChipsKey,
+      child: KeyedSubtree(
+        key: _tutorialFiltersButtonKey,
+        child: KubusMapChromeIconButton(
+          icon: _showFiltersPanel ? Icons.close : Icons.tune,
+          tooltip: tooltip,
+          active: _showFiltersPanel,
+          accentColor: accent,
+          badgeCount: count,
+          tooltipPreferBelow: true,
+          tooltipVerticalOffset: 18,
+          tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+          onPressed: () {
+            if (_showFiltersPanel) {
+              _closeDesktopFiltersPanel();
+            } else {
+              _openDesktopFiltersPanel();
+            }
+          },
+        ),
       ),
     );
   }
@@ -4361,13 +4344,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDesktopAttributionButton() {
-    final useMapBlur = kubusMapBlurEnabled(context);
-    return KubusGlassIconButton(
-      icon: Icons.info_outline,
-      tooltip: AppLocalizations.of(context)!.mapAttributionsTitle,
-      borderRadius: KubusRadius.sm,
-      iconColor: Theme.of(context).colorScheme.primary,
-      enableBlur: useMapBlur,
+    final l10n = AppLocalizations.of(context)!;
+    return KubusMapAttributionControl(
+      semanticsLabel: l10n.mapAttributionsTitle,
       onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );
   }
@@ -4435,7 +4414,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final useMapBlur = kubusMapBlurEnabled(context);
 
     return Semantics(
       label: l10n.mapDiscoveryPathTitle,
@@ -4447,14 +4425,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: _isNearbyPanelOpen ? null : _openNearbyArtPanel,
-            child: buildKubusMapGlassSurface(
+            child: buildKubusMapChromeSurface(
               context: context,
-              kind: KubusMapGlassSurfaceKind.panel,
-              borderRadius: BorderRadius.circular(18),
-              tintBase: scheme.surface,
-              useBlur: useMapBlur,
+              borderRadius: BorderRadius.circular(KubusRadius.surface),
               padding: const EdgeInsets.all(KubusSpacing.md),
-              margin: EdgeInsets.zero,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

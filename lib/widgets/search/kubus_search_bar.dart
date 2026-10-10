@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 
@@ -258,15 +258,17 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
       tintBase: scheme.surface,
     );
     final radius = BorderRadius.circular(KubusRadius.md);
+    final roles = KubusColorRoles.of(context);
+    final onMap = widget.useMapGlassSurface;
 
     return KubusSearchBarStyle(
       borderRadius: radius,
-      backgroundColor: surfaceStyle.tintColor,
-      borderColor: scheme.outline.withValues(alpha: 0.18),
-      focusedBorderColor: scheme.primary,
+      backgroundColor: onMap ? roles.surfaceOverlay : surfaceStyle.tintColor,
+      borderColor: onMap ? roles.rule : scheme.outline.withValues(alpha: 0.18),
+      focusedBorderColor: onMap ? roles.focus : scheme.primary,
       borderWidth: 1,
       focusedBorderWidth: 2,
-      blurSigma: surfaceStyle.blurSigma,
+      blurSigma: onMap ? null : surfaceStyle.blurSigma,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.md - KubusSpacing.xxs,
@@ -351,6 +353,34 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
       ),
     );
 
+    // Map chrome is one flat, near-opaque surface with a single hairline: no
+    // backdrop blur, sheen or shadow (blur-over-blur was the stacking defect).
+    final Widget surface = widget.useMapGlassSurface
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: style.backgroundColor,
+              borderRadius: style.borderRadius,
+            ),
+            child: textField,
+          )
+        : LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: style.borderRadius,
+            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: style.backgroundColor,
+            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+            enableBlur: widget.enableBlur,
+            child: wrapWithKubusMapGlassSheen(
+              show: false,
+              borderRadius: style.borderRadius,
+              isDark: theme.brightness == Brightness.dark,
+              showRim: false,
+              child: textField,
+            ),
+          );
+
     return Semantics(
       label: widget.semanticsLabel,
       textField: widget.semanticsLabel != null,
@@ -372,30 +402,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
               width: effectiveBorderWidth,
             ),
           ),
-          child: LiquidGlassPanel(
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            borderRadius: style.borderRadius,
-            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
-            showBorder: false,
-            backgroundColor: style.backgroundColor,
-            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-            enableBlur: widget.enableBlur,
-            child: wrapWithKubusMapGlassSheen(
-              // On the map, when real blur is unavailable, enrich the flat tint
-              // with the shared static sheen so the search bar matches the rest
-              // of the map chrome instead of looking like a flat panel.
-              show: widget.useMapGlassSurface &&
-                  !(widget.enableBlur &&
-                      GlassCapabilitiesProvider.watchAllowBlurEnabled(context)),
-              borderRadius: style.borderRadius,
-              isDark: theme.brightness == Brightness.dark,
-              // The field's own border is its one boundary; the sheen's rim
-              // would be a second edge just inside it.
-              showRim: false,
-              child: textField,
-            ),
-          ),
+          child: surface,
         ),
       ),
     );

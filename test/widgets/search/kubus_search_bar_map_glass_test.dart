@@ -155,8 +155,7 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(KubusRadius.sm));
     });
 
-    testWidgets(
-        'fallback over the map drops BackdropFilter and adds the material sheen',
+    testWidgets('map field is one flat surface: no BackdropFilter and no sheen',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -171,7 +170,7 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsNothing);
-      expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
     testWidgets('normal search bar fallback does NOT use the map sheen',
@@ -189,7 +188,7 @@ void main() {
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
-    testWidgets('map mode keeps real blur when blur is available',
+    testWidgets('map mode stays flat even when blur is available',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -201,9 +200,9 @@ void main() {
         ),
       );
 
-      // Provider absent => GlassSurface defaults to real blur, and the sheen is
-      // only for the blur-off fallback.
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      // Blur-over-blur was the stacking defect: map chrome never blurs, even
+      // when the device could, and it adds no sheen.
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
@@ -231,8 +230,8 @@ void main() {
         ),
       );
 
-      // Sheen fallback is active, but the text field still works fully.
-      expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+      // The flat map surface still carries a fully working text field.
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
       expect(find.text('Find art'), findsOneWidget); // hint visible
 
       await tester.tap(find.byType(TextField));

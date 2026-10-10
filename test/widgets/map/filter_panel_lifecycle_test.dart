@@ -64,11 +64,11 @@ class _FilterPanelHostState extends State<_FilterPanelHost> {
 
 void main() {
   testWidgets(
-    'filter panel: closed mounts stable parent, open shows real blur '
-    'immediately, close leaves no ghost glass/backdrop',
+    'filter panel: closed mounts stable parent, open is flat chrome with no '
+    'blur or region, close leaves nothing behind',
     (tester) async {
-      // The default test platform is Android, so the panel resolves to real
-      // BackdropFilter blur over the Virtual-Display map texture.
+      // Map chrome is one flat, near-opaque surface: the panel never blurs the
+      // map, so it needs no BackdropFilter, sheen or backdrop region.
       final controller = KubusMapBackdropHostController();
       addTearDown(controller.dispose);
 
@@ -85,13 +85,11 @@ void main() {
       expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
 
-      // Open: the panel and its real blur appear on the very first frame (no
-      // extra interaction needed). The Android real-blur path never registers a
-      // platform backdrop region, and never needs the static sheen fallback.
+      // Open: the panel appears on the very first frame with the flat surface.
       hostKey.currentState!.setOpen(true);
       await tester.pump();
       expect(find.text('Filter content'), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsWidgets);
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
       expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
       expect(controller.regionCount, 0);

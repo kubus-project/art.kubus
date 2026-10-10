@@ -6,7 +6,7 @@ import '../../models/onboarding_completion_navigation.dart';
 import '../../models/protected_action_requirements.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
+import 'kubus_map_chrome.dart';
 
 /// Non-blocking invitation to create an account, shown after a visitor has
 /// demonstrated interest.
@@ -51,20 +51,17 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: widget.maxWidth),
-          child: LiquidGlassPanel(
+          // One flat chrome surface (no blur, single hairline) like the other
+          // map clusters; the prompt is not a glass sheet over the map.
+          child: buildKubusMapChromeSurface(
+            context: context,
             margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-            showBorder: true,
-            blurSigma: KubusGlassEffects.blurSigmaHeavy,
-            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
             padding: const EdgeInsets.fromLTRB(
               KubusSpacing.md,
               KubusSpacing.sm,
               KubusSpacing.sm,
               KubusSpacing.md,
-            ),
-            backgroundColor: scheme.surfaceContainerHighest.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.84 : 0.93,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

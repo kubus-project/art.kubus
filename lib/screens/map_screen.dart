@@ -127,6 +127,7 @@ import '../widgets/map/filters/kubus_map_filter_content.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../widgets/map/kubus_map_chrome.dart';
 import '../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
@@ -4246,6 +4247,20 @@ class _MapScreenState extends State<MapScreen>
                     if (widget.walkingNavigationIntent != null)
                       _buildWalkingNavigationOverlay(),
                     if (_isWalkingFocusedMode) _buildWalkingExitButton(),
+                    // Visible basemap credit. The native control is hidden on
+                    // web, and the full sheet sits behind More tools, so the
+                    // credit is drawn here, above the Nearby sheet and clear of
+                    // the rail. Offset right of the native "i" on device builds.
+                    if (!_isWalkingFocusedMode)
+                      Positioned(
+                        left: kIsWeb ? 12.0 : 44.0,
+                        bottom: attributionBottomMargin,
+                        child: KubusMapAttributionControl(
+                          semanticsLabel: l10n.mapAttributionsTitle,
+                          onPressed: () =>
+                              unawaited(showKubusMapAttributionDialog(context)),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -5650,15 +5665,13 @@ class _MapScreenState extends State<MapScreen>
   /// chrome jumping between a bare Material icon button and the map's glass
   /// language.
   Widget _buildSearchClearToggle(AppLocalizations l10n, Color hintColor) {
-    return KubusGlassIconButton(
+    return KubusMapChromeIconButton(
       icon: Icons.close,
       tooltip: l10n.mapClearSearchTooltip,
       semanticsLabel: l10n.mapClearSearchTooltip,
       size: KubusHeaderMetrics.actionHitArea,
       iconColor: hintColor,
       borderRadius: KubusMapMetrics.headerSurfaceRadius,
-      enableBlur: kubusMapBlurEnabled(context),
-      embedded: true,
       tooltipPreferBelow: false,
       tooltipVerticalOffset: 18,
       tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
@@ -5674,7 +5687,7 @@ class _MapScreenState extends State<MapScreen>
 
     return KeyedSubtree(
       key: _tutorialFilterButtonKey,
-      child: KubusGlassIconButton(
+      child: KubusMapChromeIconButton(
         icon: active ? Icons.filter_alt_off : Icons.filter_alt,
         tooltip:
             active ? l10n.mapHideFiltersTooltip : l10n.mapShowFiltersTooltip,
@@ -5687,8 +5700,6 @@ class _MapScreenState extends State<MapScreen>
         accentColor: accent,
         iconColor: hintColor,
         borderRadius: KubusMapMetrics.headerSurfaceRadius,
-        enableBlur: kubusMapBlurEnabled(context),
-        embedded: true,
         tooltipPreferBelow: false,
         tooltipVerticalOffset: 18,
         tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
@@ -6148,7 +6159,6 @@ class _MapScreenState extends State<MapScreen>
 
   void _openMobileMapTools() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final showIsometric = AppConfig.isFeatureEnabled('mapIsometricView');
 
     showModalBottomSheet<void>(
@@ -6160,11 +6170,9 @@ class _MapScreenState extends State<MapScreen>
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(KubusSpacing.md),
-            child: buildKubusMapGlassSurface(
+            child: buildKubusMapChromeSurface(
               context: sheetContext,
-              kind: KubusMapGlassSurfaceKind.panel,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              tintBase: scheme.surface,
+              borderRadius: BorderRadius.circular(KubusRadius.surface),
               padding: const EdgeInsets.symmetric(
                 horizontal: KubusSpacing.sm,
                 vertical: KubusSpacing.md,

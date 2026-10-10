@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../features/map/controller/kubus_map_controller.dart';
-import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
-import '../../common/kubus_glass_icon_button.dart';
-import '../kubus_map_glass_surface.dart';
+import '../kubus_map_chrome.dart';
 import 'map_view_mode_controls.dart';
 
 /// Layout variants for [KubusMapPrimaryControls].
@@ -193,10 +191,14 @@ class KubusMapPrimaryControls extends StatelessWidget {
   }
 
   Widget _buildMobileRightRail(BuildContext context) {
-    final resolvedGap = gap ?? KubusSpacing.sm + KubusSpacing.xxs;
     final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
     final hasModeControls =
         showIsometricViewToggle && onToggleIsometricView != null;
+    // One flat cluster: buttons are separated by hairlines, not by gaps.
+    Widget rule() => KubusMapChromeRule(
+          axis: Axis.horizontal,
+          length: resolvedButtonSize - KubusSpacing.sm,
+        );
 
     final children = <Widget>[];
 
@@ -219,7 +221,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
                   onTap: () => unawaited(controller.resetBearing()),
                 ),
               ),
-              SizedBox(height: resolvedGap),
+              rule(),
             ],
           );
         },
@@ -240,7 +242,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
             whenActive: isometricViewTooltipWhenActive,
             whenInactive: isometricViewTooltipWhenInactive,
           ),
-          gap: resolvedGap,
+          gap: 0,
           buttonBuilder: (context, spec) {
             final button = _KubusSquareControlButton.mobile(
               size: resolvedButtonSize,
@@ -260,7 +262,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           },
         ),
       );
-      children.add(SizedBox(height: resolvedGap));
+      children.add(rule());
     }
 
     if (showZoomControls) {
@@ -276,7 +278,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           ),
         ),
       );
-      children.add(SizedBox(height: resolvedGap));
+      children.add(rule());
 
       children.add(
         Semantics(
@@ -290,7 +292,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           ),
         ),
       );
-      children.add(SizedBox(height: resolvedGap));
+      children.add(rule());
     }
 
     if (showSecondaryTools && onOpenSecondaryTools != null) {
@@ -309,7 +311,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           ),
         ),
       );
-      children.add(SizedBox(height: resolvedGap));
+      children.add(rule());
     }
 
     children.add(
@@ -329,7 +331,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
         ),
       ),
     );
-    children.add(SizedBox(height: resolvedGap));
+    children.add(rule());
 
     children.add(
       Semantics(
@@ -353,7 +355,14 @@ class KubusMapPrimaryControls extends StatelessWidget {
       ),
     );
 
-    return Column(children: children);
+    return buildKubusMapChromeSurface(
+      context: context,
+      borderRadius: BorderRadius.circular(KubusRadius.surface),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: children,
+      ),
+    );
   }
 
   Widget _buildDesktopToolbar(BuildContext context) {
@@ -374,12 +383,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
         showIsometricViewToggle && onToggleIsometricView != null;
 
     Widget buildDivider() {
-      return Container(
-        width: KubusSizes.hairline,
-        height: KubusSpacing.lg + KubusSpacing.xxs,
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
-        color: scheme.outline.withValues(alpha: 0.22),
-      );
+      return KubusMapChromeRule(length: KubusSpacing.lg + KubusSpacing.xxs);
     }
 
     final rowChildren = <Widget>[];
@@ -538,7 +542,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
       ),
     );
 
-    rowChildren.add(const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs));
+    rowChildren.add(buildDivider());
 
     rowChildren.add(
       Semantics(
@@ -562,17 +566,10 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.basic,
-      child: buildKubusMapGlassSurface(
+      child: buildKubusMapChromeSurface(
         context: context,
-        kind: KubusMapGlassSurfaceKind.panel,
         borderRadius: BorderRadius.circular(resolvedRadius),
-        tintBase: scheme.surface,
         padding: resolvedPadding,
-        margin: EdgeInsets.zero,
-        blurPolicy: KubusMapBlurPolicy.forceRealBlur,
-        overlayName: 'map-primary-controls',
-        backdropRegionId: 'desktop-map-primary-controls',
-        enablePlatformBackdropRegion: true,
         child: Row(mainAxisSize: MainAxisSize.min, children: rowChildren),
       ),
     );
@@ -595,7 +592,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
   }
 }
 
-class _KubusSquareControlButton extends StatefulWidget {
+class _KubusSquareControlButton extends StatelessWidget {
   const _KubusSquareControlButton.mobile({
     required this.size,
     required this.icon,
@@ -604,8 +601,7 @@ class _KubusSquareControlButton extends StatefulWidget {
     this.active = false,
     this.activeTint,
     this.activeIconColor,
-  })  : accent = null,
-        _variant = _KubusSquareControlVariant.mobile;
+  }) : accent = null;
 
   const _KubusSquareControlButton.desktop({
     required this.size,
@@ -616,9 +612,7 @@ class _KubusSquareControlButton extends StatefulWidget {
     this.active = false,
     this.activeTint,
     this.activeIconColor,
-  }) : _variant = _KubusSquareControlVariant.desktop;
-
-  final _KubusSquareControlVariant _variant;
+  });
 
   final double size;
   final IconData icon;
@@ -627,142 +621,27 @@ class _KubusSquareControlButton extends StatefulWidget {
   final bool active;
 
   final Color? accent;
+
+  /// Kept for call-site compatibility. The chrome selected state always uses
+  /// the accent at one low strength, so a custom fill is not drawn.
   final Color? activeTint;
   final Color? activeIconColor;
 
   @override
-  State<_KubusSquareControlButton> createState() =>
-      _KubusSquareControlButtonState();
-}
-
-class _KubusSquareControlButtonState extends State<_KubusSquareControlButton> {
-  bool _hovered = false;
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
-    final animationTheme = context.animationTheme;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    final resolvedOnTap = widget.onTap;
-    final bool enabled = resolvedOnTap != null;
-    final active = widget.active;
-
-    switch (widget._variant) {
-      case _KubusSquareControlVariant.mobile:
-        final mobileAccent = scheme.primary;
-        final mobileActiveIconColor =
-            ThemeData.estimateBrightnessForColor(mobileAccent) ==
-                    Brightness.dark
-                ? KubusColors.textPrimaryDark
-                : KubusColors.textPrimaryLight;
-        return KubusGlassIconButton(
-          icon: widget.icon,
-          onPressed: resolvedOnTap,
-          tooltip: widget.tooltip,
-          size: widget.size,
-          active: active,
-          accentColor: mobileAccent,
-          iconColor: scheme.onSurface,
-          activeIconColor: widget.activeIconColor ?? mobileActiveIconColor,
-          activeTint: widget.activeTint ?? mobileAccent.withValues(alpha: 0.20),
-          borderRadius: KubusRadius.md,
-          enableBlur: kubusMapBlurEnabled(context),
-        );
-
-      case _KubusSquareControlVariant.desktop:
-        final resolvedAccent = widget.accent ?? scheme.primary;
-        final resolvedTintBase =
-            active ? (widget.activeTint ?? resolvedAccent) : scheme.surface;
-        final iconBase = active
-            ? (widget.activeIconColor ?? resolvedAccent)
-            : scheme.onSurface;
-        final iconCol = enabled ? iconBase : iconBase.withValues(alpha: 0.38);
-
-        final child = SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: Center(
-            child: Icon(
-              widget.icon,
-              size: KubusHeaderMetrics.actionIcon,
-              color: iconCol,
-            ),
-          ),
-        );
-
-        final borderColor = active
-            ? resolvedAccent.withValues(alpha: 0.85)
-            : _focused
-                ? resolvedAccent.withValues(alpha: 0.70)
-                : scheme.outline.withValues(alpha: _hovered ? 0.34 : 0.18);
-        final decoration = BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: borderColor,
-            width: active || _focused ? 1.25 : 1,
-          ),
-          boxShadow: (active || (_hovered && enabled))
-              ? [
-                  BoxShadow(
-                    color: resolvedAccent.withValues(
-                      alpha: active ? 0.12 : 0.08,
-                    ),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        );
-
-        // Requirement: pointer cursor + visible hover/focus states on desktop.
-        return FocusableActionDetector(
-          enabled: enabled,
-          mouseCursor:
-              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          onShowHoverHighlight: (value) {
-            if (_hovered != value) setState(() => _hovered = value);
-          },
-          onShowFocusHighlight: (value) {
-            if (_focused != value) setState(() => _focused = value);
-          },
-          actions: <Type, Action<Intent>>{
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                resolvedOnTap?.call();
-                return null;
-              },
-            ),
-          },
-          child: ExcludeFocus(
-            child: AnimatedContainer(
-              duration: animationTheme.short,
-              curve: animationTheme.defaultCurve,
-              decoration: decoration,
-              child: buildKubusMapGlassSurface(
-                context: context,
-                kind: KubusMapGlassSurfaceKind.button,
-                borderRadius: radius,
-                tintBase: resolvedTintBase,
-                showBorder: false,
-                boxShadow: const <BoxShadow>[],
-                padding: EdgeInsets.zero,
-                blurPolicy: KubusMapBlurPolicy.forceRealBlur,
-                overlayName: 'map-control-button',
-                enablePlatformBackdropRegion: false,
-                onTap: resolvedOnTap,
-                child: widget.tooltip.isEmpty
-                    ? child
-                    : Tooltip(message: widget.tooltip, child: child),
-              ),
-            ),
-          ),
-        );
-    }
+    final scheme = Theme.of(context).colorScheme;
+    final resolvedAccent = accent ?? scheme.primary;
+    // Flat chrome button: no border, shadow or glass of its own. The selected
+    // state is the only accent use; hover and focus stay neutral.
+    return KubusMapChromeIconButton(
+      icon: icon,
+      onPressed: onTap,
+      tooltip: tooltip,
+      size: size,
+      active: active,
+      accentColor: resolvedAccent,
+      iconColor: scheme.onSurface,
+      activeIconColor: activeIconColor,
+    );
   }
 }
-
-enum _KubusSquareControlVariant { mobile, desktop }
