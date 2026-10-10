@@ -206,6 +206,12 @@ void main() {
         tester.getSize(find.byType(AnimatedContainer).first).height,
         KubusHeaderMetrics.searchBarHeight,
       );
+      // The app theme's state-specific outlines must not paint inside the
+      // field: the TextField draws no border of its own in any state.
+      final input = tester.widget<TextField>(find.byType(TextField));
+      expect(input.decoration?.enabledBorder, InputBorder.none);
+      expect(input.decoration?.focusedBorder, InputBorder.none);
+      expect(input.decoration?.disabledBorder, InputBorder.none);
     });
 
     testWidgets('normal search bar fallback does NOT use the map sheen',

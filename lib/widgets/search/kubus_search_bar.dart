@@ -347,7 +347,15 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
         suffixIcon: trailing,
         prefixIconConstraints: style.prefixIconConstraints,
         suffixIconConstraints: style.suffixIconConstraints,
+        // The field's boundary is the box painted around it. The app theme
+        // sets state-specific outlines, which would otherwise draw a second
+        // rounded hairline inside the field.
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
         isDense: true,
         contentPadding: style.contentPadding,
       ),
