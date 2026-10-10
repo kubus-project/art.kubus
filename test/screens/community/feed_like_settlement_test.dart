@@ -6,6 +6,7 @@ import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/auth/pending_action_continuation.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +79,14 @@ class _FakeBackend {
     }
     return http.Response('{}', 404);
   }
+}
+
+/// Chat is not under test here. The feed starts chat when it loads, and a
+/// signed-in chat opens a live socket that outlives the test. This keeps the
+/// feed's chat start-up away from the network.
+class _SilentChat extends ChatProvider {
+  @override
+  Future<void> initialize({String? initialWallet}) async {}
 }
 
 /// The account step a guest reaches from the gate. Finishing it authenticates
@@ -200,7 +209,7 @@ Future<void> _runFeed(
 }) async {
   final pending = PendingActionProvider();
   final collab = CollabProvider();
-  final chat = ChatProvider();
+  final chat = _SilentChat();
   try {
     await _pumpFeed(
       tester,
@@ -216,6 +225,9 @@ Future<void> _runFeed(
     // nothing is left, or flutter_test reports them as still pending.
     await _drain(tester);
     await tester.pumpWidget(const SizedBox());
+    // A signed-in session opens the chat socket, a singleton that outlives the
+    // test. Close it here, then let the close handshake's timers run out.
+    SocketService().disconnect();
     await _drain(tester);
   } finally {
     // The feed starts the chat subscription monitor and the collab invite poll.
