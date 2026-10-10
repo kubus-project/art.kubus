@@ -215,51 +215,11 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
         onTap: onTap,
       );
     } else if (searchType == 'institutions') {
-      final name = result['name'] ??
-          result['title'] ??
-          AppLocalizations.of(context)!.communitySearchFallbackInstitution;
-      final type = result['type'] ?? '';
-      final address = result['address'] ?? '';
-
-      return ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: themeProvider.accentColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            Icons.location_city,
-            color: themeProvider.accentColor,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          name.toString(),
-          style: KubusTypography.inter(
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          [type, address]
-              .where((e) => e.toString().trim().isNotEmpty)
-              .join(' - '),
-          style: KubusTypography.inter(
-            fontSize: 12,
-            color: scheme.onSurface.withValues(alpha: 0.6),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          size: 20,
-          color: scheme.onSurface.withValues(alpha: 0.68),
-        ),
+      return CommunitySearchInstitutionTile(
+        institution: result,
+        accentColor: themeProvider.accentColor,
+        fallbackName:
+            AppLocalizations.of(context)!.communitySearchFallbackInstitution,
         onTap: onTap,
       );
     } else if (searchType == 'screens') {
