@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../config/config.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/support_center_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/contextual_auth_gate.dart';
 import '../utils/design_tokens.dart';
@@ -14,44 +15,14 @@ import '../widgets/kubus_snackbar.dart';
 /// selects the tab.
 enum SupportSection { faq, contact, bug, requests }
 
-/// Failure categories for Support Center requests, mapped from the backend
-/// contract's status codes so every entry point shows the same copy.
-enum _SupportFailure {
-  signIn,
-  accountIdentity,
-  notFound,
-  closed,
-  invalid,
-  rateLimited,
-  generic,
-}
-
-_SupportFailure _classifyFailure(Object error) {
-  if (error is BackendApiRequestException) {
-    switch (error.statusCode) {
-      case 400:
-        return _SupportFailure.invalid;
-      case 401:
-        return _SupportFailure.signIn;
-      case 403:
-        return _SupportFailure.accountIdentity;
-      case 404:
-        return _SupportFailure.notFound;
-      case 409:
-        return _SupportFailure.closed;
-      case 429:
-        return _SupportFailure.rateLimited;
-    }
-  }
-  return _SupportFailure.generic;
-}
-
 /// Contract limits (Support Center backend contract, requester endpoints 1 and 4).
 const int _maxSubjectLength = 255;
 const int _maxMessageLength = 5000;
 
 /// Requester-facing support hub: FAQ, contact and bug forms, and the signed-in
-/// account's request history with replies.
+/// account's request history with replies. The request workflow itself lives
+/// in [SupportCenterProvider]; this screen owns only form and presentation
+/// state.
 class SupportCenterScreen extends StatefulWidget {
   const SupportCenterScreen({
     super.key,
@@ -76,22 +47,12 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   late SupportSection _section;
   bool _includePlatform = false;
   bool _submitting = false;
-  bool _replying = false;
   String? _formError;
-
-  bool _listLoading = false;
-  List<Map<String, dynamic>>? _tickets;
-  _SupportFailure? _listFailure;
-
-  String? _openId;
-  Map<String, dynamic>? _ticket;
-  bool _ticketLoading = false;
-  _SupportFailure? _ticketFailure;
-  String? _replyError;
+  String? _replyFormError;
 
   bool get _signedIn => BackendApiService().hasAuthSession;
 
-  bool get _supportEnabled => AppConfig.isFeatureEnabled('supportTickets');
+  SupportCenterProvider get _support => context.read<SupportCenterProvider>();
 
   @override
   void initState() {
@@ -99,7 +60,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     _section = widget.initialSection;
     if (_section == SupportSection.requests) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _loadTickets();
+        if (mounted) _support.loadTickets();
       });
     }
   }
@@ -123,12 +84,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     setState(() {
       _section = section;
       _formError = null;
-      _openId = null;
-      _ticket = null;
-      _ticketFailure = null;
-      _replyError = null;
+      _replyFormError = null;
     });
-    if (section == SupportSection.requests) _loadTickets();
+    final support = _support;
+    support.closeTicket();
+    if (section == SupportSection.requests) support.loadTickets();
   }
 
   /// Runs the existing protected-action flow for a visitor without a session.
@@ -148,77 +108,32 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   String _failureText(
     AppLocalizations l10n,
-    _SupportFailure failure,
+    SupportFailure failure,
     String generic,
   ) {
     return switch (failure) {
-      _SupportFailure.signIn => l10n.supportSignInRequired,
-      _SupportFailure.accountIdentity => l10n.supportErrorAccountIdentity,
-      _SupportFailure.notFound => l10n.supportErrorNotFound,
-      _SupportFailure.closed => l10n.supportErrorClosedReply,
-      _SupportFailure.invalid => l10n.supportErrorInvalid,
-      _SupportFailure.rateLimited => l10n.supportErrorRateLimited,
-      _SupportFailure.generic => generic,
+      SupportFailure.signIn => l10n.supportSignInRequired,
+      SupportFailure.accountIdentity => l10n.supportErrorAccountIdentity,
+      SupportFailure.notFound => l10n.supportErrorNotFound,
+      SupportFailure.closed => l10n.supportErrorClosedReply,
+      SupportFailure.invalid => l10n.supportErrorInvalid,
+      SupportFailure.rateLimited => l10n.supportErrorRateLimited,
+      SupportFailure.generic => generic,
     };
   }
 
-  Future<void> _loadTickets() async {
-    if (_listLoading) return;
-    if (!_signedIn) {
-      setState(() {
-        _tickets = null;
-        _listFailure = _SupportFailure.signIn;
-      });
-      return;
-    }
-    setState(() {
-      _listLoading = true;
-      _listFailure = null;
-    });
-    try {
-      final items = await BackendApiService().getMySupportTickets();
-      if (mounted) setState(() => _tickets = items);
-    } catch (error) {
-      if (mounted) setState(() => _listFailure = _classifyFailure(error));
-    } finally {
-      if (mounted) setState(() => _listLoading = false);
-    }
-  }
-
-  Future<void> _openTicket(String id) async {
-    setState(() {
-      _openId = id;
-      // Never show the previous request's conversation under a new id.
-      if (_ticket?['id']?.toString() != id) _ticket = null;
-      _ticketLoading = true;
-      _ticketFailure = null;
-    });
-    try {
-      final ticket = await BackendApiService().getMySupportTicket(id);
-      if (mounted) setState(() => _ticket = ticket);
-    } catch (error) {
-      // The detail endpoint answers 400 only for a malformed id: report it as
-      // a missing request, not as a form problem.
-      if (mounted) {
-        setState(() {
-          final failure = _classifyFailure(error);
-          _ticketFailure = failure == _SupportFailure.invalid
-              ? _SupportFailure.notFound
-              : failure;
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _ticketLoading = false);
-    }
-  }
-
+  /// The sign-in card's action. The gate reports false even when the visitor
+  /// completed the sign-in journey, so the history is refreshed whenever a
+  /// session exists afterwards, not only when the gate returned true.
   Future<void> _signInThenRefresh() async {
-    if (!await _ensureSignedIn()) return;
-    final id = _openId;
+    await _ensureSignedIn();
+    if (!mounted || !_signedIn) return;
+    final support = _support;
+    final id = support.openId;
     if (id != null) {
-      await _openTicket(id);
+      await support.openTicket(id);
     } else {
-      await _loadTickets();
+      await support.loadTickets();
     }
   }
 
@@ -252,13 +167,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     if (!await _ensureSignedIn() || !mounted) return;
 
     setState(() => _submitting = true);
-    try {
-      await BackendApiService().createSupportTicket(
-        subject: _subject.text.trim(),
-        message: message,
-        kind: bug ? 'bug' : 'support',
-      );
-      if (!mounted) return;
+    final failure = await _support.createTicket(
+      subject: _subject.text.trim(),
+      message: message,
+      kind: bug ? 'bug' : 'support',
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+
+    if (failure == null) {
       for (final controller in [
         _subject,
         _message,
@@ -276,60 +193,36 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         ),
       );
       _go(SupportSection.requests);
-    } catch (error) {
-      if (!mounted) return;
-      final failure = _classifyFailure(error);
-      setState(() {
-        _formError = _failureText(
-          l10n,
-          failure,
-          l10n.supportErrorGeneric,
-        );
-      });
-      if (failure == _SupportFailure.signIn) {
-        await _ensureSignedIn();
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+      return;
+    }
+    setState(() {
+      _formError = _failureText(l10n, failure, l10n.supportErrorGeneric);
+    });
+    if (failure == SupportFailure.signIn) {
+      await _ensureSignedIn();
     }
   }
 
   Future<void> _sendReply() async {
-    final id = _openId;
-    if (_replying || id == null || _ticket == null) return;
+    final support = _support;
+    final id = support.openId;
+    if (support.replying || id == null || support.ticket == null) return;
     final l10n = AppLocalizations.of(context)!;
     final text = _reply.text.trim();
     if (text.isEmpty) {
-      setState(() => _replyError = l10n.supportFormRequiredError);
+      setState(() => _replyFormError = l10n.supportFormRequiredError);
       return;
     }
     if (text.length > _maxMessageLength) {
-      setState(() => _replyError = l10n.supportFormMessageTooLong);
+      setState(() => _replyFormError = l10n.supportFormMessageTooLong);
       return;
     }
     if (!await _ensureSignedIn() || !mounted) return;
 
-    setState(() {
-      _replying = true;
-      _replyError = null;
-    });
-    try {
-      await BackendApiService().replyToSupportTicket(id, text);
-      if (!mounted) return;
-      _reply.clear();
-      await _openTicket(id);
-    } catch (error) {
-      if (!mounted) return;
-      final failure = _classifyFailure(error);
-      setState(() {
-        _replyError = _failureText(l10n, failure, l10n.supportErrorGeneric);
-      });
-      // A 409 means the request closed since it was loaded: refresh it so the
-      // read-only state and hint replace the composer.
-      if (failure == _SupportFailure.closed) await _openTicket(id);
-    } finally {
-      if (mounted) setState(() => _replying = false);
-    }
+    setState(() => _replyFormError = null);
+    final failure = await support.replyToTicket(id, text);
+    if (!mounted) return;
+    if (failure == null) _reply.clear();
   }
 
   String _date(Object? value) {
@@ -590,8 +483,9 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  Widget _requestsList(AppLocalizations l10n) {
-    final tickets = _tickets;
+  Widget _requestsList(AppLocalizations l10n, SupportCenterProvider support) {
+    final tickets = support.tickets;
+    final listFailure = support.listFailure;
     return _panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -600,45 +494,49 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             children: [
               Expanded(child: _heading(l10n.supportCenterSectionRequests)),
               IconButton(
-                onPressed: _listLoading ? null : _loadTickets,
+                onPressed: support.listLoading ? null : support.loadTickets,
                 tooltip: l10n.supportRequestsRefresh,
                 icon: const Icon(Icons.refresh),
               ),
             ],
           ),
-          if (_listLoading)
+          if (support.listLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
               child: Center(child: InlineLoading(width: 40, height: 40)),
             ),
-          if (_listFailure == _SupportFailure.signIn)
+          if (listFailure == SupportFailure.signIn)
             _signInCard(l10n)
-          else if (_listFailure != null)
+          else if (listFailure != null)
             _failureWithRetry(
-              _failureText(l10n, _listFailure!, l10n.supportErrorLoadRequests),
-              _listFailure!,
-              _loadTickets,
+              _failureText(l10n, listFailure, l10n.supportErrorLoadRequests),
+              listFailure,
+              support.loadTickets,
               l10n,
             ),
-          if (!_listLoading &&
-              _listFailure == null &&
+          if (!support.listLoading &&
+              listFailure == null &&
               tickets != null &&
               tickets.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
               child: Text(l10n.supportRequestsEmpty),
             ),
-          if (_listFailure == null && tickets != null)
+          if (listFailure == null && tickets != null)
             for (final item in tickets) ...[
               const Divider(height: 1),
-              _requestTile(item, l10n),
+              _requestTile(item, l10n, support),
             ],
         ],
       ),
     );
   }
 
-  Widget _requestTile(Map<String, dynamic> item, AppLocalizations l10n) {
+  Widget _requestTile(
+    Map<String, dynamic> item,
+    AppLocalizations l10n,
+    SupportCenterProvider support,
+  ) {
     final isBug = item['kind'] == 'bug';
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -652,18 +550,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         '${l10n.supportRequestUpdatedOn(_date(item['updated_at']))}',
       ),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => _openTicket(item['id'].toString()),
+      onTap: () => support.openTicket(item['id'].toString()),
     );
   }
 
   Widget _failureWithRetry(
     String text,
-    _SupportFailure failure,
+    SupportFailure failure,
     VoidCallback retry,
     AppLocalizations l10n,
   ) {
-    final retryable = failure == _SupportFailure.generic ||
-        failure == _SupportFailure.rateLimited;
+    final retryable = failure == SupportFailure.generic ||
+        failure == SupportFailure.rateLimited;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
       child: Column(
@@ -677,17 +575,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  Widget _backToList(AppLocalizations l10n) {
+  Widget _backToList(AppLocalizations l10n, SupportCenterProvider support) {
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: IconButton(
         tooltip: l10n.supportRequestsBack,
-        onPressed: () => setState(() {
-          _openId = null;
-          _ticket = null;
-          _ticketFailure = null;
-          _replyError = null;
-        }),
+        onPressed: () {
+          setState(() => _replyFormError = null);
+          support.closeTicket();
+        },
         icon: const Icon(Icons.arrow_back),
       ),
     );
@@ -713,26 +609,35 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  Widget _requestDetail(AppLocalizations l10n) {
-    final ticket = _ticket;
+  /// The reply error to show: a local validation message, else the server's
+  /// failure for the last reply.
+  String? _replyErrorText(
+    AppLocalizations l10n,
+    SupportCenterProvider support,
+  ) {
+    if (_replyFormError != null) return _replyFormError;
+    final failure = support.replyFailure;
+    if (failure == null) return null;
+    return _failureText(l10n, failure, l10n.supportErrorGeneric);
+  }
+
+  Widget _requestDetail(AppLocalizations l10n, SupportCenterProvider support) {
+    final ticket = support.ticket;
+    final ticketFailure = support.ticketFailure;
     if (ticket == null) {
       return _panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _backToList(l10n),
-            if (_ticketFailure != null)
+            _backToList(l10n, support),
+            if (ticketFailure != null)
               _failureWithRetry(
-                _failureText(
-                  l10n,
-                  _ticketFailure!,
-                  l10n.supportErrorLoadRequest,
-                ),
-                _ticketFailure!,
-                () => _openTicket(_openId!),
+                _failureText(l10n, ticketFailure, l10n.supportErrorLoadRequest),
+                ticketFailure,
+                () => support.openTicket(support.openId!),
                 l10n,
               )
-            else if (_ticketLoading)
+            else if (support.ticketLoading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 child: Center(child: InlineLoading(width: 40, height: 40)),
@@ -746,11 +651,12 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     final rawMessages = ticket['messages'];
     final messages = rawMessages is List ? rawMessages : const <dynamic>[];
     final scheme = Theme.of(context).colorScheme;
+    final replyError = _replyErrorText(l10n, support);
     return _panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _backToList(l10n),
+          _backToList(l10n, support),
           _heading(ticket['subject']?.toString() ?? ''),
           const SizedBox(height: KubusSpacing.xxs),
           Text(
@@ -766,18 +672,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
           const Divider(height: KubusSpacing.xl),
           for (final raw in messages)
             if (raw is Map) _messageView(raw, l10n),
-          if (_ticketLoading)
+          if (support.ticketLoading)
             const Padding(
               padding: EdgeInsets.only(bottom: KubusSpacing.sm),
               child: Center(child: InlineLoading(width: 40, height: 40)),
             ),
-          if (_ticketFailure != null)
+          if (ticketFailure != null)
             _errorText(
-              _failureText(l10n, _ticketFailure!, l10n.supportErrorLoadRequest),
+              _failureText(l10n, ticketFailure, l10n.supportErrorLoadRequest),
             ),
           const Divider(height: KubusSpacing.xl),
-          if (_replyError != null) _errorText(_replyError!),
-          if (closed) _closedNotice(l10n) else _replyComposer(l10n),
+          if (replyError != null) _errorText(replyError),
+          if (closed) _closedNotice(l10n) else _replyComposer(l10n, support),
         ],
       ),
     );
@@ -799,13 +705,13 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  Widget _replyComposer(AppLocalizations l10n) {
+  Widget _replyComposer(AppLocalizations l10n, SupportCenterProvider support) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
           controller: _reply,
-          enabled: !_replying,
+          enabled: !support.replying,
           minLines: 3,
           maxLines: 6,
           maxLength: _maxMessageLength,
@@ -813,24 +719,25 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         ),
         const SizedBox(height: KubusSpacing.sm),
         FilledButton.icon(
-          onPressed: _replying ? null : _sendReply,
+          onPressed: support.replying ? null : _sendReply,
           icon: const Icon(Icons.send_outlined),
           label: Text(
-            _replying ? l10n.supportFormSending : l10n.supportReplySend,
+            support.replying ? l10n.supportFormSending : l10n.supportReplySend,
           ),
         ),
       ],
     );
   }
 
-  Widget _requests(AppLocalizations l10n) {
-    if (_openId != null) return _requestDetail(l10n);
-    return _requestsList(l10n);
+  Widget _requests(AppLocalizations l10n, SupportCenterProvider support) {
+    if (support.openId != null) return _requestDetail(l10n, support);
+    return _requestsList(l10n, support);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final support = context.watch<SupportCenterProvider>();
     final sectionLabels = <SupportSection, String>{
       SupportSection.faq: l10n.supportCenterSectionFaq,
       SupportSection.contact: l10n.supportCenterSectionContact,
@@ -865,17 +772,21 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
+                // With the feature off only the FAQ answers; the request
+                // history makes no ticket calls at all.
                 switch (_section) {
                   SupportSection.faq => _faq(l10n),
                   SupportSection.contact ||
                   SupportSection.bug =>
-                    _supportEnabled
+                    support.supportEnabled
                         ? _requestForm(
                             l10n,
                             bug: _section == SupportSection.bug,
                           )
                         : _unavailableNotice(l10n),
-                  SupportSection.requests => _requests(l10n),
+                  SupportSection.requests => support.supportEnabled
+                      ? _requests(l10n, support)
+                      : _unavailableNotice(l10n),
                 },
               ],
             ),

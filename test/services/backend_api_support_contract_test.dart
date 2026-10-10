@@ -304,6 +304,62 @@ void main() {
     });
   });
 
+  group('support writes are never resent', () {
+    test('a reply that fails with 503 is not sent to another origin', () async {
+      final sentTo = <Uri>[];
+      api.setHttpClient(MockClient((request) async {
+        sentTo.add(request.url);
+        return _error(503, 'Service unavailable');
+      }));
+
+      await expectLater(
+        api.replyToSupportTicket(_ticketId, 'Hello'),
+        throwsA(
+          isA<BackendApiRequestException>()
+              .having((e) => e.statusCode, 'statusCode', 503),
+        ),
+      );
+      // The primary may already have stored the reply; a second origin would
+      // append it again because the contract has no idempotency key.
+      expect(sentTo.where((u) => u.path.endsWith('/replies')), hasLength(1));
+    });
+
+    test('a reply lost to a network error is not resent', () async {
+      final sentTo = <Uri>[];
+      api.setHttpClient(MockClient((request) async {
+        sentTo.add(request.url);
+        throw http.ClientException('connection closed');
+      }));
+
+      await expectLater(
+        api.replyToSupportTicket(_ticketId, 'Hello'),
+        throwsA(isA<http.ClientException>()),
+      );
+      expect(sentTo.where((u) => u.path.endsWith('/replies')), hasLength(1));
+    });
+
+    test('a new request that fails with 503 is not sent to another origin',
+        () async {
+      final sentTo = <Uri>[];
+      api.setHttpClient(MockClient((request) async {
+        sentTo.add(request.url);
+        return _error(503, 'Service unavailable');
+      }));
+
+      await expectLater(
+        api.createSupportTicket(subject: 'Subject', message: 'Message'),
+        throwsA(
+          isA<BackendApiRequestException>()
+              .having((e) => e.statusCode, 'statusCode', 503),
+        ),
+      );
+      expect(
+        sentTo.where((u) => u.path == '/api/support/tickets'),
+        hasLength(1),
+      );
+    });
+  });
+
   group('replyToSupportTicket', () {
     test('posts the trimmed message and completes on 201', () async {
       late http.Request sent;

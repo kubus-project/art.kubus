@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/support_center_provider.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/screens/support_center_screen.dart';
@@ -8,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
@@ -72,6 +76,27 @@ class _Backend {
       .toList();
 }
 
+/// Stands in for the sign-in route. Completing it establishes a session, as
+/// the real journey does, then returns to the screen that asked for it.
+class _FakeSignInRoute extends StatelessWidget {
+  const _FakeSignInRoute();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: FilledButton(
+          onPressed: () {
+            api.setAuthTokenForTesting(_authToken);
+            Navigator.of(context).pop();
+          },
+          child: const Text('Complete sign-in'),
+        ),
+      ),
+    );
+  }
+}
+
 /// Resolved lazily so the singleton is created inside a test zone.
 BackendApiService get api => BackendApiService();
 
@@ -112,23 +137,35 @@ void main() {
     double textScale = 1.0,
     Size size = const Size(800, 1000),
     bool signedIn = true,
+    bool supportEnabled = true,
+    bool dark = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     api.setAuthTokenForTesting(signedIn ? _authToken : null);
+    final themes = ThemeProvider();
     await tester.pumpWidget(
-      MaterialApp(
-        locale: locale,
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
+      ChangeNotifierProvider<SupportCenterProvider>(
+        create: (_) => SupportCenterProvider(supportEnabled: supportEnabled),
+        child: MaterialApp(
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          theme: themes.lightTheme,
+          darkTheme: themes.darkTheme,
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: child!,
           ),
-          child: child!,
+          routes: <String, WidgetBuilder>{
+            '/sign-in': (_) => const _FakeSignInRoute(),
+          },
+          home: SupportCenterScreen(initialSection: section),
         ),
-        home: SupportCenterScreen(initialSection: section),
       ),
     );
     await settle(tester);
@@ -554,6 +591,86 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a slow response for a request the visitor left is ignored',
+        (tester) async {
+      final slowFirst = Completer<http.Response>();
+      backend((request) async {
+        if (request.url.path.endsWith('/ticket-a')) return slowFirst.future;
+        if (request.url.path.endsWith('/ticket-b')) {
+          return _ok(_ticket(
+            id: 'ticket-b',
+            subject: 'Second request',
+            messages: <Map<String, Object?>>[_openingMessage()],
+          ));
+        }
+        return _ok(<Object?>[
+          _ticket(id: 'ticket-a', subject: 'First request'),
+          _ticket(id: 'ticket-b', subject: 'Second request'),
+        ]);
+      });
+      await pumpScreen(tester, section: SupportSection.requests);
+
+      await tester.tap(find.text('First request'));
+      await settle(tester);
+      await tester.tap(find.byTooltip('Back to all requests'));
+      await settle(tester);
+      await tester.tap(find.text('Second request'));
+      await settle(tester);
+      expect(find.text('Second request'), findsOneWidget);
+
+      // The first request answers after the second is on screen.
+      slowFirst.complete(_ok(_ticket(
+        id: 'ticket-a',
+        subject: 'First request',
+        messages: <Map<String, Object?>>[_openingMessage()],
+      )));
+      await settle(tester);
+
+      expect(find.text('First request'), findsNothing);
+      expect(find.text('Second request'), findsOneWidget);
+    });
+
+    testWidgets('finishing sign-in from My requests loads the history',
+        (tester) async {
+      final fake = backend((_) async => _ok(<Object?>[_ticket()]));
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        signedIn: false,
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+      await settle(tester);
+      // The protected-action sheet offers the existing-account path.
+      await tester.tap(find.text('Already have an account? Sign in'));
+      await settle(tester);
+      await tester.tap(find.text('Complete sign-in'));
+      await settle(tester);
+
+      // No second tap: the history is already loaded once the session exists.
+      expect(find.text('Map does not load'), findsOneWidget);
+      expect(fake.requestsTo('GET', '/api/support/tickets'), hasLength(1));
+    });
+
+    testWidgets('with support switched off My requests makes no ticket calls',
+        (tester) async {
+      final fake = backend((_) async => _ok(<Object?>[_ticket()]));
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        supportEnabled: false,
+      );
+
+      expect(
+        find.text(
+          'Support requests are not available right now. The FAQ is still open.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Map does not load'), findsNothing);
+      expect(fake.requests, isEmpty);
+    });
+
     testWidgets('the refresh control and back control expose labels',
         (tester) async {
       backend((_) async => _ok(<Object?>[_ticket()]));
@@ -564,6 +681,83 @@ void main() {
       await settle(tester);
       expect(find.byTooltip('Back to all requests'), findsOneWidget);
     });
+  });
+
+  group('layout matrix', () {
+    final longSubject = 'Subject that keeps going ' * 12;
+    final longMessage = 'Unbroken ${'m' * 300} then ordinary words. ' * 14;
+
+    for (final width in <double>[320, 390, 820, 1440]) {
+      for (final dark in <bool>[false, true]) {
+        final mode = dark ? 'dark' : 'light';
+
+        testWidgets(
+            'long request detail, empty and error states fit at ${width.toInt()} wide in $mode with 2.0 text',
+            (tester) async {
+          var failing = false;
+          var empty = false;
+          backend((request) async {
+            if (failing) return _error(500, 'boom');
+            if (request.url.path.endsWith('/$_ticketId')) {
+              return _ok(_ticket(
+                subject: longSubject,
+                messages: <Map<String, Object?>>[
+                  {
+                    'id': null,
+                    'sender_type': 'user',
+                    'message': longMessage,
+                    'created_at': '2026-10-08T09:00:00.000Z',
+                  },
+                  {
+                    'id': 'm-1',
+                    'sender_type': 'admin',
+                    'message': longMessage,
+                    'created_at': '2026-10-08T12:00:00.000Z',
+                  },
+                ],
+              ));
+            }
+            // The list row stays short so it can be tapped on screen; the
+            // detail carries the long subject and conversation.
+            if (empty) return _ok(<Object?>[]);
+            return _ok(<Object?>[_ticket(subject: 'Short row')]);
+          });
+          await pumpScreen(
+            tester,
+            section: SupportSection.requests,
+            size: Size(width, 900),
+            textScale: 2.0,
+            dark: dark,
+          );
+
+          // Error state with a retry action first.
+          expect(tester.takeException(), isNull);
+          failing = true;
+          await tester.tap(find.byTooltip('Refresh'));
+          await settle(tester);
+          expect(find.text('Try again'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          // Empty history.
+          failing = false;
+          empty = true;
+          await tester.tap(find.byTooltip('Refresh'));
+          await settle(tester);
+          expect(find.text('No requests yet.'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          // Long content in the detail view.
+          empty = false;
+          await tester.tap(find.byTooltip('Refresh'));
+          await settle(tester);
+          await tester.tap(find.text('Short row'));
+          await settle(tester);
+          expect(find.byTooltip('Back to all requests'), findsOneWidget);
+          expect(find.text(longSubject), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 
   group('layout and locale', () {

@@ -7813,7 +7813,11 @@ class BackendApiService
           'message': message.trim(),
           'kind': kind == 'bug' ? 'bug' : 'support',
         }),
+        // The contract has no idempotency key: a create that the primary
+        // stored but answered with a 5xx or lost must not be sent again to
+        // another origin, which would open a duplicate request.
         isIdempotent: false,
+        allowImplicitBackendFailover: false,
       );
       return _asSupportMap(_supportEnvelopeData(response, path: path), path);
     } catch (e) {
@@ -7866,7 +7870,11 @@ class BackendApiService
       ),
       headers: _getHeaders(),
       body: jsonEncode(<String, dynamic>{'message': message.trim()}),
+      // A reply is appended on every successful POST and the contract has no
+      // idempotency key, so it is never resent to another origin. The caller
+      // reloads the ticket to show what the server actually stored.
       isIdempotent: false,
+      allowImplicitBackendFailover: false,
     );
     return _asSupportMap(_supportEnvelopeData(response, path: path), path);
   }

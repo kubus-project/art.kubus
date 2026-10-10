@@ -36,6 +36,7 @@ import 'providers/config_provider.dart';
 import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
+import 'providers/support_center_provider.dart';
 import 'providers/community_hub_provider.dart';
 import 'providers/community_comments_provider.dart';
 import 'providers/community_interactions_provider.dart';
@@ -429,6 +430,9 @@ class _AppLauncherState extends State<AppLauncher> {
         ),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),
+        ),
+        ChangeNotifierProvider<SupportCenterProvider>(
+          create: (_) => SupportCenterProvider(),
         ),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
