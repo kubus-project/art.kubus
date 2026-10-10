@@ -24,18 +24,22 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.commonCancel),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white),
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-                  content: Text(l10n.desktopSettingsExportingDataToast)));
+              ScaffoldMessenger.of(context).showKubusSnackBar(
+                SnackBar(content: Text(l10n.desktopSettingsExportingDataToast)),
+              );
             },
             child: Text(l10n.settingsExportButton),
           ),
@@ -64,14 +68,17 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.commonCancel),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white),
+              backgroundColor: Provider.of<ThemeProvider>(
+                context,
+                listen: false,
+              ).accentColor,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
@@ -79,7 +86,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
               if (!mounted) return;
               navigator.pop();
               messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsCacheClearedToast)));
+                SnackBar(content: Text(l10n.settingsCacheClearedToast)),
+              );
             },
             child: Text(l10n.settingsClearButton),
           ),
@@ -110,21 +118,24 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.commonCancel)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(dialogContext, listen: false)
-                      .accentColor,
+              backgroundColor: Provider.of<ThemeProvider>(
+                dialogContext,
+                listen: false,
+              ).accentColor,
               foregroundColor: Theme.of(dialogContext).colorScheme.onPrimary,
             ),
             onPressed: () async {
               Navigator.pop(dialogContext);
               await _resetPermissionFlags();
               if (!mounted) return;
-              messenger.showKubusSnackBar(SnackBar(
-                  content: Text(l10n.settingsPermissionFlagsResetToast)));
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
+              );
             },
             child: Text(l10n.settingsResetButton),
           ),
@@ -179,8 +190,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                                 _getCapabilityDisplayName(l10n, capability),
                                 style: KubusTextStyles.sectionTitle.copyWith(
                                   fontSize: KubusHeaderMetrics.screenSubtitle,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
@@ -209,7 +221,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
   }
 
   String _getCapabilityDisplayName(
-      AppLocalizations l10n, PlatformCapability capability) {
+    AppLocalizations l10n,
+    PlatformCapability capability,
+  ) {
     switch (capability) {
       case PlatformCapability.camera:
         return l10n.settingsCapabilityCamera;
@@ -238,8 +252,10 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
 
   Future<void> _togglePushNotifications(bool value) async {
     final l10n = AppLocalizations.of(context)!;
-    final notificationProvider =
-        Provider.of<NotificationProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(
+      context,
+      listen: false,
+    );
     if (value) {
       final granted = await PushNotificationService().requestPermission();
       if (!granted) {
@@ -247,7 +263,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
           _applyState(() => _pushNotifications = false);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.settingsEnableNotificationsInSystemToast)),
+              content: Text(l10n.settingsEnableNotificationsInSystemToast),
+            ),
           );
         }
         await _saveSettings();
@@ -384,9 +401,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
               controller: pinController,
               obscureText: true,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.commonPinLabel,
-              ),
+              decoration: InputDecoration(labelText: l10n.commonPinLabel),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -409,75 +424,85 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
               ),
             ),
           ),
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
+          if (_hasPin)
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
 
-              await gate.lock(SecurityLockReason.sensitiveAction);
-              final settled = await gate.waitForResolution();
-              if (settled == null || !settled.isSuccess) {
-                return;
-              }
+                await gate.lock(SecurityLockReason.sensitiveAction);
+                final settled = await gate.waitForResolution();
+                if (settled == null || !settled.isSuccess) {
+                  return;
+                }
 
-              await walletProvider.clearPin();
-              if (!mounted) return;
-              _applyState(() {
-                _requirePin = false;
-                _biometricAuth = false;
-                _useBiometricsOnUnlock = true;
-                _hasPin = false;
-              });
-              await _saveSettings();
-              await gate.reloadSettings();
-              navigator.pop();
-              messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsPinClearedToast)));
-            },
-            child: Text(
-              l10n.settingsClearPinButton,
-              style: KubusTextStyles.navLabel.copyWith(
-                color: Theme.of(context).colorScheme.error,
+                await walletProvider.clearPin();
+                if (!mounted) return;
+                _applyState(() {
+                  _requirePin = false;
+                  _biometricAuth = false;
+                  _useBiometricsOnUnlock = true;
+                  _hasPin = false;
+                });
+                await _saveSettings();
+                await gate.reloadSettings();
+                navigator.pop();
+                messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinClearedToast)),
+                );
+              },
+              child: Text(
+                l10n.settingsClearPinButton,
+                style: KubusTextStyles.navLabel.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
             ),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor),
+              backgroundColor: themeProvider.accentColor,
+            ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
-              if (pin.length < 4 || confirm.length < 4) {
+              if (!RegExp(r'^[0-9]{4,12}$').hasMatch(pin) ||
+                  !RegExp(r'^[0-9]{4,12}$').hasMatch(confirm)) {
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                  SnackBar(content: Text(l10n.settingsPinMinLengthError)),
+                );
                 return;
               }
               if (pin != confirm) {
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                  SnackBar(content: Text(l10n.settingsPinMismatchError)),
+                );
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 final hasPin = await walletProvider.hasPin();
-                final biometricsSupported =
-                    await walletProvider.canUseBiometrics();
+                final biometricsSupported = await walletProvider
+                    .canUseBiometrics();
                 if (!mounted) return;
                 _applyState(() {
                   _hasPin = hasPin;
                   _biometricsSupported = biometricsSupported;
+                  _requirePin = hasPin;
                 });
+                await _saveSettings();
                 await gate.reloadSettings();
                 navigator.pop();
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+                  SnackBar(content: Text(l10n.settingsPinSetSuccessToast)),
+                );
               } catch (_) {
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+                  SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
+                );
               }
             },
             child: Text(
@@ -535,17 +560,23 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
 
     if (confirmed != true || !mounted) return;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final notificationProvider =
-        Provider.of<NotificationProvider>(context, listen: false);
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(
+      context,
+      listen: false,
+    );
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
-      savedItemsProvider:
-          Provider.of<SavedItemsProvider>(context, listen: false),
+      savedItemsProvider: Provider.of<SavedItemsProvider>(
+        context,
+        listen: false,
+      ),
     );
 
     if (!mounted) return;
@@ -648,25 +679,31 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                 Row(
                   children: [
                     _buildThemeModeOption(
-                        l10n.settingsThemeModeLight,
-                        Icons.light_mode,
-                        !themeProvider.isDarkMode &&
-                            !themeProvider.isSystemMode, () {
-                      themeProvider.setThemeMode(ThemeMode.light);
-                    }),
+                      l10n.settingsThemeModeLight,
+                      Icons.light_mode,
+                      !themeProvider.isDarkMode && !themeProvider.isSystemMode,
+                      () {
+                        themeProvider.setThemeMode(ThemeMode.light);
+                      },
+                    ),
                     const SizedBox(width: 12),
                     _buildThemeModeOption(
-                        l10n.settingsThemeModeDark,
-                        Icons.dark_mode,
-                        themeProvider.isDarkMode && !themeProvider.isSystemMode,
-                        () {
-                      themeProvider.setThemeMode(ThemeMode.dark);
-                    }),
+                      l10n.settingsThemeModeDark,
+                      Icons.dark_mode,
+                      themeProvider.isDarkMode && !themeProvider.isSystemMode,
+                      () {
+                        themeProvider.setThemeMode(ThemeMode.dark);
+                      },
+                    ),
                     const SizedBox(width: 12),
-                    _buildThemeModeOption(l10n.settingsThemeModeSystem,
-                        Icons.settings_suggest, themeProvider.isSystemMode, () {
-                      themeProvider.setThemeMode(ThemeMode.system);
-                    }),
+                    _buildThemeModeOption(
+                      l10n.settingsThemeModeSystem,
+                      Icons.settings_suggest,
+                      themeProvider.isSystemMode,
+                      () {
+                        themeProvider.setThemeMode(ThemeMode.system);
+                      },
+                    ),
                   ],
                 ),
               ],
@@ -703,21 +740,26 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color:
-                                isSelected ? Colors.white : Colors.transparent,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.transparent,
                             width: 3,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                      color: color.withValues(alpha: 0.5),
-                                      blurRadius: 8)
+                                    color: color.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                  ),
                                 ]
                               : null,
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 20)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 20,
+                              )
                             : null,
                       ),
                     );
@@ -743,14 +785,14 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         ),
                       ),
                       const SizedBox(
-                          height: KubusSpacing.sm - KubusSpacing.xxs),
+                        height: KubusSpacing.sm - KubusSpacing.xxs,
+                      ),
                       Text(
                         l10n.settingsLanguageDescription,
                         style: KubusTextStyles.sectionSubtitle.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -803,8 +845,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppLocalizations.of(context)!
-                                .settingsReduceEffectsTitle,
+                            AppLocalizations.of(
+                              context,
+                            )!.settingsReduceEffectsTitle,
                             style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -812,15 +855,16 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                           const SizedBox(height: KubusSpacing.xs),
                           Text(
                             autoDetected
-                                ? AppLocalizations.of(context)!
-                                    .settingsReduceEffectsAutoSubtitle
-                                : AppLocalizations.of(context)!
-                                    .settingsReduceEffectsSubtitle,
+                                ? AppLocalizations.of(
+                                    context,
+                                  )!.settingsReduceEffectsAutoSubtitle
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.settingsReduceEffectsSubtitle,
                             style: KubusTextStyles.detailCaption.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -831,15 +875,16 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                       onChanged: (value) {
                         glassProv.setReduceEffects(value);
                       },
-                      activeTrackColor:
-                          Provider.of<ThemeProvider>(context, listen: false)
-                              .accentColor
-                              .withValues(alpha: 0.5),
+                      activeTrackColor: Provider.of<ThemeProvider>(
+                        context,
+                        listen: false,
+                      ).accentColor.withValues(alpha: 0.5),
                       thumbColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
-                          return Provider.of<ThemeProvider>(context,
-                                  listen: false)
-                              .accentColor;
+                          return Provider.of<ThemeProvider>(
+                            context,
+                            listen: false,
+                          ).accentColor;
                         }
                         return null;
                       }),
@@ -855,7 +900,11 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
   }
 
   Widget _buildThemeModeOption(
-      String label, IconData icon, bool isSelected, VoidCallback onTap) {
+    String label,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final themeColor = scheme.tertiary;
 
@@ -890,8 +939,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                 Text(
                   label,
                   style: KubusTextStyles.navLabel.copyWith(
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     color: isSelected ? themeColor : scheme.onSurface,
                   ),
                 ),
@@ -927,7 +977,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     }
 
     final roles = KubusColorRoles.of(context);
-    final canEditEmail = emailPreferencesProvider.canManage &&
+    final canEditEmail =
+        emailPreferencesProvider.canManage &&
         !emailPreferencesProvider.isUpdating;
     final email = emailPreferencesProvider.preferences;
 
@@ -1125,8 +1176,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         notificationPreferences.enabled,
                         saveAfterToggle: false,
                         onChanged: (value) {
-                          final next =
-                              notificationPreferences.copyWith(enabled: value);
+                          final next = notificationPreferences.copyWith(
+                            enabled: value,
+                          );
                           unawaited(persistNotificationPreferences(next));
                         },
                       ),

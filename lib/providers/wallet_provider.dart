@@ -323,9 +323,9 @@ class WalletProvider extends ChangeNotifier {
     try {
       final isSupported = await _localAuth.isDeviceSupported();
       if (!isSupported) return false;
-      final canCheck = await _localAuth.canCheckBiometrics;
       final available = await _localAuth.getAvailableBiometrics();
-      return canCheck || available.isNotEmpty;
+      // Authentication requests biometricOnly: device credentials alone do not qualify.
+      return available.isNotEmpty;
     } catch (e) {
       _walletLog('biometrics check failed: $e');
       return false;
