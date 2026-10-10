@@ -3,6 +3,7 @@ import '../providers/glass_capabilities_provider.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'common/kubus_focus_ring.dart';
 import 'glass_components.dart';
 import 'inline_loading.dart';
 
@@ -201,6 +202,8 @@ class KubusButton extends StatelessWidget {
           return Colors.transparent;
         }),
         shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+        // The shared KubusFocusRing draws the keyboard indicator.
+        side: const WidgetStatePropertyAll(BorderSide.none),
         // Core actions keep a 44 px minimum target on every platform.
         minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
         tapTargetSize: MaterialTapTargetSize.padded,
@@ -237,17 +240,21 @@ class KubusButton extends StatelessWidget {
             child: buttonChild,
           );
 
-    final button = _KubusButtonInteraction(
+    final button = KubusFocusRing(
+      borderRadius: radius,
       enabled: isEnabled,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: borderColor,
-            width: KubusSizes.hairline,
+      child: _KubusButtonInteraction(
+        enabled: isEnabled,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: borderColor,
+              width: KubusSizes.hairline,
+            ),
           ),
+          child: buttonSurface,
         ),
-        child: buttonSurface,
       ),
     );
 
@@ -312,44 +319,49 @@ class KubusOutlineButton extends StatelessWidget {
             ),
           );
 
-    final button = _KubusButtonInteraction(
+    final button = KubusFocusRing(
+      borderRadius: radius,
       enabled: isEnabled,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: borderColor),
-        ),
-        child: DecoratedBox(
+      child: _KubusButtonInteraction(
+        enabled: isEnabled,
+        child: Container(
           decoration: BoxDecoration(
-            color: roles.surface,
             borderRadius: radius,
+            border: Border.all(color: borderColor),
           ),
-          child: OutlinedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: ButtonStyle(
-              foregroundColor: WidgetStatePropertyAll(contentColor),
-              backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-              overlayColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.focused)) {
-                  return roles.focus.withValues(alpha: 0.22);
-                }
-                if (states.contains(WidgetState.hovered) ||
-                    states.contains(WidgetState.pressed)) {
-                  return roles.foreground.withValues(alpha: 0.08);
-                }
-                return Colors.transparent;
-              }),
-              shadowColor: const WidgetStatePropertyAll(Colors.transparent),
-              side: const WidgetStatePropertyAll(BorderSide.none),
-              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
-                horizontal: KubusSpacing.lg,
-                vertical: KubusSpacing.md,
-              )),
-              shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                borderRadius: radius,
-              )),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: roles.surface,
+              borderRadius: radius,
             ),
-            child: content,
+            child: OutlinedButton(
+              onPressed: isLoading ? null : onPressed,
+              style: ButtonStyle(
+                foregroundColor: WidgetStatePropertyAll(contentColor),
+                backgroundColor:
+                    const WidgetStatePropertyAll(Colors.transparent),
+                overlayColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.focused)) {
+                    return roles.focus.withValues(alpha: 0.22);
+                  }
+                  if (states.contains(WidgetState.hovered) ||
+                      states.contains(WidgetState.pressed)) {
+                    return roles.foreground.withValues(alpha: 0.08);
+                  }
+                  return Colors.transparent;
+                }),
+                shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+                side: const WidgetStatePropertyAll(BorderSide.none),
+                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.md,
+                )),
+                shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+                  borderRadius: radius,
+                )),
+              ),
+              child: content,
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
+import '../common/kubus_focus_ring.dart';
 
 @immutable
 class KubusSearchBarStyle {
@@ -356,44 +357,49 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
       textField: widget.semanticsLabel != null,
       child: MouseRegion(
         cursor: mouseCursor,
-        child: AnimatedContainer(
-          duration: widget.animationDuration,
-          curve: widget.animationCurve,
-          decoration: BoxDecoration(
-            borderRadius: style.borderRadius,
-            boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
-          ),
-          // The boundary is painted over the field rather than laid out around
-          // it, so the 1px -> 2px focus ring never moves the text or the icons.
-          foregroundDecoration: BoxDecoration(
-            borderRadius: style.borderRadius,
-            border: Border.all(
-              color: effectiveBorderColor,
-              width: effectiveBorderWidth,
-            ),
-          ),
-          child: LiquidGlassPanel(
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            borderRadius: style.borderRadius,
-            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
-            showBorder: false,
-            backgroundColor: style.backgroundColor,
-            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-            enableBlur: widget.enableBlur,
-            child: wrapWithKubusMapGlassSheen(
-              // On the map, when real blur is unavailable, enrich the flat tint
-              // with the shared static sheen so the search bar matches the rest
-              // of the map chrome instead of looking like a flat panel.
-              show: widget.useMapGlassSurface &&
-                  !(widget.enableBlur &&
-                      GlassCapabilitiesProvider.watchAllowBlurEnabled(context)),
+        child: KubusFocusRing(
+          borderRadius: style.borderRadius,
+          enabled: widget.enabled,
+          child: AnimatedContainer(
+            duration: widget.animationDuration,
+            curve: widget.animationCurve,
+            decoration: BoxDecoration(
               borderRadius: style.borderRadius,
-              isDark: theme.brightness == Brightness.dark,
-              // The field's own border is its one boundary; the sheen's rim
-              // would be a second edge just inside it.
-              showRim: false,
-              child: textField,
+              boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
+            ),
+            // The boundary is painted over the field rather than laid out around
+            // it, so the 1px -> 2px focus ring never moves the text or the icons.
+            foregroundDecoration: BoxDecoration(
+              borderRadius: style.borderRadius,
+              border: Border.all(
+                color: effectiveBorderColor,
+                width: effectiveBorderWidth,
+              ),
+            ),
+            child: LiquidGlassPanel(
+              padding: EdgeInsets.zero,
+              margin: EdgeInsets.zero,
+              borderRadius: style.borderRadius,
+              blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
+              showBorder: false,
+              backgroundColor: style.backgroundColor,
+              fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+              enableBlur: widget.enableBlur,
+              child: wrapWithKubusMapGlassSheen(
+                // On the map, when real blur is unavailable, enrich the flat tint
+                // with the shared static sheen so the search bar matches the rest
+                // of the map chrome instead of looking like a flat panel.
+                show: widget.useMapGlassSurface &&
+                    !(widget.enableBlur &&
+                        GlassCapabilitiesProvider.watchAllowBlurEnabled(
+                            context)),
+                borderRadius: style.borderRadius,
+                isDark: theme.brightness == Brightness.dark,
+                // The field's own border is its one boundary; the sheen's rim
+                // would be a second edge just inside it.
+                showRim: false,
+                child: textField,
+              ),
             ),
           ),
         ),

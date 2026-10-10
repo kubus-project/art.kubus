@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_focus_ring.dart';
 
 /// PRODUCT v5 form language.
 ///
@@ -167,7 +168,11 @@ class KubusFieldFrame extends StatelessWidget {
         children: [
           KubusFieldLabel(label: label, required: required, enabled: enabled),
           const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
-          child,
+          KubusFocusRing(
+            borderRadius: BorderRadius.circular(KubusRadius.control),
+            enabled: enabled,
+            child: child,
+          ),
         ],
       ),
     );
@@ -418,46 +423,50 @@ class _KubusChoiceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     return MergeSemantics(
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        focusColor: roles.focus.withValues(alpha: 0.12),
+      child: KubusFocusRing(
         borderRadius: BorderRadius.circular(KubusRadius.control),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: KubusTextStyles.detailBody.copyWith(
-                          color: enabled
-                              ? roles.foreground
-                              : roles.foregroundMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (description != null &&
-                          description!.trim().isNotEmpty) ...[
-                        const SizedBox(height: KubusSpacing.xxs),
+        enabled: enabled,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          focusColor: roles.focus.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(KubusRadius.control),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          description!,
-                          style: KubusTextStyles.detailCaption.copyWith(
-                            color: roles.foregroundMuted,
+                          title,
+                          style: KubusTextStyles.detailBody.copyWith(
+                            color: enabled
+                                ? roles.foreground
+                                : roles.foregroundMuted,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if (description != null &&
+                            description!.trim().isNotEmpty) ...[
+                          const SizedBox(height: KubusSpacing.xxs),
+                          Text(
+                            description!,
+                            style: KubusTextStyles.detailCaption.copyWith(
+                              color: roles.foregroundMuted,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                control,
-              ],
+                  const SizedBox(width: KubusSpacing.md),
+                  control,
+                ],
+              ),
             ),
           ),
         ),

@@ -375,33 +375,38 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     final isCompact = MediaQuery.of(context).size.width < 400;
     final l10n = AppLocalizations.of(context)!;
 
-    return TextField(
-      controller: _newPostController,
-      minLines: 3,
-      maxLines: null,
-      decoration: InputDecoration(
-        hintText: l10n.communityComposerTextHint,
-        hintStyle: KubusTypography.inter(
+    // The composer's field has no border of its own (borderSide none), so the
+    // keyboard focus indicator is the shared ring.
+    return KubusFocusRing(
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      child: TextField(
+        controller: _newPostController,
+        minLines: 3,
+        maxLines: null,
+        decoration: InputDecoration(
+          hintText: l10n.communityComposerTextHint,
+          hintStyle: KubusTypography.inter(
+            fontSize: isCompact ? 14 : 16,
+            color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          ),
+          filled: true,
+          fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: isCompact ? 12 : 18,
+          ),
+        ),
+        style: KubusTypography.inter(
           fontSize: isCompact ? 14 : 16,
-          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          height: 1.4,
+          color: scheme.onPrimaryContainer,
         ),
-        filled: true,
-        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: isCompact ? 12 : 18,
-        ),
+        textInputAction: TextInputAction.newline,
       ),
-      style: KubusTypography.inter(
-        fontSize: isCompact ? 14 : 16,
-        height: 1.4,
-        color: scheme.onPrimaryContainer,
-      ),
-      textInputAction: TextInputAction.newline,
     );
   }
 

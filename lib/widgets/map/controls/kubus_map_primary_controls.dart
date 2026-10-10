@@ -6,6 +6,8 @@ import '../../../features/map/controller/kubus_map_controller.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
+import '../../common/kubus_focus_ring.dart';
 import '../../common/kubus_glass_icon_button.dart';
 import '../kubus_map_glass_surface.dart';
 import 'map_view_mode_controls.dart';
@@ -697,7 +699,8 @@ class _KubusSquareControlButtonState extends State<_KubusSquareControlButton> {
         final borderColor = active
             ? resolvedAccent.withValues(alpha: 0.85)
             : _focused
-                ? resolvedAccent.withValues(alpha: 0.70)
+                // Structural focus role, never the personal accent.
+                ? KubusColorRoles.of(context).focus.withValues(alpha: 0.70)
                 : scheme.outline.withValues(alpha: _hovered ? 0.34 : 0.18);
         final decoration = BoxDecoration(
           borderRadius: radius,
@@ -719,44 +722,48 @@ class _KubusSquareControlButtonState extends State<_KubusSquareControlButton> {
         );
 
         // Requirement: pointer cursor + visible hover/focus states on desktop.
-        return FocusableActionDetector(
+        return KubusFocusRing(
+          borderRadius: radius,
           enabled: enabled,
-          mouseCursor:
-              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          onShowHoverHighlight: (value) {
-            if (_hovered != value) setState(() => _hovered = value);
-          },
-          onShowFocusHighlight: (value) {
-            if (_focused != value) setState(() => _focused = value);
-          },
-          actions: <Type, Action<Intent>>{
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                resolvedOnTap?.call();
-                return null;
-              },
-            ),
-          },
-          child: ExcludeFocus(
-            child: AnimatedContainer(
-              duration: animationTheme.short,
-              curve: animationTheme.defaultCurve,
-              decoration: decoration,
-              child: buildKubusMapGlassSurface(
-                context: context,
-                kind: KubusMapGlassSurfaceKind.button,
-                borderRadius: radius,
-                tintBase: resolvedTintBase,
-                showBorder: false,
-                boxShadow: const <BoxShadow>[],
-                padding: EdgeInsets.zero,
-                blurPolicy: KubusMapBlurPolicy.forceRealBlur,
-                overlayName: 'map-control-button',
-                enablePlatformBackdropRegion: false,
-                onTap: resolvedOnTap,
-                child: widget.tooltip.isEmpty
-                    ? child
-                    : Tooltip(message: widget.tooltip, child: child),
+          child: FocusableActionDetector(
+            enabled: enabled,
+            mouseCursor:
+                enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+            onShowHoverHighlight: (value) {
+              if (_hovered != value) setState(() => _hovered = value);
+            },
+            onShowFocusHighlight: (value) {
+              if (_focused != value) setState(() => _focused = value);
+            },
+            actions: <Type, Action<Intent>>{
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  resolvedOnTap?.call();
+                  return null;
+                },
+              ),
+            },
+            child: ExcludeFocus(
+              child: AnimatedContainer(
+                duration: animationTheme.short,
+                curve: animationTheme.defaultCurve,
+                decoration: decoration,
+                child: buildKubusMapGlassSurface(
+                  context: context,
+                  kind: KubusMapGlassSurfaceKind.button,
+                  borderRadius: radius,
+                  tintBase: resolvedTintBase,
+                  showBorder: false,
+                  boxShadow: const <BoxShadow>[],
+                  padding: EdgeInsets.zero,
+                  blurPolicy: KubusMapBlurPolicy.forceRealBlur,
+                  overlayName: 'map-control-button',
+                  enablePlatformBackdropRegion: false,
+                  onTap: resolvedOnTap,
+                  child: widget.tooltip.isEmpty
+                      ? child
+                      : Tooltip(message: widget.tooltip, child: child),
+                ),
               ),
             ),
           ),
