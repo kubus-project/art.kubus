@@ -73,7 +73,6 @@ import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
@@ -2162,7 +2161,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     WalkingNavigationProvider navigation,
   ) async {
     final intent = navigation.intent;
-    if (intent != null) await MapNavigation.openExternalWalking(intent);
+    if (intent == null) return;
+    await MapDestination.fromWalkingIntent(intent).openWalkingExternally();
   }
 
   void _viewWalkingDestination(WalkingNavigationProvider navigation) {
@@ -3398,53 +3398,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
-              if (artwork.description.isNotEmpty) ...[
-                const SizedBox(height: KubusSpacing.md),
-                DetailSectionLabel(label: l10n.commonDescription),
-              ],
-              if (artwork.description.isNotEmpty) ...[
-                Text(
-                  artwork.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.5,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.78),
-                      ),
-                  maxLines: 8,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: KubusSpacing.md),
-              ],
-              MarkerAttributionSection.fromMarkerAndArtwork(
-                selectedMarker,
-                artwork,
-              ),
-              DetailSectionLabel(label: l10n.commonDetails),
-              DetailContextCluster(
-                compact: true,
-                items: [
-                  DetailContextItem(
-                    icon: Icons.visibility,
-                    value: '${artwork.viewsCount}',
-                  ),
-                  if (artwork.discoveryCount > 0)
-                    DetailContextItem(
-                      icon: Icons.explore,
-                      value: l10n.desktopMapDiscoveriesCount(
-                        artwork.discoveryCount,
-                      ),
-                    ),
-                ],
-              ),
-              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               DetailActionsSection(
                 title: l10n.commonActions,
                 labelPosition: DetailActionLabelPosition.afterPrimary,
                 primaryToLabelSpacing: KubusSpacing.md,
-                maxVisibleActions: 5,
+                // Six secondary actions at most; Directions is pinned so it
+                // leads the grid and is never moved behind More.
+                maxVisibleActions: 6,
+                secondaryLayout: DetailSecondaryActionLayout.grid,
                 primaryAction: SizedBox(
                   width: double.infinity,
                   child: DetailPrimaryCtaButton(
@@ -3523,6 +3485,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     label: '${artwork.likesCount}',
+                    semanticsLabel:
+                        '${l10n.commonLikes}, ${artwork.likesCount}',
                     onTap: () async {
                       final authenticated =
                           await const ContextualAuthGate().ensureAuthenticated(
@@ -3545,6 +3509,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   DetailSecondaryAction(
                     icon: Icons.comment_outlined,
                     label: '${artwork.commentsCount}',
+                    semanticsLabel:
+                        '${l10n.commonComments}, ${artwork.commentsCount}',
                     onTap: () {
                       _mapCommentsPanelController.openAndScrollToTop();
                     },
@@ -3577,9 +3543,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ).showNavigationOptions(context),
                       ),
                       tooltip: l10n.commonGetDirections,
+                      pinned: true,
                     ),
                 ],
               ),
+              const SizedBox(height: KubusSpacing.lg),
+              if (artwork.description.isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.md),
+                DetailSectionLabel(label: l10n.commonDescription),
+              ],
+              if (artwork.description.isNotEmpty) ...[
+                Text(
+                  artwork.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
+                        height: 1.5,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ],
+              MarkerAttributionSection.fromMarkerAndArtwork(
+                selectedMarker,
+                artwork,
+              ),
+              DetailSectionLabel(label: l10n.commonDetails),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.visibility,
+                    value: '${artwork.viewsCount}',
+                  ),
+                  if (artwork.discoveryCount > 0)
+                    DetailContextItem(
+                      icon: Icons.explore,
+                      value: l10n.desktopMapDiscoveriesCount(
+                        artwork.discoveryCount,
+                      ),
+                    ),
+                ],
+              ),
+              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               if (AppConfig.isFeatureEnabled('collabInvites') && isSignedIn)
                 ArtworkCollaboratorsExpandableCard(

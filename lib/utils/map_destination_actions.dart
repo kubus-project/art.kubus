@@ -14,6 +14,7 @@ import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
 import '../widgets/navigation/kubus_navigation_option_row.dart';
 import 'design_tokens.dart';
+import 'map_coordinate_rules.dart';
 import 'map_navigation.dart';
 
 typedef ArtworkMapOpenCallback = void Function(
@@ -58,25 +59,60 @@ class MapDestination {
     required this.position,
   });
 
+  /// The destination of an in-app walking route, so "open externally" from the
+  /// route goes through this same navigation path.
+  factory MapDestination.fromWalkingIntent(WalkingNavigationIntent intent) =>
+      MapDestination(
+        id: intent.destinationId,
+        title: intent.destinationLabel,
+        position: intent.destination,
+      );
+
   final String id;
   final String title;
   final LatLng position;
 
-  /// Finite, in range, and not the (0, 0) "no coordinate" default that
-  /// unlocated records are stored with.
-  static bool isValidCoordinate(LatLng position) {
-    final latitude = position.latitude;
-    final longitude = position.longitude;
-    if (!latitude.isFinite || !longitude.isFinite) return false;
-    if (latitude < -90 || latitude > 90) return false;
-    if (longitude < -180 || longitude > 180) return false;
-    return !(latitude.abs() < 0.0001 && longitude.abs() < 0.0001);
-  }
+  /// The shared coordinate rule; see [isValidMapCoordinate].
+  static bool isValidCoordinate(LatLng position) =>
+      isValidMapCoordinate(position);
 
   bool get isValid => isValidCoordinate(position);
 
-  String get coordinateText => '${position.latitude.toStringAsFixed(6)}, '
-      '${position.longitude.toStringAsFixed(6)}';
+  /// `lat, lng` at fixed precision, as shown in the copy action.
+  String get coordinateText => '${formatMapCoordinate(position.latitude)}, '
+      '${formatMapCoordinate(position.longitude)}';
+
+  /// The one Google Maps directions form. Coordinates only: MapDestination
+  /// carries no Google place id, so a place id is never sent.
+  Uri _googleDirectionsWebUri({String? travelMode}) => Uri.https(
+        'www.google.com',
+        '/maps/dir/',
+        <String, String>{
+          'api': '1',
+          'destination': _coordinates,
+          if (travelMode != null) 'travelmode': travelMode,
+        },
+      );
+
+  String get _coordinates => '${formatMapCoordinate(position.latitude)},'
+      '${formatMapCoordinate(position.longitude)}';
+
+  /// Walking directions to this place in the web directions form. Used when a
+  /// walking route is handed to an external maps app.
+  Uri get walkingExternalUri => _googleDirectionsWebUri(travelMode: 'walking');
+
+  /// Opens walking directions externally. Returns false for a destination
+  /// without a valid coordinate, so nothing is launched for it.
+  Future<bool> openWalkingExternally({ArtworkLaunchUri? launcher}) async {
+    if (!isValid) return false;
+    final open =
+        launcher ?? (Uri uri, LaunchMode mode) => launchUrl(uri, mode: mode);
+    try {
+      return await open(walkingExternalUri, LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Apple Maps has a safe web fallback, so keep it available alongside the
   /// other external navigation providers on every platform.
@@ -92,9 +128,9 @@ class MapDestination {
     ArtworkExternalMapDestination destination, {
     required TargetPlatform platform,
   }) {
-    final latitude = position.latitude.toString();
-    final longitude = position.longitude.toString();
-    final coordinates = '$latitude,$longitude';
+    final coordinates = _coordinates;
+    final latitude = formatMapCoordinate(position.latitude);
+    final longitude = formatMapCoordinate(position.longitude);
     final label = title.trim().isEmpty ? coordinates : title.trim();
 
     switch (destination) {
@@ -111,15 +147,10 @@ class MapDestination {
                   )
                 : null;
         // Web fallback is the directions form, so desktop opens route
-        // planning rather than a bare search pin. No destination_place_id is
-        // carried (MapDestination has no Google place id), so coordinates only.
+        // planning rather than a bare search pin.
         return <Uri>[
           if (appUri != null) appUri,
-          Uri.https(
-            'www.google.com',
-            '/maps/dir/',
-            <String, String>{'api': '1', 'destination': coordinates},
-          ),
+          _googleDirectionsWebUri(),
         ];
       case ArtworkExternalMapDestination.appleMaps:
         return <Uri>[

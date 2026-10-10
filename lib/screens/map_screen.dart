@@ -73,7 +73,7 @@ import '../utils/art_marker_list_diff.dart';
 import '../utils/debouncer.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
-import '../utils/map_navigation.dart';
+import '../utils/map_destination_actions.dart';
 import '../utils/map_viewport_utils.dart';
 import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
@@ -4745,7 +4745,8 @@ class _MapScreenState extends State<MapScreen>
     WalkingNavigationProvider navigation,
   ) async {
     final intent = navigation.intent;
-    if (intent != null) await MapNavigation.openExternalWalking(intent);
+    if (intent == null) return;
+    await MapDestination.fromWalkingIntent(intent).openWalkingExternally();
   }
 
   void _viewWalkingDestination(WalkingNavigationProvider navigation) {

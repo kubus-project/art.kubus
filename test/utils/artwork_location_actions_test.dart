@@ -349,7 +349,7 @@ void main() {
       destination: LatLng(46.056946, 14.505751),
     );
 
-    final uri = MapNavigation.externalWalkingUri(intent);
+    final uri = MapDestination.fromWalkingIntent(intent).walkingExternalUri;
 
     expect(uri.host, 'www.google.com');
     expect(uri.queryParameters['destination'], '46.056946,14.505751');

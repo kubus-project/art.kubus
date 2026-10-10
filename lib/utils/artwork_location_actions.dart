@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/artwork.dart';
+import 'map_coordinate_rules.dart';
 import 'map_destination_actions.dart';
 import 'map_navigation.dart';
 
@@ -21,17 +22,9 @@ export 'map_destination_actions.dart'
 class ArtworkLocationActions {
   const ArtworkLocationActions._();
 
-  static bool hasValidLocation(Artwork artwork) {
-    final latitude = artwork.position.latitude;
-    final longitude = artwork.position.longitude;
-    return artwork.hasValidLocation &&
-        latitude.isFinite &&
-        longitude.isFinite &&
-        latitude >= -90 &&
-        latitude <= 90 &&
-        longitude >= -180 &&
-        longitude <= 180;
-  }
+  /// The shared coordinate rule; see [isValidMapCoordinate].
+  static bool hasValidLocation(Artwork artwork) =>
+      isValidMapCoordinate(artwork.position);
 
   static MapDestination destinationOf(Artwork artwork) => MapDestination(
         id: artwork.id,

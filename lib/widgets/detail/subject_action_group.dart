@@ -3,11 +3,6 @@ import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 
-/// A labeled, wrapping group for actions that share one subject-page intent.
-///
-/// Core actions remain text-labeled and at least 48 logical pixels high on
-/// compact screens. Selection is exposed as a semantic toggle, not by color
-/// alone. The component uses flat v5 surfaces and structural rules.
 /// How a group lays its actions out.
 ///
 /// [wrap] is the default: labeled buttons that wrap onto further lines.
@@ -16,6 +11,11 @@ import '../../utils/kubus_color_roles.dart';
 /// equal-width icon buttons, each with a tooltip and the same spoken label.
 enum SubjectActionLayout { wrap, rowWithPrimary }
 
+/// A labeled, wrapping group for actions that share one subject-page intent.
+///
+/// Core actions remain text-labeled and at least 48 logical pixels high on
+/// compact screens. Selection is exposed as a semantic toggle, not by color
+/// alone. The component uses flat v5 surfaces and structural rules.
 class SubjectActionGroup extends StatelessWidget {
   const SubjectActionGroup({
     required this.label,
@@ -60,6 +60,7 @@ class SubjectActionGroup extends StatelessWidget {
   }
 
   Widget _buildRowWithPrimary() {
+    if (actions.isEmpty) return const SizedBox.shrink();
     final primary = actions.first;
     final secondary = actions.skip(1).toList(growable: false);
     return Column(
@@ -69,7 +70,16 @@ class SubjectActionGroup extends StatelessWidget {
           key: ValueKey<String>('subject_action_primary:${primary.label}'),
           action: primary,
         ),
-        if (secondary.isNotEmpty) ...[
+        // A lone secondary action keeps its label: stretched across the full
+        // width, an icon-only tile would be an unlabeled bar.
+        if (secondary.length == 1) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          _SubjectActionButton(
+            key: ValueKey<String>(
+                'subject_action_secondary:${secondary[0].label}'),
+            action: secondary[0],
+          ),
+        ] else if (secondary.length > 1) ...[
           const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [

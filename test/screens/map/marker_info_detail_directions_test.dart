@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
@@ -79,18 +80,56 @@ void main() {
         findsOneWidget);
   });
 
-  test('no map surface hard-codes a single directions provider', () {
-    // The desktop panel used to launch a Google Maps URL directly, bypassing
-    // the provider choice, the coordinate validity rule and the web fallbacks.
-    for (final path in <String>[
-      'lib/screens/desktop/desktop_map_screen.dart',
-      'lib/screens/map_screen.dart',
-      'lib/screens/map/marker_info_detail_screen.dart',
-      'lib/features/map/shared/map_marker_overlay_actions.dart',
-    ]) {
-      final source = File(path).readAsStringSync();
-      expect(source, isNot(contains('google.com/maps/dir')), reason: path);
-      expect(source, isNot(contains('canLaunchUrl')), reason: path);
+  test('every directions link is built in MapDestination, nowhere else', () {
+    // One navigation path. Across all of lib/, only map_destination_actions.dart
+    // may name a maps provider scheme, host or directions form, construct a
+    // geo: URI, or launch a URL near map code. The desktop panel and the
+    // walking route once launched Google Maps URLs directly, which bypassed
+    // the provider choice, the coordinate rule and the web fallbacks.
+    const allowed = 'lib/utils/map_destination_actions.dart';
+    const providerTokens = <String>[
+      'maps/dir',
+      'google.navigation',
+      'comgooglemaps',
+      'maps.apple.com',
+      'google.com/maps',
+      "'geo'",
+      'geo:',
+    ];
+    final files = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))
+        .toList(growable: false);
+    expect(files, isNotEmpty);
+
+    // A map reference, not the Dart type Map<K, V>.
+    final mapReference = RegExp(
+      r'\b(?:maps?|maplibre|openstreetmap)\b(?!\s*<)|'
+      r'Map(?:Destination|Navigation|Screen|Marker|Overlay)',
+      caseSensitive: false,
+    );
+    final offenders = <String>[];
+    for (final file in files) {
+      final path = file.path.replaceAll('\\', '/');
+      if (path.endsWith(allowed)) continue;
+      final source = file.readAsStringSync();
+      for (final token in providerTokens) {
+        if (source.contains(token)) {
+          offenders.add('$path names "$token"');
+        }
+      }
+      final lines = source.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        if (!lines[i].contains('launchUrl(')) continue;
+        final from = math.max(0, i - 8);
+        final to = math.min(lines.length, i + 9);
+        final window = lines.sublist(from, to).join('\n');
+        if (mapReference.hasMatch(window)) {
+          offenders.add('$path:${i + 1} launches a URL near map code');
+        }
+      }
     }
+    expect(offenders, isEmpty, reason: offenders.join('\n'));
   });
 }

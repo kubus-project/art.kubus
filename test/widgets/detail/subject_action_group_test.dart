@@ -262,6 +262,48 @@ void main() {
       expect(fired, _order);
     });
   });
+
+  testWidgets('a row layout with no actions renders nothing and does not throw',
+      (tester) async {
+    await tester.pumpWidget(_app(
+      const SubjectActionGroup(
+        label: 'Spatial',
+        actions: <SubjectAction>[],
+        layout: SubjectActionLayout.rowWithPrimary,
+      ),
+    ));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Spatial'), findsNothing);
+  });
+
+  testWidgets('a lone secondary action in the row layout keeps its label',
+      (tester) async {
+    await tester.pumpWidget(_app(
+      const SubjectActionGroup(
+        label: 'Spatial',
+        layout: SubjectActionLayout.rowWithPrimary,
+        actions: [
+          SubjectAction(
+            icon: Icons.map_outlined,
+            label: 'Show on map',
+            onPressed: _noop,
+          ),
+          SubjectAction(
+            icon: Icons.navigation_outlined,
+            label: 'Navigate',
+            onPressed: _noop,
+          ),
+        ],
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.text('Show on map'), findsOneWidget);
+    expect(find.text('Navigate'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _app(Widget child) => MaterialApp(

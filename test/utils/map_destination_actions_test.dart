@@ -1,8 +1,12 @@
+import 'package:art_kubus/features/map/navigation/walking_navigation_models.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/utils/map_destination_actions.dart';
+import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/utils/artwork_location_actions.dart';
+import 'package:art_kubus/utils/map_coordinate_rules.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const _ljubljana = LatLng(46.0569, 14.5058);
 
@@ -110,7 +114,7 @@ void main() {
       expect(web.host, 'www.google.com');
       expect(web.path, '/maps/dir/');
       expect(web.queryParameters['api'], '1');
-      expect(web.queryParameters['destination'], '46.0569,14.5058');
+      expect(web.queryParameters['destination'], '46.056900,14.505800');
       expect(web.path, isNot(contains('search')));
       expect(web.queryParameters.containsKey('query'), isFalse);
     });
@@ -186,8 +190,130 @@ void main() {
           .tap(find.byKey(const ValueKey('navigation-option-googleMaps')));
       await tester.pumpAndSettle();
       expect(opened, isNotEmpty);
-      expect(
-          Uri.decodeFull(opened.first.toString()), contains('46.0569,14.5058'));
+      expect(Uri.decodeFull(opened.first.toString()),
+          contains('46.056900,14.505800'));
+    });
+  });
+
+  group('one coordinate rule', () {
+    Artwork artworkAt(LatLng position) => Artwork(
+          id: 'artwork-rule',
+          title: 'Rule',
+          artist: 'Artist',
+          description: 'Description',
+          position: position,
+          rewards: 0,
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          category: 'Mural',
+        );
+
+    test('artwork, location actions and destination agree on every case', () {
+      final cases = <LatLng>[
+        const LatLng(46.0569, 14.5058),
+        const LatLng(0, 0),
+        const LatLng(0.00005, -0.00005),
+        const LatLng(0, 14.5),
+        const LatLng(90, 180),
+        const LatLng(90.5, 14.5),
+        const LatLng(46, 180.5),
+        LatLng(double.nan, 14.5),
+        LatLng(46, double.infinity),
+      ];
+      for (final position in cases) {
+        final expected = isValidMapCoordinate(position);
+        expect(MapDestination.isValidCoordinate(position), expected,
+            reason: '$position');
+        expect(artworkAt(position).hasValidLocation, expected,
+            reason: '$position');
+        expect(
+          ArtworkLocationActions.hasValidLocation(artworkAt(position)),
+          expected,
+          reason: '$position',
+        );
+      }
+    });
+  });
+
+  group('serialization and walking handoff', () {
+    test('coordinates serialize at fixed precision, never as exponents', () {
+      final destination = MapDestination(
+        id: 'tiny',
+        title: 'Tiny',
+        position: const LatLng(0.0000001, 14.5),
+      );
+      final osm = destination.externalUris(
+        ArtworkExternalMapDestination.openStreetMap,
+        platform: TargetPlatform.windows,
+      );
+      expect(osm.single.queryParameters['mlat'], '0.000000');
+      expect(osm.single.queryParameters['mlon'], '14.500000');
+      final google = destination.externalUris(
+        ArtworkExternalMapDestination.googleMaps,
+        platform: TargetPlatform.windows,
+      );
+      expect(google.last.queryParameters['destination'], '0.000000,14.500000');
+      for (final uri in [...osm, ...google]) {
+        expect(uri.toString(), isNot(contains('e-')), reason: '$uri');
+      }
+    });
+
+    test('walking directions open externally in walking mode', () async {
+      Uri? opened;
+      LaunchMode? mode;
+      final didOpen = await MapDestination.fromWalkingIntent(
+        const WalkingNavigationIntent(
+          destinationId: 'artwork-1',
+          destinationLabel: 'Artwork',
+          destination: LatLng(46.056946, 14.505751),
+        ),
+      ).openWalkingExternally(
+        launcher: (uri, launchMode) async {
+          opened = uri;
+          mode = launchMode;
+          return true;
+        },
+      );
+
+      expect(didOpen, isTrue);
+      expect(opened!.host, 'www.google.com');
+      expect(opened!.path, '/maps/dir/');
+      expect(opened!.queryParameters['api'], '1');
+      expect(opened!.queryParameters['destination'], '46.056946,14.505751');
+      expect(opened!.queryParameters['travelmode'], 'walking');
+      expect(opened!.queryParameters.containsKey('query'), isFalse);
+      expect(mode, LaunchMode.externalApplication);
+    });
+
+    test('an unlocated walking destination launches nothing', () async {
+      var launched = false;
+      final didOpen = await MapDestination.fromWalkingIntent(
+        const WalkingNavigationIntent(
+          destinationId: 'artwork-2',
+          destinationLabel: 'Unlocated',
+          destination: LatLng(0, 0),
+        ),
+      ).openWalkingExternally(
+        launcher: (_, __) async {
+          launched = true;
+          return true;
+        },
+      );
+      expect(didOpen, isFalse);
+      expect(launched, isFalse);
+    });
+
+    test('the walking handoff keeps the route destination identity', () {
+      final destination = MapDestination.fromWalkingIntent(
+        const WalkingNavigationIntent(
+          destinationId: 'artwork-3',
+          destinationLabel: 'Route end',
+          destination: LatLng(46.0569, 14.5058),
+        ),
+      );
+      expect(destination.id, 'artwork-3');
+      expect(destination.title, 'Route end');
+      expect(destination.position, const LatLng(46.0569, 14.5058));
     });
   });
 }
