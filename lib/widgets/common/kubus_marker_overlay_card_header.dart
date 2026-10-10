@@ -10,6 +10,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
     required Artwork? artwork,
     required bool canPresentExhibition,
     required VoidCallback? onTitleTap,
+    required FocusNode titleFocusNode,
     required String? linkedSubjectTypeLabel,
     required String? linkedSubjectTitle,
     required String? linkedSubjectSubtitle,
@@ -73,11 +74,12 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                 const SizedBox(height: KubusSpacing.xxs),
               ],
               if (onTitleTap != null)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onTitleTap,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(0),
+                  child: _OverlayKeyboardTitle(
+                    focusNode: titleFocusNode,
+                    onActivate: onTitleTap,
+                    accent: baseColor,
                     child: titleWidget,
                   ),
                 )
@@ -156,10 +158,13 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
           ),
         ),
         const SizedBox(width: KubusSpacing.sm),
-        _OverlayIconButton(
-          icon: Icons.close,
-          tooltip: l10n.commonClose,
-          onTap: onClose,
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(1),
+          child: _OverlayIconButton(
+            icon: Icons.close,
+            tooltip: l10n.commonClose,
+            onTap: onClose,
+          ),
         ),
       ],
     );

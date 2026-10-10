@@ -10,6 +10,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/keyboard_activation_tracker.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../artwork_creator_byline.dart';
@@ -18,6 +19,7 @@ import '../map/kubus_map_glass_surface.dart';
 import 'kubus_cached_image.dart';
 import 'marker_attribution_section.dart';
 
+part 'kubus_marker_overlay_card_focus.dart';
 part 'kubus_marker_overlay_card_support.dart';
 part 'kubus_marker_overlay_card_header.dart';
 part 'kubus_marker_overlay_card_media.dart';
@@ -87,6 +89,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.onHorizontalDragEnd,
     this.maxWidth,
     this.maxHeight,
+    this.fallbackFocusNode,
   });
 
   final ArtMarker marker;
@@ -133,6 +136,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   /// Optional sizing hints.
   final double? maxWidth;
   final double? maxHeight;
+
+  /// Where keyboard focus goes when a card opened from the keyboard closes and
+  /// the control that opened it is gone (the map search field, for example).
+  final FocusNode? fallbackFocusNode;
 
   /// Resolves the vertical composition for this card inside [availableHeight].
   ///
@@ -200,6 +207,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _MarkerOverlayFocusHost(
+      fallbackFocusNode: fallbackFocusNode,
+      builder: _buildCard,
+    );
+  }
+
+  Widget _buildCard(BuildContext context, FocusNode entryFocusNode) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     const cardPadding = MarkerOverlayCardMetrics.cardPadding;
@@ -352,6 +366,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                   artwork: artwork,
                   canPresentExhibition: canPresentExhibition,
                   onTitleTap: resolvedTitleTap,
+                  titleFocusNode: entryFocusNode,
                   linkedSubjectTypeLabel: linkedSubjectTypeLabel,
                   linkedSubjectTitle: linkedSubjectTitle,
                   linkedSubjectSubtitle: linkedSubjectSubtitle,

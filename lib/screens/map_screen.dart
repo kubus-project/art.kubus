@@ -68,6 +68,7 @@ import '../utils/creator_shell_navigation.dart';
 
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
+import '../utils/keyboard_activation_tracker.dart';
 import '../utils/kubus_map_tokens.dart';
 import '../utils/art_marker_list_diff.dart';
 import '../utils/debouncer.dart';
@@ -386,6 +387,8 @@ class _MapScreenState extends State<MapScreen>
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
+  final FocusNode _mapSearchFocusNode =
+      FocusNode(debugLabel: 'mobile_map_search');
 
   KubusMapFilterState _filterState = KubusMapFilterState.defaults();
   Map<ArtMarkerType, bool> get _markerLayerVisibility => <ArtMarkerType, bool>{
@@ -665,6 +668,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
@@ -2167,6 +2171,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    _mapSearchFocusNode.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
@@ -4159,94 +4164,104 @@ class _MapScreenState extends State<MapScreen>
                         KubusMapBackdropStrategy.platformViewBackdropHost ||
                     backdropDecision.strategy ==
                         KubusMapBackdropStrategy.nativeBackdropHost);
-            return PopScope(
-              canPop: ui.contextSurface == MapContextSurface.none,
-              onPopInvokedWithResult: (didPop, _) {
-                if (!didPop) _handleMapContextBack();
+            // Escape does what Back does on the desktop map: it closes the
+            // innermost surface, including the quick card, from wherever focus
+            // is (the card is keyboard-reachable now).
+            return CallbackShortcuts(
+              bindings: <ShortcutActivator, VoidCallback>{
+                const SingleActivator(LogicalKeyboardKey.escape): () {
+                  _handleMapContextBack();
+                },
               },
-              child: KubusMapBackdropScope(
-                controller: _mapBackdropHostController,
-                child: Stack(
-                  children: [
-                    KeyedSubtree(
-                      key: _tutorialMapKey,
-                      child: IgnorePointer(
-                        ignoring: _isSheetInteracting,
-                        child: _mapViewMounted
-                            ? _buildMap(
-                                themeProvider,
-                                attributionBottomMargin:
-                                    attributionBottomMargin,
-                              )
-                            : const SizedBox.expand(
-                                child: ColoredBox(color: Colors.transparent),
-                              ),
-                      ),
-                    ),
-                    if (platformBackdropHostEnabled)
-                      KubusMapPlatformBackdropHost(
-                        controller: _mapBackdropHostController,
-                        enabled: true,
-                      ),
-                    if (_isSheetBlocking || _isSheetInteracting)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: ValueListenableBuilder<double>(
-                          valueListenable: _nearbySheetExtentNotifier,
-                          builder: (context, extent, _) {
-                            final blockerHeight =
-                                constraints.maxHeight * extent;
-                            return SizedBox(
-                              height: blockerHeight,
-                              child: const AbsorbPointer(
-                                absorbing: true,
-                                child: SizedBox.expand(),
-                              ),
-                            );
-                          },
+              child: PopScope(
+                canPop: ui.contextSurface == MapContextSurface.none,
+                onPopInvokedWithResult: (didPop, _) {
+                  if (!didPop) _handleMapContextBack();
+                },
+                child: KubusMapBackdropScope(
+                  controller: _mapBackdropHostController,
+                  child: Stack(
+                    children: [
+                      KeyedSubtree(
+                        key: _tutorialMapKey,
+                        child: IgnorePointer(
+                          ignoring: _isSheetInteracting,
+                          child: _mapViewMounted
+                              ? _buildMap(
+                                  themeProvider,
+                                  attributionBottomMargin:
+                                      attributionBottomMargin,
+                                )
+                              : const SizedBox.expand(
+                                  child: ColoredBox(color: Colors.transparent),
+                                ),
                         ),
                       ),
-                    if (ui.contextSurface == MapContextSurface.none ||
-                        ui.contextSurface == MapContextSurface.markerPreview)
-                      _buildPrimaryControls(ui),
-                    // Walking navigation is a focused, full-bleed mode: the
-                    // browse chrome (search, Discovery Path, Nearby Art) is
-                    // suppressed so only the map, the route, the instruction
-                    // panel, and the exit affordance remain.
-                    if (!_isWalkingFocusedMode &&
-                        (ui.contextSurface == MapContextSurface.none ||
-                            ui.contextSurface == MapContextSurface.nearby ||
-                            ui.contextSurface ==
-                                MapContextSurface.markerPreview))
-                      _buildBottomSheet(
-                        theme,
-                        filteredArtworks,
-                        discoveryProgress,
-                        isLoadingArtworks,
-                      ),
-                    if (!_isWalkingFocusedMode)
-                      _buildTopOverlays(theme, themeProvider, taskProvider),
-                    // Engagement prompt. Only in the plain browse state, and
-                    // seated above the Nearby peek and the map attribution
-                    // (attributionBottomMargin already accounts for both), so
-                    // it never covers map chrome or credit.
-                    if (!_isWalkingFocusedMode &&
-                        ui.contextSurface == MapContextSurface.none)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: attributionBottomMargin + KubusSpacing.md,
-                        child: const KubusActivationPromptCard(),
-                      ),
-                    if (ui.contextSurface == MapContextSurface.markerPreview)
-                      _buildMarkerOverlay(themeProvider, ui.markerSelection),
-                    // Walking navigation owns foreground camera/UI priority.
-                    if (widget.walkingNavigationIntent != null)
-                      _buildWalkingNavigationOverlay(),
-                    if (_isWalkingFocusedMode) _buildWalkingExitButton(),
-                  ],
+                      if (platformBackdropHostEnabled)
+                        KubusMapPlatformBackdropHost(
+                          controller: _mapBackdropHostController,
+                          enabled: true,
+                        ),
+                      if (_isSheetBlocking || _isSheetInteracting)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ValueListenableBuilder<double>(
+                            valueListenable: _nearbySheetExtentNotifier,
+                            builder: (context, extent, _) {
+                              final blockerHeight =
+                                  constraints.maxHeight * extent;
+                              return SizedBox(
+                                height: blockerHeight,
+                                child: const AbsorbPointer(
+                                  absorbing: true,
+                                  child: SizedBox.expand(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      if (ui.contextSurface == MapContextSurface.none ||
+                          ui.contextSurface == MapContextSurface.markerPreview)
+                        _buildPrimaryControls(ui),
+                      // Walking navigation is a focused, full-bleed mode: the
+                      // browse chrome (search, Discovery Path, Nearby Art) is
+                      // suppressed so only the map, the route, the instruction
+                      // panel, and the exit affordance remain.
+                      if (!_isWalkingFocusedMode &&
+                          (ui.contextSurface == MapContextSurface.none ||
+                              ui.contextSurface == MapContextSurface.nearby ||
+                              ui.contextSurface ==
+                                  MapContextSurface.markerPreview))
+                        _buildBottomSheet(
+                          theme,
+                          filteredArtworks,
+                          discoveryProgress,
+                          isLoadingArtworks,
+                        ),
+                      if (!_isWalkingFocusedMode)
+                        _buildTopOverlays(theme, themeProvider, taskProvider),
+                      // Engagement prompt. Only in the plain browse state, and
+                      // seated above the Nearby peek and the map attribution
+                      // (attributionBottomMargin already accounts for both), so
+                      // it never covers map chrome or credit.
+                      if (!_isWalkingFocusedMode &&
+                          ui.contextSurface == MapContextSurface.none)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: attributionBottomMargin + KubusSpacing.md,
+                          child: const KubusActivationPromptCard(),
+                        ),
+                      if (ui.contextSurface == MapContextSurface.markerPreview)
+                        _buildMarkerOverlay(themeProvider, ui.markerSelection),
+                      // Walking navigation owns foreground camera/UI priority.
+                      if (widget.walkingNavigationIntent != null)
+                        _buildWalkingNavigationOverlay(),
+                      if (_isWalkingFocusedMode) _buildWalkingExitButton(),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -5092,6 +5107,7 @@ class _MapScreenState extends State<MapScreen>
         distanceText: pageDistanceText,
         onClose: _dismissSelectedMarker,
         onOpenDetails: openDetails,
+        fallbackFocusNode: _mapSearchFocusNode,
         actions: overlayActions,
         stackCount: stack.length,
         stackIndex: stackIndex,
@@ -5626,6 +5642,7 @@ class _MapScreenState extends State<MapScreen>
         isCompact ? KubusHeaderMetrics.searchBarHeight + 6 : null;
     return KubusGeneralSearch(
       controller: _mapSearchController,
+      focusNode: _mapSearchFocusNode,
       hintText: l10n.mapSearchHint,
       semanticsLabel: l10n.mapSearchHint,
       enableBlur: kubusMapBlurEnabled(context),

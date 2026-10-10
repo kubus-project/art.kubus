@@ -267,6 +267,7 @@ class MapDestination {
       ),
     ];
 
+    final invoker = FocusManager.instance.primaryFocus;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -392,6 +393,16 @@ class MapDestination {
         );
       },
     );
+    _returnFocus(invoker);
+  }
+
+  /// Gives keyboard focus back to the control that opened the sheet, when that
+  /// control is still on screen. Flutter does not restore focus on dismissal,
+  /// so without this a keyboard user loses their place in a quick card.
+  static void _returnFocus(FocusNode? node) {
+    final context = node?.context;
+    if (node == null || context == null || !context.mounted) return;
+    if (node.canRequestFocus) node.requestFocus();
   }
 
   Future<void> _launchAndReport(

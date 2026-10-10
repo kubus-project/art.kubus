@@ -39,9 +39,16 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
                     for (var i = 0; i < actionRows[rowIndex].length; i++) ...[
                       if (i > 0) const SizedBox(width: KubusSpacing.xs),
                       Expanded(
-                        child: _OverlayActionButton(
-                          spec: actionRows[rowIndex][i],
-                          showLabel: !iconOnlyActions,
+                        child: FocusTraversalOrder(
+                          // Rows are filled in list order, so the flat index
+                          // is the visual reading order.
+                          order: NumericFocusOrder(
+                            2.0 + rowIndex * rowSize + i,
+                          ),
+                          child: _OverlayActionButton(
+                            spec: actionRows[rowIndex][i],
+                            showLabel: !iconOnlyActions,
+                          ),
                         ),
                       ),
                     ],
@@ -54,30 +61,37 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
             ],
             if (stackCount > 1) ...[
               Center(
-                child: _OverlayPager(
-                  count: stackCount,
-                  index: stackIndex,
-                  accent: baseColor,
-                  inactiveColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  arrowColor: scheme.onSurfaceVariant,
-                  onPrevious: onPreviousStacked,
-                  onNext: onNextStacked,
-                  onSelectIndex: onSelectStackIndex,
+                child: FocusTraversalOrder(
+                  order: NumericFocusOrder(2.0 + actions.length),
+                  child: _OverlayPager(
+                    count: stackCount,
+                    index: stackIndex,
+                    accent: baseColor,
+                    inactiveColor:
+                        scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    arrowColor: scheme.onSurfaceVariant,
+                    onPrevious: onPreviousStacked,
+                    onNext: onNextStacked,
+                    onSelectIndex: onSelectStackIndex,
+                  ),
                 ),
               ),
               const SizedBox(height: KubusSpacing.sm),
             ],
             SizedBox(
               width: double.infinity,
-              child: Semantics(
-                label: primaryActionLabel,
-                button: true,
-                child: _OverlayPrimaryButton(
-                  accent: baseColor,
-                  foregroundColor: actionFg,
-                  onPressed: onPrimaryAction,
-                  icon: primaryActionIcon,
+              child: FocusTraversalOrder(
+                order: NumericFocusOrder(3.0 + actions.length),
+                child: Semantics(
                   label: primaryActionLabel,
+                  button: true,
+                  child: _OverlayPrimaryButton(
+                    accent: baseColor,
+                    foregroundColor: actionFg,
+                    onPressed: onPrimaryAction,
+                    icon: primaryActionIcon,
+                    label: primaryActionLabel,
+                  ),
                 ),
               ),
             ),

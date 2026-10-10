@@ -48,6 +48,7 @@ import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
+import '../../utils/keyboard_activation_tracker.dart';
 import '../../utils/map_destination_actions.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_perf_tracker.dart';
@@ -397,6 +398,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.markerRefreshInterval;
 
   late final KubusSearchController _mapSearchController;
+  final FocusNode _mapSearchFocusNode =
+      FocusNode(debugLabel: 'desktop_map_search');
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   TutorialOverlayController? _tutorialOverlayController;
@@ -508,6 +511,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _cameraZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
@@ -2380,6 +2384,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
     _markerSyncEngine.dispose();
+    _mapSearchFocusNode.dispose();
     MapAttributionHelper.setDesktopMapEnabled(false);
     _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
@@ -3109,6 +3114,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       key: _tutorialSearchKey,
       child: KubusGeneralSearch(
         controller: _mapSearchController,
+        focusNode: _mapSearchFocusNode,
         hintText: l10n.mapSearchHint,
         semanticsLabel: l10n.mapSearchHint,
         enableBlur: useMapBlur,
@@ -5625,6 +5631,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         onSelectStackIndex: onSelectStackIndex,
         onHorizontalDragEnd: onHorizontalDragEnd,
         maxCardHeight: maxCardHeight,
+        fallbackFocusNode: _mapSearchFocusNode,
       ),
     );
   }

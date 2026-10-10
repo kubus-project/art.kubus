@@ -260,9 +260,10 @@ class _OverlayPager extends StatelessWidget {
           cursor: onTap == null
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          // InkWell, not GestureDetector: pages are keyboard targets too.
+          child: InkWell(
             onTap: onTap,
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: SizedBox(
               width: KubusHeaderMetrics.actionHitArea,
               height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
@@ -323,9 +324,9 @@ class _OverlayPager extends StatelessWidget {
                       selected: isActive,
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
+                        child: InkWell(
                           onTap: () => onSelectIndex!(dotIndex),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           child: SizedBox(
                             width: 18,
                             height: KubusHeaderMetrics.actionHitArea -

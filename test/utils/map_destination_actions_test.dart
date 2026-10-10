@@ -316,4 +316,46 @@ void main() {
       expect(destination.position, const LatLng(46.0569, 14.5058));
     });
   });
+
+  group('keyboard focus around the sheet', () {
+    testWidgets('closing the sheet returns focus to the control that opened it',
+        (tester) async {
+      final invoker = FocusNode(debugLabel: 'directions-invoker');
+      addTearDown(invoker.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                focusNode: invoker,
+                onPressed: () => _destination().showNavigationOptions(
+                  context,
+                  platform: TargetPlatform.android,
+                  isWeb: false,
+                  canLaunch: (_) async => true,
+                  launcher: (uri, _) async => true,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      invoker.requestFocus();
+      await tester.pump();
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.text('Navigate to Vodnik Square'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('Navigate to Vodnik Square')))
+          .pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Navigate to Vodnik Square'), findsNothing);
+      expect(invoker.hasPrimaryFocus, isTrue);
+    });
+  });
 }
