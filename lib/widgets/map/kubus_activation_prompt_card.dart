@@ -106,8 +106,11 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
+                // A fixed 48px box: the button fills it, so the touch target
+                // does not depend on the button's own minimum-size rules.
                 SizedBox(
                   width: double.infinity,
+                  height: KubusMapMetrics.mobileControlSize,
                   child: FilledButton(
                     onPressed: () async {
                       final navigator = Navigator.of(context);
@@ -130,11 +133,6 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                         },
                       );
                     },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(
-                          KubusMapMetrics.mobileControlSize),
-                      tapTargetSize: MaterialTapTargetSize.padded,
-                    ),
                     child: Text(l10n.activationPromptCta),
                   ),
                 ),
