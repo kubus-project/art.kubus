@@ -558,8 +558,9 @@ class _AvatarWidgetState extends State<AvatarWidget>
           (lower.contains('/svg') ||
               lower.endsWith('.svg') ||
               lower.contains('format=svg'))) {
-        candidate =
-            candidate.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
+        candidate = MediaUrlResolver.svgAsPngReference(
+          candidate.replaceAll('/svg', '/png'),
+        );
       }
 
       if (candidate.startsWith('//')) {

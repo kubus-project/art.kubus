@@ -124,7 +124,7 @@ class KubusCachedImage extends StatefulWidget {
         KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
       return _withFallbackSemantics(
         errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
-            _buildFallback(context, icon: Icons.broken_image_outlined),
+            _buildFallback(context),
         resolvedSemanticLabel,
       );
     }
@@ -171,11 +171,13 @@ class KubusCachedImage extends StatefulWidget {
             resolvedSemanticLabel,
           );
         }
+        // Every candidate failed: show the placeholder, never a broken-image
+        // glyph. Callers that want their own error widget pass errorBuilder.
         late final Widget fallback;
         if (errorBuilder != null) {
           fallback = errorBuilder!(context, error, stackTrace);
         } else {
-          fallback = _buildFallback(context, icon: Icons.broken_image_outlined);
+          fallback = _buildFallback(context);
         }
         return _withFallbackSemantics(fallback, resolvedSemanticLabel);
       },

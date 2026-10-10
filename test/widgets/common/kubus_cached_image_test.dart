@@ -173,4 +173,27 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'a failed image shows the placeholder, never a broken-image glyph',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const KubusCachedImage(
+            imageUrl: 'https://cdn.example.com/missing-artwork.png',
+          ),
+        ),
+      );
+      // The test HTTP client answers 400, so the load fails in real async time.
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future<void>.delayed(
+              const Duration(milliseconds: 10),
+            ));
+        await tester.pump();
+      }
+
+      expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    },
+  );
 }

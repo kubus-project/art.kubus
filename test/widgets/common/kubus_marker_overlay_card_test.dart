@@ -5,6 +5,7 @@ import 'package:art_kubus/features/map/shared/marker_overlay_card_metrics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/services/storage_config.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/common/kubus_marker_overlay_card.dart';
@@ -88,9 +89,13 @@ void main() {
       request.response.close();
     });
     _imageUrl = 'http://127.0.0.1:${_imageServer.port}/artwork.png';
+    // Plain http is accepted only for the app's own dev API base, so the local
+    // image server is that base for this test.
+    StorageConfig.setHttpBackend('http://127.0.0.1:${_imageServer.port}');
   });
 
   tearDownAll(() async {
+    StorageConfig.customHttpBackend = null;
     await _imageServer.close(force: true);
   });
 

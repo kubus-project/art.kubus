@@ -91,10 +91,10 @@ void main() {
       expect(MediaUrlResolver.resolve('asset:images/logo.png'), isNull);
     });
 
-    test('normalizes protocol-relative URLs to https', () {
+    test('drops protocol-relative URLs instead of upgrading them', () {
       const raw = '//example.com/img.png';
-      expect(
-          MediaUrlResolver.resolve(raw), equals('https://example.com/img.png'));
+      expect(MediaUrlResolver.resolve(raw), isNull);
+      expect(MediaUrlResolver.resolveDisplayUrl(raw), isNull);
     });
 
     test('resolveDisplayUrl percent-encodes unsafe URL characters', () {
@@ -302,10 +302,10 @@ void main() {
       expect(MediaUrlResolver.resolveDisplayUrl(raw), equals(raw));
     });
 
-    test('protocol-relative URLs become https', () {
+    test('protocol-relative URLs are dropped, not upgraded', () {
       expect(
         MediaUrlResolver.resolveDisplayUrl('//cdn.example.com/a.jpg'),
-        equals('https://cdn.example.com/a.jpg'),
+        isNull,
       );
     });
 
@@ -423,6 +423,194 @@ void main() {
         isNull,
       );
       expect(MediaUrlResolver.firstDisplayUrl(const <String?>[]), isNull);
+    });
+
+    // `~` stands for a backslash so the table stays free of escape sequences.
+    String bs(String s) => s.replaceAll('~', String.fromCharCode(92));
+
+    test('contract: accepted references resolve to their safe URL', () {
+      final cases = <String, String>{
+        'https://cdn.example.com/a/photo.jpg':
+            'https://cdn.example.com/a/photo.jpg',
+        '/uploads/a.jpg': 'https://api.example.test/uploads/a.jpg',
+        '/profiles/cover/a.png':
+            'https://api.example.test/profiles/cover/a.png',
+        '/avatars/a.png': 'https://api.example.test/avatars/a.png',
+        'avatars/a.png': 'https://api.example.test/avatars/a.png',
+        'a.png': 'https://api.example.test/a.png',
+        'https://old.example.test/uploads/a.jpg':
+            'https://api.example.test/uploads/a.jpg',
+        'http://old.example.test/uploads/a.jpg':
+            'https://api.example.test/uploads/a.jpg',
+        'ipfs://$cidV1': '$primaryGateway$cidV1',
+        'ipfs://$cidV1/meta/a.json': '$primaryGateway$cidV1/meta/a.json',
+        'ipfs:$cidV0': '$primaryGateway$cidV0',
+        '/ipfs/$cidV1': '$primaryGateway$cidV1',
+        'https://gateway.example.com/ipfs/$cidV1': '$primaryGateway$cidV1',
+        cidV1: '$primaryGateway$cidV1',
+        cidV0: '$primaryGateway$cidV0',
+      };
+      cases.forEach((raw, expected) {
+        expect(MediaUrlResolver.resolve(raw), equals(expected), reason: raw);
+        expect(
+          MediaUrlResolver.resolveDisplayUrl(raw),
+          equals(expected),
+          reason: raw,
+        );
+      });
+    });
+
+    test('contract: rejected references resolve to nothing', () {
+      final rejected = <String>[
+        'http://cdn.example.com/a.jpg',
+        'HTTP://cdn.example.com/a.jpg',
+        'http://localhost:8080/a.jpg',
+        '//cdn.example.com/a.jpg',
+        bs('~~cdn.example.com~a.jpg'),
+        bs('/uploads~a.jpg'),
+        'https://user:pass@cdn.example.com/a.jpg',
+        'https://user@cdn.example.com/a.jpg',
+        'https://127.0.0.1/a.jpg',
+        'https://10.0.0.5/a.jpg',
+        'https://192.168.1.10/a.jpg',
+        'https://[::1]/a.jpg',
+        'https://localhost/a.jpg',
+        'https://intranet/a.jpg',
+        'https://printer.local/a.jpg',
+        'https://svc.internal/a.jpg',
+        'https://cdn.example.com/a/../../secret.jpg',
+        '/uploads/../secret.jpg',
+        'https://cdn.example.com/a/%2e%2e/secret.jpg',
+        'https://cdn.example.com/a/..%2Fsecret.jpg',
+        'javascript:alert(1)',
+        'data:image/png;base64,AA==',
+        'blob:https://example.com/abc',
+        'file:///etc/passwd',
+        'ftp://cdn.example.com/a.jpg',
+        'vbscript:msgbox',
+        'placeholder://image',
+        'placeholder:image',
+        'ipfs://not-a-cid!',
+        '',
+        '   ',
+        'null',
+        'undefined',
+        'NULL',
+      ];
+      for (final raw in rejected) {
+        expect(MediaUrlResolver.resolve(raw), isNull, reason: raw);
+        expect(MediaUrlResolver.resolveDisplayUrl(raw), isNull, reason: raw);
+        expect(
+          MediaUrlResolver.resolveDisplayCandidates(raw),
+          isEmpty,
+          reason: raw,
+        );
+      }
+    });
+
+    test('http is accepted only for the dev API base host, in dev builds', () {
+      StorageConfig.setHttpBackend('http://localhost:3000');
+      try {
+        expect(
+          MediaUrlResolver.resolve('http://localhost:3000/media/a.jpg'),
+          equals('http://localhost:3000/media/a.jpg'),
+        );
+        expect(
+          MediaUrlResolver.resolve('http://localhost:3000/uploads/a.jpg'),
+          equals('http://localhost:3000/uploads/a.jpg'),
+        );
+        expect(
+          MediaUrlResolver.resolve('http://localhost:4000/media/a.jpg'),
+          isNull,
+        );
+        expect(
+          MediaUrlResolver.resolve('http://cdn.example.com/a.jpg'),
+          isNull,
+        );
+      } finally {
+        StorageConfig.setHttpBackend('https://api.example.test');
+      }
+      // Against an https API base, the same local http reference is dropped.
+      expect(
+        MediaUrlResolver.resolve('http://localhost:3000/media/a.jpg'),
+        isNull,
+      );
+    });
+
+    test(
+        'an IPFS reference from an https host is re-routed through the gateway chain',
+        () {
+      expect(
+        MediaUrlResolver.resolveDisplayCandidates(
+          'https://gateway.example.com/ipfs/$cidV0/a.png?x=1',
+        ),
+        equals([
+          '$primaryGateway$cidV0/a.png?x=1',
+          'https://ipfs.io/ipfs/$cidV0/a.png?x=1',
+          'https://gateway.pinata.cloud/ipfs/$cidV0/a.png?x=1',
+        ]),
+      );
+    });
+
+    test('firstSafeRef returns the first safe reference unresolved', () {
+      expect(
+        MediaUrlResolver.firstSafeRef(<String?>[
+          'javascript:x',
+          null,
+          '  ',
+          '/uploads/a.jpg',
+          'https://b.example.com/x.jpg',
+        ]),
+        equals('/uploads/a.jpg'),
+      );
+      expect(
+        MediaUrlResolver.firstSafeRef(<String?>['data:x', 'placeholder://y']),
+        isNull,
+      );
+    });
+
+    test('ipfsReferenceForCid reads a stored CID and nothing else', () {
+      expect(
+        MediaUrlResolver.ipfsReferenceForCid(cidV1),
+        equals('ipfs://$cidV1'),
+      );
+      expect(
+        MediaUrlResolver.ipfsReferenceForCid('ipfs:/$cidV0'),
+        equals('ipfs://$cidV0'),
+      );
+      expect(
+        MediaUrlResolver.ipfsReferenceForCid('/ipfs/$cidV1'),
+        equals('ipfs://$cidV1'),
+      );
+      expect(MediaUrlResolver.ipfsReferenceForCid('photo.jpg'), isNull);
+      expect(MediaUrlResolver.ipfsReferenceForCid('uploads/a.jpg'), isNull);
+      expect(MediaUrlResolver.ipfsReferenceForCid('  '), isNull);
+      expect(MediaUrlResolver.ipfsReferenceForCid(null), isNull);
+    });
+
+    test('svgAsPngReference changes only the trailing path extension', () {
+      expect(
+        MediaUrlResolver.svgAsPngReference('https://cdn.example.com/a.svg'),
+        equals('https://cdn.example.com/a.png'),
+      );
+      expect(
+        MediaUrlResolver.svgAsPngReference('https://cdn.example.com/a.SVG#f'),
+        equals('https://cdn.example.com/a.png#f'),
+      );
+      expect(
+        MediaUrlResolver.svgAsPngReference(
+          'https://cdn.example.com/a.svg?v=1.svg',
+        ),
+        equals('https://cdn.example.com/a.png?v=1.svg'),
+      );
+      expect(
+        MediaUrlResolver.svgAsPngReference('https://svg.example.com/a.png'),
+        equals('https://svg.example.com/a.png'),
+      );
+      expect(
+        MediaUrlResolver.svgAsPngReference('https://cdn.example.com/a.svgz'),
+        equals('https://cdn.example.com/a.svgz'),
+      );
     });
   });
 }

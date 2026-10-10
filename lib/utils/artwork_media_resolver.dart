@@ -66,17 +66,32 @@ class ArtworkMediaResolver {
 
   /// Raw cover references carried by a metadata bag, in chain order.
   ///
+  /// The bag's own keys come first. Older and imported marker payloads nest the
+  /// same keys one level down under `metadata` or `meta`; that nested bag is
+  /// read after the outer one, so typed outer values still win.
+  ///
   /// Only string values count: a nested object or list under a cover key is
   /// never stringified into a URL.
   static List<String> coverRefsFromMetadata(Map<String, dynamic>? meta) {
     if (meta == null || meta.isEmpty) return const <String>[];
     final refs = <String>[];
+    _collectCoverRefs(meta, refs);
+    final nested = meta['metadata'] ?? meta['meta'];
+    if (nested is Map) {
+      _collectCoverRefs(
+        nested.map((key, value) => MapEntry(key.toString(), value)),
+        refs,
+      );
+    }
+    return refs;
+  }
+
+  static void _collectCoverRefs(Map<String, dynamic> meta, List<String> refs) {
     for (final key in <String>[...coverMetadataKeys, ...imageCidMetadataKeys]) {
       final value = meta[key];
       if (value is! String) continue;
       final trimmed = value.trim();
       if (trimmed.isNotEmpty) refs.add(trimmed);
     }
-    return refs;
   }
 }

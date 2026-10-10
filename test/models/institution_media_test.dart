@@ -135,5 +135,42 @@ void main() {
       );
       expect(event.heroImageRef, '/uploads/events/gallery-1.png');
     });
+
+    test('an unsafe cover falls through to the first valid gallery image', () {
+      final event = eventWith(
+        coverUrl: 'javascript:alert(1)',
+        imageUrls: const [
+          'placeholder://gallery-0',
+          '/uploads/events/gallery-1.png',
+        ],
+      );
+      expect(event.heroImageRef, '/uploads/events/gallery-1.png');
+    });
+
+    test('an unsafe cover and gallery yield no hero image', () {
+      final event = eventWith(
+        coverUrl: 'data:image/png;base64,AA==',
+        imageUrls: const ['javascript:x'],
+      );
+      expect(event.heroImageRef, isNull);
+    });
+  });
+
+  group('Institution hero image: cover first, then logo', () {
+    test('an unsafe cover falls through to a valid logo', () {
+      final institution = Institution.fromJson(_institutionJson(
+        coverImageUrl: 'javascript:alert(1)',
+        logoUrl: '/uploads/logo.png',
+      ));
+      expect(institution.heroImageRef, '/uploads/logo.png');
+    });
+
+    test('a valid cover still wins over the logo', () {
+      final institution = Institution.fromJson(_institutionJson(
+        coverImageUrl: '/uploads/cover.jpg',
+        logoUrl: '/uploads/logo.png',
+      ));
+      expect(institution.heroImageRef, '/uploads/cover.jpg');
+    });
   });
 }

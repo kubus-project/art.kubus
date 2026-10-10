@@ -726,12 +726,13 @@ class ArtMarker {
     return value;
   }
 
-  /// First raw cover reference in the shared artwork/marker cover chain
-  /// (see `ArtworkMediaResolver.resolveCover`). Callers resolve it for display.
-  String? get coverImageUrl {
-    final refs = ArtworkMediaResolver.coverRefsFromMetadata(metadata);
-    return refs.isEmpty ? null : refs.first;
-  }
+  /// First safe raw cover reference in the shared artwork/marker cover chain
+  /// (see `ArtworkMediaResolver.resolveCover`), nested `metadata`/`meta` bags
+  /// included. An unsafe entry is skipped so the next one can still show.
+  /// Callers resolve it for display.
+  String? get coverImageUrl => MediaUrlResolver.firstSafeRef(
+        ArtworkMediaResolver.coverRefsFromMetadata(metadata),
+      );
 
   /// Artwork artist attribution (e.g. muralist, sculptor, architect).
   String? get artistName =>

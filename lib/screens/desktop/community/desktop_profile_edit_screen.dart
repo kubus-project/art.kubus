@@ -548,14 +548,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
         displayUrl =
             '$base/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
-      } else if (lower.endsWith('.svg') || lower.contains('.svg?')) {
-        displayUrl =
-            url.replaceAll(RegExp(r'\.svg', caseSensitive: false), '.png');
+      } else {
+        displayUrl = MediaUrlResolver.svgAsPngReference(url);
       }
     } catch (_) {
       displayUrl = url;
     }
-    displayUrl = MediaUrlResolver.resolve(displayUrl) ?? displayUrl;
+    // Fail closed: an unresolvable avatar shows the placeholder icon, never the
+    // raw string.
+    final safeUrl = MediaUrlResolver.resolve(displayUrl);
+    if (safeUrl == null) {
+      return Icon(
+        Icons.person,
+        size: 70,
+        color: themeProvider.accentColor,
+      );
+    }
+    displayUrl = safeUrl;
 
     return Image.network(
       displayUrl,

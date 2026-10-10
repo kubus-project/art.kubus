@@ -1,3 +1,4 @@
+import '../utils/media_url_resolver.dart';
 import 'event.dart' show KubusEvent;
 
 // Institution and Events Models
@@ -38,10 +39,12 @@ class Institution {
     required this.createdAt,
   });
 
-  /// Hero imagery for an institution: the cover, else the logo.
+  /// Hero imagery for an institution: the first safe of the cover, then the
+  /// logo. An unsafe cover falls through to the logo.
   ///
   /// Every surface (detail hero, search thumbnail) uses this one order.
-  String? get heroImageRef => coverImageUrl ?? logoUrl;
+  String? get heroImageRef =>
+      MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl, logoUrl]);
 
   factory Institution.fromJson(Map<String, dynamic> json) {
     final boundary = _InstitutionImageBoundary.read(json);
@@ -290,14 +293,12 @@ class Event {
     required this.createdBy,
   });
 
-  /// Hero imagery for an event: the cover, else the first gallery image.
+  /// Hero imagery for an event: the first safe of the cover, then the gallery
+  /// images in order. An unsafe cover falls through to the gallery.
   ///
   /// Search thumbnails, map cards and detail headers all use this order.
-  String? get heroImageRef {
-    final cover = coverUrl?.trim();
-    if (cover != null && cover.isNotEmpty) return cover;
-    return imageUrls.isNotEmpty ? imageUrls.first : null;
-  }
+  String? get heroImageRef =>
+      MediaUrlResolver.firstSafeRef(<String?>[coverUrl, ...imageUrls]);
 
   bool get isFree => price == null || price == 0;
   bool get hasCapacity => capacity == null || currentAttendees < capacity!;
