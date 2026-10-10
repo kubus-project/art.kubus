@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common/kubus_cached_image.dart';
 import '../inline_loading.dart';
 
 import '../../utils/design_tokens.dart';
@@ -198,32 +199,25 @@ class DetailHeader extends StatelessWidget {
       return gradientBackground;
     }
 
-    final imageWidget = Image.network(
-      resolvedCoverUrl,
+    // KubusCachedImage walks the gateway candidates before giving up, so an
+    // IPFS cover moves to the next gateway when one fails.
+    final imageWidget = KubusCachedImage(
+      imageUrl: resolvedCoverUrl,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => gradientBackground,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            gradientBackground,
-            Center(
-              child: SizedBox(
-                width: 32,
-                height: 32,
-                child: InlineLoading(
-                    tileSize: 4,
-                    progress: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                    color: accentColor),
-              ),
+      placeholderBuilder: (_) => Stack(
+        fit: StackFit.expand,
+        children: [
+          gradientBackground,
+          Center(
+            child: SizedBox(
+              width: 32,
+              height: 32,
+              child: InlineLoading(tileSize: 4, color: accentColor),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+      errorBuilder: (_, __, ___) => gradientBackground,
     );
 
     if (heroTag != null) {

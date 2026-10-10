@@ -6,6 +6,7 @@ import 'dart:async';
 import '../../services/telemetry/telemetry_service.dart';
 
 import 'package:flutter/material.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
@@ -498,21 +499,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return placeholder;
     }
 
-    return Image.network(
-      resolved,
+    // KubusCachedImage walks the gateway candidates (an IPFS cover moves to the
+    // next gateway when one fails) and shows the placeholder, not a broken
+    // image, when every candidate has failed.
+    return KubusCachedImage(
+      imageUrl: resolved,
       fit: BoxFit.cover,
       semanticLabel: semanticLabel,
       errorBuilder: (_, __, ___) => placeholder,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: InlineLoading(shape: BoxShape.circle, color: scheme.primary),
-          ),
-        );
-      },
     );
   }
 

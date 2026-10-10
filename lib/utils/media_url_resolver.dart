@@ -150,10 +150,28 @@ class MediaUrlResolver {
     try {
       final uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
-      return _directDisplayDomains.any((d) => _hostMatches(host, d));
+      if (_directDisplayDomains.any((d) => _hostMatches(host, d))) return true;
+      return _isConfiguredIpfsGatewayHost(host);
     } catch (_) {
       return false;
     }
+  }
+
+  /// The configured public IPFS gateways are fetched directly by web clients.
+  ///
+  /// They are built to answer browser GETs, so a stored `https://<gateway>/ipfs/`
+  /// image loads without the backend media proxy. The proxy's production host
+  /// allowlist does not carry these gateways, so a proxied IPFS image cannot load
+  /// there at all. The hosts come from [StorageConfig], never a list kept here.
+  static bool _isConfiguredIpfsGatewayHost(String host) {
+    for (final gateway in StorageConfig.activeIpfsGateways) {
+      final gatewayHost =
+          Uri.tryParse(gateway.trim())?.host.toLowerCase() ?? '';
+      if (gatewayHost.isNotEmpty && _hostMatches(host, gatewayHost)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static bool _isKnownCorsHostileRedirector(String url) {
