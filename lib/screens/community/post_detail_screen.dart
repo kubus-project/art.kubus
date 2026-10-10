@@ -42,6 +42,7 @@ import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../desktop/desktop_shell_scope.dart';
 
 enum PostDetailInitialAction { edit, delete, report, options }
 
@@ -1843,25 +1844,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    // Inside a desktop sub-screen the shell header already carries the title
+    // and the one Back control, so this screen must not draw a second bar
+    // with the same title. Panes and bare shell pushes keep their AppBar.
+    final hostedInDesktopSubScreen =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>() != null;
     final content = Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
-        ),
-        title: Text(
-          l10n.commonPost,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+      appBar: hostedInDesktopSubScreen
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed:
+                    widget.onClose ?? () => Navigator.of(context).maybePop(),
               ),
-        ),
-      ),
+              title: Text(
+                l10n.commonPost,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
       body: SafeArea(
         bottom: false,
         child: _loading

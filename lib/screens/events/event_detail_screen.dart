@@ -372,6 +372,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
     final isDesktopCanonicalPublicEntry =
         DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
+    // Hosted in a desktop sub-screen, the shell header owns the one title and
+    // Back, so no second bar is drawn above the event.
+    final hostedInDesktopSubScreen =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>() != null;
     final roles = KubusColorRoles.of(context);
     final events = context.watch<EventsProvider>();
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
@@ -413,17 +417,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final eventScaffold = Scaffold(
       backgroundColor:
           isCanonicalPublicEntry ? roles.surface : Colors.transparent,
-      appBar: isDesktopCanonicalPublicEntry
+      appBar: isDesktopCanonicalPublicEntry || hostedInDesktopSubScreen
           ? null
           : AppBar(
               backgroundColor:
                   isCanonicalPublicEntry ? roles.surface : Colors.transparent,
               elevation: 0,
+              // The brand bar keeps Back; the event title is the one title,
+              // in the body (as on the artwork and profile detail screens).
               title: Text(
-                isCanonicalPublicEntry ? 'art.kubus' : event.title,
-                style: isCanonicalPublicEntry
-                    ? KubusTextStyles.screenTitle
-                    : KubusTypography.inter(fontWeight: FontWeight.w600),
+                'art.kubus',
+                style: KubusTextStyles.screenTitle,
               ),
               actions: const [],
             ),
