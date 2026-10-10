@@ -5,6 +5,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'inline_loading.dart';
+import 'common/kubus_focus_ring.dart';
 import 'kubus_button.dart';
 
 class KubusAuthMethodMetrics {
@@ -154,15 +155,19 @@ class KubusAuthMethodButton extends StatelessWidget {
       child: content,
     );
 
-    final button = KubusAuthMethodButtonShell(
-      isLoading: false,
-      variant: variant,
-      backgroundColor: backgroundColor,
-      foregroundColor: foregroundColor,
-      borderColor: borderColor,
+    final button = KubusFocusRing(
+      borderRadius: style.radius,
       enabled: !isLoading && onPressed != null,
-      height: height,
-      child: buttonChild,
+      child: KubusAuthMethodButtonShell(
+        isLoading: false,
+        variant: variant,
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        borderColor: borderColor,
+        enabled: !isLoading && onPressed != null,
+        height: height,
+        child: buttonChild,
+      ),
     );
 
     if (isFullWidth) {

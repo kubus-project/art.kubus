@@ -12,6 +12,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
+import '../../../widgets/common/kubus_focus_ring.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -412,6 +413,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           ),
         ),
       ),
+    );
+    tile = KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.surface),
+      child: tile,
     );
     if (!widget.isExpanded) {
       tile = Tooltip(message: label, child: tile);
@@ -880,6 +885,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           ),
         ),
       ),
+    );
+    entry = KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.surface),
+      child: entry,
     );
     if (!widget.isExpanded) {
       entry = Tooltip(message: label, child: entry);

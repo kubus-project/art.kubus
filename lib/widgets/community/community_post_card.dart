@@ -16,6 +16,7 @@ import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 import 'community_post_caption.dart';
 import 'community_post_media_carousel.dart';
+import '../common/kubus_focus_ring.dart';
 
 part 'community_post_card_interactions.dart';
 part 'community_post_card_metadata.dart';

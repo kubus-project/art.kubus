@@ -41,13 +41,17 @@ class _InteractionButton extends StatelessWidget {
       child: ExcludeSemantics(
         child: Tooltip(
           message: semanticLabel,
-          child: InkWell(
-            onTap: onTap,
+          child: KubusFocusRing(
             borderRadius: BorderRadius.circular(KubusRadius.surface),
-            focusColor: roles.focus.withValues(alpha: 0.16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-              child: Center(child: Icon(icon, color: finalColor, size: 20)),
+            enabled: onTap != null,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(KubusRadius.surface),
+              focusColor: roles.focus.withValues(alpha: 0.16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                child: Center(child: Icon(icon, color: finalColor, size: 20)),
+              ),
             ),
           ),
         ),
@@ -129,21 +133,25 @@ class _PostCountLink extends StatelessWidget {
       label: label,
       onTap: onTap,
       child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onTap,
+        child: KubusFocusRing(
           borderRadius: BorderRadius.circular(KubusRadius.control),
-          focusColor: roles.focus.withValues(alpha: 0.16),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  label,
-                  style: style.copyWith(
-                    decoration: TextDecoration.underline,
-                    decorationColor: roles.ruleStrong,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(KubusRadius.control),
+            focusColor: roles.focus.withValues(alpha: 0.16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    label,
+                    style: style.copyWith(
+                      decoration: TextDecoration.underline,
+                      decorationColor: roles.ruleStrong,
+                    ),
                   ),
                 ),
               ),

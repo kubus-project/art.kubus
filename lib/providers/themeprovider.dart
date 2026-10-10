@@ -155,6 +155,20 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Keyboard focus ring for Material text and outlined buttons: a 2 px
+  /// family focus side. [WidgetState.focused] is true whenever the button
+  /// holds focus, including after a pointer press, so the side also requires
+  /// keyboard highlight ([FocusHighlightMode.traditional]). Otherwise the
+  /// button keeps its own side.
+  static WidgetStateProperty<BorderSide?> _keyboardFocusSide(Color focus) =>
+      WidgetStateProperty.resolveWith<BorderSide?>(
+        (states) => states.contains(WidgetState.focused) &&
+                FocusManager.instance.highlightMode ==
+                    FocusHighlightMode.traditional
+            ? BorderSide(color: focus, width: 2)
+            : null,
+      );
+
   // Dark theme data
   ThemeData get darkTheme => ThemeData(
         useMaterial3: true,
@@ -164,6 +178,10 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryDark,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        // Material's default focus fill is neutral white; the family focus
+        // role keeps Material-drawn focus on-brand. The indicator itself is
+        // KubusFocusRing, not this fill.
+        focusColor: KubusProductPalette.focusDark.withValues(alpha: 0.16),
         // Structural roles stay fixed: primary/tertiary are kubus teal,
         // secondary is the family blue. The user's saved accent is provided
         // separately through KubusColorRoles for explicit personal highlights.
@@ -256,6 +274,19 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           labelStyle: TextStyle(color: KubusColorRoles.dark.foregroundMuted),
           hintStyle: TextStyle(color: KubusColorRoles.dark.foregroundSubtle),
         ),
+        // A transparent (non-null) background keeps the Material surface a
+        // button type, so the focus side is painted for text buttons too.
+        textButtonTheme: TextButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor:
+                const WidgetStatePropertyAll<Color>(Colors.transparent),
+            side: _keyboardFocusSide(KubusProductPalette.focusDark),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: ButtonStyle(
+              side: _keyboardFocusSide(KubusProductPalette.focusDark)),
+        ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: KubusColorRoles.dark.surface,
           selectedItemColor: KubusColorRoles.dark.active,
@@ -281,6 +312,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryLight,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        focusColor: KubusProductPalette.focusLight.withValues(alpha: 0.16),
         // Light counterpart of the dark semantic roles. Personal accents do
         // not repaint the structural ColorScheme.
         colorScheme: ColorScheme.light(
@@ -371,6 +403,19 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           ),
           labelStyle: TextStyle(color: KubusColorRoles.light.foregroundMuted),
           hintStyle: TextStyle(color: KubusColorRoles.light.foregroundSubtle),
+        ),
+        // A transparent (non-null) background keeps the Material surface a
+        // button type, so the focus side is painted for text buttons too.
+        textButtonTheme: TextButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor:
+                const WidgetStatePropertyAll<Color>(Colors.transparent),
+            side: _keyboardFocusSide(KubusProductPalette.focusLight),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: ButtonStyle(
+              side: _keyboardFocusSide(KubusProductPalette.focusLight)),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: KubusColorRoles.light.surface,
