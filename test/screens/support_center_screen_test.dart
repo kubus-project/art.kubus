@@ -923,6 +923,43 @@ void main() {
       );
     });
 
+    testWidgets('an incomplete bug report scrolls to its first missing field',
+        (tester) async {
+      backend((_) async => _ok(<Object?>[]));
+      await pumpScreen(
+        tester,
+        section: SupportSection.bug,
+        size: const Size(390, 600),
+      );
+      Future<void> fill(String label, String text) async {
+        await tester.ensureVisible(field(label));
+        await tester.enterText(field(label), text);
+        await settle(tester);
+      }
+
+      await fill('What happened?', 'Blank map');
+      await fill('Steps to reproduce', 'Open the map');
+      await fill('Expected behaviour', 'Markers show');
+      await fill('Actual behaviour', 'Nothing');
+      // Subject is left empty at the top of the form; Send is at the bottom,
+      // so the field is below the fold when the submit is tapped.
+      await tester.ensureVisible(find.text('Send bug report'));
+      await settle(tester);
+      expect(
+        tester.getRect(field('Subject')).top,
+        lessThan(tester.getRect(find.byType(ListView)).top),
+        reason: 'the empty subject starts above the visible area',
+      );
+      await tester.tap(find.text('Send bug report'));
+      await settle(tester);
+
+      final list = tester.getRect(find.byType(ListView));
+      final missing = tester.getRect(field('Subject'));
+      expect(missing.top, greaterThanOrEqualTo(list.top));
+      expect(missing.bottom, lessThanOrEqualTo(list.bottom));
+      expect(find.text('This field is required.'), findsOneWidget);
+    });
+
     testWidgets('a refused session on send opens sign-in and keeps the draft',
         (tester) async {
       backend((request) async {

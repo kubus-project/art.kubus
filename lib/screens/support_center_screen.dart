@@ -287,6 +287,44 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     }
   }
 
+  /// Keys for the form fields, so a failed submit can scroll to the first field
+  /// that is still invalid. The Send button sits below a long bug report, so the
+  /// summary at the top is not enough on its own.
+  final _fieldKeys =
+      <TextEditingController, GlobalKey<FormFieldState<String>>>{};
+
+  GlobalKey<FormFieldState<String>> _fieldKey(TextEditingController c) =>
+      _fieldKeys.putIfAbsent(c, () => GlobalKey<FormFieldState<String>>());
+
+  void _revealFirstInvalidField({required bool bug}) {
+    final controllers = <TextEditingController>[
+      _subject,
+      if (bug) ...<TextEditingController>[
+        _message,
+        _steps,
+        _expected,
+        _actual
+      ] else
+        _message,
+    ];
+    for (final controller in controllers) {
+      final state = _fieldKey(controller).currentState;
+      if (state == null || !state.hasError) continue;
+      final context = _fieldKey(controller).currentContext;
+      if (context == null) return;
+      final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+      unawaited(
+        Scrollable.ensureVisible(
+          context,
+          alignment: 0.2,
+          duration: reduce ? Duration.zero : const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+      return;
+    }
+  }
+
   String _composeBugReport() {
     final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
     return [
@@ -307,6 +345,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     setState(() => _formError = null);
     if (!(_formKey.currentState?.validate() ?? false)) {
       setState(() => _formError = l10n.supportErrorInvalid);
+      _revealFirstInvalidField(bug: bug);
       return;
     }
     final message = bug ? _composeBugReport() : _message.text.trim();
@@ -653,6 +692,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     return Padding(
       padding: const EdgeInsets.only(top: KubusSpacing.sm),
       child: TextFormField(
+        key: _fieldKey(controller),
         controller: controller,
         enabled: !_submitting,
         maxLines: maxLines,
