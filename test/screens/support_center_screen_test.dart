@@ -223,22 +223,83 @@ void main() {
       expect(fake.requestsTo('POST', '/api/support/tickets'), isEmpty);
     });
 
-    testWidgets(
-        'subject is capped at 255 characters and whitespace is required',
-        (tester) async {
+    testWidgets('whitespace-only subject is required', (tester) async {
       backend((_) async => _ok(<Object?>[]));
       await pumpScreen(tester, section: SupportSection.contact);
-
-      await tester.enterText(field('Subject'), 'a' * 300);
-      await settle(tester);
-      final subject = tester.widget<TextFormField>(field('Subject'));
-      expect(subject.controller!.text.length, 255);
 
       await tester.enterText(field('Subject'), '     ');
       await tester.enterText(field('Message'), 'Some detail');
       await tester.tap(find.text('Send request'));
       await settle(tester);
       expect(find.text('This field is required.'), findsOneWidget);
+    });
+
+    testWidgets('an over-long subject is refused with a message, not cut off',
+        (tester) async {
+      final fake = backend((_) async => _ok(<Object?>[]));
+      await pumpScreen(tester, section: SupportSection.contact);
+
+      await tester.enterText(field('Subject'), 'a' * 300);
+      await settle(tester);
+      final subject = tester.widget<TextFormField>(field('Subject'));
+      expect(subject.controller!.text.length, 300);
+      expect(find.text('300/255'), findsOneWidget);
+      expect(find.text('Use 255 characters or fewer.'), findsOneWidget);
+
+      await tester.enterText(field('Message'), 'Some detail');
+      await tester.tap(find.text('Send request'));
+      await settle(tester);
+      expect(fake.requestsTo('POST', '/api/support/tickets'), isEmpty);
+    });
+
+    testWidgets('the counter and the limit count UTF-16 units like the server',
+        (tester) async {
+      final fake = backend((request) async {
+        if (request.method == 'POST') return _ok(_ticket(), status: 201);
+        return _ok(<Object?>[]);
+      });
+      await pumpScreen(tester, section: SupportSection.contact);
+
+      // 2501 emoji are 5002 UTF-16 units: over the 5000 limit, with a message.
+      await tester.enterText(field('Subject'), 'Emoji limit');
+      await tester.enterText(field('Message'), '\u{1F600}' * 2501);
+      await settle(tester);
+      expect(find.text('5002/5000'), findsOneWidget);
+      expect(find.text('Use 5000 characters or fewer.'), findsOneWidget);
+      await tester.tap(find.text('Send request'));
+      await settle(tester);
+      expect(fake.requestsTo('POST', '/api/support/tickets'), isEmpty);
+
+      // 2500 emoji are exactly 5000 units: accepted and sent once.
+      await tester.enterText(field('Message'), '\u{1F600}' * 2500);
+      await settle(tester);
+      expect(find.text('5000/5000'), findsOneWidget);
+      await tester.tap(find.text('Send request'));
+      await settle(tester);
+      expect(fake.requestsTo('POST', '/api/support/tickets'), hasLength(1));
+    });
+
+    testWidgets('a visible error is a live alert that carries its message',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      backend((_) async => _error(429, 'Too many', retryAfter: '3600'));
+      await pumpScreen(tester, section: SupportSection.requests);
+
+      final alert = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.liveRegion == true,
+      );
+      expect(alert, findsOneWidget);
+      expect(tester.getSemantics(alert).flagsCollection.isLiveRegion, isTrue);
+      final message = find.descendant(
+        of: alert,
+        matching: find.text('Too many requests. Try again in about an hour.'),
+      );
+      expect(message, findsOneWidget);
+      expect(
+        tester.getSemantics(message).label,
+        'Too many requests. Try again in about an hour.',
+      );
+      handle.dispose();
     });
 
     testWidgets('contact request posts the contract body without email',

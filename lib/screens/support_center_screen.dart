@@ -508,9 +508,12 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
+  /// A visible error that assistive technology announces. The node is a live
+  /// alert and carries the message itself, so the text is in the semantics tree.
   Widget _errorText(String text) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
+      container: true,
       liveRegion: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
@@ -589,7 +592,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             _formField(
               _subject,
               label: l10n.supportFormSubjectLabel,
-              maxLength: _maxSubjectLength,
+              limit: _maxSubjectLength,
               validator: (value) => _validateText(
                 value,
                 l10n,
@@ -682,12 +685,33 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
+  /// Length in UTF-16 code units of the trimmed text: the unit the server
+  /// checks (the length of the trimmed string). Flutter's own maxLength counts
+  /// grapheme clusters, which would show 2501 emoji as 2501 and accept them.
+  int _checkedLength(String text) => text.trim().length;
+
+  /// Counter under a field: the checked length against the limit, in error
+  /// colour once it is over. The limit itself is enforced by the validator, so
+  /// over-long input gets a message rather than being cut off.
+  Widget _lengthCounter(
+      BuildContext context, TextEditingController controller, int limit) {
+    final theme = Theme.of(context);
+    final length = _checkedLength(controller.text);
+    final over = length > limit;
+    return Text(
+      '$length/$limit',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: over ? theme.colorScheme.error : null,
+      ),
+    );
+  }
+
   Widget _formField(
     TextEditingController controller, {
     required String label,
     String? Function(String?)? validator,
     int maxLines = 1,
-    int maxLength = _maxMessageLength,
+    int limit = _maxMessageLength,
   }) {
     return Padding(
       padding: const EdgeInsets.only(top: KubusSpacing.sm),
@@ -696,7 +720,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         controller: controller,
         enabled: !_submitting,
         maxLines: maxLines,
-        maxLength: maxLength,
+        buildCounter: (context,
+                {required currentLength,
+                required maxLength,
+                required isFocused}) =>
+            _lengthCounter(context, controller, limit),
         decoration: InputDecoration(
           labelText: label,
           alignLabelWithHint: maxLines > 1,
@@ -934,13 +962,26 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: _reply,
-          enabled: !support.replying,
-          minLines: 3,
-          maxLines: 6,
-          maxLength: _maxMessageLength,
-          decoration: InputDecoration(labelText: l10n.supportReplyLabel),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _reply,
+          builder: (context, value, _) {
+            final over = _checkedLength(value.text) > _maxMessageLength;
+            return TextField(
+              controller: _reply,
+              enabled: !support.replying,
+              minLines: 3,
+              maxLines: 6,
+              buildCounter: (context,
+                      {required currentLength,
+                      required maxLength,
+                      required isFocused}) =>
+                  _lengthCounter(context, _reply, _maxMessageLength),
+              decoration: InputDecoration(
+                labelText: l10n.supportReplyLabel,
+                errorText: over ? l10n.supportFormMessageTooLong : null,
+              ),
+            );
+          },
         ),
         const SizedBox(height: KubusSpacing.sm),
         FilledButton.icon(
