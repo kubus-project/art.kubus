@@ -1,9 +1,290 @@
-# art.kubus 0.8.2: community media
+# art.kubus 0.8.2
 
-Status: **draft, not released.** This document describes the Community media
-slice that is part of the 0.8.2 release. Version files (`version.json`,
-`pubspec.yaml`, `package.json` and the app version constant) are bumped in the
-release-preparation commit, as in 0.8.1, not in this feature change.
+Status: **draft, not released (state recorded 2026-10-10).** Nothing in this
+release is merged into `master`, tagged, version-bumped or deployed. Merges are
+owner-run. `master` is still 0.8.1 (`23abf028`) and `dev` is `b38b8728`.
+Version files (`version.json`, `pubspec.yaml`, `package.json` and the app
+version constant) are bumped in the release-preparation commit, as in 0.8.1,
+not in any feature change. Maturity stays `0.8.x-alpha`.
+
+This file records the 0.8.2 release state: scope, cross-repo contracts, rollout
+gates, verification evidence and open decisions. The merged Community media
+slice is described in detail further down.
+
+## Release state
+
+Heads and states were read from GitHub on 2026-10-10. Every open package below
+is unmerged. Merged before this record: app #248 (Slice B search), #249 (Slice C
+map continuity), #250 (community media carousel and composer), #255 (community
+video player and multi-media default); backend #78 (Slice B search) and #79
+(community upload budget and media validation), both on `master`.
+
+| Package | PR | Head | Base | State | CI at head | Unresolved review threads |
+| --- | --- | --- | --- | --- | --- | --- |
+| Community video: audio and player frame | app #257 | `038b3a0a` | dev | open, clean | PR validation: success | 0 |
+| Community video: fail closed on unresolvable URL | app #263 | `8c447dc3` | `claude/intelligent-allen-m220xd` (#257 head) | open, stacked on #257 | GitGuardian only (no PR validation run on this base) | 0 |
+| D: map quick card, directions, one navigation path | app #251 | `36a1f9aa` | dev | open, clean | success | 0 |
+| E: map chrome | app #264 | `c85eca9b` | dev | open, clean | success | 0 |
+| G: analytics chart scales | app #259 | `754135b2` | dev | open, clean | success | 0 |
+| H: one media resolver | app #260 | `2d8679c1` | dev | open, clean | success | 0 |
+| Support Center (client) | app #261 | `8a619822` | dev | open, clean | success | 0 |
+| F: community guest gating and intents | app #262 | `beccba9b` | dev | open, clean | success | 0 |
+| Search institutions picker fix | app #265 | `05124be3` | dev | open, **blocked** | success | **1 (P1)** |
+| I/H: SEO entities, sitemap, media contract | backend #84 | `012837b5` | master | open, clean | Backend CI required: success | **3** |
+| Support backend, migration 105 | backend #80 | `cc2b06be` | master | open, **draft** | Backend CI required: success | 0 |
+| Search institutions on the migrated schema | backend #85 | `e9591467` | master | open, clean | Backend CI required: success | **2 (P2)** |
+| Support console | admin #13 | `71c2f48b` | master | open, **draft** | success | 0 |
+
+Notes on the table:
+
+- #263 is built on the #257 head. Merge #257 first, or merge #263 into it, then
+  retarget. Its own change is one guard in `community_post_video_slide.dart`
+  with a test.
+- #265 is blocked by one open P1 thread on `lib/utils/community_search_results.dart`:
+  the new branch accepts an obsolete `data` payload when `results[kind]` is absent.
+- Backend #84 has three open threads: a P1 on the admin artwork-list query in
+  `src/routes/adminModeration.js` (it references an uploader-name column), and
+  two P2s in `seoPublicPagesService.js` (default identicons) and
+  `seoPublicPages.js` (pagination robots). Backend #85 has two P2s in
+  `src/routes/search.js`: institution cover normalisation, and `degradedKinds`
+  missing from the short-query early return.
+- These threads are reported, not resolved, by this record.
+
+What each package changes:
+
+- **#257 and #263.** A video plays with sound at the viewer's last volume. If a
+  browser refuses sound, it plays muted and says so. The player is framed to the
+  clip's own aspect ratio. An unresolvable video reference never creates a player.
+- **#251 (D).** `MapDestination` is the one navigation path (provider choice,
+  web fallbacks, the "navigate to" sheet). Directions is pinned on the desktop
+  artwork panel. One coordinate rule. A guard test rejects map provider tokens
+  outside that file.
+- **#264 (E).** One logo, in the shell rail. Map chrome is one flat surface
+  level with hairline dividers. Accent marks only the selected state. Visible
+  attribution text meets 4.5:1 in both themes. Engines, controller and search
+  behaviour are unchanged.
+- **#259 (G).** One pure `ChartScale` helper for the analytics line and bar
+  charts: nice ticks, and single, flat, empty and non-finite series handled.
+  Outliers above 4 x p95 are clipped at p95 x 1.15, and tooltips keep true values.
+- **#260 (H).** One `MediaUrlResolver` contract (table below). An unsafe field
+  falls through to the next field. IPFS covers step through the gateway chain,
+  then the placeholder. Fetching gateways directly on web avoids the proxy host
+  allowlist.
+- **#261, backend #80, admin #13.** Support Center: FAQ, contact form, bug
+  report, request history, replies, closed read-only state. Tickets have kind
+  `support` or `bug`, a `messages` conversation, and admin status, priority,
+  assignee and internal note. Email goes only to a verified account address.
+- **#262 (F).** Guest gating for comments, likes, chat and the desktop composer,
+  using the existing `ContextualAuthGate` and pending-action flow. Intents survive
+  sign-in, and a confirmed like shows on its card.
+- **#265.** The community search picker reads the kind it requested. Institution
+  rows render from the migrated backend shape.
+- **Backend #84.** Public pages output https only. Unknown artists are never
+  bylines. Sitemap `<lastmod>` comes from `updated_at`. Robots allow clean
+  pagination. Media follows the contract below. Admin lists gain separate
+  `artist_display_name` and `uploader_*` fields.
+- **Backend #85.** Institution search reads the migrated columns. A failed kind
+  is logged and reported in a new `degradedKinds` array.
+
+## Cross-repo media contract
+
+Backend column: public page output from backend #84. App column: resolver
+output from app #260.
+
+| Stored reference | Backend #84 (public output) | App #260 (Flutter) |
+| --- | --- | --- |
+| `https://<public host>/...` | kept | kept |
+| `/uploads/`, `/profiles/`, `/avatars/`, bare file name | `https://` media origin: `SEO_MEDIA_BASE_URL`, else `HTTP_BASE_URL`, else `https://api.kubus.site` | rewritten to the storage API host (bare name becomes `<api>/uploads/<name>`) |
+| Same path on another https host | kept as given | kept as given, never rewritten |
+| `ipfs://<cid>`, `/ipfs/<cid>`, bare `bafy...` | first https gateway from `IPFS_GATEWAY_URL`, then `https://ipfs.io/ipfs/` | gateway chain `dweb.link`, `ipfs.io`, `pinata` (from `StorageConfig`), stepping on failure |
+| Bare `Qm...` (CIDv0) | not a CID: `isLikelyCid` recognises `bafy...` only | a CID, same gateway chain |
+| `http://` | dropped | dropped (dev builds: only the storage origin itself) |
+| `//host`, backslash forms, `user:pass@`, IP literals, `localhost`, single-label hosts, `*.local`, `*.internal`, `..` segments, control characters | dropped | dropped |
+| `javascript:`, `data:`, `blob:`, other schemes | dropped | dropped |
+| Loopback (`localhost`, `127.*`) | dropped | dropped in release builds; rewritten to the storage host in dev builds |
+| Literal `null` or `undefined` | no media | placeholder |
+| Post video | `<video>` only with a video extension, the `#kubus-media=video` marker, or a stored `video/*` type | extension or marker only (the community API returns no per-post media type yet) |
+
+Known intentional differences:
+
+1. Gateway order and set. The app tries `dweb.link` first. The backend uses the
+   configured https gateway first, then `ipfs.io`.
+2. Bare `Qm...` CIDs. The app treats them as CIDs. The backend does not, because
+   `isLikelyCid` is not widened in this release.
+3. Own-host rewrite only. Both sides rewrite the API or media origin and nothing
+   else. A third-party https `/uploads` path is kept as stored.
+4. Loopback. The app rewrites loopback to the storage host in dev builds only.
+   The backend always drops it.
+5. Video detection. The backend also reads a stored `video/*` type. The app
+   does not, until the community API returns one.
+
+## Rollout order and gates
+
+Proposed owner order. None of these steps has been run, and nothing is deployed.
+
+1. Verify backups and migration readiness for the target database.
+2. Apply backend migration 105 (backend #80) on every writable instance before
+   any Support client build is released. The migration is additive and is
+   applied by name.
+3. Deploy backend #84 before, or together with, app #260. Set `SEO_MEDIA_BASE_URL`
+   or `HTTP_BASE_URL`, and an https `IPFS_GATEWAY_URL`, for public pages. The
+   production env examples already use https values (per #84).
+4. Deploy backend #85 before, or with, app #265. #265 reads the additive
+   `degradedKinds` field. It is not verified whether #265 tolerates a response
+   without that field, so deploy #85 first. Decide the production institutions
+   source first (see open decisions).
+5. Merge app PRs in this order: #257, then #263 (stacked); then #251, #264, #259
+   and #262 (independent); then #261 (after backend #80); then #260 (after backend
+   #84); then #265 (after backend #85).
+6. Flags, as read from the code on `dev`:
+   - `supportTickets`: `enableSupportTickets = true` in source, with no build
+     define. The Support entry points are on in every build that contains #261.
+     Backend #80 must be live first.
+   - `communityMultiMedia`: `COMMUNITY_MULTI_MEDIA_ENABLED`, default `!isProduction`
+     in source, so off in a release build with no define. The public build
+     pipeline (`scripts/prepare_public_build_config.mjs`) defaults
+     `KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED` to `true`. `false` is the rollback
+     switch. Backend #79 is already on `master`.
+   - `analytics` (`ANALYTICS_APP_ENABLED`): source default `isProduction`. The
+     public pipeline defaults `KUBUS_ANALYTICS_APP_ENABLED` to `true`.
+   - `externalImageProxy`: `enableExternalImageProxy = true` on web. Its host
+     allowlist must be checked in production (open items).
+   - No new flag is added. #251 moves existing reads (`mapWalkingNavigation`,
+     `streetArtClaims`, `collabInvites`). #260 reads `externalImageProxy` and
+     #261 reads `supportTickets`. #257, #259, #262, #263, #264 and #265 add no
+     flag reads.
+7. Merges are owner-run. No production deploy, migration, tag or version bump
+   is implied by this document or by any PR listed above.
+
+## Invariants kept
+
+- A cultural artist is never the uploader, owner, contributor, wallet holder,
+  importer or photographer. Backend #84 removes the `artist_name` fallback from
+  the uploader display name and stops profile saves from writing
+  `artworks.artist_name` (I-02, G). Admin shows recorded artist and uploader
+  as separate fields.
+- Unknown stays unknown. `Unknown artist`, and its Slovenian equivalents, are
+  unattributed in the backend (B) and render as "Unknown artist" in the app
+  (#251). A wallet never reads as the artist.
+- No backfill. Historical rows where the uploader was stored as the artist are
+  not repaired (owner decision, #84).
+- An unsafe media field falls through to the next field and never renders (#260,
+  #84).
+
+## Verification evidence
+
+CI is per head, as in the table above. Local integrated evidence is outside the
+repository, under `C:/kubus-build/evidence/`:
+
+- **App integration.** Branch `int/0.8.2-app` (worktree `C:/kubus-build/int-app`,
+  HEAD `9ba31273`) merges #257, #263, #251, #264, #259, #260, #261 and #265.
+  It contains #262 only at `460c7b52`, one commit behind the current head
+  `beccba9b`, so that commit is not covered by the integration run. The full
+  suite in `evidence/j4/flutter-test-full.log` ends `+4519 ~26`, `All tests
+  passed!`, exit 0. `evidence/j4/analyze.log` reports no issues. The log does not
+  record its commit.
+- **Backend integration.** Branch `int/0.8.2-backend` (`C:/kubus-build/int-backend`,
+  HEAD `c36028d`) contains backend #84, #85, #80, #78 and #79. Jest in
+  `evidence/j/jest-test-ci.log`: 211 suites passed (7 skipped), 1964 tests passed
+  (59 skipped). Support end-to-end against the rig: 84 of 84 PASS
+  (`evidence/j/support-e2e-run/support-e2e-results-run.json`). PostgreSQL support
+  contract: 9 of 9 (`evidence/j/pg-support.log`).
+- **SEO.** 41 URLs on the rig (`evidence/j/seo-results.json`): 29 return 200, and
+  12 are the expected 404s (hidden, private, deactivated, draft, unknown). No
+  JSON-LD errors on any page.
+- **Browser, Chromium.** `evidence/j4/results` holds 17 PASS and 7 FAIL rows
+  across 17 files. One FAIL row is repeated in a trace file. The FAIL rows are not claimed as passing:
+  - C1-a and C1-b, like after sign-in (390 px, EN). A later rerun,
+    `j5v-LIKE`, passes 2 of 2 at 390 px EN, SL and at 1440 px.
+  - C5, post after the profile step (1440 px): the composer did not resume and
+    no POST was made.
+  - SR-6, community search institutions (390 px). #265 targets this.
+  - MP-D, map quick-card Directions tap (390 px, EN and SL).
+- **Browser, Firefox.** No integrated Firefox matrix. Firefox runs exist only for
+  Slice D, as reported in #251 (Chromium and Firefox at 390, 820 and 1440 px,
+  light and dark).
+- **Not verified:**
+  - Native Android and iOS navigation schemes (`google.navigation`,
+    `comgooglemaps`, `geo:`). The manifest `<queries>` and iOS
+    `LSApplicationQueriesSchemes` are a follow-up (#251).
+  - Physical devices and real speakers. Audio was checked in headless Chromium by
+    element state and decoded audio bytes only (#257). No spoken screen-reader
+    output.
+  - Production. Nothing was deployed or byte-compared. Gateway CORS cannot be
+    checked from the sandbox (#260).
+  - Analytics with live data. The charts were rendered from a fixture series,
+    because the analytics screen needs a signed-in account (#259).
+  - The Firefox matrix, and real iOS and Android browsers (#257).
+  - Authenticated live community publish flows (#257).
+  - `dart run custom_lint` on #261 exits 1 locally, the same as on a dev export
+    (author's report).
+
+## Open owner decisions and known limits
+
+Data and contracts:
+
+- **Uploader-as-artist history.** Historical rows where a profile save wrote the
+  uploader name into `artworks.artist_name` are not repaired. The candidate-set
+  query is in the #84 body. It cannot separate a real artist who is also the
+  uploader.
+- **Sitemap `<lastmod>` churn.** View counts and like, unlike and discovery
+  actions bump `artworks.updated_at`, so sitemap freshness moves with views
+  (reproduced in #84). The fix needs a `content_updated_at` column that changes
+  only on content edits. That needs a migration in both schema snapshots, so it
+  is deferred.
+- **Institutions source in production.** The `institutions` table had 0 active
+  rows in the 2026-09 audit. Production institutions are profiles with
+  `is_institution = true` (2 rows). Search reads the table, so production returns
+  no institutions until this is decided (#85).
+- **Institutions picker.** #85 says the community search institutions tab sends
+  `type=institutions`. #265 says no reachable picker tab on `dev` sends it. Confirm
+  before relying on an institutions tab.
+- **Events** are not a backend search kind (#85). No app code reads `results.events`.
+- **Support viewer role.** Viewer accounts log in but get 403 on `/auth/me` and on
+  every ticket route. The console explains this. Whether viewers get read access
+  is an owner decision (#13).
+- **Support email and notes.** Request-supplied email is ignored. Receipts and
+  status mail go only to a verified account email (#80). `admin_note` is internal:
+  it is never emailed and never returned to the requester (#13).
+- **Support rate limits** are per process, like the other route limiters (#80).
+- **Account deletion** leaves support tickets in place. This is from the release
+  brief and is not in any PR body (unverified).
+- **Local QA base URL.** With `HTTP_BASE_URL=http://localhost:3000` and no https
+  `SEO_MEDIA_BASE_URL`, relative media on public pages is dropped. This affects
+  `scripts/qa/seoPreviewServer.js` (#84, QA tooling follow-up).
+- **IPFS CIDs.** `isLikelyCid` reads a `bafkrei...` value as a file name. Left
+  unchanged, because the helper is shared with the API (#84).
+- **Post dates** on public pages use `Europe/Ljubljana` by design. Flagged for
+  review (#84).
+- **Wallet-less accounts** belong to the wallet-optional programme, which is not
+  in 0.8.2. The like route records a like and then answers 500, and the client
+  treats the recorded like as success (#262). The profile Save does not persist
+  without a wallet, so the profile step cannot advance for email-only accounts
+  (#262). Community post create returns 500 for wallet-less accounts (from the
+  release brief; not in a PR body, unverified).
+
+Product and UI:
+
+- **Desktop FAB "post" after sign-in** returns to the inline composer, not the
+  dialog, because the resume intent is one value (#262). Accepted.
+- **Map quick card focus.** The card does not take focus on open, so Tab walks the
+  sidebar first (18 presses to Directions at 1440 px). This predates 0.8.2. #264's
+  body does not address it (#251).
+- **Native navigation schemes.** Android `<queries>` and iOS
+  `LSApplicationQueriesSchemes` are missing. Web fallbacks work (#251).
+- **Gateway CORS and media proxy.** Gateways are fetched directly on web. Their
+  CORS headers must be probed in production. If absent, the next candidate is
+  tried, then the placeholder. The production proxy host allowlist does not
+  include the gateways, so the proxy answers `403 HOST_NOT_ALLOWED` for IPFS
+  covers (#260). Check this in production before release.
+- **Visual items from the release brief (unverified, not in PR bodies):** keyboard
+  focus ring faint in dark mode; `node.kubus.site` index navigation at Sofia Sans
+  40 px; Inter on `art.kubus.site`; HSTS and CSP headers on the art and node hosts;
+  the `kubus.site` deploy had no smoke test or rollback (plesk-git).
+
+Community media (see the detail below): the IPFS-only extensionless video case,
+native platform playback limits, per-process upload budgets, and the native
+Slovenian copy review remain documented limitations.
 
 ## Community posts with several photos and videos
 
