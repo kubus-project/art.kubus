@@ -174,6 +174,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     String? ticketId,
     SupportDraft? draft,
   }) async {
+    // A Send can arrive before the stored session has loaded on a cold open;
+    // the gate must not treat that visitor as a guest. The read is the same
+    // bootstrap the rest of the app uses, and an unreadable session is a guest.
+    try {
+      await BackendApiService().ensureAuthLoaded();
+    } catch (_) {
+      // Fall through as a guest.
+    }
+    if (!mounted) return false;
     if (_signedIn) return true;
     final l10n = AppLocalizations.of(context)!;
     if (draft != null) _support.stashDraft(draft);

@@ -8,6 +8,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/screens/support_center_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -17,6 +18,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
     'signature';
+
+/// Answers at once with nothing stored in secure storage. Unmocked, a guest's
+/// session read waits out its timeout in widget tests.
+const _secureStorage =
+    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
 const _ticketId = 'ticket-1';
 
@@ -105,12 +111,16 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, (call) async => null);
     api.setAuthTokenForTesting(_authToken);
   });
 
   tearDown(() {
     api.setAuthTokenForTesting(null);
     api.setHttpClient(createPlatformHttpClient());
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, null);
   });
 
   /// Installs a fake backend. Requests are recorded for assertions.

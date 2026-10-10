@@ -11,11 +11,16 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/widgets/auth/pending_action_continuation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Answers at once with nothing stored in secure storage (see the screen test).
+const _secureStorage =
+    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
 /// Shape-only session token; the backend is faked, so only presence matters.
 const _authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
@@ -139,6 +144,8 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, (call) async => null);
     api.setAuthTokenForTesting(null);
     requests = <http.Request>[];
   });
@@ -146,6 +153,8 @@ void main() {
   tearDown(() {
     api.setAuthTokenForTesting(null);
     api.setHttpClient(createPlatformHttpClient());
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, null);
   });
 
   void fakeBackend(Future<http.Response> Function(http.Request) handler) {

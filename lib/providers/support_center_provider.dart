@@ -150,16 +150,18 @@ class SupportCenterProvider extends ChangeNotifier {
   /// while the feature is off, so a disabled build sends no ticket traffic.
   Future<void> loadTickets() async {
     if (!_supportEnabled || _listLoading) return;
-    if (!signedIn) {
-      _tickets = null;
-      _listFailure = SupportFailure.signIn;
-      notifyListeners();
-      return;
-    }
     _listLoading = true;
     _listFailure = null;
     notifyListeners();
     try {
+      // A cold open can reach here before the stored session is read; the
+      // session must be known before deciding guest or signed in.
+      await BackendApiService().ensureAuthLoaded();
+      if (!signedIn) {
+        _tickets = null;
+        _listFailure = SupportFailure.signIn;
+        return;
+      }
       _tickets = await BackendApiService().getMySupportTickets();
     } catch (error) {
       _listFailure = classifySupportFailure(error);
