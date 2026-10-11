@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/services/storage_config.dart';
+import 'package:art_kubus/utils/media_failure_registry.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/common/kubus_marker_overlay_card.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
@@ -860,6 +861,57 @@ void main() {
 
     expect(find.text('1.2 km'), findsOneWidget);
     expect(find.byIcon(Icons.near_me), findsOneWidget);
+  });
+
+  testWidgets(
+      'a cover whose first IPFS gateway failed moments ago loads from the next '
+      'gateway instead of the placeholder', (tester) async {
+    const cid = 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi';
+    addTearDown(KubusMediaFailureRegistry.shared.clear);
+    // The card is reopened inside the failure window of the first gateway.
+    final version = KubusCachedImage.versionTokenFromDate(
+      _artwork().updatedAt,
+    );
+    String versioned(String url) =>
+        KubusCachedImage.withStableVersion(url, version)!;
+    KubusMediaFailureRegistry.shared.markFailed(
+      versioned('https://dweb.link/ipfs/$cid'),
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        SizedBox(
+          width: 340,
+          child: KubusMarkerOverlayCard(
+            marker: _marker(),
+            artwork: _artwork(),
+            subjectImageUrl: 'ipfs://$cid',
+            baseColor: Colors.teal,
+            displayTitle: 'Artwork',
+            canPresentExhibition: false,
+            description: 'Short preview.',
+            onClose: () {},
+            onPrimaryAction: () {},
+            primaryActionIcon: Icons.arrow_forward,
+            primaryActionLabel: 'More info',
+            maxWidth: 340,
+            maxHeight: 420,
+          ),
+        ),
+      ),
+    );
+
+    final shown = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((image) {
+          final provider = image.image;
+          return provider is ResizeImage ? provider.imageProvider : provider;
+        })
+        .whereType<NetworkImage>()
+        .map((provider) => provider.url)
+        .toList();
+    expect(shown, contains(versioned('https://ipfs.io/ipfs/$cid')));
+    expect(shown, isNot(contains(versioned('https://dweb.link/ipfs/$cid'))));
   });
 
   testWidgets('primary CTA foreground follows brightness contrast rule',

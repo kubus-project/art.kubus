@@ -737,6 +737,69 @@ void main() {
       );
     });
 
+    test(
+        'a stored IPFS https URL on a private, loopback or internal host is '
+        'never requested; the configured gateway chain serves it', () {
+      const chain = <String>[
+        '$primaryGateway$cidV1',
+        'https://ipfs.io/ipfs/$cidV1',
+        'https://gateway.pinata.cloud/ipfs/$cidV1',
+      ];
+      for (final stored in <String>[
+        'https://localhost/ipfs/$cidV1',
+        'https://127.0.0.1/ipfs/$cidV1',
+        'https://10.0.0.5/ipfs/$cidV1',
+        'https://192.168.1.20:8443/ipfs/$cidV1',
+        'https://[::1]/ipfs/$cidV1',
+        'https://intranet/ipfs/$cidV1',
+        'https://gw.internal/ipfs/$cidV1',
+        'https://gw.local/ipfs/$cidV1',
+        'https://app.localhost/ipfs/$cidV1',
+      ]) {
+        expect(
+          MediaUrlResolver.resolveDisplayCandidates(stored),
+          equals(chain),
+          reason: stored,
+        );
+        expect(
+          MediaUrlResolver.resolveDisplayUrl(stored),
+          equals(chain.first),
+          reason: stored,
+        );
+      }
+    });
+
+    test('a private-host IPFS URL keeps its path and query on the chain', () {
+      expect(
+        MediaUrlResolver.resolveDisplayCandidates(
+          'https://10.0.0.5/ipfs/$cidV0/a.png?x=1',
+        ),
+        equals([
+          '$primaryGateway$cidV0/a.png?x=1',
+          'https://ipfs.io/ipfs/$cidV0/a.png?x=1',
+          'https://gateway.pinata.cloud/ipfs/$cidV0/a.png?x=1',
+        ]),
+      );
+    });
+
+    test('a private-host IPFS URL with no CID is dropped', () {
+      expect(
+        MediaUrlResolver.resolveDisplayCandidates(
+          'https://localhost/ipfs/not-a-cid!',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('a public-host IPFS URL stays first, ahead of the chain', () {
+      expect(
+        MediaUrlResolver.resolveDisplayCandidates(
+          'https://w3s.link/ipfs/$cidV1',
+        ).first,
+        equals('https://w3s.link/ipfs/$cidV1'),
+      );
+    });
+
     test('a short fixture CID is accepted for an explicit ipfs:// reference',
         () {
       expect(
