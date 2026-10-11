@@ -390,9 +390,7 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     final l10n = AppLocalizations.of(context)!;
     final rawImageUrl = post.imageUrl ??
         (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
-    final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl) ??
-        MediaUrlResolver.resolve(rawImageUrl) ??
-        rawImageUrl;
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl);
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),

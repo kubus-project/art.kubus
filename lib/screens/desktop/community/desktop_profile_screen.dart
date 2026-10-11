@@ -745,7 +745,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final web3Provider = Provider.of<Web3Provider>(context);
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final coverImageUrl = _normalizeMediaUrl(user?.coverImage);
+    final coverImageUrl = MediaUrlResolver.resolveDisplayUrl(user?.coverImage);
     final wallet = user?.walletAddress ?? '';
     const avatarRadius = 44.0;
     final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
@@ -1794,10 +1794,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       MaterialPageRoute(builder: (_) => screen),
     );
-  }
-
-  String? _normalizeMediaUrl(String? url) {
-    return MediaUrlResolver.resolve(url);
   }
 
   String _formatStatCount(int count) {

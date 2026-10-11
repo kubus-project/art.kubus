@@ -10,6 +10,7 @@ import '../../providers/themeprovider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
@@ -693,7 +694,10 @@ class _ExhibitionCard extends StatelessWidget {
 
     final location = (exhibition.locationName ?? '').trim();
     final isPublished = exhibition.isPublished;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      exhibition.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -731,9 +735,13 @@ class _ExhibitionCard extends StatelessWidget {
                     child: coverUrl != null && coverUrl.isNotEmpty
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(KubusRadius.md),
-                            child: Image.network(
-                              coverUrl,
+                            child: KubusCachedImage(
+                              imageUrl: coverUrl,
                               fit: BoxFit.cover,
+                              placeholderBuilder: (_) => Icon(
+                                AppColorUtils.exhibitionIcon,
+                                color: themeProvider.accentColor,
+                              ),
                               errorBuilder: (_, __, ___) => Icon(
                                 AppColorUtils.exhibitionIcon,
                                 color: themeProvider.accentColor,

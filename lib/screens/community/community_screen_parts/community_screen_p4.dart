@@ -163,6 +163,9 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
           AppLocalizations.of(context)!.commonUnknown;
       final image =
           result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
+      final resolvedImage = image == null
+          ? null
+          : MediaUrlResolver.resolveDisplayUrl(image.toString());
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
@@ -173,13 +176,11 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
             color: themeProvider.accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KubusRadius.sm),
           ),
-          child: image != null
+          child: resolvedImage != null
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: Image.network(
-                    MediaUrlResolver.resolveDisplayUrl(image.toString()) ??
-                        MediaUrlResolver.resolve(image.toString()) ??
-                        image.toString(),
+                    resolvedImage,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Icon(
                       Icons.image,

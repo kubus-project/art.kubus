@@ -53,6 +53,10 @@ class MediaUrlResolver {
 
   static const int _defaultMaxDisplayWidth = 1600;
 
+  /// Width cap for list rows, cards and thumbnails. Heroes and detail headers
+  /// use the default display cap.
+  static const int cardMaxWidth = 960;
+
   // Wikimedia originals are frequently multi-megabyte scans; always request a
   // server-side thumbnail for display so 4G clients don't download 5MB+ per
   // card. Formats that Wikimedia can thumbnail with the same file extension.
@@ -146,10 +150,28 @@ class MediaUrlResolver {
     try {
       final uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
-      return _directDisplayDomains.any((d) => _hostMatches(host, d));
+      if (_directDisplayDomains.any((d) => _hostMatches(host, d))) return true;
+      return _isConfiguredIpfsGatewayHost(host);
     } catch (_) {
       return false;
     }
+  }
+
+  /// The configured public IPFS gateways are fetched directly by web clients.
+  ///
+  /// They are built to answer browser GETs, so a stored `https://<gateway>/ipfs/`
+  /// image loads without the backend media proxy. The proxy's production host
+  /// allowlist does not carry these gateways, so a proxied IPFS image cannot load
+  /// there at all. The hosts come from [StorageConfig], never a list kept here.
+  static bool _isConfiguredIpfsGatewayHost(String host) {
+    for (final gateway in StorageConfig.activeIpfsGateways) {
+      final gatewayHost =
+          Uri.tryParse(gateway.trim())?.host.toLowerCase() ?? '';
+      if (gatewayHost.isNotEmpty && _hostMatches(host, gatewayHost)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static bool _isKnownCorsHostileRedirector(String url) {
@@ -334,11 +356,10 @@ class MediaUrlResolver {
 
   /// Resolves a raw media reference into an absolute URL when possible.
   ///
-  /// - Passes through `data:`, `blob:`, and `asset:` URIs unchanged.
-  /// - Supports `ipfs://`, `ipfs/`, `/ipfs/` and backend-relative paths via `StorageConfig`.
-  /// - Normalizes protocol-relative URLs (`//...`) to `https://`.
+  /// Non-display variant: used for models, files and any reference that is not
+  /// rendered as a size-clamped image. See [_resolveCandidates] for the rules.
   static String? resolve(String? raw) {
-    return _resolveInternal(raw, forDisplay: false);
+    return _firstCandidate(_resolveCandidates(raw, forDisplay: false));
   }
 
   /// Resolves an image/display URL.
@@ -346,54 +367,430 @@ class MediaUrlResolver {
   /// For Flutter Web, this routes non-allowlisted external hosts through the
   /// backend media proxy to avoid CORS/image decode failures in CanvasKit.
   static String? resolveDisplayUrl(String? raw, {int? maxWidth}) {
-    return _resolveInternal(raw, forDisplay: true, maxWidth: maxWidth);
+    return _firstCandidate(
+      _resolveCandidates(raw, forDisplay: true, maxWidth: maxWidth),
+    );
   }
 
-  static String? _resolveInternal(
+  /// Every display URL for [raw], in preference order.
+  ///
+  /// IPFS references resolve to one candidate per configured gateway so an
+  /// image widget can step to the next gateway when the first one fails. All
+  /// other references yield at most one candidate.
+  static List<String> resolveDisplayCandidates(String? raw, {int? maxWidth}) {
+    return _resolveCandidates(raw, forDisplay: true, maxWidth: maxWidth);
+  }
+
+  /// The single fallback walker for entity media fields.
+  ///
+  /// Callers pass their field chain in preference order (for example an
+  /// artwork's `imageUrl`, then its CID, then fallbacks). The first reference
+  /// that resolves to a safe URL wins. Unsafe, empty and placeholder entries
+  /// are skipped, never passed through.
+  static String? firstDisplayUrl(
+    Iterable<String?> refs, {
+    int? maxWidth,
+  }) {
+    for (final raw in refs) {
+      final resolved = resolveDisplayUrl(raw, maxWidth: maxWidth);
+      if (resolved != null) return resolved;
+    }
+    return null;
+  }
+
+  /// The PNG rendition of an `.svg` reference, for surfaces that cannot show
+  /// SVG. Only the trailing extension of the path changes: a `.svg` in the
+  /// host, an earlier segment or the query is left alone. Other references
+  /// are returned as given.
+  static String svgAsPngReference(String url) {
+    final suffixAt = url.indexOf(RegExp(r'[?#]'));
+    final pathPart = suffixAt < 0 ? url : url.substring(0, suffixAt);
+    if (!pathPart.toLowerCase().endsWith('.svg')) return url;
+    final suffix = suffixAt < 0 ? '' : url.substring(suffixAt);
+    return '${pathPart.substring(0, pathPart.length - '.svg'.length)}.png'
+        '$suffix';
+  }
+
+  /// The IPFS reference for a stored CID field, or null when [raw] is not a
+  /// CID. A CID field is read as `ipfs://<cid>` (bare, `ipfs:`, `ipfs://`,
+  /// `/ipfs/` and `ipfs/` forms), never as a file name or a backend path.
+  static String? ipfsReferenceForCid(String? raw) {
+    if (raw == null || _hasControlCharacter(raw)) return null;
+    var value = raw.trim();
+    if (value.isEmpty) return null;
+    final lower = value.toLowerCase();
+    if (lower.startsWith('ipfs:')) {
+      value = value.substring('ipfs:'.length);
+    } else if (lower.startsWith('/ipfs/')) {
+      value = value.substring('/ipfs/'.length);
+    } else if (lower.startsWith('ipfs/')) {
+      value = value.substring('ipfs/'.length);
+    }
+    value = value.replaceFirst(RegExp(r'^/+'), '');
+    final cid = value.split(RegExp(r'[/?#]')).first;
+    if (!_cidFieldSegment.hasMatch(cid)) return null;
+    return 'ipfs://$value';
+  }
+
+  /// The first reference in [refs] that passes the safety rules, returned as
+  /// given (trimmed), not resolved.
+  ///
+  /// For model getters that hand a raw reference to a caller which resolves it
+  /// later: an unsafe or placeholder cover falls through to the next field
+  /// instead of hiding it.
+  static String? firstSafeRef(Iterable<String?> refs) {
+    for (final raw in refs) {
+      if (raw == null || _hasControlCharacter(raw)) continue;
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) continue;
+      if (_resolveCandidates(trimmed, forDisplay: false).isNotEmpty) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
+  static String? _firstCandidate(List<String> candidates) {
+    return candidates.isEmpty ? null : candidates.first;
+  }
+
+  /// URL safety and normalization shared by every media consumer.
+  ///
+  /// Accepted:
+  /// - absolute `https:` on a public host (a host that is not an IP literal,
+  ///   `localhost`, a single-label name, or `*.local` / `*.internal`);
+  /// - `ipfs://<cid>[/path]`, `ipfs:<cid>`, `/ipfs/<cid>`, `ipfs/<cid>` and bare
+  ///   CIDv0/CIDv1 values go through the configured gateway chain (see
+  ///   [_ipfsCandidates]). A stored `https://<host>/ipfs/<cid>` is tried as
+  ///   stored first, then the same chain;
+  /// - backend-relative paths and bare names, resolved against the storage
+  ///   API host. `/uploads/`, `/profiles/` and `/avatars/` on the storage API
+  ///   host (or loopback in a development build) are rewritten to that relative
+  ///   path. The same path on any other https host is kept exactly as given;
+  /// - `http:` only when the app's own development API base is `http:` and
+  ///   the reference points at that same origin (see [_isDevHttpBackendOrigin]).
+  ///
+  /// Rejected (no candidates): every other scheme (`javascript:`, `data:`,
+  /// `blob:`, `file:`, `asset:`, `vbscript:`, `ftp:`, `placeholder:`, ...),
+  /// `http:` to any other host, protocol-relative `//host`, backslash forms,
+  /// `user:pass@` URLs, `..` segments (also percent-encoded), and empty,
+  /// whitespace, `null` and `undefined` input.
+  static List<String> _resolveCandidates(
     String? raw, {
     required bool forDisplay,
     int? maxWidth,
   }) {
-    if (raw == null) return null;
-    final candidate = raw.trim();
-    if (candidate.isEmpty) return null;
+    final admissible = _admissibleReference(raw);
+    if (admissible == null) return const <String>[];
 
-    final lower = candidate.toLowerCase();
-    if (lower.startsWith('placeholder://')) return null;
-    if (lower.startsWith('data:') ||
-        lower.startsWith('blob:') ||
-        lower.startsWith('asset:')) {
-      return candidate;
-    }
+    final resolvedCandidates = _destinationCandidates(admissible);
+    final out = <String>[];
+    for (final resolved in resolvedCandidates) {
+      var normalized = _canonicalizeHttpUrl(resolved);
+      if (forDisplay && _isHttpUrl(normalized)) {
+        normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
+        normalized = rewriteWikimediaThumb(normalized, maxWidth: maxWidth);
+      }
 
-    if (candidate.startsWith('//')) {
-      return StorageConfig.resolveUrl('https:$candidate');
-    }
-
-    final resolved = StorageConfig.resolveUrl(candidate);
-    if (resolved == null) return null;
-    var normalized = _canonicalizeHttpUrl(resolved);
-    if (forDisplay && _isHttpUrl(normalized)) {
-      normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
-      normalized = rewriteWikimediaThumb(normalized, maxWidth: maxWidth);
-    }
-
-    // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore
-    // requires upstream CORS headers. Route external display media through
-    // backend proxy unless the host is explicitly allowlisted.
-    if (foundation.kIsWeb && AppConfig.isFeatureEnabled('externalImageProxy')) {
-      if (_isHttpUrl(normalized)) {
+      // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore
+      // requires upstream CORS headers. Route external display media through
+      // backend proxy unless the host is explicitly allowlisted.
+      if (foundation.kIsWeb &&
+          AppConfig.isFeatureEnabled('externalImageProxy') &&
+          _isHttpUrl(normalized)) {
         if (forDisplay) {
           if (shouldProxyDisplayUrl(normalized)) {
-            return _proxyImageUrl(normalized);
+            normalized = _proxyImageUrl(normalized);
           }
         } else if (_looksLikeImageUrl(normalized) &&
             shouldProxyDisplayUrl(normalized)) {
-          return _proxyImageUrl(normalized);
+          normalized = _proxyImageUrl(normalized);
         }
       }
+
+      if (normalized.isNotEmpty && !out.contains(normalized)) {
+        out.add(normalized);
+      }
+    }
+    return out;
+  }
+
+  static const Set<String> _rejectedLiterals = {'null', 'undefined'};
+
+  static const List<String> _backendManagedPrefixes = [
+    '/uploads/',
+    '/profiles/',
+    '/avatars/',
+  ];
+
+  /// A numeric or hex host label, in any form inet_aton accepts: decimal
+  /// (`2130706433`, `127`), octal (`0177`) or hex (`0x7f`).
+  static final RegExp _numericHostLabel = RegExp(
+    r'^(0x[0-9a-f]*|[0-9]+)$',
+    caseSensitive: false,
+  );
+
+  /// A host whose last label is numeric is an IPv4 number in some form
+  /// (`127.0.0.1`, `127.1`, `0x7f.1`, `2130706433`, `0177.0.0.1`). Such a host
+  /// is never a public name, so it is not accepted as an external reference.
+  static bool _endsInNumber(String host) {
+    final labels = host.split('.');
+    return _numericHostLabel.hasMatch(labels.last);
+  }
+
+  /// Lower-case host with one trailing root dot removed, so `localhost.` is
+  /// checked as `localhost`. A second dot is left in place and is rejected by
+  /// the empty-label check.
+  static String _normalizeHost(String host) {
+    final h = host.toLowerCase();
+    return h.endsWith('.') ? h.substring(0, h.length - 1) : h;
+  }
+
+  /// True when [text] holds a control character (U+0000 to U+001F or U+007F),
+  /// including an embedded newline or tab. Such a reference is never a URL.
+  static bool _hasControlCharacter(String text) {
+    for (final unit in text.codeUnits) {
+      if (unit < 0x20 || unit == 0x7f) return true;
+    }
+    return false;
+  }
+
+  /// One CID segment of an explicit IPFS reference (`ipfs://`, `/ipfs/`,
+  /// `https://host/ipfs/`). Real CIDs (CIDv0 `Qm...`, CIDv1 `bafy...`) are
+  /// base-alphanumeric; anything else is not a CID and is dropped.
+  static final RegExp _ipfsSegment = RegExp(r'^[A-Za-z0-9]+$');
+
+  /// A stored CID field (`image_cid`, `cid`) is only read as a CID when it
+  /// looks like one: at least 20 base-alphanumeric characters. Shorter values
+  /// are never mistaken for an IPFS reference.
+  static final RegExp _cidFieldSegment = RegExp(r'^[A-Za-z0-9]{20,}$');
+
+  static String get _backslash => String.fromCharCode(92);
+
+  /// The reference when it passes the checks that depend only on its text,
+  /// otherwise null. Hosts and gateways are checked when candidates are built.
+  static String? _admissibleReference(String? raw) {
+    if (raw == null) return null;
+    // Checked before trimming: an embedded or trailing control character is
+    // rejected, not stripped or percent-encoded into the URL.
+    if (_hasControlCharacter(raw)) return null;
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final lower = value.toLowerCase();
+    if (_rejectedLiterals.contains(lower)) return null;
+    if (lower.startsWith('placeholder:')) return null;
+    if (value.contains(_backslash)) return null;
+    if (value.startsWith('//')) return null;
+
+    final scheme = _schemeOf(value);
+    if (scheme == null) {
+      // A colon in a relative reference is a scheme in disguise: the backend's
+      // bare-name rule turns `javascript:alert(1)` into `/uploads/javascript:alert(1)`.
+      if (value.contains(':')) return null;
+      return _hasTraversalSegment(value) ? null : value;
+    }
+    if (scheme == 'ipfs' || scheme == 'ipns') return value;
+    if (scheme == 'http' || scheme == 'https') {
+      return _admissibleAbsoluteHttp(value, scheme);
+    }
+    return null;
+  }
+
+  static String? _admissibleAbsoluteHttp(String value, String scheme) {
+    final uri = Uri.tryParse(value);
+    if (uri == null || uri.host.isEmpty) return null;
+    if (uri.userInfo.isNotEmpty) return null;
+    if (_hasTraversalSegment(value)) return null;
+
+    final relative = _pathAndSuffix(value);
+    // A backend-managed path on the storage API host (or on loopback in a dev
+    // build) is rewritten to the relative path, so its host is not checked.
+    // The same path on any other host is an ordinary external reference.
+    if (_isBackendManagedPath(relative) && _isOwnMediaHost(uri.host)) {
+      return value;
+    }
+    // A stored IPFS https URL is kept as given, with the gateway chain behind
+    // it, whatever its host.
+    if (_ipfsPathRest(relative) != null) {
+      return scheme == 'https' ? value : null;
+    }
+    if (scheme == 'http') {
+      return _isDevHttpBackendOrigin(uri) ? value : null;
+    }
+    return _isPublicHost(uri.host) ? value : null;
+  }
+
+  /// Turns an admissible reference into its absolute candidates, in order.
+  static List<String> _destinationCandidates(String value) {
+    final scheme = _schemeOf(value);
+    if (scheme == 'ipfs') {
+      return _ipfsCandidates(value.substring('ipfs:'.length));
+    }
+    if (scheme == 'ipns') {
+      final rest = value
+          .substring('ipns:'.length)
+          .replaceFirst(RegExp(r'^/+'), '')
+          .replaceFirst(RegExp(r'^ipns/'), '');
+      return StorageConfig.resolveAllUrls('ipns://$rest');
+    }
+    if (scheme == 'http' || scheme == 'https') {
+      final uri = Uri.tryParse(value);
+      final relative = _pathAndSuffix(value);
+      if (uri != null &&
+          _isBackendManagedPath(relative) &&
+          _isOwnMediaHost(uri.host)) {
+        // Rewritten to the relative path, which resolves on the API host.
+        return StorageConfig.resolveAllUrls(relative);
+      }
+      final ipfsRest = _ipfsPathRest(relative);
+      if (ipfsRest != null) {
+        // The stored URL is tried as given; the configured gateway chain
+        // follows, so a failed gateway falls back to the next one.
+        final chain = _ipfsCandidates(ipfsRest);
+        if (chain.isEmpty) return const <String>[];
+        return <String>[value, ...chain];
+      }
+      // Any other https reference, including a third-party URL that merely
+      // contains /uploads/, stays exactly as given. A dev http base is upgraded
+      // on secure web by StorageConfig, as before.
+      if (scheme == 'http') return StorageConfig.resolveAllUrls(value);
+      return <String>[value];
     }
 
-    return normalized;
+    final lower = value.toLowerCase();
+    if (StorageConfig.isLikelyCid(value)) return _ipfsCandidates(value);
+    if (lower.startsWith('/ipfs/') || lower.startsWith('ipfs/')) {
+      return _ipfsCandidates(value);
+    }
+    // A bare file name with no slash is a legacy upload: it lives under
+    // /uploads on the storage API host, as the backend resolves it.
+    if (!value.contains('/')) {
+      return StorageConfig.resolveAllUrls('/uploads/$value');
+    }
+    return StorageConfig.resolveAllUrls(value)
+        .where((url) => url.startsWith('https://') || url.startsWith('http://'))
+        .toList(growable: false);
+  }
+
+  /// Gateway candidates for `<cid>[/path][?query][#fragment]`, or none when
+  /// the CID segment is not a CID. Every configured gateway is a candidate, in
+  /// order, so a failed image can step to the next gateway.
+  static List<String> _ipfsCandidates(String cidAndPath) {
+    var rest = cidAndPath.trim().replaceFirst(RegExp(r'^/+'), '');
+    rest = rest.replaceFirst(RegExp(r'^ipfs/'), '');
+    final cid = rest.split(RegExp(r'[/?#]')).first;
+    if (!_ipfsSegment.hasMatch(cid)) return const <String>[];
+    return StorageConfig.resolveAllUrls('ipfs://$rest');
+  }
+
+  /// The path and everything after it for an absolute URL (`/a/b?c#d`), or
+  /// the whole value when it is not absolute.
+  static String _pathAndSuffix(String value) {
+    final authorityAt = value.indexOf('//');
+    if (!value.contains('://') || authorityAt < 0) return value;
+    final pathAt = value.indexOf('/', authorityAt + 2);
+    return pathAt < 0 ? '/' : value.substring(pathAt);
+  }
+
+  static bool _isBackendManagedPath(String relative) {
+    final lower = relative.toLowerCase();
+    return _backendManagedPrefixes.any((prefix) => lower.startsWith(prefix));
+  }
+
+  /// Text after `/ipfs/` in the path part of [relative], or null when the
+  /// path is not an IPFS path. A `?query` or `#fragment` is kept.
+  static String? _ipfsPathRest(String relative) {
+    final pathEnd = relative.indexOf(RegExp(r'[?#]'));
+    final pathOnly = pathEnd < 0 ? relative : relative.substring(0, pathEnd);
+    final lower = pathOnly.toLowerCase();
+    final at = lower.startsWith('/ipfs/') ? 0 : lower.indexOf('/ipfs/');
+    if (at < 0) return null;
+    return relative.substring(at + '/ipfs/'.length);
+  }
+
+  /// True when any path segment, after percent-decoding, is `..` (or the
+  /// path cannot be decoded, or decodes to a backslash).
+  static bool _hasTraversalSegment(String value) {
+    final relative = _pathAndSuffix(value);
+    final cut = relative.indexOf(RegExp(r'[?#]'));
+    final pathOnly = cut < 0 ? relative : relative.substring(0, cut);
+    final String decoded;
+    try {
+      decoded = Uri.decodeComponent(pathOnly);
+    } catch (_) {
+      return true;
+    }
+    if (decoded.contains(_backslash)) return true;
+    return decoded.split('/').any((segment) => segment == '..');
+  }
+
+  static bool _isStorageBackendHost(String host) {
+    final backend = Uri.tryParse(StorageConfig.httpBackend);
+    final backendHost = _normalizeHost(backend?.host ?? '');
+    return backendHost.isNotEmpty && backendHost == _normalizeHost(host);
+  }
+
+  /// Test seam: a unit test can run the release rules inside a debug test run
+  /// by setting this to false (and must reset it to null afterwards).
+  @foundation.visibleForTesting
+  static bool? debugDevBuildOverride;
+
+  static bool get _devBuild => debugDevBuildOverride ?? AppConfig.isDevelopment;
+
+  static bool _isLoopbackHost(String host) {
+    final h = _normalizeHost(host);
+    return h == 'localhost' ||
+        h.endsWith('.localhost') ||
+        h == '::1' ||
+        h.startsWith('127.');
+  }
+
+  /// Whether a backend-managed path on [host] is rewritten to the storage API
+  /// host: the API host itself, and in development builds any loopback host.
+  /// Any other host is an ordinary external reference and is never rewritten.
+  static bool _isOwnMediaHost(String host) {
+    final h = _normalizeHost(host);
+    if (h.isEmpty) return false;
+    if (_isStorageBackendHost(h)) return true;
+    return _devBuild && _isLoopbackHost(h);
+  }
+
+  /// Development only: an `http:` reference is accepted when the app's own API
+  /// base is `http:` and the reference is on that same origin (host and port,
+  /// for example `http://localhost:3000`). Release builds never accept http.
+  static bool _isDevHttpBackendOrigin(Uri uri) {
+    if (!_devBuild) return false;
+    final backend = Uri.tryParse(StorageConfig.httpBackend);
+    if (backend == null || backend.scheme.toLowerCase() != 'http') {
+      return false;
+    }
+    return backend.host.isNotEmpty &&
+        _normalizeHost(backend.host) == _normalizeHost(uri.host) &&
+        backend.port == uri.port;
+  }
+
+  /// Hosts an external reference may use. The storage API host is always
+  /// allowed; other IP literals, `localhost`, single-label names and local
+  /// or internal suffixes are not.
+  static bool _isPublicHost(String host) {
+    final h = _normalizeHost(host);
+    if (h.isEmpty) return false;
+    if (_isStorageBackendHost(h)) return true;
+    if (h.contains(':')) return false; // IPv6 literal
+    if (h.split('.').any((label) => label.isEmpty)) return false; // `a..b`
+    if (_endsInNumber(h)) return false; // IPv4 in any numeric or hex form
+    if (!h.contains('.')) return false; // localhost and other single labels
+    return !(h.endsWith('.local') ||
+        h.endsWith('.internal') ||
+        h.endsWith('.localhost'));
+  }
+
+  static final RegExp _schemePattern = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.\-]*):');
+
+  /// Lower-cased scheme of [candidate] when it carries one (`javascript`,
+  /// `data`, `https`, ...), otherwise null. Relative paths and CIDs have none.
+  static String? _schemeOf(String candidate) {
+    final match = _schemePattern.firstMatch(candidate);
+    return match?.group(1)!.toLowerCase();
   }
 }

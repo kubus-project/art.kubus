@@ -11,7 +11,7 @@ typedef KubusImageErrorBuilder = Widget Function(
 
 /// Shared network image widget for stable URL normalization and cache-friendly
 /// rendering across map + creator surfaces.
-class KubusCachedImage extends StatelessWidget {
+class KubusCachedImage extends StatefulWidget {
   const KubusCachedImage({
     super.key,
     required this.imageUrl,
@@ -35,6 +35,9 @@ class KubusCachedImage extends StatelessWidget {
           semanticLabel == null || !excludeFromSemantics,
           'semanticLabel cannot be provided when excludeFromSemantics is true.',
         );
+
+  @override
+  State<KubusCachedImage> createState() => _KubusCachedImageState();
 
   final String? imageUrl;
   final BoxFit fit;
@@ -67,19 +70,6 @@ class KubusCachedImage extends StatelessWidget {
     return value.millisecondsSinceEpoch.toString();
   }
 
-  static String? resolveImageUrl(
-    String? raw, {
-    int? maxDisplayWidth,
-  }) {
-    final resolved = MediaUrlResolver.resolveDisplayUrl(
-          raw,
-          maxWidth: maxDisplayWidth,
-        ) ??
-        MediaUrlResolver.resolveDisplayUrl(raw);
-    if (resolved == null || resolved.trim().isEmpty) return null;
-    return resolved.trim();
-  }
-
   static String? withStableVersion(String? url, String? version) {
     if (url == null || url.isEmpty) return null;
     final token = (version ?? '').trim();
@@ -108,13 +98,20 @@ class KubusCachedImage extends StatelessWidget {
     return parsed.replace(queryParameters: params).toString();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// Builds the image for [state]'s current gateway candidate.
+  ///
+  /// Candidates come from the canonical resolver: an IPFS reference yields one
+  /// URL per configured gateway, and a failed candidate advances to the next.
+  Widget _buildImage(BuildContext context, _KubusCachedImageState state) {
     final resolvedSemanticLabel = _normalizedSemanticLabel;
-    final resolved = resolveImageUrl(
+    final candidates = MediaUrlResolver.resolveDisplayCandidates(
       imageUrl,
-      maxDisplayWidth: maxDisplayWidth,
+      maxWidth: maxDisplayWidth,
     );
+    final candidateIndex = candidates.isEmpty
+        ? 0
+        : state._candidateIndex.clamp(0, candidates.length - 1);
+    final resolved = candidates.isEmpty ? null : candidates[candidateIndex];
     final urlWithVersion = withStableVersion(resolved, cacheVersion);
     if (urlWithVersion == null || urlWithVersion.isEmpty) {
       return _withFallbackSemantics(
@@ -127,7 +124,7 @@ class KubusCachedImage extends StatelessWidget {
         KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
       return _withFallbackSemantics(
         errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
-            _buildFallback(context, icon: Icons.broken_image_outlined),
+            _buildFallback(context),
         resolvedSemanticLabel,
       );
     }
@@ -167,11 +164,20 @@ class KubusCachedImage extends StatelessWidget {
       excludeFromSemantics: excludeFromSemantics,
       errorBuilder: (context, error, stackTrace) {
         KubusMediaFailureRegistry.shared.markFailed(urlWithVersion);
+        if (candidateIndex + 1 < candidates.length) {
+          state._advanceCandidate(candidateIndex);
+          return _withFallbackSemantics(
+            _buildFallback(context),
+            resolvedSemanticLabel,
+          );
+        }
+        // Every candidate failed: show the placeholder, never a broken-image
+        // glyph. Callers that want their own error widget pass errorBuilder.
         late final Widget fallback;
         if (errorBuilder != null) {
           fallback = errorBuilder!(context, error, stackTrace);
         } else {
-          fallback = _buildFallback(context, icon: Icons.broken_image_outlined);
+          fallback = _buildFallback(context);
         }
         return _withFallbackSemantics(fallback, resolvedSemanticLabel);
       },
@@ -215,6 +221,32 @@ class KubusCachedImage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _KubusCachedImageState extends State<KubusCachedImage> {
+  int _candidateIndex = 0;
+  bool _advancePending = false;
+
+  @override
+  void didUpdateWidget(covariant KubusCachedImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _candidateIndex = 0;
+    }
+  }
+
+  void _advanceCandidate(int failedIndex) {
+    if (_advancePending) return;
+    _advancePending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _advancePending = false;
+      if (!mounted || _candidateIndex != failedIndex) return;
+      setState(() => _candidateIndex = failedIndex + 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget._buildImage(context, this);
 }
 
 /// Error handed to [KubusCachedImage.errorBuilder] when the image was not

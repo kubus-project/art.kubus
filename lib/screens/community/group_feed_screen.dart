@@ -609,8 +609,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       preview = CommunitySubjectPreview(
         ref: CommunitySubjectRef(type: 'artwork', id: draft.artwork!.id),
         title: draft.artwork!.title,
-        imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ??
-            draft.artwork!.imageUrl,
+        imageUrl: MediaUrlResolver.resolveDisplayUrl(draft.artwork!.imageUrl),
       );
     }
 
