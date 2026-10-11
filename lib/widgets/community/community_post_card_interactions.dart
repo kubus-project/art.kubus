@@ -22,6 +22,7 @@ class _InteractionButton extends StatefulWidget {
     this.isActive = false,
     this.toggled,
     this.color,
+    this.focusReturnKey,
   });
 
   final IconData icon;
@@ -31,6 +32,9 @@ class _InteractionButton extends StatefulWidget {
   final bool isActive;
   final bool? toggled;
   final Color? color;
+  // Identifies a control a sign-in journey must hand focus back to; see
+  // PendingActionProvider.rememberFocusReturn.
+  final String? focusReturnKey;
 
   @override
   State<_InteractionButton> createState() => _InteractionButtonState();
@@ -46,6 +50,17 @@ class _InteractionButtonState extends State<_InteractionButton> {
   void initState() {
     super.initState();
     _focusNode.addListener(_handleFocusChange);
+    final key = widget.focusReturnKey;
+    if (key != null) {
+      // A rebuilt control (the screen was replaced by sign-in) takes focus once,
+      // after the first frame, when the journey remembered it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (readPendingActionsOrNull(context)?.takeFocusReturn(key) ?? false) {
+          _focusNode.requestFocus();
+        }
+      });
+    }
   }
 
   @override

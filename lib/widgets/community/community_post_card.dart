@@ -16,6 +16,7 @@ import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 import 'community_post_caption.dart';
 import 'community_post_media_carousel.dart';
+import 'post_like_settlement.dart';
 
 part 'community_post_card_interactions.dart';
 part 'community_post_card_metadata.dart';
@@ -303,6 +304,7 @@ class CommunityPostCard extends StatelessWidget {
                               : l10n?.communityPostStateNotLiked,
                         ]),
                         toggled: post.isLiked,
+                        focusReturnKey: 'like:${post.id}',
                         onTap: onToggleLike,
                         isActive: post.isLiked,
                         color: post.isLiked

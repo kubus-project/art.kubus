@@ -40,6 +40,11 @@ class PendingActionProvider extends ChangeNotifier {
 
   PendingActionIntent? _pending;
   bool _awaitingConfirmation = false;
+
+  // The control a visitor was on when they continued into sign-in. The screen
+  // it lives on is replaced by that journey, so the rebuilt control claims
+  // keyboard focus once, instead of focus falling back to the page's start.
+  String? _focusReturnKey;
   bool _executing = false;
   PendingActionIntent? _settled;
   PendingActionIntent? _lastSettled;
@@ -232,6 +237,20 @@ class PendingActionProvider extends ChangeNotifier {
       notifyListeners();
     }
     return result;
+  }
+
+  /// Remembers the control to refocus when the account journey it opened is
+  /// finished, for a screen that the journey replaces. See [takeFocusReturn].
+  void rememberFocusReturn(String key) {
+    _focusReturnKey = key;
+  }
+
+  /// Claims the remembered focus target if it is [key]: true once, so a
+  /// control that is rebuilt after the journey takes focus exactly once.
+  bool takeFocusReturn(String key) {
+    if (_focusReturnKey != key) return false;
+    _focusReturnKey = null;
+    return true;
   }
 
   /// Visitor declined the continuation. Browsing context is untouched.

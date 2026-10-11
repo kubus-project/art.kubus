@@ -364,6 +364,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _toggleLike() async {
     if (_post == null) return;
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
+    final likeKey = 'like:${_post!.id}';
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
@@ -372,6 +374,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       targetType: PendingActionTargetType.post,
       targetId: _post!.id,
       sourceScreen: 'post_detail',
+      onAuthJourneyStarted: () => pending?.rememberFocusReturn(likeKey),
     );
     if (!authenticated || !mounted) return;
     try {

@@ -74,6 +74,7 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
@@ -84,6 +85,8 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
       targetType: PendingActionTargetType.post,
       targetId: post.id,
       sourceScreen: 'desktop_community_feed',
+      onAuthJourneyStarted: () =>
+          pending?.rememberFocusReturn('like:${post.id}'),
     );
     if (!authenticated || !mounted) return;
     final wasLiked = post.isLiked;

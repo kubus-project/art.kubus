@@ -784,6 +784,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
@@ -795,6 +796,8 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       targetType: PendingActionTargetType.post,
       targetId: post.id,
       sourceScreen: 'community_feed',
+      onAuthJourneyStarted: () =>
+          pending?.rememberFocusReturn('like:${post.id}'),
     );
     if (!authenticated || !mounted) return;
 
