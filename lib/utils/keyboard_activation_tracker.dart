@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 /// Remembers when an activation key (Enter, numpad Enter or Space) was last
 /// pressed or released, so a surface opened by that activation can be told
@@ -26,6 +26,8 @@ class KeyboardActivationTracker {
   };
 
   static DateTime? _lastActivationAt;
+  static FocusNode? _invoker;
+  static DateTime? _invokerAt;
 
   @visibleForTesting
   static DateTime Function() clock = DateTime.now;
@@ -57,9 +59,29 @@ class KeyboardActivationTracker {
     return clock().difference(at) <= window;
   }
 
+  /// A control that is being activated names itself here, so a surface it
+  /// opens can return focus to it. Read once with [takeInvoker].
+  static void noteInvoker(FocusNode node) {
+    _invoker = node;
+    _invokerAt = clock();
+  }
+
+  /// The control named by [noteInvoker] if that happened within [window], or
+  /// null. Clears the hint either way.
+  static FocusNode? takeInvoker() {
+    final node = _invoker;
+    final at = _invokerAt;
+    _invoker = null;
+    _invokerAt = null;
+    if (node == null || at == null) return null;
+    return clock().difference(at) <= window ? node : null;
+  }
+
   @visibleForTesting
   static void resetForTests() {
     _lastActivationAt = null;
+    _invoker = null;
+    _invokerAt = null;
     clock = DateTime.now;
   }
 }

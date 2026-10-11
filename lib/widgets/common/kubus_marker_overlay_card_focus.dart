@@ -124,7 +124,10 @@ class _MarkerOverlayFocusHostState extends State<_MarkerOverlayFocusHost> {
     // A new keyboard open replaces any session still around. The replaced
     // session's restore is dropped: the new card is now where focus belongs.
     _activeMarkerOverlayFocusSession = _MarkerOverlayFocusSession(
-      invoker: FocusManager.instance.primaryFocus,
+      // The row that was activated names itself; focus at this point is not
+      // reliably that row.
+      invoker: KeyboardActivationTracker.takeInvoker() ??
+          FocusManager.instance.primaryFocus,
       fallback: widget.fallbackFocusNode,
     );
     FocusManager.instance.removeListener(_onPrimaryFocusChanged);

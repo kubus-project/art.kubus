@@ -13,6 +13,7 @@ import '../../../utils/media_url_resolver.dart';
 import '../../artwork_creator_byline.dart';
 import '../../common/kubus_cached_image.dart';
 import '../kubus_map_glass_surface.dart';
+import '../../../utils/keyboard_activation_tracker.dart';
 
 class _SpatialArchiveBadge extends StatelessWidget {
   const _SpatialArchiveBadge({
@@ -71,6 +72,7 @@ class _KubusNearbyArtArtworkListItemState
   bool get wantKeepAlive => _keepAlive;
 
   void _markActivated() {
+    KeyboardActivationTracker.noteInvoker(_focusNode);
     _keepAliveTimer?.cancel();
     _keepAlive = true;
     updateKeepAlive();
@@ -257,6 +259,7 @@ class _KubusNearbyArtArtworkGridItemState
   bool get wantKeepAlive => _keepAlive;
 
   void _markActivated() {
+    KeyboardActivationTracker.noteInvoker(_focusNode);
     _keepAliveTimer?.cancel();
     _keepAlive = true;
     updateKeepAlive();
