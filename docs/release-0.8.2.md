@@ -207,3 +207,11 @@ Corrections made on top of the merged work:
 The Support Center client (#261) is deliberately **not** in the branch proposed for `dev`. It needs backend #80 and migration 105. A separate branch, `int/0.8.2-ui-integration-support`, adds it on top for staging with the matching backend. The backend counterpart is `int/0.8.2-backend-staging` (#84, #85 and #80 merged without squashing; `backend-ci.yml` keeps every database-contract step).
 
 Gates before this reaches users: merge into `dev` after the required checks pass, then deploy the matching backend candidate before the Support client, and keep the Community multi-media switch tied to backend #79 as described above. Nothing here changes versions, tags or production configuration.
+
+## Development integration (verified 2026-10-11)
+
+- #271 was merged into `dev` with a merge commit (`90884947`), so the nine incorporated histories are preserved. All 11 required checks passed on the PR head `59e876e8`.
+- `Deploy development web` ran on `90884947`: the artifact was built from that SHA, its `SHA256SUMS` verified, `kubus-web-revision.txt` and the deployment metadata matched the SHA, and the password-aware development smoke and revision smoke passed. No production release workflow ran.
+- **Shared API (temporary, owner decision).** `dev.kubus.site` uses the production API `https://api.kubus.site` (standby `bapi.kubus.site`) until a separate staging backend exists. `deploy-development.yml` sets `require_staging_backend: false` explicitly; the staging-capable logic in `web-artifact.yml` and `scripts/prepare_public_build_config.mjs` stays for later. QA on the shared API is read-only or uses disposable records, and migrations go through the reviewed backend deployment only.
+- The deployed artifact was served locally and exercised with the acceptance harness (API reads go to production as GET only; writes are contained or hit the disposable rig). Map, video and overflow suites match the accepted baseline; the like-continuation case passes in Chromium and Firefox from a clean state. `dev.kubus.site` itself is behind HTTP basic auth, so no browser pass was run on the live host.
+- The Support Center client is still **not** deployed. `int/0.8.2-ui-integration-support` now merges `dev` (`efc73605`) and needs backend #80 with migration 105 first.
