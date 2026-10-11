@@ -16,6 +16,7 @@ import '../../services/share/share_types.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/wallet_utils.dart';
@@ -109,6 +110,11 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    // The desktop sub-screen header already shows this name above the embedded
+    // screen; the body does not repeat it (one title per screen).
+    final hostTitle =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>()?.title.trim();
+    final headerCarriesName = hostTitle == name.trim();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -123,16 +129,18 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTypography.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
+                child: headerCarriesName
+                    ? const SizedBox.shrink()
+                    : Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
               ),
               if (canEdit)
                 IconButton(

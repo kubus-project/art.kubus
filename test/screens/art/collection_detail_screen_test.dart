@@ -7,6 +7,7 @@ import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/art/collection_detail_screen.dart';
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/collab_api.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
@@ -121,6 +122,41 @@ void main() {
         );
       }
     }
+  });
+
+  testWidgets(
+      'embedded under a sub-screen with the same title: the name appears once',
+      (tester) async {
+    final harness = _CollectionHarness();
+    addTearDown(harness.dispose);
+
+    await tester.pumpWidget(harness.app(
+      DesktopShellScope(
+        pushScreen: (_) {},
+        popScreen: () {},
+        navigateToRoute: (_) {},
+        openNotifications: () {},
+        openFunctionsPanel: (_, {Widget? content}) {},
+        setFunctionsPanelContent: (_) {},
+        closeFunctionsPanel: () {},
+        canPop: true,
+        child: const DesktopSubScreen(
+          title: 'Public collection',
+          child: CollectionDetailScreen(
+            collectionId: 'collection-1',
+            embedded: true,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Public collection'),
+      findsOneWidget,
+      reason:
+          'the sub-screen header owns the name; the body does not repeat it',
+    );
   });
 }
 

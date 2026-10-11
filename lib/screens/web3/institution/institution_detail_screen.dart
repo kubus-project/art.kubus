@@ -9,6 +9,7 @@ import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../screens/desktop/desktop_shell_scope.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../widgets/common/kubus_cached_image.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -142,7 +143,22 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     );
   }
 
-  Widget _buildHeaderCard(BuildContext context, Institution institution) {
+  /// Whether the header card repeats the institution name. A standalone screen
+  /// shows the name in its AppBar, so the card does not. Embedded in a desktop
+  /// sub-screen, the card repeats it only when the sub-screen header carries a
+  /// different string (a raw link with its own label).
+  bool _bodyShowsName(BuildContext context, Institution institution) {
+    if (!widget.embedded) return false;
+    final hostTitle =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>()?.title.trim();
+    return hostTitle != institution.name.trim();
+  }
+
+  Widget _buildHeaderCard(
+    BuildContext context,
+    Institution institution, {
+    required bool showName,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final resolvedImage =
         MediaUrlResolver.resolveDisplayUrl(institution.heroImageRef);
@@ -216,13 +232,17 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  institution.name,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: scheme.onSurface,
+                // One title per screen: the AppBar (standalone) or the desktop
+                // sub-screen header (embedded) already carries the name.
+                if (showName) ...[
+                  Text(
+                    institution.name,
+                    style: KubusTextStyles.screenTitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: KubusSpacing.sm),
+                  const SizedBox(height: KubusSpacing.sm),
+                ],
                 Wrap(
                   spacing: KubusSpacing.sm,
                   runSpacing: KubusSpacing.sm,
@@ -363,7 +383,11 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             : ListView(
                 padding: const EdgeInsets.all(KubusSpacing.lg),
                 children: [
-                  _buildHeaderCard(context, _institution!),
+                  _buildHeaderCard(
+                    context,
+                    _institution!,
+                    showName: _bodyShowsName(context, _institution!),
+                  ),
                   const SizedBox(height: KubusSpacing.lg),
                   _buildEventsSection(context),
                 ],
