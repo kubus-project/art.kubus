@@ -312,4 +312,44 @@ void main() {
       expect(body.maxLines, isNull);
     });
   });
+
+  group('stage on very wide columns', () {
+    test('keeps the full column while its 4:3 stage fits the height cap', () {
+      expect(communityMediaStageWidth(360, 800), 360);
+      expect(communityMediaStageWidth(720, 900), 720);
+    });
+
+    test('caps the width so the stage is never taller than the cap', () {
+      // 1440 tall viewport: cap is 720 high, so at most 960 wide.
+      expect(communityMediaStageWidth(3000, 1440), 960);
+      // 600 tall viewport: 0.72 * 600 = 432 high, 576 wide.
+      expect(communityMediaStageWidth(3000, 600), closeTo(576, 0.001));
+      // Tiny viewports keep a usable minimum stage.
+      expect(communityMediaStageWidth(3000, 200),
+          kCommunityMediaStageMinHeight * kCommunityMediaStageAspect);
+    });
+
+    test('passes an unbounded column through untouched', () {
+      expect(communityMediaStageWidth(double.infinity, 900), double.infinity);
+    });
+
+    testWidgets('an ultrawide column renders a bounded, centered stage',
+        (tester) async {
+      tester.view.physicalSize = const Size(3440, 1440);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: _images),
+        width: 3000,
+      ));
+      await tester.pump();
+
+      final stage = tester.getSize(find.byType(PageView));
+      expect(stage.height, lessThanOrEqualTo(720.5));
+      expect(stage.width / stage.height, closeTo(4 / 3, 0.01));
+      final center = tester.getCenter(find.byType(PageView));
+      expect(center.dx, closeTo(1720, 1));
+    });
+  });
 }

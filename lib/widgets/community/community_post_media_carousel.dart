@@ -18,6 +18,24 @@ const double kCommunityMediaStageAspect = 4 / 3;
 /// Quoted posts show one compact preview at this proportion.
 const double kCommunityMediaCompactAspect = 16 / 9;
 
+/// The stage never grows taller than this share of the viewport, and never
+/// beyond [kCommunityMediaStageMaxHeight], so a video does not become taller
+/// than the screen on ultrawide or very wide columns.
+const double kCommunityMediaStageViewportShare = 0.72;
+const double kCommunityMediaStageMaxHeight = 720;
+const double kCommunityMediaStageMinHeight = 320;
+
+/// Width of the media stage for a column [available] pixels wide on a viewport
+/// [viewportHeight] tall: the full column until its 4:3 stage would exceed the
+/// height cap, then the widest 4:3 stage the cap allows.
+double communityMediaStageWidth(double available, double viewportHeight) {
+  if (!available.isFinite) return available;
+  final cap = (viewportHeight * kCommunityMediaStageViewportShare)
+      .clamp(kCommunityMediaStageMinHeight, kCommunityMediaStageMaxHeight)
+      .toDouble();
+  return math.min(available, cap * kCommunityMediaStageAspect);
+}
+
 /// An image whose shape is within this factor of the stage fills it (cover).
 /// Anything further from the stage shape is fitted whole (contain), so tall
 /// portraits and wide panoramas are not cropped away.
@@ -151,7 +169,20 @@ class _CommunityPostMediaCarouselState
   Widget build(BuildContext context) {
     if (widget.mediaUrls.isEmpty) return const SizedBox.shrink();
     if (widget.compact) return _buildCompact(context);
-    return _buildCarousel(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = communityMediaStageWidth(
+          constraints.maxWidth,
+          MediaQuery.sizeOf(context).height,
+        );
+        final carousel = _buildCarousel(context);
+        if (!width.isFinite || width >= constraints.maxWidth) return carousel;
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(width: width, child: carousel),
+        );
+      },
+    );
   }
 
   Widget _buildCompact(BuildContext context) {
