@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
@@ -99,17 +101,81 @@ class SupportCenterProvider extends ChangeNotifier {
 
   bool get signedIn => BackendApiService().hasAuthSession;
 
-  List<Map<String, dynamic>>? get tickets => _tickets;
-  bool get listLoading => _listLoading;
-  SupportFailure? get listFailure => _listFailure;
+  // Everything below belongs to the account that was signed in when it was
+  // loaded. This provider outlives a sign-out, so each getter answers only
+  // while that same account is still signed in: after a logout or an account
+  // switch the previous account's requests are gone at once, before any new
+  // request returns, and responses still in flight for it are dropped.
+  String? _scopeKey;
+  bool _scoped = false;
+  int _listToken = 0;
 
-  String? get openId => _openId;
-  Map<String, dynamic>? get ticket => _ticket;
-  bool get ticketLoading => _ticketLoading;
-  SupportFailure? get ticketFailure => _ticketFailure;
+  /// Stable identity of the account behind [token]: the account id in the
+  /// session token, so a refreshed token for the same account keeps its data.
+  /// A token without a readable payload stands for itself.
+  @visibleForTesting
+  static String? accountKeyOf(String? token) {
+    final value = (token ?? '').trim();
+    if (value.isEmpty) return null;
+    final parts = value.split('.');
+    if (parts.length != 3) return value;
+    try {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      if (payload is Map) {
+        for (final key in const <String>[
+          'id',
+          'userId',
+          'sub',
+          'walletAddress'
+        ]) {
+          final candidate = (payload[key] ?? '').toString().trim();
+          if (candidate.isNotEmpty) return '$key:$candidate';
+        }
+      }
+    } catch (_) {
+      // Fall through: the token itself is the identity.
+    }
+    return value;
+  }
 
-  bool get replying => _replying;
-  SupportFailure? get replyFailure => _replyFailure;
+  String? _currentKey() => accountKeyOf(BackendApiService().getAuthToken());
+
+  bool get _inScope => _scoped && _currentKey() == _scopeKey;
+
+  /// Binds the provider to the account asking now. When it is a different
+  /// account (or a guest) from the one the data belongs to, the data is
+  /// cleared and every pending response is invalidated.
+  void _enterScope() {
+    final key = _currentKey();
+    if (_scoped && key == _scopeKey) return;
+    _scoped = true;
+    _scopeKey = key;
+    _tickets = null;
+    _listFailure = null;
+    _listLoading = false;
+    _listToken++;
+    _detailToken++;
+    _openId = null;
+    _ticket = null;
+    _ticketLoading = false;
+    _ticketFailure = null;
+    _replying = false;
+    _replyFailure = null;
+  }
+
+  List<Map<String, dynamic>>? get tickets => _inScope ? _tickets : null;
+  bool get listLoading => _inScope && _listLoading;
+  SupportFailure? get listFailure => _inScope ? _listFailure : null;
+
+  String? get openId => _inScope ? _openId : null;
+  Map<String, dynamic>? get ticket => _inScope ? _ticket : null;
+  bool get ticketLoading => _inScope && _ticketLoading;
+  SupportFailure? get ticketFailure => _inScope ? _ticketFailure : null;
+
+  bool get replying => _inScope && _replying;
+  SupportFailure? get replyFailure => _inScope ? _replyFailure : null;
 
   /// The interrupted draft, with the account that wrote it (null for a guest).
   ({SupportDraft draft, String? ownerUserId})? _stash;
@@ -149,25 +215,38 @@ class SupportCenterProvider extends ChangeNotifier {
   /// The signed-in account's requests, newest update first. Does nothing
   /// while the feature is off, so a disabled build sends no ticket traffic.
   Future<void> loadTickets() async {
-    if (!_supportEnabled || _listLoading) return;
+    if (!_supportEnabled) return;
+    // A cold open can reach here before the stored session is read; the
+    // session must be known before deciding guest or signed in.
+    try {
+      await BackendApiService().ensureAuthLoaded();
+    } catch (_) {
+      // Handled below as a guest.
+    }
+    _enterScope();
+    if (_listLoading) return;
+    final token = ++_listToken;
     _listLoading = true;
     _listFailure = null;
     notifyListeners();
     try {
-      // A cold open can reach here before the stored session is read; the
-      // session must be known before deciding guest or signed in.
-      await BackendApiService().ensureAuthLoaded();
       if (!signedIn) {
         _tickets = null;
         _listFailure = SupportFailure.signIn;
         return;
       }
-      _tickets = await BackendApiService().getMySupportTickets();
+      final loaded = await BackendApiService().getMySupportTickets();
+      // The account may have changed while the request was in flight.
+      if (token != _listToken) return;
+      _tickets = loaded;
     } catch (error) {
+      if (token != _listToken) return;
       _listFailure = classifySupportFailure(error);
     } finally {
-      _listLoading = false;
-      notifyListeners();
+      if (token == _listToken) {
+        _listLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -176,6 +255,13 @@ class SupportCenterProvider extends ChangeNotifier {
   /// dropped.
   Future<void> openTicket(String id) async {
     if (!_supportEnabled) return;
+    // The session must be known before the request is bound to an account.
+    try {
+      await BackendApiService().ensureAuthLoaded();
+    } catch (_) {
+      // A guest; the request answers 401.
+    }
+    _enterScope();
     final token = ++_detailToken;
     _openId = id;
     // Never show the previous request's conversation under a new id.
@@ -241,7 +327,9 @@ class SupportCenterProvider extends ChangeNotifier {
   /// shows what the server holds.
   Future<SupportFailure?> replyToTicket(String id, String text) async {
     // A second send while one is in flight must not reach the server.
+    _enterScope();
     if (_replying) return SupportFailure.generic;
+    final scope = _scopeKey;
     _replying = true;
     _replyFailure = null;
     notifyListeners();
@@ -253,6 +341,11 @@ class SupportCenterProvider extends ChangeNotifier {
       failure = classifySupportFailure(error);
     }
 
+    if (scope != _currentKey()) {
+      // The account changed while the reply was in flight: it belongs to the
+      // old account's request, which is gone from this screen.
+      return failure;
+    }
     _replying = false;
     _replyFailure = failure;
     final stillOpen = _openId == id;

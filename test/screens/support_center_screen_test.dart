@@ -1131,6 +1131,83 @@ void main() {
       );
     });
 
+    testWidgets(
+        'a draft refused for one account is never restored to another account',
+        (tester) async {
+      backend((request) async {
+        if (request.method == 'POST') return _error(401, 'Invalid token');
+        if (request.url.path.endsWith('/$_ticketId')) {
+          return _ok(_ticket(
+            messages: <Map<String, Object?>>[_openingMessage()],
+          ));
+        }
+        return _ok(<Object?>[_ticket()]);
+      });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'user_id': 'account-a',
+      });
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        routes: freshSignIn(),
+      );
+      await tester.tap(find.text('Map does not load'));
+      await settle(tester);
+      await tester.enterText(replyField(), 'Account A private reply');
+      await tester.tap(find.text('Send reply'));
+      await settle(tester);
+      expect(find.text('Complete sign-in'), findsOneWidget);
+
+      final support = tester
+          .element(find.byType(SupportCenterScreen, skipOffstage: false))
+          .read<SupportCenterProvider>();
+      // Account B signs in next: A's text is dropped, not restored to B.
+      expect(
+        support.takeDraft(
+          section: SupportSection.requests.name,
+          ticketId: _ticketId,
+          currentUserId: 'account-b',
+        ),
+        isNull,
+      );
+    });
+
+    testWidgets('the refused account still gets its own draft back',
+        (tester) async {
+      backend((request) async {
+        if (request.method == 'POST') return _error(401, 'Invalid token');
+        if (request.url.path.endsWith('/$_ticketId')) {
+          return _ok(_ticket(
+            messages: <Map<String, Object?>>[_openingMessage()],
+          ));
+        }
+        return _ok(<Object?>[_ticket()]);
+      });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'user_id': 'account-a',
+      });
+      await pumpScreen(
+        tester,
+        section: SupportSection.requests,
+        routes: freshSignIn(),
+      );
+      await tester.tap(find.text('Map does not load'));
+      await settle(tester);
+      await tester.enterText(replyField(), 'Account A private reply');
+      await tester.tap(find.text('Send reply'));
+      await settle(tester);
+
+      final support = tester
+          .element(find.byType(SupportCenterScreen, skipOffstage: false))
+          .read<SupportCenterProvider>();
+      final draft = support.takeDraft(
+        section: SupportSection.requests.name,
+        ticketId: _ticketId,
+        currentUserId: 'account-a',
+      );
+      expect(draft?.fields['reply'], 'Account A private reply');
+    });
+
     testWidgets('a refused session on reply opens sign-in for the request',
         (tester) async {
       backend((request) async {

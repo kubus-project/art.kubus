@@ -300,7 +300,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   /// (and the request, for a reply). The same route the other screens use for a
   /// 401; an interrupted draft is stashed first so it is restored on return.
   Future<void> _openSignIn({SupportDraft? draft, String? ticketId}) async {
-    if (draft != null) _support.stashDraft(draft);
+    if (draft != null) {
+      // Only a refused session reaches here with a draft, so the draft was
+      // written by the signed-in account: bind it to that account, so a
+      // different account signing in next never receives it. A draft with no
+      // readable account id is bound to the session identity instead, which
+      // no other account matches.
+      final owner = await _currentUserId() ??
+          SupportCenterProvider.accountKeyOf(
+              BackendApiService().getAuthToken());
+      if (!mounted) return;
+      _support.stashDraft(draft, ownerUserId: owner);
+    }
     await Navigator.of(context).pushNamed(
       '/sign-in',
       arguments: <String, Object?>{
