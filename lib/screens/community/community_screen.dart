@@ -10,6 +10,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/community_search_results.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
 import '../../widgets/inline_loading.dart';
@@ -20,8 +21,11 @@ import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../widgets/community/community_compose_intent_resumer.dart';
+import '../../widgets/community/post_like_settlement.dart';
+import '../../services/pending_action_executor.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
+import '../../widgets/community/community_search_institution_tile.dart';
 import '../../widgets/community/community_subject_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_mode_provider.dart';
@@ -48,6 +52,7 @@ import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
 import '../../community/community_composer_media.dart';
 import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';
@@ -90,6 +95,7 @@ import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
 import '../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../widgets/notifications/kubus_notifications_sheet.dart';
+import '../../widgets/common/kubus_focus_ring.dart';
 
 part 'community_screen_parts/community_screen_p1.dart';
 part 'community_screen_parts/community_screen_p2.dart';
@@ -135,6 +141,14 @@ class _CommunityScreenState extends State<CommunityScreen>
   List<CommunityPost> _communityPosts = [];
   List<CommunityPost> _followingFeedPosts = [];
   List<CommunityPost> _discoverFeedPosts = [];
+  // A like the continuation confirms for a post in this feed is shown on its
+  // card at once, without reloading the list or moving the scroll position.
+  late final PostLikeSettlementWatcher _likeSettlements =
+      PostLikeSettlementWatcher(
+    _applySettledPostLike,
+    onLikeStarted: _applyStartedPostLike,
+    onLikeAttemptEnded: _applyEndedPostLike,
+  );
   List<CommunityPost> _artFeedPosts = [];
   final Set<String> _expandedCommentPostIds = <String>{};
   final Map<String, TextEditingController> _inlineCommentControllers =
@@ -286,6 +300,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _likeSettlements.attach(readPendingActionsOrNull(context));
     if (!_animationsInitialized) {
       _animationsInitialized = true;
       final animationTheme = context.animationTheme;
@@ -341,6 +356,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   void dispose() {
+    _likeSettlements.detach();
     // Remove config provider listener
     try {
       final configProvider =

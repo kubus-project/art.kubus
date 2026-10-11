@@ -13,14 +13,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     String? actionLabel,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final hub = context.read<CommunityHubProvider>();
-    return const ContextualAuthGate().ensureAuthenticated(
-      requirements: ProtectedActionRequirements.participant,
+    return ensureCommunityComposeAccess(
       context,
+      intent: intent,
       actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
-      returnRoute: '/community',
       sourceScreen: 'community_screen',
-      onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
     );
   }
 
@@ -36,6 +33,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
         return _handleReviewFabPressed();
       case CommunityComposeIntent.createGroup:
         return _handleCreateGroupPressed();
+      case CommunityComposeIntent.startChat:
+        // The chat start the guest asked for: back in Messages, where the
+        // new-conversation entry is.
+        _openMessagesOverlay();
+        return Future<void>.value();
     }
   }
 
@@ -375,33 +377,38 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     final isCompact = MediaQuery.of(context).size.width < 400;
     final l10n = AppLocalizations.of(context)!;
 
-    return TextField(
-      controller: _newPostController,
-      minLines: 3,
-      maxLines: null,
-      decoration: InputDecoration(
-        hintText: l10n.communityComposerTextHint,
-        hintStyle: KubusTypography.inter(
+    // The composer's field has no border of its own (borderSide none), so the
+    // keyboard focus indicator is the shared ring.
+    return KubusFocusRing(
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      child: TextField(
+        controller: _newPostController,
+        minLines: 3,
+        maxLines: null,
+        decoration: InputDecoration(
+          hintText: l10n.communityComposerTextHint,
+          hintStyle: KubusTypography.inter(
+            fontSize: isCompact ? 14 : 16,
+            color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          ),
+          filled: true,
+          fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: isCompact ? 12 : 18,
+          ),
+        ),
+        style: KubusTypography.inter(
           fontSize: isCompact ? 14 : 16,
-          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          height: 1.4,
+          color: scheme.onPrimaryContainer,
         ),
-        filled: true,
-        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: isCompact ? 12 : 18,
-        ),
+        textInputAction: TextInputAction.newline,
       ),
-      style: KubusTypography.inter(
-        fontSize: isCompact ? 14 : 16,
-        height: 1.4,
-        color: scheme.onPrimaryContainer,
-      ),
-      textInputAction: TextInputAction.newline,
     );
   }
 
@@ -560,11 +567,12 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
           hub.setDraftArtwork(null);
         }
       },
-      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+      leading: previewValue != null &&
+              MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                 width: 44,
                 height: 44,
                 fit: BoxFit.cover,
@@ -877,6 +885,9 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     List<Map<String, dynamic>> suggestions = [];
     bool isLoading = false;
     bool showSuggestions = true;
+    // True when the backend reported this kind as degraded and returned no
+    // rows, so the empty state must not say "no results".
+    bool searchUnavailable = false;
 
     showModalBottomSheet(
       context: context,
@@ -1006,6 +1017,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                                   searchController.clear();
                                   setModalState(() {
                                     results.clear();
+                                    searchUnavailable = false;
                                     showSuggestions = true;
                                   });
                                 },
@@ -1024,6 +1036,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                         if (q.isEmpty) {
                           setModalState(() {
                             results.clear();
+                            searchUnavailable = false;
                             showSuggestions = true;
                           });
                           return;
@@ -1033,36 +1046,34 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                           showSuggestions = false;
                         });
                         try {
+                          // The request's `type` and the rows read back are the
+                          // same kind. Tags are searched as `all` (the backend
+                          // has no tag kind) and only the custom entry is added.
                           final response = await backend.search(
                             query: q,
                             type: searchType == 'tags' ? 'all' : searchType,
                             limit: 20,
                           );
                           final list = <Map<String, dynamic>>[];
+                          var unavailable = false;
                           if (response['success'] == true) {
-                            if (searchType == 'profiles') {
-                              final profiles =
-                                  _extractSearchResults(response, 'profiles');
-                              list.addAll(profiles);
-                            } else if (searchType == 'artworks') {
-                              final artworks =
-                                  _extractSearchResults(response, 'artworks');
-                              list.addAll(artworks);
-                            } else if (searchType == 'tags') {
+                            if (searchType == 'tags') {
                               list.add(
                                   {'tag': q, 'count': 0, 'isCustom': true});
-                              final tags =
-                                  _extractSearchResults(response, 'tags');
-                              list.addAll(tags);
-                            } else {
-                              final all =
-                                  _extractSearchResults(response, 'all');
-                              list.addAll(all);
                             }
+                            final rows =
+                                communitySearchRows(response, searchType);
+                            list.addAll(rows);
+                            unavailable = rows.isEmpty &&
+                                communitySearchKindDegraded(
+                                  response,
+                                  searchType,
+                                );
                           }
                           if (mounted) {
                             setModalState(() {
                               results = list;
+                              searchUnavailable = unavailable;
                               isLoading = false;
                             });
                           }
@@ -1117,8 +1128,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                                           searchController.text.isEmpty
                                               ? l10n
                                                   .communitySearchEmptyStartTyping
-                                              : l10n
-                                                  .communitySearchEmptyNoResults,
+                                              : searchUnavailable
+                                                  ? l10n
+                                                      .commonSomethingWentWrong
+                                                  : l10n
+                                                      .communitySearchEmptyNoResults,
                                           style: KubusTypography.inter(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.5),
@@ -1145,42 +1159,5 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
         },
       ),
     );
-  }
-
-  List<Map<String, dynamic>> _extractSearchResults(
-      Map<String, dynamic> response, String type) {
-    final list = <Map<String, dynamic>>[];
-    try {
-      if (response['results'] is Map<String, dynamic>) {
-        final data = response['results'] as Map<String, dynamic>;
-        final items = data[type] ?? data['results'] ?? [];
-        if (items is List) {
-          for (final item in items) {
-            if (item is Map<String, dynamic>) {
-              list.add(item);
-            }
-          }
-        }
-      } else if (response['data'] is List) {
-        for (final item in response['data']) {
-          if (item is Map<String, dynamic>) {
-            list.add(item);
-          }
-        }
-      } else if (response['data'] is Map<String, dynamic>) {
-        final data = response['data'] as Map<String, dynamic>;
-        final items = data[type] ?? [];
-        if (items is List) {
-          for (final item in items) {
-            if (item is Map<String, dynamic>) {
-              list.add(item);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error extracting search results: $e');
-    }
-    return list;
   }
 }

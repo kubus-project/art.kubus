@@ -16,10 +16,23 @@ part of 'kubus_marker_overlay_card.dart';
 /// focus at all (Escape clears focus before closing), focus returns to the
 /// control that opened the card if that control still exists, and otherwise to
 /// the screen's fallback focus node (the map search field).
+///
+/// One key press can reach the activation tracker more than once: the key down
+/// and, a moment later, its release (or the browser's own activation event for
+/// a semantics button). A card the overlay recreates while the press settles
+/// (it re-places the card once its anchor resolves) would then see a fresh
+/// activation that names no opener. Such a host joins the session that is
+/// already running, so the opener recorded by the first host is not replaced by
+/// whatever happens to hold focus at that moment.
 class _MarkerOverlayFocusSession {
-  _MarkerOverlayFocusSession({required this.invoker, this.fallback});
+  _MarkerOverlayFocusSession({
+    required this.invoker,
+    required this.startedAt,
+    this.fallback,
+  });
 
   final FocusNode? invoker;
+  final DateTime startedAt;
   FocusNode? fallback;
   final Set<FocusScopeNode> scopes = <FocusScopeNode>{};
   int mountedHosts = 0;
@@ -73,7 +86,8 @@ class _MarkerOverlayFocusHostState extends State<_MarkerOverlayFocusHost> {
   @override
   void initState() {
     super.initState();
-    if (KeyboardActivationTracker.consumeRecentActivation()) {
+    if (KeyboardActivationTracker.consumeRecentActivation() &&
+        !_isSettlingRepeatOfActiveSession()) {
       _startSession();
     }
     final session = _activeMarkerOverlayFocusSession;
@@ -120,10 +134,22 @@ class _MarkerOverlayFocusHostState extends State<_MarkerOverlayFocusHost> {
     super.dispose();
   }
 
+  /// A further activation, with no opener of its own, arriving within the
+  /// activation window of the session that is already running: the same key
+  /// press settling, not a new open.
+  bool _isSettlingRepeatOfActiveSession() {
+    final active = _activeMarkerOverlayFocusSession;
+    if (active == null) return false;
+    if (KeyboardActivationTracker.hasFreshInvoker) return false;
+    final age = KeyboardActivationTracker.now().difference(active.startedAt);
+    return age <= KeyboardActivationTracker.window;
+  }
+
   void _startSession() {
     // A new keyboard open replaces any session still around. The replaced
     // session's restore is dropped: the new card is now where focus belongs.
     _activeMarkerOverlayFocusSession = _MarkerOverlayFocusSession(
+      startedAt: KeyboardActivationTracker.now(),
       // The row that was activated names itself; focus at this point is not
       // reliably that row.
       invoker: KeyboardActivationTracker.takeInvoker() ??

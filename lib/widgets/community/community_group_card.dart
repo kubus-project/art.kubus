@@ -93,9 +93,8 @@ class CommunityGroupCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           group.isMember ? scheme.surface : accentColor,
-                      foregroundColor: group.isMember
-                          ? scheme.onSurface
-                          : scheme.onPrimary,
+                      foregroundColor:
+                          group.isMember ? scheme.onSurface : scheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
@@ -183,8 +182,9 @@ class CommunityGroupCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color:
-            Theme.of(context).brightness == Brightness.dark ? scheme.surface : Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? scheme.surface
+            : Colors.white,
         borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.1),
@@ -256,7 +256,8 @@ class CommunityGroupCard extends StatelessWidget {
                                   _formatTimeAgo(group.latestPost!.createdAt!),
                                 ),
                                 style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: 0.5),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.5),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -335,12 +336,11 @@ class _GroupAvatar extends StatelessWidget {
         color: accentColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
-      child: group.coverImage != null && group.coverImage!.isNotEmpty
+      child: MediaUrlResolver.resolveDisplayUrl(group.coverImage) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(group.coverImage!) ??
-                    group.coverImage!,
+                MediaUrlResolver.resolveDisplayUrl(group.coverImage)!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
                   Icons.groups,

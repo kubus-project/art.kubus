@@ -762,6 +762,12 @@ abstract class AppLocalizations {
   /// **'Like this artwork'**
   String get activationGateLikeArtworkTitle;
 
+  /// No description provided for @activationGateLikePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post'**
+  String get activationGateLikePostTitle;
+
   /// No description provided for @activationGateFollowTitle.
   ///
   /// In en, this message translates to:
@@ -863,6 +869,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Like this artwork?'**
   String get activationConfirmLikeArtwork;
+
+  /// No description provided for @activationConfirmLikePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post?'**
+  String get activationConfirmLikePost;
 
   /// No description provided for @activationConfirmFollow.
   ///
@@ -19056,6 +19068,12 @@ abstract class AppLocalizations {
   /// **'This video cannot be played here.'**
   String get communityMediaVideoUnavailable;
 
+  /// 0.8.2 community video poster: shown on a video that has no still preview
+  ///
+  /// In en, this message translates to:
+  /// **'Preview unavailable'**
+  String get communityMediaVideoPreviewUnavailable;
+
   /// 0.8.2 community media video player
   ///
   /// In en, this message translates to:
@@ -23388,6 +23406,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Comment'**
   String get communityPostActionComment;
+
+  /// No description provided for @communityPostStateLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'liked'**
+  String get communityPostStateLiked;
+
+  /// No description provided for @communityPostStateNotLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'not liked'**
+  String get communityPostStateNotLiked;
+
+  /// No description provided for @communityPostStateSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'saved'**
+  String get communityPostStateSaved;
+
+  /// No description provided for @communityPostStateNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'not saved'**
+  String get communityPostStateNotSaved;
 
   /// No description provided for @communityRepostedToast.
   ///

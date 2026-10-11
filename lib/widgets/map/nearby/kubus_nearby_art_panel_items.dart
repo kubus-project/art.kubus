@@ -420,11 +420,10 @@ class _ArtworkThumbnail extends StatelessWidget {
         ? (height * dpr).clamp(64.0, 1024.0).round()
         : null;
     final resolved =
-        MediaUrlResolver.resolveDisplayUrl(url, maxWidth: cacheWidth) ??
-            (url ?? '').trim();
+        MediaUrlResolver.resolveDisplayUrl(url, maxWidth: cacheWidth);
 
     Widget child;
-    if (resolved.isEmpty) {
+    if (resolved == null || resolved.isEmpty) {
       child = ColoredBox(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
         child: Center(
@@ -460,7 +459,9 @@ class _ArtworkThumbnail extends StatelessWidget {
           color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
           child: Center(
             child: Icon(
-              Icons.broken_image_outlined,
+              // Placeholder, not a broken-image glyph: a missing cover is
+              // expected, not an error the viewer must see.
+              Icons.image_outlined,
               color: scheme.onSurfaceVariant,
               size: iconSize,
             ),

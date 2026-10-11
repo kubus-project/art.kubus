@@ -1,10 +1,7 @@
-import 'dart:io' show File;
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:video_player/video_player.dart';
 
 import '../../community/community_composer_media.dart';
 import '../../community/community_upload_feedback.dart';
@@ -296,7 +293,14 @@ class _CommunityComposerMediaThumbnail extends StatelessWidget {
     }
     final typed = _buildTypedTile(context);
     if (item.isVideo) {
-      return _ComposerVideoPreview(file: item.file, fallback: typed);
+      // The captured poster stands in for the clip. Without one (capture is
+      // unavailable here, or still running) the typed tile shows. No player is
+      // created for a tile, so a tray of clips never starts several decoders.
+      final poster = item.posterBytes;
+      if (poster != null && poster.isNotEmpty) {
+        return _ComposerVideoPoster(bytes: poster);
+      }
+      return typed;
     }
     return typed;
   }
@@ -396,86 +400,21 @@ class _TileIconButton extends StatelessWidget {
   }
 }
 
-/// First frame of a picked video, shown paused and muted behind the tile
-/// chrome. Falls back to the typed tile while the clip loads, and for good if it
-/// cannot be decoded here (the upload still goes ahead; the server is the judge).
-class _ComposerVideoPreview extends StatefulWidget {
-  const _ComposerVideoPreview({required this.file, required this.fallback});
+/// The captured poster of a picked video, with the play mark over it. The tile
+/// is a still: it never decodes the clip itself.
+class _ComposerVideoPoster extends StatelessWidget {
+  const _ComposerVideoPoster({required this.bytes});
 
-  final XFile file;
-  final Widget fallback;
-
-  @override
-  State<_ComposerVideoPreview> createState() => _ComposerVideoPreviewState();
-}
-
-class _ComposerVideoPreviewState extends State<_ComposerVideoPreview> {
-  VideoPlayerController? _controller;
-  bool _ready = false;
-  bool _disposed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    VideoPlayerController? controller;
-    try {
-      final path = widget.file.path;
-      controller = kIsWeb
-          ? VideoPlayerController.networkUrl(Uri.parse(path))
-          : VideoPlayerController.file(File(path));
-      await controller.initialize();
-      await controller.setVolume(0);
-      // A frame past the very first one avoids a black opening frame.
-      await controller.seekTo(const Duration(milliseconds: 100));
-    } catch (_) {
-      await controller?.dispose();
-      return;
-    }
-    if (_disposed) {
-      await controller.dispose();
-      return;
-    }
-    setState(() {
-      _controller = controller;
-      _ready = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    final controller = _controller;
-    _controller = null;
-    if (controller != null) controller.dispose();
-    super.dispose();
-  }
+  final Uint8List bytes;
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
-    if (!_ready || controller == null || !controller.value.isInitialized) {
-      return widget.fallback;
-    }
     final roles = KubusColorRoles.of(context);
-    final size = controller.value.size;
     return ExcludeSemantics(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ClipRect(
-            child: FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: size.width,
-                height: size.height,
-                child: VideoPlayer(controller),
-              ),
-            ),
-          ),
+          Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true),
           Center(
             child: DecoratedBox(
               decoration: BoxDecoration(

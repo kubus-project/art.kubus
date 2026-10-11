@@ -9,11 +9,8 @@ import 'common/kubus_cached_image.dart';
 final Map<String, Future<void>> _prefetchInFlight = <String, Future<void>>{};
 
 Future<void> prefetchDiskCachedArtworkImage(String url) {
-  final resolvedUrl = MediaUrlResolver.resolveDisplayUrl(url) ??
-      MediaUrlResolver.resolve(url) ??
-      url;
-  final normalized = resolvedUrl.trim();
-  if (normalized.isEmpty) return Future<void>.value();
+  final normalized = MediaUrlResolver.resolveDisplayUrl(url);
+  if (normalized == null) return Future<void>.value();
 
   final existing = _prefetchInFlight[normalized];
   if (existing != null) return existing;

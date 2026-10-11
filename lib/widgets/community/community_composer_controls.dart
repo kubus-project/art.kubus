@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/community_screen_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../common/kubus_focus_ring.dart';
 
 enum CommunityComposerCategorySelectorVariant {
   mobile,
@@ -190,60 +191,62 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final effectiveForeground = foregroundColor ?? scheme.onSurface;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(borderRadius),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: duration,
-          curve: curve,
-          padding: padding,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor),
-          ),
-          child: IconTheme.merge(
-            data: IconThemeData(color: effectiveForeground),
-            child: DefaultTextStyle.merge(
-              style: KubusTextStyles.navMetaLabel.copyWith(
-                color: effectiveForeground,
-              ),
-              child: Row(
-                children: [
-                  leading,
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: KubusTextStyles.sectionTitle.copyWith(
-                            fontSize: KubusChromeMetrics.navLabel + 1,
-                            fontWeight: FontWeight.w600,
-                            color: effectiveForeground,
+    return KubusFocusRing(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(borderRadius),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: duration,
+            curve: curve,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(color: borderColor),
+            ),
+            child: IconTheme.merge(
+              data: IconThemeData(color: effectiveForeground),
+              child: DefaultTextStyle.merge(
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: effectiveForeground,
+                ),
+                child: Row(
+                  children: [
+                    leading,
+                    const SizedBox(width: KubusSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: KubusTextStyles.sectionTitle.copyWith(
+                              fontSize: KubusChromeMetrics.navLabel + 1,
+                              fontWeight: FontWeight.w600,
+                              color: effectiveForeground,
+                            ),
+                            maxLines: titleMaxLines,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: titleMaxLines,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          subtitle,
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            color:
-                                effectiveForeground.withValues(alpha: 0.6),
+                          const SizedBox(height: KubusSpacing.xs),
+                          Text(
+                            subtitle,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
+                              color: effectiveForeground.withValues(alpha: 0.6),
+                            ),
+                            maxLines: subtitleMaxLines,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: subtitleMaxLines,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  trailing,
-                ],
+                    const SizedBox(width: KubusSpacing.md),
+                    trailing,
+                  ],
+                ),
               ),
             ),
           ),

@@ -388,11 +388,10 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final rawImageUrl = post.imageUrl ??
-        (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
-    final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl) ??
-        MediaUrlResolver.resolve(rawImageUrl) ??
-        rawImageUrl;
+    // A video-first post shows its poster, never the clip as an image.
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(
+      communityPostPreviewImageUrl(post),
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),
@@ -679,6 +678,22 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     Future<void> submitInlineComment() async {
       final text = controller.text.trim();
       if (text.isEmpty) return;
+      // Guests meet the account gate before a comment is sent. The text stays
+      // in the field, so it is still there when they come back from sign-in.
+      final authenticated =
+          await const ContextualAuthGate().ensureAuthenticated(
+        context,
+        actionLabel: l10n.commonComments.toLowerCase(),
+        returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+        actionType: PendingActionType.comment,
+        targetType: PendingActionTargetType.post,
+        targetId: post.id,
+        sourceScreen: 'community_feed',
+        onAuthJourneyStarted: () => context
+            .read<CommunityHubProvider>()
+            .rememberCommentDraftForAuth(post.id, controller.text),
+      );
+      if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       final commentsProvider = context.read<CommunityCommentsProvider>();
       final parentId = _inlineReplyToCommentIds[post.id];
@@ -692,6 +707,9 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
         post.commentCount = commentsProvider.totalCountForPost(post.id);
         ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
+        if (mounted) {
+          context.read<CommunityHubProvider>().takeCommentDraftForAuth(post.id);
+        }
         if (!mounted) return;
         _applyState(() {
           _inlineReplyToCommentIds.remove(post.id);

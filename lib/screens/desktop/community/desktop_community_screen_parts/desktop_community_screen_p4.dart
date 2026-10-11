@@ -493,7 +493,21 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     return '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
   }
 
-  void _startNewConversation() {
+  Future<void> _startNewConversation() async {
+    // Starting a conversation is an account action on every entry point; the
+    // gate runs before the dialog so a guest never fills one in.
+    // A guest who starts a chat signs in and comes back to Messages, through the
+    // same compose-access mechanism as New post; it is the participant scope the
+    // profile message button uses.
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.startChat,
+      actionLabel: AppLocalizations.of(context)!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
     // Show dialog to start new conversation
     showKubusDialog(
       context: context,
@@ -547,6 +561,31 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     });
   }
 
+  /// Collapsing the quick composer never needs an account; opening it does.
+  Future<void> _toggleComposerExpansion() async {
+    if (_isComposerExpanded) {
+      _applyState(() => _isComposerExpanded = false);
+      return;
+    }
+    await _requestComposerExpansion();
+  }
+
+  /// Opens the inline composer once the visitor may compose. [beforeOpen] runs
+  /// in the same state update, for a caller that also sets the draft category.
+  Future<void> _requestComposerExpansion({VoidCallback? beforeOpen}) async {
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.post,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
+    _applyState(() {
+      beforeOpen?.call();
+      _isComposerExpanded = true;
+    });
+  }
+
   Widget _buildCreatePostPrompt(ThemeProvider themeProvider) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final user = profileProvider.currentUser;
@@ -590,8 +629,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () =>
-                  _applyState(() => _isComposerExpanded = !_isComposerExpanded),
+              onTap: () => unawaited(_toggleComposerExpansion()),
               borderRadius: BorderRadius.circular(_isComposerExpanded ? 0 : 16),
               child: Padding(
                 padding: const EdgeInsets.all(14),

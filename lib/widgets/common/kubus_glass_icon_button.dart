@@ -6,6 +6,7 @@ import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 import 'kubus_badge.dart';
+import 'kubus_focus_ring.dart';
 
 /// Reusable glass icon button used across map UIs.
 class KubusGlassIconButton extends StatefulWidget {
@@ -239,6 +240,14 @@ class _KubusGlassIconButtonState extends State<KubusGlassIconButton> {
           ],
         ),
       ),
+    );
+
+    // Ring is drawn outside the glass surface; the accent border above stays
+    // the hover/active cue, the ring is the keyboard indicator.
+    button = KubusFocusRing(
+      borderRadius: radius,
+      enabled: enabled,
+      child: button,
     );
 
     if (tooltip.isEmpty) return button;

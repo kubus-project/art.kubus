@@ -24,6 +24,14 @@ on:
         required: false
         default: true
         type: boolean
+      require_staging_backend:
+        description: >-
+          The artifact will be deployed: build against the staging backend named
+          by the KUBUS_DEVELOPMENT_BACKEND_URL variable and fail if it is missing
+          or unsafe, never against production. Validation builds leave it false.
+        required: false
+        default: false
+        type: boolean
       browser_set:
         description: Comma-separated Playwright browsers
         required: false
@@ -119,7 +127,11 @@ jobs:
       - name: Prepare public build configuration
         env:
           KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED: ${{ inputs.community_multi_media_enabled }}
+          KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
+          KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_REQUIRE_STAGING_BACKEND: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend }}
+          KUBUS_DEVELOPMENT_BACKEND_URL: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend && vars.KUBUS_DEVELOPMENT_BACKEND_URL || '' }}
           KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
           KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
@@ -147,7 +159,7 @@ jobs:
 
       - name: Record Community build capability in artifact
         run: |
-          node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; const defines = JSON.parse(readFileSync('.dart_tool/public-build-defines.json')); writeFileSync('build/web/kubus-community-build.json', JSON.stringify({ sourceSha: '${{ inputs.source_sha }}', COMMUNITY_MULTI_MEDIA_ENABLED: defines.COMMUNITY_MULTI_MEDIA_ENABLED }) + '\n');"
+          node --input-type=module -e "import { readFileSync, writeFileSync } from 'node:fs'; const defines = JSON.parse(readFileSync('.dart_tool/public-build-defines.json')); writeFileSync('build/web/kubus-community-build.json', JSON.stringify({ sourceSha: '${{ inputs.source_sha }}', COMMUNITY_MULTI_MEDIA_ENABLED: defines.COMMUNITY_MULTI_MEDIA_ENABLED, COMMUNITY_VIDEO_AUTOPLAY_ENABLED: defines.COMMUNITY_VIDEO_AUTOPLAY_ENABLED, COMMUNITY_VIDEO_POSTERS_ENABLED: defines.COMMUNITY_VIDEO_POSTERS_ENABLED }) + '\n');"
 
       - name: Seal Netcup-compatible WebAssembly and generate checksums
         shell: bash

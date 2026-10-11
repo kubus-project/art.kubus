@@ -376,11 +376,12 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
           hub.setDraftArtwork(null);
         }
       },
-      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+      leading: previewValue != null &&
+              MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
@@ -708,15 +709,11 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     }
     // Guests see the contextual account surface; their draft stays in the
     // composer so posting can continue after sign-in.
-    final canPost = await const ContextualAuthGate().ensureAuthenticated(
-      requirements: ProtectedActionRequirements.participant,
+    final canPost = await ensureCommunityComposeAccess(
       context,
+      intent: CommunityComposeIntent.post,
       actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
-      returnRoute: '/community',
       sourceScreen: 'desktop_community_screen',
-      onAuthJourneyStarted: () => context
-          .read<CommunityHubProvider>()
-          .rememberComposeIntentForAuth(CommunityComposeIntent.post),
     );
     if (!canPost || !mounted) return;
 

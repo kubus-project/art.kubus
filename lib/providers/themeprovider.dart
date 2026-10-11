@@ -155,6 +155,36 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Focus fill for Material widgets that only paint an overlay on keyboard
+  /// focus (list tiles, chips, tabs, icon-less InkWells). Alpha is the lowest
+  /// value at which the filled edge reaches 3:1 against the page (WCAG 1.4.11),
+  /// checked by test/design/product_v5_focus_contrast_test.dart.
+  static const double _focusFillAlphaDark = 0.5;
+  static const double _focusFillAlphaLight = 0.8;
+
+  /// Keyboard focus style for Material text buttons, for surfaces that replace
+  /// the theme's text button style (for example the auth entry shell) so they
+  /// keep the same focus indicator.
+  static ButtonStyle keyboardFocusTextButtonStyle(Color focus) => ButtonStyle(
+        backgroundColor:
+            const WidgetStatePropertyAll<Color>(Colors.transparent),
+        side: _keyboardFocusSide(focus),
+      );
+
+  /// Keyboard focus ring for Material text and outlined buttons: a 2 px
+  /// family focus side. [WidgetState.focused] is true whenever the button
+  /// holds focus, including after a pointer press, so the side also requires
+  /// keyboard highlight ([FocusHighlightMode.traditional]). Otherwise the
+  /// button keeps its own side.
+  static WidgetStateProperty<BorderSide?> _keyboardFocusSide(Color focus) =>
+      WidgetStateProperty.resolveWith<BorderSide?>(
+        (states) => states.contains(WidgetState.focused) &&
+                FocusManager.instance.highlightMode ==
+                    FocusHighlightMode.traditional
+            ? BorderSide(color: focus, width: 2)
+            : null,
+      );
+
   // Dark theme data
   ThemeData get darkTheme => ThemeData(
         useMaterial3: true,
@@ -164,6 +194,12 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryDark,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        // Material's default focus fill is neutral white; the family focus
+        // role keeps Material-drawn focus on-brand. The indicator itself is
+        // KubusFocusRing, not this fill.
+        focusColor: KubusProductPalette.focusDark.withValues(
+          alpha: _focusFillAlphaDark,
+        ),
         // Structural roles stay fixed: primary/tertiary are kubus teal,
         // secondary is the family blue. The user's saved accent is provided
         // separately through KubusColorRoles for explicit personal highlights.
@@ -227,15 +263,20 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: KubusColorRoles.dark.active,
-            foregroundColor: KubusColorRoles.dark.onActive,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: KubusRadius.circular(KubusRadius.control),
+          style: ButtonStyle(
+            // Inner ring in the on-active colour: it reads on the active fill.
+            side: _keyboardFocusSide(KubusColorRoles.dark.onActive),
+          ).merge(
+            ElevatedButton.styleFrom(
+              backgroundColor: KubusColorRoles.dark.active,
+              foregroundColor: KubusColorRoles.dark.onActive,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: KubusRadius.circular(KubusRadius.control),
+              ),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
             ),
-            padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -255,6 +296,32 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           ),
           labelStyle: TextStyle(color: KubusColorRoles.dark.foregroundMuted),
           hintStyle: TextStyle(color: KubusColorRoles.dark.foregroundSubtle),
+        ),
+        // A transparent (non-null) background keeps the Material surface a
+        // button type, so the focus side is painted for text buttons too.
+        textButtonTheme: TextButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor:
+                const WidgetStatePropertyAll<Color>(Colors.transparent),
+            side: _keyboardFocusSide(KubusProductPalette.focusDark),
+          ),
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: ButtonStyle(
+            side: _keyboardFocusSide(KubusProductPalette.focusDark),
+          ),
+        ),
+        tabBarTheme: TabBarThemeData(
+          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) => states.contains(WidgetState.focused)
+                ? KubusProductPalette.focusDark
+                    .withValues(alpha: _focusFillAlphaDark)
+                : null,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: ButtonStyle(
+              side: _keyboardFocusSide(KubusProductPalette.focusDark)),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: KubusColorRoles.dark.surface,
@@ -281,6 +348,9 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryLight,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        focusColor: KubusProductPalette.focusLight.withValues(
+          alpha: _focusFillAlphaLight,
+        ),
         // Light counterpart of the dark semantic roles. Personal accents do
         // not repaint the structural ColorScheme.
         colorScheme: ColorScheme.light(
@@ -343,15 +413,20 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: KubusColorRoles.light.active,
-            foregroundColor: KubusColorRoles.light.onActive,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: KubusRadius.circular(KubusRadius.control),
+          style: ButtonStyle(
+            // Inner ring in the on-active colour: it reads on the active fill.
+            side: _keyboardFocusSide(KubusColorRoles.light.onActive),
+          ).merge(
+            ElevatedButton.styleFrom(
+              backgroundColor: KubusColorRoles.light.active,
+              foregroundColor: KubusColorRoles.light.onActive,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: KubusRadius.circular(KubusRadius.control),
+              ),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
             ),
-            padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -371,6 +446,32 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           ),
           labelStyle: TextStyle(color: KubusColorRoles.light.foregroundMuted),
           hintStyle: TextStyle(color: KubusColorRoles.light.foregroundSubtle),
+        ),
+        // A transparent (non-null) background keeps the Material surface a
+        // button type, so the focus side is painted for text buttons too.
+        textButtonTheme: TextButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor:
+                const WidgetStatePropertyAll<Color>(Colors.transparent),
+            side: _keyboardFocusSide(KubusProductPalette.focusLight),
+          ),
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: ButtonStyle(
+            side: _keyboardFocusSide(KubusProductPalette.focusLight),
+          ),
+        ),
+        tabBarTheme: TabBarThemeData(
+          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) => states.contains(WidgetState.focused)
+                ? KubusProductPalette.focusLight
+                    .withValues(alpha: _focusFillAlphaLight)
+                : null,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: ButtonStyle(
+              side: _keyboardFocusSide(KubusProductPalette.focusLight)),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: KubusColorRoles.light.surface,

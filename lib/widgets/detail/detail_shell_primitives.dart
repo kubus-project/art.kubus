@@ -1106,7 +1106,7 @@ class DetailIdentityBlock extends StatelessWidget {
                       ),
                 ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: DetailSpacing.sm),
+                if (showTitle) const SizedBox(height: DetailSpacing.sm),
                 Text(
                   subtitle!,
                   maxLines: 2,

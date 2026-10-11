@@ -34,7 +34,6 @@ import '../config/config.dart';
 import 'encrypted_wallet_backup_service.dart';
 import 'public_action_outbox_service.dart';
 import 'public_fallback_service.dart';
-import 'storage_config.dart';
 import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_session_coordinator.dart';
@@ -10799,9 +10798,13 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl = MediaUrlResolver.resolveDisplayUrl(rawImage) ??
-      MediaUrlResolver.resolveDisplayUrl(imageCid) ??
-      StorageConfig.resolveUrl(imageCid);
+  // Cover chain: the image field first, then the stored CID as an IPFS
+  // reference (gateway chain). An unsafe or unresolvable field is skipped, and
+  // nothing is passed through raw.
+  final normalizedImageUrl = MediaUrlResolver.firstDisplayUrl(<String?>[
+    rawImage,
+    MediaUrlResolver.ipfsReferenceForCid(imageCid),
+  ]);
   final arScale = doubleVal(
     json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale'],
   );
@@ -10865,7 +10868,10 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
         json['gallery_urls'] ??
         json['gallery'] ??
         json['mediaGallery'],
-  ).map((u) => MediaUrlResolver.resolveDisplayUrl(u) ?? u).toList();
+  )
+      .map((u) => MediaUrlResolver.resolveDisplayUrl(u))
+      .whereType<String>()
+      .toList();
 
   List<Map<String, dynamic>> parseGalleryMeta(dynamic raw) {
     if (raw is List) {
@@ -10961,9 +10967,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     json['poapImageUrl'],
     json['poap_image_url'],
   ]);
-  final poapImageUrl = poapImageRaw != null
-      ? (MediaUrlResolver.resolveDisplayUrl(poapImageRaw) ?? poapImageRaw)
-      : null;
+  // An unresolvable POAP image is no image: the raw string is never passed on.
+  final poapImageUrl = MediaUrlResolver.resolveDisplayUrl(poapImageRaw);
 
   final walletAddress = nullableString(
     json['walletAddress'] ?? json['wallet_address'],

@@ -25,6 +25,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
@@ -372,6 +373,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
     final isDesktopCanonicalPublicEntry =
         DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
+    // Hosted in a desktop sub-screen, the shell header owns the one title and
+    // Back, so no second bar is drawn above the event.
+    final hostedInDesktopSubScreen =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>() != null;
     final roles = KubusColorRoles.of(context);
     final events = context.watch<EventsProvider>();
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
@@ -413,17 +418,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final eventScaffold = Scaffold(
       backgroundColor:
           isCanonicalPublicEntry ? roles.surface : Colors.transparent,
-      appBar: isDesktopCanonicalPublicEntry
+      appBar: isDesktopCanonicalPublicEntry || hostedInDesktopSubScreen
           ? null
           : AppBar(
               backgroundColor:
                   isCanonicalPublicEntry ? roles.surface : Colors.transparent,
               elevation: 0,
+              // The brand bar keeps Back; the event title is the one title,
+              // in the body (as on the artwork and profile detail screens).
               title: Text(
-                isCanonicalPublicEntry ? 'art.kubus' : event.title,
-                style: isCanonicalPublicEntry
-                    ? KubusTextStyles.screenTitle
-                    : KubusTypography.inter(fontWeight: FontWeight.w600),
+                'art.kubus',
+                style: KubusTextStyles.screenTitle,
               ),
               actions: const [],
             ),
@@ -700,7 +705,7 @@ class _EventDetailsCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(event.coverUrl);
 
     String? dateRange;
     if (event.startsAt != null || event.endsAt != null) {
@@ -737,16 +742,21 @@ class _EventDetailsCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: AspectRatio(
               aspectRatio: publicDesktopLayout ? 0.73 : 16 / 9,
-              child: Image.network(
-                coverUrl,
+              child: KubusCachedImage(
+                imageUrl: coverUrl,
                 fit: BoxFit.cover,
+                placeholderBuilder: (_) => Container(
+                  color: publicDesktopLayout
+                      ? roles.surfaceRaised
+                      : scheme.surfaceContainerHighest,
+                ),
                 errorBuilder: (_, __, ___) => Container(
                   color: publicDesktopLayout
                       ? roles.surfaceRaised
                       : scheme.surfaceContainerHighest,
                   alignment: Alignment.center,
                   child: Icon(
-                    Icons.broken_image_outlined,
+                    Icons.image_outlined,
                     size: 46,
                     color: publicDesktopLayout
                         ? roles.foregroundSubtle
@@ -774,11 +784,23 @@ class _EventDetailsCard extends StatelessWidget {
               letterSpacing: publicDesktopLayout ? -0.65 : -0.4,
             )
           : null;
+      // A desktop sub-screen header above this screen already shows the event
+      // title when the sub-screen was opened with it. The body does not repeat
+      // it. A raw deep link (a different shell label) keeps the body title.
+      final subScreenTitle = context
+          .findAncestorWidgetOfExactType<DesktopSubScreen>()
+          ?.title
+          .trim();
+      final shellShowsEventTitle = subScreenTitle != null &&
+          subScreenTitle.isNotEmpty &&
+          !(DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false) &&
+          subScreenTitle == event.title.trim();
       return DetailIdentityBlock(
         title: event.title,
         kicker: l10n.mapMarkerSubjectTypeEvent,
         subtitle: hostLabel,
         titleStyle: titleStyle,
+        showTitle: !shellShowsEventTitle,
       );
     }
 
@@ -1157,7 +1179,7 @@ class _LinkedExhibitionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(exhibition.coverUrl);
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
@@ -1198,9 +1220,13 @@ class _LinkedExhibitionCard extends StatelessWidget {
                   height: 64,
                   color: scheme.surfaceContainerHighest,
                   child: coverUrl != null && coverUrl.isNotEmpty
-                      ? Image.network(
-                          coverUrl,
+                      ? KubusCachedImage(
+                          imageUrl: coverUrl,
                           fit: BoxFit.cover,
+                          placeholderBuilder: (_) => Icon(
+                            AppColorUtils.exhibitionIcon,
+                            color: scheme.onSurface.withValues(alpha: 0.45),
+                          ),
                           errorBuilder: (_, __, ___) => Icon(
                             AppColorUtils.exhibitionIcon,
                             color: scheme.onSurface.withValues(alpha: 0.45),

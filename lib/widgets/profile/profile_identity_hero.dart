@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
 import '../common/kubus_cached_image.dart';
 import '../detail/profile_identity_block.dart';
@@ -140,7 +141,7 @@ class ProfileIdentityHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    final resolvedCover = KubusCachedImage.resolveImageUrl(coverImageUrl);
+    final resolvedCover = MediaUrlResolver.resolveDisplayUrl(coverImageUrl);
     final hasCover = resolvedCover != null && resolvedCover.isNotEmpty;
     final coverHeight =
         hasCover ? coverHeightWithImage : coverHeightWithoutImage;

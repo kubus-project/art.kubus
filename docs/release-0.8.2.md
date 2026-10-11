@@ -190,3 +190,20 @@ See [the complete acceptance report](community-082-e2e-qa.md) for exact commands
 No merge, tag, version bump, production migration/deployment or production secret change occurred. Owner-controlled integration must still verify backups, apply migration 098 before updated writable backends, run deployed authenticated staging acceptance, verify the exact matching frontend artifact and explicitly enable it. Isolated browser QA does not establish deployed staging, Google SSO, physical-device or OS-level text-scale acceptance. Browser page zoom and separately identified widget text-scale tests were exercised.
 
 Extensionless IPFS-only video, native platform playback limits, per-process upload budgets and owner/native Slovenian copy review remain documented limitations. A hung upload retains the composer until the existing request timeout. The wider 0.8.2 release remains outside this Community acceptance pass.
+
+## UI integration candidate
+
+One reviewable branch carries the open 0.8.2 UI work, so the protected base is validated once instead of after every merge. It is built from `dev` at `ba9f3613` (which already holds #257, #263 and #251) and merges, without squashing or rewriting, the head commits of nine pull requests: #264 map chrome, #267 focus visibility, #259 analytics scales, #262 Community guest gating, #268 single titles, #260 shared media resolution, #269 institution navigation, #265 institution search rows and #270 video posters with muted autoplay. Each source branch and its review history is unchanged.
+
+Conflicts were resolved by hand, not by taking a side: #267's shared focus ring wraps #264's flat map search field and #264's own chrome button replaces the removed variant button; the Community action buttons keep #267's ring, #262's focus node and 48 px targets; #268's single-title app bar keeps the bottom-bar comment composer already on `dev`; #260's storage import stays in the marker card test. Localization was regenerated and the locale guard re-applied.
+
+Corrections made on top of the merged work:
+
+- **Muted autoplay.** While a clip plays silently only because autoplay started it, its volume control shows Unmute and a volume of 0. A tap on the clip, the button, the slider or the M key takes the sound on the same player. The viewer's remembered sound choice is still never written by autoplay.
+- **Video-first posts.** The art feed card, both repost sheets and the raw search-row mapping use the post's poster through one shared rule (`communityMediaPreviewStill`) instead of the first media reference.
+- **Quick-card focus.** One key press reached the activation tracker twice (key down, then its release), and the overlay re-places the card once its anchor resolves. The re-placed card took the second event as a new open and recorded whatever held focus as its opener, which had just been disposed, so Escape and Close landed in the search field. A card that sees an activation with no opener of its own inside the activation window now joins the running session, and focus returns to the Nearby row that opened it.
+- **Fullscreen control.** At desktop widths each control in the video strip is its own focusable button with its own semantics node. The earlier failure came from the acceptance harness: at 1440 x 900 the player's strip lies below the fold, so the harness clicked a wrapper. A regression test now asserts separate nodes, Tab reach and Enter activation.
+
+The Support Center client (#261) is deliberately **not** in the branch proposed for `dev`. It needs backend #80 and migration 105. A separate branch, `int/0.8.2-ui-integration-support`, adds it on top for staging with the matching backend. The backend counterpart is `int/0.8.2-backend-staging` (#84, #85 and #80 merged without squashing; `backend-ci.yml` keeps every database-contract step).
+
+Gates before this reaches users: merge into `dev` after the required checks pass, then deploy the matching backend candidate before the Support client, and keep the Community multi-media switch tied to backend #79 as described above. Nothing here changes versions, tags or production configuration.

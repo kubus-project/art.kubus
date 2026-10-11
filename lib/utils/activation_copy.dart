@@ -35,7 +35,9 @@ class ActivationCopy {
             return l10n.activationGateSaveArtworkTitle;
         }
       case PendingActionType.like:
-        return l10n.activationGateLikeArtworkTitle;
+        return targetType == PendingActionTargetType.post
+            ? l10n.activationGateLikePostTitle
+            : l10n.activationGateLikeArtworkTitle;
       case PendingActionType.follow:
         return l10n.activationGateFollowTitle;
       case PendingActionType.comment:
@@ -71,7 +73,9 @@ class ActivationCopy {
             return l10n.activationConfirmSaveArtwork;
         }
       case PendingActionType.like:
-        return l10n.activationConfirmLikeArtwork;
+        return intent.targetType == PendingActionTargetType.post
+            ? l10n.activationConfirmLikePost
+            : l10n.activationConfirmLikeArtwork;
       case PendingActionType.follow:
         return l10n.activationConfirmFollow;
       case PendingActionType.comment:

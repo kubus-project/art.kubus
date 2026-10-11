@@ -6,14 +6,16 @@ import '../../models/onboarding_completion_navigation.dart';
 import '../../models/protected_action_requirements.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
+import '../../utils/kubus_map_tokens.dart';
+import 'kubus_map_chrome.dart';
 
 /// Non-blocking invitation to create an account, shown after a visitor has
 /// demonstrated interest.
 ///
 /// Renders nothing until [ActivationPromptProvider] arms it. It is a card, not
-/// a modal: the map stays fully interactive underneath, and callers position it
-/// so it never covers map attribution or the primary controls.
+/// a modal: the map stays interactive everywhere except the card's own surface
+/// (callers wrap it in a map overlay blocker), and callers position it so it
+/// never covers map attribution or the primary controls.
 class KubusActivationPromptCard extends StatefulWidget {
   const KubusActivationPromptCard({super.key, this.maxWidth = 420});
 
@@ -51,20 +53,17 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: widget.maxWidth),
-          child: LiquidGlassPanel(
+          // One flat chrome surface (no blur, single hairline) like the other
+          // map clusters; the prompt is not a glass sheet over the map.
+          child: buildKubusMapChromeSurface(
+            context: context,
             margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-            showBorder: true,
-            blurSigma: KubusGlassEffects.blurSigmaHeavy,
-            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            borderRadius: BorderRadius.circular(KubusRadius.surface),
             padding: const EdgeInsets.fromLTRB(
               KubusSpacing.md,
               KubusSpacing.sm,
               KubusSpacing.sm,
               KubusSpacing.md,
-            ),
-            backgroundColor: scheme.surfaceContainerHighest.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.84 : 0.93,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -91,8 +90,8 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                       tooltip: l10n.activationPromptDismiss,
                       color: scheme.onSurfaceVariant,
                       constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
+                        minWidth: KubusMapMetrics.mobileControlSize,
+                        minHeight: KubusMapMetrics.mobileControlSize,
                       ),
                     ),
                   ],
@@ -107,8 +106,11 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
+                // A fixed 48px box: the button fills it, so the touch target
+                // does not depend on the button's own minimum-size rules.
                 SizedBox(
                   width: double.infinity,
+                  height: KubusMapMetrics.mobileControlSize,
                   child: FilledButton(
                     onPressed: () async {
                       final navigator = Navigator.of(context);
@@ -131,9 +133,6 @@ class _KubusActivationPromptCardState extends State<KubusActivationPromptCard> {
                         },
                       );
                     },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                    ),
                     child: Text(l10n.activationPromptCta),
                   ),
                 ),

@@ -163,6 +163,9 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
           AppLocalizations.of(context)!.commonUnknown;
       final image =
           result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
+      final resolvedImage = image == null
+          ? null
+          : MediaUrlResolver.resolveDisplayUrl(image.toString());
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
@@ -173,13 +176,11 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
             color: themeProvider.accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KubusRadius.sm),
           ),
-          child: image != null
+          child: resolvedImage != null
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: Image.network(
-                    MediaUrlResolver.resolveDisplayUrl(image.toString()) ??
-                        MediaUrlResolver.resolve(image.toString()) ??
-                        image.toString(),
+                    resolvedImage,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Icon(
                       Icons.image,
@@ -215,51 +216,11 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
         onTap: onTap,
       );
     } else if (searchType == 'institutions') {
-      final name = result['name'] ??
-          result['title'] ??
-          AppLocalizations.of(context)!.communitySearchFallbackInstitution;
-      final type = result['type'] ?? '';
-      final address = result['address'] ?? '';
-
-      return ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: themeProvider.accentColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            Icons.location_city,
-            color: themeProvider.accentColor,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          name.toString(),
-          style: KubusTypography.inter(
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          [type, address]
-              .where((e) => e.toString().trim().isNotEmpty)
-              .join(' - '),
-          style: KubusTypography.inter(
-            fontSize: 12,
-            color: scheme.onSurface.withValues(alpha: 0.6),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          size: 20,
-          color: scheme.onSurface.withValues(alpha: 0.68),
-        ),
+      return CommunitySearchInstitutionTile(
+        institution: result,
+        accentColor: themeProvider.accentColor,
+        fallbackName:
+            AppLocalizations.of(context)!.communitySearchFallbackInstitution,
         onTap: onTap,
       );
     } else if (searchType == 'screens') {
@@ -782,12 +743,25 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
 
     final post = _communityPosts[index];
+    // A like confirmed on this post is still in flight: a tap now would take
+    // the like back while the server is recording it.
+    if (_likeSettlements.isInFlight(post.id)) return;
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      // The visitor returns to the feed they tapped; the confirmed like is
+      // applied to its card. Returning to the post opened a second screen
+      // that showed the pre-like state.
+      returnRoute: '/community',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'community_feed',
+      onAuthJourneyStarted: () =>
+          pending?.rememberFocusReturn('like:${post.id}'),
     );
     if (!authenticated || !mounted) return;
 
@@ -823,6 +797,71 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
         ),
       );
     }
+  }
+
+  /// Reads the viewer's own likes for [posts] (the feed is read anonymously)
+  /// and repaints when they land; the lists are not reloaded.
+  void _refreshViewerStates(List<CommunityPost> posts) {
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    unawaited(interactions.refreshPostStates(posts, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
+  }
+
+  /// Every copy of the post in the feed's lists, once each.
+  Iterable<CommunityPost> _feedCopiesOf(String postId) sync* {
+    final seen = Set<CommunityPost>.identity();
+    for (final list in <List<CommunityPost>>[
+      _followingFeedPosts,
+      _discoverFeedPosts,
+      _communityPosts,
+    ]) {
+      for (final post in list) {
+        if (post.id == postId && seen.add(post)) yield post;
+      }
+    }
+  }
+
+  /// Shows a like the continuation confirmed for a post in this feed. Every
+  /// copy of the post in the feed's lists is updated; nothing is reloaded.
+  void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyConfirmedPostLike(post, snapshot);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// A confirmed like on a post in this feed is in flight: the card shows it
+  /// liked at once instead of after the server answers.
+  void _applyStartedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyOptimisticPostLike(post);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// The like attempt ended without a confirmed like: the card shows the
+  /// server's state, not the optimistic one.
+  void _applyEndedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    final copies = _feedCopiesOf(postId).toList(growable: false);
+    if (copies.isEmpty) return;
+    unawaited(interactions.refreshPostStates(copies, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
   }
 
   void _showPostLikes(String postId) {

@@ -23,6 +23,10 @@ final Uint8List _png = base64Decode(
 
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
+/// A valid 1x1 PNG, so a captured poster decodes in the tray.
+const String _onePixelPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
 CommunityComposerPickedMedia _image(String name) =>
     CommunityComposerPickedMedia(
       file: XFile.fromData(_png, path: name, mimeType: 'image/png'),
@@ -274,19 +278,19 @@ void counterTests() {
       }
     }
 
-    testWidgets('a picked video shows its first frame, then releases it',
+    testWidgets('a picked video shows its captured poster and starts no player',
         (tester) async {
-      final controller = CommunityComposerMediaController()
-        ..add([_image('one.png'), _video('clip.mp4')]);
+      final poster = base64Decode(_onePixelPng);
+      final controller = CommunityComposerMediaController(
+        posterCapture: (file) async => poster,
+      )..add([_image('one.png'), _video('clip.mp4')]);
       await tester.pumpWidget(_harness(controller));
-      await settle(tester, until: find.byType(VideoPlayer));
+      await settle(tester);
 
-      expect(find.byType(VideoPlayer), findsOneWidget);
-      expect(platform.live, hasLength(1));
-      expect(platform.playingNow, isEmpty, reason: 'a preview never plays');
-      expect(platform.live.single.volume, 0);
-      expect(platform.live.single.seeks, isNotEmpty,
-          reason: 'it moves past the opening frame');
+      expect(controller.items.last.posterBytes, poster);
+      expect(find.byType(VideoPlayer), findsNothing,
+          reason: 'the tray no longer decodes each clip');
+      expect(platform.live, isEmpty);
       // The tile keeps its accessible name even though the file name is gone.
       expect(find.bySemanticsLabel(RegExp('^Video, Media 2 of 2')),
           findsOneWidget);
@@ -294,11 +298,23 @@ void counterTests() {
       controller.remove(controller.items.last.id);
       await tester.pump();
       await settle(tester);
-      expect(find.byType(VideoPlayer), findsNothing);
       expect(platform.live, isEmpty);
 
       await tester.pumpWidget(const SizedBox());
       await settle(tester);
+    });
+
+    testWidgets('a picked video with no poster keeps the typed tile',
+        (tester) async {
+      final controller = CommunityComposerMediaController(
+        posterCapture: (file) async => null,
+      )..add([_video('clip.mp4')]);
+      await tester.pumpWidget(_harness(controller));
+      await settle(tester);
+
+      expect(find.byType(VideoPlayer), findsNothing);
+      expect(find.text('clip.mp4'), findsOneWidget);
+      expect(platform.live, isEmpty);
     });
 
     testWidgets('an undecodable video keeps the typed tile', (tester) async {

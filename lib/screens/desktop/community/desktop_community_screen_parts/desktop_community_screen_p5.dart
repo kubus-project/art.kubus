@@ -280,15 +280,11 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
     if (!_canSubmitComposer) return;
     // Guests see the contextual account surface; their draft stays in the
     // composer so posting can continue after sign-in.
-    final canPost = await const ContextualAuthGate().ensureAuthenticated(
-      requirements: ProtectedActionRequirements.participant,
+    final canPost = await ensureCommunityComposeAccess(
       context,
+      intent: CommunityComposeIntent.post,
       actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
-      returnRoute: '/community',
       sourceScreen: 'desktop_community_screen',
-      onAuthJourneyStarted: () => context
-          .read<CommunityHubProvider>()
-          .rememberComposeIntentForAuth(CommunityComposeIntent.post),
     );
     if (!canPost || !mounted) return;
     final appModeProvider =
@@ -629,9 +625,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                             // Make the action visible immediately by expanding
                             // the quick composer in the sidebar.
                             if (!_isComposerExpanded) {
-                              _applyState(() {
-                                _isComposerExpanded = true;
-                              });
+                              unawaited(_requestComposerExpansion());
                             } else {
                               // Still rebuild so the mini-chip row reflects the
                               // added tag even if the composer is already open.
@@ -1166,13 +1160,12 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   ),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: group.coverImage != null
+                child: MediaUrlResolver.resolveDisplayUrl(group.coverImage) !=
+                        null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(KubusRadius.md),
                         child: Image.network(
-                          MediaUrlResolver.resolveDisplayUrl(
-                                  group.coverImage) ??
-                              group.coverImage!,
+                          MediaUrlResolver.resolveDisplayUrl(group.coverImage)!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.group,

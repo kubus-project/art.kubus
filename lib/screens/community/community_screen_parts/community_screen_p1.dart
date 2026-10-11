@@ -213,6 +213,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
       final interactionsProvider =
           Provider.of<CommunityInteractionsProvider>(context, listen: false);
       interactionsProvider.hydratePostsFromServer(posts);
+      _refreshViewerStates(posts);
     }
 
     final blocked = await BlockListService().loadBlockedWallets();
@@ -696,7 +697,6 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
-    final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -780,39 +780,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                             size: isSmallScreen ? 20 : 24,
                           ),
                         ),
-                        onPressed: () {
-                          showGeneralDialog(
-                            context: context,
-                            barrierDismissible: true,
-                            barrierLabel: l10n.messagesTitle,
-                            barrierColor:
-                                scheme.primaryContainer.withValues(alpha: 0.7),
-                            transitionDuration: animationTheme.medium,
-                            pageBuilder: (ctx, a1, a2) =>
-                                const MessagesScreen(),
-                            transitionBuilder: (ctx, anim1, anim2, child) {
-                              final slideCurve = CurvedAnimation(
-                                parent: anim1,
-                                curve: animationTheme.defaultCurve,
-                              );
-                              final fadeCurve = CurvedAnimation(
-                                parent: anim1,
-                                curve: animationTheme.fadeCurve,
-                              );
-                              return Transform.translate(
-                                offset: Offset(
-                                  0,
-                                  (1 - slideCurve.value) *
-                                      MediaQuery.of(context).size.height,
-                                ),
-                                child: FadeTransition(
-                                  opacity: fadeCurve,
-                                  child: child,
-                                ),
-                              );
-                            },
-                          );
-                        },
+                        onPressed: _openMessagesOverlay,
                         badgeCount: totalUnread,
                         badgeColor: themeProvider.accentColor,
                       );
@@ -912,6 +880,42 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
         _bellUnreadCount = provider.unreadCount;
       });
     } catch (_) {}
+  }
+
+  /// Opens the Messages overlay from the top bar, and again when a guest who
+  /// asked to start a chat returns from sign-in.
+  void _openMessagesOverlay() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final animationTheme = context.animationTheme;
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: l10n.messagesTitle,
+      barrierColor: scheme.primaryContainer.withValues(alpha: 0.7),
+      transitionDuration: animationTheme.medium,
+      pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final slideCurve = CurvedAnimation(
+          parent: anim1,
+          curve: animationTheme.defaultCurve,
+        );
+        final fadeCurve = CurvedAnimation(
+          parent: anim1,
+          curve: animationTheme.fadeCurve,
+        );
+        return Transform.translate(
+          offset: Offset(
+            0,
+            (1 - slideCurve.value) * MediaQuery.of(context).size.height,
+          ),
+          child: FadeTransition(
+            opacity: fadeCurve,
+            child: child,
+          ),
+        );
+      },
+    );
   }
 
   void _onChatProviderChanged() {

@@ -416,6 +416,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Všečkaj to umetnino';
 
   @override
+  String get activationGateLikePostTitle => 'Všečkaj to objavo';
+
+  @override
   String get activationGateFollowTitle => 'Spremljaj tega umetnika';
 
   @override
@@ -472,6 +475,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationConfirmLikeArtwork => 'Želiš všečkati to umetnino?';
 
   @override
+  String get activationConfirmLikePost => 'Želiš všečkati to objavo?';
+
+  @override
   String get activationConfirmFollow => 'Želiš spremljati tega umetnika?';
 
   @override
@@ -481,7 +487,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationConfirmContribute => 'Želiš nadaljevati svoj prispevek?';
 
   @override
-  String get activationConfirmLikeCta => 'Všeček';
+  String get activationConfirmLikeCta => 'Všečkaj';
 
   @override
   String get activationConfirmContinueCta => 'Nadaljuj';
@@ -11059,6 +11065,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tega videa tukaj ni mogoče predvajati.';
 
   @override
+  String get communityMediaVideoPreviewUnavailable => 'Predogled ni na voljo';
+
+  @override
   String get communityMediaVideoReplay => 'Ponovno predvajaj video';
 
   @override
@@ -13521,6 +13530,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityPostActionComment => 'Komentiraj';
+
+  @override
+  String get communityPostStateLiked => 'všečkano';
+
+  @override
+  String get communityPostStateNotLiked => 'ni všečkano';
+
+  @override
+  String get communityPostStateSaved => 'shranjeno';
+
+  @override
+  String get communityPostStateNotSaved => 'ni shranjeno';
 
   @override
   String get communityRepostedToast => 'Ponovno objavljeno';

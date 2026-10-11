@@ -414,6 +414,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Like this artwork';
 
   @override
+  String get activationGateLikePostTitle => 'Like this post';
+
+  @override
   String get activationGateFollowTitle => 'Follow this artist';
 
   @override
@@ -468,6 +471,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activationConfirmLikeArtwork => 'Like this artwork?';
+
+  @override
+  String get activationConfirmLikePost => 'Like this post?';
 
   @override
   String get activationConfirmFollow => 'Follow this artist?';
@@ -10957,6 +10963,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'This video cannot be played here.';
 
   @override
+  String get communityMediaVideoPreviewUnavailable => 'Preview unavailable';
+
+  @override
   String get communityMediaVideoReplay => 'Replay video';
 
   @override
@@ -13387,6 +13396,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityPostActionComment => 'Comment';
+
+  @override
+  String get communityPostStateLiked => 'liked';
+
+  @override
+  String get communityPostStateNotLiked => 'not liked';
+
+  @override
+  String get communityPostStateSaved => 'saved';
+
+  @override
+  String get communityPostStateNotSaved => 'not saved';
 
   @override
   String get communityRepostedToast => 'Reposted';

@@ -88,6 +88,13 @@ class ProfileUtilityActions extends StatelessWidget {
       padding: const WidgetStatePropertyAll(EdgeInsets.zero),
       iconSize: const WidgetStatePropertyAll(KubusHeaderMetrics.actionIcon),
       shape: shape,
+      // Same governed side as the shape, so the theme's focus side does not
+      // replace this button's own keyline.
+      side: WidgetStateProperty.resolveWith<BorderSide?>(
+        (states) => states.contains(WidgetState.focused)
+            ? KubusBorders.activeSide(context, accent: roles.focus)
+            : KubusBorders.hairlineSide(context),
+      ),
       backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {

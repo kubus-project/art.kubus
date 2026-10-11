@@ -322,10 +322,9 @@ class _CommunitySubjectPickerContentState
             final preview = CommunitySubjectPreview(
               ref: ref,
               title: (raw['title'] ?? 'Artwork').toString(),
-              imageUrl: MediaUrlResolver.resolve(
-                    raw['imageUrl'] ?? raw['coverImage'] ?? raw['cover_image'],
-                  ) ??
-                  raw['imageUrl']?.toString(),
+              imageUrl: MediaUrlResolver.resolveDisplayUrl(
+                raw['imageUrl'] ?? raw['coverImage'] ?? raw['cover_image'],
+              ),
             );
             return _SubjectListTile(
               preview: preview,
@@ -371,8 +370,7 @@ class _CommunitySubjectPickerContentState
           ref: CommunitySubjectRef(type: 'exhibition', id: exhibition.id),
           title: exhibition.title,
           subtitle: exhibition.locationName,
-          imageUrl: MediaUrlResolver.resolve(exhibition.coverUrl) ??
-              exhibition.coverUrl,
+          imageUrl: MediaUrlResolver.resolveDisplayUrl(exhibition.coverUrl),
         );
         return _SubjectListTile(
           preview: preview,
@@ -413,8 +411,7 @@ class _CommunitySubjectPickerContentState
         final preview = CommunitySubjectPreview(
           ref: CommunitySubjectRef(type: 'collection', id: collection.id),
           title: collection.name,
-          imageUrl: MediaUrlResolver.resolve(collection.thumbnailUrl) ??
-              collection.thumbnailUrl,
+          imageUrl: MediaUrlResolver.resolveDisplayUrl(collection.thumbnailUrl),
         );
         return _SubjectListTile(
           preview: preview,
@@ -490,7 +487,7 @@ class _CommunitySubjectPickerContentState
               ref: CommunitySubjectRef(type: 'institution', id: wallet),
               title: title,
               subtitle: subtitle,
-              imageUrl: MediaUrlResolver.resolve(image) ?? image?.toString(),
+              imageUrl: MediaUrlResolver.resolveDisplayUrl(image?.toString()),
             );
             return _SubjectListTile(
               preview: preview,

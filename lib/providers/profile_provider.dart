@@ -192,12 +192,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
     }
 
-    // Generic .svg -> .png conversion (best-effort)
-    if (lower.endsWith('.svg') || lower.contains('.svg?')) {
-      return url.replaceAll(RegExp(r'\.svg', caseSensitive: false), '.png');
-    }
-
-    return url;
+    // Generic .svg -> .png conversion (best-effort, trailing extension only).
+    return MediaUrlResolver.svgAsPngReference(url);
   }
 
   // Try to extract a usable URL from various upload response shapes

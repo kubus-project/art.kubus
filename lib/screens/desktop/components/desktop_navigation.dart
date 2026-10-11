@@ -12,6 +12,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
+import '../../../widgets/common/kubus_focus_ring.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -190,19 +191,22 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               height: KubusChromeMetrics.railCompactLogo,
             ),
             const SizedBox(height: KubusSpacing.xs),
-            IconButton(
-              onPressed: widget.onToggleExpand,
-              icon: Icon(
-                Icons.chevron_right,
-                color: widget.activeAccent.withValues(alpha: 0.72),
-                size: KubusChromeMetrics.navCompactIcon,
+            KubusFocusRing(
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              child: IconButton(
+                onPressed: widget.onToggleExpand,
+                icon: Icon(
+                  Icons.chevron_right,
+                  color: widget.activeAccent.withValues(alpha: 0.72),
+                  size: KubusChromeMetrics.navCompactIcon,
+                ),
+                tooltip: l10n.desktopNavigationExpandTooltip,
+                constraints: const BoxConstraints(
+                  minWidth: KubusHeaderMetrics.actionHitArea,
+                  minHeight: KubusHeaderMetrics.actionHitArea,
+                ),
+                padding: EdgeInsets.zero,
               ),
-              tooltip: l10n.desktopNavigationExpandTooltip,
-              constraints: const BoxConstraints(
-                minWidth: KubusHeaderMetrics.actionHitArea,
-                minHeight: KubusHeaderMetrics.actionHitArea,
-              ),
-              padding: EdgeInsets.zero,
             ),
           ],
         ),
@@ -254,19 +258,22 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               ),
             ),
           ),
-          IconButton(
-            onPressed: widget.onToggleExpand,
-            icon: Icon(
-              Icons.chevron_left,
-              color: widget.activeAccent.withValues(alpha: 0.72),
-              size: KubusChromeMetrics.navCompactIcon,
+          KubusFocusRing(
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            child: IconButton(
+              onPressed: widget.onToggleExpand,
+              icon: Icon(
+                Icons.chevron_left,
+                color: widget.activeAccent.withValues(alpha: 0.72),
+                size: KubusChromeMetrics.navCompactIcon,
+              ),
+              tooltip: l10n.desktopNavigationCollapseTooltip,
+              constraints: const BoxConstraints(
+                minWidth: KubusHeaderMetrics.actionHitArea,
+                minHeight: KubusHeaderMetrics.actionHitArea,
+              ),
+              padding: EdgeInsets.zero,
             ),
-            tooltip: l10n.desktopNavigationCollapseTooltip,
-            constraints: const BoxConstraints(
-              minWidth: KubusHeaderMetrics.actionHitArea,
-              minHeight: KubusHeaderMetrics.actionHitArea,
-            ),
-            padding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -412,6 +419,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           ),
         ),
       ),
+    );
+    tile = KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.surface),
+      child: tile,
     );
     if (!widget.isExpanded) {
       tile = Tooltip(message: label, child: tile);
@@ -592,111 +603,114 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     required AppAnimationTheme animationTheme,
   }) {
     final isHovered = _hoveredActionButtons.contains(hoverKey);
-    return MouseRegion(
-      onEnter: (_) => _setActionButtonHover(hoverKey, true),
-      onExit: (_) => _setActionButtonHover(hoverKey, false),
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          color: isActive
-              ? widget.activeAccent.withValues(alpha: 0.16)
-              : isHovered
-                  ? widget.activeAccent.withValues(alpha: 0.08)
-                  : Colors.transparent,
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-          border: Border.all(
+    return KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.sm),
+      child: MouseRegion(
+        onEnter: (_) => _setActionButtonHover(hoverKey, true),
+        onExit: (_) => _setActionButtonHover(hoverKey, false),
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          decoration: BoxDecoration(
             color: isActive
-                ? widget.activeAccent.withValues(alpha: 0.30)
+                ? widget.activeAccent.withValues(alpha: 0.16)
                 : isHovered
-                    ? widget.activeAccent.withValues(alpha: 0.12)
+                    ? widget.activeAccent.withValues(alpha: 0.08)
                     : Colors.transparent,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
             borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: SizedBox(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Center(
-                    child: Icon(
-                      icon,
-                      color: isActive
-                          ? widget.activeAccent
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                      size: KubusChromeMetrics.navIcon,
+            border: Border.all(
+              color: isActive
+                  ? widget.activeAccent.withValues(alpha: 0.30)
+                  : isHovered
+                      ? widget.activeAccent.withValues(alpha: 0.12)
+                      : Colors.transparent,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              child: SizedBox(
+                width: KubusHeaderMetrics.actionHitArea,
+                height: KubusHeaderMetrics.actionHitArea,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Center(
+                      child: Icon(
+                        icon,
+                        color: isActive
+                            ? widget.activeAccent
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                        size: KubusChromeMetrics.navIcon,
+                      ),
                     ),
-                  ),
-                  // Generic badge with count (for collab invites, etc.)
-                  if (showBadge && badgeCount > 0)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.xs,
-                          vertical: KubusSpacing.xxs,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: KubusSpacing.sm +
-                              KubusSpacing.xs +
-                              KubusSpacing.xxs,
-                          minHeight: KubusSpacing.sm +
-                              KubusSpacing.xs +
-                              KubusSpacing.xxs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1,
+                    // Generic badge with count (for collab invites, etc.)
+                    if (showBadge && badgeCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.xs,
+                            vertical: KubusSpacing.xxs,
                           ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            badgeCount > 99 ? '99+' : badgeCount.toString(),
-                            style: KubusTextStyles.compactBadge.copyWith(
-                              color: Theme.of(context).colorScheme.onError,
+                          constraints: const BoxConstraints(
+                            minWidth: KubusSpacing.sm +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs,
+                            minHeight: KubusSpacing.sm +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              badgeCount > 99 ? '99+' : badgeCount.toString(),
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: Theme.of(context).colorScheme.onError,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  // Notification badge (uses NotificationProvider)
-                  if (showBadge && badgeCount == 0)
-                    Selector<NotificationProvider, int>(
-                      selector: (_, np) => np.unreadCount,
-                      builder: (context, unreadCount, _) {
-                        if (unreadCount == 0) return const SizedBox.shrink();
-                        return Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: KubusChromeMetrics.navBadgeDot,
-                            height: KubusChromeMetrics.navBadgeDot,
-                            decoration: BoxDecoration(
-                              color: widget.activeAccent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 1,
+                    // Notification badge (uses NotificationProvider)
+                    if (showBadge && badgeCount == 0)
+                      Selector<NotificationProvider, int>(
+                        selector: (_, np) => np.unreadCount,
+                        builder: (context, unreadCount, _) {
+                          if (unreadCount == 0) return const SizedBox.shrink();
+                          return Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: KubusChromeMetrics.navBadgeDot,
+                              height: KubusChromeMetrics.navBadgeDot,
+                              decoration: BoxDecoration(
+                                color: widget.activeAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  width: 1,
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                ],
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -716,111 +730,116 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }) {
     final isHovered = _hoveredActionButtons.contains(hoverKey);
     final collapsedButtonPadding = 7.0;
-    return MouseRegion(
-      onEnter: (_) => _setActionButtonHover(hoverKey, true),
-      onExit: (_) => _setActionButtonHover(hoverKey, false),
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          color: isActive
-              ? widget.activeAccent.withValues(alpha: 0.16)
-              : isHovered
-                  ? widget.activeAccent.withValues(alpha: 0.08)
-                  : Colors.transparent,
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
+    return KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.sm),
+      child: MouseRegion(
+        onEnter: (_) => _setActionButtonHover(hoverKey, true),
+        onExit: (_) => _setActionButtonHover(hoverKey, false),
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          decoration: BoxDecoration(
             color: isActive
-                ? widget.activeAccent.withValues(alpha: 0.30)
+                ? widget.activeAccent.withValues(alpha: 0.16)
                 : isHovered
-                    ? widget.activeAccent.withValues(alpha: 0.12)
+                    ? widget.activeAccent.withValues(alpha: 0.08)
                     : Colors.transparent,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
             borderRadius: BorderRadius.circular(KubusRadius.md),
-            child: SizedBox(
-              width: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-              height: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Center(
-                    child: Icon(
-                      icon,
-                      color: isActive
-                          ? widget.activeAccent
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                      size: KubusChromeMetrics.navIcon,
+            border: Border.all(
+              color: isActive
+                  ? widget.activeAccent.withValues(alpha: 0.30)
+                  : isHovered
+                      ? widget.activeAccent.withValues(alpha: 0.12)
+                      : Colors.transparent,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              child: SizedBox(
+                width:
+                    KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+                height:
+                    KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Center(
+                      child: Icon(
+                        icon,
+                        color: isActive
+                            ? widget.activeAccent
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                        size: KubusChromeMetrics.navIcon,
+                      ),
                     ),
-                  ),
-                  // Generic badge with count (for collab invites, etc.)
-                  if (showBadge && badgeCount > 0)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.xs,
-                          vertical: KubusSpacing.xxs,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: KubusSpacing.sm +
-                              KubusSpacing.xs +
-                              KubusSpacing.xxs,
-                          minHeight: KubusSpacing.sm +
-                              KubusSpacing.xs +
-                              KubusSpacing.xxs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1,
+                    // Generic badge with count (for collab invites, etc.)
+                    if (showBadge && badgeCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.xs,
+                            vertical: KubusSpacing.xxs,
                           ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            badgeCount > 99 ? '99+' : badgeCount.toString(),
-                            style: KubusTextStyles.compactBadge.copyWith(
-                              color: Theme.of(context).colorScheme.onError,
+                          constraints: const BoxConstraints(
+                            minWidth: KubusSpacing.sm +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs,
+                            minHeight: KubusSpacing.sm +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              badgeCount > 99 ? '99+' : badgeCount.toString(),
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: Theme.of(context).colorScheme.onError,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  // Notification badge (uses NotificationProvider)
-                  if (showBadge && badgeCount == 0)
-                    Selector<NotificationProvider, int>(
-                      selector: (_, np) => np.unreadCount,
-                      builder: (context, unreadCount, _) {
-                        if (unreadCount == 0) return const SizedBox.shrink();
-                        return Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: KubusChromeMetrics.navBadgeDot,
-                            height: KubusChromeMetrics.navBadgeDot,
-                            decoration: BoxDecoration(
-                              color: widget.activeAccent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 1,
+                    // Notification badge (uses NotificationProvider)
+                    if (showBadge && badgeCount == 0)
+                      Selector<NotificationProvider, int>(
+                        selector: (_, np) => np.unreadCount,
+                        builder: (context, unreadCount, _) {
+                          if (unreadCount == 0) return const SizedBox.shrink();
+                          return Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: KubusChromeMetrics.navBadgeDot,
+                              height: KubusChromeMetrics.navBadgeDot,
+                              decoration: BoxDecoration(
+                                color: widget.activeAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  width: 1,
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                ],
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -881,6 +900,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         ),
       ),
     );
+    entry = KubusFocusRing(
+      borderRadius: KubusRadius.circular(KubusRadius.surface),
+      child: entry,
+    );
     if (!widget.isExpanded) {
       entry = Tooltip(message: label, child: entry);
     }
@@ -901,105 +924,111 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         final isSelected = widget.isProfileSelected;
         final isHovered = _isProfileHovered;
 
-        return Material(
-          color: Colors.transparent,
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isProfileHovered = true),
-            onExit: (_) => setState(() => _isProfileHovered = false),
-            child: InkWell(
-              onTap: widget.onProfileTap,
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-              child: Container(
-                padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? widget.activeAccent.withValues(alpha: 0.16)
-                      : isHovered
-                          ? widget.activeAccent.withValues(alpha: 0.08)
-                          : Colors.transparent,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
+        return KubusFocusRing(
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
+          child: Material(
+            color: Colors.transparent,
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isProfileHovered = true),
+              onExit: (_) => setState(() => _isProfileHovered = false),
+              child: InkWell(
+                onTap: widget.onProfileTap,
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
+                child: Container(
+                  padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
+                  decoration: BoxDecoration(
                     color: isSelected
-                        ? widget.activeAccent.withValues(alpha: 0.30)
+                        ? widget.activeAccent.withValues(alpha: 0.16)
                         : isHovered
-                            ? widget.activeAccent.withValues(alpha: 0.12)
+                            ? widget.activeAccent.withValues(alpha: 0.08)
                             : Colors.transparent,
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(
+                      color: isSelected
+                          ? widget.activeAccent.withValues(alpha: 0.30)
+                          : isHovered
+                              ? widget.activeAccent.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: widget.isExpanded
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (profileProvider.isSignedIn)
-                      AvatarWidget(
-                        wallet: user?.walletAddress ?? '',
-                        avatarUrl: user?.avatar,
-                        radius: widget.isExpanded ? 17 : 16,
-                        allowFabricatedFallback: true,
-                        enableProfileNavigation: false,
-                      )
-                    else
-                      SizedBox(
-                        width: 34,
-                        height: 34,
-                        child: Icon(
-                          Icons.login,
-                          size: KubusChromeMetrics.navIcon,
-                          color: KubusColorRoles.of(context).foregroundMuted,
+                  child: Row(
+                    mainAxisAlignment: widget.isExpanded
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (profileProvider.isSignedIn)
+                        AvatarWidget(
+                          wallet: user?.walletAddress ?? '',
+                          avatarUrl: user?.avatar,
+                          radius: widget.isExpanded ? 17 : 16,
+                          allowFabricatedFallback: true,
+                          enableProfileNavigation: false,
+                        )
+                      else
+                        SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: Icon(
+                            Icons.login,
+                            size: KubusChromeMetrics.navIcon,
+                            color: KubusColorRoles.of(context).foregroundMuted,
+                          ),
                         ),
-                      ),
-                    if (widget.isExpanded) ...[
-                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                      Expanded(
-                        child: AnimatedOpacity(
-                          opacity: widget.expandAnimation.value,
-                          duration: const Duration(milliseconds: 150),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                !profileProvider.isSignedIn
-                                    ? AppLocalizations.of(context)!.commonSignIn
-                                    : user?.displayName ??
-                                        AppLocalizations.of(context)!
-                                            .profilePersonaArtEnthusiast,
-                                style: KubusTextStyles.profileName.copyWith(
-                                  color: isSelected
-                                      ? widget.activeAccent
-                                      : scheme.onSurface,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              if (user?.username != null)
+                      if (widget.isExpanded) ...[
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xs),
+                        Expanded(
+                          child: AnimatedOpacity(
+                            opacity: widget.expandAnimation.value,
+                            duration: const Duration(milliseconds: 150),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 Text(
-                                  '@${user!.username}',
-                                  style: KubusTextStyles.profileHandle.copyWith(
+                                  !profileProvider.isSignedIn
+                                      ? AppLocalizations.of(context)!
+                                          .commonSignIn
+                                      : user?.displayName ??
+                                          AppLocalizations.of(context)!
+                                              .profilePersonaArtEnthusiast,
+                                  style: KubusTextStyles.profileName.copyWith(
                                     color: isSelected
                                         ? widget.activeAccent
-                                            .withValues(alpha: 0.82)
-                                        : scheme.onSurface
-                                            .withValues(alpha: 0.6),
+                                        : scheme.onSurface,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
-                            ],
+                                if (user?.username != null)
+                                  Text(
+                                    '@${user!.username}',
+                                    style:
+                                        KubusTextStyles.profileHandle.copyWith(
+                                      color: isSelected
+                                          ? widget.activeAccent
+                                              .withValues(alpha: 0.82)
+                                          : scheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Icon(
-                        Icons.more_horiz,
-                        color: isSelected
-                            ? widget.activeAccent.withValues(alpha: 0.82)
-                            : scheme.onSurface.withValues(alpha: 0.6),
-                        size: KubusHeaderMetrics.actionIcon,
-                      ),
+                        Icon(
+                          Icons.more_horiz,
+                          color: isSelected
+                              ? widget.activeAccent.withValues(alpha: 0.82)
+                              : scheme.onSurface.withValues(alpha: 0.6),
+                          size: KubusHeaderMetrics.actionIcon,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

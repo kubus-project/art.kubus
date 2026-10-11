@@ -8,7 +8,20 @@ class _FakeBackendApiService implements BackendApiService {
   _FakeBackendApiService(this.suggestions);
 
   final List<Map<String, dynamic>> suggestions;
+  List<Map<String, dynamic>> posts = const <Map<String, dynamic>>[];
   bool? lastIncludeCollections;
+
+  @override
+  Future<Map<String, dynamic>> search({
+    required String query,
+    String type = 'all',
+    int limit = 20,
+    int page = 1,
+  }) async {
+    return <String, dynamic>{
+      'data': <String, dynamic>{'posts': posts},
+    };
+  }
 
   @override
   Future<List<Map<String, dynamic>>> getSearchSuggestions({
@@ -30,6 +43,53 @@ class _FakeBackendApiService implements BackendApiService {
 }
 
 void main() {
+  group('community post rows', () {
+    const video = 'https://cdn.kubus.site/uploads/clip.mp4';
+    const poster = 'https://cdn.kubus.site/uploads/clip-still.jpg';
+    final hinted =
+        '$video#kubus-media=video&kubus-poster=${Uri.encodeComponent(poster)}';
+
+    Future<Map<String, dynamic>> rowData(Map<String, dynamic> post) async {
+      final backend = _FakeBackendApiService(const <Map<String, dynamic>>[])
+        ..posts = <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'p1', 'content': 'clip', ...post},
+        ];
+      final results = await SearchService(backendApi: backend).fetchResults(
+        snapshot: const SearchContextSnapshot(),
+        query: 'cl',
+        config: const KubusSearchConfig(
+          scope: KubusSearchScope.community,
+          allowedKinds: <KubusSearchResultKind>{KubusSearchResultKind.post},
+        ),
+      );
+      return results.single.data;
+    }
+
+    test('a video-first row shows the poster, not the clip', () async {
+      final data = await rowData(<String, dynamic>{
+        'imageUrl': hinted,
+        'mediaUrls': <String>[hinted],
+      });
+      expect(data['imageUrl'], poster);
+    });
+
+    test('a video-only row without a poster has no still', () async {
+      final data = await rowData(<String, dynamic>{
+        'imageUrl': video,
+        'mediaUrls': <String>[video],
+      });
+      expect(data['imageUrl'], isNull);
+    });
+
+    test('an image-first row keeps its image', () async {
+      final data = await rowData(<String, dynamic>{
+        'imageUrl': 'https://cdn.kubus.site/uploads/one.jpg',
+        'mediaUrls': <String>[hinted],
+      });
+      expect(data['imageUrl'], 'https://cdn.kubus.site/uploads/one.jpg');
+    });
+  });
+
   test(
       'home scope filters out unsupported non-art/profile suggestions without coordinates',
       () async {
