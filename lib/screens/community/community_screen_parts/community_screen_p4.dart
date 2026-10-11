@@ -782,12 +782,25 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
 
     final post = _communityPosts[index];
+    // A like confirmed on this post is still in flight: a tap now would take
+    // the like back while the server is recording it.
+    if (_likeSettlements.isInFlight(post.id)) return;
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      // The visitor returns to the feed they tapped; the confirmed like is
+      // applied to its card. Returning to the post opened a second screen
+      // that showed the pre-like state.
+      returnRoute: '/community',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'community_feed',
+      onAuthJourneyStarted: () =>
+          pending?.rememberFocusReturn('like:${post.id}'),
     );
     if (!authenticated || !mounted) return;
 
@@ -823,6 +836,71 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
         ),
       );
     }
+  }
+
+  /// Reads the viewer's own likes for [posts] (the feed is read anonymously)
+  /// and repaints when they land; the lists are not reloaded.
+  void _refreshViewerStates(List<CommunityPost> posts) {
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    unawaited(interactions.refreshPostStates(posts, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
+  }
+
+  /// Every copy of the post in the feed's lists, once each.
+  Iterable<CommunityPost> _feedCopiesOf(String postId) sync* {
+    final seen = Set<CommunityPost>.identity();
+    for (final list in <List<CommunityPost>>[
+      _followingFeedPosts,
+      _discoverFeedPosts,
+      _communityPosts,
+    ]) {
+      for (final post in list) {
+        if (post.id == postId && seen.add(post)) yield post;
+      }
+    }
+  }
+
+  /// Shows a like the continuation confirmed for a post in this feed. Every
+  /// copy of the post in the feed's lists is updated; nothing is reloaded.
+  void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyConfirmedPostLike(post, snapshot);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// A confirmed like on a post in this feed is in flight: the card shows it
+  /// liked at once instead of after the server answers.
+  void _applyStartedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyOptimisticPostLike(post);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// The like attempt ended without a confirmed like: the card shows the
+  /// server's state, not the optimistic one.
+  void _applyEndedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    final copies = _feedCopiesOf(postId).toList(growable: false);
+    if (copies.isEmpty) return;
+    unawaited(interactions.refreshPostStates(copies, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
   }
 
   void _showPostLikes(String postId) {

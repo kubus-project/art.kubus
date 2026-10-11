@@ -39,14 +39,90 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Reads the viewer's own likes for [posts] (the feed is read anonymously)
+  /// and repaints when they land; the lists are not reloaded.
+  void _refreshViewerStates(List<CommunityPost> posts) {
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    unawaited(interactions.refreshPostStates(posts, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
+  }
+
+  /// Every copy of the post in the feed's lists, once each.
+  Iterable<CommunityPost> _feedCopiesOf(String postId) sync* {
+    final seen = Set<CommunityPost>.identity();
+    for (final list in <List<CommunityPost>>[
+      _followingPosts,
+      _discoverPosts,
+    ]) {
+      for (final post in list) {
+        if (post.id == postId && seen.add(post)) yield post;
+      }
+    }
+  }
+
+  /// Shows a like the continuation confirmed for a post in this feed. Every
+  /// copy of the post in the feed's lists is updated; nothing is reloaded.
+  void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyConfirmedPostLike(post, snapshot);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// A confirmed like on a post in this feed is in flight: the card shows it
+  /// liked at once instead of after the server answers.
+  void _applyStartedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyOptimisticPostLike(post);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// The like attempt ended without a confirmed like: the card shows the
+  /// server's state, not the optimistic one.
+  void _applyEndedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    final copies = _feedCopiesOf(postId).toList(growable: false);
+    if (copies.isEmpty) return;
+    unawaited(interactions.refreshPostStates(copies, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
+  }
+
   Future<void> _togglePostLike(CommunityPost post) async {
+    // A confirmed like on this post is still in flight: a tap now would take it
+    // back while the server is recording it.
+    if (_likeSettlements.isInFlight(post.id)) return;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      // Back to the feed the like was tapped on, as on mobile (the card shows
+      // the confirmed like there).
+      returnRoute: '/community',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'desktop_community_feed',
+      onAuthJourneyStarted: () =>
+          pending?.rememberFocusReturn('like:${post.id}'),
     );
     if (!authenticated || !mounted) return;
     final wasLiked = post.isLiked;
@@ -138,6 +214,22 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     Future<void> submitInlineComment() async {
       final text = controller.text.trim();
       if (text.isEmpty) return;
+      // Guests meet the account gate before a comment is sent. The text stays
+      // in the field, so it is still there when they come back from sign-in.
+      final authenticated =
+          await const ContextualAuthGate().ensureAuthenticated(
+        context,
+        actionLabel: l10n.commonComments.toLowerCase(),
+        returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+        actionType: PendingActionType.comment,
+        targetType: PendingActionTargetType.post,
+        targetId: post.id,
+        sourceScreen: 'desktop_community_feed',
+        onAuthJourneyStarted: () => context
+            .read<CommunityHubProvider>()
+            .rememberCommentDraftForAuth(post.id, controller.text),
+      );
+      if (!authenticated || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       final commentsProvider = context.read<CommunityCommentsProvider>();
       final parentId = _inlineReplyToCommentIds[post.id];
@@ -151,6 +243,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
         post.commentCount = commentsProvider.totalCountForPost(post.id);
         ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
+        if (mounted) {
+          context.read<CommunityHubProvider>().takeCommentDraftForAuth(post.id);
+        }
         if (!mounted) return;
         _applyState(() {
           _inlineReplyToCommentIds.remove(post.id);
@@ -420,12 +515,11 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_isComposerExpanded) return;
-      _applyState(() {
-        _isComposerExpanded = true;
+      unawaited(_requestComposerExpansion(beforeOpen: () {
         _selectedCategory = hub.draft.category.isNotEmpty
             ? hub.draft.category
             : _selectedCategory;
-      });
+      }));
     });
   }
 

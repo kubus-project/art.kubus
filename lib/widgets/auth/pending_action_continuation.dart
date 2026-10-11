@@ -11,7 +11,6 @@ import '../../providers/saved_items_provider.dart';
 import '../../services/pending_action_executor.dart';
 import '../../utils/activation_copy.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
 import '../kubus_snackbar.dart';
 
 /// Watches for a restored [PendingActionIntent] and offers it back to the
@@ -118,6 +117,10 @@ class _PendingActionContinuationHostState
     _presenting = false;
     if (!mounted) return;
 
+    // A restored entry point is its own feedback: the composer is already on
+    // screen. A toast here would sit over the composer's send button and take
+    // the visitor's first tap.
+    if (result.outcome == PendingActionOutcome.entryRestored) return;
     messenger.showKubusSnackBar(
       SnackBar(content: Text(_feedbackFor(l10n, intent, result))),
       tone: result.didSucceed
@@ -247,19 +250,23 @@ class _PendingActionConfirmationSheet extends StatelessWidget {
       ),
     );
 
-    LiquidGlassPanel panel({
+    Widget panel({
       required BorderRadius radius,
       required double maxHeight,
     }) {
-      return LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        showBorder: true,
-        blurSigma: KubusGlassEffects.blurSigmaHeavy,
-        fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-        borderRadius: radius,
-        padding: EdgeInsets.zero,
-        backgroundColor: scheme.surfaceContainerHighest.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.86 : 0.94,
+      // Opaque, as on the activation gate: the sheet sits over the screen the
+      // visitor was on, and translucent glass let its content through the copy.
+      return Material(
+        color: scheme.surfaceContainerHighest,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: theme.brightness == Brightness.dark
+                ? KubusColors.glassBorderDark
+                : KubusColors.glassBorderLight,
+            width: KubusSizes.hairline,
+          ),
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),

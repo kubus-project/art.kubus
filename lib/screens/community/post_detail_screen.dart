@@ -15,6 +15,7 @@ import '../../community/community_interactions.dart';
 import '../../community/community_post_text_limits.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
+import '../../models/pending_action_intent.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
 import '../../services/contextual_auth_gate.dart';
@@ -23,8 +24,12 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
+import '../../providers/community_hub_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
+import '../../providers/pending_action_provider.dart';
+import '../../services/pending_action_executor.dart';
+import '../../widgets/community/post_like_settlement.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -90,6 +95,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _didRunInitialAction = false;
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
   final Set<String> _deleteInFlightCommentIds = <String>{};
+  PendingActionProvider? _pendingActions;
 
   String? _currentWalletAddress() {
     final override = widget.currentWalletAddressOverride;
@@ -109,10 +115,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _post = widget.post;
       _loading = false;
       _maybeRunInitialAction();
+      _restoreCommentDraft(widget.post!.id);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final post = _post;
         if (!mounted || post == null) return;
+        _onPendingActionsChanged();
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
@@ -120,9 +128,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context
               .read<CommunityInteractionsProvider>()
               .hydratePostsFromServer([post]);
-          unawaited(context
-              .read<CommunityInteractionsProvider>()
-              .refreshPostStates([post], force: true));
+          _refreshViewerState(post);
         } catch (_) {}
         context
             .read<CommunityCommentsProvider>()
@@ -161,7 +167,135 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final pending = _readPendingActions();
+    if (identical(pending, _pendingActions)) return;
+    _pendingActions?.removeListener(_onPendingActionsChanged);
+    _pendingActions = pending;
+    _pendingActions?.addListener(_onPendingActionsChanged);
+  }
+
+  PendingActionProvider? _readPendingActions() {
+    try {
+      return Provider.of<PendingActionProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// True while a like confirmed on this post is in flight. The heart shows the
+  /// like from the moment of confirmation, and taps on it wait for the answer.
+  bool _likeInFlight = false;
+
+  /// The visitor came back from sign-in and confirmed a continuation that was
+  /// captured on this post. A like is re-read from the server so the heart
+  /// shows what was actually recorded; a comment puts the cursor back into the
+  /// composer the visitor was writing in.
+  ///
+  /// While the like is in flight the heart already shows it. The server records
+  /// a like well before it answers (20 to 40 s on the rig), so a heart that
+  /// stays empty until the answer reads as a failed tap.
+  void _onPendingActionsChanged() {
+    // Nothing to attach a follow-up to until the post is on screen. Leaving the
+    // settled intent in place keeps it for the load that completes later.
+    final post = _post;
+    if (post == null) return;
+    final pending = _pendingActions;
+    if (pending != null && pending.isExecuting) {
+      _beginLikeInFlight(post, pending.pending);
+    }
+    final settled = pending?.takeSettled();
+    if (settled == null) {
+      // An attempt that ended without a confirmed like failed: show what the
+      // server holds, not the optimistic heart.
+      if (_likeInFlight && pending != null && !pending.isExecuting) {
+        _likeInFlight = false;
+        unawaited(_refreshPostStateFromServer(post));
+      }
+      return;
+    }
+    if (settled.targetType != PendingActionTargetType.post ||
+        settled.targetId != post.id) {
+      return;
+    }
+    // Compared one by one rather than switched on: other continuations add
+    // action types, and an exhaustive switch here would stop compiling.
+    if (settled.actionType == PendingActionType.like) {
+      _likeInFlight = false;
+      final confirmed = _pendingActions?.lastSettledResult?.postLike;
+      if (confirmed != null) {
+        _applySettledLike(post, confirmed);
+      } else {
+        unawaited(_refreshPostStateFromServer(post));
+      }
+    } else if (settled.actionType == PendingActionType.comment) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _commentFocusNode.requestFocus();
+      });
+    }
+  }
+
+  /// Reads the viewer's own like and count for [post], which the anonymous post
+  /// read does not carry, and repaints once they land: the card reads the post
+  /// object on build, and nothing else rebuilds it when the state arrives.
+  void _refreshViewerState(CommunityPost post) {
+    final interactions = context.read<CommunityInteractionsProvider>();
+    unawaited(interactions.refreshPostStates([post], force: true).then((_) {
+      if (mounted) setState(() {});
+    }));
+  }
+
+  /// Shows a confirmed like at once, before the server answers. The count is
+  /// corrected by the answer (or the server's state on failure).
+  void _beginLikeInFlight(CommunityPost post, PendingActionIntent? intent) {
+    if (_likeInFlight || post.isLiked || intent == null) return;
+    final isThisLike = intent.actionType == PendingActionType.like &&
+        intent.targetType == PendingActionTargetType.post &&
+        intent.targetId == post.id;
+    if (!isThisLike) return;
+    _likeInFlight = true;
+    applyOptimisticPostLike(post);
+    context.read<CommunityInteractionsProvider>().applyServerPostState(post);
+    setState(() {});
+  }
+
+  /// Shows the like the backend confirmed, without a second read.
+  void _applySettledLike(CommunityPost post, PostLikeSnapshot snapshot) {
+    applyConfirmedPostLike(post, snapshot);
+    context.read<CommunityInteractionsProvider>().applyServerPostState(post);
+    setState(() {});
+  }
+
+  Future<void> _refreshPostStateFromServer(CommunityPost post) async {
+    final interactions = context.read<CommunityInteractionsProvider>();
+    try {
+      await interactions.refreshPostStates([post], force: true);
+    } catch (_) {
+      // The heart keeps the last known state; the next open re-reads it.
+    }
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Puts back a comment the guest typed before sign-in, once, for this post.
+  void _restoreCommentDraft(String postId) {
+    final draft = _readCommunityHub()?.takeCommentDraftForAuth(postId);
+    if (draft == null || _commentController.text.trim().isNotEmpty) return;
+    _commentController.text = draft;
+  }
+
+  CommunityHubProvider? _readCommunityHub() {
+    try {
+      return Provider.of<CommunityHubProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   void dispose() {
+    _pendingActions?.removeListener(_onPendingActionsChanged);
     _commentController.dispose();
     _commentFocusNode.dispose();
     super.dispose();
@@ -189,9 +323,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context
               .read<CommunityInteractionsProvider>()
               .hydratePostsFromServer([post]);
-          unawaited(context
-              .read<CommunityInteractionsProvider>()
-              .refreshPostStates([post], force: true));
+          _refreshViewerState(post);
         } catch (_) {}
       }
       if (!mounted) return;
@@ -199,6 +331,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _post = post;
         _loading = false;
       });
+      _restoreCommentDraft(post.id);
+      _onPendingActionsChanged();
       if (mounted) {
         // Load comments via provider so edited/original fields and nesting are
         // consistent and mutations can update UI without manual refresh.
@@ -264,12 +398,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _toggleLike() async {
-    if (_post == null) return;
+    if (_post == null || _likeInFlight) return;
     final l10n = AppLocalizations.of(context)!;
+    final pending = readPendingActionsOrNull(context);
+    final likeKey = 'like:${_post!.id}';
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: _post!.id,
+      sourceScreen: 'post_detail',
+      onAuthJourneyStarted: () => pending?.rememberFocusReturn(likeKey),
     );
     if (!authenticated || !mounted) return;
     try {
@@ -354,14 +495,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
+    final hub = context.read<CommunityHubProvider>();
+    final postId = _post!.id;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      returnRoute: '/p/${Uri.encodeComponent(postId)}',
       actionType: PendingActionType.comment,
       targetType: PendingActionTargetType.post,
-      targetId: _post!.id,
+      targetId: postId,
       sourceScreen: 'post_detail',
+      onAuthJourneyStarted: () =>
+          hub.rememberCommentDraftForAuth(postId, _commentController.text),
     );
     if (!authenticated || !mounted) return;
     _commentController.clear();
@@ -377,6 +522,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             content: text,
             parentCommentId: parentId,
           );
+      // Sent: a draft kept for sign-in must not come back on a later visit.
+      hub.takeCommentDraftForAuth(postId);
       ProfilePackageMutationTracker.postUpdated(post: _post!);
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -1862,6 +2009,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               ),
         ),
       ),
+      // The composer is the bottom bar, not a body child: Scaffold lays a
+      // floating SnackBar (a failed like, a failed comment) above a bottom bar,
+      // so the feedback never covers the Send button.
+      bottomNavigationBar:
+          _loading || _error != null ? null : _buildCommentComposer(l10n),
       body: SafeArea(
         bottom: false,
         child: _loading
@@ -2335,7 +2487,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                         ),
                       ),
-                      _buildCommentComposer(l10n),
                     ],
                   ),
       ),

@@ -357,6 +357,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         context
             .read<CommunityInteractionsProvider>()
             .hydratePostsFromServer(filtered);
+        _refreshViewerStates(filtered);
       }
       if (mounted) {
         _applyState(() {
@@ -557,6 +558,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         context
             .read<CommunityInteractionsProvider>()
             .hydratePostsFromServer(filtered);
+        _refreshViewerStates(filtered);
       }
       if (mounted) {
         _applyState(() {

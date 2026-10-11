@@ -2,11 +2,18 @@ import 'dart:ui' as ui;
 
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/pending_action_intent.dart';
+import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/community_subject_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
+import 'package:art_kubus/services/pending_action_executor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -63,14 +70,28 @@ Future<void> _pump(
 SemanticsNode _node(WidgetTester tester, String label) =>
     tester.getSemantics(find.bySemanticsLabel(RegExp('^$label')));
 
+class _ConfirmingLikeExecutor implements PendingActionExecutor {
+  @override
+  Future<PendingActionExecutionResult> execute({
+    required PendingActionIntent intent,
+    required ArtworkProvider artworkProvider,
+    required SavedItemsProvider savedItemsProvider,
+  }) async {
+    return const PendingActionExecutionResult(
+      PendingActionOutcome.completed,
+      postLike: (isLiked: true, likeCount: 13),
+    );
+  }
+}
+
 void main() {
   testWidgets('like and save are toggles; comment, repost and share are not',
       (tester) async {
     final handle = tester.ensureSemantics();
     await _pump(tester, _post(liked: true));
 
-    final like = tester.getSemantics(find.bySemanticsLabel('Like'));
-    expect(like.label, 'Like');
+    final like = _node(tester, 'Like');
+    expect(like.label, 'Like, 12 likes, liked');
     expect(like.flagsCollection.isButton, isTrue);
     expect(like.flagsCollection.isToggled, ui.Tristate.isTrue);
 
@@ -85,7 +106,8 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('post actions meet the 44 px target and fire their callbacks',
+  testWidgets(
+      'post actions meet the 48 px mobile target and fire their callbacks',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -111,8 +133,8 @@ void main() {
         matching: find.byType(InkWell),
       );
       final size = tester.getSize(target.first);
-      expect(size.height, greaterThanOrEqualTo(44), reason: '$icon');
-      expect(size.width, greaterThanOrEqualTo(44), reason: '$icon');
+      expect(size.height, greaterThanOrEqualTo(48), reason: '$icon');
+      expect(size.width, greaterThanOrEqualTo(48), reason: '$icon');
     }
 
     await tester.tap(find.byIcon(Icons.favorite_border));
@@ -124,6 +146,163 @@ void main() {
   testWidgets('the post surface is flat (no glass panel)', (tester) async {
     await _pump(tester, _post());
     expect(find.byType(BackdropFilter), findsNothing);
+  });
+
+  testWidgets('each action is a focusable button named with its count or state',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, _post());
+
+    for (final label in [
+      'Like, 12 likes, not liked',
+      'Comment, 3 comments',
+      'Save, not saved',
+    ]) {
+      final data =
+          tester.getSemantics(find.bySemanticsLabel(label)).getSemanticsData();
+      expect(data.flagsCollection.isButton, isTrue, reason: label);
+      expect(data.hasAction(SemanticsAction.focus), isTrue, reason: label);
+      expect(data.hasAction(SemanticsAction.tap), isTrue, reason: label);
+    }
+    handle.dispose();
+  });
+
+  testWidgets('a liked post names its like as liked', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, _post(liked: true, saved: true));
+
+    expect(find.bySemanticsLabel('Like, 12 likes, liked'), findsOneWidget);
+    expect(find.bySemanticsLabel('Save, saved'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets(
+      'a like control rebuilt by a sign-in journey takes focus once, when it was remembered',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    final pending = PendingActionProvider()..rememberFocusReturn('like:post-1');
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PendingActionProvider>.value(
+        value: pending,
+        child: ChangeNotifierProvider<CommunitySubjectProvider>(
+          create: (_) => CommunitySubjectProvider(),
+          child: MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            theme: ThemeData(extensions: const [KubusColorRoles.light]),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: CommunityPostCard(
+                  post: _post(),
+                  accentColor: KubusColorRoles.light.active,
+                  onOpenPostDetail: (_) {},
+                  onToggleLike: () {},
+                  onOpenComments: () {},
+                  onRepost: () {},
+                  onShare: () {},
+                  onToggleBookmark: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final like = tester.getSemantics(
+      find.bySemanticsLabel('Like, 12 likes, not liked'),
+    );
+    expect(like.flagsCollection.isFocused, ui.Tristate.isTrue);
+    expect(pending.takeFocusReturn('like:post-1'), isFalse);
+    handle.dispose();
+  });
+
+  testWidgets(
+      'a confirmed like returns focus to its like control once the sheet has closed',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final handle = tester.ensureSemantics();
+    final pending = PendingActionProvider(executor: _ConfirmingLikeExecutor());
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PendingActionProvider>.value(
+        value: pending,
+        child: ChangeNotifierProvider<CommunitySubjectProvider>(
+          create: (_) => CommunitySubjectProvider(),
+          child: MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            theme: ThemeData(extensions: const [KubusColorRoles.light]),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: CommunityPostCard(
+                  post: _post(),
+                  accentColor: KubusColorRoles.light.active,
+                  onOpenPostDetail: (_) {},
+                  onToggleLike: () {},
+                  onOpenComments: () {},
+                  onRepost: () {},
+                  onShare: () {},
+                  onToggleBookmark: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final intent = PendingActionIntent.create(
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: 'post-1',
+      returnRoute: '/p/post-1',
+      sourceScreen: 'post_detail',
+    )!;
+    await tester.runAsync(() async {
+      await pending.capture(intent);
+      await pending.confirm(
+        artworkProvider: ArtworkProvider(),
+        savedItemsProvider: SavedItemsProvider(),
+      );
+    });
+    await tester.pump();
+    await tester.pump();
+
+    final like = tester.getSemantics(
+      find.bySemanticsLabel('Like, 12 likes, not liked'),
+    );
+    expect(like.flagsCollection.isFocused, ui.Tristate.isTrue);
+    handle.dispose();
+  });
+
+  testWidgets('a focused action activates on Enter and on Space',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    var liked = 0;
+    await _pump(tester, _post(), onLike: () => liked++);
+
+    final like = tester.getSemantics(
+      find.bySemanticsLabel('Like, 12 likes, not liked'),
+    );
+    // The finders read this owner; the rootPipelineOwner is a different tree here.
+    // ignore: deprecated_member_use
+    tester.binding.pipelineOwner.semanticsOwner!
+        .performAction(like.id, SemanticsAction.focus);
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+
+    expect(liked, 2);
+    handle.dispose();
   });
 
   testWidgets('a count that opens its own list is a separate labeled button',
@@ -138,7 +317,8 @@ void main() {
       onShowLikes: () => listed++,
     );
 
-    final toggle = tester.getSemantics(find.bySemanticsLabel('Like'));
+    final toggle =
+        tester.getSemantics(find.bySemanticsLabel('Like, 12 likes, liked'));
     expect(toggle.flagsCollection.isToggled, ui.Tristate.isTrue);
     final count = tester.getSemantics(find.bySemanticsLabel('12 likes'));
     expect(count.flagsCollection.isButton, isTrue);
@@ -154,7 +334,7 @@ void main() {
     );
 
     tester.semantics.tap(find.semantics.byLabel('12 likes'));
-    tester.semantics.tap(find.semantics.byLabel('Like'));
+    tester.semantics.tap(find.semantics.byLabel('Like, 12 likes, liked'));
     expect([liked, listed], [1, 1]);
     handle.dispose();
   });

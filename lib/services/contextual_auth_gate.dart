@@ -41,6 +41,17 @@ export '../models/protected_action_requirements.dart';
 class ContextualAuthGate {
   const ContextualAuthGate();
 
+  /// Gates on screen right now, keyed by the navigator they were opened on.
+  ///
+  /// A second request while one is open (a double tap, or a second entry point
+  /// reached before the first sheet appears) is dropped rather than stacking a
+  /// second sheet or capturing a second intent over the first. The flag is
+  /// released before any account journey starts, so a long onboarding never
+  /// holds it, and it is keyed per navigator so a torn-down tree cannot leave
+  /// it stuck for the next one.
+  static final Expando<bool> _presentingOn =
+      Expando<bool>('ContextualAuthGate.presenting');
+
   /// Returns true when the caller may proceed immediately.
   ///
   /// [actionLabel] is the human verb used for the generic fallback headline and
@@ -75,6 +86,55 @@ class ContextualAuthGate {
   }) async {
     final missingStep = _missingCapabilityStep(context, requirements);
     if (missingStep == null) return true;
+
+    final navigator = Navigator.maybeOf(context);
+    if (navigator != null && _presentingOn[navigator] == true) return false;
+    if (navigator != null) _presentingOn[navigator] = true;
+    var presenting = navigator != null;
+    void endPresentation() {
+      if (!presenting || navigator == null) return;
+      presenting = false;
+      _presentingOn[navigator] = false;
+    }
+
+    try {
+      return await _ensureAuthenticated(
+        context,
+        missingStep: missingStep,
+        actionLabel: actionLabel,
+        returnRoute: returnRoute,
+        actionType: actionType,
+        targetType: targetType,
+        targetId: targetId,
+        targetLabel: targetLabel,
+        markerId: markerId,
+        sourceScreen: sourceScreen,
+        returnArguments: returnArguments,
+        requirements: requirements,
+        onAuthJourneyStarted: onAuthJourneyStarted,
+        endPresentation: endPresentation,
+      );
+    } finally {
+      endPresentation();
+    }
+  }
+
+  Future<bool> _ensureAuthenticated(
+    BuildContext context, {
+    required String missingStep,
+    required String actionLabel,
+    required String returnRoute,
+    required PendingActionType? actionType,
+    required PendingActionTargetType? targetType,
+    required String? targetId,
+    required String? targetLabel,
+    required String? markerId,
+    required String? sourceScreen,
+    required Map<String, String> returnArguments,
+    required ProtectedActionRequirements requirements,
+    required VoidCallback? onAuthJourneyStarted,
+    required VoidCallback endPresentation,
+  }) async {
     StartupTrace.publicEntry('auth_gate_triggered',
         route: returnRoute, caller: sourceScreen ?? 'ContextualAuthGate');
 
@@ -132,6 +192,7 @@ class ContextualAuthGate {
           requirements: requirements,
           onAuthJourneyStarted: onAuthJourneyStarted,
         )) {
+      endPresentation();
       return false;
     }
 
@@ -139,6 +200,7 @@ class ContextualAuthGate {
     // resumes exactly that structured step. It is not an acquisition case, so
     // never show Google/email/wallet choices again.
     if (BackendApiService().hasAuthSession) {
+      endPresentation();
       onAuthJourneyStarted?.call();
       await _openOnboarding(
         context,
@@ -175,8 +237,15 @@ class ContextualAuthGate {
           sourceScreen: screen,
         ),
       );
+      // Declining the gate ends the attempt: the intent captured on the way in
+      // must not survive to be offered after an unrelated later sign-in.
+      await _dropCapturedIntent(context);
       return false;
     }
+
+    // The visitor chose a way into the account journey, so the presentation is
+    // over; a repeated tap from here on belongs to the journey, not the gate.
+    endPresentation();
 
     unawaited(
       telemetry.trackAuthMethodSelected(
@@ -238,6 +307,14 @@ class ContextualAuthGate {
 
   String _safeReturnRoute(String route) =>
       PendingActionIntent.isSafeInternalRoute(route) ? route : '/main';
+
+  Future<void> _dropCapturedIntent(BuildContext context) async {
+    try {
+      await context.read<PendingActionProvider>().clear();
+    } catch (_) {
+      // Outside the application provider tree nothing was captured either.
+    }
+  }
 
   Future<void> _openOnboarding(
     BuildContext context, {

@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/community_hub_provider.dart';
+import '../../widgets/community/community_compose_intent_resumer.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
 import '../../providers/app_mode_provider.dart';
@@ -323,6 +325,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _startConversation() async {
+    // Starting a conversation is an account action on every entry point; the
+    // gate runs before the composer dialog so a guest never fills one in.
+    // A guest who starts a chat signs in and comes back to Messages, through the
+    // same compose-access mechanism as New post; it is the participant scope the
+    // profile message button uses.
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.startChat,
+      actionLabel: AppLocalizations.of(context)!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
+      sourceScreen: 'messages_screen',
+    );
+    if (!allowed || !mounted) return;
     final result = await showKubusDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => _CreateConversationDialog(),

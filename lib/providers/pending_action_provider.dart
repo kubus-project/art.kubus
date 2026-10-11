@@ -40,7 +40,16 @@ class PendingActionProvider extends ChangeNotifier {
 
   PendingActionIntent? _pending;
   bool _awaitingConfirmation = false;
+
+  // The control a visitor was on when they continued into sign-in. The screen
+  // it lives on is replaced by that journey, so the rebuilt control claims
+  // keyboard focus once, instead of focus falling back to the page's start.
+  String? _focusReturnKey;
   bool _executing = false;
+  PendingActionIntent? _settled;
+  PendingActionIntent? _lastSettled;
+  PendingActionExecutionResult? _lastSettledResult;
+  int _settledRevision = 0;
 
   /// In-memory exactly-once guard. Complements the persisted marker so a
   /// double tap within one session cannot start two mutations.
@@ -53,6 +62,29 @@ class PendingActionProvider extends ChangeNotifier {
   bool get isAwaitingConfirmation => _awaitingConfirmation && _pending != null;
 
   bool get isExecuting => _executing;
+
+  /// The most recently confirmed intent that succeeded (or that only restored
+  /// an entry point, such as a comment composer), until a screen takes it.
+  ///
+  /// Lets the screen the visitor was returned to react to the outcome, for
+  /// example by refreshing a like or focusing its composer, without the screen
+  /// having to know about the continuation host.
+  PendingActionIntent? takeSettled() {
+    final settled = _settled;
+    _settled = null;
+    return settled;
+  }
+
+  /// Increases each time an intent succeeds. A screen that needs every outcome,
+  /// not just the first to take it, compares this with the revision it last
+  /// handled and then reads [lastSettled] and [lastSettledResult].
+  int get settledRevision => _settledRevision;
+
+  /// The most recent successful intent, kept after [takeSettled] runs.
+  PendingActionIntent? get lastSettled => _lastSettled;
+
+  /// The outcome of [lastSettled], including any confirmed post like state.
+  PendingActionExecutionResult? get lastSettledResult => _lastSettledResult;
 
   /// Persists the action a guest just attempted.
   Future<void> capture(PendingActionIntent intent) async {
@@ -161,6 +193,10 @@ class PendingActionProvider extends ChangeNotifier {
     }
 
     if (result.didSucceed) {
+      _settled = intent;
+      _lastSettled = intent;
+      _lastSettledResult = result;
+      _settledRevision += 1;
       await _service.markCompleted(intent);
       unawaited(_telemetry.trackPendingActionCompleted(
         actionType: intent.actionType.storageValue,
@@ -191,9 +227,30 @@ class PendingActionProvider extends ChangeNotifier {
       // action on every return to the screen.
       await _finish(intent);
     } else {
+      // The stored copy is dropped now: a reload must never replay an attempt
+      // the visitor has already seen fail. The in-memory copy stays so a
+      // further confirm() can retry it, but the attempt is no longer offered
+      // as awaiting confirmation: the host would re-open the sheet on top of
+      // the failure feedback, which sits under it and never shows.
+      _awaitingConfirmation = false;
+      await _service.clear();
       notifyListeners();
     }
     return result;
+  }
+
+  /// Remembers the control to refocus when the account journey it opened is
+  /// finished, for a screen that the journey replaces. See [takeFocusReturn].
+  void rememberFocusReturn(String key) {
+    _focusReturnKey = key;
+  }
+
+  /// Claims the remembered focus target if it is [key]: true once, so a
+  /// control that is rebuilt after the journey takes focus exactly once.
+  bool takeFocusReturn(String key) {
+    if (_focusReturnKey != key) return false;
+    _focusReturnKey = null;
+    return true;
   }
 
   /// Visitor declined the continuation. Browsing context is untouched.
