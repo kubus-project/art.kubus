@@ -13526,6 +13526,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityPostActionLike => 'Všečkaj';
 
   @override
+  String get communityPostStateLiked => 'všečkano';
+
+  @override
+  String get communityPostStateNotLiked => 'ni všečkano';
+
+  @override
+  String get communityPostStateSaved => 'shranjeno';
+
+  @override
+  String get communityPostStateNotSaved => 'ni shranjeno';
+
+  @override
   String get communityPostActionComment => 'Komentiraj';
 
   @override

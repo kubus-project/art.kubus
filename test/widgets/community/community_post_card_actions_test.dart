@@ -7,6 +7,7 @@ import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -69,8 +70,8 @@ void main() {
     final handle = tester.ensureSemantics();
     await _pump(tester, _post(liked: true));
 
-    final like = tester.getSemantics(find.bySemanticsLabel('Like'));
-    expect(like.label, 'Like');
+    final like = _node(tester, 'Like');
+    expect(like.label, 'Like, 12 likes, liked');
     expect(like.flagsCollection.isButton, isTrue);
     expect(like.flagsCollection.isToggled, ui.Tristate.isTrue);
 
@@ -127,6 +128,58 @@ void main() {
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
+  testWidgets('each action is a focusable button named with its count or state',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, _post());
+
+    for (final label in [
+      'Like, 12 likes, not liked',
+      'Comment, 3 comments',
+      'Save, not saved',
+    ]) {
+      final data =
+          tester.getSemantics(find.bySemanticsLabel(label)).getSemanticsData();
+      expect(data.flagsCollection.isButton, isTrue, reason: label);
+      expect(data.hasAction(SemanticsAction.focus), isTrue, reason: label);
+      expect(data.hasAction(SemanticsAction.tap), isTrue, reason: label);
+    }
+    handle.dispose();
+  });
+
+  testWidgets('a liked post names its like as liked', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, _post(liked: true, saved: true));
+
+    expect(find.bySemanticsLabel('Like, 12 likes, liked'), findsOneWidget);
+    expect(find.bySemanticsLabel('Save, saved'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('a focused action activates on Enter and on Space',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    var liked = 0;
+    await _pump(tester, _post(), onLike: () => liked++);
+
+    final like = tester.getSemantics(
+      find.bySemanticsLabel('Like, 12 likes, not liked'),
+    );
+    // The finders read this owner; the rootPipelineOwner is a different tree here.
+    // ignore: deprecated_member_use
+    tester.binding.pipelineOwner.semanticsOwner!
+        .performAction(like.id, SemanticsAction.focus);
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+
+    expect(liked, 2);
+    handle.dispose();
+  });
+
   testWidgets('a count that opens its own list is a separate labeled button',
       (tester) async {
     final handle = tester.ensureSemantics();
@@ -139,7 +192,8 @@ void main() {
       onShowLikes: () => listed++,
     );
 
-    final toggle = tester.getSemantics(find.bySemanticsLabel('Like'));
+    final toggle =
+        tester.getSemantics(find.bySemanticsLabel('Like, 12 likes, liked'));
     expect(toggle.flagsCollection.isToggled, ui.Tristate.isTrue);
     final count = tester.getSemantics(find.bySemanticsLabel('12 likes'));
     expect(count.flagsCollection.isButton, isTrue);
@@ -155,7 +209,7 @@ void main() {
     );
 
     tester.semantics.tap(find.semantics.byLabel('12 likes'));
-    tester.semantics.tap(find.semantics.byLabel('Like'));
+    tester.semantics.tap(find.semantics.byLabel('Like, 12 likes, liked'));
     expect([liked, listed], [1, 1]);
     handle.dispose();
   });

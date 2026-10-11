@@ -23395,6 +23395,30 @@ abstract class AppLocalizations {
   /// **'Like'**
   String get communityPostActionLike;
 
+  /// No description provided for @communityPostStateLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'liked'**
+  String get communityPostStateLiked;
+
+  /// No description provided for @communityPostStateNotLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'not liked'**
+  String get communityPostStateNotLiked;
+
+  /// No description provided for @communityPostStateSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'saved'**
+  String get communityPostStateSaved;
+
+  /// No description provided for @communityPostStateNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'not saved'**
+  String get communityPostStateNotSaved;
+
   /// No description provided for @communityPostActionComment.
   ///
   /// In en, this message translates to:

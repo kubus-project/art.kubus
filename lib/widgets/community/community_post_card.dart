@@ -295,7 +295,13 @@ class CommunityPostCard extends StatelessWidget {
                         icon: post.isLiked
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        semanticLabel: l10n?.communityPostActionLike ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.communityPostActionLike,
+                          l10n?.communityPostLikesCount(post.likeCount),
+                          post.isLiked
+                              ? l10n?.communityPostStateLiked
+                              : l10n?.communityPostStateNotLiked,
+                        ]),
                         toggled: post.isLiked,
                         onTap: onToggleLike,
                         isActive: post.isLiked,
@@ -308,7 +314,10 @@ class CommunityPostCard extends StatelessWidget {
                     Expanded(
                       child: _InteractionButton(
                         icon: Icons.comment_outlined,
-                        semanticLabel: l10n?.communityPostActionComment ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.communityPostActionComment,
+                          l10n?.commonCommentsCount(post.commentCount),
+                        ]),
                         onTap: onOpenComments,
                         isActive: commentsExpanded,
                         accentColor: accentColor,
@@ -335,7 +344,12 @@ class CommunityPostCard extends StatelessWidget {
                         icon: post.isBookmarked
                             ? Icons.bookmark
                             : Icons.bookmark_border,
-                        semanticLabel: l10n?.commonSave ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.commonSave,
+                          post.isBookmarked
+                              ? l10n?.communityPostStateSaved
+                              : l10n?.communityPostStateNotSaved,
+                        ]),
                         toggled: post.isBookmarked,
                         onTap: onToggleBookmark,
                         isActive: post.isBookmarked,

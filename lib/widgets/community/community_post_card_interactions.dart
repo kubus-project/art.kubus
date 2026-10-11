@@ -1,5 +1,10 @@
 part of 'community_post_card.dart';
 
+/// The spoken label of a post action: its name plus its count or state, e.g.
+/// "Like, 4 likes, not liked". Empty parts are dropped.
+String _actionLabel(Iterable<String?> parts) =>
+    parts.where((part) => part != null && part.isNotEmpty).join(', ');
+
 /// One post action (like, comment, repost, share, save).
 ///
 /// An icon-only button with a text label for assistive technology and a
@@ -8,7 +13,7 @@ part of 'community_post_card.dart';
 /// [toggled]; one-shot actions (comment, repost, share) leave it `null` so
 /// they never announce a toggle state. Counts live in [_PostStatsLine], so an
 /// action never has to share its hit area with a count.
-class _InteractionButton extends StatelessWidget {
+class _InteractionButton extends StatefulWidget {
   const _InteractionButton({
     required this.icon,
     required this.semanticLabel,
@@ -28,10 +33,41 @@ class _InteractionButton extends StatelessWidget {
   final Color? color;
 
   @override
+  State<_InteractionButton> createState() => _InteractionButtonState();
+}
+
+class _InteractionButtonState extends State<_InteractionButton> {
+  // The action's focus node, handed to its InkWell. The InkWell's own focus
+  // node is excluded from semantics (below), so the web engine can only focus
+  // the action through the labelled node, which passes focus on to this one.
+  final FocusNode _focusNode = FocusNode(debugLabel: 'community post action');
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final onTap = widget.onTap;
+    final semanticLabel = widget.semanticLabel;
+    final toggled = widget.toggled;
+    final icon = widget.icon;
     final roles = KubusColorRoles.of(context);
-    final finalColor =
-        color ?? (isActive ? accentColor : roles.foregroundMuted);
+    final finalColor = widget.color ??
+        (widget.isActive ? widget.accentColor : roles.foregroundMuted);
     return Semantics(
       container: true,
       button: true,
@@ -39,10 +75,14 @@ class _InteractionButton extends StatelessWidget {
       toggled: toggled,
       label: semanticLabel,
       onTap: onTap,
+      focusable: onTap != null,
+      focused: _focusNode.hasPrimaryFocus,
+      onFocus: onTap == null ? null : _focusNode.requestFocus,
       child: ExcludeSemantics(
         child: Tooltip(
           message: semanticLabel,
           child: InkWell(
+            focusNode: _focusNode,
             onTap: onTap,
             borderRadius: BorderRadius.circular(KubusRadius.surface),
             focusColor: roles.focus.withValues(alpha: 0.16),

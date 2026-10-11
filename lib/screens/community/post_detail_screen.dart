@@ -1970,6 +1970,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               ),
         ),
       ),
+      // The composer is the bottom bar, not a body child: Scaffold lays a
+      // floating SnackBar (a failed like, a failed comment) above a bottom bar,
+      // so the feedback never covers the Send button.
+      bottomNavigationBar:
+          _loading || _error != null ? null : _buildCommentComposer(l10n),
       body: SafeArea(
         bottom: false,
         child: _loading
@@ -2443,7 +2448,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                         ),
                       ),
-                      _buildCommentComposer(l10n),
                     ],
                   ),
       ),

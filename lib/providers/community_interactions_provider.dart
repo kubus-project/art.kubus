@@ -26,6 +26,10 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
   final Map<String, CommunityEntityInteractionState> _postStates = {};
   final Map<String, DateTime> _postStateFetchedAt = {};
+  // Orders confirmed writes against reads: a read may only apply a post's state
+  // when no write for that post was recorded after the read started.
+  int _stateSeq = 0;
+  final Map<String, int> _postStateWriteSeq = {};
   final Map<String, bool> _postStateInflight = {};
   Timer? _postStateReconcileTimer;
 
@@ -74,6 +78,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
       isBookmarked: post.isBookmarked,
     );
     _postStateFetchedAt[post.id] = DateTime.now();
+    _postStateWriteSeq[post.id] = ++_stateSeq;
   }
 
   void hydratePostsFromServer(List<CommunityPost> posts) {
@@ -211,6 +216,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
       _postStateInflight[post.id] = true;
     }
     final requestEpoch = _authEpoch;
+    final requestSeq = ++_stateSeq;
     try {
       final batch = await _api.getCommunityInteractionStates(
         postIds: targets.map((post) => post.id).toList(growable: false),
@@ -221,6 +227,10 @@ class CommunityInteractionsProvider extends ChangeNotifier {
       for (final post in targets) {
         final state = batch.posts[post.id];
         if (state == null) continue;
+        // A state recorded while this read was in flight (a confirmed like, a
+        // fresher list) is newer than this read. Applying the read would undo
+        // it: the count falls back and the heart empties.
+        if ((_postStateWriteSeq[post.id] ?? 0) > requestSeq) continue;
         _postStates[post.id] = state;
         _postStateFetchedAt[post.id] = fetchedAt;
         final nextLikeCount = state.likeCount ?? post.likeCount;

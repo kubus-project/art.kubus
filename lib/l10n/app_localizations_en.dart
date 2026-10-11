@@ -13392,6 +13392,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPostActionLike => 'Like';
 
   @override
+  String get communityPostStateLiked => 'liked';
+
+  @override
+  String get communityPostStateNotLiked => 'not liked';
+
+  @override
+  String get communityPostStateSaved => 'saved';
+
+  @override
+  String get communityPostStateNotSaved => 'not saved';
+
+  @override
   String get communityPostActionComment => 'Comment';
 
   @override
