@@ -129,6 +129,7 @@ jobs:
           KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED: ${{ inputs.community_multi_media_enabled }}
           KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
+          KUBUS_SUPPORT_TICKETS_ENABLED: ${{ vars.KUBUS_SUPPORT_TICKETS_ENABLED }}
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
           KUBUS_REQUIRE_STAGING_BACKEND: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend }}
           KUBUS_DEVELOPMENT_BACKEND_URL: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend && vars.KUBUS_DEVELOPMENT_BACKEND_URL || '' }}

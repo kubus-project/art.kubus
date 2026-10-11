@@ -114,6 +114,7 @@ jobs:
           KUBUS_ANALYTICS_APP_ENABLED: ${{ vars.KUBUS_ANALYTICS_APP_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
+          KUBUS_SUPPORT_TICKETS_ENABLED: ${{ vars.KUBUS_SUPPORT_TICKETS_ENABLED }}
         run: node scripts/prepare_public_build_config.mjs
       - name: Build signed packages
         run: |
@@ -174,6 +175,7 @@ jobs:
           KUBUS_ANALYTICS_APP_ENABLED: ${{ vars.KUBUS_ANALYTICS_APP_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
+          KUBUS_SUPPORT_TICKETS_ENABLED: ${{ vars.KUBUS_SUPPORT_TICKETS_ENABLED }}
         run: node scripts/prepare_public_build_config.mjs
       - name: Configure protected iOS signing
         env:

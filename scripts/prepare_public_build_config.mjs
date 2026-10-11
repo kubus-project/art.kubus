@@ -35,6 +35,15 @@ if (!['true', 'false'].includes(communityVideoPostersEnabled)) {
   console.error('KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED must be true or false when set.');
   process.exit(1);
 }
+// Support Center ticket features need backend 0.8.2 (migration 105). CI builds
+// fail closed: they stay off until the repository variable
+// KUBUS_SUPPORT_TICKETS_ENABLED is set to true after that backend is deployed.
+const supportTicketsEnabled = (process.env.KUBUS_SUPPORT_TICKETS_ENABLED || 'false')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(supportTicketsEnabled)) {
+  console.error('KUBUS_SUPPORT_TICKETS_ENABLED must be true or false when set.');
+  process.exit(1);
+}
 const buildMetadata = [
   'KUBUS_APP_VERSION',
   'KUBUS_BUILD_NUMBER',
@@ -144,6 +153,7 @@ values.ANALYTICS_APP_ENABLED = analyticsBuildEnabled === 'true';
 values.COMMUNITY_MULTI_MEDIA_ENABLED = communityMultiMediaEnabled === 'true';
 values.COMMUNITY_VIDEO_AUTOPLAY_ENABLED = communityVideoAutoplayEnabled === 'true';
 values.COMMUNITY_VIDEO_POSTERS_ENABLED = communityVideoPostersEnabled === 'true';
+values.SUPPORT_TICKETS_ENABLED = supportTicketsEnabled === 'true';
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');
 mkdirSync(dirname(outputPath), { recursive: true });

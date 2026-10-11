@@ -62,7 +62,16 @@ class AppConfig {
     defaultValue: true,
   );
   static const bool enableReporting = true;
-  static const bool enableSupportTickets = true;
+
+  /// Support Center requests, conversations and the contact form. They need
+  /// backend 0.8.2 (migration 105); public CI builds pass
+  /// SUPPORT_TICKETS_ENABLED from the repository variable
+  /// KUBUS_SUPPORT_TICKETS_ENABLED and stay off until it is true. Local builds
+  /// and tests default on. Off shows the FAQ and a notice, with no ticket calls.
+  static const bool enableSupportTickets = bool.fromEnvironment(
+    'SUPPORT_TICKETS_ENABLED',
+    defaultValue: true,
+  );
 
   /// Meta browser pixel. Off by default: no third-party script is added to the
   /// page unless a deployment both enables this and supplies a pixel id.
