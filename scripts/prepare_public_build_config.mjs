@@ -59,6 +59,51 @@ if (!['https:', 'http:'].includes(backendUrl.protocol)) {
   process.exit(1);
 }
 
+// The client reads its API origin from BACKEND_BASE_URL (and fails over to
+// BACKEND_STANDBY_BASE_URL), not from KUBUS_BACKEND_URL, and both default to
+// production. A development build therefore must name its own backend, and
+// must not fail over to production: it is never allowed to fall back silently.
+const deploymentEnvironment = (process.env.KUBUS_DEPLOYMENT_ENVIRONMENT || '').trim();
+let developmentBackend = null;
+if (deploymentEnvironment === 'development') {
+  const raw = (process.env.KUBUS_DEVELOPMENT_BACKEND_URL || '').trim();
+  if (!raw) {
+    console.error(
+      'A development build needs KUBUS_DEVELOPMENT_BACKEND_URL (the public HTTPS origin of the staging backend); ' +
+        'it refuses to build against the production API.',
+    );
+    process.exit(1);
+  }
+  let origin;
+  try {
+    origin = new URL(raw);
+  } catch {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be an absolute URL.');
+    process.exit(1);
+  }
+  const host = origin.hostname.toLowerCase();
+  const isPrivateHost =
+    host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
+    host.endsWith('.internal') || !host.includes('.') || host.includes(':') ||
+    /^\d+(\.\d+){3}$/.test(host);
+  if (origin.protocol !== 'https:' || isPrivateHost) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be a public HTTPS origin, not a local or private address.');
+    process.exit(1);
+  }
+  if (origin.username || origin.password || (origin.pathname !== '/' && origin.pathname !== '') ||
+      origin.search || origin.hash) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be a bare origin (no credentials, path, query or fragment).');
+    process.exit(1);
+  }
+  const productionHosts = new Set(['api.kubus.site', 'bapi.kubus.site']);
+  const productionBase = new URL(process.env.KUBUS_BACKEND_URL).hostname.toLowerCase();
+  if (productionHosts.has(host) || host === productionBase) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL points at a production backend; a development build must use staging.');
+    process.exit(1);
+  }
+  developmentBackend = origin.origin;
+}
+
 const values = Object.fromEntries([
   ...required.map((name) => [name, process.env[name].trim()]),
   ...optional.map((name) => [name, (process.env[name] || '').trim()]),
@@ -85,6 +130,12 @@ if (suppliedBuildMetadataCount === buildMetadata.length) {
     process.exit(1);
   }
   Object.assign(values, suppliedBuildMetadata);
+}
+if (developmentBackend) {
+  values.KUBUS_BACKEND_URL = developmentBackend;
+  values.BACKEND_BASE_URL = developmentBackend;
+  // Same origin as the primary, so failover can never reach production.
+  values.BACKEND_STANDBY_BASE_URL = developmentBackend;
 }
 values.KUBUS_ENABLE_WEB_SEMANTICS = false;
 // This is build capability, never consent. ConfigProvider owns the persisted
