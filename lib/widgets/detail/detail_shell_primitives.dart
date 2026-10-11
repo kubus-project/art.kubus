@@ -742,8 +742,8 @@ class DetailIdentityBlock extends StatelessWidget {
   final Widget? trailing;
   final TextStyle? titleStyle;
 
-  /// Set to false when the shell header already shows this title, so the
-  /// screen keeps one visible title. The kicker and subtitle still show.
+  /// Hide the title when the surface's header already shows it, so a screen
+  /// does not present the same title twice. Kicker and subtitle still show.
   final bool showTitle;
 
   @override
