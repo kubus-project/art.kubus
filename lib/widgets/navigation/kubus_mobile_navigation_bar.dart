@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_focus_ring.dart';
 
 /// One primary destination in [KubusMobileNavigationBar].
 class KubusMobileNavigationDestination {
@@ -101,53 +102,57 @@ class _KubusMobileNavigationItem extends StatelessWidget {
       label: destination.label,
       onTap: onTap,
       excludeSemantics: true,
-      child: InkResponse(
-        onTap: onTap,
-        containedInkWell: true,
-        highlightShape: BoxShape.rectangle,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Selection indicator: a short active rule above the icon, so
-              // the selected state never depends on colour alone.
-              Container(
-                width: 20,
-                height: 2,
-                color: selected ? roles.active : Colors.transparent,
-              ),
-              const SizedBox(height: KubusSpacing.xs),
-              Icon(
-                selected ? destination.selectedIcon : destination.icon,
-                size: 24,
-                color: iconColor,
-              ),
-              const SizedBox(height: KubusSpacing.xxs),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-                // Scale a long label down (e.g. "Community" at 320 px)
-                // rather than cutting it with an ellipsis.
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    destination.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    textScaler: MediaQuery.textScalerOf(context)
-                        .clamp(maxScaleFactor: 1.3),
-                    style: KubusTypography.content(
-                      fontSize: 11.5,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: labelColor,
-                      height: 1.1,
+      child: KubusFocusRing(
+        borderRadius: KubusRadius.circular(KubusRadius.control),
+        child: InkResponse(
+          onTap: onTap,
+          containedInkWell: true,
+          highlightShape: BoxShape.rectangle,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Selection indicator: a short active rule above the icon, so
+                // the selected state never depends on colour alone.
+                Container(
+                  width: 20,
+                  height: 2,
+                  color: selected ? roles.active : Colors.transparent,
+                ),
+                const SizedBox(height: KubusSpacing.xs),
+                Icon(
+                  selected ? destination.selectedIcon : destination.icon,
+                  size: 24,
+                  color: iconColor,
+                ),
+                const SizedBox(height: KubusSpacing.xxs),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+                  // Scale a long label down (e.g. "Community" at 320 px)
+                  // rather than cutting it with an ellipsis.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      destination.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      textScaler: MediaQuery.textScalerOf(context)
+                          .clamp(maxScaleFactor: 1.3),
+                      style: KubusTypography.content(
+                        fontSize: 11.5,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
+                        color: labelColor,
+                        height: 1.1,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

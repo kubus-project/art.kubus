@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../common/kubus_focus_ring.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 
@@ -396,24 +397,28 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
       textField: widget.semanticsLabel != null,
       child: MouseRegion(
         cursor: mouseCursor,
-        child: AnimatedContainer(
-          duration: widget.animationDuration,
-          curve: widget.animationCurve,
-          decoration: BoxDecoration(
-            color: widget.useMapGlassSurface ? style.backgroundColor : null,
-            borderRadius: style.borderRadius,
-            boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
-          ),
-          // The boundary is painted over the field rather than laid out around
-          // it, so the 1px -> 2px focus ring never moves the text or the icons.
-          foregroundDecoration: BoxDecoration(
-            borderRadius: style.borderRadius,
-            border: Border.all(
-              color: effectiveBorderColor,
-              width: effectiveBorderWidth,
+        child: KubusFocusRing(
+          borderRadius: style.borderRadius,
+          enabled: widget.enabled,
+          child: AnimatedContainer(
+            duration: widget.animationDuration,
+            curve: widget.animationCurve,
+            decoration: BoxDecoration(
+              color: widget.useMapGlassSurface ? style.backgroundColor : null,
+              borderRadius: style.borderRadius,
+              boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
             ),
+            // The boundary is painted over the field rather than laid out around
+            // it, so the 1px -> 2px focus ring never moves the text or the icons.
+            foregroundDecoration: BoxDecoration(
+              borderRadius: style.borderRadius,
+              border: Border.all(
+                color: effectiveBorderColor,
+                width: effectiveBorderWidth,
+              ),
+            ),
+            child: surface,
           ),
-          child: surface,
         ),
       ),
     );

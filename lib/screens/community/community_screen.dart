@@ -90,6 +90,7 @@ import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
 import '../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../widgets/notifications/kubus_notifications_sheet.dart';
+import '../../widgets/common/kubus_focus_ring.dart';
 
 part 'community_screen_parts/community_screen_p1.dart';
 part 'community_screen_parts/community_screen_p2.dart';
