@@ -10963,6 +10963,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'This video cannot be played here.';
 
   @override
+  String get communityMediaVideoPreviewUnavailable => 'Preview unavailable';
+
+  @override
   String get communityMediaVideoReplay => 'Replay video';
 
   @override

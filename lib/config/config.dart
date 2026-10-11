@@ -33,6 +33,26 @@ class AppConfig {
     'COMMUNITY_MULTI_MEDIA_ENABLED',
     defaultValue: !isProduction,
   );
+
+  /// Muted autoplay of Community videos in the feed: a clip that is clearly on
+  /// screen starts silently, and the viewer's first tap brings sound. It is on
+  /// in every build and exists as a kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_AUTOPLAY_ENABLED=false. Reduced motion always
+  /// turns it off, whatever this says.
+  static const bool enableCommunityVideoAutoplay = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_AUTOPLAY_ENABLED',
+    defaultValue: true,
+  );
+
+  /// Still posters for Community videos: a clip picked in the composer gets a
+  /// captured poster and that poster is uploaded with the post. Off means no
+  /// thumbnail decoding and no poster upload at selection or publish; posters
+  /// that are already stored keep displaying. Kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_POSTERS_ENABLED=false.
+  static const bool enableCommunityVideoPosters = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_POSTERS_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableSeoPublicPages = bool.fromEnvironment(
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
@@ -570,6 +590,10 @@ class AppConfig {
         return enableCollabInvites;
       case 'communityMultiMedia':
         return enableCommunityMultiMedia;
+      case 'communityVideoAutoplay':
+        return enableCommunityVideoAutoplay;
+      case 'communityVideoPosters':
+        return enableCommunityVideoPosters;
       case 'collabInviteNotifications':
         return enableCollabInviteNotifications;
       case 'season0':

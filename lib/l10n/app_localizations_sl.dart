@@ -11065,6 +11065,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tega videa tukaj ni mogoče predvajati.';
 
   @override
+  String get communityMediaVideoPreviewUnavailable => 'Predogled ni na voljo';
+
+  @override
   String get communityMediaVideoReplay => 'Ponovno predvajaj video';
 
   @override
