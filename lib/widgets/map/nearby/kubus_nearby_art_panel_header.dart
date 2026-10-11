@@ -2,8 +2,9 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_map_tokens.dart';
 import '../../common/kubus_screen_header.dart';
-import '../kubus_map_glass_surface.dart';
+import '../kubus_map_chrome.dart';
 import 'kubus_nearby_art_panel_types.dart';
 
 class KubusNearbyArtPanelHeader extends StatelessWidget {
@@ -187,6 +188,9 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     );
   }
 
+  /// Flat map-chrome control: one hairline surface, a 48px touch target, and
+  /// no glass fill inside the glass sheet. With no [onTap] it draws no ink well,
+  /// so an enclosing [PopupMenuButton] keeps the tap.
   Widget _glassIconButton(
     BuildContext context, {
     required IconData icon,
@@ -194,24 +198,32 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     required VoidCallback? onTap,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    final button = buildKubusMapGlassSurface(
-      context: context,
-      kind: KubusMapGlassSurfaceKind.button,
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      tintBase: scheme.surfaceContainerHighest,
-      padding: EdgeInsets.zero,
-      onTap: onTap,
-      child: SizedBox(
-        width: KubusHeaderMetrics.actionHitArea,
-        height: KubusHeaderMetrics.actionHitArea,
-        child: Center(
-          child: Icon(
-            icon,
-            size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
-            color: onTap == null ? scheme.onSurfaceVariant : scheme.onSurface,
-          ),
+    final radius = BorderRadius.circular(KubusMapMetrics.headerSurfaceRadius);
+    final content = SizedBox(
+      width: KubusMapMetrics.mobileControlSize,
+      height: KubusMapMetrics.mobileControlSize,
+      child: Center(
+        child: Icon(
+          icon,
+          size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+          color: onTap == null ? scheme.onSurfaceVariant : scheme.onSurface,
         ),
       ),
+    );
+    final control = onTap == null
+        ? content
+        : Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: radius,
+              onTap: onTap,
+              child: content,
+            ),
+          );
+    final button = buildKubusMapChromeSurface(
+      context: context,
+      borderRadius: radius,
+      child: control,
     );
 
     return Tooltip(message: tooltip, child: button);
