@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -643,9 +644,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final priceController = TextEditingController();
-    final price = await showDialog<String>(
+    final price = await showKubusDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.marketplaceListNftForSaleTitle),
         content: TextField(
           controller: priceController,
@@ -655,14 +657,16 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
               InputDecoration(labelText: l10n.marketplacePriceKub8Label),
         ),
         actions: [
-          TextButton(
+          KubusButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonCancel),
+            label: l10n.commonCancel,
+            variant: KubusButtonVariant.quiet,
           ),
-          FilledButton(
+          const SizedBox(width: KubusSpacing.sm),
+          KubusButton(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(priceController.text.trim()),
-            child: Text(l10n.commonSave),
+            label: l10n.commonSave,
           ),
         ],
       ),

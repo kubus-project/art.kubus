@@ -847,6 +847,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     final result = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(title),
         content: Text(body),
         actions: [

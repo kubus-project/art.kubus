@@ -331,18 +331,21 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     if (_newPostController.text.trim().isNotEmpty ||
         _composerMedia.isNotEmpty) {
       final l10n = AppLocalizations.of(sheetContext)!;
-      final discard = await showDialog<bool>(
+      final discard = await showKubusDialog<bool>(
         context: sheetContext,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
+          size: KubusDialogSize.compact,
           title: Text(l10n.communityComposerDiscardDraft),
           actions: [
-            TextButton(
+            KubusButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
+              label: l10n.commonCancel,
+              variant: KubusButtonVariant.quiet,
             ),
-            TextButton(
+            const SizedBox(width: KubusSpacing.sm),
+            KubusButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.commonContinue),
+              label: l10n.commonContinue,
             ),
           ],
         ),

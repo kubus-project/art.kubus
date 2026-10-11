@@ -225,6 +225,10 @@ class KubusSizes {
   /// for compact count badges that must stay readable.
   static const double badgeCountFontSize = 11.0;
 
+  /// Hit area of an icon-only action ([KubusIconActionButton]) in a composer
+  /// or toolbar row.
+  static const double iconActionSize = 48.0;
+
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
 

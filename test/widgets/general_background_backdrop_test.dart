@@ -82,8 +82,8 @@ void main() {
     // repeating motion ticker remains.
     await tester.pump(const Duration(milliseconds: 950));
 
-    final observer = tester.state(find.byType(GeneralBackground))
-        as WidgetsBindingObserver;
+    final observer =
+        tester.state(find.byType(GeneralBackground)) as WidgetsBindingObserver;
 
     observer.didChangeAppLifecycleState(AppLifecycleState.paused);
     await tester.pump();

@@ -105,6 +105,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,

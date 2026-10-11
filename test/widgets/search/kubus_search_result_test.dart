@@ -2,7 +2,8 @@ import 'package:art_kubus/widgets/search/kubus_search_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('previewImageUrl falls back to the first non-empty image list entry', () {
+  test('previewImageUrl falls back to the first non-empty image list entry',
+      () {
     const result = KubusSearchResult(
       label: 'Gallery',
       kind: KubusSearchResultKind.institution,

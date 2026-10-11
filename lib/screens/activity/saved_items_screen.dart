@@ -850,6 +850,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(
           l10n.savedItemsRemoveDialogTitle,
           style: KubusTypography.inter(fontWeight: FontWeight.w700),
@@ -918,6 +919,7 @@ Future<void> showSavedItemsClearAllDialog(BuildContext context) async {
   await showKubusDialog<void>(
     context: context,
     builder: (dialogContext) => KubusAlertDialog(
+      size: KubusDialogSize.compact,
       title: Text(
         l10n.savedItemsClearAllDialogTitle,
         style: KubusTypography.inter(fontWeight: FontWeight.w700),

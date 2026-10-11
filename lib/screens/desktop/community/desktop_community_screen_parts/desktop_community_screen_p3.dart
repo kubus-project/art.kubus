@@ -479,9 +479,10 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
-                IconButton.filledTonal(
+                KubusIconActionButton(
+                  tooltip: l10n.commonSend,
                   onPressed: submitInlineComment,
-                  icon: const Icon(Icons.send_outlined, size: 18),
+                  icon: Icons.send_rounded,
                 ),
               ],
             ),
@@ -903,6 +904,7 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(
           l10n.communityUnrepostTitle,
           style: KubusTextStyles.sectionTitle,

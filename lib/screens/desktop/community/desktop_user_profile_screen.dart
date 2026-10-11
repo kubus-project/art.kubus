@@ -1804,6 +1804,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     showKubusDialog(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(KubusRadius.lg),

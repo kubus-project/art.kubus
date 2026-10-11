@@ -952,9 +952,10 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
-                IconButton.filledTonal(
+                KubusIconActionButton(
+                  tooltip: l10n.commonSend,
                   onPressed: submitInlineComment,
-                  icon: const Icon(Icons.send_outlined, size: 18),
+                  icon: Icons.send_rounded,
                 ),
               ],
             ),

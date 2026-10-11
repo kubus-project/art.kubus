@@ -212,6 +212,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.collectionSettingsDeleteDialogTitle),
         content:

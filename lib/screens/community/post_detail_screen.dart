@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -1903,15 +1904,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   const SizedBox(width: KubusSpacing.xs),
-                  IconButton.filled(
+                  KubusIconActionButton(
                     tooltip: l10n.commonSend,
                     onPressed: _submitComment,
-                    style: IconButton.styleFrom(
-                      backgroundColor: roles.active,
-                      foregroundColor: roles.onActive,
-                      minimumSize: const Size(48, 48),
-                    ),
-                    icon: const Icon(Icons.send_rounded, size: 20),
+                    icon: Icons.send_rounded,
                   ),
                 ],
               ),
@@ -2245,6 +2241,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       context: context,
                                       builder: (dialogContext) {
                                         return KubusAlertDialog(
+                                          size: KubusDialogSize.compact,
                                           title: Text(
                                               l10n.commentDeleteConfirmTitle),
                                           content: Text(

@@ -1033,9 +1033,10 @@ class _SetupSection extends StatelessWidget {
     KubusNodeProvider node,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.kubusNodeUnpairAction),
         content: Text(l10n.kubusNodeConfirmBody),
         actions: [

@@ -1517,6 +1517,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title:
             Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(

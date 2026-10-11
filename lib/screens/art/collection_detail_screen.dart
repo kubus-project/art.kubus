@@ -251,6 +251,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.collectionSettingsDeleteDialogTitle),
         content: Text(

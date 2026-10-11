@@ -328,8 +328,7 @@ void main() {
     expect(decision.reason, 'platform-view-backdrop-host');
   });
 
-  testWidgets(
-      'compact web forced map chrome engages the DOM blur host',
+  testWidgets('compact web forced map chrome engages the DOM blur host',
       (tester) async {
     late KubusMapBlurDecision decision;
 

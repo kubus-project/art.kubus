@@ -464,6 +464,7 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title:
             Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(l10n.communityUnrepostConfirmBody,

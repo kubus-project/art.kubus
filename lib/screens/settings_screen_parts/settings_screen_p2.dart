@@ -904,6 +904,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsClearCacheDialogTitle,
@@ -959,6 +960,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
@@ -1016,6 +1018,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsExportDataDialogTitle,
@@ -1090,6 +1093,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsResetAppDialogTitle,
@@ -1194,6 +1198,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final confirmed = await showKubusDialog<bool>(
                 context: dialogContext,
                 builder: (confirmContext) => KubusAlertDialog(
+                  size: KubusDialogSize.compact,
                   backgroundColor: Theme.of(confirmContext).colorScheme.surface,
                   title: Text(
                     l10n.settingsFinalConfirmationTitle,

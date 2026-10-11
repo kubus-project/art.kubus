@@ -159,6 +159,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.exhibitionDetailDeleteDialogTitle),
         content:

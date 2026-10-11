@@ -796,8 +796,13 @@ class KubusAlertDialog extends StatelessWidget {
         ? null
         : Padding(
             padding: effectiveActionsPadding,
-            child: Row(
-              mainAxisAlignment: actionsAlignment,
+            // OverflowBar keeps actions on one row while they fit and stacks
+            // them (full width) when they do not, so a long localized label
+            // on a phone is never clipped by the dialog edge.
+            child: OverflowBar(
+              alignment: actionsAlignment,
+              overflowAlignment: OverflowBarAlignment.end,
+              overflowSpacing: KubusSpacing.sm,
               children: actions!,
             ),
           );

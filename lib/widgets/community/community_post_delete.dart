@@ -187,26 +187,17 @@ class _DeletePostDialogState extends State<_DeletePostDialog> {
           ],
         ),
         actions: [
-          Expanded(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: KubusSpacing.sm,
-              runSpacing: KubusSpacing.sm,
-              children: [
-                KubusButton(
-                  onPressed:
-                      _pending ? null : () => Navigator.of(context).pop(false),
-                  label: l10n.commonCancel,
-                  variant: KubusButtonVariant.quiet,
-                ),
-                KubusButton(
-                  onPressed: _pending ? null : _delete,
-                  label: l10n.commonDelete,
-                  variant: KubusButtonVariant.destructive,
-                  isLoading: _pending,
-                ),
-              ],
-            ),
+          KubusButton(
+            onPressed: _pending ? null : () => Navigator.of(context).pop(false),
+            label: l10n.commonCancel,
+            variant: KubusButtonVariant.quiet,
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          KubusButton(
+            onPressed: _pending ? null : _delete,
+            label: l10n.commonDelete,
+            variant: KubusButtonVariant.destructive,
+            isLoading: _pending,
           ),
         ],
       ),

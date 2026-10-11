@@ -323,6 +323,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.exhibitionDetailDeleteDialogTitle),
         content: Text(
           l10n.exhibitionDetailDeleteDialogContent(exhibition.title),

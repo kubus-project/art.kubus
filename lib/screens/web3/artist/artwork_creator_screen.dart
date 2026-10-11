@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -693,10 +694,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final double mintPrice = draft.nftMintPrice < 0 ? 0.0 : draft.nftMintPrice;
     final royalty = draft.nftRoyaltyPercent.clamp(0, 100).toDouble();
 
-    showDialog<void>(
+    showKubusDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surface,
         title: Text(
           l10n.pushArchiveObjectCreatingTitle,

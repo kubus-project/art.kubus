@@ -13,10 +13,12 @@ const _longHandle = 'ana_kovac_the_extremely_prolific_street_muralist_x';
 void main() {
   group('ProfileIdentityBlock', () {
     testWidgets('renders the complete handle without ellipsis', (tester) async {
-      await _pump(tester, const ProfileIdentityBlock(
-        displayName: 'Ana Kovač',
-        handle: _longHandle,
-      ));
+      await _pump(
+          tester,
+          const ProfileIdentityBlock(
+            displayName: 'Ana Kovač',
+            handle: _longHandle,
+          ));
 
       final handle = tester.widget<Text>(find.text('@$_longHandle'));
       expect(handle.overflow, isNot(TextOverflow.ellipsis));
@@ -26,24 +28,30 @@ void main() {
 
     testWidgets('hides wallet addresses and provisional identifiers',
         (tester) async {
-      await _pump(tester, const ProfileIdentityBlock(
-        displayName: 'Ana Kovač',
-        handle: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-      ));
+      await _pump(
+          tester,
+          const ProfileIdentityBlock(
+            displayName: 'Ana Kovač',
+            handle: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+          ));
       expect(find.textContaining('@'), findsNothing);
 
-      await _pump(tester, const ProfileIdentityBlock(
-        displayName: 'Ana Kovač',
-        handle: 'user_7xKXtg2C',
-      ));
+      await _pump(
+          tester,
+          const ProfileIdentityBlock(
+            displayName: 'Ana Kovač',
+            handle: 'user_7xKXtg2C',
+          ));
       expect(find.textContaining('@'), findsNothing);
     });
 
     testWidgets('never renders a duplicated @', (tester) async {
-      await _pump(tester, const ProfileIdentityBlock(
-        displayName: 'Ana Kovač',
-        handle: '@@ana_kovac',
-      ));
+      await _pump(
+          tester,
+          const ProfileIdentityBlock(
+            displayName: 'Ana Kovač',
+            handle: '@@ana_kovac',
+          ));
       expect(find.text('@ana_kovac'), findsOneWidget);
       expect(find.text('@@ana_kovac'), findsNothing);
     });
@@ -102,11 +110,13 @@ void main() {
 
     testWidgets('exposes name, role and handle in one semantics node',
         (tester) async {
-      await _pump(tester, const ProfileIdentityBlock(
-        displayName: 'Ana Kovač',
-        handle: 'ana_kovac',
-        isArtist: true,
-      ));
+      await _pump(
+          tester,
+          const ProfileIdentityBlock(
+            displayName: 'Ana Kovač',
+            handle: 'ana_kovac',
+            isArtist: true,
+          ));
 
       final node = tester.getSemantics(find.byType(ProfileIdentityBlock));
       expect(node.label, contains('Ana Kovač'));

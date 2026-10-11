@@ -56,10 +56,20 @@ class CommunityPostVideoSlide extends StatefulWidget {
     required this.url,
     required this.isActive,
     this.autoplay = true,
+    this.onAspect,
   });
 
   final String url;
   final bool isActive;
+
+  /// Reports the clip's real width / height once its player has loaded, so the
+  /// stage around it can take the clip's own shape.
+  final ValueChanged<double>? onAspect;
+
+  /// Real aspect ratios already learned this session, by video source URL. A
+  /// post seen again (scrolling back, opening its detail) starts at the right
+  /// height instead of the poster's or the default.
+  static final Map<String, double> knownAspects = <String, double>{};
 
   /// False for previews that never autoplay (quoted posts).
   final bool autoplay;
@@ -323,6 +333,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       return;
     }
     CommunityVideoPlaybackCoordinator.claim(controller);
+    _reportAspect(controller);
     setState(() {
       _controller = controller;
       _initializing = false;
@@ -330,6 +341,14 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     controller.addListener(_syncGuard);
     controller.addListener(_recoverBlockedSound);
     await controller.play();
+  }
+
+  void _reportAspect(VideoPlayerController controller) {
+    final aspect = controller.value.aspectRatio;
+    if (!aspect.isFinite || aspect <= 0) return;
+    CommunityPostVideoSlide
+        .knownAspects[communityMediaVideoSourceUrl(widget.url)] = aspect;
+    widget.onAspect?.call(aspect);
   }
 
   Future<void> _togglePlayback() async {
@@ -541,6 +560,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     _autoMuted = true;
     _audio.silenceForAutoplay();
     CommunityVideoPlaybackCoordinator.claim(controller);
+    _reportAspect(controller);
     setState(() {
       _controller = controller;
       _initializing = false;

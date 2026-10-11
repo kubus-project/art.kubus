@@ -9,6 +9,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsExportDataDialogTitle,
@@ -49,6 +50,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsClearCacheDialogTitle,
@@ -94,6 +96,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
@@ -497,6 +500,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,

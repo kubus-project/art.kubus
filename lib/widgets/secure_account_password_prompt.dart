@@ -37,6 +37,7 @@ Future<void> maybeShowGooglePasswordUpgradePrompt(
   final shouldOpen = await showKubusDialog<bool>(
     context: context,
     builder: (dialogContext) => KubusAlertDialog(
+      size: KubusDialogSize.compact,
       backgroundColor: scheme.surface,
       title: Text(
         l10n.authSecureAccountAddPasswordTitle,

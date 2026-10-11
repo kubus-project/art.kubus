@@ -299,6 +299,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.artistGalleryDeleteArtworkTitle),
         content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),

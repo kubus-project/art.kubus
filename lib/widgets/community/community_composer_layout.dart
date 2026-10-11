@@ -41,8 +41,7 @@ class CommunityComposerHeaderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dividerColor =
-        borderColor ?? scheme.outline.withValues(alpha: 0.1);
+    final dividerColor = borderColor ?? scheme.outline.withValues(alpha: 0.1);
 
     return Container(
       padding: padding,
@@ -132,9 +131,8 @@ class CommunityComposerSurface extends StatelessWidget {
 
     return Container(
       width: width,
-      constraints: maxHeight == null
-          ? null
-          : BoxConstraints(maxHeight: maxHeight!),
+      constraints:
+          maxHeight == null ? null : BoxConstraints(maxHeight: maxHeight!),
       decoration: decoration,
       child: Column(
         mainAxisSize: bodyScrolls ? MainAxisSize.max : MainAxisSize.min,
