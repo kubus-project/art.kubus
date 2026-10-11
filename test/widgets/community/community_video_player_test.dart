@@ -9,7 +9,7 @@ import 'package:art_kubus/widgets/community/community_video_autoplay.dart';
 import 'package:art_kubus/widgets/community/community_video_controls.dart';
 import 'package:art_kubus/widgets/community/community_video_fullscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart' show SemanticsAction;
+import 'package:flutter/semantics.dart' show SemanticsAction, SemanticsNode;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meta/meta.dart';
@@ -936,6 +936,65 @@ void main() {
         'slider:${_l10n.communityMediaVideoVolume}',
         'button:${_l10n.communityMediaVideoFullscreen}',
       ]);
+    });
+
+    testPlayer(
+        'at a desktop width every strip control is its own focusable button',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_app(_stage(
+        const CommunityPostVideoSlide(url: _clip, isActive: true),
+        width: 1146,
+      )));
+      await startPlayback(tester);
+      final hoverGesture = await _hover(
+        tester,
+        find.byType(CommunityVideoPlayerSurface),
+      );
+
+      final labels = <String>[
+        _l10n.communityMediaVideoPause,
+        _l10n.communityMediaVideoMute,
+        _l10n.communityMediaVideoFullscreen,
+      ];
+      final nodes = <String, SemanticsNode>{};
+      for (final label in labels) {
+        final node = tester.getSemantics(find.bySemanticsLabel(label).first);
+        // The node's own label is the control's name alone. A merged node would
+        // read "Pause video ... Mute video ... Full screen" as one control.
+        expect(node.label, label, reason: '$label is not merged with a sibling');
+        expect(
+          node.flagsCollection.isButton,
+          isTrue,
+          reason: '$label is exposed as a button',
+        );
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.tap),
+          isTrue,
+          reason: '$label can be activated by assistive technology',
+        );
+        nodes[label] = node;
+      }
+      expect(
+        <int>{for (final node in nodes.values) node.id}.length,
+        labels.length,
+        reason: 'three controls, three nodes',
+      );
+
+      // Keyboard: Tab reaches the full screen control and Enter opens it.
+      for (var i = 0; i < 12; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focus = FocusManager.instance.primaryFocus?.context;
+        final tip = focus?.findAncestorWidgetOfExactType<Tooltip>();
+        if (tip?.message == _l10n.communityMediaVideoFullscreen) break;
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await _settle(tester);
+      expect(find.byType(CommunityVideoFullscreenPage), findsOneWidget);
+
+      await hoverGesture.removePointer();
+      semantics.dispose();
     });
 
     testPlayer('the focus ring uses the focus role on a focused control',
