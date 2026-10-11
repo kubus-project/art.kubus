@@ -565,9 +565,11 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
           changeLabel: summary.hasData
               ? _formatChange(l10n, summary.changePercent)
               : null,
-          isPositive: summary.changePercent == null
-              ? null
-              : summary.changePercent! >= 0,
+          // A flat period is neither a gain nor a loss (see _formatChange).
+          isPositive:
+              summary.changePercent == null || summary.changePercent == 0
+                  ? null
+                  : summary.changePercent! >= 0,
         ),
       );
     }
@@ -656,6 +658,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
 
   String _formatChange(AppLocalizations l10n, double? value) {
     if (value == null) return l10n.commonNotAvailableShort;
+    if (value == 0) return '0.0%';
     return '${value >= 0 ? '+' : '-'}${value.abs().toStringAsFixed(1)}%';
   }
 

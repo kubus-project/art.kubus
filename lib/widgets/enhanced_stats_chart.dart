@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../utils/design_tokens.dart';
+import 'charts/chart_scale.dart';
 import 'charts/stats_interactive_bar_chart.dart';
 import 'charts/stats_interactive_line_chart.dart';
 
@@ -58,6 +60,7 @@ class EnhancedStatsChart extends StatelessWidget {
             xLabels: xLabels,
             height: 180,
             gridColor: scheme.onSurface.withValues(alpha: 0.12),
+            emptyLabel: AppLocalizations.of(context)!.analyticsNoDataYetTitle,
           ),
         ],
       ),
@@ -90,13 +93,14 @@ class EnhancedBarChart extends StatelessWidget {
             growable: false);
 
     final now = DateTime.now();
+    final safeData = ChartScale.sanitize(data);
     final entries = List<StatsBarEntry>.generate(
-      data.length,
+      safeData.length,
       (i) {
-        final dayOffset = data.length - 1 - i;
+        final dayOffset = safeData.length - 1 - i;
         return StatsBarEntry(
           bucketStart: now.subtract(Duration(days: dayOffset)),
-          value: data[i].round(),
+          value: safeData[i].round(),
         );
       },
       growable: false,
@@ -126,6 +130,7 @@ class EnhancedBarChart extends StatelessWidget {
             xLabels: xLabels,
             barColor: accentColor,
             gridColor: scheme.onSurface.withValues(alpha: 0.12),
+            emptyLabel: AppLocalizations.of(context)!.analyticsNoDataYetTitle,
             height: 140,
           ),
         ],
