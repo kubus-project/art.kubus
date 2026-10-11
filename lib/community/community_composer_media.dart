@@ -96,10 +96,17 @@ class CommunityComposerMediaController extends ChangeNotifier {
   CommunityComposerMediaController({
     this.maxItems = kCommunityComposerMaxMediaItems,
     Future<Uint8List?> Function(XFile file)? posterCapture,
-  }) : _posterCapture = posterCapture ?? captureCommunityVideoPoster;
+    bool? postersEnabled,
+  })  : _posterCapture = posterCapture ?? captureCommunityVideoPoster,
+        _postersEnabled = postersEnabled ??
+            AppConfig.isFeatureEnabled('communityVideoPosters');
 
   final int maxItems;
   final Future<Uint8List?> Function(XFile file) _posterCapture;
+
+  /// With posters off, selecting a video starts no thumbnail decoding and no
+  /// poster is ever uploaded for it.
+  final bool _postersEnabled;
   final List<CommunityComposerMediaItem> _items =
       <CommunityComposerMediaItem>[];
   int _sequence = 0;
@@ -157,7 +164,7 @@ class CommunityComposerMediaController extends ChangeNotifier {
             : null,
       );
       _items.add(item);
-      if (item.isVideo) newVideos.add(item);
+      if (item.isVideo && _postersEnabled) newVideos.add(item);
       added++;
     }
     if (added > 0) notifyListeners();
@@ -343,6 +350,7 @@ Future<String> uploadCommunityComposerMediaItemWith(
   CommunityComposerMediaItem item, {
   required CommunityComposerFileUpload uploadFile,
   Map<String, String>? metadata,
+  bool? postersEnabled,
 }) async {
   final bytes = item.imageBytes ?? await item.file.readAsBytes();
   final result = await uploadFile(
@@ -362,6 +370,8 @@ Future<String> uploadCommunityComposerMediaItemWith(
     item,
     uploadFile: uploadFile,
     metadata: metadata,
+    enabled:
+        postersEnabled ?? AppConfig.isFeatureEnabled('communityVideoPosters'),
   );
   return communityMediaReferenceForPost(
     url,
@@ -374,7 +384,10 @@ Future<String?> _uploadCommunityVideoPoster(
   CommunityComposerMediaItem item, {
   required CommunityComposerFileUpload uploadFile,
   Map<String, String>? metadata,
+  required bool enabled,
 }) async {
+  // Off means no second upload, whatever was captured.
+  if (!enabled) return null;
   final poster = item.posterBytes;
   if (poster == null || poster.isEmpty) return null;
   try {

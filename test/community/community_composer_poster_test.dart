@@ -140,6 +140,73 @@ void main() {
     });
   });
 
+  group('posters switched off', () {
+    test('selecting a video launches no capture at all', () async {
+      var captures = 0;
+      final controller = CommunityComposerMediaController(
+        postersEnabled: false,
+        posterCapture: (file) async {
+          captures++;
+          return _posterBytes;
+        },
+      )..add([_video('clip.mp4')]);
+      await _settle();
+      expect(captures, 0, reason: 'no thumbnail decoding when posters are off');
+      expect(controller.items.single.posterBytes, isNull);
+    });
+
+    test('a stored poster is never uploaded, and the video goes up alone',
+        () async {
+      final uploader = _RecordingUploader();
+      final controller = CommunityComposerMediaController(postersEnabled: false)
+        ..add([_video('clip.mp4')]);
+      await _settle();
+      final item = controller.items.single;
+      item.posterBytes = _posterBytes;
+
+      final reference = await uploadCommunityComposerMediaItemWith(
+        item,
+        uploadFile: uploader.call,
+        postersEnabled: false,
+      );
+
+      expect(uploader.fileTypes, <String>['post-video']);
+      expect(reference, _uploadedVideo);
+      expect(communityMediaPosterReference(reference), isNull);
+    });
+
+    test('publish is unchanged apart from the missing poster', () async {
+      final uploader = _RecordingUploader();
+      var captures = 0;
+      final controller = CommunityComposerMediaController(
+        postersEnabled: false,
+        posterCapture: (file) async {
+          captures++;
+          return _posterBytes;
+        },
+      )..add([_video('clip.mp4'), _image('photo.jpg')]);
+      await _settle();
+
+      List<String>? submitted;
+      await controller.publish(
+        upload: (item) => uploadCommunityComposerMediaItemWith(
+          item,
+          uploadFile: uploader.call,
+          postersEnabled: false,
+        ),
+        submit: (urls) async {
+          submitted = urls;
+          return 'created';
+        },
+      );
+
+      expect(captures, 0);
+      expect(uploader.fileTypes, <String>['post-video', 'post-image']);
+      expect(submitted, <String>[_uploadedVideo, _uploadedPoster]);
+      expect(controller.publishError, isNull);
+    });
+  });
+
   group('uploading the poster', () {
     test('the video is uploaded first, then the poster as an image', () async {
       final uploader = _RecordingUploader();

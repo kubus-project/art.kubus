@@ -114,12 +114,14 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
   /// An autoplay is starting: the controller exists, play() has not settled.
   bool _autoPlayPending = false;
 
+  /// Whether this clip is currently registered with the autoplay scheduler.
+  bool _autoplayRegistered = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _audio.addListener(_applyVolume);
-    CommunityVideoAutoplay.register(this);
   }
 
   @override
@@ -132,6 +134,22 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       WidgetsBinding.instance.addPostFrameCallback((_) => _pauseIfPlaying());
     }
     _tickersEnabled = enabled;
+    _syncAutoplayRegistration();
+  }
+
+  /// A clip joins the autoplay scheduler only while autoplay can run for it:
+  /// the feature is on, and reduced motion is off. Otherwise it never registers,
+  /// so no timer runs for it.
+  void _syncAutoplayRegistration() {
+    final wanted = CommunityVideoAutoplay.enabled &&
+        !MediaQuery.disableAnimationsOf(context);
+    if (wanted == _autoplayRegistered) return;
+    _autoplayRegistered = wanted;
+    if (wanted) {
+      CommunityVideoAutoplay.register(this);
+    } else {
+      CommunityVideoAutoplay.unregister(this);
+    }
   }
 
   @override

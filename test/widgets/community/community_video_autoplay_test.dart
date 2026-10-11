@@ -117,6 +117,26 @@ void testAutoplay(String name, Future<void> Function(WidgetTester) body) {
   });
 }
 
+/// A minimal clip for scheduler-level checks.
+class _FakeCandidate implements CommunityVideoAutoplayCandidate {
+  @override
+  double get autoplayVisibleFraction => 1;
+  @override
+  bool get autoplayAllowed => true;
+  @override
+  bool get autoplayMayStart => true;
+  @override
+  bool get playingWithSound => false;
+  @override
+  bool get autoplayOwned => false;
+  @override
+  bool get autoplayPlaying => false;
+  @override
+  Future<bool> startAutoplay() async => false;
+  @override
+  void stopAutoplay() {}
+}
+
 void main() {
   late FakeVideoPlayerPlatform platform;
   late VideoPlayerPlatform previous;
@@ -481,6 +501,61 @@ void main() {
           find.text(_l10n.communityMediaVideoPreviewUnavailable), findsNothing,
           reason: 'the clip is playing over the poster area');
       expect(platform.playingNow.length, 1);
+    });
+  });
+
+  group('disabled autoplay costs nothing', () {
+    testWidgets('a disabled feature registers no clip and starts no timer',
+        (tester) async {
+      CommunityVideoAutoplay.enabledOverride = false;
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(_app(_carouselAt(top, [_clip, _otherClip])));
+      await tester.pump();
+
+      expect(CommunityVideoAutoplay.candidateCount, 0);
+      expect(CommunityVideoAutoplay.timerRunning, isFalse,
+          reason: 'no 250 ms poll runs while autoplay is off');
+      await _advance(tester, 1500);
+      expect(platform.live, isEmpty);
+      expect(CommunityVideoAutoplay.timerRunning, isFalse);
+    });
+
+    testWidgets('reduced motion registers no clip and starts no timer',
+        (tester) async {
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(
+        _app(_carouselAt(top, [_clip]), reducedMotion: true),
+      );
+      await tester.pump();
+
+      expect(CommunityVideoAutoplay.candidateCount, 0);
+      expect(CommunityVideoAutoplay.timerRunning, isFalse);
+    });
+
+    testWidgets(
+        'switching autoplay off while a clip is mounted stops the timer',
+        (tester) async {
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(_app(_carouselAt(top, [_clip])));
+      await _advance(tester, 900);
+      expect(CommunityVideoAutoplay.timerRunning, isTrue);
+      expect(platform.playingNow.length, 1);
+
+      CommunityVideoAutoplay.enabledOverride = false;
+      await _advance(tester, 600);
+      expect(CommunityVideoAutoplay.timerRunning, isFalse,
+          reason: 'the next tick sees autoplay off and cancels the timer');
+      expect(platform.playingNow, isEmpty,
+          reason: 'a running autoplay is ended, not left playing');
+    });
+
+    test('the scheduler refuses registration while disabled', () {
+      CommunityVideoAutoplay.enabledOverride = false;
+      addTearDown(() => CommunityVideoAutoplay.enabledOverride = null);
+      final candidate = _FakeCandidate();
+      CommunityVideoAutoplay.register(candidate);
+      expect(CommunityVideoAutoplay.candidateCount, 0);
+      expect(CommunityVideoAutoplay.timerRunning, isFalse);
     });
   });
 }

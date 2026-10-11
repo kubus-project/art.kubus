@@ -43,6 +43,16 @@ class AppConfig {
     'COMMUNITY_VIDEO_AUTOPLAY_ENABLED',
     defaultValue: true,
   );
+
+  /// Still posters for Community videos: a clip picked in the composer gets a
+  /// captured poster and that poster is uploaded with the post. Off means no
+  /// thumbnail decoding and no poster upload at selection or publish; posters
+  /// that are already stored keep displaying. Kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_POSTERS_ENABLED=false.
+  static const bool enableCommunityVideoPosters = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_POSTERS_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableSeoPublicPages = bool.fromEnvironment(
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
@@ -582,6 +592,8 @@ class AppConfig {
         return enableCommunityMultiMedia;
       case 'communityVideoAutoplay':
         return enableCommunityVideoAutoplay;
+      case 'communityVideoPosters':
+        return enableCommunityVideoPosters;
       case 'collabInviteNotifications':
         return enableCollabInviteNotifications;
       case 'season0':

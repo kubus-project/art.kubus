@@ -71,7 +71,11 @@ class CommunityVideoAutoplay {
   static CommunityVideoAutoplayCandidate? _owner;
   static Timer? _timer;
 
+  /// Adds [candidate] and starts the timer. While autoplay is off (flag,
+  /// data saver) nothing is registered and no timer is created, so a disabled
+  /// feed costs no polling at all.
   static void register(CommunityVideoAutoplayCandidate candidate) {
+    if (!enabled) return;
     if (_candidates.contains(candidate)) return;
     _candidates.add(candidate);
     _visits[candidate] = _Visit();
@@ -107,6 +111,18 @@ class CommunityVideoAutoplay {
   @visibleForTesting
   static void tick() {
     final on = enabled;
+    if (!on) {
+      // Switched off while clips are still mounted: stop the timer and end any
+      // running autoplay. Registration is refused until it is switched back on.
+      _timer?.cancel();
+      _timer = null;
+      final running = _owner;
+      if (running != null) {
+        _owner = null;
+        running.stopAutoplay();
+      }
+      return;
+    }
     final now = DateTime.now();
 
     final owner = _owner;
