@@ -208,3 +208,16 @@ test('development deployment explicitly opts into the existing shared API', () =
   assert.equal(defines.BACKEND_BASE_URL, undefined);
   assert.equal(defines.BACKEND_STANDBY_BASE_URL, undefined);
 });
+
+for (const [flag, enabled] of [[undefined, false], ['false', false], ['true', true], ['TRUE', true]]) {
+  test(`Support tickets build flag ${flag ?? 'unset'} fails closed`, () => {
+    const { result, defines } = runDevelopmentBuild(flag === undefined ? {} : { KUBUS_SUPPORT_TICKETS_ENABLED: flag });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(defines.SUPPORT_TICKETS_ENABLED, enabled);
+  });
+}
+
+test('an invalid Support tickets flag fails the build', () => {
+  const { result } = runDevelopmentBuild({ KUBUS_SUPPORT_TICKETS_ENABLED: 'maybe' });
+  assert.equal(result.status, 1);
+});

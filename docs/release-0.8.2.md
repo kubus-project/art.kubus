@@ -208,6 +208,54 @@ The Support Center client (#261) is deliberately **not** in the branch proposed 
 
 Gates before this reaches users: merge into `dev` after the required checks pass, then deploy the matching backend candidate before the Support client, and keep the Community multi-media switch tied to backend #79 as described above. Nothing here changes versions, tags or production configuration.
 
+## Development release candidate (state 2026-10-11)
+
+Implemented, merged, deployed and tested are different things; each row says which.
+
+| Part | Revision | Implemented | Merged | Deployed | Tested |
+| --- | --- | --- | --- | --- | --- |
+| App UI integration (#271, nine PRs, merge commit) | `dev` `90884947` | yes | yes, into `dev` | development web, workflow run 38157484073 | CI 11/11; acceptance harness on the byte-identical artifact |
+| Support Center (#261 on current `dev`) | art.kubus#272, branch `int/0.8.2-ui-integration-support` | yes | no (open PR) | no | analyze, unit and widget tests; real-backend browser QA (below) |
+| Backend integration (#84, #85, #80) | art.kubus-backend#86, `int/0.8.2-backend-staging` | yes | no (needs owner approval) | no; production backend is `ce11d5f` | CI green; disposable-database migration rehearsal |
+| Admin Support console | admin.kubus#13 (`71c2f48`) | yes | no | no | CI; 107/107 browser checks against the real Support API |
+
+### Development deployment
+- `Deploy development web` built `90884947`, verified `SHA256SUMS`, `kubus-web-revision.txt` and the deployment metadata, and passed the password-aware development smoke and the revision smoke. No production release workflow ran.
+- `dev.kubus.site` is behind HTTP basic auth, so browser acceptance ran on the downloaded artifact served locally (identical bytes). That is not a direct live-site check.
+- **Shared API (temporary owner decision).** Development and production frontends use `https://api.kubus.site` (standby `https://bapi.kubus.site`) until a separate staging backend exists. `deploy-development.yml` sets `require_staging_backend: false`; the staging-capable logic stays in `web-artifact.yml` and `scripts/prepare_public_build_config.mjs`. QA against the shared API is read-only; write flows used the disposable rig.
+
+### Acceptance results (browser harness; exact revisions)
+- **Development artifact `90884947`** (served locally, byte-identical to the deployed bundle). Map: 1440 light and dark 14/14; the 390, 820 and 320 widths show the same two narrow-width failures as the earlier accepted baseline (marker rendering at the fixture centre, tab order to Nearby artworks); keyboard-focus suite 13/13 at 1440, 820 and 390. Video: Chromium 1440 21/21, 390 reduced motion 7/7, Firefox 390 19/21 (the two baseline Firefox items). No horizontal overflow in 24 page/width/theme combinations. Community, Chromium and Firefox: IPFS cover fallback, institution rows, video poster and muted autoplay, comment draft restoration, compose and chat continuation all pass; guest Like with sign-in continuation passes (Firefox 1440 2/2), with the reload duplicate noted below.
+- **Support Center** on `717ce1ce` (the build with the two review fixes), against the 0.8.2 backend candidate with real sign-in, ticket creation, admin reply and closure: Chromium 390 EN 26/26, Firefox 1440 SL 26/26, guest-to-sign-in-to-send 1/1, cold `/support` deep link at 390 EN 3/4 (the failing check is the sign-in confirmation step of the harness; the cold load, My requests and send checks pass), Chromium 820 SL dark 24/26. On the build before the review fixes (same lifecycle code): Chromium 1440 EN dark 26/26, Chromium 320 SL 26/26, Firefox 390 EN 26/26. The 6th ticket in an hour returned 429 with `Retry-After` as designed, which also limited how often one account could be reused. At 820 SL dark the reply typed by the harness reaches the backend without its first character (the other 2 of the 26 checks; three runs, that configuration only). The Slovenian gate sign-in variants of the cold-link and Like scripts could not be exercised: the script does not find the gate's sign-in link in Slovenian, on the previous build as well.
+- **Admin console** (admin.kubus#13 `71c2f48`): 107/107 browser checks against the real Support API; the Support routes it uses are unchanged in the integration candidate.
+- **Analytics**: 1440 x 900 trend panel with normal, spiky, single-point and empty series, light and dark, with hover, as widget tests (13 in the file). The authenticated 1440 browser flow could not reach the profile (see limitations).
+- **Review findings fixed before this state.** Codex found two P1 privacy issues on #272, both fixed and covered by tests: the Support provider kept the previous account's requests after a logout or account switch (data is now bound to the signed-in account and late responses are dropped), and a draft refused for account A could be restored into account B (drafts now carry their account).
+
+### Support Center switch
+Public CI builds pass `SUPPORT_TICKETS_ENABLED` from the repository variable `KUBUS_SUPPORT_TICKETS_ENABLED` and **fail closed**: unset means the Support Center shows the FAQ and an unavailability notice and makes no ticket calls. Local builds default to enabled. Set the variable to `true` and redeploy only after the Support API is live (below). Community switches are unchanged: `COMMUNITY_MULTI_MEDIA_ENABLED`, `COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `COMMUNITY_VIDEO_POSTERS_ENABLED`.
+
+### Backend 0.8.2 (art.kubus-backend#86, not deployed)
+- **Migration 105** (`support_tickets.kind`, index, `support_ticket_messages`) is the only schema change. It is additive. On a database built from `master` (95 migrations) with three legacy tickets seeded, the candidate runner applied exactly 105; a second run applied nothing; rows, admin notes and assignees were unchanged; every legacy ticket reads `kind = 'support'`; an INSERT in the previous application's shape still works; the check constraint rejects unknown kinds. Fresh bootstrap of `schema.sql` and `schema_complete.sql` (96 migrations) matches. The runner records applied files by name, so the 099-104 numbers (on #81/#82) can land later.
+- **Institutions.** `GET /api/institutions` returns 0 on production: institutions are profiles with `is_institution = true`. Search and suggestions return them with `source: "profile"` and the profile wallet as `id`, which the app already opens as a profile. No institution id is invented.
+- **Authorship, media, sitemap** (#84) and **degraded kinds** (#85) are covered by their own suites; the combined candidate passes the support, search, SEO and authorship suites (265 tests).
+- **Rollback.** Roll the application back and keep the additive schema: `master` code ignores the new column and table. Do not drop populated Support tables.
+
+### Required before production, in this order (owner approval needed for 2-5)
+1. Take a production database backup and restore it into an isolated database; compare table counts. (Not done by the agent: access to the production host was not available to this session.)
+2. Apply migration 105 on the writable primary, then deploy the backend to primary and standby; confirm `/health/writable` and `x-kubus-backend-revision`.
+3. Verify the Support API: unauthenticated 401, owner-only reads (another account gets 404), reply 409 on a closed ticket, 429 limits (5 tickets and 30 replies per hour per account), no `admin_note` or `assigned_to` in requester responses.
+4. Merge and deploy admin.kubus#13; check an administrator and a viewer account.
+5. Merge art.kubus#272, set `KUBUS_SUPPORT_TICKETS_ENABLED=true`, redeploy development, then repeat the Support lifecycle on the live host.
+6. Then, and only then: version bump, `dev` to `master`, tag, signed Android and iOS builds, and the physical-device checks that browser QA cannot replace (Android and iOS back navigation, native video, OS text scale, Google sign-in).
+
+### Known limitations (P2, not blocking development review)
+- Like continuation: after a reload, a duplicate like request is sent in about one of three Chromium runs, and in Firefox the like intermittently shows as not liked. Pending-action completion is stored by design, so the cause is a race between the replay check and the interactions state; not yet fixed.
+- Desktop focus after a sign-in-continued Like lands on the page body.
+- The desktop sidebar keeps its Sign in tile for an email session that continued without a wallet, so the profile (and its analytics) is not reachable on desktop for such a session; 1440 px analytics layout is covered by widget tests (normal, spiky, single-point and empty series, light and dark, with hover), not by an authenticated browser flow.
+- Historical videos without posters use the fallback state; reduced-motion disables autoplay by design.
+- Support QA at 820 px Slovenian lost the first typed character of a reply in the harness twice (the reply reached the backend as "ser follow-up"); it did not happen at the other widths. Probably typing before the field takes focus; not investigated further and not seen by a person.
+- art.kubus#266 (an older release-state draft) is superseded by this document and should be closed unmerged.
+
 ## Final UI corrections
 
 Corrections after owner testing of the development build. Each root cause was reproduced before it was changed.
