@@ -1553,19 +1553,29 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       } catch (_) {}
 
                       final onClose = widget.onClose;
+                      final interactions =
+                          context.read<CommunityInteractionsProvider>();
+                      final hub = _readCommunityHub();
 
                       try {
-                        await BackendApiService().deleteCommunityPost(post.id);
-                        ProfilePackageMutationTracker.postDeleted(
-                          authorWallet: post.authorWallet ?? post.authorId,
-                        );
-                        if (!mounted) return;
+                        // The provider forgets the post's interaction state and
+                        // records the profile mutation; the feeds drop it locally
+                        // so it does not linger until the next refresh.
+                        await interactions.deleteCommunityPost(post);
+                        hub?.removeArtFeedPost(post.id);
+                        final groupId = post.groupId;
+                        if (groupId != null) {
+                          hub?.removeGroupPost(groupId, post.id);
+                        }
                         appRefresh?.triggerCommunity();
-                        dialogNavigator.pop();
+                        // Close the dialog even when this screen was already
+                        // dismissed while the request ran.
+                        if (dialogContext.mounted) dialogNavigator.pop();
                         messenger.showKubusSnackBar(
                           SnackBar(
                               content: Text(l10n.postDetailPostDeletedToast)),
                         );
+                        if (!mounted) return;
                         if (onClose != null) {
                           onClose();
                         } else {
@@ -1576,8 +1586,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           debugPrint(
                               'PostDetailScreen: delete post failed: $e');
                         }
-                        if (!mounted) return;
-                        setDialogState(() => deleting = false);
+                        if (dialogContext.mounted) {
+                          setDialogState(() => deleting = false);
+                        }
                         messenger.showKubusSnackBar(
                           SnackBar(
                               content:
