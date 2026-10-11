@@ -439,7 +439,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_cameraZoom);
   @override
-  MapMarkerOverview? get markerOverview => _overviewController.overview;
+  MapMarkerOverview? get markerOverview => _overviewController.drawableOverview;
 
   /// The overview can express the content-layer toggles but not filters that
   /// depend on per-artwork state, so those fall back to detailed markers.
@@ -5213,7 +5213,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     } else if (useBoundsQuery && _overviewController.isActive) {
       // Zoomed in to detailed markers: the overview is done, redraw from them.
-      _overviewController.deactivate();
+      _overviewController.deactivate(keepForHandoff: true);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
 
@@ -5273,6 +5273,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             );
 
       final markersChanged = !_markersEquivalent(_artMarkers, merged);
+      // The overview dots stay on screen until these detailed markers are in.
+      // They replace dots that were already visible, so they ease in softly
+      // instead of fading up from nothing.
+      final overviewHandoff = _overviewController.hasHandoff;
+      if (overviewHandoff) {
+        _kubusMapController.beginOverviewHandoffEntrances(<String>[
+          for (final m in merged)
+            if (m.hasValidPosition) m.id,
+        ]);
+      }
+      final releasedHandoff =
+          overviewHandoff && _overviewController.releaseHandoff();
 
       if (markersChanged) {
         setState(() {
@@ -5286,7 +5298,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // radius. (`_artMarkers` already equals `merged` at this point.)
       _applyVisibleMarkers();
 
-      if (markersChanged) {
+      if (markersChanged || releasedHandoff) {
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
       _restorePendingSelection();

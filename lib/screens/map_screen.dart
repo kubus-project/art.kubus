@@ -493,7 +493,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_lastZoom);
   @override
-  MapMarkerOverview? get markerOverview => _overviewController.overview;
+  MapMarkerOverview? get markerOverview => _overviewController.drawableOverview;
 
   /// The overview can express the content-layer toggles but not filters that
   /// depend on per-artwork state, so those fall back to detailed markers.
@@ -2616,7 +2616,7 @@ class _MapScreenState extends State<MapScreen>
       }
     } else if (useBoundsQuery && _overviewController.isActive) {
       // Zoomed in to detailed markers: the overview is done, redraw from them.
-      _overviewController.deactivate();
+      _overviewController.deactivate(keepForHandoff: true);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
 
@@ -2677,6 +2677,16 @@ class _MapScreenState extends State<MapScreen>
             );
 
       final markersChanged = !_markersEquivalent(_artMarkers, merged);
+      // The overview dots stay on screen until these detailed markers are in.
+      // They replace dots that were already visible, so they ease in softly
+      // instead of fading up from nothing.
+      final overviewHandoff = _overviewController.hasHandoff;
+      if (overviewHandoff) {
+        _kubusMapController.beginOverviewHandoffEntrances(<String>[
+          for (final m in merged)
+            if (m.hasValidPosition) m.id,
+        ]);
+      }
 
       final String? selectedIdBeforeSetState =
           _kubusMapController.selectedMarkerId;
@@ -2699,11 +2709,15 @@ class _MapScreenState extends State<MapScreen>
           selectedIdBeforeSetState == resolvedSelected.id &&
           !identical(selectedMarkerBeforeSetState, resolvedSelected);
 
+      final releasedHandoff =
+          overviewHandoff && _overviewController.releaseHandoff();
       if (markersChanged || selectionNeedsRefresh) {
         setState(() {
           _artMarkers = merged;
         });
         _applyVisibleMarkers();
+        unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      } else if (releasedHandoff) {
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
       _restorePendingSelection();

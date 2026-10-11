@@ -26,7 +26,6 @@ import '../../../widgets/map/kubus_map_marker_features.dart';
 import '../../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../../widgets/map/kubus_map_marker_rendering.dart';
 import '../controller/kubus_map_controller.dart';
-import '../controller/map_overview_controller.dart';
 import '../shared/map_cluster_transition.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_lod.dart';
@@ -210,8 +209,12 @@ class KubusMapMarkerSyncEngine {
       // World and region zoom draw the server's exact aggregate nodes, not a
       // nearest-first slice of detailed markers, and do not cluster them again:
       // they already are the regional groups.
+      // The overview is drawn for as long as the host holds one. That is the
+      // live overview, and also the one kept while detailed markers load after
+      // the camera crossed the exit zoom: switching on the zoom alone emptied
+      // the source for the length of the fetch.
       final overview = host.markerOverview;
-      if (overview != null && zoom < KubusMapOverviewController.exitZoom) {
+      if (overview != null) {
         await _syncOverview(
           overview: overview,
           themeProvider: themeProvider,
@@ -462,10 +465,9 @@ class KubusMapMarkerSyncEngine {
     }
     await host.afterMarkerSync(themeProvider);
 
-    // The camera may have left the overview band (or the overview was dropped)
-    // while this pass ran: rebuild once for what is current.
-    if (host.markerOverview == null ||
-        host.syncZoom >= KubusMapOverviewController.exitZoom) {
+    // The overview may have been dropped (detailed markers arrived) while this
+    // pass ran: rebuild once for what is current.
+    if (host.markerOverview == null) {
       host.requestMarkerResync();
     }
   }

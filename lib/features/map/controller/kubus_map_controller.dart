@@ -2178,6 +2178,18 @@ class KubusMapController {
     _scheduleEntryAnimations(ids, staggered: true, soft: true);
   }
 
+  /// Detailed markers arriving to replace the overview dots the map was just
+  /// showing. They are already represented, so they ease in softly (never from
+  /// invisible) and are treated as in view straight away, rather than waiting
+  /// for the next asynchronous viewport check to reveal them.
+  void beginOverviewHandoffEntrances(Iterable<String> markerIds) {
+    final ids = markerIds.toList(growable: false);
+    if (ids.isEmpty) return;
+    if (!_viewportStateInitialized) return;
+    _visibleMarkerIds = <String>{..._visibleMarkerIds, ...ids};
+    _scheduleEntryAnimations(ids, staggered: true, soft: true);
+  }
+
   void _scheduleEntryAnimations(
     List<String> markerIds, {
     required bool staggered,
