@@ -175,6 +175,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkGridItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,
@@ -216,6 +217,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkListItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,

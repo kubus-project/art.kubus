@@ -249,6 +249,11 @@ ArtMarker _marker({required String artworkId}) {
 }
 
 class _FakeNearbyMapDelegate implements NearbyArtMapDelegate {
+  @override
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve,
+  ) {}
+
   ArtMarker? selectedMarker;
   int animateCallCount = 0;
   LatLng? lastAnimatedTarget;

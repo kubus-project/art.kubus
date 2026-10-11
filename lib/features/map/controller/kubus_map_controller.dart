@@ -352,6 +352,10 @@ class KubusMapController {
 
   bool _autoFollow = true;
 
+  // A selection waiting for its marker to load (see selectMarkerWhenLoaded).
+  ArtMarker? Function(List<ArtMarker> markers)? _pendingSelectionResolver;
+  DateTime? _pendingSelectionDeadline;
+
   // Marker data.
   List<ArtMarker> _markers = const <ArtMarker>[];
   Map<ArtMarkerType, bool> _markerTypeVisibility =
@@ -641,6 +645,45 @@ class KubusMapController {
     }
   }
 
+  /// Selects the marker [resolve] finds, now if it is loaded, otherwise as soon
+  /// as a marker list that contains it arrives, for up to [timeout].
+  ///
+  /// A nearby row whose marker is outside the loaded set uses this: the camera
+  /// moves to the artwork and the card opens once its marker loads. A user
+  /// gesture on the map cancels the wait.
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve, {
+    Duration timeout = const Duration(seconds: 8),
+  }) {
+    final immediate = resolve(_markers);
+    if (immediate != null) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      selectMarker(immediate);
+      return;
+    }
+    _pendingSelectionResolver = resolve;
+    _pendingSelectionDeadline = DateTime.now().add(timeout);
+  }
+
+  void _resolvePendingSelection() {
+    final resolve = _pendingSelectionResolver;
+    if (resolve == null) return;
+    final deadline = _pendingSelectionDeadline;
+    if (deadline == null || DateTime.now().isAfter(deadline)) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      return;
+    }
+    final marker = resolve(_markers);
+    if (marker == null) return;
+    _pendingSelectionResolver = null;
+    _pendingSelectionDeadline = null;
+    // setMarkers runs inside the screen's data refresh, which can be in the
+    // middle of a build; select once that work has returned.
+    scheduleMicrotask(() => selectMarker(marker));
+  }
+
   void setMarkers(List<ArtMarker> markers) {
     final incomingIds = markers.map((marker) => marker.id).toSet();
     _markerEntranceTracker.observeIncoming(
@@ -648,6 +691,7 @@ class KubusMapController {
       viewportInitialized: _viewportStateInitialized,
     );
     _markers = markers;
+    _resolvePendingSelection();
     _pruneSpiderfyStateIfNeeded();
 
     // Keep selection data fresh when marker instances are replaced during
@@ -952,6 +996,10 @@ class KubusMapController {
     // [KubusMapCameraState.differsFrom]); it must not close the card.
     final bool hasGesture =
         !_programmaticCameraMove && nextCamera.differsFrom(previousCamera);
+    if (hasGesture) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+    }
     if (hasGesture && _autoFollow) {
       _autoFollow = false;
       onAutoFollowChanged?.call(_autoFollow);
