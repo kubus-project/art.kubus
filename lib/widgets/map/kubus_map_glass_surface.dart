@@ -605,6 +605,9 @@ Widget buildKubusMapGlassSurface({
   BoxBorder? border,
   List<BoxShadow>? boxShadow,
   VoidCallback? onTap,
+  // Keyboard target of the tap surface; a caller that must keep focus across
+  // rebuilds owns the node and passes it here.
+  FocusNode? focusNode,
   // Default to the strict real-blur policy so every map overlay that does not
   // explicitly opt out is routed through the real-blur path (Android
   // BackdropFilter over the Virtual-Display map; web/iOS host where available).
@@ -765,6 +768,7 @@ Widget buildKubusMapGlassSurface({
     surface = Material(
       color: Colors.transparent,
       child: InkWell(
+        focusNode: focusNode,
         onTap: onTap,
         borderRadius: effectiveRadius,
         child: surface,
