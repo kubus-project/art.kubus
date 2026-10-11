@@ -2624,6 +2624,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           ? contextPanelWidth +
                               KubusMapMetrics.desktopChromeInset
                           : KubusMapMetrics.desktopChromeInset,
+                      // With a side panel open the credit may use only the room
+                      // left of the control cluster; it wraps rather than hides.
+                      right: _isLeftPanelVisible
+                          ? KubusMapMetrics.desktopCreditControlsReserve
+                          : null,
                       bottom: KubusMapMetrics.desktopChromeInset,
                       child: MapOverlayBlocker(
                         child: _buildDesktopAttributionButton(),

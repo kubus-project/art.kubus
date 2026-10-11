@@ -318,10 +318,11 @@ class KubusMapAttributionControl extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
+                        // Two lines at most, so a narrow map keeps the whole
+                        // credit visible instead of truncating it.
                         child: Text(
                           credit,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
                           style: creditStyle ??
                               theme.textTheme.labelSmall?.copyWith(
                                 color: roles.foreground,

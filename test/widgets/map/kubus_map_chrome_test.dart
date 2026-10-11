@@ -138,6 +138,40 @@ void main() {
       expect(tapTarget.height, greaterThanOrEqualTo(48));
     });
 
+    testWidgets(
+        'credit wraps to two lines in a narrow map gap, never truncates',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: <ThemeExtension<dynamic>>[KubusColorRoles.light],
+          ),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomLeft,
+              child: SizedBox(
+                width: 200,
+                child: KubusMapAttributionControl(
+                  semanticsLabel: 'Map attributions',
+                  onPressed: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final text = tester.getSize(find.text(kubusMapAttributionCredit));
+      expect(text.width, lessThanOrEqualTo(200));
+      // Two lines of credit: taller than a single 12px label line.
+      expect(text.height, greaterThan(20));
+      final tapTarget = tester.getSize(find.byType(KubusMapAttributionControl));
+      expect(tapTarget.width, lessThanOrEqualTo(200));
+    });
+
     test('credit matches the vendored Kubus styles attribution', () {
       for (final style in const <String>[
         'assets/map_styles/kubus_light.json',
