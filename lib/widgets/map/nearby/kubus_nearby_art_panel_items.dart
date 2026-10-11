@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -52,27 +54,53 @@ class KubusNearbyArtArtworkListItem extends StatefulWidget {
 }
 
 class _KubusNearbyArtArtworkListItemState
-    extends State<KubusNearbyArtArtworkListItem> {
+    extends State<KubusNearbyArtArtworkListItem>
+    with AutomaticKeepAliveClientMixin<KubusNearbyArtArtworkListItem> {
   // Owned by the row, not by its InkWell: the glass surface around the row can
   // be rebuilt while a card is open, which replaces the InkWell's focus node.
   // This node stays valid across that, so closing the card can return focus.
   final FocusNode _focusNode = FocusNode(debugLabel: 'nearby-art-row');
 
+  // A row that opened a card is kept built while the card is open (bounded), so
+  // closing the card can return focus to it. A lazy list would otherwise release
+  // it once the sheet or the list re-sorts and the row scrolls out of view.
+  bool _keepAlive = false;
+  Timer? _keepAliveTimer;
+
+  @override
+  bool get wantKeepAlive => _keepAlive;
+
+  void _markActivated() {
+    _keepAliveTimer?.cancel();
+    _keepAlive = true;
+    updateKeepAlive();
+    _keepAliveTimer = Timer(const Duration(minutes: 2), () {
+      if (!mounted) return;
+      _keepAlive = false;
+      updateKeepAlive();
+    });
+  }
+
   @override
   void dispose() {
+    _keepAliveTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final row = widget;
     return _nearbyListRow(
       context,
       artwork: row.artwork,
       distanceText: row.distanceText,
       accentColor: row.accentColor,
-      onTap: row.onTap,
+      onTap: () {
+        _markActivated();
+        row.onTap();
+      },
       focusNode: _focusNode,
     );
   }
@@ -212,27 +240,53 @@ class KubusNearbyArtArtworkGridItem extends StatefulWidget {
 }
 
 class _KubusNearbyArtArtworkGridItemState
-    extends State<KubusNearbyArtArtworkGridItem> {
+    extends State<KubusNearbyArtArtworkGridItem>
+    with AutomaticKeepAliveClientMixin<KubusNearbyArtArtworkGridItem> {
   // Owned by the row, not by its InkWell: the glass surface around the row can
   // be rebuilt while a card is open, which replaces the InkWell's focus node.
   // This node stays valid across that, so closing the card can return focus.
   final FocusNode _focusNode = FocusNode(debugLabel: 'nearby-art-row');
 
+  // A row that opened a card is kept built while the card is open (bounded), so
+  // closing the card can return focus to it. A lazy list would otherwise release
+  // it once the sheet or the list re-sorts and the row scrolls out of view.
+  bool _keepAlive = false;
+  Timer? _keepAliveTimer;
+
+  @override
+  bool get wantKeepAlive => _keepAlive;
+
+  void _markActivated() {
+    _keepAliveTimer?.cancel();
+    _keepAlive = true;
+    updateKeepAlive();
+    _keepAliveTimer = Timer(const Duration(minutes: 2), () {
+      if (!mounted) return;
+      _keepAlive = false;
+      updateKeepAlive();
+    });
+  }
+
   @override
   void dispose() {
+    _keepAliveTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final row = widget;
     return _nearbyGridRow(
       context,
       artwork: row.artwork,
       distanceText: row.distanceText,
       accentColor: row.accentColor,
-      onTap: row.onTap,
+      onTap: () {
+        _markActivated();
+        row.onTap();
+      },
       focusNode: _focusNode,
     );
   }
