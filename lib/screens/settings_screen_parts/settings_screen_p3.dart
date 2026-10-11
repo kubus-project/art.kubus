@@ -574,87 +574,8 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
   }
 
   void _showSupportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    final rootContext = context;
-    showKubusDialog(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
-        title: Text(
-          l10n.settingsSupportDialogTitle,
-          style: KubusTypography.inter(
-            color: Theme.of(dialogContext).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.settingsSupportDialogBody,
-              style: KubusTypography.inter(
-                color: Theme.of(dialogContext).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(dialogContext, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(rootContext).showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsOpeningFaqToast)),
-                );
-              },
-              icon: const Icon(Icons.help_outline),
-              label: Text(l10n.settingsViewFaqButton),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(dialogContext, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(rootContext);
-                Navigator.pop(dialogContext);
-
-                if (!AppConfig.isFeatureEnabled('supportTickets')) {
-                  messenger.showKubusSnackBar(
-                    SnackBar(
-                        content: Text(l10n.settingsOpeningEmailClientToast)),
-                  );
-                  return;
-                }
-
-                await showKubusDialog<bool>(
-                  context: rootContext,
-                  builder: (_) => const SupportTicketDialog(),
-                );
-              },
-              icon: const Icon(Icons.email),
-              label: Text(l10n.settingsContactSupportButton),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              l10n.commonClose,
-              style: KubusTypography.inter(
-                color: Theme.of(dialogContext).colorScheme.outline,
-              ),
-            ),
-          ),
-        ],
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SupportCenterScreen()),
     );
   }
 
