@@ -404,7 +404,10 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       await controller.play();
     }
     await popped;
-    final resume = controller.value.isPlaying;
+    // A muted autoplay that was playing resumes on exit even where the browser
+    // paused the detached element; the viewer's own pause never reaches here
+    // muted, because a tap in the expanded view takes the sound instead.
+    final resume = controller.value.isPlaying || (wasPlaying && _autoMuted);
     // push completes at pop, but completed waits for the reverse animation and
     // overlay removal. The fullscreen view must be gone before inline remounts.
     await route.completed;
@@ -467,9 +470,14 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
       _autoPlayPending || (_autoMuted && _controller != null);
 
   @override
-  bool get autoplayPlaying =>
-      _autoPlayPending ||
-      (_autoMuted && (_controller?.value.isPlaying ?? false));
+  bool get autoplayPlaying {
+    if (_autoPlayPending) return true;
+    // In the expanded view the inline element is detached, and some browsers
+    // pause a detached media element. The clip still belongs to the viewer's
+    // expanded view and resumes on exit, so the scheduler must not release it.
+    if (_fullscreen) return true;
+    return _autoMuted && (_controller?.value.isPlaying ?? false);
+  }
 
   /// Starts this clip muted. The element is muted with volume 0 before play, so
   /// the viewer's sound choice is neither read nor written. A refused or failed
