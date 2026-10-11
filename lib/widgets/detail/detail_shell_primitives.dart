@@ -1057,6 +1057,7 @@ class DetailIdentityBlock extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.titleStyle,
+    this.showTitle = true,
   });
 
   final String title;
@@ -1064,6 +1065,10 @@ class DetailIdentityBlock extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final TextStyle? titleStyle;
+
+  /// Hide the title when the surface's header already shows it, so a screen
+  /// does not present the same title twice. Kicker and subtitle still show.
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -1089,16 +1094,17 @@ class DetailIdentityBlock extends StatelessWidget {
                 ),
                 const SizedBox(height: DetailSpacing.xs),
               ],
-              Text(
-                title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: titleStyle ??
-                    DetailTypography.screenTitle(context).copyWith(
-                      fontSize: KubusHeaderMetrics.screenTitle,
-                      height: 1.16,
-                    ),
-              ),
+              if (showTitle)
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle ??
+                      DetailTypography.screenTitle(context).copyWith(
+                        fontSize: KubusHeaderMetrics.screenTitle,
+                        height: 1.16,
+                      ),
+                ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: DetailSpacing.sm),
                 Text(

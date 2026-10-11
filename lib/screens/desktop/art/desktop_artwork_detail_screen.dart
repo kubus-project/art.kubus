@@ -44,6 +44,22 @@ import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
 import '../desktop_shell_scope.dart';
 
+/// Whether the desktop shell header already shows [title] above this screen.
+///
+/// Opened in-app, the screen sits in a [DesktopSubScreen] titled with the
+/// artwork's title, so the header carries it and the body must not repeat it.
+/// A raw deep link gets a generic header label and keeps the body title. A
+/// canonical public entry shows the brand label in the header, so it keeps it
+/// too.
+bool _repeatsShellTitle(BuildContext context, String title) {
+  final host = context.findAncestorWidgetOfExactType<DesktopSubScreen>();
+  if (host == null) return false;
+  if (DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false) {
+    return false;
+  }
+  return host.title.trim() == title.trim();
+}
+
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
   final bool showAppBar;
@@ -195,6 +211,13 @@ class _DesktopArtworkDetailScreenState
       builder: (context, artworkProvider, profileProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
+        // Read here, in the builder's own build: the actions row sits inside a
+        // LayoutBuilder, where a provider lookup is not allowed.
+        final isSaved = artwork == null
+            ? false
+            : context.select<SavedItemsProvider, bool>(
+                (provider) => provider.isArtworkSaved(artwork.id),
+              );
 
         if (_artworkLoading) {
           return Scaffold(
@@ -296,6 +319,7 @@ class _DesktopArtworkDetailScreenState
                   )
                 : null,
             body: _buildDesktopPage(
+              isSaved: isSaved,
               artwork: artwork,
               coverUrl: coverUrl,
               artworkProvider: artworkProvider,
@@ -309,6 +333,7 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildDesktopPage({
+    required bool isSaved,
     required Artwork artwork,
     required String? coverUrl,
     required ArtworkProvider artworkProvider,
@@ -344,7 +369,7 @@ class _DesktopArtworkDetailScreenState
                     : null,
               ),
               const SizedBox(height: DetailSpacing.lg),
-              _buildActionsRow(artwork, artworkProvider, isSignedIn),
+              _buildActionsRow(artwork, artworkProvider, isSaved),
             ],
           );
           final publicDesktopContext = isCanonicalPublicEntry
@@ -688,6 +713,7 @@ class _DesktopArtworkDetailScreenState
         children: [
           DetailIdentityBlock(
             title: artwork.title,
+            showTitle: !_repeatsShellTitle(context, artwork.title),
             kicker:
                 category.isNotEmpty && category != 'General' ? category : null,
             titleStyle: KubusTextStyles.responsiveTitleStyle(
@@ -833,12 +859,9 @@ class _DesktopArtworkDetailScreenState
   Widget _buildActionsRow(
     Artwork artwork,
     ArtworkProvider artworkProvider,
-    bool _,
+    bool isSaved,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final isSaved = context.select<SavedItemsProvider, bool>(
-      (provider) => provider.isArtworkSaved(artwork.id),
-    );
     final showArPrimaryAction =
         artwork.arEnabled && AppConfig.isFeatureEnabled('ar');
     final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
