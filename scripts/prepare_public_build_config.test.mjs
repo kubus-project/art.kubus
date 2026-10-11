@@ -199,7 +199,7 @@ test('a build that is not deployed is unchanged and ignores the development back
 
 test('development deployment explicitly opts into the existing shared API', () => {
   const source = workflow('deploy-development.yml');
-  assert.match(source, /require_staging_backend:\\s*false\\b/);
+  assert.match(source, /require_staging_backend:\s*false\b/);
   const { result, defines } = runDevelopmentBuild({
     KUBUS_REQUIRE_STAGING_BACKEND: 'false',
   });
