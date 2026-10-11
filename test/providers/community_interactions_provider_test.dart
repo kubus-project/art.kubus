@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/community_subject.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
@@ -140,7 +142,57 @@ CommunityPost _post({
   );
 }
 
+/// A state read that stays in flight until the test releases it.
+class _GatedInteractionApi extends _FakeBackendApiService {
+  final Completer<CommunityInteractionStateBatch> _gate =
+      Completer<CommunityInteractionStateBatch>();
+
+  @override
+  Future<CommunityInteractionStateBatch> getCommunityInteractionStates({
+    Iterable<String> postIds = const <String>[],
+    Iterable<String> commentIds = const <String>[],
+    Iterable<String> artworkIds = const <String>[],
+  }) {
+    interactionStateCalls += 1;
+    return _gate.future;
+  }
+
+  void release(
+      {required bool isLiked, required int likeCount, required String postId}) {
+    _gate.complete(CommunityInteractionStateBatch(posts: {
+      postId: CommunityEntityInteractionState(
+        id: postId,
+        isLiked: isLiked,
+        likeCount: likeCount,
+        commentCount: 3,
+        isBookmarked: false,
+      ),
+    }));
+  }
+}
+
 void main() {
+  test('a read that was in flight does not undo a newer confirmed like',
+      () async {
+    final api = _GatedInteractionApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    final post = _post(isLiked: false); // likeCount 7
+
+    final pending = provider.refreshPostStates([post], force: true);
+    // The like is confirmed while the read is still out.
+    post
+      ..isLiked = true
+      ..likeCount = 8;
+    provider.applyServerPostState(post);
+    // The older read lands last and still says "not liked, 7".
+    api.release(isLiked: false, likeCount: 7, postId: post.id);
+    await pending;
+
+    expect(post.isLiked, isTrue);
+    expect(post.likeCount, 8);
+    expect(provider.cachedPostState(post.id)!.likeCount, 8);
+  });
+
   test('prefetchForPosts hydrates feed state without immediate refresh',
       () async {
     final api = _FakeBackendApiService();

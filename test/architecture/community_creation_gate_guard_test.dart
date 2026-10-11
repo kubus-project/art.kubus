@@ -34,7 +34,12 @@ void main() {
         reason: handler,
       );
     }
-    expect(p3, contains('onAuthJourneyStarted:'));
+    // Mobile and desktop share one compose gate; it remembers the request.
+    expect(p3, contains('ensureCommunityComposeAccess('));
+    expect(
+      read('lib/widgets/community/community_compose_intent_resumer.dart'),
+      contains('onAuthJourneyStarted:'),
+    );
     expect(
       read('lib/screens/community/community_screen.dart'),
       contains('CommunityComposeIntentResumer('),

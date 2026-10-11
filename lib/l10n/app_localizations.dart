@@ -762,6 +762,12 @@ abstract class AppLocalizations {
   /// **'Like this artwork'**
   String get activationGateLikeArtworkTitle;
 
+  /// No description provided for @activationGateLikePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post'**
+  String get activationGateLikePostTitle;
+
   /// No description provided for @activationGateFollowTitle.
   ///
   /// In en, this message translates to:
@@ -863,6 +869,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Like this artwork?'**
   String get activationConfirmLikeArtwork;
+
+  /// No description provided for @activationConfirmLikePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post?'**
+  String get activationConfirmLikePost;
 
   /// No description provided for @activationConfirmFollow.
   ///
@@ -23382,6 +23394,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Like'**
   String get communityPostActionLike;
+
+  /// No description provided for @communityPostStateLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'liked'**
+  String get communityPostStateLiked;
+
+  /// No description provided for @communityPostStateNotLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'not liked'**
+  String get communityPostStateNotLiked;
+
+  /// No description provided for @communityPostStateSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'saved'**
+  String get communityPostStateSaved;
+
+  /// No description provided for @communityPostStateNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'not saved'**
+  String get communityPostStateNotSaved;
 
   /// No description provided for @communityPostActionComment.
   ///

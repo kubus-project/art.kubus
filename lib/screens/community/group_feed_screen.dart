@@ -960,6 +960,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'group_feed',
     );
     if (!authenticated || !mounted) return;
     final walletAddress = Provider.of<WalletProvider>(context, listen: false)

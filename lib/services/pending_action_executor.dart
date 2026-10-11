@@ -2,6 +2,7 @@ import '../config/config.dart';
 import '../models/pending_action_intent.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
+import 'backend_api_service.dart';
 import 'user_service.dart';
 
 /// Why a confirmed pending action did or did not complete.
@@ -23,10 +24,17 @@ enum PendingActionOutcome {
   failed,
 }
 
+/// The account's like on a post as the backend confirmed it.
+typedef PostLikeSnapshot = ({bool isLiked, int? likeCount});
+
 class PendingActionExecutionResult {
-  const PendingActionExecutionResult(this.outcome);
+  const PendingActionExecutionResult(this.outcome, {this.postLike});
 
   final PendingActionOutcome outcome;
+
+  /// For a confirmed post like: the like state the backend holds now, so a
+  /// screen showing the post can reflect it without reloading.
+  final PostLikeSnapshot? postLike;
 
   bool get didSucceed =>
       outcome == PendingActionOutcome.completed ||
@@ -42,6 +50,14 @@ class PendingActionExecutionResult {
       };
 }
 
+/// Reads the account's like state on [postId]. Resolves to `null` when the
+/// post is no longer available.
+typedef PostLikedLoader = Future<PostLikeSnapshot?> Function(String postId);
+
+/// Records a like on [postId] and resolves to the new like count when the
+/// backend reports one. The backend treats a repeated like as a no-op.
+typedef PostLiker = Future<int?> Function(String postId);
+
 /// Applies a confirmed [PendingActionIntent].
 ///
 /// Two invariants matter here:
@@ -53,7 +69,30 @@ class PendingActionExecutionResult {
 ///   target; the backend still authenticates and authorizes the mutation, and a
 ///   rejection surfaces as [PendingActionOutcome.unauthorized].
 class PendingActionExecutor {
-  const PendingActionExecutor();
+  const PendingActionExecutor({
+    PostLikedLoader? loadPostLiked,
+    PostLiker? likePost,
+  })  : _loadPostLiked = loadPostLiked,
+        _likePost = likePost;
+
+  final PostLikedLoader? _loadPostLiked;
+  final PostLiker? _likePost;
+
+  Future<PostLikeSnapshot?> _readPostLiked(String postId) async {
+    final override = _loadPostLiked;
+    if (override != null) return override(postId);
+    final batch = await BackendApiService()
+        .getCommunityInteractionStates(postIds: <String>[postId]);
+    final state = batch.posts[postId];
+    if (state == null) return null;
+    return (isLiked: state.isLiked, likeCount: state.likeCount);
+  }
+
+  Future<int?> _sendPostLike(String postId) {
+    final override = _likePost;
+    if (override != null) return override(postId);
+    return BackendApiService().likePost(postId);
+  }
 
   Future<PendingActionExecutionResult> execute({
     required PendingActionIntent intent,
@@ -164,6 +203,9 @@ class PendingActionExecutor {
     required PendingActionIntent intent,
     required ArtworkProvider artworkProvider,
   }) async {
+    if (intent.targetType == PendingActionTargetType.post) {
+      return _executePostLike(intent.targetId);
+    }
     if (intent.targetType != PendingActionTargetType.artwork) {
       return const PendingActionExecutionResult(
         PendingActionOutcome.targetUnavailable,
@@ -179,6 +221,63 @@ class PendingActionExecutor {
     return PendingActionExecutionResult(
       ok ? PendingActionOutcome.completed : PendingActionOutcome.failed,
     );
+  }
+
+  /// Drives the post to "liked" rather than toggling it. A post the account
+  /// already likes is left alone, so a replayed or doubly confirmed like can
+  /// never take the like back off.
+  Future<PendingActionExecutionResult> _executePostLike(String postId) async {
+    final current = await _readPostLiked(postId);
+    if (current == null) {
+      return const PendingActionExecutionResult(
+        PendingActionOutcome.targetUnavailable,
+      );
+    }
+    if (current.isLiked) {
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: current,
+      );
+    }
+
+    Object? sendFailure;
+    int? reportedCount;
+    try {
+      reportedCount = await _sendPostLike(postId);
+    } catch (error) {
+      sendFailure = error;
+    }
+
+    // The like route records the like before a later step can fail, and a
+    // response can be lost after the write. The server's state is what counts:
+    // a like it holds is a success, whatever the response said.
+    final after = await _readPostLikedOrNull(postId);
+    if (after != null && after.isLiked) {
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: (isLiked: true, likeCount: after.likeCount ?? reportedCount),
+      );
+    }
+    if (sendFailure != null) {
+      return PendingActionExecutionResult(_classify(sendFailure));
+    }
+    if (after == null) {
+      // The request succeeded and the state could not be read to contradict it.
+      return PendingActionExecutionResult(
+        PendingActionOutcome.completed,
+        postLike: (isLiked: true, likeCount: reportedCount),
+      );
+    }
+    return const PendingActionExecutionResult(PendingActionOutcome.failed);
+  }
+
+  /// A state read that cannot fail the caller: null when it could not be read.
+  Future<PostLikeSnapshot?> _readPostLikedOrNull(String postId) async {
+    try {
+      return await _readPostLiked(postId);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<PendingActionExecutionResult> _executeFollow(
