@@ -13,7 +13,13 @@ enum PendingActionType {
   like,
   follow,
   comment,
-  contribute;
+  contribute,
+  // Support Center submissions. Payload-free by design: the draft text lives
+  // in SupportCenterProvider and never enters storage, so these restore to the
+  // Support screen like comment and contribute restore to their composers.
+  supportContact,
+  supportBug,
+  supportReply;
 
   String get storageValue => name;
 
@@ -34,7 +40,8 @@ enum PendingActionTargetType {
   collection,
   post,
   user,
-  marker;
+  marker,
+  supportRequest;
 
   String get storageValue => name;
 
