@@ -109,7 +109,11 @@ class _QuickCardHarnessState extends State<_QuickCardHarness> {
                   child: _TestButton(
                     label: 'Row',
                     focusNode: row,
-                    onTap: openCard,
+                    // The nearby rows name themselves as the opener.
+                    onTap: () {
+                      KeyboardActivationTracker.noteInvoker(row);
+                      openCard();
+                    },
                   ),
                 ),
               if (open)
@@ -361,6 +365,65 @@ void main() {
 
     expect(find.text(_title), findsNothing);
     expect(state.row.hasPrimaryFocus, isTrue);
+  });
+
+  testWidgets(
+      'the same key press reaching the tracker again keeps the opener '
+      'when the card is recreated', (tester) async {
+    final log = <String>[];
+    await _pumpHarness(tester, log);
+    final state = _harnessState(tester);
+
+    state.row.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump();
+    expect(_focusedLabel(), _title);
+
+    // The key's release (or the browser's own activation) reaches the tracker
+    // after the first card mounted, and the overlay re-places the card.
+    KeyboardActivationTracker.noteActivationForTests();
+    state.recreateCard();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(_title), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(_title), findsNothing);
+    expect(state.row.hasPrimaryFocus, isTrue,
+        reason: 'focus returns to the row, not the fallback search field');
+    expect(state.search.hasPrimaryFocus, isFalse);
+  });
+
+  testWidgets(
+      'a genuinely new keyboard open still replaces the session',
+      (tester) async {
+    final log = <String>[];
+    await _pumpHarness(tester, log);
+    final state = _harnessState(tester);
+
+    state.row.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump();
+
+    // A second row names itself: that is a new open, not the same press.
+    KeyboardActivationTracker.noteActivationForTests();
+    KeyboardActivationTracker.noteInvoker(state.after);
+    state.recreateCard();
+    await tester.pump();
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump();
+
+    expect(state.after.hasPrimaryFocus, isTrue);
   });
 
   testWidgets(

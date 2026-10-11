@@ -66,6 +66,15 @@ class KeyboardActivationTracker {
     _invokerAt = clock();
   }
 
+  /// Whether a control named itself with [noteInvoker] within [window] and has
+  /// not been taken yet.
+  static bool get hasFreshInvoker {
+    final at = _invokerAt;
+    return _invoker != null &&
+        at != null &&
+        clock().difference(at) <= window;
+  }
+
   /// The control named by [noteInvoker] if that happened within [window], or
   /// null. Clears the hint either way.
   static FocusNode? takeInvoker() {
@@ -76,6 +85,10 @@ class KeyboardActivationTracker {
     if (node == null || at == null) return null;
     return clock().difference(at) <= window ? node : null;
   }
+
+  /// Records an activation key event as the handler does. Test-only.
+  @visibleForTesting
+  static void noteActivationForTests() => _lastActivationAt = clock();
 
   @visibleForTesting
   static void resetForTests() {
