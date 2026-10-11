@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../widgets/common/kubus_send_button.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
@@ -2296,15 +2297,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     onSubmitted: (_) => _send(),
                   ),
                 ),
-                IconButton.filled(
+                KubusSendButton(
                   tooltip: l10n.commonSend,
                   onPressed: _send,
-                  style: IconButton.styleFrom(
-                    backgroundColor: roles.active,
-                    foregroundColor: roles.onActive,
-                    minimumSize: const Size(48, 48),
-                  ),
-                  icon: const Icon(Icons.send_rounded, size: 20),
                 ),
               ],
             ),

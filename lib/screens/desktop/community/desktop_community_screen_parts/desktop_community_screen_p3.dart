@@ -473,15 +473,16 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                       isDense: true,
                       hintText: l10n.postDetailWriteCommentHint,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        borderRadius:
+                            BorderRadius.circular(KubusSendButton.radius),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
-                IconButton.filledTonal(
+                KubusSendButton(
+                  tooltip: l10n.commonSend,
                   onPressed: submitInlineComment,
-                  icon: const Icon(Icons.send_outlined, size: 18),
                 ),
               ],
             ),

@@ -8,6 +8,7 @@ import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../widgets/common/kubus_send_button.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
@@ -1968,15 +1969,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   const SizedBox(width: KubusSpacing.xs),
-                  IconButton.filled(
+                  KubusSendButton(
                     tooltip: l10n.commonSend,
                     onPressed: _submitComment,
-                    style: IconButton.styleFrom(
-                      backgroundColor: roles.active,
-                      foregroundColor: roles.onActive,
-                      minimumSize: const Size(48, 48),
-                    ),
-                    icon: const Icon(Icons.send_rounded, size: 20),
                   ),
                 ],
               ),
