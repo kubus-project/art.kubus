@@ -61,11 +61,11 @@ if (!['https:', 'http:'].includes(backendUrl.protocol)) {
 
 // The client reads its API origin from BACKEND_BASE_URL (and fails over to
 // BACKEND_STANDBY_BASE_URL), not from KUBUS_BACKEND_URL, and both default to
-// production. A development build therefore must name its own backend, and
-// must not fail over to production: it is never allowed to fall back silently.
-const deploymentEnvironment = (process.env.KUBUS_DEPLOYMENT_ENVIRONMENT || '').trim();
+// production. A build that will be deployed to development therefore must name
+// its own backend, and must not fail over to production: it never falls back
+// silently. Validation builds (not deployed) do not set the switch.
 let developmentBackend = null;
-if (deploymentEnvironment === 'development') {
+if ((process.env.KUBUS_REQUIRE_STAGING_BACKEND || '').trim() === 'true') {
   const raw = (process.env.KUBUS_DEVELOPMENT_BACKEND_URL || '').trim();
   if (!raw) {
     console.error(

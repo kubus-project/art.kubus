@@ -24,6 +24,14 @@ on:
         required: false
         default: true
         type: boolean
+      require_staging_backend:
+        description: >-
+          The artifact will be deployed: build against the staging backend named
+          by the KUBUS_DEVELOPMENT_BACKEND_URL variable and fail if it is missing
+          or unsafe, never against production. Validation builds leave it false.
+        required: false
+        default: false
+        type: boolean
       browser_set:
         description: Comma-separated Playwright browsers
         required: false
@@ -122,8 +130,8 @@ jobs:
           KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
           KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
-          KUBUS_DEPLOYMENT_ENVIRONMENT: ${{ inputs.deployment_environment }}
-          KUBUS_DEVELOPMENT_BACKEND_URL: ${{ inputs.deployment_environment == 'development' && vars.KUBUS_DEVELOPMENT_BACKEND_URL || '' }}
+          KUBUS_REQUIRE_STAGING_BACKEND: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend }}
+          KUBUS_DEVELOPMENT_BACKEND_URL: ${{ inputs.deployment_environment == 'development' && inputs.require_staging_backend && vars.KUBUS_DEVELOPMENT_BACKEND_URL || '' }}
           KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
           KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}

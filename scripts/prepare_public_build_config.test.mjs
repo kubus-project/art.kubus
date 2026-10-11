@@ -158,7 +158,7 @@ function runDevelopmentBuild(extra) {
 }
 
 test('a development build refuses to build without a staging backend', () => {
-  const { result } = runDevelopmentBuild({ KUBUS_DEPLOYMENT_ENVIRONMENT: 'development' });
+  const { result } = runDevelopmentBuild({ KUBUS_REQUIRE_STAGING_BACKEND: 'true' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /KUBUS_DEVELOPMENT_BACKEND_URL/);
 });
@@ -170,7 +170,7 @@ for (const bad of [
 ]) {
   test(`a development build rejects backend ${bad}`, () => {
     const { result } = runDevelopmentBuild({
-      KUBUS_DEPLOYMENT_ENVIRONMENT: 'development', KUBUS_DEVELOPMENT_BACKEND_URL: bad,
+      KUBUS_REQUIRE_STAGING_BACKEND: 'true', KUBUS_DEVELOPMENT_BACKEND_URL: bad,
     });
     assert.equal(result.status, 1, result.stderr);
   });
@@ -178,7 +178,7 @@ for (const bad of [
 
 test('a development build targets staging for both the primary and the failover origin', () => {
   const { result, defines } = runDevelopmentBuild({
-    KUBUS_DEPLOYMENT_ENVIRONMENT: 'development',
+    KUBUS_REQUIRE_STAGING_BACKEND: 'true',
     KUBUS_DEVELOPMENT_BACKEND_URL: 'https://staging-api.example.test',
   });
   assert.equal(result.status, 0, result.stderr);
@@ -187,9 +187,8 @@ test('a development build targets staging for both the primary and the failover 
   assert.equal(defines.KUBUS_BACKEND_URL, 'https://staging-api.example.test');
 });
 
-test('a production build is unchanged and ignores the development backend', () => {
+test('a build that is not deployed is unchanged and ignores the development backend', () => {
   const { result, defines } = runDevelopmentBuild({
-    KUBUS_DEPLOYMENT_ENVIRONMENT: 'production',
     KUBUS_DEVELOPMENT_BACKEND_URL: 'https://staging-api.example.test',
   });
   assert.equal(result.status, 0, result.stderr);
