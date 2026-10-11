@@ -11,6 +11,7 @@ import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
+import 'community_post_media.dart';
 
 // Enhanced community interaction models
 class CommunityPost {
@@ -818,16 +819,7 @@ class CommunityService {
                         ? post.content.trim()
                         : '${post.content.trim().substring(0, 117).trimRight()}...'),
                 subtitle: post.authorName,
-                imageUrl: (post.imageUrl?.trim().isNotEmpty ?? false)
-                    ? post.imageUrl!.trim()
-                    : (post.mediaUrls.isNotEmpty
-                        ? post.mediaUrls
-                            .firstWhere(
-                              (media) => media.trim().isNotEmpty,
-                              orElse: () => '',
-                            )
-                            .trim()
-                        : null),
+                imageUrl: communityPostPreviewImageUrl(post),
                 authorId: post.authorWallet ?? post.authorId,
                 authorName: post.authorName,
                 metadata: <String, dynamic>{

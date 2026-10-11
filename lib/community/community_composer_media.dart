@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -6,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../services/backend_api_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
 import 'community_post_media.dart';
+import 'community_video_poster.dart';
 
 /// Maximum images and videos in one Community post, counted together.
 const int kCommunityComposerMaxMediaItems = 10;
@@ -72,6 +75,11 @@ class CommunityComposerMediaItem {
   String? uploadedUrl;
   Object? lastError;
 
+  /// Still poster captured from a picked video, or null. Capture runs after
+  /// selection and never blocks publishing: a video without a poster is still
+  /// published, just without one.
+  Uint8List? posterBytes;
+
   String get name => file.name;
   bool get isImage => kind == CommunityComposerMediaKind.image;
   bool get isVideo => kind == CommunityComposerMediaKind.video;
@@ -87,14 +95,24 @@ class CommunityComposerMediaItem {
 class CommunityComposerMediaController extends ChangeNotifier {
   CommunityComposerMediaController({
     this.maxItems = kCommunityComposerMaxMediaItems,
-  });
+    Future<Uint8List?> Function(XFile file)? posterCapture,
+    bool? postersEnabled,
+  })  : _posterCapture = posterCapture ?? captureCommunityVideoPoster,
+        _postersEnabled = postersEnabled ??
+            AppConfig.isFeatureEnabled('communityVideoPosters');
 
   final int maxItems;
+  final Future<Uint8List?> Function(XFile file) _posterCapture;
+
+  /// With posters off, selecting a video starts no thumbnail decoding and no
+  /// poster is ever uploaded for it.
+  final bool _postersEnabled;
   final List<CommunityComposerMediaItem> _items =
       <CommunityComposerMediaItem>[];
   int _sequence = 0;
   bool _uploading = false;
   bool _publishing = false;
+  bool _disposed = false;
   Object? _publishError;
   Object? get publishError => _publishError;
 
@@ -134,22 +152,49 @@ class CommunityComposerMediaController extends ChangeNotifier {
   int add(Iterable<CommunityComposerPickedMedia> picked) {
     if (isLocked) return 0;
     var added = 0;
+    final newVideos = <CommunityComposerMediaItem>[];
     for (final media in picked) {
       if (isFull) break;
-      _items.add(
-        CommunityComposerMediaItem._(
-          id: 'composer-media-${_sequence++}',
-          kind: media.kind,
-          file: media.file,
-          imageBytes: media.kind == CommunityComposerMediaKind.image
-              ? media.imageBytes
-              : null,
-        ),
+      final item = CommunityComposerMediaItem._(
+        id: 'composer-media-${_sequence++}',
+        kind: media.kind,
+        file: media.file,
+        imageBytes: media.kind == CommunityComposerMediaKind.image
+            ? media.imageBytes
+            : null,
       );
+      _items.add(item);
+      if (item.isVideo && _postersEnabled) newVideos.add(item);
       added++;
     }
     if (added > 0) notifyListeners();
+    for (final item in newVideos) {
+      _startPosterCapture(item);
+    }
     return added;
+  }
+
+  /// Captures the poster in the background. A late result is kept only while
+  /// the item is still in the composer, and a failure leaves the item posterless.
+  void _startPosterCapture(CommunityComposerMediaItem item) {
+    unawaited(() async {
+      Uint8List? poster;
+      try {
+        poster = await _posterCapture(item.file);
+      } catch (_) {
+        poster = null;
+      }
+      if (poster == null || poster.isEmpty) return;
+      if (_disposed || !_items.contains(item)) return;
+      item.posterBytes = poster;
+      notifyListeners();
+    }());
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   void remove(String id) {
@@ -259,14 +304,56 @@ class CommunityComposerMediaController extends ChangeNotifier {
   }
 }
 
+/// The upload seam: the same call [BackendApiService.uploadFile] makes, so tests
+/// can drive the funnel without a backend.
+typedef CommunityComposerFileUpload = Future<Map<String, dynamic>> Function({
+  required List<int> fileBytes,
+  required String fileName,
+  required String fileType,
+  Map<String, String>? metadata,
+  bool compress,
+});
+
 /// Uploads one composer item through the existing post upload endpoint.
+///
+/// A video is uploaded first. Its poster, when one was captured, follows as an
+/// image through the same endpoint, and the returned reference carries the
+/// poster hint. A failed poster upload never fails the item: the video goes up
+/// without a poster.
 Future<String> uploadCommunityComposerMediaItem(
   BackendApiService api,
   CommunityComposerMediaItem item, {
   Map<String, String>? metadata,
+}) {
+  return uploadCommunityComposerMediaItemWith(
+    item,
+    uploadFile: ({
+      required List<int> fileBytes,
+      required String fileName,
+      required String fileType,
+      Map<String, String>? metadata,
+      bool compress = true,
+    }) =>
+        api.uploadFile(
+      fileBytes: fileBytes,
+      fileName: fileName,
+      fileType: fileType,
+      metadata: metadata,
+      compress: compress,
+    ),
+    metadata: metadata,
+  );
+}
+
+/// [uploadCommunityComposerMediaItem] over an explicit [uploadFile] seam.
+Future<String> uploadCommunityComposerMediaItemWith(
+  CommunityComposerMediaItem item, {
+  required CommunityComposerFileUpload uploadFile,
+  Map<String, String>? metadata,
+  bool? postersEnabled,
 }) async {
   final bytes = item.imageBytes ?? await item.file.readAsBytes();
-  final result = await api.uploadFile(
+  final result = await uploadFile(
     fileBytes: bytes,
     fileName: item.name,
     fileType: item.isVideo ? 'post-video' : 'post-image',
@@ -276,7 +363,52 @@ Future<String> uploadCommunityComposerMediaItem(
   if (url.isEmpty) {
     throw StateError('Media upload returned no URL.');
   }
-  return communityMediaReferenceForPost(url, isVideo: item.isVideo);
+  if (!item.isVideo) {
+    return communityMediaReferenceForPost(url, isVideo: false);
+  }
+  final posterUrl = await _uploadCommunityVideoPoster(
+    item,
+    uploadFile: uploadFile,
+    metadata: metadata,
+    enabled:
+        postersEnabled ?? AppConfig.isFeatureEnabled('communityVideoPosters'),
+  );
+  return communityMediaReferenceForPost(
+    url,
+    isVideo: true,
+    posterUrl: posterUrl,
+  );
+}
+
+Future<String?> _uploadCommunityVideoPoster(
+  CommunityComposerMediaItem item, {
+  required CommunityComposerFileUpload uploadFile,
+  Map<String, String>? metadata,
+  required bool enabled,
+}) async {
+  // Off means no second upload, whatever was captured.
+  if (!enabled) return null;
+  final poster = item.posterBytes;
+  if (poster == null || poster.isEmpty) return null;
+  try {
+    final result = await uploadFile(
+      fileBytes: poster,
+      fileName: _posterFileName(item.name),
+      fileType: 'post-image',
+      metadata: metadata,
+      compress: false,
+    );
+    final url = (result['uploadedUrl'] as String?)?.trim() ?? '';
+    return url.isEmpty ? null : url;
+  } catch (_) {
+    return null;
+  }
+}
+
+String _posterFileName(String videoName) {
+  final leaf = videoName.trim().split(RegExp(r'[\\/]')).last;
+  final base = leaf.replaceFirst(RegExp(r'\.[^.]*$'), '');
+  return '${base.isEmpty ? 'video' : base}-poster.jpg';
 }
 
 /// Opens the photo picker for up to [limit] images, reading bytes once.

@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:art_kubus/community/community_interactions.dart';
@@ -5,8 +7,12 @@ import 'package:art_kubus/community/community_post_media.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_post_caption.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
+import 'package:art_kubus/widgets/community/community_video_autoplay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+
+import '../../support/fake_video_player_platform.dart';
 
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -142,8 +148,11 @@ void main() {
       expect(opened, 1);
     });
 
-    testWidgets('a video item shows a play control and does not start a player',
+    testWidgets(
+        'a video item shows a play control and starts no player while autoplay is off',
         (tester) async {
+      CommunityVideoAutoplay.enabledOverride = false;
+      addTearDown(() => CommunityVideoAutoplay.enabledOverride = null);
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(
           mediaUrls: ['https://example.test/uploads/clip.mp4'],
@@ -153,6 +162,42 @@ void main() {
 
       expect(find.byTooltip(_l10n.communityMediaVideoPlay), findsOneWidget);
       expect(find.byTooltip(_l10n.communityMediaVideoMute), findsNothing);
+    });
+
+    testWidgets(
+        'a visible video item starts muted after its dwell under the autoplay rules',
+        (tester) async {
+      final previous = VideoPlayerPlatform.instance;
+      final platform = FakeVideoPlayerPlatform();
+      VideoPlayerPlatform.instance = platform;
+      CommunityVideoAutoplay.enabledOverride = true;
+      addTearDown(() {
+        VideoPlayerPlatform.instance = previous;
+        CommunityVideoAutoplay.enabledOverride = null;
+      });
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(
+          mediaUrls: ['https://example.test/uploads/clip.mp4'],
+        ),
+      ));
+      await tester.pump();
+      expect(platform.live, isEmpty, reason: 'nothing starts before the dwell');
+
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 4)),
+        );
+      }
+      expect(platform.playingNow.length, 1);
+      expect(platform.playingNow.single.volume, 0,
+          reason: 'the element starts muted; the session choice is untouched');
+      expect(find.byTooltip(_l10n.communityMediaVideoPlay), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
     });
 
     testWidgets('compact mode shows the first item with a +N badge',

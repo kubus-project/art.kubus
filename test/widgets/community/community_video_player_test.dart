@@ -5,6 +5,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_video_slide.dart';
+import 'package:art_kubus/widgets/community/community_video_autoplay.dart';
 import 'package:art_kubus/widgets/community/community_video_controls.dart';
 import 'package:art_kubus/widgets/community/community_video_fullscreen.dart';
 import 'package:flutter/material.dart';
@@ -103,6 +104,8 @@ void main() {
   setUp(() {
     CommunityVideoAudio.resetSession();
     CommunityPostVideoSlide.guardInterval = const Duration(milliseconds: 20);
+    // These tests drive playback by hand; muted autoplay has its own suite.
+    CommunityVideoAutoplay.enabledOverride = false;
     previous = VideoPlayerPlatform.instance;
     platform = FakeVideoPlayerPlatform();
     VideoPlayerPlatform.instance = platform;
@@ -111,6 +114,7 @@ void main() {
   tearDown(() {
     CommunityVideoAudio.resetSession();
     CommunityPostVideoSlide.guardInterval = const Duration(milliseconds: 400);
+    CommunityVideoAutoplay.enabledOverride = null;
     VideoPlayerPlatform.instance = previous;
   });
 

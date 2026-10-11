@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' show IconData, immutable;
 import 'package:latlong2/latlong.dart';
 
 import '../community/community_interactions.dart';
+import '../community/community_post_media.dart';
 import '../models/artwork.dart';
 import '../models/institution.dart';
 import '../utils/artwork_media_resolver.dart';
@@ -609,10 +610,9 @@ class SearchService {
       data: <String, dynamic>{
         'postId': id,
         'authorName': post.authorName,
-        if (post.imageUrl != null && post.imageUrl!.trim().isNotEmpty)
-          'imageUrl': post.imageUrl!.trim()
-        else if (post.mediaUrls.isNotEmpty)
-          'imageUrl': post.mediaUrls.first,
+        // A video-first post's still is its poster, never the clip itself.
+        if (communityPostPreviewImageUrl(post) case final still?)
+          'imageUrl': still,
         if (post.authorAvatar != null && post.authorAvatar!.trim().isNotEmpty)
           'avatarUrl': post.authorAvatar!.trim(),
         if ((post.authorWallet ?? '').trim().isNotEmpty)

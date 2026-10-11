@@ -168,8 +168,11 @@ class _CommunityPostMediaCarouselState
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // A quoted preview shows a video's poster but never autoplays.
               _buildSlide(0, first,
-                  fit: BoxFit.cover, onTap: widget.onOpenMedia),
+                  fit: BoxFit.cover,
+                  onTap: widget.onOpenMedia,
+                  autoplay: false),
               if (extra > 0)
                 Positioned(
                   right: KubusSpacing.sm,
@@ -349,12 +352,14 @@ class _CommunityPostMediaCarouselState
     required BoxFit fit,
     VoidCallback? onTap,
     bool isActive = true,
+    bool autoplay = true,
   }) {
     if (communityMediaUrlIsVideo(url)) {
       return CommunityPostVideoSlide(
         key: ValueKey<String>('video-$url'),
         url: url,
         isActive: isActive,
+        autoplay: autoplay,
       );
     }
     return _CommunityMediaImageSlide(

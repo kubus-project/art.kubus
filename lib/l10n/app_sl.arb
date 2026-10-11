@@ -4298,6 +4298,10 @@
   "@communityMediaVideoUnavailable": {
     "description": "0.8.2 community media"
   },
+  "communityMediaVideoPreviewUnavailable": "Predogled ni na voljo",
+  "@communityMediaVideoPreviewUnavailable": {
+    "description": "0.8.2 community video poster: shown on a video that has no still preview"
+  },
   "communityMediaVideoReplay": "Ponovno predvajaj video",
   "@communityMediaVideoReplay": {
     "description": "0.8.2 community media video player"

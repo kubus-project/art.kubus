@@ -49,6 +49,13 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform
   /// with a strict autoplay policy rejects `play()` with sound.
   bool blockSoundedPlay = false;
 
+  /// Rejects every `play()` call, muted or not, the way a browser or a decoder
+  /// can refuse playback outright.
+  bool rejectAllPlay = false;
+
+  /// Calls to `play()` so far, per player id.
+  final Map<int, int> playCalls = <int, int>{};
+
   final Map<int, FakeVideoPlayer> players = <int, FakeVideoPlayer>{};
   int _nextId = 1;
 
@@ -110,6 +117,13 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform
   @override
   Future<void> play(int playerId) async {
     final player = players[playerId]!;
+    playCalls[playerId] = (playCalls[playerId] ?? 0) + 1;
+    if (rejectAllPlay) {
+      throw PlatformException(
+        code: 'NotSupportedError',
+        message: 'play() was refused by the test platform.',
+      );
+    }
     if (blockSoundedPlay && player.volume > 0) {
       if (!player.events.isClosed) {
         player.events.addError(PlatformException(
