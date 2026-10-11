@@ -868,7 +868,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           height: radius * 2,
           decoration: BoxDecoration(
               color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(radius * 0.5)),
+              borderRadius: BorderRadius.circular(
+                  AvatarWidget.shapeRadiusFor(radius: radius))),
           alignment: Alignment.center,
           child: Text(initials.isNotEmpty ? initials : 'U',
               style: TextStyle(
@@ -1234,7 +1235,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ),
         );
       } else {
-        avatar = CircleAvatar(
+        avatar = KubusMonogramAvatar(
             radius: 18,
             child: Text(_headerInitials(),
                 style: const TextStyle(fontWeight: FontWeight.w600)));
@@ -1249,7 +1250,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           radius: 18,
         );
       } else {
-        avatar = CircleAvatar(
+        avatar = KubusMonogramAvatar(
             radius: 18,
             child: Text(_headerInitials(),
                 style: const TextStyle(fontWeight: FontWeight.w600)));

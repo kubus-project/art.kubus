@@ -56,7 +56,6 @@ class _Rig {
     this.failArtFeed = false,
     this.failPublic = false,
     this.failArtworks = false,
-    this.signals = ArtDiscoverySignals.none,
   });
 
   final Map<double, int> artFeedByRadius;
@@ -69,7 +68,6 @@ class _Rig {
   final bool failArtFeed;
   final bool failPublic;
   final bool failArtworks;
-  final ArtDiscoverySignals signals;
 
   final List<double> radiiAsked = <double>[];
   final List<bool> devicePrompts = <bool>[];
@@ -97,7 +95,7 @@ class _Rig {
           return [for (var i = 0; i < artworks; i++) _art('art-$i')];
         },
         exhibitions: (location, radius) async => const <Exhibition>[],
-        signals: () async => signals,
+        signals: () async => ArtDiscoverySignals.none,
         selectedArea: () => selected,
         mapCenter: () => map,
         deviceLocation: ({required bool prompt}) async {
