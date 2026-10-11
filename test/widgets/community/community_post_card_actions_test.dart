@@ -2,7 +2,12 @@ import 'dart:ui' as ui;
 
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/pending_action_intent.dart';
+import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/community_subject_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
+import 'package:art_kubus/services/pending_action_executor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
@@ -64,6 +69,20 @@ Future<void> _pump(
 
 SemanticsNode _node(WidgetTester tester, String label) =>
     tester.getSemantics(find.bySemanticsLabel(RegExp('^$label')));
+
+class _ConfirmingLikeExecutor implements PendingActionExecutor {
+  @override
+  Future<PendingActionExecutionResult> execute({
+    required PendingActionIntent intent,
+    required ArtworkProvider artworkProvider,
+    required SavedItemsProvider savedItemsProvider,
+  }) async {
+    return const PendingActionExecutionResult(
+      PendingActionOutcome.completed,
+      postLike: (isLiked: true, likeCount: 13),
+    );
+  }
+}
 
 void main() {
   testWidgets('like and save are toggles; comment, repost and share are not',
@@ -198,6 +217,67 @@ void main() {
     );
     expect(like.flagsCollection.isFocused, ui.Tristate.isTrue);
     expect(pending.takeFocusReturn('like:post-1'), isFalse);
+    handle.dispose();
+  });
+
+  testWidgets(
+      'a confirmed like returns focus to its like control once the sheet has closed',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final handle = tester.ensureSemantics();
+    final pending = PendingActionProvider(executor: _ConfirmingLikeExecutor());
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PendingActionProvider>.value(
+        value: pending,
+        child: ChangeNotifierProvider<CommunitySubjectProvider>(
+          create: (_) => CommunitySubjectProvider(),
+          child: MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            theme: ThemeData(extensions: const [KubusColorRoles.light]),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: CommunityPostCard(
+                  post: _post(),
+                  accentColor: KubusColorRoles.light.active,
+                  onOpenPostDetail: (_) {},
+                  onToggleLike: () {},
+                  onOpenComments: () {},
+                  onRepost: () {},
+                  onShare: () {},
+                  onToggleBookmark: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final intent = PendingActionIntent.create(
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: 'post-1',
+      returnRoute: '/p/post-1',
+      sourceScreen: 'post_detail',
+    )!;
+    await tester.runAsync(() async {
+      await pending.capture(intent);
+      await pending.confirm(
+        artworkProvider: ArtworkProvider(),
+        savedItemsProvider: SavedItemsProvider(),
+      );
+    });
+    await tester.pump();
+    await tester.pump();
+
+    final like = tester.getSemantics(
+      find.bySemanticsLabel('Like, 12 likes, not liked'),
+    );
+    expect(like.flagsCollection.isFocused, ui.Tristate.isTrue);
     handle.dispose();
   });
 

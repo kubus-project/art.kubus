@@ -16,6 +16,8 @@ import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 import 'community_post_caption.dart';
 import 'community_post_media_carousel.dart';
+import '../../models/pending_action_intent.dart';
+import '../../providers/pending_action_provider.dart';
 import 'post_like_settlement.dart';
 
 part 'community_post_card_interactions.dart';

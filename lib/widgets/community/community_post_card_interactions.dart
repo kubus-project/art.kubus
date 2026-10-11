@@ -50,21 +50,46 @@ class _InteractionButtonState extends State<_InteractionButton> {
   void initState() {
     super.initState();
     _focusNode.addListener(_handleFocusChange);
-    final key = widget.focusReturnKey;
-    if (key != null) {
-      // A rebuilt control (the screen was replaced by sign-in) takes focus once,
-      // after the first frame, when the journey remembered it.
+    if (widget.focusReturnKey != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        if (readPendingActionsOrNull(context)?.takeFocusReturn(key) ?? false) {
+        final pending = readPendingActionsOrNull(context);
+        if (pending == null) return;
+        _pendingActions = pending;
+        _settledSeen = pending.settledRevision;
+        pending.addListener(_handleSettled);
+        // A rebuilt control (the screen was replaced by sign-in) takes focus
+        // once, when the journey remembered it.
+        final key = widget.focusReturnKey;
+        if (key != null && pending.takeFocusReturn(key)) {
           _focusNode.requestFocus();
         }
       });
     }
   }
 
+  PendingActionProvider? _pendingActions;
+  int _settledSeen = 0;
+
+  // A like on this control's post was confirmed. The confirmation sheet has
+  // closed by then, so focus can stay here. Only the current route takes it:
+  // a feed card under a pushed post must not pull focus back.
+  void _handleSettled() {
+    final pending = _pendingActions;
+    final key = widget.focusReturnKey;
+    if (pending == null || key == null || !mounted) return;
+    if (pending.settledRevision == _settledSeen) return;
+    _settledSeen = pending.settledRevision;
+    final settled = pending.lastSettled;
+    if (settled == null || settled.actionType != PendingActionType.like) return;
+    if (key != 'like:${settled.targetId}') return;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    _focusNode.requestFocus();
+  }
+
   @override
   void dispose() {
+    _pendingActions?.removeListener(_handleSettled);
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
