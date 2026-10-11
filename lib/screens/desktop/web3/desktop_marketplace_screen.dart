@@ -1,3 +1,4 @@
+import '../../../widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -453,7 +454,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
     final scheme = Theme.of(context).colorScheme;
     final ownedCollectibles = _ownedCollectibles(entry);
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
         child: ConstrainedBox(
@@ -643,9 +644,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final priceController = TextEditingController();
-    final price = await showDialog<String>(
+    final price = await showKubusDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.marketplaceListNftForSaleTitle),
         content: TextField(
           controller: priceController,
