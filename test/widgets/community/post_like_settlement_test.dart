@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
@@ -19,6 +20,24 @@ CommunityPost _post({bool isLiked = false, int likeCount = 3}) => CommunityPost(
 
 /// Returns a fixed outcome for every intent, so the provider settles without
 /// touching the network.
+/// Holds the attempt open until [gate] completes, as the rig's like does.
+class _GatedExecutor implements PendingActionExecutor {
+  _GatedExecutor(this.gate, this.result);
+
+  final Completer<void> gate;
+  final PendingActionExecutionResult result;
+
+  @override
+  Future<PendingActionExecutionResult> execute({
+    required PendingActionIntent intent,
+    required ArtworkProvider artworkProvider,
+    required SavedItemsProvider savedItemsProvider,
+  }) async {
+    await gate.future;
+    return result;
+  }
+}
+
 class _FixedExecutor implements PendingActionExecutor {
   _FixedExecutor(this.result);
 
@@ -106,6 +125,79 @@ void main() {
   });
 
   group('PostLikeSettlementWatcher', () {
+    test('a like in flight reports its start, then its settlement', () async {
+      final gate = Completer<void>();
+      final provider = PendingActionProvider(
+        executor: _GatedExecutor(
+          gate,
+          const PendingActionExecutionResult(
+            PendingActionOutcome.completed,
+            postLike: (isLiked: true, likeCount: 4),
+          ),
+        ),
+      );
+      final started = <String>[];
+      final settled = <String>[];
+      final ended = <String>[];
+      final watcher = PostLikeSettlementWatcher(
+        (postId, snapshot) => settled.add(postId),
+        onLikeStarted: started.add,
+        onLikeAttemptEnded: ended.add,
+      )..attach(provider);
+
+      await provider.capture(_postLike());
+      final run = provider.confirm(
+        artworkProvider: ArtworkProvider(),
+        savedItemsProvider: SavedItemsProvider(),
+      );
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(started, <String>['post-1']);
+      expect(watcher.isInFlight('post-1'), isTrue);
+      expect(settled, isEmpty);
+
+      gate.complete();
+      await run;
+      expect(settled, <String>['post-1']);
+      expect(ended, isEmpty);
+      expect(watcher.isInFlight('post-1'), isFalse);
+      watcher.detach();
+    });
+
+    test('a like attempt that fails reports the end, not a settlement',
+        () async {
+      final gate = Completer<void>()..complete();
+      final provider = PendingActionProvider(
+        executor: _GatedExecutor(
+          gate,
+          const PendingActionExecutionResult(PendingActionOutcome.failed),
+        ),
+      );
+      final started = <String>[];
+      final settled = <String>[];
+      final ended = <String>[];
+      final watcher = PostLikeSettlementWatcher(
+        (postId, snapshot) => settled.add(postId),
+        onLikeStarted: started.add,
+        onLikeAttemptEnded: ended.add,
+      )..attach(provider);
+
+      await provider.capture(_postLike());
+      await provider.confirm(
+        artworkProvider: ArtworkProvider(),
+        savedItemsProvider: SavedItemsProvider(),
+      );
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(started, <String>['post-1']);
+      expect(settled, isEmpty);
+      expect(ended, <String>['post-1']);
+      expect(watcher.isInFlight('post-1'), isFalse);
+      watcher.detach();
+    });
+
     test('a like confirmed after attaching is reported once', () async {
       final provider = PendingActionProvider(
         executor: _FixedExecutor(

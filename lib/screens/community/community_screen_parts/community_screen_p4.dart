@@ -782,6 +782,9 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
 
     final post = _communityPosts[index];
+    // A like confirmed on this post is still in flight: a tap now would take
+    // the like back while the server is recording it.
+    if (_likeSettlements.isInFlight(post.id)) return;
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
     final pending = readPendingActionsOrNull(context);
@@ -845,6 +848,20 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }));
   }
 
+  /// Every copy of the post in the feed's lists, once each.
+  Iterable<CommunityPost> _feedCopiesOf(String postId) sync* {
+    final seen = Set<CommunityPost>.identity();
+    for (final list in <List<CommunityPost>>[
+      _followingFeedPosts,
+      _discoverFeedPosts,
+      _communityPosts,
+    ]) {
+      for (final post in list) {
+        if (post.id == postId && seen.add(post)) yield post;
+      }
+    }
+  }
+
   /// Shows a like the continuation confirmed for a post in this feed. Every
   /// copy of the post in the feed's lists is updated; nothing is reloaded.
   void _applySettledPostLike(String postId, PostLikeSnapshot snapshot) {
@@ -852,19 +869,38 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     final interactions =
         Provider.of<CommunityInteractionsProvider>(context, listen: false);
     _applyState(() {
-      final seen = Set<CommunityPost>.identity();
-      for (final list in <List<CommunityPost>>[
-        _followingFeedPosts,
-        _discoverFeedPosts,
-        _communityPosts,
-      ]) {
-        for (final post in list) {
-          if (post.id != postId || !seen.add(post)) continue;
-          applyConfirmedPostLike(post, snapshot);
-          interactions.applyServerPostState(post);
-        }
+      for (final post in _feedCopiesOf(postId)) {
+        applyConfirmedPostLike(post, snapshot);
+        interactions.applyServerPostState(post);
       }
     });
+  }
+
+  /// A confirmed like on a post in this feed is in flight: the card shows it
+  /// liked at once instead of after the server answers.
+  void _applyStartedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    _applyState(() {
+      for (final post in _feedCopiesOf(postId)) {
+        applyOptimisticPostLike(post);
+        interactions.applyServerPostState(post);
+      }
+    });
+  }
+
+  /// The like attempt ended without a confirmed like: the card shows the
+  /// server's state, not the optimistic one.
+  void _applyEndedPostLike(String postId) {
+    if (!mounted) return;
+    final interactions =
+        Provider.of<CommunityInteractionsProvider>(context, listen: false);
+    final copies = _feedCopiesOf(postId).toList(growable: false);
+    if (copies.isEmpty) return;
+    unawaited(interactions.refreshPostStates(copies, force: true).then((_) {
+      if (mounted) _applyState(() {});
+    }));
   }
 
   void _showPostLikes(String postId) {

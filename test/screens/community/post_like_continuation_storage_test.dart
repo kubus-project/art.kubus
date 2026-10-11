@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -35,6 +36,10 @@ class _Backend {
   int serverLikeCount = 3;
   int likeRequests = 0;
   final List<String> requests = <String>[];
+  // When set, a like is recorded on the server at once but answered only when
+  // this completes: the rig's shape (the like lands in about a second, the
+  // answer takes 20 to 40 s).
+  Completer<void>? likeAnswer;
 
   http.Response _json(Object body, [int status = 200]) => http.Response(
         jsonEncode(body),
@@ -77,6 +82,7 @@ class _Backend {
         path == '/api/community/posts/post-1/like') {
       likeRequests += 1;
       if (failWithoutInsert) {
+        await likeAnswer?.future;
         return _json(
           <String, dynamic>{'success': false, 'error': 'Internal server error'},
           500,
@@ -84,6 +90,7 @@ class _Backend {
       }
       if (!likedOnServer) serverLikeCount += 1;
       likedOnServer = true;
+      await likeAnswer?.future;
       if (failAfterInsert) {
         return _json(
           <String, dynamic>{'success': false, 'error': 'Internal server error'},
@@ -358,6 +365,88 @@ void main() {
       final card =
           tester.widget<CommunityPostCard>(find.byType(CommunityPostCard));
       expect(card.post.isLiked, isFalse);
+    } finally {
+      collab.stopInvitePolling();
+      chat.dispose();
+      SocketService().disconnect();
+    }
+  });
+
+  testWidgets(
+      'a confirmed like shows liked at once, while the server answer is in flight',
+      (tester) async {
+    final backend = _Backend(likedOnServer: false)
+      ..likeAnswer = Completer<void>();
+    final collab = CollabProvider();
+    final chat = _SilentChat();
+    try {
+      await _load(
+        tester,
+        backend: backend,
+        pending: PendingActionProvider(),
+        collab: collab,
+        chat: chat,
+      );
+      await _guestLikeToConfirmation(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Like'));
+      await _drain(tester);
+
+      // The like is on the server and the answer is still out: the heart is
+      // liked and the count is one more, not "not liked" until the answer.
+      expect(backend.serverLikeCount, 4);
+      expect(backend.likeRequests, 1);
+      final shown =
+          tester.widget<CommunityPostCard>(find.byType(CommunityPostCard)).post;
+      expect(shown.isLiked, isTrue);
+      expect(shown.likeCount, 4);
+      expect(find.byIcon(Icons.favorite), findsOneWidget);
+
+      // A tap while the like is in flight does not take it back. Short pump:
+      // the transport re-sends a write after 30 s, which would blur the count.
+      await tester.tap(find.byIcon(Icons.favorite));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(backend.likeRequests, 1);
+      expect(shown.isLiked, isTrue);
+
+      backend.likeAnswer!.complete();
+      await _drain(tester);
+      expect(shown.isLiked, isTrue);
+      expect(shown.likeCount, 4);
+      expect(backend.likeRequests, 1);
+    } finally {
+      collab.stopInvitePolling();
+      chat.dispose();
+      SocketService().disconnect();
+    }
+  });
+
+  testWidgets(
+      'a like that fails in flight returns the heart to the server state',
+      (tester) async {
+    final backend = _Backend(likedOnServer: false, failWithoutInsert: true)
+      ..likeAnswer = Completer<void>();
+    final collab = CollabProvider();
+    final chat = _SilentChat();
+    try {
+      await _load(
+        tester,
+        backend: backend,
+        pending: PendingActionProvider(),
+        collab: collab,
+        chat: chat,
+      );
+      await _guestLikeToConfirmation(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Like'));
+      await _drain(tester);
+      final shown =
+          tester.widget<CommunityPostCard>(find.byType(CommunityPostCard)).post;
+      expect(shown.isLiked, isTrue);
+
+      backend.likeAnswer!.complete();
+      await _drain(tester);
+      expect(shown.isLiked, isFalse);
+      expect(shown.likeCount, 3);
+      expect(find.byIcon(Icons.favorite_border), findsOneWidget);
     } finally {
       collab.stopInvitePolling();
       chat.dispose();

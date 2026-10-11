@@ -164,7 +164,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   // A like the continuation confirms for a post in this feed is shown on its
   // card at once, without reloading the list or moving the scroll position.
   late final PostLikeSettlementWatcher _likeSettlements =
-      PostLikeSettlementWatcher(_applySettledPostLike);
+      PostLikeSettlementWatcher(
+    _applySettledPostLike,
+    onLikeStarted: _applyStartedPostLike,
+    onLikeAttemptEnded: _applyEndedPostLike,
+  );
   bool _isLoadingDiscover = false;
   bool _isLoadingFollowing = false;
   bool _discoverFeedLoaded = false;

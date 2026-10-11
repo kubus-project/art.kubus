@@ -15,6 +15,7 @@ import '../../community/community_interactions.dart';
 import '../../community/community_post_text_limits.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
+import '../../models/pending_action_intent.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
 import '../../services/contextual_auth_gate.dart';
@@ -183,17 +184,37 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
+  /// True while a like confirmed on this post is in flight. The heart shows the
+  /// like from the moment of confirmation, and taps on it wait for the answer.
+  bool _likeInFlight = false;
+
   /// The visitor came back from sign-in and confirmed a continuation that was
   /// captured on this post. A like is re-read from the server so the heart
   /// shows what was actually recorded; a comment puts the cursor back into the
   /// composer the visitor was writing in.
+  ///
+  /// While the like is in flight the heart already shows it. The server records
+  /// a like well before it answers (20 to 40 s on the rig), so a heart that
+  /// stays empty until the answer reads as a failed tap.
   void _onPendingActionsChanged() {
     // Nothing to attach a follow-up to until the post is on screen. Leaving the
     // settled intent in place keeps it for the load that completes later.
     final post = _post;
     if (post == null) return;
-    final settled = _pendingActions?.takeSettled();
-    if (settled == null) return;
+    final pending = _pendingActions;
+    if (pending != null && pending.isExecuting) {
+      _beginLikeInFlight(post, pending.pending);
+    }
+    final settled = pending?.takeSettled();
+    if (settled == null) {
+      // An attempt that ended without a confirmed like failed: show what the
+      // server holds, not the optimistic heart.
+      if (_likeInFlight && pending != null && !pending.isExecuting) {
+        _likeInFlight = false;
+        unawaited(_refreshPostStateFromServer(post));
+      }
+      return;
+    }
     if (settled.targetType != PendingActionTargetType.post ||
         settled.targetId != post.id) {
       return;
@@ -201,6 +222,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     // Compared one by one rather than switched on: other continuations add
     // action types, and an exhaustive switch here would stop compiling.
     if (settled.actionType == PendingActionType.like) {
+      _likeInFlight = false;
       final confirmed = _pendingActions?.lastSettledResult?.postLike;
       if (confirmed != null) {
         _applySettledLike(post, confirmed);
@@ -222,6 +244,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     unawaited(interactions.refreshPostStates([post], force: true).then((_) {
       if (mounted) setState(() {});
     }));
+  }
+
+  /// Shows a confirmed like at once, before the server answers. The count is
+  /// corrected by the answer (or the server's state on failure).
+  void _beginLikeInFlight(CommunityPost post, PendingActionIntent? intent) {
+    if (_likeInFlight || post.isLiked || intent == null) return;
+    final isThisLike = intent.actionType == PendingActionType.like &&
+        intent.targetType == PendingActionTargetType.post &&
+        intent.targetId == post.id;
+    if (!isThisLike) return;
+    _likeInFlight = true;
+    applyOptimisticPostLike(post);
+    context.read<CommunityInteractionsProvider>().applyServerPostState(post);
+    setState(() {});
   }
 
   /// Shows the like the backend confirmed, without a second read.
@@ -362,7 +398,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _toggleLike() async {
-    if (_post == null) return;
+    if (_post == null || _likeInFlight) return;
     final l10n = AppLocalizations.of(context)!;
     final pending = readPendingActionsOrNull(context);
     final likeKey = 'like:${_post!.id}';

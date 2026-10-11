@@ -140,7 +140,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   // A like the continuation confirms for a post in this feed is shown on its
   // card at once, without reloading the list or moving the scroll position.
   late final PostLikeSettlementWatcher _likeSettlements =
-      PostLikeSettlementWatcher(_applySettledPostLike);
+      PostLikeSettlementWatcher(
+    _applySettledPostLike,
+    onLikeStarted: _applyStartedPostLike,
+    onLikeAttemptEnded: _applyEndedPostLike,
+  );
   List<CommunityPost> _artFeedPosts = [];
   final Set<String> _expandedCommentPostIds = <String>{};
   final Map<String, TextEditingController> _inlineCommentControllers =

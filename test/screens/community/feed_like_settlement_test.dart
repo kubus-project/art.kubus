@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -24,6 +25,10 @@ import '../../support/product_surface_harness.dart';
 /// shows a like, so the feed starts unliked; [likedOnServer] is what the
 /// account already holds.
 class _FakeBackend {
+  // When set, a like is recorded at once and answered only when this completes
+  // (the rig: the like lands in about a second, the answer takes 20 to 40 s).
+  Completer<void>? likeAnswer;
+
   _FakeBackend({required this.likedOnServer, this.failAfterInsert = false});
 
   bool likedOnServer;
@@ -78,6 +83,7 @@ class _FakeBackend {
       // The like route is idempotent: a repeated like never counts twice.
       if (!likedOnServer) serverLikeCount += 1;
       likedOnServer = true;
+      await likeAnswer?.future;
       if (failAfterInsert) {
         return _json(<String, dynamic>{
           'success': false,
@@ -358,6 +364,51 @@ void main() {
         final card =
             tester.widget<CommunityPostCard>(find.byType(CommunityPostCard));
         expect(card.post.isLiked, isTrue);
+      });
+    });
+
+    testWidgets(
+        'a confirmed like shows liked on the card while its answer is in flight',
+        (tester) async {
+      useBackend(false);
+      backend.likeAnswer = Completer<void>();
+      await _runFeed(tester,
+          feed: CommunityScreen(), size: const Size(390, 844), body: (_) async {
+        await _likeAsGuestAndConfirm(tester);
+
+        // Recorded on the server, answer still out: the card is liked now.
+        expect(backend.likeRequests, 1);
+        expect(backend.serverLikeCount, 4);
+        final card = tester.widget<CommunityPostCard>(
+          find.byType(CommunityPostCard),
+        );
+        expect(card.post.isLiked, isTrue);
+        expect(card.post.likeCount, 4);
+        expect(
+          find.descendant(
+            of: find.byType(CommunityPostCard),
+            matching: find.byIcon(Icons.favorite),
+          ),
+          findsOneWidget,
+        );
+
+        // A tap on the liked card while in flight does not take the like back.
+        await tester.tap(find.byIcon(Icons.favorite));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(backend.likeRequests, 1);
+        expect(card.post.isLiked, isTrue);
+
+        backend.likeAnswer!.complete();
+        await tester.pump(const Duration(milliseconds: 200));
+        for (var i = 0; i < 5; i++) {
+          await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 20)));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+        expect(card.post.isLiked, isTrue);
+        expect(card.post.likeCount, 4);
+        expect(backend.likeRequests, 1);
       });
     });
   });
