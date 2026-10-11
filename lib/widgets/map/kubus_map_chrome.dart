@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/kubus_map_tokens.dart';
 
 /// Credit line for the basemap, shown visibly on the map.
 ///
@@ -76,9 +77,9 @@ class KubusMapChromeRule extends StatelessWidget {
 /// Square icon control used inside map chrome clusters.
 ///
 /// Flat: no border, shadow or glass of its own. Hover is a neutral fill, focus
-/// is a focus-role ring, and [active] (selected state) is the only place the
-/// accent appears. The hit area is at least [size], which defaults to the 44px
-/// minimum tap target.
+/// is a focus-role ring (2px, about 5:1 on the chrome surface in both themes),
+/// and [active] (selected state) is the only place the accent appears. The hit
+/// area is at least [size], which defaults to the 48px chrome target.
 class KubusMapChromeIconButton extends StatefulWidget {
   const KubusMapChromeIconButton({
     super.key,
@@ -86,7 +87,7 @@ class KubusMapChromeIconButton extends StatefulWidget {
     required this.onPressed,
     required this.tooltip,
     this.active = false,
-    this.size = KubusHeaderMetrics.actionHitArea,
+    this.size = KubusMapMetrics.chromeControlSize,
     this.accentColor,
     this.iconColor,
     this.activeIconColor,
@@ -170,6 +171,12 @@ class _KubusMapChromeIconButtonState extends State<KubusMapChromeIconButton> {
               mouseCursor:
                   enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
               borderRadius: radius,
+              // Focus, hover and press are drawn by this control alone: the
+              // focus ring below and the neutral hover fill. Material's own
+              // focus highlight is a low-contrast teal wash, so it is off.
+              focusColor: Colors.transparent,
+              hoverColor: Colors.transparent,
+              highlightColor: Colors.transparent,
               onTap: widget.onPressed,
               onHover: (value) {
                 if (_hovered != value) setState(() => _hovered = value);
@@ -257,15 +264,15 @@ class _KubusMapChromeIconButtonState extends State<KubusMapChromeIconButton> {
 /// The credit is drawn as text on the same near-opaque chrome surface as the
 /// other clusters, so its contrast comes from theme tokens rather than from
 /// whatever map pixels are underneath. The whole row is the tap target (at
-/// least [minHeight] high, 44px on desktop and 48px on mobile) and opens the
-/// attribution sheet.
+/// least [minHeight] high, 48px on desktop and mobile) and opens the attribution
+/// sheet.
 class KubusMapAttributionControl extends StatelessWidget {
   const KubusMapAttributionControl({
     super.key,
     required this.onPressed,
     required this.semanticsLabel,
     this.credit = kubusMapAttributionCredit,
-    this.minHeight = KubusHeaderMetrics.actionHitArea,
+    this.minHeight = KubusMapMetrics.chromeControlSize,
   });
 
   final VoidCallback onPressed;

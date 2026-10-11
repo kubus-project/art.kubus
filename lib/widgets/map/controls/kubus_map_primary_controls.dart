@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../features/map/controller/kubus_map_controller.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_map_tokens.dart';
 import '../kubus_map_chrome.dart';
 import 'map_view_mode_controls.dart';
 
@@ -171,7 +172,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
   /// Square button size.
   ///
-  /// If null, uses 44 (mobile) and 42 (desktop) to match existing visuals.
+  /// If null, uses the 48px map chrome target on every platform.
   final double? buttonSize;
 
   /// Outer padding used by [KubusMapPrimaryControlsLayout.desktopToolbar] around the control row.
@@ -191,7 +192,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
   }
 
   Widget _buildMobileRightRail(BuildContext context) {
-    final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
+    final resolvedButtonSize = buttonSize ?? KubusMapMetrics.chromeControlSize;
     final hasModeControls =
         showIsometricViewToggle && onToggleIsometricView != null;
     // One flat cluster: buttons are separated by hairlines, not by gaps.
@@ -370,7 +371,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
+    final resolvedButtonSize = buttonSize ?? KubusMapMetrics.chromeControlSize;
     final resolvedPadding = desktopToolbarPadding ??
         const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm,

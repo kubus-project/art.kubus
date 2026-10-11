@@ -187,13 +187,13 @@ void main() {
       // Flat: no blur layer anywhere in the cluster.
       expect(find.byType(BackdropFilter), findsNothing);
 
-      // Every control clears the 44px desktop tap target.
+      // Every desktop chrome control clears the 48px map chrome target.
       final buttons = find.byType(KubusMapChromeIconButton);
       expect(buttons, findsNWidgets(5));
       for (var i = 0; i < 5; i++) {
         final size = tester.getSize(buttons.at(i));
-        expect(size.width, greaterThanOrEqualTo(44), reason: 'button $i');
-        expect(size.height, greaterThanOrEqualTo(44), reason: 'button $i');
+        expect(size.width, greaterThanOrEqualTo(48), reason: 'button $i');
+        expect(size.height, greaterThanOrEqualTo(48), reason: 'button $i');
       }
 
       // Reading order: left to right, nearby -> zoom out -> zoom in ->
@@ -276,6 +276,53 @@ void main() {
       expect(yOf('Zoom in'), lessThan(yOf('Zoom out')));
       expect(yOf('Zoom out'), lessThan(yOf('Center on me')));
       expect(yOf('Center on me'), lessThan(yOf('Create marker here')));
+    });
+  });
+
+  group('map chrome: focus indicator', () {
+    testWidgets(
+        'keyboard focus on a chrome control draws a 2px focus-role ring and no '
+        'fill; the Material focus highlight is off', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: <ThemeExtension<dynamic>>[KubusColorRoles.light],
+          ),
+          home: Scaffold(
+            body: Center(
+              child: KubusMapChromeIconButton(
+                icon: Icons.add,
+                tooltip: 'Zoom in',
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final ink = tester.widget<InkWell>(find.byType(InkWell).first);
+      expect(ink.focusColor, Colors.transparent);
+      expect(ink.highlightColor, Colors.transparent);
+      expect(ink.hoverColor, Colors.transparent);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      final box = tester.widget<AnimatedContainer>(
+        find
+            .descendant(
+              of: find.byType(KubusMapChromeIconButton),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      final decoration = box.decoration as BoxDecoration;
+      final border = decoration.border as Border;
+      expect(border.top.width, 2);
+      expect(border.top.color, KubusColorRoles.light.focus);
+      // Focus is a ring, not a fill: no background colour behind the icon.
+      expect(decoration.color, anyOf(isNull, Colors.transparent));
     });
   });
 
