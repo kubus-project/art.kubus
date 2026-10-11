@@ -80,6 +80,22 @@ class KubusMapCameraState {
   final double zoom;
   final double bearing;
   final double pitch;
+
+  /// Whether [other] is a different camera beyond rounding noise.
+  ///
+  /// MapLibre also emits move events that leave the camera where it was (the
+  /// canvas re-measuring itself when the map becomes visible again). Those are
+  /// not gestures, so they must not dismiss the open marker card.
+  bool differsFrom(KubusMapCameraState other) {
+    const double centerEpsilonDeg = 1e-7;
+    const double zoomEpsilon = 1e-4;
+    const double angleEpsilonDeg = 1e-3;
+    return (center.latitude - other.center.latitude).abs() > centerEpsilonDeg ||
+        (center.longitude - other.center.longitude).abs() > centerEpsilonDeg ||
+        (zoom - other.zoom).abs() > zoomEpsilon ||
+        (bearing - other.bearing).abs() > angleEpsilonDeg ||
+        (pitch - other.pitch).abs() > angleEpsilonDeg;
+  }
 }
 
 @immutable
@@ -335,6 +351,10 @@ class KubusMapController {
   }
 
   bool _autoFollow = true;
+
+  // A selection waiting for its marker to load (see selectMarkerWhenLoaded).
+  ArtMarker? Function(List<ArtMarker> markers)? _pendingSelectionResolver;
+  DateTime? _pendingSelectionDeadline;
 
   // Marker data.
   List<ArtMarker> _markers = const <ArtMarker>[];
@@ -625,6 +645,45 @@ class KubusMapController {
     }
   }
 
+  /// Selects the marker [resolve] finds, now if it is loaded, otherwise as soon
+  /// as a marker list that contains it arrives, for up to [timeout].
+  ///
+  /// A nearby row whose marker is outside the loaded set uses this: the camera
+  /// moves to the artwork and the card opens once its marker loads. A user
+  /// gesture on the map cancels the wait.
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve, {
+    Duration timeout = const Duration(seconds: 8),
+  }) {
+    final immediate = resolve(_markers);
+    if (immediate != null) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      selectMarker(immediate);
+      return;
+    }
+    _pendingSelectionResolver = resolve;
+    _pendingSelectionDeadline = DateTime.now().add(timeout);
+  }
+
+  void _resolvePendingSelection() {
+    final resolve = _pendingSelectionResolver;
+    if (resolve == null) return;
+    final deadline = _pendingSelectionDeadline;
+    if (deadline == null || DateTime.now().isAfter(deadline)) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      return;
+    }
+    final marker = resolve(_markers);
+    if (marker == null) return;
+    _pendingSelectionResolver = null;
+    _pendingSelectionDeadline = null;
+    // setMarkers runs inside the screen's data refresh, which can be in the
+    // middle of a build; select once that work has returned.
+    scheduleMicrotask(() => selectMarker(marker));
+  }
+
   void setMarkers(List<ArtMarker> markers) {
     final incomingIds = markers.map((marker) => marker.id).toSet();
     _markerEntranceTracker.observeIncoming(
@@ -632,6 +691,7 @@ class KubusMapController {
       viewportInitialized: _viewportStateInitialized,
     );
     _markers = markers;
+    _resolvePendingSelection();
     _pruneSpiderfyStateIfNeeded();
 
     // Keep selection data fresh when marker instances are replaced during
@@ -919,26 +979,35 @@ class KubusMapController {
     _cameraIsMoving = true;
     _hasCameraFrame = true;
 
-    final bool hasGesture = !_programmaticCameraMove;
-    if (hasGesture && _autoFollow) {
-      _autoFollow = false;
-      onAutoFollowChanged?.call(_autoFollow);
-    }
-
     final nextCenter =
         LatLng(position.target.latitude, position.target.longitude);
     final nextZoom = position.zoom;
     final nextBearing = position.bearing;
     final nextPitch = position.tilt;
 
-    final bearingChanged = (nextBearing - _camera.bearing).abs() > 0.1;
-
-    _camera = KubusMapCameraState(
+    final previousCamera = _camera;
+    final nextCamera = KubusMapCameraState(
       center: nextCenter,
       zoom: nextZoom,
       bearing: nextBearing,
       pitch: nextPitch,
     );
+    // A move that leaves the camera unchanged is not a gesture (see
+    // [KubusMapCameraState.differsFrom]); it must not close the card.
+    final bool hasGesture =
+        !_programmaticCameraMove && nextCamera.differsFrom(previousCamera);
+    if (hasGesture) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+    }
+    if (hasGesture && _autoFollow) {
+      _autoFollow = false;
+      onAutoFollowChanged?.call(_autoFollow);
+    }
+
+    final bearingChanged = (nextBearing - previousCamera.bearing).abs() > 0.1;
+
+    _camera = nextCamera;
 
     if (bearingChanged) {
       bearingDegrees.value = nextBearing;

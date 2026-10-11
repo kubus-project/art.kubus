@@ -923,6 +923,8 @@ class KubusMarkerOverlayHelpers {
     VoidCallback? onPreviousStacked,
     GestureDragEndCallback? onHorizontalDragEnd,
     required double maxCardHeight,
+    FocusNode? fallbackFocusNode,
+    bool escapeCloses = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final presentation = resolveMarkerOverlayPresentation(
@@ -946,6 +948,7 @@ class KubusMarkerOverlayHelpers {
           subjectTypeLabel(l10n, presentation.linkedSubject.kind),
       linkedSubjectTitle: presentation.linkedSubject.title,
       linkedSubjectSubtitle: presentation.linkedSubject.subtitle,
+      placeText: presentation.placeText,
       onClose: onClose,
       onPrimaryAction: onOpenDetails,
       onCardTap: onOpenDetails,
@@ -965,6 +968,8 @@ class KubusMarkerOverlayHelpers {
       onSelectStackIndex: onSelectStackIndex,
       onHorizontalDragEnd: onHorizontalDragEnd,
       maxHeight: maxCardHeight,
+      fallbackFocusNode: fallbackFocusNode,
+      onEscape: escapeCloses ? onClose : null,
     );
   }
 }

@@ -68,12 +68,13 @@ import '../utils/creator_shell_navigation.dart';
 
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
+import '../utils/keyboard_activation_tracker.dart';
 import '../utils/kubus_map_tokens.dart';
 import '../utils/art_marker_list_diff.dart';
 import '../utils/debouncer.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
-import '../utils/map_navigation.dart';
+import '../utils/map_destination_actions.dart';
 import '../utils/map_viewport_utils.dart';
 import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
@@ -386,6 +387,8 @@ class _MapScreenState extends State<MapScreen>
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
+  final FocusNode _mapSearchFocusNode =
+      FocusNode(debugLabel: 'mobile_map_search');
 
   KubusMapFilterState _filterState = KubusMapFilterState.defaults();
   Map<ArtMarkerType, bool> get _markerLayerVisibility => <ArtMarkerType, bool>{
@@ -665,6 +668,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
@@ -2167,6 +2171,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    _mapSearchFocusNode.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
@@ -4745,7 +4750,8 @@ class _MapScreenState extends State<MapScreen>
     WalkingNavigationProvider navigation,
   ) async {
     final intent = navigation.intent;
-    if (intent != null) await MapNavigation.openExternalWalking(intent);
+    if (intent == null) return;
+    await MapDestination.fromWalkingIntent(intent).openWalkingExternally();
   }
 
   void _viewWalkingDestination(WalkingNavigationProvider navigation) {
@@ -5091,6 +5097,9 @@ class _MapScreenState extends State<MapScreen>
         distanceText: pageDistanceText,
         onClose: _dismissSelectedMarker,
         onOpenDetails: openDetails,
+        fallbackFocusNode: _mapSearchFocusNode,
+        // The mobile map has no root Escape handler; the card closes itself.
+        escapeCloses: true,
         actions: overlayActions,
         stackCount: stack.length,
         stackIndex: stackIndex,
@@ -5625,6 +5634,7 @@ class _MapScreenState extends State<MapScreen>
         isCompact ? KubusHeaderMetrics.searchBarHeight + 6 : null;
     return KubusGeneralSearch(
       controller: _mapSearchController,
+      focusNode: _mapSearchFocusNode,
       hintText: l10n.mapSearchHint,
       semanticsLabel: l10n.mapSearchHint,
       enableBlur: kubusMapBlurEnabled(context),

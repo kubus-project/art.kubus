@@ -682,11 +682,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   SubjectAction(
                     icon: Icons.navigation_outlined,
                     label: l10n.commonNavigate,
-                    onPressed: () =>
-                        ArtworkLocationActions.showNavigationOptions(
-                      context,
-                      artwork,
-                    ),
+                    onPressed: () => MapDestination.ofArtwork(artwork)
+                        .showNavigationOptions(context),
                   ),
                 ],
               ),

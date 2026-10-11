@@ -26,6 +26,12 @@ abstract interface class NearbyArtMapDelegate {
     List<ArtMarker>? stackedMarkers,
     int? stackIndex,
   });
+
+  /// Selects the marker [resolve] finds once it is loaded (see
+  /// [KubusMapController.selectMarkerWhenLoaded]).
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve,
+  );
 }
 
 class KubusNearbyArtMapDelegate implements NearbyArtMapDelegate {
@@ -53,6 +59,13 @@ class KubusNearbyArtMapDelegate implements NearbyArtMapDelegate {
       duration: duration,
       compositionYOffsetPx: compositionYOffsetPx,
     );
+  }
+
+  @override
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve,
+  ) {
+    controller.selectMarkerWhenLoaded(resolve);
   }
 
   @override
@@ -149,9 +162,15 @@ class NearbyArtController {
     final target = marker?.position ?? fallbackPosition;
     final desiredZoom = math.max(_map.camera.zoom, minZoom);
 
-    // Selecting first ensures overlays open immediately.
+    // Selecting first ensures overlays open immediately. A row whose marker is
+    // not loaded yet waits for it: the camera moves first, then the card opens
+    // when the marker arrives (or the wait expires and the row only recentres).
     if (marker != null) {
       _map.selectMarker(marker);
+    } else {
+      _map.selectMarkerWhenLoaded(
+        (markers) => findMarkerForArtwork(artwork, markers),
+      );
     }
 
     await _map.animateTo(

@@ -146,7 +146,10 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
         ),
-        if (isLoading)
+        // A reload with rows already on screen keeps them: a viewport change
+        // reloads artworks, and replacing the rows would unmount the focused
+        // row (keyboard focus then cannot return to the card's opener).
+        if (isLoading && sorted.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: KubusNearbyArtLoadingState(),
@@ -175,6 +178,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkGridItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,
@@ -216,6 +220,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkListItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,

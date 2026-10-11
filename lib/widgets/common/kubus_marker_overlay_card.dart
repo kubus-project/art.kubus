@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../features/map/shared/marker_overlay_card_metrics.dart';
 import '../../l10n/app_localizations.dart';
@@ -10,6 +11,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/keyboard_activation_tracker.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../artwork_creator_byline.dart';
@@ -18,6 +20,7 @@ import '../map/kubus_map_glass_surface.dart';
 import 'kubus_cached_image.dart';
 import 'marker_attribution_section.dart';
 
+part 'kubus_marker_overlay_card_focus.dart';
 part 'kubus_marker_overlay_card_support.dart';
 part 'kubus_marker_overlay_card_header.dart';
 part 'kubus_marker_overlay_card_media.dart';
@@ -30,11 +33,15 @@ class MarkerOverlayActionSpec {
     required this.label,
     required this.isActive,
     required this.activeColor,
+    this.id,
     this.onTap,
     this.tooltip,
     this.semanticsLabel,
   });
 
+  /// Stable identifier for tests and analytics. Never read aloud: the spoken
+  /// name is [semanticsLabel], falling back to [label].
+  final String? id;
   final IconData icon;
   final String label;
   final bool isActive;
@@ -71,6 +78,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.linkedSubjectTypeLabel,
     this.linkedSubjectTitle,
     this.linkedSubjectSubtitle,
+    this.placeText,
     this.maxPreviewChars = MarkerOverlayCardMetrics.maxPreviewChars,
     this.maxPreviewWords = MarkerOverlayCardMetrics.maxPreviewWords,
     this.actions = const <MarkerOverlayActionSpec>[],
@@ -82,6 +90,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.onHorizontalDragEnd,
     this.maxWidth,
     this.maxHeight,
+    this.fallbackFocusNode,
+    this.onEscape,
   });
 
   final ArtMarker marker;
@@ -99,6 +109,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   final String? linkedSubjectTypeLabel;
   final String? linkedSubjectTitle;
   final String? linkedSubjectSubtitle;
+
+  /// One-line "where" shown under the byline, when the linked subject context
+  /// does not already carry a place.
+  final String? placeText;
 
   final int maxPreviewChars;
   final int maxPreviewWords;
@@ -124,6 +138,14 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   /// Optional sizing hints.
   final double? maxWidth;
   final double? maxHeight;
+
+  /// Where keyboard focus goes when a card opened from the keyboard closes and
+  /// the control that opened it is gone (the map search field, for example).
+  final FocusNode? fallbackFocusNode;
+
+  /// Closes the card on Escape while focus is inside it. Null leaves Escape to
+  /// the screen (the desktop map handles it at its root).
+  final VoidCallback? onEscape;
 
   /// Resolves the vertical composition for this card inside [availableHeight].
   ///
@@ -183,6 +205,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           linkedTitle.isNotEmpty && linkedTitle != displayTitle.trim(),
       hasLinkedSubtitle: (linkedSubjectSubtitle ?? '').trim().isNotEmpty,
       hasByline: artwork != null,
+      hasPlace: (placeText ?? '').trim().isNotEmpty,
       secondaryActionRows: actions.isEmpty ? 0 : 1,
       hasPager: stackCount > 1,
     );
@@ -190,6 +213,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _MarkerOverlayFocusHost(
+      fallbackFocusNode: fallbackFocusNode,
+      builder: _buildCard,
+    );
+  }
+
+  Widget _buildCard(BuildContext context, FocusNode entryFocusNode) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     const cardPadding = MarkerOverlayCardMetrics.cardPadding;
@@ -342,9 +372,11 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                   artwork: artwork,
                   canPresentExhibition: canPresentExhibition,
                   onTitleTap: resolvedTitleTap,
+                  titleFocusNode: entryFocusNode,
                   linkedSubjectTypeLabel: linkedSubjectTypeLabel,
                   linkedSubjectTitle: linkedSubjectTitle,
                   linkedSubjectSubtitle: linkedSubjectSubtitle,
+                  placeText: placeText,
                 ),
                 const SizedBox(height: MarkerOverlayCardMetrics.sectionGap),
                 if (previewChildren.isNotEmpty)
@@ -425,6 +457,16 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       wrapped = GestureDetector(
         behavior: HitTestBehavior.opaque,
         onHorizontalDragEnd: onHorizontalDragEnd,
+        child: wrapped,
+      );
+    }
+
+    if (onEscape != null) {
+      // Scoped to the card: Escape is only taken while focus is inside it.
+      wrapped = CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.escape): onEscape!,
+        },
         child: wrapped,
       );
     }

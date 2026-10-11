@@ -5,7 +5,6 @@ import 'package:art_kubus/features/map/shared/marker_overlay_card_metrics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
-import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/common/kubus_marker_overlay_card.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
@@ -530,9 +529,9 @@ void main() {
       expect(secondary, findsOneWidget);
       expect(primary, findsOneWidget);
       expect(tester.getSize(secondary).height,
-          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
+          greaterThanOrEqualTo(MarkerOverlayCardMetrics.touchTargetHeight));
       expect(tester.getSize(primary).height,
-          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
+          greaterThanOrEqualTo(MarkerOverlayCardMetrics.touchTargetHeight));
     },
   );
 
@@ -812,7 +811,7 @@ void main() {
                   .first,
             )
             .height,
-        KubusHeaderMetrics.actionHitArea,
+        MarkerOverlayCardMetrics.touchTargetHeight,
       );
       expect(
         tester
@@ -821,7 +820,7 @@ void main() {
                   const ValueKey<String>('marker_overlay_primary_action')),
             )
             .height,
-        KubusHeaderMetrics.actionHitArea,
+        MarkerOverlayCardMetrics.touchTargetHeight,
       );
     },
   );

@@ -51,6 +51,11 @@ Artwork _artwork({
 
 class _FakeNearbyMapDelegate implements NearbyArtMapDelegate {
   @override
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve,
+  ) {}
+
+  @override
   KubusMapCameraState get camera => const KubusMapCameraState(
         center: LatLng(46.0569, 14.5058),
         zoom: 14,
