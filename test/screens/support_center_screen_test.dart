@@ -915,6 +915,70 @@ void main() {
       expect(contactTab.getSemanticsData().label, contains('Contact support'));
       expect(flags.isSelected, Tristate.isTrue);
       expect(flags.isChecked, CheckedState.none);
+      // The chip's own checkable child is excluded, on every platform.
+      expect(contactTab.childrenCount, 0);
+      handle.dispose();
+    });
+
+    testWidgets(
+        'keyboard focus rings one tab; selected and focused are separate',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      backend((_) async => _ok(<Object?>[]));
+      await pumpScreen(tester, section: SupportSection.faq);
+
+      Finder tab(String label) => find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.role == SemanticsRole.tab &&
+                w.properties.label == label,
+          );
+      double ringWidth(String section) {
+        final box = tester.widget<DecoratedBox>(
+          find.byKey(ValueKey<String>('support-tab-ring-$section')),
+        );
+        final shape =
+            (box.decoration as ShapeDecoration).shape as StadiumBorder;
+        return shape.side.width;
+      }
+
+      // Tab lands on FAQ first: focused and selected at once.
+      for (var i = 0;
+          i < 12 &&
+              FocusManager.instance.primaryFocus?.debugLabel !=
+                  'support-tab-faq';
+          i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await settle(tester);
+      }
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'support-tab-faq');
+      final faqFocused = tester.getSemantics(tab('FAQ')).flagsCollection;
+      expect(faqFocused.isSelected, Tristate.isTrue);
+      expect(faqFocused.isFocused, Tristate.isTrue);
+      expect(ringWidth('faq'), 2);
+
+      // Tab again: focused only (Contact support is not selected).
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await settle(tester);
+      expect(FocusManager.instance.primaryFocus?.debugLabel,
+          'support-tab-contact');
+      final contact =
+          tester.getSemantics(tab('Contact support')).flagsCollection;
+      expect(contact.isFocused, Tristate.isTrue);
+      expect(contact.isSelected, Tristate.isFalse);
+      expect(ringWidth('contact'), 2);
+      expect(ringWidth('faq'), 0, reason: 'the ring moves with focus');
+      // FAQ stays selected while focus is elsewhere.
+      final faqSelectedOnly = tester.getSemantics(tab('FAQ')).flagsCollection;
+      expect(faqSelectedOnly.isSelected, Tristate.isTrue);
+      expect(faqSelectedOnly.isFocused, isNot(Tristate.isTrue));
+      // The selected tab carries the check mark, so selection is not fill alone.
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'FAQ'))
+            .showCheckmark,
+        isTrue,
+      );
       handle.dispose();
     });
 

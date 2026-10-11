@@ -11,6 +11,7 @@ import '../providers/support_center_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/contextual_auth_gate.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/kubus_snackbar.dart';
 
@@ -18,6 +19,10 @@ import '../widgets/kubus_snackbar.dart';
 /// settings and the profile all open [SupportCenterScreen]; [initialSection]
 /// selects the tab.
 enum SupportSection { faq, contact, bug, requests }
+
+/// Keyboard focus ring on a section tab: 2px, drawn outside the chip with a gap.
+const double _tabRingWidth = 2;
+const double _tabRingGap = 4;
 
 /// Contract limits (Support Center backend contract, requester endpoints 1 and 4).
 const int _maxSubjectLength = 255;
@@ -67,9 +72,26 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   SupportCenterProvider get _support => context.read<SupportCenterProvider>();
 
+  /// One focus node per section tab, so the ring can follow keyboard focus.
+  final Map<SupportSection, FocusNode> _tabFocus =
+      <SupportSection, FocusNode>{};
+  FocusNode _tabFocusNode(SupportSection section) =>
+      _tabFocus.putIfAbsent(section, () {
+        final node = FocusNode(debugLabel: 'support-tab-${section.name}');
+        node.addListener(_onTabFocusChanged);
+        return node;
+      });
+
+  void _onTabFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode _) => _onTabFocusChanged();
+
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
     _section = widget.initialSection;
     if (_section == SupportSection.requests) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -139,6 +161,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    for (final node in _tabFocus.values) {
+      node.removeListener(_onTabFocusChanged);
+      node.dispose();
+    }
     for (final controller in [
       _subject,
       _message,
@@ -323,6 +350,54 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       );
       return;
     }
+  }
+
+  /// A section tab. Semantics: role tab with selected and focus state, one node,
+  /// named once. The chip itself is excluded from semantics: on web it reports
+  /// itself as checkable, which removes aria-selected from the tab.
+  /// Keyboard focus gets its own ring outside the chip (role focus colour,
+  /// traditional highlight only) and the chip's grey focus fill is cleared, so
+  /// focus is never mistaken for the selected fill.
+  Widget _sectionTab(SupportSection section, String label) {
+    final focusNode = _tabFocusNode(section);
+    final selected = _section == section;
+    final keyboardFocus = focusNode.hasFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    final ringColor = KubusColorRoles.of(context).focus;
+    return Semantics(
+      role: SemanticsRole.tab,
+      selected: selected,
+      focusable: true,
+      focused: focusNode.hasFocus,
+      label: label,
+      onTap: () => _go(section),
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.all(_tabRingGap),
+          child: DecoratedBox(
+            key: ValueKey<String>('support-tab-ring-${section.name}'),
+            decoration: ShapeDecoration(
+              shape: StadiumBorder(
+                side: keyboardFocus
+                    ? BorderSide(color: ringColor, width: _tabRingWidth)
+                    : BorderSide.none,
+              ),
+            ),
+            child: Theme(
+              data: Theme.of(context).copyWith(focusColor: Colors.transparent),
+              child: ChoiceChip(
+                focusNode: focusNode,
+                selected: selected,
+                label: Text(label),
+                // The check mark is the non-fill selected indicator.
+                showCheckmark: true,
+                onSelected: (_) => _go(section),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   String _composeBugReport() {
@@ -1032,21 +1107,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                     runSpacing: KubusSpacing.sm,
                     children: [
                       for (final section in SupportSection.values)
-                        // MergeSemantics folds the chip into this tab, so each
-                        // section is one node (announced once) and it keeps the
-                        // chip's focus, which keyboard users need to see.
-                        MergeSemantics(
-                          child: Semantics(
-                            role: SemanticsRole.tab,
-                            selected: _section == section,
-                            onTap: () => _go(section),
-                            child: ChoiceChip(
-                              selected: _section == section,
-                              label: Text(sectionLabels[section]!),
-                              onSelected: (_) => _go(section),
-                            ),
-                          ),
-                        ),
+                        _sectionTab(section, sectionLabels[section]!),
                     ],
                   ),
                 ),
