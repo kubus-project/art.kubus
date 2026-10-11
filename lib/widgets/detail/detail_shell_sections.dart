@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../common/kubus_cached_image.dart';
 import 'detail_shell_tokens.dart';
 
 /// A standard section container with header and content.
@@ -308,9 +309,10 @@ class CollaboratorsRow extends StatelessWidget {
         ),
         child: ClipOval(
           child: resolvedAvatar != null
-              ? Image.network(
-                  resolvedAvatar,
+              ? KubusCachedImage(
+                  imageUrl: resolvedAvatar,
                   fit: BoxFit.cover,
+                  placeholderBuilder: (_) => _buildInitials(context, collab),
                   errorBuilder: (_, __, ___) => _buildInitials(context, collab),
                 )
               : _buildInitials(context, collab),
@@ -585,9 +587,11 @@ class DetailArtworkCard extends StatelessWidget {
                     ),
                   ),
                   child: resolvedImage != null
-                      ? Image.network(
-                          resolvedImage,
+                      ? KubusCachedImage(
+                          imageUrl: resolvedImage,
                           fit: BoxFit.cover,
+                          placeholderBuilder: (_) =>
+                              _buildPlaceholder(context, effectiveAccent),
                           errorBuilder: (_, __, ___) =>
                               _buildPlaceholder(context, effectiveAccent),
                         )

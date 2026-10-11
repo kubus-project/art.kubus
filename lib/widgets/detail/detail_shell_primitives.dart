@@ -733,6 +733,7 @@ class DetailIdentityBlock extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.titleStyle,
+    this.showTitle = true,
   });
 
   final String title;
@@ -740,6 +741,10 @@ class DetailIdentityBlock extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final TextStyle? titleStyle;
+
+  /// Set to false when the shell header already shows this title, so the
+  /// screen keeps one visible title. The kicker and subtitle still show.
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -765,18 +770,19 @@ class DetailIdentityBlock extends StatelessWidget {
                 ),
                 const SizedBox(height: DetailSpacing.xs),
               ],
-              Text(
-                title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: titleStyle ??
-                    DetailTypography.screenTitle(context).copyWith(
-                      fontSize: KubusHeaderMetrics.screenTitle,
-                      height: 1.16,
-                    ),
-              ),
+              if (showTitle)
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle ??
+                      DetailTypography.screenTitle(context).copyWith(
+                        fontSize: KubusHeaderMetrics.screenTitle,
+                        height: 1.16,
+                      ),
+                ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: DetailSpacing.sm),
+                if (showTitle) const SizedBox(height: DetailSpacing.sm),
                 Text(
                   subtitle!,
                   maxLines: 2,

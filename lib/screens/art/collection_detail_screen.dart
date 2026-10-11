@@ -17,6 +17,7 @@ import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
@@ -165,12 +166,19 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           color: scheme.onSurface.withValues(alpha: 0.35),
                         ),
                       )
-                    : Image.network(
-                        thumbnailUrl,
+                    : KubusCachedImage(
+                        imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
+                        placeholderBuilder: (_) => Center(
+                          child: Icon(
+                            Icons.collections,
+                            size: 72,
+                            color: scheme.onSurface.withValues(alpha: 0.35),
+                          ),
+                        ),
                         errorBuilder: (_, __, ___) => Center(
                           child: Icon(
-                            Icons.broken_image_outlined,
+                            Icons.image_outlined,
                             size: 56,
                             color: scheme.onSurface.withValues(alpha: 0.35),
                           ),
@@ -396,36 +404,78 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                       color: scheme.onSurface,
                     ),
                   ),
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          scheme.primary.withValues(alpha: 0.22),
-                          scheme.secondary.withValues(alpha: 0.18),
-                        ],
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              scheme.primary.withValues(alpha: 0.22),
+                              scheme.secondary.withValues(alpha: 0.18),
+                            ],
+                          ),
+                        ),
+                        child: thumbnailUrl == null
+                            ? Center(
+                                child: Icon(
+                                  Icons.collections,
+                                  size: 72,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.35),
+                                ),
+                              )
+                            : KubusCachedImage(
+                                imageUrl: thumbnailUrl,
+                                fit: BoxFit.cover,
+                                placeholderBuilder: (_) => Center(
+                                  child: Icon(
+                                    Icons.collections,
+                                    size: 72,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    size: 56,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                              ),
                       ),
-                    ),
-                    child: thumbnailUrl == null
-                        ? Center(
-                            child: Icon(
-                              Icons.collections,
-                              size: 72,
-                              color: scheme.onSurface.withValues(alpha: 0.35),
-                            ),
-                          )
-                        : Image.network(
-                            thumbnailUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                size: 56,
-                                color: scheme.onSurface.withValues(alpha: 0.35),
+                      // Token scrim behind the title: the surface colour fades in
+                      // over the cover's bottom edge, so the title's onSurface
+                      // text keeps contrast over bright and dark photos alike.
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 128,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  scheme.surface.withValues(alpha: 0),
+                                  scheme.surface.withValues(alpha: 0.9),
+                                  scheme.surface.withValues(alpha: 0.92),
+                                ],
+                                // The title band sits near 0.9 alpha, so the
+                                // title keeps 4.5:1 over dark and bright photos.
+                                stops: const [0.0, 0.45, 1.0],
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -565,11 +615,15 @@ class _ArtworkRow extends StatelessWidget {
                         Icons.image_outlined,
                         color: scheme.onSurface.withValues(alpha: 0.4),
                       )
-                    : Image.network(
-                        imageUrl,
+                    : KubusCachedImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
+                        placeholderBuilder: (_) => Icon(
+                          Icons.image_outlined,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
                         errorBuilder: (_, __, ___) => Icon(
-                          Icons.broken_image_outlined,
+                          Icons.image_outlined,
                           color: scheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),

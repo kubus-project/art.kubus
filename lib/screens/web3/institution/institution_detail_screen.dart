@@ -10,6 +10,7 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../widgets/common/kubus_cached_image.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
@@ -174,9 +175,24 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                         color: scheme.onSurface.withValues(alpha: 0.72),
                       ),
                     )
-                  : Image.network(
-                      resolvedImage,
+                  : KubusCachedImage(
+                      imageUrl: resolvedImage,
                       fit: BoxFit.cover,
+                      placeholderBuilder: (_) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              scheme.primary.withValues(alpha: 0.22),
+                              scheme.secondary.withValues(alpha: 0.18),
+                            ],
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.apartment_outlined,
+                          size: 48,
+                          color: scheme.onSurface.withValues(alpha: 0.72),
+                        ),
+                      ),
                       errorBuilder: (_, __, ___) => DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
