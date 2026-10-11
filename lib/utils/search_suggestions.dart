@@ -119,6 +119,14 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       final wallet =
           (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])
               ?.toString();
+      // Only a wallet the row itself carries counts as one. The id fallback
+      // above names the record for institutions, events and artworks.
+      final hasOwnWallet =
+          (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'])
+                  ?.toString()
+                  .trim()
+                  .isNotEmpty ??
+              false;
 
       String label;
       String? subtitle;
@@ -468,7 +476,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         'type': type,
         if (rawDisplayName != null) 'displayName': rawDisplayName,
         if (rawUsername != null) 'username': rawUsername,
-        if (wallet != null) 'wallet': wallet,
+        // A profile's id is its wallet. Another kind's id is a record id, so
+        // it is not emitted as a wallet (an institution row opened that id as
+        // a profile).
+        if (wallet != null && (type.toLowerCase() == 'profile' || hasOwnWallet))
+          'wallet': wallet,
         if (markerCandidate != null && markerCandidate.isNotEmpty)
           'markerId': markerCandidate,
         if (subjectTypeCandidate != null && subjectTypeCandidate.isNotEmpty)
