@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../features/map/telemetry/map_engagement_tracker.dart';
@@ -49,6 +48,8 @@ import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
+import '../../utils/keyboard_activation_tracker.dart';
+import '../../utils/map_destination_actions.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_perf_tracker.dart';
 import '../../utils/map_performance_debug.dart';
@@ -73,7 +74,6 @@ import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
@@ -398,6 +398,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.markerRefreshInterval;
 
   late final KubusSearchController _mapSearchController;
+  final FocusNode _mapSearchFocusNode =
+      FocusNode(debugLabel: 'desktop_map_search');
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   TutorialOverlayController? _tutorialOverlayController;
@@ -509,6 +511,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _cameraZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
@@ -2162,7 +2165,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     WalkingNavigationProvider navigation,
   ) async {
     final intent = navigation.intent;
-    if (intent != null) await MapNavigation.openExternalWalking(intent);
+    if (intent == null) return;
+    await MapDestination.fromWalkingIntent(intent).openWalkingExternally();
   }
 
   void _viewWalkingDestination(WalkingNavigationProvider navigation) {
@@ -2380,6 +2384,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
     _markerSyncEngine.dispose();
+    _mapSearchFocusNode.dispose();
     MapAttributionHelper.setDesktopMapEnabled(false);
     _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
@@ -3109,6 +3114,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       key: _tutorialSearchKey,
       child: KubusGeneralSearch(
         controller: _mapSearchController,
+        focusNode: _mapSearchFocusNode,
         hintText: l10n.mapSearchHint,
         semanticsLabel: l10n.mapSearchHint,
         enableBlur: useMapBlur,
@@ -3398,53 +3404,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
-              if (artwork.description.isNotEmpty) ...[
-                const SizedBox(height: KubusSpacing.md),
-                DetailSectionLabel(label: l10n.commonDescription),
-              ],
-              if (artwork.description.isNotEmpty) ...[
-                Text(
-                  artwork.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.5,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.78),
-                      ),
-                  maxLines: 8,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: KubusSpacing.md),
-              ],
-              MarkerAttributionSection.fromMarkerAndArtwork(
-                selectedMarker,
-                artwork,
-              ),
-              DetailSectionLabel(label: l10n.commonDetails),
-              DetailContextCluster(
-                compact: true,
-                items: [
-                  DetailContextItem(
-                    icon: Icons.visibility,
-                    value: '${artwork.viewsCount}',
-                  ),
-                  if (artwork.discoveryCount > 0)
-                    DetailContextItem(
-                      icon: Icons.explore,
-                      value: l10n.desktopMapDiscoveriesCount(
-                        artwork.discoveryCount,
-                      ),
-                    ),
-                ],
-              ),
-              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               DetailActionsSection(
                 title: l10n.commonActions,
                 labelPosition: DetailActionLabelPosition.afterPrimary,
                 primaryToLabelSpacing: KubusSpacing.md,
-                maxVisibleActions: 5,
+                // Six secondary actions at most; Directions is pinned so it
+                // leads the grid and is never moved behind More.
+                maxVisibleActions: 6,
+                secondaryLayout: DetailSecondaryActionLayout.grid,
                 primaryAction: SizedBox(
                   width: double.infinity,
                   child: DetailPrimaryCtaButton(
@@ -3523,6 +3491,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     label: '${artwork.likesCount}',
+                    semanticsLabel:
+                        '${l10n.commonLikes}, ${artwork.likesCount}',
                     onTap: () async {
                       final authenticated =
                           await const ContextualAuthGate().ensureAuthenticated(
@@ -3545,6 +3515,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   DetailSecondaryAction(
                     icon: Icons.comment_outlined,
                     label: '${artwork.commentsCount}',
+                    semanticsLabel:
+                        '${l10n.commonComments}, ${artwork.commentsCount}',
                     onTap: () {
                       _mapCommentsPanelController.openAndScrollToTop();
                     },
@@ -3565,24 +3537,64 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  DetailSecondaryAction(
-                    icon: Icons.directions,
-                    label: l10n.commonGetDirections,
-                    onTap: () async {
-                      final uri = Uri.parse(
-                        'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
-                      );
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    tooltip: l10n.commonGetDirections,
-                  ),
+                  if (MapDestination.isValidCoordinate(artwork.position))
+                    DetailSecondaryAction(
+                      icon: Icons.directions,
+                      label: l10n.commonGetDirections,
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: artwork.id,
+                          title: artwork.title,
+                          position: artwork.position,
+                        ).showNavigationOptions(context),
+                      ),
+                      tooltip: l10n.commonGetDirections,
+                      pinned: true,
+                    ),
                 ],
               ),
+              const SizedBox(height: KubusSpacing.lg),
+              if (artwork.description.isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.md),
+                DetailSectionLabel(label: l10n.commonDescription),
+              ],
+              if (artwork.description.isNotEmpty) ...[
+                Text(
+                  artwork.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
+                        height: 1.5,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ],
+              MarkerAttributionSection.fromMarkerAndArtwork(
+                selectedMarker,
+                artwork,
+              ),
+              DetailSectionLabel(label: l10n.commonDetails),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.visibility,
+                    value: '${artwork.viewsCount}',
+                  ),
+                  if (artwork.discoveryCount > 0)
+                    DetailContextItem(
+                      icon: Icons.explore,
+                      value: l10n.desktopMapDiscoveriesCount(
+                        artwork.discoveryCount,
+                      ),
+                    ),
+                ],
+              ),
+              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               if (AppConfig.isFeatureEnabled('collabInvites') && isSignedIn)
                 ArtworkCollaboratorsExpandableCard(
@@ -3960,21 +3972,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (exhibition.lat != null && exhibition.lng != null)
+                  if (exhibition.lat != null &&
+                      exhibition.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(exhibition.lat!, exhibition.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: exhibition.id,
+                          title: exhibition.title,
+                          position: LatLng(exhibition.lat!, exhibition.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -4169,21 +4181,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (event.lat != null && event.lng != null)
+                  if (event.lat != null &&
+                      event.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(event.lat!, event.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: event.id,
+                          title: event.title,
+                          position: LatLng(event.lat!, event.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -5619,6 +5631,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         onSelectStackIndex: onSelectStackIndex,
         onHorizontalDragEnd: onHorizontalDragEnd,
         maxCardHeight: maxCardHeight,
+        fallbackFocusNode: _mapSearchFocusNode,
       ),
     );
   }
@@ -6374,11 +6387,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       closeAccentColor: themeProvider.accentColor,
       onClose: _closeDesktopMarkerDetails,
       actions: <MarkerInfoDetailAction>[
+        if (MapDestination.isValidCoordinate(marker.position))
+          MarkerInfoDetailAction(
+            icon: Icons.directions,
+            label: l10n.commonNavigate,
+            tooltip: l10n.commonGetDirections,
+            semanticsLabel: l10n.artDetailNavigateToTitle(detail.title),
+            onTap: () => unawaited(
+              MapDestination(
+                id: marker.id,
+                title: detail.title,
+                position: marker.position,
+              ).showNavigationOptions(context),
+            ),
+          ),
         MarkerInfoDetailAction(
           icon: Icons.share_outlined,
           label: l10n.commonShare,
           tooltip: l10n.commonShare,
-          semanticsLabel: 'marker_info_share',
+          semanticsLabel: l10n.commonShare,
           onTap: () {
             ShareService().showShareSheet(
               context,

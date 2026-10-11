@@ -1,4 +1,6 @@
 import 'package:latlong2/latlong.dart';
+
+import '../utils/map_coordinate_rules.dart';
 import 'promotion.dart';
 
 enum ArtworkStatus {
@@ -239,12 +241,9 @@ class Artwork {
     return getDistanceFrom(currentPosition) <= maxDistanceMeters;
   }
 
-  /// Whether the artwork has a meaningful location (filters out null-island defaults).
-  bool get hasValidLocation {
-    final nearNullIsland =
-        position.latitude.abs() < 0.0001 && position.longitude.abs() < 0.0001;
-    return !nearNullIsland;
-  }
+  /// Whether the artwork has a meaningful location: finite, in range, and not
+  /// the null-island default. The rule is shared with every navigation surface.
+  bool get hasValidLocation => isValidMapCoordinate(position);
 
   /// Check if artwork is discovered
   bool get isDiscovered => status != ArtworkStatus.undiscovered;

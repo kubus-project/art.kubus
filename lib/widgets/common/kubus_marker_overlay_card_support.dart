@@ -75,13 +75,18 @@ class _OverlayIconButton extends StatelessWidget {
           cursor: onTap == null
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: SizedBox(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea,
-              child: Center(child: visual),
+          // InkWell, not GestureDetector: a bare gesture detector is not a
+          // focus target, so the close control was unreachable by keyboard.
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: SizedBox(
+                width: MarkerOverlayCardMetrics.touchTargetHeight,
+                height: MarkerOverlayCardMetrics.touchTargetHeight,
+                child: Center(child: visual),
+              ),
             ),
           ),
         ),
@@ -170,7 +175,7 @@ class _OverlayActionButton extends StatelessWidget {
         onTap: spec.onTap,
         child: SizedBox(
           key: const ValueKey<String>('marker_overlay_secondary_action'),
-          height: KubusHeaderMetrics.actionHitArea,
+          height: MarkerOverlayCardMetrics.touchTargetHeight,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: showLabel ? MainAxisSize.max : MainAxisSize.min,
@@ -255,12 +260,13 @@ class _OverlayPager extends StatelessWidget {
           cursor: onTap == null
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          // InkWell, not GestureDetector: pages are keyboard targets too.
+          child: InkWell(
             onTap: onTap,
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: SizedBox(
-              width: KubusHeaderMetrics.actionHitArea,
-              height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
+              width: MarkerOverlayCardMetrics.touchTargetHeight,
+              height: MarkerOverlayCardMetrics.touchTargetHeight,
               child: Center(
                 child: Icon(
                   icon,
@@ -318,13 +324,12 @@ class _OverlayPager extends StatelessWidget {
                       selected: isActive,
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
+                        child: InkWell(
                           onTap: () => onSelectIndex!(dotIndex),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           child: SizedBox(
                             width: 18,
-                            height: KubusHeaderMetrics.actionHitArea -
-                                KubusSpacing.xs,
+                            height: MarkerOverlayCardMetrics.touchTargetHeight,
                             child: Center(child: dot),
                           ),
                         ),
@@ -388,7 +393,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
         child: ConstrainedBox(
           key: const ValueKey<String>('marker_overlay_primary_action'),
           constraints: const BoxConstraints(
-            minHeight: KubusHeaderMetrics.actionHitArea,
+            minHeight: MarkerOverlayCardMetrics.touchTargetHeight,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

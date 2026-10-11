@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -505,6 +506,7 @@ class DetailSecondaryAction {
     this.activeColor,
     this.tooltip,
     this.semanticsLabel,
+    this.pinned = false,
   });
 
   final IconData icon;
@@ -514,6 +516,56 @@ class DetailSecondaryAction {
   final Color? activeColor;
   final String? tooltip;
   final String? semanticsLabel;
+
+  /// A pinned action leads its cluster and is never moved behind the More
+  /// control, so the one action a person most needs (directions) is never
+  /// hidden by a cap.
+  final bool pinned;
+}
+
+/// The actions a [DetailSecondaryActionCluster] shows, and the ones it moves
+/// behind an explicit More control. Nothing is cut silently.
+///
+/// Rules, in order: an action without a label has nothing to say and is
+/// dropped; pinned actions lead and are always shown, even past the cap; when
+/// everything fits in [maxVisible] nothing overflows; otherwise one slot is
+/// reserved for the More control and the remaining slots take the unpinned
+/// actions in their given order.
+({List<DetailSecondaryAction> shown, List<DetailSecondaryAction> overflow})
+    partitionDetailSecondaryActions(
+  List<DetailSecondaryAction> actions, {
+  required int maxVisible,
+}) {
+  final labelled = actions
+      .where((action) => action.label.trim().isNotEmpty)
+      .toList(growable: false);
+  final pinned = labelled.where((action) => action.pinned).toList();
+  final unpinned = labelled.where((action) => !action.pinned).toList();
+  final ordered = <DetailSecondaryAction>[...pinned, ...unpinned];
+  if (ordered.length <= maxVisible) {
+    return (shown: ordered, overflow: const <DetailSecondaryAction>[]);
+  }
+  var freeSlots = maxVisible - 1 - pinned.length;
+  if (freeSlots < 0) freeSlots = 0;
+  final shown = <DetailSecondaryAction>[
+    ...pinned,
+    ...unpinned.take(freeSlots),
+  ];
+  final overflow = ordered
+      .where((action) => !shown.any((kept) => identical(kept, action)))
+      .toList(growable: false);
+  return (shown: shown, overflow: overflow);
+}
+
+/// How a [DetailSecondaryActionCluster] lays its actions out.
+enum DetailSecondaryActionLayout {
+  /// Labeled pills that wrap onto further lines.
+  wrap,
+
+  /// Equal-width tiles, [DetailSecondaryActionCluster.columns] to a row, each
+  /// with its icon above its label. Every action sits in a predictable row
+  /// instead of wrapping onto a line that can fall below the fold.
+  grid,
 }
 
 class DetailSectionLabel extends StatelessWidget {
@@ -558,6 +610,7 @@ class DetailActionsSection extends StatelessWidget {
     required this.actions,
     this.primaryAction,
     this.maxVisibleActions = 4,
+    this.secondaryLayout = DetailSecondaryActionLayout.wrap,
     this.labelPosition = DetailActionLabelPosition.beforePrimary,
     this.labelBottomSpacing = DetailSpacing.xs,
     this.primaryBottomSpacing = DetailSpacing.sm,
@@ -568,6 +621,7 @@ class DetailActionsSection extends StatelessWidget {
   final List<DetailSecondaryAction> actions;
   final Widget? primaryAction;
   final int maxVisibleActions;
+  final DetailSecondaryActionLayout secondaryLayout;
   final DetailActionLabelPosition labelPosition;
   final double? labelBottomSpacing;
   final double? primaryBottomSpacing;
@@ -609,6 +663,7 @@ class DetailActionsSection extends StatelessWidget {
       DetailSecondaryActionCluster(
         maxVisible: maxVisibleActions,
         actions: actions,
+        layout: secondaryLayout,
       ),
     );
 
@@ -624,34 +679,303 @@ class DetailSecondaryActionCluster extends StatelessWidget {
     super.key,
     required this.actions,
     this.maxVisible = 4,
+    this.layout = DetailSecondaryActionLayout.wrap,
+    this.columns = 3,
   });
 
   final List<DetailSecondaryAction> actions;
   final int maxVisible;
+  final DetailSecondaryActionLayout layout;
+
+  /// Tiles per row for [DetailSecondaryActionLayout.grid].
+  final int columns;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final visible = actions
-        .where((action) => action.label.trim().isNotEmpty)
-        .take(maxVisible)
-        .toList(growable: false);
-    if (visible.isEmpty) return const SizedBox.shrink();
+    final isDark = theme.brightness == Brightness.dark;
+    final parts = partitionDetailSecondaryActions(
+      actions,
+      maxVisible: maxVisible,
+    );
+    if (parts.shown.isEmpty && parts.overflow.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final l10n = AppLocalizations.of(context)!;
 
-    return Wrap(
-      spacing: DetailSpacing.sm,
-      runSpacing: DetailSpacing.sm,
-      children: [
-        for (final action in visible)
-          _QuietActionButton(
-            action: action,
-            scheme: scheme,
-            isDark: theme.brightness == Brightness.dark,
+    switch (layout) {
+      case DetailSecondaryActionLayout.wrap:
+        return Wrap(
+          spacing: DetailSpacing.sm,
+          runSpacing: DetailSpacing.sm,
+          children: [
+            for (final action in parts.shown)
+              _QuietActionButton(
+                action: action,
+                scheme: scheme,
+                isDark: isDark,
+              ),
+            if (parts.overflow.isNotEmpty)
+              _MoreActionsButton(
+                actions: parts.overflow,
+                scheme: scheme,
+                isDark: isDark,
+                tooltip: l10n.commonMore,
+                stacked: false,
+              ),
+          ],
+        );
+      case DetailSecondaryActionLayout.grid:
+        final tiles = <Widget>[
+          for (final action in parts.shown)
+            _GridActionCell(action: action, scheme: scheme, isDark: isDark),
+          if (parts.overflow.isNotEmpty)
+            _MoreActionsButton(
+              actions: parts.overflow,
+              scheme: scheme,
+              isDark: isDark,
+              tooltip: l10n.commonMore,
+              stacked: true,
+            ),
+        ];
+        return _TileGrid(columns: columns < 1 ? 1 : columns, tiles: tiles);
+    }
+  }
+}
+
+/// Rows of equal-width tiles. Every row is as tall as its tallest tile, and a
+/// short last row keeps the same column widths as the full rows above it.
+class _TileGrid extends StatelessWidget {
+  const _TileGrid({required this.columns, required this.tiles});
+
+  final int columns;
+  final List<Widget> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var start = 0; start < tiles.length; start += columns) {
+      final rowTiles = tiles.skip(start).take(columns).toList(growable: false);
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: DetailSpacing.sm));
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < columns; i++) ...[
+                if (i > 0) const SizedBox(width: DetailSpacing.sm),
+                Expanded(
+                  child: i < rowTiles.length
+                      ? rowTiles[i]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
           ),
-      ],
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
     );
   }
+}
+
+/// One secondary action in the grid. A quiet cell like [_QuietActionButton], not
+/// a destination card: destinations are `KubusActionTile`.
+class _GridActionCell extends StatelessWidget {
+  const _GridActionCell({
+    required this.action,
+    required this.scheme,
+    required this.isDark,
+  });
+
+  final DetailSecondaryAction action;
+  final ColorScheme scheme;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = action.activeColor ?? scheme.primary;
+    final tile = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(DetailRadius.md),
+        onTap: action.onTap,
+        child: _ActionFace(
+          icon: action.icon,
+          label: action.label,
+          stacked: true,
+          isActive: action.isActive,
+          activeColor: activeColor,
+          scheme: scheme,
+          isDark: isDark,
+        ),
+      ),
+    );
+    return _describeAction(action, tile);
+  }
+}
+
+class _MoreActionsButton extends StatelessWidget {
+  const _MoreActionsButton({
+    required this.actions,
+    required this.scheme,
+    required this.isDark,
+    required this.tooltip,
+    required this.stacked,
+  });
+
+  /// Overflow actions in display order. Selecting one invokes its [onTap].
+  final List<DetailSecondaryAction> actions;
+  final ColorScheme scheme;
+  final bool isDark;
+  final String tooltip;
+  final bool stacked;
+
+  @override
+  Widget build(BuildContext context) {
+    final face = _ActionFace(
+      icon: Icons.more_horiz,
+      label: tooltip,
+      stacked: stacked,
+      isActive: false,
+      activeColor: scheme.primary,
+      scheme: scheme,
+      isDark: isDark,
+    );
+    return PopupMenuButton<int>(
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      onSelected: (index) => actions[index].onTap?.call(),
+      itemBuilder: (context) => [
+        for (var i = 0; i < actions.length; i++)
+          PopupMenuItem<int>(
+            value: i,
+            enabled: actions[i].onTap != null,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(actions[i].icon, size: 18),
+                const SizedBox(width: DetailSpacing.sm),
+                Text(actions[i].label),
+              ],
+            ),
+          ),
+      ],
+      child: face,
+    );
+  }
+}
+
+/// The shared surface of a quiet action: an icon and label in one pill or, for
+/// the grid, an icon above a label in a tile.
+class _ActionFace extends StatelessWidget {
+  const _ActionFace({
+    required this.icon,
+    required this.label,
+    required this.stacked,
+    required this.isActive,
+    required this.activeColor,
+    required this.scheme,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool stacked;
+  final bool isActive;
+  final Color activeColor;
+  final ColorScheme scheme;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = isActive ? activeColor : scheme.onSurfaceVariant;
+    final labelStyle = DetailTypography.button(context).copyWith(
+      color: fg,
+      fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+    );
+    final iconWidget = Icon(icon, size: stacked ? 18 : 16, color: fg);
+    final text = Text(
+      label,
+      maxLines: stacked ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: stacked ? TextAlign.center : TextAlign.start,
+      style: labelStyle,
+    );
+    return Container(
+      padding: stacked
+          ? const EdgeInsets.symmetric(
+              horizontal: DetailSpacing.xs,
+              vertical: DetailSpacing.sm,
+            )
+          : const EdgeInsets.symmetric(
+              horizontal: DetailSpacing.md,
+              vertical: DetailSpacing.sm,
+            ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(DetailRadius.md),
+        color: isActive
+            ? activeColor.withValues(alpha: isDark ? 0.22 : 0.14)
+            : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+        border: Border.all(
+          color: isActive
+              ? activeColor.withValues(alpha: 0.35)
+              : scheme.outlineVariant.withValues(alpha: 0.30),
+        ),
+      ),
+      child: stacked
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                iconWidget,
+                const SizedBox(height: DetailSpacing.xs),
+                text,
+              ],
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                iconWidget,
+                const SizedBox(width: DetailSpacing.xs),
+                text,
+              ],
+            ),
+    );
+  }
+}
+
+/// Gives a grid tile its spoken label, activation and tooltip. The tile's own
+/// semantics are excluded so the label is spoken once, as a button.
+///
+/// The spoken label is the explicit semantics label, else the tooltip, else the
+/// visible label. The visible label can be a bare count ("12"), which is not
+/// something to read aloud on its own.
+Widget _describeAction(DetailSecondaryAction action, Widget child) {
+  var described = child;
+  final semanticsLabel = (action.semanticsLabel ?? '').trim();
+  final tooltip = (action.tooltip ?? '').trim();
+  final spoken = semanticsLabel.isNotEmpty
+      ? semanticsLabel
+      : (tooltip.isNotEmpty ? tooltip : action.label);
+  described = Semantics(
+    container: true,
+    button: true,
+    enabled: action.onTap != null,
+    focusable: action.onTap != null,
+    label: spoken,
+    onTap: action.onTap,
+    child: ExcludeSemantics(child: described),
+  );
+  if ((action.tooltip ?? '').trim().isNotEmpty) {
+    described = Tooltip(message: action.tooltip!, child: described);
+  }
+  return described;
 }
 
 class _QuietActionButton extends StatelessWidget {
@@ -733,6 +1057,7 @@ class DetailIdentityBlock extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.titleStyle,
+    this.showTitle = true,
   });
 
   final String title;
@@ -740,6 +1065,10 @@ class DetailIdentityBlock extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final TextStyle? titleStyle;
+
+  /// Hide the title when the surface's header already shows it, so a screen
+  /// does not present the same title twice. Kicker and subtitle still show.
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -765,16 +1094,17 @@ class DetailIdentityBlock extends StatelessWidget {
                 ),
                 const SizedBox(height: DetailSpacing.xs),
               ],
-              Text(
-                title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: titleStyle ??
-                    DetailTypography.screenTitle(context).copyWith(
-                      fontSize: KubusHeaderMetrics.screenTitle,
-                      height: 1.16,
-                    ),
-              ),
+              if (showTitle)
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle ??
+                      DetailTypography.screenTitle(context).copyWith(
+                        fontSize: KubusHeaderMetrics.screenTitle,
+                        height: 1.16,
+                      ),
+                ),
               if ((subtitle ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: DetailSpacing.sm),
                 Text(

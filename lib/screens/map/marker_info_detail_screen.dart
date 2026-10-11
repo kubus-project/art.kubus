@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +16,7 @@ import '../../services/share/share_types.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/map_destination_actions.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -133,14 +136,29 @@ class MarkerInfoDetailScreen extends StatelessWidget {
                         label: l10n.commonOpenOnMap,
                         onTap: () => Navigator.of(context).pop(),
                         tooltip: l10n.commonOpenOnMap,
-                        semanticsLabel: 'marker_info_open_on_map',
+                        semanticsLabel: l10n.commonOpenOnMap,
+                      ),
+                    if (MapDestination.isValidCoordinate(marker.position))
+                      MarkerInfoDetailAction(
+                        icon: Icons.directions,
+                        label: l10n.commonNavigate,
+                        onTap: () => unawaited(
+                          MapDestination(
+                            id: marker.id,
+                            title: detail.title,
+                            position: marker.position,
+                          ).showNavigationOptions(context),
+                        ),
+                        tooltip: l10n.commonGetDirections,
+                        semanticsLabel:
+                            l10n.artDetailNavigateToTitle(detail.title),
                       ),
                     MarkerInfoDetailAction(
                       icon: Icons.share_outlined,
                       label: l10n.commonShare,
                       onTap: () => _shareMarker(context),
                       tooltip: l10n.commonShare,
-                      semanticsLabel: 'marker_info_share',
+                      semanticsLabel: l10n.commonShare,
                       activeColor: themeProvider.accentColor,
                     ),
                   ],
