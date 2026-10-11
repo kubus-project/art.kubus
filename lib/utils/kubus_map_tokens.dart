@@ -65,6 +65,15 @@ abstract final class KubusMapMetrics {
   /// Visible mobile primary control size, including its tap target.
   static const double mobileControlSize = 48.0;
 
+  /// Map chrome control target on every platform (desktop toolbar, filter and
+  /// discovery toggles, credit row). The app header keeps its own 44px metric.
+  static const double chromeControlSize = 48.0;
+
+  /// Room the desktop credit leaves on its right when a side panel is open: the
+  /// chrome inset, the six 48px toolbar controls with their hairlines (about
+  /// 292px) and a gap. The credit wraps inside what is left.
+  static const double desktopCreditControlsReserve = 332.0;
+
   /// Context panels target this range on intermediate and wide canvases.
   static const double desktopContextPanelMinWidth = 300.0;
   static const double desktopContextPanelPreferredWidth = 360.0;

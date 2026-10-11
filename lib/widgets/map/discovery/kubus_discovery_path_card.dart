@@ -6,7 +6,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_map_tokens.dart';
 import '../../inline_progress.dart';
-import '../kubus_map_glass_surface.dart';
+import '../kubus_map_chrome.dart';
 
 /// Direction the discovery card's expandable contribution/task area grows in.
 ///
@@ -207,14 +207,10 @@ class KubusDiscoveryPathCard extends StatelessWidget {
         duration: mapMotion.duration,
         curve: mapMotion.curve,
         constraints: constraints,
-        child: buildKubusMapGlassSurface(
+        child: buildKubusMapChromeSurface(
           context: context,
-          kind: KubusMapGlassSurfaceKind.panel,
-          overlayName: 'discovery-path-card',
           borderRadius: radius,
-          tintBase: scheme.surface,
           padding: glassPadding,
-          margin: EdgeInsets.zero,
           child: RepaintBoundary(
             child: Column(
               mainAxisSize: MainAxisSize.min,

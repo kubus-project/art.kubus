@@ -9,7 +9,6 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
-import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
 import 'kubus_search_bar.dart';
@@ -115,21 +114,15 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
 
   KubusSearchBarStyle _resolveStyle(BuildContext context) {
     if (widget.style != null) return widget.style!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
     if (widget.useMapGlassSurface) {
-      // Map chrome keeps its overlay language over the live map.
-      final surfaceStyle = KubusGlassStyle.resolve(
-        context,
-        surfaceType: KubusGlassSurfaceType.button,
-        tintBase: scheme.surface,
-      );
+      // Map chrome is one flat, near-opaque surface with a single hairline
+      // rule and a focus-role ring. No blur, sheen or shadow.
       return KubusSearchBarStyle(
         borderRadius:
             BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
-        backgroundColor: surfaceStyle.tintColor,
-        borderColor: scheme.outline.withValues(alpha: 0.18),
+        backgroundColor: roles.surfaceOverlay,
+        borderColor: roles.rule,
         focusedBorderColor: roles.focus,
         borderWidth: 1,
         focusedBorderWidth: 2,
@@ -138,20 +131,8 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
           horizontal: KubusSpacing.md,
           vertical: KubusSpacing.md - KubusSpacing.xxs,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        focusedBoxShadow: [
-          BoxShadow(
-            color: roles.focus.withValues(alpha: 0.14),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: null,
+        focusedBoxShadow: null,
         prefixIconConstraints: _iconConstraints,
         suffixIconConstraints: _iconConstraints,
         textStyle: KubusTypography.textTheme.bodyMedium
@@ -453,7 +434,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                       maxHeight: maxHeight,
                     ),
                     child: _KubusDropdownSurface(
-                      overMap: useMapGlassSurface,
                       panelRadius: resolvedPanelRadius,
                       child: Builder(
                         builder: (context) {
@@ -611,49 +591,32 @@ class KubusSearchResultsOverlay extends StatelessWidget {
 /// Surface wrapper for the search results dropdown.
 ///
 /// A results list is something to read, so it is a solid raised surface with a
-/// hairline rule everywhere, including over the live map: map chips, labels and
-/// markers must never show through result text. Over the map it is lifted off
-/// the canvas with a soft shadow instead of being made translucent.
+/// single hairline rule everywhere, including over the live map: map chips,
+/// labels and markers must never show through result text. It carries no
+/// shadow, in line with the flat map chrome (one surface level, one rule).
 class _KubusDropdownSurface extends StatelessWidget {
   const _KubusDropdownSurface({
-    required this.overMap,
     required this.panelRadius,
     required this.child,
   });
 
-  final bool overMap;
   final BorderRadius panelRadius;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
+    return Material(
+      color: roles.surfaceRaised,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
         borderRadius: panelRadius,
-        boxShadow: overMap
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.18),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : null,
+        side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
       ),
-      child: Material(
-        color: roles.surfaceRaised,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: panelRadius,
-          side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
-          child: child,
-        ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+        child: child,
       ),
     );
   }

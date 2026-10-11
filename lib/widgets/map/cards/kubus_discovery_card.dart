@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../common/kubus_glass_chip.dart';
-import '../../common/kubus_glass_icon_button.dart';
 import '../discovery/kubus_discovery_path_card.dart';
-import '../kubus_map_glass_surface.dart';
+import '../kubus_map_chrome.dart';
 
 @immutable
 class KubusDiscoveryToggleConfig {
@@ -99,6 +98,7 @@ class KubusDiscoveryCard extends StatelessWidget {
                   icon: toggle.icon,
                   active: toggle.value,
                   accentColor: toggle.accentColor ?? scheme.primary,
+                  useMapAwareGlass: true,
                   onPressed: () => toggle.onChanged(!toggle.value),
                 ),
               ),
@@ -127,12 +127,11 @@ class KubusDiscoveryCard extends StatelessWidget {
       expansionDirection: expansionDirection,
       compactWhenCollapsed: compactWhenCollapsed,
       compactProgressLabel: compactProgressLabel,
-      toggleButton: KubusGlassIconButton(
+      toggleButton: KubusMapChromeIconButton(
         icon: chevronIcon,
         tooltip: expanded ? l10n.commonCollapse : l10n.commonExpand,
         size: expandButtonSize,
         borderRadius: KubusRadius.sm,
-        enableBlur: kubusMapBlurEnabled(context),
         onPressed: onToggleExpanded,
       ),
       titleStyle: titleStyle,

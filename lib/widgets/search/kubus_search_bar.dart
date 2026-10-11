@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
 
@@ -258,15 +258,17 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
       tintBase: scheme.surface,
     );
     final radius = BorderRadius.circular(KubusRadius.md);
+    final roles = KubusColorRoles.of(context);
+    final onMap = widget.useMapGlassSurface;
 
     return KubusSearchBarStyle(
       borderRadius: radius,
-      backgroundColor: surfaceStyle.tintColor,
-      borderColor: scheme.outline.withValues(alpha: 0.18),
-      focusedBorderColor: scheme.primary,
+      backgroundColor: onMap ? roles.surfaceOverlay : surfaceStyle.tintColor,
+      borderColor: onMap ? roles.rule : scheme.outline.withValues(alpha: 0.18),
+      focusedBorderColor: onMap ? roles.focus : scheme.primary,
       borderWidth: 1,
       focusedBorderWidth: 2,
-      blurSigma: surfaceStyle.blurSigma,
+      blurSigma: onMap ? null : surfaceStyle.blurSigma,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.md - KubusSpacing.xxs,
@@ -345,13 +347,51 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
         suffixIcon: trailing,
         prefixIconConstraints: style.prefixIconConstraints,
         suffixIconConstraints: style.suffixIconConstraints,
+        // The field's boundary is the box painted around it. The app theme
+        // sets state-specific outlines, which would otherwise draw a second
+        // rounded hairline inside the field.
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
         isDense: true,
         contentPadding: style.contentPadding,
       ),
     );
 
+    // Map chrome is one flat, near-opaque surface with a single hairline: no
+    // backdrop blur, sheen or shadow (blur-over-blur was the stacking defect).
+    // On the map the fill is painted by the outer AnimatedContainer below, so
+    // the fill and the hairline share one box. A DecoratedBox around the field
+    // would size to the field's intrinsic height and leave a second outline
+    // offset from the first.
+    final Widget surface = widget.useMapGlassSurface
+        ? Align(alignment: Alignment.centerLeft, child: textField)
+        : LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: style.borderRadius,
+            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: style.backgroundColor,
+            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+            enableBlur: widget.enableBlur,
+            child: wrapWithKubusMapGlassSheen(
+              show: false,
+              borderRadius: style.borderRadius,
+              isDark: theme.brightness == Brightness.dark,
+              showRim: false,
+              child: textField,
+            ),
+          );
+
+    // The field is its own semantics container: its label and rect are the field
+    // alone. Without a boundary, a neighbouring header label is merged into this
+    // node and the engine sizes the text input to the whole map area.
     return Semantics(
+      container: true,
       label: widget.semanticsLabel,
       textField: widget.semanticsLabel != null,
       child: MouseRegion(
@@ -360,6 +400,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
           duration: widget.animationDuration,
           curve: widget.animationCurve,
           decoration: BoxDecoration(
+            color: widget.useMapGlassSurface ? style.backgroundColor : null,
             borderRadius: style.borderRadius,
             boxShadow: _isFocused ? style.focusedBoxShadow : style.boxShadow,
           ),
@@ -372,30 +413,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
               width: effectiveBorderWidth,
             ),
           ),
-          child: LiquidGlassPanel(
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            borderRadius: style.borderRadius,
-            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
-            showBorder: false,
-            backgroundColor: style.backgroundColor,
-            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-            enableBlur: widget.enableBlur,
-            child: wrapWithKubusMapGlassSheen(
-              // On the map, when real blur is unavailable, enrich the flat tint
-              // with the shared static sheen so the search bar matches the rest
-              // of the map chrome instead of looking like a flat panel.
-              show: widget.useMapGlassSurface &&
-                  !(widget.enableBlur &&
-                      GlassCapabilitiesProvider.watchAllowBlurEnabled(context)),
-              borderRadius: style.borderRadius,
-              isDark: theme.brightness == Brightness.dark,
-              // The field's own border is its one boundary; the sheen's rim
-              // would be a second edge just inside it.
-              showRim: false,
-              child: textField,
-            ),
-          ),
+          child: surface,
         ),
       ),
     );

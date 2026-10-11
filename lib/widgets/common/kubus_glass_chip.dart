@@ -4,6 +4,8 @@ import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../../utils/kubus_color_roles.dart';
+import '../map/kubus_map_chrome.dart';
 import '../map/kubus_map_glass_surface.dart';
 
 /// Reusable glass chip used for filter/sort selections.
@@ -80,8 +82,11 @@ class KubusGlassChip extends StatelessWidget {
           : KubusGlassEffects.fallbackOpaqueOpacity,
     );
 
+    // Map chips are one flat surface (see useMapAwareGlass below): no fallback
+    // sheen is painted inside them, in either blur mode. Other chips keep the
+    // glass fallback when real blur is unavailable.
     final child = wrapWithKubusMapGlassSheen(
-      show: !(enableBlur && allowBlur),
+      show: !useMapAwareGlass && !(enableBlur && allowBlur),
       borderRadius: radius,
       isDark: isDark,
       child: Row(
@@ -112,13 +117,17 @@ class KubusGlassChip extends StatelessWidget {
     );
 
     final surface = useMapAwareGlass
-        ? buildKubusMapGlassSurface(
+        // Map chrome: one flat surface per chip. The selected state is a light
+        // accent wash over the same surface, never a glass tint.
+        ? buildKubusMapChromeSurface(
             context: context,
-            kind: KubusMapGlassSurfaceKind.button,
             borderRadius: radius,
-            tintBase: active
-                ? (Color.lerp(scheme.surface, accent, 0.18) ?? scheme.surface)
-                : scheme.surface,
+            fill: active
+                ? Color.alphaBlend(
+                    accent.withValues(alpha: 0.14),
+                    KubusColorRoles.of(context).surfaceOverlay,
+                  )
+                : null,
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.sm + KubusSpacing.xs,
               vertical: KubusSpacing.sm + KubusSpacing.xxs,

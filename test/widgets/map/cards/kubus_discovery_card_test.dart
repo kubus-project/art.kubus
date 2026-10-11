@@ -1,10 +1,9 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_map_tokens.dart';
-import 'package:art_kubus/widgets/common/kubus_glass_icon_button.dart';
-import 'package:art_kubus/widgets/glass/glass_surface.dart';
 import 'package:art_kubus/widgets/map/cards/kubus_discovery_card.dart';
 import 'package:art_kubus/widgets/map/discovery/kubus_discovery_path_card.dart';
+import 'package:art_kubus/widgets/map/kubus_map_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -186,7 +185,7 @@ void main() {
     expect(pathCard.glassPadding, const EdgeInsets.all(KubusSpacing.md));
   });
 
-  testWidgets('mobile map header radius paints a rectangular glass surface',
+  testWidgets('mobile map header radius paints a flat rectangular surface',
       (tester) async {
     // Regression guard: the collapsed discovery module previously used a
     // hardcoded 18 and then KubusRadius.md (12), both of which read as a
@@ -224,22 +223,27 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final surface = tester.widget<GlassSurface>(
+    // The card paints one flat chrome surface (token fill + hairline rule).
+    final surface = tester.widget<Container>(
       find
           .descendant(
             of: find.byType(KubusDiscoveryPathCard),
-            matching: find.byType(GlassSurface),
+            matching: find.byWidgetPredicate(
+              (w) => w is Container && w.decoration is BoxDecoration,
+            ),
           )
           .first,
     );
-    expect(surface.borderRadius, BorderRadius.circular(KubusRadius.sm));
+    final decoration = surface.decoration! as BoxDecoration;
+    expect(decoration.borderRadius, BorderRadius.circular(KubusRadius.sm));
+    expect(decoration.boxShadow, isNull);
 
     // Wide, short bar — never a capsule — and the toggle keeps its 44px target.
     final size = tester.getSize(find.byType(KubusDiscoveryPathCard));
     expect(size.height, lessThan(size.width));
     expect(size.height, lessThan(KubusHeaderMetrics.actionHitArea * 1.5));
     expect(
-      tester.getSize(find.byType(KubusGlassIconButton)).height,
+      tester.getSize(find.byType(KubusMapChromeIconButton)).height,
       KubusHeaderMetrics.actionHitArea,
     );
   });
