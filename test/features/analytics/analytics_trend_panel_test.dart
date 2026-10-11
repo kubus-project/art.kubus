@@ -2,6 +2,7 @@ import 'package:art_kubus/features/analytics/analytics_metric_registry.dart';
 import 'package:art_kubus/features/analytics/analytics_time.dart';
 import 'package:art_kubus/features/analytics/widgets/analytics_trend_panel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,8 +31,10 @@ Future<void> _pump(
   WidgetTester tester, {
   required AnalyticsSeriesSummary summary,
   Locale locale = const Locale('en'),
+  Size size = const Size(390, 844),
+  ThemeData? theme,
 }) async {
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -39,7 +42,7 @@ Future<void> _pump(
   final metric = AnalyticsMetricRegistry.byId('viewsReceived')!;
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData.light(useMaterial3: true),
+      theme: theme ?? ThemeData.light(useMaterial3: true),
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -136,5 +139,58 @@ void main() {
 
     expect(find.text('+12.5%'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+  });
+
+  group('desktop width (1440 x 900)', () {
+    final datasets = <String, AnalyticsSeriesSummary>{
+      'normal': _summary(
+        values: List<double>.generate(30, (i) => 4 + (i % 7) * 1.5),
+        previous: List<double>.generate(30, (i) => 3 + (i % 5) * 1.2),
+        changePercent: 12,
+      ),
+      'spiky': _summary(
+        values: <double>[
+          ...List<double>.filled(14, 1),
+          240,
+          ...List<double>.filled(15, 2)
+        ],
+        previous: List<double>.filled(30, 3),
+        changePercent: 340,
+      ),
+      'single point': _summary(values: <double>[7], previous: <double>[3]),
+      'empty': _summary(values: const <double>[], previous: const <double>[]),
+    };
+
+    for (final entry in datasets.entries) {
+      for (final dark in <bool>[false, true]) {
+        testWidgets(
+            '${entry.key}, ${dark ? 'dark' : 'light'}: lays out and hovers without errors',
+            (tester) async {
+          await _pump(
+            tester,
+            summary: entry.value,
+            size: const Size(1440, 900),
+            theme: dark
+                ? ThemeData.dark(useMaterial3: true)
+                : ThemeData.light(useMaterial3: true),
+          );
+          final panel = find.byType(AnalyticsTrendPanel);
+          expect(panel, findsOneWidget);
+          expect(tester.getSize(panel).width, lessThanOrEqualTo(1440));
+
+          final mouse =
+              await tester.createGesture(kind: PointerDeviceKind.mouse);
+          await mouse.addPointer(location: Offset.zero);
+          addTearDown(mouse.removePointer);
+          final box = tester.getRect(panel);
+          for (final fx in <double>[0.2, 0.5, 0.8]) {
+            await mouse
+                .moveTo(Offset(box.left + box.width * fx, box.center.dy));
+            await tester.pump(const Duration(milliseconds: 120));
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }
