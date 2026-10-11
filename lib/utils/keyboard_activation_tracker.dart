@@ -66,6 +66,9 @@ class KeyboardActivationTracker {
     _invokerAt = clock();
   }
 
+  /// The tracker's current time, which tests may replace through [clock].
+  static DateTime now() => clock();
+
   /// Whether a control named itself with [noteInvoker] within [window] and has
   /// not been taken yet.
   static bool get hasFreshInvoker {
