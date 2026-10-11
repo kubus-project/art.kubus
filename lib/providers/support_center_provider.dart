@@ -113,7 +113,6 @@ class SupportCenterProvider extends ChangeNotifier {
   /// Stable identity of the account behind [token]: the account id in the
   /// session token, so a refreshed token for the same account keeps its data.
   /// A token without a readable payload stands for itself.
-  @visibleForTesting
   static String? accountKeyOf(String? token) {
     final value = (token ?? '').trim();
     if (value.isEmpty) return null;
