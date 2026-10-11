@@ -70,9 +70,7 @@ class KeyboardActivationTracker {
   /// not been taken yet.
   static bool get hasFreshInvoker {
     final at = _invokerAt;
-    return _invoker != null &&
-        at != null &&
-        clock().difference(at) <= window;
+    return _invoker != null && at != null && clock().difference(at) <= window;
   }
 
   /// The control named by [noteInvoker] if that happened within [window], or

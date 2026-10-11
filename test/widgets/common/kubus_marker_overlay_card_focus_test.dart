@@ -399,8 +399,7 @@ void main() {
     expect(state.search.hasPrimaryFocus, isFalse);
   });
 
-  testWidgets(
-      'a genuinely new keyboard open still replaces the session',
+  testWidgets('a genuinely new keyboard open still replaces the session',
       (tester) async {
     final log = <String>[];
     await _pumpHarness(tester, log);

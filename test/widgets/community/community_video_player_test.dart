@@ -962,7 +962,8 @@ void main() {
         final node = tester.getSemantics(find.bySemanticsLabel(label).first);
         // The node's own label is the control's name alone. A merged node would
         // read "Pause video ... Mute video ... Full screen" as one control.
-        expect(node.label, label, reason: '$label is not merged with a sibling');
+        expect(node.label, label,
+            reason: '$label is not merged with a sibling');
         expect(
           node.flagsCollection.isButton,
           isTrue,
