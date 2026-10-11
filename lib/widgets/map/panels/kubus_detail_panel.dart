@@ -143,10 +143,9 @@ class DetailHeader extends StatelessWidget {
     final cacheWidth = (920 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (height * dpr).clamp(96.0, 1440.0).round();
     final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(
-          imageUrl,
-          maxWidth: cacheWidth,
-        ) ??
-        imageUrl;
+      imageUrl,
+      maxWidth: cacheWidth,
+    );
     final fallbackIconColor =
         ThemeData.estimateBrightnessForColor(accentColor) == Brightness.dark
             ? KubusColors.textPrimaryDark.withValues(alpha: 0.78)

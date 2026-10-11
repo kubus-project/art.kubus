@@ -142,4 +142,58 @@ void main() {
     expect(find.bySemanticsLabel('Missing artwork image'), findsOneWidget);
     semantics.dispose();
   });
+
+  testWidgets(
+    'an unsafe reference renders the fallback icon and never a network image',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(const KubusCachedImage(imageUrl: 'javascript:alert(1)')),
+      );
+      expect(find.byType(Image), findsNothing);
+      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'an IPFS reference starts on the primary gateway URL',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(const KubusCachedImage(
+          imageUrl:
+              'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+        )),
+      );
+      final image = tester.widget<Image>(find.byType(Image));
+      final provider = image.image;
+      expect(provider, isA<NetworkImage>());
+      expect(
+        (provider as NetworkImage).url,
+        startsWith(
+            'https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi'),
+      );
+    },
+  );
+
+  testWidgets(
+    'a failed image shows the placeholder, never a broken-image glyph',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const KubusCachedImage(
+            imageUrl: 'https://cdn.example.com/missing-artwork.png',
+          ),
+        ),
+      );
+      // The test HTTP client answers 400, so the load fails in real async time.
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future<void>.delayed(
+              const Duration(milliseconds: 10),
+            ));
+        await tester.pump();
+      }
+
+      expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    },
+  );
 }

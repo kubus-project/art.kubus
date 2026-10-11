@@ -214,9 +214,8 @@ class _NFTGalleryState extends State<NFTGallery> {
     final l10n = AppLocalizations.of(context)!;
     final title = series?.name ?? l10n.walletGalleryDigitalEditionFallbackTitle;
     final rawImage = series?.imageUrl ?? series?.animationUrl;
-    final resolvedImage = rawImage == null
-        ? null
-        : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+    final resolvedImage =
+        rawImage == null ? null : MediaUrlResolver.resolveDisplayUrl(rawImage);
     final rarityColor = series != null
         ? RarityUi.collectibleColor(context, series.rarity)
         : AppColorUtils.tealAccent;

@@ -16,7 +16,9 @@ import '../../services/share/share_types.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
@@ -108,6 +110,11 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    // The desktop sub-screen header already shows this name above the embedded
+    // screen; the body does not repeat it (one title per screen).
+    final hostTitle =
+        context.findAncestorWidgetOfExactType<DesktopSubScreen>()?.title.trim();
+    final headerCarriesName = hostTitle == name.trim();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -122,16 +129,18 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTypography.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
+                child: headerCarriesName
+                    ? const SizedBox.shrink()
+                    : Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
               ),
               if (canEdit)
                 IconButton(
@@ -165,12 +174,19 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           color: scheme.onSurface.withValues(alpha: 0.35),
                         ),
                       )
-                    : Image.network(
-                        thumbnailUrl,
+                    : KubusCachedImage(
+                        imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
+                        placeholderBuilder: (_) => Center(
+                          child: Icon(
+                            Icons.collections,
+                            size: 72,
+                            color: scheme.onSurface.withValues(alpha: 0.35),
+                          ),
+                        ),
                         errorBuilder: (_, __, ___) => Center(
                           child: Icon(
-                            Icons.broken_image_outlined,
+                            Icons.image_outlined,
                             size: 56,
                             color: scheme.onSurface.withValues(alpha: 0.35),
                           ),
@@ -338,7 +354,10 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
               ? resolved.name
               : l10n.userProfileCollectionFallbackTitle;
           final description = (resolved.description ?? '').trim();
-          final thumbnailUrl = MediaUrlResolver.resolve(resolved.thumbnailUrl);
+          final thumbnailUrl = MediaUrlResolver.resolveDisplayUrl(
+            resolved.thumbnailUrl,
+            maxWidth: MediaUrlResolver.cardMaxWidth,
+          );
           final artworks = resolved.artworks;
 
           final walletAddress = walletProvider.currentWalletAddress;
@@ -393,36 +412,78 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                       color: scheme.onSurface,
                     ),
                   ),
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          scheme.primary.withValues(alpha: 0.22),
-                          scheme.secondary.withValues(alpha: 0.18),
-                        ],
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              scheme.primary.withValues(alpha: 0.22),
+                              scheme.secondary.withValues(alpha: 0.18),
+                            ],
+                          ),
+                        ),
+                        child: thumbnailUrl == null
+                            ? Center(
+                                child: Icon(
+                                  Icons.collections,
+                                  size: 72,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.35),
+                                ),
+                              )
+                            : KubusCachedImage(
+                                imageUrl: thumbnailUrl,
+                                fit: BoxFit.cover,
+                                placeholderBuilder: (_) => Center(
+                                  child: Icon(
+                                    Icons.collections,
+                                    size: 72,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    size: 56,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                              ),
                       ),
-                    ),
-                    child: thumbnailUrl == null
-                        ? Center(
-                            child: Icon(
-                              Icons.collections,
-                              size: 72,
-                              color: scheme.onSurface.withValues(alpha: 0.35),
-                            ),
-                          )
-                        : Image.network(
-                            thumbnailUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                size: 56,
-                                color: scheme.onSurface.withValues(alpha: 0.35),
+                      // Token scrim behind the title: the surface colour fades in
+                      // over the cover's bottom edge, so the title's onSurface
+                      // text keeps contrast over bright and dark photos alike.
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 128,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  scheme.surface.withValues(alpha: 0),
+                                  scheme.surface.withValues(alpha: 0.9),
+                                  scheme.surface.withValues(alpha: 0.92),
+                                ],
+                                // The title band sits near 0.9 alpha, so the
+                                // title keeps 4.5:1 over dark and bright photos.
+                                stops: const [0.0, 0.45, 1.0],
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -534,11 +595,10 @@ class _ArtworkRow extends StatelessWidget {
     final id = artwork.id;
     final title =
         artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled;
-    final rawUrl = artwork.imageUrl ??
-        (artwork.imageCid != null && artwork.imageCid!.isNotEmpty
-            ? 'ipfs://${artwork.imageCid}'
-            : null);
-    final imageUrl = MediaUrlResolver.resolve(rawUrl);
+    final imageUrl = MediaUrlResolver.firstDisplayUrl(
+      <String?>[artwork.imageUrl, artwork.imageCid],
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DetailSpacing.md),
@@ -563,11 +623,15 @@ class _ArtworkRow extends StatelessWidget {
                         Icons.image_outlined,
                         color: scheme.onSurface.withValues(alpha: 0.4),
                       )
-                    : Image.network(
-                        imageUrl,
+                    : KubusCachedImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
+                        placeholderBuilder: (_) => Icon(
+                          Icons.image_outlined,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
                         errorBuilder: (_, __, ___) => Icon(
-                          Icons.broken_image_outlined,
+                          Icons.image_outlined,
                           color: scheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),

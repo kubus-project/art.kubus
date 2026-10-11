@@ -39,7 +39,7 @@ class CommunitySubjectProvider extends ChangeNotifier {
             ref: ref,
             title: title,
             subtitle: ref.subtitle ?? ref.ownerName,
-            imageUrl: MediaUrlResolver.resolve(ref.imageUrl) ?? ref.imageUrl,
+            imageUrl: MediaUrlResolver.resolveDisplayUrl(ref.imageUrl),
           );
           seeded = true;
         }
@@ -48,8 +48,8 @@ class CommunitySubjectProvider extends ChangeNotifier {
             _cache[key] = CommunitySubjectPreview(
               ref: ref,
               title: post.artwork!.title,
-              imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
-                  post.artwork!.imageUrl,
+              imageUrl:
+                  MediaUrlResolver.resolveDisplayUrl(post.artwork!.imageUrl),
             );
             seeded = true;
           }
@@ -95,11 +95,14 @@ class CommunitySubjectProvider extends ChangeNotifier {
       bool updated = false;
       for (final raw in response) {
         final preview = CommunitySubjectPreview.fromMap(raw);
-        if (preview.ref.id.isEmpty || preview.ref.normalizedType.isEmpty) continue;
+        if (preview.ref.id.isEmpty || preview.ref.normalizedType.isEmpty) {
+          continue;
+        }
         final image = preview.imageUrl;
-        final resolvedImage = image == null ? null : MediaUrlResolver.resolve(image) ?? image;
+        final resolvedImage = MediaUrlResolver.resolveDisplayUrl(image);
         final normalizedPreview = CommunitySubjectPreview(
-          ref: CommunitySubjectRef(type: preview.ref.normalizedType, id: preview.ref.id),
+          ref: CommunitySubjectRef(
+              type: preview.ref.normalizedType, id: preview.ref.id),
           title: preview.title,
           subtitle: preview.subtitle,
           imageUrl: resolvedImage,

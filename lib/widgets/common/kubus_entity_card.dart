@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_entity_semantics.dart';
+import '../../utils/media_url_resolver.dart';
 import 'kubus_atmosphere.dart';
 import 'kubus_cached_image.dart';
 
@@ -389,7 +390,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
     KubusColorRoles roles,
     bool motion,
   ) {
-    final resolved = KubusCachedImage.resolveImageUrl(widget.imageUrl);
+    final resolved = MediaUrlResolver.resolveDisplayUrl(widget.imageUrl);
     final hasMedia = resolved != null && resolved.isNotEmpty;
 
     final media = hasMedia
@@ -456,7 +457,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
   /// from the entity's own deep tone rather than black: the card stays a
   /// field of that role instead of fading to neutral grey.
   Widget _buildScrim(BuildContext context, Color accent) {
-    final resolved = KubusCachedImage.resolveImageUrl(widget.imageUrl);
+    final resolved = MediaUrlResolver.resolveDisplayUrl(widget.imageUrl);
     final hasMedia = resolved != null && resolved.isNotEmpty;
     final ink = hasMedia
         ? Colors.black

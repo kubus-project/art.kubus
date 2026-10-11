@@ -960,7 +960,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         final rawImage = series?.imageUrl ?? series?.animationUrl;
         final resolvedImage = rawImage == null
             ? null
-            : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+            : MediaUrlResolver.resolveDisplayUrl(rawImage);
         return <String, dynamic>{
           'id': collectible.id,
           'tokenId': collectible.tokenId,

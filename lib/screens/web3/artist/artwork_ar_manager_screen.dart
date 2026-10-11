@@ -184,8 +184,7 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
     final config = arState.config;
     final resolvedMarkerUrl = config?.markerAssetUrl == null
         ? null
-        : (MediaUrlResolver.resolve(config!.markerAssetUrl!) ??
-            config.markerAssetUrl);
+        : (MediaUrlResolver.resolveDisplayUrl(config!.markerAssetUrl!));
 
     return Scaffold(
       appBar: AppBar(

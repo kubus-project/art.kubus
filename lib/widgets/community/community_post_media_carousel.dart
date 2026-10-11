@@ -96,7 +96,8 @@ class _CommunityPostMediaCarouselState
       final index = i;
       final url = widget.mediaUrls[index];
       if (communityMediaUrlIsVideo(url)) continue;
-      final resolved = MediaUrlResolver.resolveDisplayUrl(url) ?? url;
+      final resolved = MediaUrlResolver.resolveDisplayUrl(url);
+      if (resolved == null) continue;
       _probes[index] = _NaturalSizeProbe(
         NetworkImage(resolved),
         onSize: (aspect) {
@@ -380,48 +381,51 @@ class _CommunityMediaImageSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final resolved = MediaUrlResolver.resolveDisplayUrl(url) ?? url;
+    final resolved = MediaUrlResolver.resolveDisplayUrl(url);
+    final unavailable = Center(
+      child: Tooltip(
+        message: l10n.communityMediaImageUnavailable,
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 40,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+    );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: ColoredBox(
         color: scheme.surfaceContainerHighest,
-        child: Image.network(
-          resolved,
-          fit: fit,
-          width: double.infinity,
-          height: double.infinity,
-          gaplessPlayback: true,
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return Center(
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: InlineLoading(
-                  expand: true,
-                  shape: BoxShape.circle,
-                  tileSize: 4,
-                  progress: progress.expectedTotalBytes != null
-                      ? progress.cumulativeBytesLoaded /
-                          progress.expectedTotalBytes!
-                      : null,
-                ),
+        child: resolved == null
+            ? unavailable
+            : Image.network(
+                resolved,
+                fit: fit,
+                width: double.infinity,
+                height: double.infinity,
+                gaplessPlayback: true,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Center(
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: InlineLoading(
+                        expand: true,
+                        shape: BoxShape.circle,
+                        tileSize: 4,
+                        progress: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => unavailable,
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) => Center(
-            child: Tooltip(
-              message: l10n.communityMediaImageUnavailable,
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                size: 40,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

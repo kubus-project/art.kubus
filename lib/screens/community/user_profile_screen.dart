@@ -547,7 +547,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget _buildProfileHeader(ThemeProvider themeProvider,
       {required bool isArtist, required bool isInstitution}) {
     final l10n = AppLocalizations.of(context)!;
-    final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
+    final coverImageUrl =
+        MediaUrlResolver.resolveDisplayUrl(user!.coverImageUrl);
     final coverUrlIsKnownBad =
         coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
     const avatarRadius = 42.0;
@@ -767,7 +768,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? get _canonicalPublicCoverUrl {
     final profile = user;
     if (profile == null) return null;
-    final url = _normalizeMediaUrl(profile.coverImageUrl);
+    final url = MediaUrlResolver.resolveDisplayUrl(profile.coverImageUrl);
     if (url == null || url.isEmpty || url == _failedCoverImageUrl) {
       return null;
     }
@@ -1397,10 +1398,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       onTap: onTap,
       width: 200,
     );
-  }
-
-  String? _normalizeMediaUrl(String? url) {
-    return MediaUrlResolver.resolve(url);
   }
 
   String _formatDateLabel(AppLocalizations l10n, dynamic value) {

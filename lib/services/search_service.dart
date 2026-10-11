@@ -214,8 +214,8 @@ class SearchService {
               'address': institution.address,
               'subjectType': 'institution',
               'subjectId': institution.id,
-              if (institution.imageUrls.isNotEmpty)
-                'imageUrl': institution.imageUrls.first,
+              if (institution.heroImageRef != null)
+                'imageUrl': institution.heroImageRef,
             },
           ),
         )
@@ -247,7 +247,7 @@ class SearchService {
               'location': event.location,
               'subjectType': 'event',
               'subjectId': event.id,
-              if (event.imageUrls.isNotEmpty) 'imageUrl': event.imageUrls.first,
+              if (event.heroImageRef != null) 'imageUrl': event.heroImageRef,
             },
           ),
         )

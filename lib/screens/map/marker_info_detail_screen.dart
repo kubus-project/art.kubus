@@ -66,7 +66,10 @@ class MarkerInfoDetailScreen extends StatelessWidget {
       scheme: scheme,
       roles: KubusColorRoles.of(context),
     );
-    final coverUrl = MediaUrlResolver.resolve(detail.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      detail.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
 
     return AnimatedGradientBackground(
       child: Scaffold(

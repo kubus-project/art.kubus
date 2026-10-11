@@ -121,7 +121,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         TextEditingController(text: social['instagram'] ?? '');
     _websiteController = TextEditingController(text: social['website'] ?? '');
     _avatarUrl = _editableAvatarRef(profile?.avatar);
-    _coverImageUrl = _normalizeMediaUrl(profile?.coverImage);
+    _coverImageUrl = MediaUrlResolver.resolve(profile?.coverImage);
 
     final artistInfo = profile?.artistInfo;
     _specialtyController = TextEditingController(
@@ -170,7 +170,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
   void _syncMediaFromProvider(UserProfile? profile) {
     final nextAvatar = _editableAvatarRef(profile?.avatar);
-    final nextCoverDisplay = _normalizeMediaUrl(profile?.coverImage);
+    final nextCoverDisplay = MediaUrlResolver.resolve(profile?.coverImage);
 
     setState(() {
       if (!_isUploadingAvatar && !_avatarChanged) {
@@ -548,14 +548,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
         displayUrl =
             '$base/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
-      } else if (lower.endsWith('.svg') || lower.contains('.svg?')) {
-        displayUrl =
-            url.replaceAll(RegExp(r'\.svg', caseSensitive: false), '.png');
+      } else {
+        displayUrl = MediaUrlResolver.svgAsPngReference(url);
       }
     } catch (_) {
       displayUrl = url;
     }
-    displayUrl = _normalizeMediaUrl(displayUrl) ?? displayUrl;
+    // Fail closed: an unresolvable avatar shows the placeholder icon, never the
+    // raw string.
+    final safeUrl = MediaUrlResolver.resolve(displayUrl);
+    if (safeUrl == null) {
+      return Icon(
+        Icons.person,
+        size: 70,
+        color: themeProvider.accentColor,
+      );
+    }
+    displayUrl = safeUrl;
 
     return Image.network(
       displayUrl,
@@ -668,7 +677,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       unawaited(profileProvider.loadProfile(wallet));
       if (kDebugMode) {
         final displayAvatarUrl =
-            _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+            MediaUrlResolver.resolve(persistableAvatar) ?? persistableAvatar;
         final uri = Uri.tryParse(displayAvatarUrl);
         messenger.showKubusSnackBar(
           SnackBar(
@@ -936,10 +945,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     }
   }
 
-  String? _normalizeMediaUrl(String? url) {
-    return MediaUrlResolver.resolve(url);
-  }
-
   void _showFormNotice(String? message) {
     setState(() => _formNotice = message);
     if (message != null && _scrollController.hasClients) {
@@ -1024,7 +1029,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
               username: uprof.username,
               bio: uprof.bio,
               profileImageUrl: uprof.avatar,
-              coverImageUrl: _normalizeMediaUrl(uprof.coverImage),
+              coverImageUrl: MediaUrlResolver.resolve(uprof.coverImage),
               followersCount: uprof.stats?.followersCount ?? 0,
               followingCount: uprof.stats?.followingCount ?? 0,
               postsCount: uprof.stats?.artworksCreated ?? 0,
