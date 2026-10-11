@@ -50,11 +50,16 @@ class CommunityVideoAudio extends ChangeNotifier {
   double _volume;
   bool _muted;
 
+  /// This clip is silent only because muted autoplay started it. The viewer's
+  /// own choice (and the session's) is untouched, but the controls must show
+  /// the clip as muted until the viewer takes the sound.
+  bool _autoplaySilent = false;
+
   double get volume => _volume;
-  bool get muted => _muted;
+  bool get muted => _muted || _autoplaySilent;
 
   /// What the controller should be set to.
-  double get effectiveVolume => _muted ? 0 : _volume;
+  double get effectiveVolume => muted ? 0 : _volume;
 
   /// Takes the viewer's latest choice from the session. Feed items are cached,
   /// so a clip can be mounted before the viewer mutes or changes the level on
@@ -63,10 +68,34 @@ class CommunityVideoAudio extends ChangeNotifier {
   void adoptSessionChoice() {
     _volume = _sessionVolume;
     _muted = _sessionMuted;
+    _autoplaySilent = false;
+  }
+
+  /// Muted autoplay is starting this clip. The controls show it as muted; the
+  /// session's choice is neither read nor written. Does not notify: the clip's
+  /// controls are built after its player exists.
+  void silenceForAutoplay() => _autoplaySilent = true;
+
+  /// The clip no longer plays silently on autoplay's account (its player was
+  /// released). Does not notify.
+  void forgetAutoplaySilence() => _autoplaySilent = false;
+
+  /// The viewer took the sound of an autoplaying clip: show the session's
+  /// choice again. Notifies, so the controls follow.
+  void endAutoplaySilence() {
+    _autoplaySilent = false;
+    notifyListeners();
   }
 
   void toggleMute() {
-    _muted = !_muted;
+    if (_autoplaySilent) {
+      // The control showed muted, so pressing it unmutes: the viewer asks for
+      // sound, which is also remembered as their choice.
+      _autoplaySilent = false;
+      _muted = false;
+    } else {
+      _muted = !_muted;
+    }
     if (!_muted && _volume <= 0) _volume = 1;
     _remember();
     notifyListeners();
@@ -74,6 +103,7 @@ class CommunityVideoAudio extends ChangeNotifier {
 
   void setVolume(double value) {
     final next = value.clamp(0.0, 1.0);
+    _autoplaySilent = false;
     _volume = next;
     _muted = next <= 0;
     _remember();

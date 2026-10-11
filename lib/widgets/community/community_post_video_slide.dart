@@ -189,6 +189,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     _controller = null;
     _autoMuted = false;
     _autoPlayPending = false;
+    _audio.forgetAutoplaySilence();
     CommunityVideoPlaybackCoordinator.release(controller);
     unawaited(controller?.dispose());
   }
@@ -361,6 +362,9 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     _audio.adoptSessionChoice();
     if (_audio.muted) _audio.toggleMute();
     await controller.setVolume(_audio.effectiveVolume);
+    // The controls showed muted for the autoplay; they now show the session's
+    // choice.
+    _audio.endAutoplaySilence();
     CommunityVideoPlaybackCoordinator.claim(controller);
     if (controller.value.isCompleted) await controller.seekTo(Duration.zero);
     if (!controller.value.isPlaying) await controller.play();
@@ -535,6 +539,7 @@ class _CommunityPostVideoSlideState extends State<CommunityPostVideoSlide>
     }
 
     _autoMuted = true;
+    _audio.silenceForAutoplay();
     CommunityVideoPlaybackCoordinator.claim(controller);
     setState(() {
       _controller = controller;

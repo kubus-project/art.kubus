@@ -157,12 +157,17 @@ String _videoReferenceWithPoster(String url, String poster) {
 /// When the first item is a video, its poster is used; with no poster, the
 /// first image in the post is used instead. Otherwise the first item itself.
 /// Null when no still is available.
-String? communityPostPreviewImageUrl(CommunityPost post) {
+String? communityPostPreviewImageUrl(CommunityPost post) =>
+    communityMediaPreviewStill(<String?>[post.imageUrl, ...post.mediaUrls]);
+
+/// The still for an ordered list of stored media references: the one rule
+/// behind every picture-sized stand-in for a post, wherever its references come
+/// from (a [CommunityPost], or a search row's raw fields). See
+/// [communityPostPreviewImageUrl].
+String? communityMediaPreviewStill(Iterable<String?> references) {
   final items = <String>[];
-  final legacy = post.imageUrl?.trim() ?? '';
-  if (legacy.isNotEmpty) items.add(legacy);
-  for (final media in post.mediaUrls) {
-    final url = media.trim();
+  for (final reference in references) {
+    final url = reference?.trim() ?? '';
     if (url.isNotEmpty) items.add(url);
   }
   if (items.isEmpty) return null;

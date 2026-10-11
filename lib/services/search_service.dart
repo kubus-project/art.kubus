@@ -523,18 +523,16 @@ class SearchService {
       id: id,
       data: <String, dynamic>{
         ...Map<String, dynamic>.from(map),
-        if ((_stringValue(
-                  map,
-                  const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
-                ) ??
-                _stringValue(map['artwork'], const ['imageUrl', 'image_url']) ??
-                '')
-            .isNotEmpty)
-          'imageUrl': _stringValue(
+        // A video-first post's still is its poster, never the clip itself.
+        'imageUrl': communityMediaPreviewStill(<String?>[
+              _stringValue(
                 map,
                 const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
-              ) ??
-              _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
+              ),
+              if (map['mediaUrls'] is List)
+                for (final item in map['mediaUrls'] as List) item?.toString(),
+            ]) ??
+            _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
         if ((_stringValue(
                   map,
                   const [

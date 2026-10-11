@@ -388,9 +388,10 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final rawImageUrl = post.imageUrl ??
-        (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
-    final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl);
+    // A video-first post shows its poster, never the clip as an image.
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(
+      communityPostPreviewImageUrl(post),
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),

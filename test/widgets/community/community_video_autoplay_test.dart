@@ -173,6 +173,50 @@ void main() {
       expect(find.byTooltip(_l10n.communityMediaVideoPlay), findsNothing);
     });
 
+    testAutoplay('the volume control shows muted while autoplay is silent',
+        (tester) async {
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(_app(_carouselAt(top, [_clip])));
+      await _advance(tester, 900);
+      expect(platform.playingNow.single.volume, 0);
+
+      expect(find.byTooltip(_l10n.communityMediaVideoUnmute), findsOneWidget,
+          reason: 'the clip is silent, so the control offers to unmute');
+      expect(find.byTooltip(_l10n.communityMediaVideoMute), findsNothing);
+      expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.volume_up_rounded), findsNothing);
+    });
+
+    testAutoplay('the volume control unmutes the autoplaying clip itself',
+        (tester) async {
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(_app(_carouselAt(top, [_clip])));
+      await _advance(tester, 900);
+      final before = platform.players.keys.toList();
+
+      await tester.tap(find.byTooltip(_l10n.communityMediaVideoUnmute));
+      await _advance(tester, 300);
+
+      expect(platform.players.keys.toList(), before, reason: 'same player');
+      expect(platform.playingNow.single.volume, 1);
+      expect(find.byTooltip(_l10n.communityMediaVideoMute), findsOneWidget);
+      expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+    });
+
+    testAutoplay('a tap on the clip takes the sound and the control follows',
+        (tester) async {
+      final top = ValueNotifier<double>(_offsetFor(1));
+      await tester.pumpWidget(_app(_carouselAt(top, [_clip])));
+      await _advance(tester, 900);
+
+      await tester.tap(find.byKey(_frameKey));
+      await _advance(tester, 300);
+
+      expect(platform.playingNow.single.volume, 1);
+      expect(find.byTooltip(_l10n.communityMediaVideoMute), findsOneWidget);
+      expect(find.byIcon(Icons.volume_off_rounded), findsNothing);
+    });
+
     testAutoplay('the viewer sound choice is neither read nor written',
         (tester) async {
       final top = ValueNotifier<double>(_offsetFor(1));

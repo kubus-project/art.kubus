@@ -12,6 +12,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
 import '../../community/community_post_text_limits.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
@@ -1812,7 +1813,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
                             if (MediaUrlResolver.resolveDisplayUrl(
-                                    _post!.imageUrl) !=
+                                    communityPostPreviewImageUrl(_post!)) !=
                                 null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
@@ -1820,7 +1821,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                      _post!.imageUrl)!,
+                                      communityPostPreviewImageUrl(_post!))!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,

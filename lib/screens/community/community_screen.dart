@@ -52,6 +52,7 @@ import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
 import '../../community/community_composer_media.dart';
 import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';

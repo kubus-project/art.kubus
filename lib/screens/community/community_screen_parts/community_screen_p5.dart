@@ -217,7 +217,7 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
                             if (MediaUrlResolver.resolveDisplayUrl(
-                                    post.imageUrl) !=
+                                    communityPostPreviewImageUrl(post)) !=
                                 null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
@@ -225,7 +225,7 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                                     BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                      post.imageUrl)!,
+                                      communityPostPreviewImageUrl(post))!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,
