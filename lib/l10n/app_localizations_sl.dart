@@ -13529,6 +13529,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityPostActionLike => 'Všečkaj';
 
   @override
+  String get communityPostActionComment => 'Komentiraj';
+
+  @override
   String get communityPostStateLiked => 'všečkano';
 
   @override
@@ -13539,9 +13542,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityPostStateNotSaved => 'ni shranjeno';
-
-  @override
-  String get communityPostActionComment => 'Komentiraj';
 
   @override
   String get communityRepostedToast => 'Ponovno objavljeno';

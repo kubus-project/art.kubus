@@ -13395,6 +13395,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPostActionLike => 'Like';
 
   @override
+  String get communityPostActionComment => 'Comment';
+
+  @override
   String get communityPostStateLiked => 'liked';
 
   @override
@@ -13405,9 +13408,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityPostStateNotSaved => 'not saved';
-
-  @override
-  String get communityPostActionComment => 'Comment';
 
   @override
   String get communityRepostedToast => 'Reposted';

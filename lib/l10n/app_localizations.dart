@@ -23401,6 +23401,12 @@ abstract class AppLocalizations {
   /// **'Like'**
   String get communityPostActionLike;
 
+  /// No description provided for @communityPostActionComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get communityPostActionComment;
+
   /// No description provided for @communityPostStateLiked.
   ///
   /// In en, this message translates to:
@@ -23424,12 +23430,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'not saved'**
   String get communityPostStateNotSaved;
-
-  /// No description provided for @communityPostActionComment.
-  ///
-  /// In en, this message translates to:
-  /// **'Comment'**
-  String get communityPostActionComment;
 
   /// No description provided for @communityRepostedToast.
   ///
