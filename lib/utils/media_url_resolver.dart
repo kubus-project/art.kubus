@@ -609,8 +609,9 @@ class MediaUrlResolver {
     if (_isBackendManagedPath(relative) && _isOwnMediaHost(uri.host)) {
       return value;
     }
-    // A stored IPFS https URL is kept as given, with the gateway chain behind
-    // it, whatever its host.
+    // A stored IPFS https URL stays a reference here, so the configured gateway
+    // chain can serve it; whether the stored host itself is tried is decided
+    // when candidates are built.
     if (_ipfsPathRest(relative) != null) {
       return scheme == 'https' ? value : null;
     }
@@ -644,10 +645,13 @@ class MediaUrlResolver {
       }
       final ipfsRest = _ipfsPathRest(relative);
       if (ipfsRest != null) {
-        // The stored URL is tried as given; the configured gateway chain
-        // follows, so a failed gateway falls back to the next one.
+        // The stored URL is tried as given when its host is public; the
+        // configured gateway chain follows, so a failed gateway falls back to
+        // the next one. A private, loopback or internal stored host is never
+        // requested: the chain alone serves the reference.
         final chain = _ipfsCandidates(ipfsRest);
         if (chain.isEmpty) return const <String>[];
+        if (uri == null || !_isPublicHost(uri.host)) return chain;
         return <String>[value, ...chain];
       }
       // Any other https reference, including a third-party URL that merely

@@ -108,23 +108,32 @@ class KubusCachedImage extends StatefulWidget {
       imageUrl,
       maxWidth: maxDisplayWidth,
     );
-    final candidateIndex = candidates.isEmpty
+    var candidateIndex = candidates.isEmpty
         ? 0
         : state._candidateIndex.clamp(0, candidates.length - 1);
+    if (skipRecentlyFailed && candidates.isNotEmpty) {
+      // A candidate that failed moments ago is passed over, not retried: the
+      // next eligible gateway is tried, and only when none is left does the
+      // fallback show (no request is made, so nothing can loop).
+      while (candidateIndex < candidates.length &&
+          KubusMediaFailureRegistry.shared.hasRecentlyFailed(
+            withStableVersion(candidates[candidateIndex], cacheVersion),
+          )) {
+        candidateIndex++;
+      }
+      if (candidateIndex >= candidates.length) {
+        return _withFallbackSemantics(
+          errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
+              _buildFallback(context),
+          resolvedSemanticLabel,
+        );
+      }
+    }
     final resolved = candidates.isEmpty ? null : candidates[candidateIndex];
     final urlWithVersion = withStableVersion(resolved, cacheVersion);
     if (urlWithVersion == null || urlWithVersion.isEmpty) {
       return _withFallbackSemantics(
         _buildFallback(context),
-        resolvedSemanticLabel,
-      );
-    }
-
-    if (skipRecentlyFailed &&
-        KubusMediaFailureRegistry.shared.hasRecentlyFailed(urlWithVersion)) {
-      return _withFallbackSemantics(
-        errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
-            _buildFallback(context),
         resolvedSemanticLabel,
       );
     }
@@ -240,7 +249,7 @@ class _KubusCachedImageState extends State<KubusCachedImage> {
     _advancePending = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _advancePending = false;
-      if (!mounted || _candidateIndex != failedIndex) return;
+      if (!mounted || _candidateIndex > failedIndex) return;
       setState(() => _candidateIndex = failedIndex + 1);
     });
   }

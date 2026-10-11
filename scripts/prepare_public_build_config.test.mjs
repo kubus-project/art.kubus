@@ -138,3 +138,73 @@ for (const [name, expected] of [['web-artifact.yml', 1], ['mobile-release.yml', 
 test('the artifact records both video switches it was built with', () => {
   assert.match(workflow('web-artifact.yml'), /COMMUNITY_VIDEO_AUTOPLAY_ENABLED: defines\.COMMUNITY_VIDEO_AUTOPLAY_ENABLED, COMMUNITY_VIDEO_POSTERS_ENABLED: defines\.COMMUNITY_VIDEO_POSTERS_ENABLED/);
 });
+
+function runDevelopmentBuild(extra) {
+  const root = mkdtempSync(join(tmpdir(), 'kubus-dev-backend-'));
+  try {
+    mkdirSync(join(root, 'scripts'));
+    mkdirSync(join(root, 'ios', 'Flutter'), { recursive: true });
+    copyFileSync(new URL('./prepare_public_build_config.mjs', import.meta.url), join(root, 'scripts', 'prepare_public_build_config.mjs'));
+    const env = { ...process.env, KUBUS_BACKEND_URL: 'https://api.kubus.site',
+      KUBUS_GOOGLE_CLIENT_ID: 'public-client', KUBUS_GOOGLE_WEB_CLIENT_ID: 'public-web-client',
+      KUBUS_GOOGLE_IOS_CLIENT_ID: 'public-ios.apps.googleusercontent.com', ...extra };
+    for (const name of ['KUBUS_APP_VERSION', 'KUBUS_BUILD_NUMBER', 'KUBUS_BUILD_DATE']) delete env[name];
+    if (extra.KUBUS_DEVELOPMENT_BACKEND_URL === undefined) delete env.KUBUS_DEVELOPMENT_BACKEND_URL;
+    const result = spawnSync(process.execPath, [join(root, 'scripts', 'prepare_public_build_config.mjs')], { env, encoding: 'utf8' });
+    let defines = null;
+    if (result.status === 0) defines = JSON.parse(readFileSync(join(root, '.dart_tool', 'public-build-defines.json')));
+    return { result, defines };
+  } finally { rmSync(root, { recursive: true, force: true }); }
+}
+
+test('a development build refuses to build without a staging backend', () => {
+  const { result } = runDevelopmentBuild({ KUBUS_REQUIRE_STAGING_BACKEND: 'true' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /KUBUS_DEVELOPMENT_BACKEND_URL/);
+});
+
+for (const bad of [
+  'https://api.kubus.site', 'https://bapi.kubus.site', 'http://staging.example.test',
+  'https://localhost', 'https://127.0.0.1', 'https://10.0.0.5', 'https://staging',
+  'https://staging.example.test/api', 'https://user:pw@staging.example.test', 'not a url',
+]) {
+  test(`a development build rejects backend ${bad}`, () => {
+    const { result } = runDevelopmentBuild({
+      KUBUS_REQUIRE_STAGING_BACKEND: 'true', KUBUS_DEVELOPMENT_BACKEND_URL: bad,
+    });
+    assert.equal(result.status, 1, result.stderr);
+  });
+}
+
+test('a development build targets staging for both the primary and the failover origin', () => {
+  const { result, defines } = runDevelopmentBuild({
+    KUBUS_REQUIRE_STAGING_BACKEND: 'true',
+    KUBUS_DEVELOPMENT_BACKEND_URL: 'https://staging-api.example.test',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(defines.BACKEND_BASE_URL, 'https://staging-api.example.test');
+  assert.equal(defines.BACKEND_STANDBY_BASE_URL, 'https://staging-api.example.test');
+  assert.equal(defines.KUBUS_BACKEND_URL, 'https://staging-api.example.test');
+});
+
+test('a build that is not deployed is unchanged and ignores the development backend', () => {
+  const { result, defines } = runDevelopmentBuild({
+    KUBUS_DEVELOPMENT_BACKEND_URL: 'https://staging-api.example.test',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(defines.KUBUS_BACKEND_URL, 'https://api.kubus.site');
+  assert.equal(defines.BACKEND_BASE_URL, undefined);
+  assert.equal(defines.BACKEND_STANDBY_BASE_URL, undefined);
+});
+
+test('development deployment explicitly opts into the existing shared API', () => {
+  const source = workflow('deploy-development.yml');
+  assert.match(source, /require_staging_backend:\s*false\b/);
+  const { result, defines } = runDevelopmentBuild({
+    KUBUS_REQUIRE_STAGING_BACKEND: 'false',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(defines.KUBUS_BACKEND_URL, 'https://api.kubus.site');
+  assert.equal(defines.BACKEND_BASE_URL, undefined);
+  assert.equal(defines.BACKEND_STANDBY_BASE_URL, undefined);
+});
