@@ -208,6 +208,42 @@ void main() {
 
     semantics.dispose();
   });
+
+  testWidgets('a reload keeps the rows on screen, and the same row element',
+      (tester) async {
+    final mapDelegate = _FakeNearbyMapDelegate();
+    final controller = NearbyArtController(map: mapDelegate);
+    final artwork = _artwork();
+    final marker = _marker(artworkId: artwork.id);
+
+    Widget panel({required bool isLoading}) => _buildApp(
+          SizedBox(
+            width: 420,
+            height: 640,
+            child: KubusNearbyArtPanel(
+              controller: controller,
+              layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+              artworks: <Artwork>[artwork],
+              markers: <ArtMarker>[marker],
+              basePosition: const LatLng(46.0569, 14.5058),
+              isLoading: isLoading,
+              viewportScope: false,
+              radiusKm: 2,
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(panel(isLoading: false));
+    await tester.pumpAndSettle();
+    final row = tester.element(find.text('Nearby Artwork'));
+
+    await tester.pumpWidget(panel(isLoading: true));
+    await tester.pump();
+
+    expect(find.text('Nearby Artwork'), findsOneWidget);
+    expect(find.byType(KubusNearbyArtLoadingState), findsNothing);
+    expect(tester.element(find.text('Nearby Artwork')), same(row));
+  });
 }
 
 Widget _buildApp(Widget child) {

@@ -146,7 +146,10 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
         ),
-        if (isLoading)
+        // A reload with rows already on screen keeps them: a viewport change
+        // reloads artworks, and replacing the rows would unmount the focused
+        // row (keyboard focus then cannot return to the card's opener).
+        if (isLoading && sorted.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: KubusNearbyArtLoadingState(),
