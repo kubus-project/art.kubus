@@ -108,51 +108,19 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     }
   }
 
-  Future<void> _ensureArtFeedLoaded({bool force = false}) async {
-    final l10n = AppLocalizations.of(context)!;
-    if (_isLoadingArtFeed && !force) return;
-    if (!force && _artFeedPosts.isNotEmpty) return;
-
-    _applyState(() {
-      _isLoadingArtFeed = true;
-      _artFeedError = null;
-    });
-
-    final locationData = await _obtainCurrentLocation();
-    if (!mounted) return;
-    if (locationData == null) {
-      _applyState(() {
-        _isLoadingArtFeed = false;
-        _artFeedError = l10n.communityArtFeedLocationPermissionRequiredError;
-      });
-      return;
-    }
-
-    try {
-      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
-      await hub.loadArtFeed(
-        latitude: locationData.latitude!,
-        longitude: locationData.longitude!,
-        sort: 'hybrid',
-        refresh: true,
-      );
-      if (!mounted) return;
-      _applyState(() {
-        _artFeedLatitude = locationData.latitude;
-        _artFeedLongitude = locationData.longitude;
-        _artFeedPosts = List<CommunityPost>.from(hub.artFeedPosts);
-        _isLoadingArtFeed = false;
-        _artFeedError = hub.artFeedError;
-      });
-    } catch (e) {
-      debugPrint('Failed to load art feed: $e');
-      if (!mounted) return;
-      _applyState(() {
-        _isLoadingArtFeed = false;
-        _artFeedError = l10n.communityArtFeedLoadFailedError;
-      });
-      _showSnack(l10n.communityArtFeedLoadFailedToast);
-    }
+  /// Loads the Art discovery feed: personalised, nearby and new content
+  /// composed by [CommunityArtDiscoveryProvider]. A missing or denied location
+  /// never empties the tab; it only changes where "nearby" is measured from.
+  Future<void> _ensureArtFeedLoaded({
+    bool force = false,
+    bool promptForLocation = false,
+  }) async {
+    final discovery = context.read<CommunityArtDiscoveryProvider>();
+    if (!force && (discovery.loaded || discovery.loading)) return;
+    await discovery.refresh(
+      buildLiveArtDiscoverySources(context),
+      promptForLocation: promptForLocation,
+    );
   }
 
   void _showSnack(String message) {
@@ -547,43 +515,6 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     }
     _lastConfigChange = now;
     _loadInitialFeeds(force: true);
-  }
-
-  bool _handleArtFeedScrollNotification(ScrollNotification notification) {
-    if (!mounted) return false;
-    if (notification.metrics.axis != Axis.vertical) return false;
-    if (_tabController.index != 3) return false;
-    if (_artFeedLatitude == null || _artFeedLongitude == null) return false;
-    if (notification.metrics.extentAfter > 600) return false;
-
-    if (_artFeedLoadMoreInFlight) return false;
-    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
-    if (hub.artFeedLoading || !hub.artFeedHasMore) return false;
-
-    _artFeedLoadMoreInFlight = true;
-    (() async {
-      try {
-        await hub.loadArtFeed(
-          latitude: _artFeedLatitude!,
-          longitude: _artFeedLongitude!,
-          radiusKm: hub.artFeedRadiusKm,
-          limit: 20,
-          refresh: false,
-        );
-        if (!mounted) return;
-        _applyState(() {
-          _artFeedPosts = List<CommunityPost>.from(hub.artFeedPosts);
-          _isLoadingArtFeed = hub.artFeedLoading;
-          _artFeedError = hub.artFeedError;
-        });
-      } catch (_) {
-        // Errors are surfaced via hub.artFeedError and the existing UI states.
-      } finally {
-        _artFeedLoadMoreInFlight = false;
-      }
-    })();
-
-    return false;
   }
 
   void _handleIncomingPost(Map<String, dynamic> data) async {

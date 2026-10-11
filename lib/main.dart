@@ -37,6 +37,7 @@ import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
+import 'providers/community_art_discovery_provider.dart';
 import 'providers/community_comments_provider.dart';
 import 'providers/community_interactions_provider.dart';
 import 'providers/community_subject_provider.dart';
@@ -627,6 +628,16 @@ class _AppLauncherState extends State<AppLauncher> {
                 update: (context, subjectProvider, hubProvider) {
                   final provider = hubProvider ?? CommunityHubProvider();
                   provider.bindSubjectProvider(subjectProvider);
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider<WalletProvider,
+                  CommunityArtDiscoveryProvider>(
+                create: (context) => CommunityArtDiscoveryProvider(),
+                update: (context, walletProvider, discoveryProvider) {
+                  final provider =
+                      discoveryProvider ?? CommunityArtDiscoveryProvider();
+                  provider.bindAccount(walletProvider.currentWalletAddress);
                   return provider;
                 },
               ),

@@ -30700,6 +30700,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t reach art.kubus. Check your connection and try again.'**
   String get communityPostDeleteNetwork;
+
+  /// No description provided for @communityArtDiscoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover art'**
+  String get communityArtDiscoveryTitle;
+
+  /// No description provided for @communityArtDiscoverySubtitleMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the area you were viewing on the map'**
+  String get communityArtDiscoverySubtitleMap;
+
+  /// No description provided for @communityArtDiscoverySubtitleDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Around your location'**
+  String get communityArtDiscoverySubtitleDevice;
+
+  /// No description provided for @communityArtDiscoverySubtitleSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the last area you used'**
+  String get communityArtDiscoverySubtitleSaved;
+
+  /// No description provided for @communityArtDiscoverySubtitlePublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Art and conversations from across the platform'**
+  String get communityArtDiscoverySubtitlePublic;
+
+  /// No description provided for @communityArtDiscoveryWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {distance}'**
+  String communityArtDiscoveryWithin(Object distance);
+
+  /// No description provided for @communityArtDiscoveryUseMyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my location'**
+  String get communityArtDiscoveryUseMyLocation;
+
+  /// No description provided for @communityArtDiscoveryReasonForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'For you'**
+  String get communityArtDiscoveryReasonForYou;
+
+  /// No description provided for @communityArtDiscoveryReasonNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby'**
+  String get communityArtDiscoveryReasonNearby;
+
+  /// No description provided for @communityArtDiscoveryReasonFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'From an artist you follow'**
+  String get communityArtDiscoveryReasonFollowed;
+
+  /// No description provided for @communityArtDiscoveryReasonNewArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'New artwork'**
+  String get communityArtDiscoveryReasonNewArtwork;
+
+  /// No description provided for @communityArtDiscoveryReasonDiscussion.
+  ///
+  /// In en, this message translates to:
+  /// **'Community discussion'**
+  String get communityArtDiscoveryReasonDiscussion;
+
+  /// No description provided for @communityArtDiscoveryReasonReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent review'**
+  String get communityArtDiscoveryReasonReview;
+
+  /// No description provided for @communityArtDiscoveryReasonExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get communityArtDiscoveryReasonExhibition;
+
+  /// No description provided for @communityArtDiscoveryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get communityArtDiscoveryEmptyTitle;
+
+  /// No description provided for @communityArtDiscoveryEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No public art, reviews or exhibitions could be found right now. Try again in a moment, or explore the map.'**
+  String get communityArtDiscoveryEmptyBody;
+
+  /// No description provided for @communityArtDiscoveryErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load discovery'**
+  String get communityArtDiscoveryErrorTitle;
+
+  /// No description provided for @communityArtDiscoveryErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get communityArtDiscoveryErrorBody;
+
+  /// No description provided for @communityArtDiscoveryLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get communityArtDiscoveryLoadMore;
 }
 
 class _AppLocalizationsDelegate

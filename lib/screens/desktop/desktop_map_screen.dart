@@ -61,6 +61,7 @@ import '../../utils/map_viewport_utils.dart';
 import '../../utils/geo_bounds.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/user_profile_navigation.dart';
+import '../../widgets/common/kubus_size_reporter.dart';
 import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
@@ -266,6 +267,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   ml.MapLibreMapController? _mapController;
   ml.MapLibreMapController? _deactivateDetachedMapController;
+
+  /// Laid-out width of the bottom-right control cluster; the discovery card
+  /// above it takes exactly this width so the group reads as one block.
+  double? _controlClusterWidth;
   MapLayersManager? _layersManager;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -2617,28 +2622,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     // control toolbar and attribution cluster on the right stay
                     // clear. Declared before that cluster so the controls
                     // always render above it.
-                    // Basemap credit: bottom-left, clear of the control cluster and
-                    // of the engagement prompt that sits above it.
-                    AnimatedPositioned(
-                      // Clears the left side panel whether it shows marker
-                      // details or filters, so the credit never sits on it.
-                      // Moves with the panel's own motion.
-                      duration: mapMotion.panelEnter.duration,
-                      curve: mapMotion.panelEnter.curve,
-                      left: _isLeftPanelVisible
-                          ? contextPanelWidth +
-                              KubusMapMetrics.desktopChromeInset
-                          : KubusMapMetrics.desktopChromeInset,
-                      // With a side panel open the credit may use only the room
-                      // left of the control cluster; it wraps rather than hides.
-                      right: _isLeftPanelVisible
-                          ? KubusMapMetrics.desktopCreditControlsReserve
-                          : null,
-                      bottom: KubusMapMetrics.desktopChromeInset,
-                      child: MapOverlayBlocker(
-                        child: _buildDesktopAttributionButton(),
-                      ),
-                    ),
                     Positioned(
                       left: _hasLeftDetailPanel
                           ? contextPanelWidth +
@@ -2676,22 +2659,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
+                                  // Basemap credit: the compact info button
+                                  // sits beside the control cluster, bottom
+                                  // aligned with it (spelled out for a few
+                                  // seconds on arrival, then collapsed).
+                                  _buildDesktopAttributionButton(),
+                                  const SizedBox(width: KubusSpacing.sm),
                                   Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       // Always reserve a discovery path area on desktop:
                                       // show progress when present, otherwise a compact
-                                      // idle card. It sits directly above the controls
-                                      // and never collides with search/filters/cards.
+                                      // idle card. It sits directly above the controls,
+                                      // exactly as wide as the control cluster, and
+                                      // never collides with search/filters/cards.
                                       if (showDiscoveryChrome) ...[
-                                        if (activeProgress.isNotEmpty)
-                                          _buildDiscoveryCard(taskProvider)
-                                        else
-                                          _buildDiscoveryIdleCard(),
+                                        SizedBox(
+                                          width: _controlClusterWidth,
+                                          child: activeProgress.isNotEmpty
+                                              ? _buildDiscoveryCard(
+                                                  taskProvider,
+                                                )
+                                              : _buildDiscoveryIdleCard(),
+                                        ),
                                         const SizedBox(height: KubusSpacing.sm),
                                       ],
-                                      _buildMapControls(themeProvider),
+                                      KubusSizeReporter(
+                                        onSize: (size) {
+                                          if (!mounted) return;
+                                          final width =
+                                              size.width.roundToDouble();
+                                          if (_controlClusterWidth == width) {
+                                            return;
+                                          }
+                                          setState(
+                                            () => _controlClusterWidth = width,
+                                          );
+                                        },
+                                        child: _buildMapControls(themeProvider),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -4379,7 +4386,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildDesktopAttributionButton() {
     final l10n = AppLocalizations.of(context)!;
-    return KubusMapAttributionControl(
+    return KubusMapCollapsingAttribution(
       semanticsLabel: l10n.mapAttributionsTitle,
       onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );

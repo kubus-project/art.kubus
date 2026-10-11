@@ -6660,6 +6660,7 @@ class BackendApiService
     int limit = 20,
     int page = 1,
     String sort = 'hybrid',
+    bool includeGeneral = false,
   }) async {
     try {
       final params = <String, String>{
@@ -6669,6 +6670,9 @@ class BackendApiService
         'limit': limit.toString(),
         'page': page.toString(),
         'sort': sort.trim().toLowerCase(),
+        // Also public posts that are not reviews, drops or events but sit in
+        // the area. Servers that predate the flag ignore it.
+        if (includeGeneral) 'includeGeneral': 'true',
       };
       final uri = Uri.parse(
         '$baseUrl/api/community/art-feed',

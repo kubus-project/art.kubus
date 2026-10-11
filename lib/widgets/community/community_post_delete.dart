@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
+import '../../providers/community_art_discovery_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/design_tokens.dart';
@@ -93,6 +94,12 @@ Future<bool> confirmAndDeleteCommunityPost({
   if (_deleteInFlight.contains(post.id)) return false;
   final l10n = AppLocalizations.of(context)!;
   final interactions = context.read<CommunityInteractionsProvider>();
+  CommunityArtDiscoveryProvider? discovery;
+  try {
+    discovery = context.read<CommunityArtDiscoveryProvider>();
+  } catch (_) {
+    discovery = null;
+  }
   final messenger = ScaffoldMessenger.maybeOf(context);
 
   final deleted = await showKubusDialog<bool>(
@@ -104,6 +111,8 @@ Future<bool> confirmAndDeleteCommunityPost({
   );
   if (deleted != true) return false;
 
+  // A deleted post must leave the Art discovery feed too, and stay out of it.
+  discovery?.removePost(post.id);
   try {
     onDeleted();
   } catch (e) {

@@ -4278,28 +4278,6 @@ class _MapScreenState extends State<MapScreen>
                     if (widget.walkingNavigationIntent != null)
                       _buildWalkingNavigationOverlay(),
                     if (_isWalkingFocusedMode) _buildWalkingExitButton(),
-                    // Visible basemap credit. The native control is hidden on
-                    // web, and the full sheet sits behind More tools, so the
-                    // credit is drawn here, above the Nearby sheet and clear of
-                    // the rail. Offset right of the native "i" on device builds.
-                    if (!_isWalkingFocusedMode)
-                      Positioned(
-                        left: kIsWeb ? 12.0 : 44.0,
-                        // The sheet is padded above the nav bar, so clear both.
-                        bottom: attributionBottomMargin +
-                            KubusLayout.mainBottomNavBarHeight,
-                        // Blocked like every other control over the platform view,
-                        // so taps open the sheet instead of reaching the map.
-                        child: MapOverlayBlocker(
-                          child: KubusMapAttributionControl(
-                            semanticsLabel: l10n.mapAttributionsTitle,
-                            minHeight: KubusMapMetrics.mobileControlSize,
-                            onPressed: () => unawaited(
-                              showKubusMapAttributionDialog(context),
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -6165,34 +6143,52 @@ class _MapScreenState extends State<MapScreen>
             measurementKey: _primaryControlsKey,
             isOccluded: (plan) => plan.controlsOccluded,
             child: MapOverlayBlocker(
-              child: KubusMapControls(
-                controller: _kubusMapController,
-                layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-                onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
-                onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
-                centerOnMeActive: _autoFollow,
-                resetBearingTooltip: l10n.mapResetBearingTooltip,
-                centerOnMeKey: _tutorialCenterButtonKey,
-                centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-                createMarkerKey: _tutorialAddMarkerButtonKey,
-                createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
-                createMarkerHighlighted:
-                    ui.contextSurface == MapContextSurface.createMarker,
-                buttonSize: KubusMapMetrics.mobileControlSize,
-                showZoomControls: false,
-                showSecondaryTools: hasSecondaryTools,
-                onOpenSecondaryTools: _openMobileMapTools,
-                secondaryToolsKey: _tutorialMapToolsButtonKey,
-                secondaryToolsTooltip: l10n.mapToolsTitle,
-                showIsometricViewToggle: false,
-                isometricViewActive: _isometricViewEnabled,
-                onToggleIsometricView: () {
-                  unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
-                },
-                isometricViewTooltipWhenActive:
-                    l10n.mapIsometricViewDisableTooltip,
-                isometricViewTooltipWhenInactive:
-                    l10n.mapIsometricViewEnableTooltip,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  KubusMapControls(
+                    controller: _kubusMapController,
+                    layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+                    onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
+                    onCreateMarker: () =>
+                        unawaited(_handleCurrentLocationTap()),
+                    centerOnMeActive: _autoFollow,
+                    resetBearingTooltip: l10n.mapResetBearingTooltip,
+                    centerOnMeKey: _tutorialCenterButtonKey,
+                    centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+                    createMarkerKey: _tutorialAddMarkerButtonKey,
+                    createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+                    createMarkerHighlighted:
+                        ui.contextSurface == MapContextSurface.createMarker,
+                    buttonSize: KubusMapMetrics.mobileControlSize,
+                    showZoomControls: false,
+                    showSecondaryTools: hasSecondaryTools,
+                    onOpenSecondaryTools: _openMobileMapTools,
+                    secondaryToolsKey: _tutorialMapToolsButtonKey,
+                    secondaryToolsTooltip: l10n.mapToolsTitle,
+                    showIsometricViewToggle: false,
+                    isometricViewActive: _isometricViewEnabled,
+                    onToggleIsometricView: () {
+                      unawaited(
+                          _setIsometricViewEnabled(!_isometricViewEnabled));
+                    },
+                    isometricViewTooltipWhenActive:
+                        l10n.mapIsometricViewDisableTooltip,
+                    isometricViewTooltipWhenInactive:
+                        l10n.mapIsometricViewEnableTooltip,
+                  ),
+                  // Basemap credit: the compact info button directly under the
+                  // rail, the same 48px column (spelled out on arrival, then
+                  // collapsed). The full credit stays one tap away.
+                  const SizedBox(height: KubusSpacing.sm),
+                  KubusMapCollapsingAttribution(
+                    semanticsLabel: l10n.mapAttributionsTitle,
+                    minHeight: KubusMapMetrics.mobileControlSize,
+                    onPressed: () =>
+                        unawaited(showKubusMapAttributionDialog(context)),
+                  ),
+                ],
               ),
             ),
           ),

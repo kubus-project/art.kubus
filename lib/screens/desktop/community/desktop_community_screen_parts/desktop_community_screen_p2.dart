@@ -176,7 +176,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final currentTab = _tabs[_tabController.index];
-    if (currentTab == 'groups') return const SizedBox.shrink();
+    // Groups have no feed order, and Art discovery is ranked by one policy
+    // (follows, saves, proximity, recency), not by a chosen sort.
+    if (currentTab == 'groups' || currentTab == 'art') {
+      return const SizedBox.shrink();
+    }
     final sortMode = _sortModeForTab(currentTab);
 
     Widget buildChip(String label, String value, IconData icon) {
@@ -602,134 +606,33 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   }
 
   Widget _buildArtFeed(ThemeProvider themeProvider) {
-    return Consumer<CommunityHubProvider>(
-      builder: (context, communityProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final allPosts = communityProvider.artFeedPosts;
-        final isLoading = communityProvider.artFeedLoading;
-        final error = communityProvider.artFeedError;
-
-        if (isLoading && allPosts.isEmpty) {
-          return _buildLoadingState(
-              themeProvider, l10n.desktopCommunityLoadingNearbyArtLabel);
-        }
-
-        if (error != null && allPosts.isEmpty) {
-          return _buildErrorState(themeProvider, error, () async {
-            await communityProvider.loadArtFeed(
-              latitude: 46.05,
-              longitude: 14.50,
-              radiusKm: 50,
-              limit: 50,
-              refresh: true,
-            );
-          });
-        }
-
-        if (allPosts.isEmpty) {
-          return _buildEmptyState(
-            themeProvider,
-            Icons.view_in_ar_outlined,
-            l10n.desktopCommunityEmptyNearbyArtTitle,
-            l10n.desktopCommunityEmptyNearbyArtBody,
-          );
-        }
-
-        final posts = _sortPosts(_filterPostsForQuery(allPosts), _artSortMode);
-        if (posts.isEmpty) {
-          return _buildEmptyState(
-            themeProvider,
-            Icons.search,
-            l10n.desktopCommunityEmptySearchTitle,
-            l10n.desktopCommunityEmptySearchSubtitle,
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            await communityProvider.loadArtFeed(
-              latitude: 46.05,
-              longitude: 14.50,
-              radiusKm: 50,
-              limit: 50,
-              refresh: true,
-            );
-          },
-          color: themeProvider.accentColor,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              // Infinite scroll: load next page when near the bottom.
-              if (notification.metrics.extentAfter < 600 &&
-                  communityProvider.artFeedHasMore &&
-                  !communityProvider.artFeedLoading) {
-                final center = communityProvider.artFeedCenter;
-                unawaited(communityProvider.loadArtFeed(
-                  latitude: center?.lat ?? 46.05,
-                  longitude: center?.lng ?? 14.50,
-                  radiusKm: communityProvider.artFeedRadiusKm,
-                  limit: communityProvider.artFeedPageSize,
-                  refresh: false,
-                ));
-              }
-              return false;
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              itemCount: posts.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await communityProvider.loadArtFeed(
-                              latitude: 46.05,
-                              longitude: 14.50,
-                              radiusKm: 50,
-                              limit: 50,
-                              refresh: true,
-                            );
-                          },
-                          icon: const Icon(Icons.my_location),
-                          label: Text(
-                              l10n.desktopCommunityArtUseCurrentAreaButton),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            await communityProvider.loadArtFeed(
-                              latitude: 46.05,
-                              longitude: 14.50,
-                              radiusKm: 200,
-                              limit: 100,
-                              refresh: true,
-                            );
-                          },
-                          icon: const Icon(Icons.travel_explore),
-                          label:
-                              Text(l10n.desktopCommunityArtWiderRadiusButton),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return _buildPostCard(posts[index - 1], themeProvider);
-              },
-            ),
-          ),
-        );
-      },
+    final query = _communitySearchController.state.query.trim().toLowerCase();
+    return CommunityArtDiscoveryFeed(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      maxContentWidth: 760,
+      postBuilder: (context, post) => _buildPostCard(post, themeProvider),
+      onRefresh: () => _loadArtFeed(force: true),
+      onUseMyLocation: () => _loadArtFeed(force: true, promptForLocation: true),
+      matches:
+          query.isEmpty ? null : (item) => _artDiscoveryMatches(item, query),
     );
+  }
+
+  /// The tab's search field applies to every kind of discovery entry.
+  bool _artDiscoveryMatches(ArtDiscoveryItem item, String query) {
+    switch (item.kind) {
+      case ArtDiscoveryKind.post:
+        return _filterPostsForQuery([item.post!]).isNotEmpty;
+      case ArtDiscoveryKind.artwork:
+        final art = item.artwork!;
+        return art.title.toLowerCase().contains(query) ||
+            art.artist.toLowerCase().contains(query) ||
+            art.tags.any((tag) => tag.toLowerCase().contains(query));
+      case ArtDiscoveryKind.exhibition:
+        final show = item.exhibition!;
+        return show.title.toLowerCase().contains(query) ||
+            (show.locationName ?? '').toLowerCase().contains(query);
+    }
   }
 
   Widget _buildFloatingActions(ThemeProvider themeProvider) {

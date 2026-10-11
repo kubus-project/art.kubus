@@ -92,6 +92,10 @@ import '../../widgets/community/community_search_bar.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
+import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
+import 'package:art_kubus/community/art_discovery.dart';
+import 'package:art_kubus/community/art_discovery_sources.dart';
+import 'package:art_kubus/providers/community_art_discovery_provider.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
@@ -161,14 +165,12 @@ class _CommunityScreenState extends State<CommunityScreen>
   bool _isLoadingDiscoverFeed = false;
   bool _followingFeedLoaded = false;
   bool _discoverFeedLoaded = false;
-  bool _isLoadingArtFeed = false;
   CommunityFeedType _activeFeed = CommunityFeedType.following;
   // Deduplication and local push are now handled centrally by NotificationProvider
   final Map<int, bool> _bookmarkedPosts = {};
   // Avatar cache removed - ChatProvider or UserService are used for user avatars
   // Scroll controller for the feed to detect when user is away from top
   late ScrollController _feedScrollController;
-  bool _artFeedLoadMoreInFlight = false;
   late final TextEditingController _groupSearchController;
   late final KubusSearchController _communitySearchController;
   Timer? _groupSearchDebounce;
@@ -180,7 +182,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   final List<CommunityPost> _bufferedIncomingPosts = [];
   // Keep ids of posts we just created locally to suppress duplicate socket echoes
   final Set<String> _recentlyCreatedPostIds = <String>{};
-  String? _artFeedError;
 
   // New post state
   final TextEditingController _newPostController = TextEditingController();
@@ -194,8 +195,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   );
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
-  double? _artFeedLatitude;
-  double? _artFeedLongitude;
   String? _lastWalletAddress;
   AppRefreshProvider? _appRefreshProvider;
   int _lastCommunityRefreshVersion = 0;
