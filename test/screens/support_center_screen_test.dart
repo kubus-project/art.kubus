@@ -967,6 +967,16 @@ void main() {
       expect(contact.isFocused, Tristate.isTrue);
       expect(contact.isSelected, Tristate.isFalse);
       expect(ringWidth('contact'), 2);
+      // The ring box encloses the chip with a gap at least as wide as the ring,
+      // so the chip's fill cannot cover it.
+      final ringBox = tester.getRect(
+        find.byKey(const ValueKey<String>('support-tab-ring-contact')),
+      );
+      final chipBox = tester.getRect(
+        find.widgetWithText(ChoiceChip, 'Contact support'),
+      );
+      expect(chipBox.left - ringBox.left, greaterThanOrEqualTo(2));
+      expect(ringBox.right - chipBox.right, greaterThanOrEqualTo(2));
       expect(ringWidth('faq'), 0, reason: 'the ring moves with focus');
       // FAQ stays selected while focus is elsewhere.
       final faqSelectedOnly = tester.getSemantics(tab('FAQ')).flagsCollection;

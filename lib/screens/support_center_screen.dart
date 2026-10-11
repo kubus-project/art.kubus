@@ -389,17 +389,19 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       label: label,
       onTap: () => _go(section),
       child: ExcludeSemantics(
-        child: Padding(
-          padding: const EdgeInsets.all(_tabRingGap),
-          child: DecoratedBox(
-            key: ValueKey<String>('support-tab-ring-${section.name}'),
-            decoration: ShapeDecoration(
-              shape: StadiumBorder(
-                side: keyboardFocus
-                    ? BorderSide(color: ringColor, width: _tabRingWidth)
-                    : BorderSide.none,
-              ),
+        // The ring is drawn in the gap around the chip: this box is the outer
+        // edge, so the chip's own fill does not cover it.
+        child: DecoratedBox(
+          key: ValueKey<String>('support-tab-ring-${section.name}'),
+          decoration: ShapeDecoration(
+            shape: StadiumBorder(
+              side: keyboardFocus
+                  ? BorderSide(color: ringColor, width: _tabRingWidth)
+                  : BorderSide.none,
             ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(_tabRingGap),
             child: Theme(
               data: Theme.of(context).copyWith(focusColor: Colors.transparent),
               child: ChoiceChip(
