@@ -979,6 +979,11 @@ void main() {
             .showCheckmark,
         isTrue,
       );
+
+      // A pointer press is not keyboard navigation: its focus draws no ring.
+      await tester.tap(tab('My requests'));
+      await settle(tester);
+      expect(ringWidth('requests'), 0);
       handle.dispose();
     });
 

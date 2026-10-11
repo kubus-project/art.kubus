@@ -3,6 +3,8 @@ import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'
+    show HardwareKeyboard, KeyDownEvent, KeyEvent;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -86,12 +88,28 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     if (mounted) setState(() {});
   }
 
-  void _onHighlightModeChanged(FocusHighlightMode _) => _onTabFocusChanged();
+  /// True after a key press and false after a pointer press. Web reports focus
+  /// that arrives through the semantics tree as touch highlight mode, so
+  /// FocusHighlightMode cannot tell keyboard focus from pointer focus there.
+  bool _keyboardNavigation = false;
+
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && !_keyboardNavigation && mounted) {
+      setState(() => _keyboardNavigation = true);
+    }
+    return false;
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    if (_keyboardNavigation && mounted) {
+      setState(() => _keyboardNavigation = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
     _section = widget.initialSection;
     if (_section == SupportSection.requests) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -161,7 +179,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   @override
   void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     for (final node in _tabFocus.values) {
       node.removeListener(_onTabFocusChanged);
       node.dispose();
@@ -361,8 +379,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   Widget _sectionTab(SupportSection section, String label) {
     final focusNode = _tabFocusNode(section);
     final selected = _section == section;
-    final keyboardFocus = focusNode.hasFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    final keyboardFocus = focusNode.hasFocus && _keyboardNavigation;
     final ringColor = KubusColorRoles.of(context).focus;
     return Semantics(
       role: SemanticsRole.tab,
@@ -1087,48 +1104,51 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     };
     return Scaffold(
       appBar: AppBar(title: Text(l10n.supportCenterTitle)),
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 920),
-            child: ListView(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              children: [
-                // The four sections switch the panel below, so they are tabs
-                // (not checkboxes): one selected tab at a time.
-                Semantics(
-                  container: true,
-                  explicitChildNodes: true,
-                  role: SemanticsRole.tabBar,
-                  label: l10n.supportCenterSectionsLabel,
-                  child: Wrap(
-                    spacing: KubusSpacing.sm,
-                    runSpacing: KubusSpacing.sm,
-                    children: [
-                      for (final section in SupportSection.values)
-                        _sectionTab(section, sectionLabels[section]!),
-                    ],
+      body: Listener(
+        onPointerDown: _onPointerDown,
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: ListView(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                children: [
+                  // The four sections switch the panel below, so they are tabs
+                  // (not checkboxes): one selected tab at a time.
+                  Semantics(
+                    container: true,
+                    explicitChildNodes: true,
+                    role: SemanticsRole.tabBar,
+                    label: l10n.supportCenterSectionsLabel,
+                    child: Wrap(
+                      spacing: KubusSpacing.sm,
+                      runSpacing: KubusSpacing.sm,
+                      children: [
+                        for (final section in SupportSection.values)
+                          _sectionTab(section, sectionLabels[section]!),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: KubusSpacing.md),
-                // With the feature off only the FAQ answers; the request
-                // history makes no ticket calls at all.
-                switch (_section) {
-                  SupportSection.faq => _faq(l10n),
-                  SupportSection.contact ||
-                  SupportSection.bug =>
-                    support.supportEnabled
-                        ? _requestForm(
-                            l10n,
-                            bug: _section == SupportSection.bug,
-                          )
+                  const SizedBox(height: KubusSpacing.md),
+                  // With the feature off only the FAQ answers; the request
+                  // history makes no ticket calls at all.
+                  switch (_section) {
+                    SupportSection.faq => _faq(l10n),
+                    SupportSection.contact ||
+                    SupportSection.bug =>
+                      support.supportEnabled
+                          ? _requestForm(
+                              l10n,
+                              bug: _section == SupportSection.bug,
+                            )
+                          : _unavailableNotice(l10n),
+                    SupportSection.requests => support.supportEnabled
+                        ? _requests(l10n, support)
                         : _unavailableNotice(l10n),
-                  SupportSection.requests => support.supportEnabled
-                      ? _requests(l10n, support)
-                      : _unavailableNotice(l10n),
-                },
-              ],
+                  },
+                ],
+              ),
             ),
           ),
         ),
