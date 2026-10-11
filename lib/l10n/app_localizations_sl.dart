@@ -17852,4 +17852,20 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityComposerCheckFeed => 'Preveri vir objav';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Seja je potekla. Za izbris objave se znova prijavi.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'Izbrišeš lahko samo svoje objave.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'Te objave trenutno ni mogoče izbrisati. Osveži vir in poskusi znova.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Povezava z art.kubus ni uspela. Preveri povezavo in poskusi znova.';
 }

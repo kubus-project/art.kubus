@@ -7428,5 +7428,9 @@
   "communityComposerRateLimitedGeneric": "Posting is temporarily limited. Wait before trying again. Your draft is kept.",
   "communityComposerDiscardDraft": "Discard this draft?",
   "communityComposerAlreadyCommitted": "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.",
-  "communityComposerCheckFeed": "Check feed"
+  "communityComposerCheckFeed": "Check feed",
+  "communityPostDeleteSessionExpired": "Your session has expired. Sign in again to delete this post.",
+  "communityPostDeleteNotAllowed": "You can only delete your own posts.",
+  "communityPostDeleteConflict": "This post can't be deleted right now. Refresh the feed and try again.",
+  "communityPostDeleteNetwork": "Couldn't reach art.kubus. Check your connection and try again."
 }

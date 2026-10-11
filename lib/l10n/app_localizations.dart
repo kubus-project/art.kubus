@@ -30676,6 +30676,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check feed'**
   String get communityComposerCheckFeed;
+
+  /// No description provided for @communityPostDeleteSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to delete this post.'**
+  String get communityPostDeleteSessionExpired;
+
+  /// No description provided for @communityPostDeleteNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only delete your own posts.'**
+  String get communityPostDeleteNotAllowed;
+
+  /// No description provided for @communityPostDeleteConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This post can\'t be deleted right now. Refresh the feed and try again.'**
+  String get communityPostDeleteConflict;
+
+  /// No description provided for @communityPostDeleteNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach art.kubus. Check your connection and try again.'**
+  String get communityPostDeleteNetwork;
 }
 
 class _AppLocalizationsDelegate

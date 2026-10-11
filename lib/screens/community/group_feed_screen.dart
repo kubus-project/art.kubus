@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -853,99 +854,23 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
     if (!mounted) return;
-    if (_deleteDialogOpenPostIds.contains(post.id) ||
-        _deleteInFlightPostIds.contains(post.id)) {
-      return;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
+    if (_deleteDialogOpenPostIds.contains(post.id)) return;
     _deleteDialogOpenPostIds.add(post.id);
-    bool deleting = false;
-
+    AppRefreshProvider? appRefresh;
     try {
-      await showKubusDialog<void>(
+      appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
+    } catch (_) {}
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final groupId = post.groupId ?? _group.id;
+    try {
+      await confirmAndDeleteCommunityPost(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => KubusAlertDialog(
-            title: Text(
-              l10n.postDetailDeletePostTitle,
-              style: KubusTypography.inter(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              l10n.postDetailDeletePostBody,
-              style: KubusTypography.inter(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () => Navigator.of(dialogContext).maybePop(),
-                child: Text(l10n.commonCancel),
-              ),
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () async {
-                        if (_deleteInFlightPostIds.contains(post.id)) return;
-                        setDialogState(() => deleting = true);
-                        _deleteInFlightPostIds.add(post.id);
-                        final messenger = ScaffoldMessenger.of(context);
-                        AppRefreshProvider? appRefresh;
-                        try {
-                          appRefresh = Provider.of<AppRefreshProvider>(
-                            context,
-                            listen: false,
-                          );
-                        } catch (_) {}
-
-                        try {
-                          await BackendApiService()
-                              .deleteCommunityPost(post.id);
-                          ProfilePackageMutationTracker.postDeleted(
-                            authorWallet: post.authorWallet ?? post.authorId,
-                          );
-                          if (!mounted || !dialogContext.mounted) return;
-                          final hub = Provider.of<CommunityHubProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final groupId = post.groupId ?? _group.id;
-                          hub.removeGroupPost(groupId, post.id);
-                          hub.removeArtFeedPost(post.id);
-                          appRefresh?.triggerCommunity();
-                          Navigator.of(dialogContext).pop();
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                                content: Text(l10n.postDetailPostDeletedToast)),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint(
-                                'GroupFeedScreen: delete post failed: $e');
-                          }
-                          if (!mounted || !dialogContext.mounted) return;
-                          setDialogState(() => deleting = false);
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.postDetailDeletePostFailedToast),
-                            ),
-                          );
-                        } finally {
-                          _deleteInFlightPostIds.remove(post.id);
-                        }
-                      },
-                child: deleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: InlineLoading(tileSize: 4),
-                      )
-                    : Text(l10n.commonDelete),
-              ),
-            ],
-          ),
-        ),
+        post: post,
+        onDeleted: () {
+          hub.removeGroupPost(groupId, post.id);
+          hub.removeArtFeedPost(post.id);
+          appRefresh?.triggerCommunity();
+        },
       );
     } finally {
       _deleteDialogOpenPostIds.remove(post.id);

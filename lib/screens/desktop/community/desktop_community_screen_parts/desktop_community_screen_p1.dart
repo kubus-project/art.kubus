@@ -361,7 +361,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
       }
       if (mounted) {
         _applyState(() {
-          _discoverPosts = filtered;
+          _discoverPosts = List<CommunityPost>.of(filtered);
           _discoverFeedLoaded = true;
           _isLoadingDiscover = false;
         });
@@ -562,7 +562,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
       }
       if (mounted) {
         _applyState(() {
-          _followingPosts = filtered;
+          _followingPosts = List<CommunityPost>.of(filtered);
           _followingFeedLoaded = true;
           _isLoadingFollowing = false;
         });

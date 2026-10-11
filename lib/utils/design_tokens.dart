@@ -273,6 +273,9 @@ class KubusSizes {
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
 
+  /// Wide variant for dialogs that genuinely carry two columns or a table.
+  static const double dialogWidthXl = 720.0;
+
   /// Coloured state dot shown beside a status label (AR header, list rows).
   static const double statusDot = 8.0;
 

@@ -90,6 +90,7 @@ import '../../widgets/community/community_search_actions.dart';
 import '../../widgets/community/community_search_bar.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';

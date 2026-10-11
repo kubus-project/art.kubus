@@ -17669,4 +17669,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityComposerCheckFeed => 'Check feed';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Your session has expired. Sign in again to delete this post.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'You can only delete your own posts.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'This post can\'t be deleted right now. Refresh the feed and try again.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Couldn\'t reach art.kubus. Check your connection and try again.';
 }

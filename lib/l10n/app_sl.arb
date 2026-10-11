@@ -7390,5 +7390,9 @@
   "communityComposerRateLimitedGeneric": "Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.",
   "communityComposerDiscardDraft": "Želite zavreči ta osnutek?",
   "communityComposerAlreadyCommitted": "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.",
-  "communityComposerCheckFeed": "Preveri vir objav"
+  "communityComposerCheckFeed": "Preveri vir objav",
+  "communityPostDeleteSessionExpired": "Seja je potekla. Za izbris objave se znova prijavi.",
+  "communityPostDeleteNotAllowed": "Izbrišeš lahko samo svoje objave.",
+  "communityPostDeleteConflict": "Te objave trenutno ni mogoče izbrisati. Osveži vir in poskusi znova.",
+  "communityPostDeleteNetwork": "Povezava z art.kubus ni uspela. Preveri povezavo in poskusi znova."
 }

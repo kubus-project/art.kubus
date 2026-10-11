@@ -6532,9 +6532,13 @@ class BackendApiService
         headers: _getHeaders(),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to delete post: ${response.statusCode} - ${response.body}',
+      // 200/202/204 all mean the server removed the post. Anything else is
+      // surfaced with its status so callers can tell 401/403/404/409/5xx apart.
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId',
+          body: response.body,
         );
       }
     } catch (_) {

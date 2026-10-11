@@ -275,14 +275,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     _applyState(() {
       if (targetFollowing) {
-        _followingFeedPosts = posts ?? [];
+        _followingFeedPosts =
+            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
         _followingFeedLoaded = true;
         _isLoadingFollowingFeed = false;
         if (_activeFeed == CommunityFeedType.following) {
           _communityPosts = _followingFeedPosts;
         }
       } else {
-        _discoverFeedPosts = posts ?? [];
+        _discoverFeedPosts =
+            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
         _discoverFeedLoaded = true;
         _isLoadingDiscoverFeed = false;
         if (_activeFeed == CommunityFeedType.discover) {
@@ -354,7 +356,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     _applyState(() {
       if (targetFollowing) {
-        _followingFeedPosts = posts ?? [];
+        _followingFeedPosts =
+            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
         _followingFeedLoaded = true;
         _isLoadingFollowingFeed = false;
         if (isActiveFeed) {
@@ -362,7 +365,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           _isLoading = false;
         }
       } else {
-        _discoverFeedPosts = posts ?? [];
+        _discoverFeedPosts =
+            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
         _discoverFeedLoaded = true;
         _isLoadingDiscoverFeed = false;
         if (isActiveFeed) {
