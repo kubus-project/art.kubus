@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
 import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
 import 'package:flutter/gestures.dart';
@@ -108,9 +110,47 @@ Rect _glyph(WidgetTester tester) => tester.getRect(find.descendant(
       matching: find.byIcon(Icons.analytics_outlined),
     ));
 
+/// Moves the pointer onto the tile and lets the 180 ms lift complete. The
+/// float keeps running afterwards (it only stops once the pointer leaves), so
+/// tests never `pumpAndSettle` while hovered.
 Future<void> _hover(WidgetTester tester, TestGesture gesture) async {
   await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
-  await tester.pumpAndSettle();
+  await tester.pump();
+  await tester.pump(KubusHoverResponse.duration * 1.2);
+}
+
+/// The surface's vertical offset from [rest], sampled every [step] for
+/// [span] while the pointer stays. Negative is up.
+Future<List<double>> _floatTrace(
+  WidgetTester tester,
+  Offset rest, {
+  Duration step = const Duration(milliseconds: 100),
+  Duration span = const Duration(milliseconds: 2400),
+}) async {
+  final trace = <double>[];
+  for (var t = Duration.zero; t < span; t += step) {
+    await tester.pump(step);
+    trace.add(_surfaceTopLeft(tester).dy - rest.dy);
+  }
+  return trace;
+}
+
+void _expectOffset(Offset actual, Offset expected, {String? reason}) {
+  expect(actual.dx, moreOrLessEquals(expected.dx, epsilon: 0.01),
+      reason: reason);
+  expect(actual.dy, moreOrLessEquals(expected.dy, epsilon: 0.01),
+      reason: reason);
+}
+
+void _expectRect(Rect actual, Rect expected, {String? reason}) {
+  _expectOffset(actual.topLeft, expected.topLeft, reason: reason);
+  _expectOffset(actual.bottomRight, expected.bottomRight, reason: reason);
+}
+
+Future<void> _leave(WidgetTester tester, TestGesture gesture) async {
+  await gesture.moveTo(const Offset(790, 590));
+  await tester.pump();
+  await tester.pump(KubusHoverResponse.duration * 1.2);
 }
 
 void main() {
@@ -155,10 +195,13 @@ void main() {
   });
 
   group('KubusActionTile hover contract', () {
+    const lift = KubusHoverResponse.liftDistance;
+    const amp = KubusHoverResponse.floatAmplitude;
+
     for (final layout in KubusActionTileLayout.values) {
       testWidgets(
-          '${layout.name}: lifts 2 px with a soft accent shadow, without '
-          'moving layout', (tester) async {
+          '${layout.name}: rises, keeps floating while hovered, shadows, '
+          'never moves layout and settles on exit', (tester) async {
         await tester.pumpWidget(_host(layout));
         final gesture = await _mouse(tester);
         final restSize = tester.getSize(find.byType(KubusActionTile));
@@ -167,45 +210,93 @@ void main() {
 
         await _hover(tester, gesture);
 
-        final lifted = _surfaceTopLeft(tester);
-        expect(rest.dy - lifted.dy, moreOrLessEquals(2, epsilon: 0.01));
-        expect(lifted.dx, rest.dx);
+        // The lift has completed: the surface sits inside the float band
+        // around its lifted position, and never below its resting line.
+        final first = _surfaceTopLeft(tester);
+        expect(first.dx, rest.dx);
+        expect(
+          first.dy - rest.dy,
+          inInclusiveRange(-(lift + amp), -(lift - amp)),
+        );
         // Paint only: the laid-out size is untouched.
         expect(tester.getSize(find.byType(KubusActionTile)), restSize);
         // A tinted drop shadow, not a glow: visible but restrained.
         expect(_shadowAlpha(tester), inInclusiveRange(0.2, 0.4));
 
-        await gesture.moveTo(const Offset(790, 590));
+        // The float is continuous: over a bit more than one period the
+        // surface visits both ends of its band.
+        final trace = await _floatTrace(tester, rest);
+        expect(trace.reduce(math.min), lessThanOrEqualTo(-(lift + amp) + 0.3));
+        expect(
+            trace.reduce(math.max), greaterThanOrEqualTo(-(lift - amp) - 0.3));
+        for (final dy in trace) {
+          expect(dy, lessThan(0), reason: 'never below the resting line');
+          expect(dy, greaterThanOrEqualTo(-(lift + amp) - 0.01));
+        }
+
+        // Exit: back on the resting line, shadow gone, and the float stops
+        // (pumpAndSettle only returns when nothing keeps animating).
+        await _leave(tester, gesture);
         await tester.pumpAndSettle();
         expect(_surfaceTopLeft(tester), rest);
         expect(_shadowAlpha(tester), 0);
       });
     }
 
+    testWidgets('the rise is an eased entry, not a jump', (tester) async {
+      await tester.pumpWidget(_host(KubusActionTileLayout.stacked));
+      final gesture = await _mouse(tester);
+      final rest = _surfaceTopLeft(tester);
+      await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
+      await tester.pump();
+
+      final frames = <double>[];
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 45));
+        frames.add(rest.dy - _surfaceTopLeft(tester).dy);
+      }
+      // Rising on every frame, and still short of the lifted position after
+      // the first 45 ms.
+      expect(frames.first, inExclusiveRange(0.3, lift));
+      expect(frames[1], greaterThan(frames.first));
+      expect(frames[2], greaterThan(frames[1]));
+    });
+
     for (final layout in const [
       KubusActionTileLayout.stacked,
       KubusActionTileLayout.compact,
     ]) {
       testWidgets(
-          '${layout.name}: the ghost glyph drifts 2-3 px inward and grows at '
-          'most 4 %', (tester) async {
+          '${layout.name}: the ghost glyph drifts inward, grows at most 4 % '
+          'and counter-floats', (tester) async {
         await tester.pumpWidget(_host(layout));
         final gesture = await _mouse(tester);
         final rest = _glyph(tester);
-        const lift = 2.0;
+        final restSurface = _surfaceTopLeft(tester);
 
         await _hover(tester, gesture);
 
         final hovered = _glyph(tester);
         final scale = hovered.width / rest.width;
         expect(scale, inInclusiveRange(1.02, 1.04));
-        // The drift is measured on the glyph's own motion: take the tile's
-        // lift out of the vertical delta.
-        final drift = hovered.center - rest.center + const Offset(0, lift);
-        expect(drift.distance, inInclusiveRange(2, 3));
-        // Inward from the top-right corner: left and down.
+        // Measured on the glyph's own motion: take the tile's travel out of
+        // the delta. The drift is 2-3 px, plus the glyph's own float
+        // (2.2 % of its size).
+        final surfaceTravel = _surfaceTopLeft(tester) - restSurface;
+        final drift = hovered.center - rest.center - surfaceTravel;
+        expect(drift.distance, inInclusiveRange(1, 6));
+        // Inward from the top-right corner: to the left.
         expect(drift.dx, lessThan(0));
-        expect(drift.dy, greaterThan(0));
+
+        // It floats on its own, against the surface: its offset inside the
+        // tile changes over a period.
+        final inside = <double>[];
+        for (var i = 0; i < 24; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          inside.add(_glyph(tester).center.dy - _surfaceTopLeft(tester).dy);
+        }
+        expect(
+            inside.reduce(math.max) - inside.reduce(math.min), greaterThan(1));
       });
     }
 
@@ -220,15 +311,15 @@ void main() {
     });
 
     testWidgets(
-        'compact: lifts with an accent shadow, the arrow and text stay fixed '
-        'relative to the tile, and the indicator and glyph answer',
+        'compact: floats with an accent shadow, the arrow and text stay '
+        'fixed relative to the tile, and the indicator and glyph answer',
         (tester) async {
       await tester.pumpWidget(
         _host(KubusActionTileLayout.compact, subtitle: 'Where this goes'),
       );
       final gesture = await _mouse(tester);
       final rest = _surfaceTopLeft(tester);
-      final arrow = _arrow(tester);
+      final arrow = _arrow(tester) - rest;
       Color indicator() => (tester
               .widget<AnimatedContainer>(find.byKey(_indicatorKey))
               .decoration! as BoxDecoration)
@@ -240,13 +331,18 @@ void main() {
 
       await _hover(tester, gesture);
 
-      // The whole surface moves as one painted unit: 2 px up, and the arrow
-      // and title move with it (never relative to the tile).
-      expect(rest.dy - _surfaceTopLeft(tester).dy,
-          moreOrLessEquals(2, epsilon: 0.01));
-      expect(_arrow(tester), arrow - const Offset(0, 2));
-      expect(tester.getRect(find.text('Analytics')),
-          title.shift(const Offset(0, -2)));
+      // The whole surface moves as one painted unit: the arrow and title
+      // keep their place on it at every point of the float.
+      for (var i = 0; i < 12; i++) {
+        final now = _surfaceTopLeft(tester);
+        expect(now.dy, lessThan(rest.dy));
+        _expectOffset(_arrow(tester) - now, arrow);
+        _expectRect(
+          tester.getRect(find.text('Analytics')),
+          title.shift(Offset(0, now.dy - rest.dy)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(tester.getSize(find.byType(KubusActionTile)), size);
       expect(_shadowAlpha(tester), inInclusiveRange(0.2, 0.4));
       expect(_glyph(tester), isNot(glyphBefore));
@@ -255,29 +351,95 @@ void main() {
 
     for (final layout in KubusActionTileLayout.values) {
       testWidgets(
-          '${layout.name}: reduced motion has no movement but still answers',
-          (tester) async {
+          '${layout.name}: reduced motion keeps a still lifted state, no '
+          'animation', (tester) async {
         await tester.pumpWidget(_host(layout, reduceMotion: true));
         final gesture = await _mouse(tester);
         final rest = _surfaceTopLeft(tester);
         final stacked = layout == KubusActionTileLayout.stacked;
-        final arrow = stacked ? null : _arrow(tester);
-        final glyph =
-            layout == KubusActionTileLayout.inline ? null : _glyph(tester);
+        final arrow = stacked ? null : _arrow(tester) - rest;
+        final glyph = layout == KubusActionTileLayout.inline
+            ? null
+            : _glyph(tester).shift(const Offset(0, -lift));
 
-        await _hover(tester, gesture);
+        // One frame after the pointer arrives: already in the lifted state,
+        // with no transition to wait for.
+        await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
+        await tester.pump();
+        expect(
+          rest.dy - _surfaceTopLeft(tester).dy,
+          moreOrLessEquals(lift, epsilon: 0.01),
+          reason: 'a still lift',
+        );
+        // The shadow is painted at full strength on that same first frame:
+        // no 180 ms transition hides behind the still lift.
+        expect(_paintedShadowAlpha(tester), inInclusiveRange(0.2, 0.4),
+            reason: 'reduced motion: the whole answer arrives at once');
+        // ...and it stays exactly there: no float.
+        final trace = await _floatTrace(tester, rest);
+        expect(trace.toSet().length, 1, reason: 'no float');
+        await tester.pumpAndSettle();
 
-        expect(_surfaceTopLeft(tester), rest, reason: 'no lift');
+        expect(_surfaceTopLeft(tester).dx, rest.dx);
         if (!stacked) {
-          expect(_arrow(tester), arrow, reason: 'no arrow travel');
+          _expectOffset(
+            _arrow(tester) - _surfaceTopLeft(tester),
+            arrow!,
+            reason: 'no arrow travel',
+          );
         }
         if (glyph != null) {
-          expect(_glyph(tester), glyph, reason: 'no glyph drift or scale');
+          _expectRect(_glyph(tester), glyph,
+              reason: 'no glyph drift, scale or float');
         }
         expect(_shadowAlpha(tester), greaterThan(0),
             reason: 'the static shadow state still changes');
+
+        await gesture.moveTo(const Offset(790, 590));
+        await tester.pump();
+        expect(_surfaceTopLeft(tester), rest, reason: 'returns at once');
       });
     }
+
+    testWidgets('a disabled tile never lifts or floats', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 260,
+                child: KubusActionTile(
+                  title: 'Locked',
+                  icon: Icons.lock_outline,
+                  accent: _accent,
+                  onTap: () {},
+                  enabled: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final gesture = await _mouse(tester);
+      final rest = _surfaceTopLeft(tester);
+      await gesture.moveTo(tester.getCenter(find.byType(KubusActionTile)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(_surfaceTopLeft(tester), rest);
+      expect(_shadowAlpha(tester), 0);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('removing a hovered tile disposes its float cleanly',
+        (tester) async {
+      await tester.pumpWidget(_host(KubusActionTileLayout.stacked));
+      final gesture = await _mouse(tester);
+      await _hover(tester, gesture);
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('touch never leaves the tile in a hover state', (tester) async {
       await tester.pumpWidget(_host(KubusActionTileLayout.stacked));
@@ -370,7 +532,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 45));
       samples.add(_paintedShadowAlpha(tester));
     }
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     final peak = _paintedShadowAlpha(tester);
 
     expect(peak, greaterThan(0));

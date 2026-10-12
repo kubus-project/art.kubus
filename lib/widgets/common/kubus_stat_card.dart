@@ -32,13 +32,17 @@ enum KubusStatCardLayout {
 /// the card turning into a colour block: the fill under the text is the plain
 /// surface.
 ///
-/// Hover (expressive tiles, pointer only) answers as one painted unit: the
-/// whole surface lifts 2 px with a soft contextual accent shadow, the field
-/// and edge brighten and the glyph grows and drifts a few pixels toward the
-/// number. The number and label never reflow or move on their own. Reduced
-/// motion keeps the brightening and the shadow state and drops the lift and
-/// the drift. A tile without [onTap] answers hover visually but keeps the
-/// default cursor and no button semantics. Touch never hovers.
+/// Hover (every layout, pointer only) answers as one painted unit that floats:
+/// the whole surface rises ([KubusHoverResponse.liftDistance]) with a soft
+/// contextual accent shadow and then keeps drifting gently while the pointer
+/// stays ([KubusHoverResponse]). An expressive tile also brightens its field
+/// and edge, and its glyph grows, drifts toward the number and counter-floats;
+/// a dense tile's hairline takes the accent instead. The number and label
+/// never reflow or move on their own. Reduced motion drops the animation, not
+/// the answer: the surface takes its lifted position, shadow, field and edge
+/// at once, with no float and no glyph drift. A tile without [onTap] answers
+/// hover visually but keeps the default cursor and no button semantics.
+/// Touch never hovers.
 ///
 /// The spoken label is `value title` (for example "1,284 Followers") so a
 /// value is never announced without its meaning. Tappable tiles expose button
@@ -280,7 +284,14 @@ class KubusStatCard extends StatelessWidget {
         color: roles.surface,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: roles.rule, width: KubusSizes.hairline),
+          side: BorderSide(
+            // The dense row has no field or edge light, so its hairline is
+            // what picks up the accent on hover.
+            color: hovered && !isExpressive
+                ? resolvedAccent.withValues(alpha: 0.5)
+                : roles.rule,
+            width: KubusSizes.hairline,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: !isExpressive
@@ -290,7 +301,7 @@ class KubusStatCard extends StatelessWidget {
                   Positioned.fill(
                     child: IgnorePointer(
                       child: AnimatedContainer(
-                        duration: KubusHoverResponse.duration,
+                        duration: KubusHoverResponse.durationOf(context),
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
                             center: Alignment.bottomRight,
@@ -331,11 +342,10 @@ class KubusStatCard extends StatelessWidget {
                 ],
               ),
       );
-      if (!isExpressive) return material;
       // The shadow lives outside the clipped Material so it can fall past the
       // tile's edge.
       return AnimatedContainer(
-        duration: KubusHoverResponse.duration,
+        duration: KubusHoverResponse.durationOf(context),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           borderRadius: radius,
@@ -355,14 +365,13 @@ class KubusStatCard extends StatelessWidget {
       label: semanticsLabel ?? '$value $title',
       excludeSemantics: true,
       onTap: onTap,
-      child: isExpressive
-          ? KubusHoverResponse(
-              lift: true,
-              cursor:
-                  onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
-              builder: (context, hovered) => surface(hovered),
-            )
-          : surface(false),
+      // Every stat card floats, dense or expressive: layout density decides
+      // the identity device, not whether the tile answers the pointer.
+      child: KubusHoverResponse(
+        lift: true,
+        cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+        builder: (context, hovered) => surface(hovered),
+      ),
     );
   }
 }

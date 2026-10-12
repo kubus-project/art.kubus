@@ -33,7 +33,7 @@ and "Stats" sections of `PRODUCT_V5_CHARACTER_REBALANCE.md`.
 | Amber wallet balance hero | ADAPT | `KubusWalletSectionCard(accent:)` / desktop balance |
 | Teal cover gradient on profiles | ADAPT | `ProfileCoverField` in the role colour, not the user accent |
 | Ljubljana map background (`GeneralBackground`) | ADAPT | `KubusAtmosphere(texture: cartographic)` on the Home opening only |
-| Hover float on stat watermarks | ADAPT | Glyph drifts inside the clipped tile; tiles never move |
+| Hover float on stat watermarks | RESTORE | **Superseded in 0.8.2:** the surface and its glyph float on hover; see [`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md) |
 | Wallet-first / Web3-first Home hero | DISCARD | Home stays discovery-first |
 | Liquid glass on every card, tinted management cards | DISCARD | Rails and forms stay flat and hairline-separated |
 | Full-bleed gradient feature intros, per-page rainbow gradients | DISCARD | One feature colour per intro, on a hero context tile |
@@ -56,8 +56,9 @@ and "Stats" sections of `PRODUCT_V5_CHARACTER_REBALANCE.md`.
   opt-in for rows): compact context tile, number, label, plus a ghost glyph
   bleeding 36 % off the trailing corner, a corner field and an edge light.
 - **`KubusActionTile`**: destination shortcut in the destination's colour.
-- **`KubusHoverResponse`**: pointer-only hover; optional 2 px paint-only
-  lift.
+- **`KubusHoverResponse`**: pointer-only hover; optional paint-only lift and
+  continuous float (constants and behaviour in
+  [`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md)).
 
 ### Cartographic texture
 
@@ -83,15 +84,15 @@ drive fields, ghost glyphs and edge lights:
 
 ## Motion
 
-- Stat tiles: hover brightens the field and edge and drifts/scales the
-  glyph 4 px / 6 % inside the clipped tile. The tile and its text never
-  move.
-- Action tiles: 2 px paint-only lift, accent edge and soft accent shadow
-  (see the hover contract in `PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md`; compact
-  rows answer quietly without lift or shadow).
-- Reduced motion (`MediaQuery.disableAnimations`, `prefers-reduced-motion`
-  on web): no lift and no glyph drift; the brightening stays as a state
-  change. Touch never hovers.
+- **Superseded in 0.8.2.** The hover and reduced-motion behaviour of stat and
+  action tiles is defined only in
+  [`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md): every tile
+  and stat card floats (rise, then a continuous gentle float, accent shadow,
+  glyph drift and counter-float), compact rows included. Reduced motion
+  (`MediaQuery.disableAnimations`, `prefers-reduced-motion` on web) keeps a
+  still lifted state instead of dropping the answer. Touch never hovers.
+  (The 5A-R text that said tiles never move and compact rows answer without a
+  lift is what let the float disappear.)
 
 ## Where it is not used
 

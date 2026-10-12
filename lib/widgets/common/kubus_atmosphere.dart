@@ -322,7 +322,7 @@ enum KubusGhostGlyphPlacement {
 ///
 /// Place it as a full-size layer of a clipped [Stack]
 /// (`Positioned.fill(child: KubusGhostGlyph(...))`).
-class KubusGhostGlyph extends StatelessWidget {
+class KubusGhostGlyph extends StatefulWidget {
   const KubusGhostGlyph({
     super.key,
     required this.icon,
@@ -356,14 +356,65 @@ class KubusGhostGlyph extends StatelessWidget {
   static double defaultOpacity(Brightness b) =>
       b == Brightness.dark ? 0.11 : 0.085;
 
+  /// Vertical float of a hovered glyph as a fraction of its size: it drifts
+  /// against the surface's own float, so the two read as depth.
+  static const double floatFraction = 0.022;
+
   static double _edge(double inset, double overhang) =>
       inset > 0 ? inset : -overhang;
 
   @override
+  State<KubusGhostGlyph> createState() => _KubusGhostGlyphState();
+}
+
+class _KubusGhostGlyphState extends State<KubusGhostGlyph>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _float = AnimationController(
+    vsync: this,
+    duration: KubusHoverResponse.floatPeriod,
+  );
+
+  bool _motion = true;
+
+  void _syncFloat() {
+    if (widget.hovered && _motion) {
+      if (!_float.isAnimating) _float.repeat();
+    } else if (!_motion) {
+      _float.reset();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _motion = KubusHoverResponse.motionAllowed(context);
+    _syncFloat();
+  }
+
+  @override
+  void didUpdateWidget(KubusGhostGlyph oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncFloat();
+  }
+
+  @override
+  void dispose() {
+    _float.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final alpha = opacity ?? defaultOpacity(brightness);
-    final motion = KubusHoverResponse.motionAllowed(context);
+    final widget = this.widget;
+    final alpha = widget.opacity ??
+        KubusGhostGlyph.defaultOpacity(Theme.of(context).brightness);
+    final motion = _motion;
+    final icon = widget.icon;
+    final color = widget.color;
+    final placement = widget.placement;
+    final alignment = widget.alignment;
+    final inset = widget.inset;
+    final hovered = widget.hovered;
     return IgnorePointer(
       child: ExcludeSemantics(
         child: ClipRect(
@@ -373,7 +424,7 @@ class KubusGhostGlyph extends StatelessWidget {
               if (!size.isFinite || size.isEmpty) {
                 return const SizedBox.shrink();
               }
-              final glyphSize = extent ?? placement.extentFor(size);
+              final glyphSize = widget.extent ?? placement.extentFor(size);
               final overhang = glyphSize * placement.bleed;
               final right = alignment.x >= 0;
               final bottom = alignment.y >= 0;
@@ -381,21 +432,44 @@ class KubusGhostGlyph extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: right ? null : _edge(inset.left, overhang),
-                    right: right ? _edge(inset.right, overhang) : null,
-                    top: bottom ? null : _edge(inset.top, overhang),
-                    bottom: bottom ? _edge(inset.bottom, overhang) : null,
+                    left: right
+                        ? null
+                        : KubusGhostGlyph._edge(inset.left, overhang),
+                    right: right
+                        ? KubusGhostGlyph._edge(inset.right, overhang)
+                        : null,
+                    top: bottom
+                        ? null
+                        : KubusGhostGlyph._edge(inset.top, overhang),
+                    bottom: bottom
+                        ? KubusGhostGlyph._edge(inset.bottom, overhang)
+                        : null,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween<double>(end: hovered && motion ? 1 : 0),
                       duration:
                           motion ? KubusHoverResponse.duration : Duration.zero,
                       curve: Curves.easeOutCubic,
-                      builder: (context, t, child) => Transform.translate(
-                        offset: placement.shiftAt(alignment, t),
-                        child: Transform.scale(
-                          scale: placement.scaleAt(t),
-                          child: child,
-                        ),
+                      onEnd: () {
+                        if (!widget.hovered) _float.reset();
+                      },
+                      builder: (context, t, child) => AnimatedBuilder(
+                        animation: _float,
+                        child: child,
+                        builder: (context, child) {
+                          // Against the surface's own float (see
+                          // [KubusHoverResponse.floatAmplitude]).
+                          final bob = -math.sin(_float.value * 2 * math.pi) *
+                              glyphSize *
+                              KubusGhostGlyph.floatFraction;
+                          return Transform.translate(
+                            offset: placement.shiftAt(alignment, t) +
+                                Offset(0, bob * t),
+                            child: Transform.scale(
+                              scale: placement.scaleAt(t),
+                              child: child,
+                            ),
+                          );
+                        },
                       ),
                       child: Icon(
                         icon,
@@ -416,11 +490,15 @@ class KubusGhostGlyph extends StatelessWidget {
 
 /// Pointer-only hover response for interactive art-directed surfaces.
 ///
-/// Reports hover to [builder] and, when [lift] is set, raises the child by
-/// a paint-only translation (layout never moves). Touch input never hovers.
-/// With reduced motion ([MediaQuery.disableAnimationsOf]) there is no
-/// movement; [builder] still receives the hover state so tint and edge can
-/// answer without motion.
+/// Reports hover to [builder] and, when [lift] is set, floats the child: it
+/// rises [liftDistance] over [duration] and then keeps drifting gently up and
+/// down ([floatAmplitude], one cycle per [floatPeriod]) for as long as the
+/// pointer stays, settling back over [duration] on exit. All of it is a
+/// paint-only translation (layout never moves). Touch input never hovers.
+///
+/// With reduced motion ([MediaQuery.disableAnimationsOf]) nothing animates:
+/// the child takes its [liftDistance] position at once (a still state change,
+/// like the tint and edge), does not float and returns at once on exit.
 class KubusHoverResponse extends StatefulWidget {
   const KubusHoverResponse({
     super.key,
@@ -440,7 +518,21 @@ class KubusHoverResponse extends StatefulWidget {
 
   /// Hover answer timing, shared by everything built on this primitive.
   static const Duration duration = Duration(milliseconds: 180);
-  static const double liftDistance = 2;
+
+  /// How far a hovered surface rises (px).
+  static const double liftDistance = 3;
+
+  /// The continuous float while the pointer stays: half the travel (px) up
+  /// and down around the lifted position, so the surface never drops below
+  /// its resting line, and one full cycle every [floatPeriod].
+  static const double floatAmplitude = 1.5;
+  static const Duration floatPeriod = Duration(milliseconds: 2200);
+
+  /// The hover transition for any colour, shadow or field that answers a
+  /// hover: [duration], or none under reduced motion, so the whole answer
+  /// arrives on the first frame.
+  static Duration durationOf(BuildContext context) =>
+      motionAllowed(context) ? duration : Duration.zero;
 
   /// Whether decorative movement is allowed in [context].
   static bool motionAllowed(BuildContext context) =>
@@ -487,12 +579,56 @@ class KubusHoverResponse extends StatefulWidget {
   State<KubusHoverResponse> createState() => _KubusHoverResponseState();
 }
 
-class _KubusHoverResponseState extends State<KubusHoverResponse> {
+class _KubusHoverResponseState extends State<KubusHoverResponse>
+    with SingleTickerProviderStateMixin {
+  /// One cycle of the float; runs only while a lifted surface is hovered.
+  late final AnimationController _float = AnimationController(
+    vsync: this,
+    duration: KubusHoverResponse.floatPeriod,
+  );
+
   bool _hovered = false;
+  bool _motion = true;
+
+  bool get _active => _hovered && widget.enabled && widget.lift;
+
+  /// The float starts with the hover and stops once the surface has settled
+  /// back (see [_onSettled]), so it never snaps on exit.
+  void _syncFloat() {
+    if (_active && _motion) {
+      if (!_float.isAnimating) _float.repeat();
+    } else if (!_motion) {
+      _float.reset();
+    }
+  }
+
+  void _onSettled() {
+    if (!_active) _float.reset();
+  }
 
   void _set(bool value) {
     if (_hovered == value) return;
     setState(() => _hovered = value);
+    _syncFloat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _motion = KubusHoverResponse.motionAllowed(context);
+    _syncFloat();
+  }
+
+  @override
+  void didUpdateWidget(KubusHoverResponse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncFloat();
+  }
+
+  @override
+  void dispose() {
+    _float.dispose();
+    super.dispose();
   }
 
   @override
@@ -507,14 +643,30 @@ class _KubusHoverResponseState extends State<KubusHoverResponse> {
       child: !widget.lift
           ? child
           : TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                end: hovered && motion ? -KubusHoverResponse.liftDistance : 0,
-              ),
+              // 0 at rest, 1 lifted. The envelope scales the whole offset, so
+              // the float fades in and out with the lift and never pops.
+              tween: Tween<double>(end: hovered ? 1 : 0),
               duration: motion ? KubusHoverResponse.duration : Duration.zero,
               curve: Curves.easeOutCubic,
+              onEnd: _onSettled,
               child: child,
-              builder: (context, dy, child) =>
-                  Transform.translate(offset: Offset(0, dy), child: child),
+              builder: (context, lift, child) => AnimatedBuilder(
+                animation: _float,
+                child: child,
+                builder: (context, child) {
+                  final bob = motion
+                      ? math.sin(_float.value * 2 * math.pi) *
+                          KubusHoverResponse.floatAmplitude
+                      : 0.0;
+                  return Transform.translate(
+                    offset: Offset(
+                      0,
+                      lift * (bob - KubusHoverResponse.liftDistance),
+                    ),
+                    child: child,
+                  );
+                },
+              ),
             ),
     );
   }

@@ -71,7 +71,7 @@ polish. Disposition: **4A** fixed in this PR · **4B** next Wave 4 tranche ·
 | Spacing | Tokens exist; many literal paddings (10/14/18) in legacy desktop widgets. | P3 | Migrate when touched. |
 | Breakpoints | Contract compact < 900 ≤ desktop holds. At 900–1199 the rail stayed *expanded* (180 px) because the auto-collapse guard could never fire above 900; the brand wrapped mid-word and BEFORE home hero collapsed to one character per line at 900 px. | **P0** (900 px home) | 4A: intro no longer a fixed-width slab; rail auto-collapses below 1200 px unless the viewer expands it; rail brand is single-line. |
 | Accessibility | Mobile nav: `GestureDetector`s with no label, role or selected state. Desktop rail: no selected state, no labels when collapsed. Post actions: no role, no toggle state, ~32 px targets. | P1 | 4A fixes all three with tests. |
-| Motion | Nav icon scale 0.92 bounce; post like scale 1.18; hover lift. Reduced motion honoured by `KubusButton` only. | P3 | 4A removes nav scale and hover lift; like-scale removed with the new action widget. |
+| Motion | Nav icon scale 0.92 bounce; post like scale 1.18; hover lift. Reduced motion honoured by `KubusButton` only. | P3 | 4A removes nav scale and hover lift on navigation and cards (historical; tile and stat-card hover is governed by [`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md)); like-scale removed with the new action widget. |
 | Localization | Hard-coded English "Reduce effects" tile on mobile and desktop settings. Guest greeting "Good afternoon, there". | P2 | 4A localizes both (EN/SL). |
 | Role simulation | Mobile settings tile and sheet are `kDebugMode`-guarded; desktop has none. | — | 4A adds a source guard test. |
 

@@ -28,6 +28,10 @@ Audit every task/screen before broad polish. Classify KEEP/REFINE/REDESIGN/MERGE
 
 Agents must name the current state, files owned and excluded, exact data contract, tests, screenshot evidence and a stop condition before changing code. Do not merge or deploy without authorization.
 
+## PRODUCT motion is a contract
+
+Hover and reduced-motion behaviour of the PRODUCT tile family (`KubusActionTile`, `KubusStatCard`, `KubusHoverResponse`, `KubusGhostGlyph`) is defined only in `docs/design/PRODUCT_V5_MOTION_CONTRACT.md`. Read it before touching any of them. The owner's PC reports `prefers-reduced-motion`, so verify reduced mode first, in a real browser. A hover change updates the code, the contract, the widget tests and `scripts/qa/product_motion_acceptance.mjs` together; CI (`flutter_quality`) fails when the painted float, shadow or rest return regress. Never gate a tile's visible answer on motion alone, and never let a layout default remove it.
+
 ## Multi-agent orchestration and cost discipline
 
 Canonical detail: `docs/engineering/agent-orchestration.md`. The short form for Claude Code:

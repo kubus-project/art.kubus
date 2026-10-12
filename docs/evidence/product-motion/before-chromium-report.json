@@ -1,0 +1,368 @@
+{
+  "label": "before-chromium",
+  "browser": "chromium",
+  "theme": "light",
+  "reducedMotion": false,
+  "results": [
+    {
+      "id": "action-stacked",
+      "answer": "float",
+      "samples": 57,
+      "entry": [
+        {
+          "t": 365,
+          "dy": -1.98
+        }
+      ],
+      "liftMean": -1.98,
+      "liftMin": -1.98,
+      "liftMax": -1.98,
+      "bob": 0,
+      "shadow": 4.04,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "action-inline",
+      "answer": "float",
+      "samples": 87,
+      "entry": [
+        {
+          "t": 165,
+          "dy": -2
+        },
+        {
+          "t": 324,
+          "dy": -2
+        },
+        {
+          "t": 360,
+          "dy": -2
+        },
+        {
+          "t": 390,
+          "dy": -2
+        }
+      ],
+      "liftMean": -2,
+      "liftMin": -2,
+      "liftMax": -2,
+      "bob": 0,
+      "shadow": 4.03,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "action-compact",
+      "answer": "float",
+      "samples": 85,
+      "entry": [
+        {
+          "t": 219,
+          "dy": -2
+        },
+        {
+          "t": 296,
+          "dy": -2
+        },
+        {
+          "t": 328,
+          "dy": -2
+        },
+        {
+          "t": 361,
+          "dy": -2
+        },
+        {
+          "t": 394,
+          "dy": -2
+        }
+      ],
+      "liftMean": -2,
+      "liftMin": -2,
+      "liftMax": -2,
+      "bob": 0,
+      "shadow": 4.03,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "action-disabled",
+      "answer": "none",
+      "samples": 94,
+      "entry": [
+        {
+          "t": 66,
+          "dy": 0
+        },
+        {
+          "t": 109,
+          "dy": 0
+        },
+        {
+          "t": 142,
+          "dy": 0
+        },
+        {
+          "t": 176,
+          "dy": 0
+        },
+        {
+          "t": 205,
+          "dy": 0
+        },
+        {
+          "t": 241,
+          "dy": 0
+        },
+        {
+          "t": 274,
+          "dy": 0
+        },
+        {
+          "t": 308,
+          "dy": 0
+        },
+        {
+          "t": 345,
+          "dy": 0
+        },
+        {
+          "t": 375,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered",
+      "answer": "float",
+      "samples": 59,
+      "entry": [
+        {
+          "t": 130,
+          "dy": -2.02
+        },
+        {
+          "t": 312,
+          "dy": -2.02
+        },
+        {
+          "t": 361,
+          "dy": -2.02
+        }
+      ],
+      "liftMean": -2.02,
+      "liftMin": -2.02,
+      "liftMax": -2.02,
+      "bob": 0,
+      "shadow": 4.05,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "stat-centered-tap",
+      "answer": "float",
+      "samples": 60,
+      "entry": [
+        {
+          "t": 136,
+          "dy": -2.02
+        },
+        {
+          "t": 299,
+          "dy": -2.02
+        },
+        {
+          "t": 349,
+          "dy": -2.02
+        },
+        {
+          "t": 399,
+          "dy": -2.02
+        }
+      ],
+      "liftMean": -2.02,
+      "liftMin": -2.02,
+      "liftMax": -2.02,
+      "bob": 0,
+      "shadow": 4.05,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "stat-standard",
+      "answer": "float",
+      "samples": 95,
+      "entry": [
+        {
+          "t": 51,
+          "dy": 0
+        },
+        {
+          "t": 87,
+          "dy": 0
+        },
+        {
+          "t": 122,
+          "dy": 0
+        },
+        {
+          "t": 155,
+          "dy": 0
+        },
+        {
+          "t": 184,
+          "dy": 0
+        },
+        {
+          "t": 221,
+          "dy": 0
+        },
+        {
+          "t": 253,
+          "dy": 0
+        },
+        {
+          "t": 287,
+          "dy": 0
+        },
+        {
+          "t": 320,
+          "dy": 0
+        },
+        {
+          "t": 354,
+          "dy": 0
+        },
+        {
+          "t": 387,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "lift 0px < 1.5px",
+        "accent shadow 0 < 1.2",
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "stat-standard-tap",
+      "answer": "float",
+      "samples": 92,
+      "entry": [
+        {
+          "t": 147,
+          "dy": 0
+        },
+        {
+          "t": 185,
+          "dy": 0
+        },
+        {
+          "t": 218,
+          "dy": 0
+        },
+        {
+          "t": 253,
+          "dy": 0
+        },
+        {
+          "t": 285,
+          "dy": 0
+        },
+        {
+          "t": 319,
+          "dy": 0
+        },
+        {
+          "t": 352,
+          "dy": 0
+        },
+        {
+          "t": 386,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "lift 0px < 1.5px",
+        "accent shadow 0 < 1.2",
+        "no continuous float: bob 0px < 1px"
+      ]
+    },
+    {
+      "id": "stat-standard-expressive",
+      "answer": "float",
+      "samples": 87,
+      "entry": [
+        {
+          "t": 136,
+          "dy": -2.01
+        },
+        {
+          "t": 272,
+          "dy": -2.01
+        },
+        {
+          "t": 310,
+          "dy": -2.01
+        },
+        {
+          "t": 344,
+          "dy": -2.01
+        },
+        {
+          "t": 376,
+          "dy": -2.01
+        }
+      ],
+      "liftMean": -2.01,
+      "liftMin": -2.01,
+      "liftMax": -2.01,
+      "bob": 0,
+      "shadow": 4.03,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": [
+        "no continuous float: bob 0px < 1px"
+      ]
+    }
+  ],
+  "pageErrors": []
+}

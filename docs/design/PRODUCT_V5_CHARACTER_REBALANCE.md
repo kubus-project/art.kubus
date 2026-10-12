@@ -66,8 +66,10 @@ Not for chevrons, back arrows, overflow menus or every list-row icon.
 `KubusStatCard` has two layouts. The centred layout is a fixed stack:
 context icon tile, number, label. Since 5A-R it is expressive by default: a
 cropped ghost glyph, a corner field and an edge light in the accent, with a
-hover that moves only the glyph inside the clipped tile (never the tile or
-its text; no movement under reduced motion). The fill under the text stays
+hover as defined by the motion contract
+([`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md); the 5A-R
+wording that only the glyph moves is superseded: the tile floats as one unit
+and its text never moves relative to it). The fill under the text stays
 the surface. The Wave-4 parameters (`tintBase`, `borderColor`, `iconBoxSize`,
 `iconSize`, `centeredWatermark*`) are removed.
 

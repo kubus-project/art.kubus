@@ -15,8 +15,8 @@ enum KubusActionTileLayout {
 
   /// Dense management destination (settings, security, account): a full-width
   /// row with the title, an optional one-line subtitle, an optional [status]
-  /// and the arrow, over a lightly cropped trailing glyph. On hover it lifts
-  /// 2 px with the contextual accent shadow like the other layouts; the glyph,
+  /// and the arrow, over a lightly cropped trailing glyph. On hover it floats
+  /// with the contextual accent shadow like the other layouts; the glyph,
   /// field, edge and a leading indicator answer too.
   compact,
 }
@@ -42,14 +42,17 @@ enum KubusActionTileLayout {
 ///
 /// Hover contract (pointer only; touch never hovers):
 ///
-/// - every layout: a 2 px paint-only lift, a stronger accent field and edge,
-///   and a soft contextual accent shadow ([KubusHoverResponse.accentShadow]).
-///   Stacked and compact add the ghost glyph's inward drift and scale; compact
-///   also strengthens its leading indicator; inline adds a 2 px arrow travel.
-///   180 ms ease-out. Nothing reflows: the surface moves as one painted unit.
-/// - reduced motion: no lift, no glyph drift or scale, no arrow travel; the
-///   field, edge, indicator and shadow state still change so the tile still
-///   answers.
+/// - every layout floats ([KubusHoverResponse]): the tile rises
+///   [KubusHoverResponse.liftDistance] over 180 ms ease-out and then keeps
+///   drifting gently while the pointer stays, with a soft contextual accent
+///   shadow ([KubusHoverResponse.accentShadow]), a stronger accent field and
+///   edge. Stacked and compact add the ghost glyph's inward drift, scale and
+///   counter-float; compact also strengthens its leading indicator; inline adds
+///   a 2 px arrow travel. Nothing reflows: the surface moves as one painted
+///   unit.
+/// - reduced motion: no animation. The tile takes its lifted position, field,
+///   edge, indicator and shadow at once and stays still: no float, no glyph
+///   drift or scale, no arrow travel.
 ///
 /// The title owns the button semantics (the optional [subtitle] is its hint);
 /// the glyph and arrow are excluded from the tree. Minimum 44 px target,
@@ -288,7 +291,7 @@ class KubusActionTile extends StatelessWidget {
               maxWidth: maxWidth,
             ),
             child: AnimatedContainer(
-              duration: KubusHoverResponse.duration,
+              duration: KubusHoverResponse.durationOf(context),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
                 borderRadius: radius,
@@ -315,7 +318,7 @@ class KubusActionTile extends StatelessWidget {
                     Positioned.fill(
                       child: IgnorePointer(
                         child: AnimatedContainer(
-                          duration: KubusHoverResponse.duration,
+                          duration: KubusHoverResponse.durationOf(context),
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
                               center: Alignment.topRight,
@@ -372,7 +375,7 @@ class KubusActionTile extends StatelessWidget {
                           child: AnimatedContainer(
                             key: const ValueKey<String>(
                                 'kubus_action_tile_indicator'),
-                            duration: KubusHoverResponse.duration,
+                            duration: KubusHoverResponse.durationOf(context),
                             width: 3,
                             decoration: BoxDecoration(
                               color:
