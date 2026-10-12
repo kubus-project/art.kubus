@@ -208,7 +208,7 @@ The Support Center client (#261) is deliberately **not** in the branch proposed 
 
 Gates before this reaches users: merge into `dev` after the required checks pass, then deploy the matching backend candidate before the Support client, and keep the Community multi-media switch tied to backend #79 as described above. Nothing here changes versions, tags or production configuration.
 
-## Development release candidate (state 2026-10-11)
+## Development release candidate (state 2026-10-11; superseded by "Final integration state" below)
 
 Implemented, merged, deployed and tested are different things; each row says which.
 
@@ -275,3 +275,37 @@ Corrections after owner testing of the development build. Each root cause was re
 **Art discovery.** The Art tab is one ranked feed (`ArtDiscoveryRanker`): follows and saves, proximity, recency and genuine engagement, with per-author and per-kind damping and one post per artwork. Sources are art-feed posts (radius widening 3, 15, 60, 250 km only while sparse), recent public posts, public artworks and published exhibitions. Location is the chosen area, then the map's area, then the device (never prompted unless the visitor asks), then the last used area; without any it is public discovery. Only entries within 25 km are labelled nearby. `GET /api/community/art-feed?includeGeneral=true` (backend PR, additive, group posts excluded) lets ordinary located posts qualify; servers without it simply return art categories only.
 
 Not done here: a UI to pick a named city (the map's area serves as the chosen area), and no migration, deployment, tag or version change.
+
+## Final integration state (2026-10-12)
+
+Statuses are separate: **implemented**, **merged**, **deployed**, **tested**, **owner accepted**, **released**. The last two are never inferred. Revisions in this table are the ones recorded when the section was written; the release checkpoint in the PR descriptions is authoritative for later changes.
+
+| Part | PR / revision | Implemented | Merged | Deployed | Tested |
+| --- | --- | --- | --- | --- | --- |
+| Backend 0.8.2 (#86, migration 105) | `master` `32fb3160` | yes | yes | Oracle primary, running image tagged `candidate-32fb316`, rollback `rollback-pre-32fb316` | CI; running container reports the revision |
+| Admin Support console (#13) | `master` `438bde04` | yes | yes | Netcup `~/admin.kubus.site/httpdocs` | CI; browser checks against the real Support API |
+| Flutter 0.8.2 with Support (#272) | `dev` `c57232f6` | yes | yes | development web, run 38182460291, `KUBUS_SUPPORT_TICKETS_ENABLED=true` | CI; acceptance harness |
+| Art feed bounding box + index (backend #87, migration 106) | head `99971135` | yes | pending | no | CI; unit and route tests; disposable PostGIS: schema parity and clean bootstrap (97 migrations), plan and equivalence evidence |
+| Admin reply/save/refresh keep unsaved edits (admin #14) | head `c00f4d95` | yes | pending | no | `npm run verify` (302 tests); CI |
+| Final UI corrections (#273) and desktop wallet shell (#276) | integration PR #279, merged heads `ba3e556b` and `4c719168` | yes | pending | no | focused and combined Flutter tests (1849), analyzer, docs doctor, browser Art-tab acceptance |
+
+### What the final integration adds over #272
+- Art tab: search is applied to the whole ranked feed before paging (a lower-ranked match used to be unreachable and Load more vanished); a search with no match says so; captionless posts with different media are kept apart while real duplicates are still suppressed.
+- Map overview: held hand-off dots bridge a zoom crossing only; a per-artwork filter (search, favourites, AR) drops them at once, so a failed detailed fetch cannot leave unfiltered dots on screen.
+- Wallet: the recovery phrase reveal opens inside the desktop shell like the backup screen that hosts it; mobile and no-shell hosts keep the route. Cryptography and persistence are untouched.
+- Admin: Refresh and Save keep unsaved status, priority, assignee, note and reason; Refresh is disabled while a reply or save is in flight.
+- Backend: the art-feed geographic scan is bounded by an indexable box (antimeridian split, pole handling, latitude validation) ahead of the exact radius check, with a partial index. On 300k posts the plan went from a sequential scan (6384 buffers, 75 ms) to an index scan (10 buffers, 0.03 ms); boxed and exact id sets are identical for seven test centres.
+
+### Evidence types
+- **Browser acceptance of the integrated build** (exact local release build of the merge of `ba3e556b` and `4c719168`, served locally; the API is the disposable integration backend, and the public-posts endpoint is answered by a 30-post fixture so a match can sit beyond the first page): Art tab at 1440 light/English and 1440 dark/Slovenian pass populated feed, Show more, search for a lower-ranked match, no-match message and restoring the feed (7/7 each); at 390 the populated feed and Show more pass, and the header search is not covered by the script. Evidence under `C:/kubus-build/evidence/final-int/shots/`.
+- **Wallet nested navigation** is verified by a widget test against a shell stand-in that, like the real shell, shows only the top screen (open backup, Show phrase, close). It is not a browser run: the harness has no signed-in wallet fixture.
+- **Map filter behaviour** is verified by controller tests; the unfiltered zoom hand-off keeps its earlier frame-sequence evidence (`C:/kubus-build/evidence/ui-fix/lod`).
+- A "Review" chip on a post card stays English in the Slovenian UI. It predates this work and is not changed here.
+
+### Operational state (read-only checks, 2026-10-12)
+- Oracle backend healthy, `GIT_COMMIT` equals `32fb3160`; `/health/writable` reports primary with one streaming replica and no synchronous standby. The home replication slot is active with no retained WAL (earlier growth was while the standby was offline); WAL directory 1104 MB against a 4096 MB slot cap.
+- `ipfs-cluster` runs at about 97% of its 768 MiB memory limit, with `context deadline exceeded` on repo stat and API 500s; the backend snapshot publisher logs `IPFS upload failed` about once a minute. Kubo itself is healthy. Raising the cluster memory limit needs an owner decision (compose change and container recreate).
+- Docker reclaimable space on Oracle is about 8.9 GB (images and build cache); host free space was not measurable from docker alone.
+
+### Remaining before production (unchanged order, owner decisions)
+Merge backend #87 and apply migration 106, merge admin #14 and redeploy, merge #279, redeploy development and repeat the Support lifecycle on the live host, then version bump, `dev` to `master`, tag, signed builds and physical-device checks. Nothing in this section authorises a production release.
