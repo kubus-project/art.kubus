@@ -403,5 +403,58 @@ void main() {
       expect(h.controller.hasHandoff, isFalse);
       expect(h.controller.overview, isNotNull);
     });
+
+    test('a filter the overview cannot express drops the dots at once',
+        () async {
+      final h = _Harness();
+      await h.controller
+          .refresh(visible: h.visible, queryBounds: h.padded, zoom: 4);
+
+      // A search / favourites / AR filter switches on while still zoomed out.
+      final result = await h.controller.refresh(
+        visible: h.visible,
+        queryBounds: h.padded,
+        zoom: 4,
+        allowed: false,
+      );
+      expect(result, KubusMapOverviewRefresh.detailed);
+      expect(h.controller.isActive, isFalse);
+      expect(h.controller.hasHandoff, isFalse,
+          reason: 'unfiltered dots must not bridge to a filtered fetch');
+      expect(h.controller.drawableOverview, isNull);
+    });
+
+    test('a filter switching on during a zoom hand-off clears the held dots',
+        () async {
+      final h = _Harness();
+      await h.controller
+          .refresh(visible: h.visible, queryBounds: h.padded, zoom: 4);
+      await h.controller
+          .refresh(visible: h.visible, queryBounds: h.padded, zoom: 9);
+      expect(h.controller.hasHandoff, isTrue);
+
+      await h.controller.refresh(
+        visible: h.visible,
+        queryBounds: h.padded,
+        zoom: 4,
+        allowed: false,
+      );
+      expect(h.controller.hasHandoff, isFalse);
+      expect(h.controller.drawableOverview, isNull);
+    });
+
+    test('without a filter the zoom hand-off is unchanged', () async {
+      final h = _Harness();
+      await h.controller
+          .refresh(visible: h.visible, queryBounds: h.padded, zoom: 4);
+      await h.controller.refresh(
+        visible: h.visible,
+        queryBounds: h.padded,
+        zoom: 9,
+        allowed: true,
+      );
+      expect(h.controller.hasHandoff, isTrue);
+      expect(h.controller.drawableOverview, isNotNull);
+    });
   });
 }

@@ -56,10 +56,10 @@ class CommunityArtDiscoveryFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<CommunityArtDiscoveryProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final shown = provider.items
-        .where((item) => matches?.call(item) ?? true)
-        .toList(growable: false);
-    final filtering = matches != null && shown.length != provider.items.length;
+    // The filter runs over the whole ranked feed before the page is cut, so a
+    // lower-ranked match stays reachable through Load more.
+    final shown = provider.visibleItems(matches);
+    final filtering = matches != null;
 
     if (provider.loading && provider.allItems.isEmpty) {
       return const Center(child: _FeedLoading());
@@ -80,7 +80,19 @@ class CommunityArtDiscoveryFeed extends StatelessWidget {
           actionLabel: l10n.commonRetry,
           onAction: onRefresh,
         )
-      else if (shown.isEmpty && !filtering)
+      else if (shown.isEmpty && filtering)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xl),
+          child: Center(
+            child: Text(
+              l10n.commonNoResultsFound,
+              style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                color: KubusColorRoles.of(context).foregroundMuted,
+              ),
+            ),
+          ),
+        )
+      else if (shown.isEmpty)
         EmptyStateCard(
           icon: Icons.brush_outlined,
           title: l10n.communityArtDiscoveryEmptyTitle,
@@ -95,7 +107,7 @@ class CommunityArtDiscoveryFeed extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: KubusSpacing.lg),
             child: _DiscoveryEntry(item: item, postBuilder: postBuilder),
           ),
-      if (provider.hasMore && !filtering)
+      if (provider.hasMoreMatching(matches))
         Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.lg),
           child: Center(

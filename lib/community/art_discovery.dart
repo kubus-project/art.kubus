@@ -501,8 +501,8 @@ abstract final class ArtDiscoveryRanker {
         if (ref != null && ref.isNotEmpty && !seenArtworkPosts.add(ref)) {
           continue;
         }
-        final body = '${chosen.authorKey}|${_normalise(chosen.post?.content)}';
-        if (!seenPostBodies.add(body)) continue;
+        final copyKey = _copyKey(chosen);
+        if (copyKey != null && !seenPostBodies.add(copyKey)) continue;
       }
 
       result.add(chosen);
@@ -513,6 +513,30 @@ abstract final class ArtDiscoveryRanker {
       recentKinds.add(chosen.kind);
     }
     return result;
+  }
+
+  /// Identity of a post for copy suppression: author, normalised text, the
+  /// media it carries and the post it reposts. Posts with no known author, or
+  /// with nothing to compare (no text, no media, not a repost), are never
+  /// treated as copies, because a captionless picture from an author is not a
+  /// duplicate of that author's next captionless picture.
+  static String? _copyKey(ArtDiscoveryItem item) {
+    final post = item.post;
+    // Only a real wallet or account id identifies an author here: the item's
+    // authorKey falls back to the display label, which unrelated posts share.
+    final author = WalletUtils.canonical(
+      post?.authorWallet ?? post?.authorIdentityData.userId ?? '',
+    );
+    if (author.isEmpty) return null;
+    final body = _normalise(post?.content);
+    final media = <String>{
+      for (final url in <String?>[post?.imageUrl, ...?post?.mediaUrls])
+        if (url != null && url.trim().isNotEmpty) url.trim(),
+    }.toList()
+      ..sort();
+    final original = (post?.originalPostId ?? '').trim();
+    if (body.isEmpty && media.isEmpty && original.isEmpty) return null;
+    return '$author|$body|${media.join(',')}|$original';
   }
 
   static String _normalise(String? text) =>

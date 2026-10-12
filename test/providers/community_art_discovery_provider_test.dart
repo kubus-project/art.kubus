@@ -276,6 +276,61 @@ void main() {
     expect(provider.hasMore, isFalse);
   });
 
+  group('filtered pagination', () {
+    test('a match beyond the first page stays reachable', () async {
+      final rig = _Rig(publicPosts: 30);
+      final provider = CommunityArtDiscoveryProvider(pageSize: 12);
+      await provider.refresh(rig.sources);
+      final last = provider.allItems.last;
+      bool onlyLast(ArtDiscoveryItem item) => item.key == last.key;
+
+      expect(provider.items.map((i) => i.key), isNot(contains(last.key)));
+      expect(provider.visibleItems(onlyLast).map((i) => i.key), [last.key],
+          reason: 'the filter runs before the page is cut');
+      expect(provider.hasMoreMatching(onlyLast), isFalse);
+    });
+
+    test('Load more pages through the matches only', () async {
+      final rig = _Rig(publicPosts: 40);
+      final provider = CommunityArtDiscoveryProvider(pageSize: 5);
+      await provider.refresh(rig.sources);
+      // Every second entry matches: 20 matches in 40 entries.
+      final keys = provider.allItems.map((i) => i.key).toList();
+      bool even(ArtDiscoveryItem item) => keys.indexOf(item.key).isEven;
+
+      expect(provider.visibleItems(even), hasLength(5));
+      expect(provider.hasMoreMatching(even), isTrue);
+      provider.loadMore();
+      expect(provider.visibleItems(even), hasLength(10));
+      provider.loadMore();
+      provider.loadMore();
+      expect(provider.visibleItems(even), hasLength(20));
+      expect(provider.hasMoreMatching(even), isFalse);
+      // Ranking is stable: matches keep their global order.
+      expect(
+        provider.visibleItems(even).map((i) => i.key),
+        [for (var i = 0; i < keys.length; i += 2) keys[i]],
+      );
+    });
+
+    test('no match is an empty page, not a stuck Load more', () async {
+      final rig = _Rig(publicPosts: 30);
+      final provider = CommunityArtDiscoveryProvider(pageSize: 12);
+      await provider.refresh(rig.sources);
+      bool none(ArtDiscoveryItem item) => false;
+      expect(provider.visibleItems(none), isEmpty);
+      expect(provider.hasMoreMatching(none), isFalse);
+    });
+
+    test('without a filter nothing changes', () async {
+      final rig = _Rig(publicPosts: 30);
+      final provider = CommunityArtDiscoveryProvider(pageSize: 12);
+      await provider.refresh(rig.sources);
+      expect(provider.visibleItems(null), provider.items);
+      expect(provider.hasMoreMatching(null), provider.hasMore);
+    });
+  });
+
   test('a deleted post leaves the feed and does not return on refresh',
       () async {
     final rig = _Rig(publicPosts: 3);

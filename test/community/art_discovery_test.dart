@@ -306,6 +306,89 @@ void main() {
       expect(items.where((i) => i.id.startsWith('dup')).length, 1);
     });
 
+    group('captionless posts', () {
+      CommunityPost media(
+        String id, {
+        String wallet = 'c',
+        String content = '',
+        List<String> urls = const <String>[],
+        String? originalPostId,
+        bool anonymous = false,
+      }) =>
+          CommunityPost(
+            id: id,
+            authorIdentityData: ProfileIdentityData.fromCompactAuthor(
+              anonymous
+                  ? const <String, dynamic>{}
+                  : {
+                      'displayName': wallet,
+                      'username': wallet,
+                      'walletAddress': wallet,
+                    },
+              fallbackLabel: 'x',
+            ),
+            content: content,
+            mediaUrls: urls,
+            originalPostId: originalPostId,
+            timestamp: _now,
+          );
+
+      List<String> kept(List<CommunityPost> posts) =>
+          _rank(ArtDiscoveryCandidates(publicPosts: posts))
+              .map((i) => i.id)
+              .toList();
+
+      test('distinct media from one author stays distinct', () {
+        final ids = kept([
+          media('m1', urls: const ['https://x/a.jpg']),
+          media('m2', urls: const ['https://x/b.jpg']),
+          media('m3', urls: const ['https://x/c.mp4']),
+        ]);
+        expect(ids.toSet(), {'m1', 'm2', 'm3'});
+      });
+
+      test('the very same media from the same author is one entry', () {
+        final ids = kept([
+          media('m1', urls: const ['https://x/a.jpg']),
+          media('m2', urls: const [' https://x/a.jpg ']),
+        ]);
+        expect(ids.length, 1);
+      });
+
+      test('captionless posts with nothing to compare are never copies', () {
+        final ids = kept([media('e1'), media('e2'), media('e3')]);
+        expect(ids.toSet(), {'e1', 'e2', 'e3'});
+      });
+
+      test('unknown authors never collapse unrelated posts', () {
+        final ids = kept([
+          media('u1', anonymous: true, urls: const ['https://x/a.jpg']),
+          media('u2', anonymous: true, urls: const ['https://x/a.jpg']),
+          media('u3', anonymous: true, content: 'same words'),
+          media('u4', anonymous: true, content: 'same words'),
+        ]);
+        expect(ids.toSet(), {'u1', 'u2', 'u3', 'u4'});
+      });
+
+      test('reposts of different originals stay distinct', () {
+        final ids = kept([
+          media('r1', originalPostId: 'orig-1'),
+          media('r2', originalPostId: 'orig-2'),
+        ]);
+        expect(ids.toSet(), {'r1', 'r2'});
+      });
+
+      test('the same caption with different pictures is not a copy', () {
+        final ids = kept([
+          media('s1',
+              content: 'Opening night', urls: const ['https://x/1.jpg']),
+          media('s2',
+              content: 'Opening night', urls: const ['https://x/2.jpg']),
+        ]);
+        expect(ids.toSet(), {'s1', 's2'});
+      });
+    });
+
     test('an entry offered twice is kept once', () {
       final p = _post('same');
       final items = _rank(ArtDiscoveryCandidates(

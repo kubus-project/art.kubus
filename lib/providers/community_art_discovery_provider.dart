@@ -94,6 +94,30 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
   List<ArtDiscoveryItem> get items =>
       _items.take(_visibleCount).toList(growable: false);
 
+  /// The slice shown now when only entries accepted by [matches] count.
+  ///
+  /// The predicate is applied to the whole ranked feed before the page is cut,
+  /// so a lower-ranked match is never hidden behind a page of non-matches. A
+  /// null predicate is the unfiltered [items].
+  List<ArtDiscoveryItem> visibleItems(
+    bool Function(ArtDiscoveryItem item)? matches,
+  ) {
+    if (matches == null) return items;
+    return _items.where(matches).take(_visibleCount).toList(growable: false);
+  }
+
+  /// Whether another page exists once [matches] has been applied.
+  bool hasMoreMatching(bool Function(ArtDiscoveryItem item)? matches) {
+    if (matches == null) return hasMore;
+    var seen = 0;
+    for (final item in _items) {
+      if (!matches(item)) continue;
+      seen += 1;
+      if (seen > _visibleCount) return true;
+    }
+    return false;
+  }
+
   bool get loading => _loading;
   bool get loaded => _loaded;
   bool get hasMore => _visibleCount < _items.length;

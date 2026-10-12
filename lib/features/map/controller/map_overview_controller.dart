@@ -145,7 +145,11 @@ class KubusMapOverviewController {
     bool allowed = true,
   }) async {
     if (!wantsOverviewAt(zoom, allowed: allowed)) {
-      deactivate(keepForHandoff: true);
+      // Only crossing the zoom band may bridge to the detailed markers with
+      // the old dots. When a filter the overview cannot express is active the
+      // dots would show artworks the filter excludes (and, if the detailed
+      // fetch then failed, keep showing them), so they go at once.
+      deactivate(keepForHandoff: allowed);
       return KubusMapOverviewRefresh.detailed;
     }
 

@@ -2616,7 +2616,15 @@ class _MapScreenState extends State<MapScreen>
       }
     } else if (useBoundsQuery && _overviewController.isActive) {
       // Zoomed in to detailed markers: the overview is done, redraw from them.
-      _overviewController.deactivate(keepForHandoff: true);
+      _overviewController.deactivate(keepForHandoff: _overviewAllowedByFilters);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+    }
+
+    // A hand-off bridges a zoom crossing only. If a filter the overview cannot
+    // express switched on meanwhile, the held dots are no longer valid, and a
+    // failing detailed fetch below must not leave them on screen.
+    if (!_overviewAllowedByFilters && _overviewController.hasHandoff) {
+      _overviewController.deactivate();
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
 
