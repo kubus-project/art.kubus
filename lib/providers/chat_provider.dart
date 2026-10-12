@@ -595,6 +595,7 @@ class ChatProvider extends ChangeNotifier {
 
     void add(
       String? wallet, {
+      String? userId,
       String? displayName,
       String? username,
       String? avatarUrl,
@@ -604,14 +605,14 @@ class ChatProvider extends ChangeNotifier {
       final normalizedWallet = WalletUtils.normalize(wallet);
       final key = normalizeParticipantIdentityKey(
         walletAddress: normalizedWallet,
-        userId: normalizedWallet,
+        userId: userId,
       );
       if (key == 'unknown') return;
       final changed = _upsertParticipantIdentity(
         ResolvedConversationParticipant(
           identityKey: key,
           walletAddress: normalizedWallet.isEmpty ? null : normalizedWallet,
-          userId: normalizedWallet.isEmpty ? null : normalizedWallet,
+          userId: userId,
           displayName: _meaningfulDisplayName(displayName, normalizedWallet),
           username: _meaningfulUsername(username),
           avatarUrl: _normalizeParticipantAvatar(avatarUrl),
@@ -626,6 +627,7 @@ class ChatProvider extends ChangeNotifier {
     for (final profile in conversation.memberProfiles) {
       add(
         profile.wallet,
+        userId: profile.userId,
         displayName: profile.displayName,
         avatarUrl: profile.avatarUrl,
       );
@@ -634,6 +636,7 @@ class ChatProvider extends ChangeNotifier {
     if (counterpart != null) {
       add(
         counterpart.wallet,
+        userId: counterpart.userId,
         displayName: counterpart.displayName,
         avatarUrl: counterpart.avatarUrl,
       );
@@ -657,7 +660,7 @@ class ChatProvider extends ChangeNotifier {
     for (final message in messages) {
       final key = normalizeParticipantIdentityKey(
         walletAddress: message.senderWallet,
-        userId: message.senderWallet,
+        userId: message.senderUserId,
         senderId: message.id,
       );
       if (key == 'unknown') continue;
@@ -665,7 +668,7 @@ class ChatProvider extends ChangeNotifier {
         ResolvedConversationParticipant(
           identityKey: key,
           walletAddress: WalletUtils.normalize(message.senderWallet),
-          userId: WalletUtils.normalize(message.senderWallet),
+          userId: message.senderUserId,
           displayName: _meaningfulDisplayName(
               message.senderDisplayName, message.senderWallet),
           username: _meaningfulUsername(message.senderUsername),
@@ -702,7 +705,7 @@ class ChatProvider extends ChangeNotifier {
     final senderWallet = WalletUtils.normalize(message.senderWallet);
     final senderKey = normalizeParticipantIdentityKey(
       walletAddress: senderWallet,
-      userId: senderWallet,
+      userId: message.senderUserId,
       senderId: message.id,
     );
     final currentKey = normalizeParticipantIdentityKey(
@@ -718,7 +721,7 @@ class ChatProvider extends ChangeNotifier {
             : senderWallet,
         userId: WalletUtils.normalize(currentUserId).isNotEmpty
             ? WalletUtils.normalize(currentUserId)
-            : senderWallet,
+            : message.senderUserId,
         displayName:
             _meaningfulDisplayName(currentUserDisplayName, senderWallet),
         avatarUrl: _normalizeParticipantAvatar(currentUserAvatarUrl),
@@ -736,7 +739,7 @@ class ChatProvider extends ChangeNotifier {
       ResolvedConversationParticipant(
         identityKey: senderKey,
         walletAddress: senderWallet.isEmpty ? null : senderWallet,
-        userId: senderWallet.isEmpty ? null : senderWallet,
+        userId: message.senderUserId,
         displayName:
             _meaningfulDisplayName(message.senderDisplayName, senderWallet),
         username: _meaningfulUsername(message.senderUsername),
@@ -750,7 +753,7 @@ class ChatProvider extends ChangeNotifier {
         ResolvedConversationParticipant(
           identityKey: senderKey,
           walletAddress: senderWallet.isEmpty ? null : senderWallet,
-          userId: senderWallet.isEmpty ? null : senderWallet,
+          userId: message.senderUserId,
           source: ParticipantIdentitySource.fallback,
           updatedAt: message.createdAt,
         );
