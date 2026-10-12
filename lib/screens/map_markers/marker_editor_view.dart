@@ -1035,6 +1035,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final confirm = await showKubusDialog<bool>(
       context: context,
       builder: (_) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.manageMarkersDeleteConfirmTitle),
         content: Text(l10n.manageMarkersDeleteConfirmBody),
         actions: [

@@ -26,7 +26,8 @@ ArtMarker _marker(
 }
 
 void main() {
-  test('kubusClusterMarkersByGridLevel groups markers and computes centroid', () {
+  test('kubusClusterMarkersByGridLevel groups markers and computes centroid',
+      () {
     final a = _marker('a', const LatLng(52.0, 13.0));
     final b = _marker('b', const LatLng(52.0, 13.0));
     final c = _marker('c', const LatLng(48.0, 2.0));
@@ -164,8 +165,8 @@ void main() {
       // Generic circle is only the no-category fallback; a real category never
       // resolves to it here (streetArt => diamond).
       expect(badge.shape, isNot(ArtMapMarkerShape.circle));
-      expect(badge.icon.codePoint,
-          resolveIcon(ArtMarkerType.streetArt).codePoint);
+      expect(
+          badge.icon.codePoint, resolveIcon(ArtMarkerType.streetArt).codePoint);
       expect(badge.count, 2);
     });
 

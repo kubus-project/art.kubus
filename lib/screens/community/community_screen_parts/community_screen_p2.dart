@@ -147,76 +147,38 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
   }
 
   Widget _buildArtTab() {
-    final l10n = AppLocalizations.of(context)!;
-    final filteredPosts = _filterPostsForQuery(_artFeedPosts);
-    final hasQuery = _communitySearchQuery.isNotEmpty;
-
-    if (_isLoadingArtFeed && _artFeedPosts.isEmpty) {
-      return const AppLoading();
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => _ensureArtFeedLoaded(force: true),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: _handleArtFeedScrollNotification,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.lg,
-            KubusSpacing.lg,
-            KubusSpacing.lg,
-            KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
-          ),
-          children: [
-            _buildArtFeedHeader(),
-            const SizedBox(height: KubusSpacing.md),
-            if (_artFeedError != null && filteredPosts.isEmpty && !hasQuery)
-              _buildArtStatusCard(
-                icon: Icons.location_off_outlined,
-                title: l10n.communityArtFeedLocationNeededTitle,
-                description: l10n.communityArtFeedLocationNeededDescription,
-                actionLabel: l10n.commonRetry,
-                onAction: () => _ensureArtFeedLoaded(force: true),
-              )
-            else if (filteredPosts.isEmpty)
-              _buildArtStatusCard(
-                icon: hasQuery ? Icons.search_off : Icons.brush_outlined,
-                title: hasQuery
-                    ? l10n.commonNoResultsFound
-                    : l10n.communityArtFeedNoNearbyActivationsTitle,
-                description: hasQuery
-                    ? l10n.communitySearchEmptyNoResults
-                    : l10n.communityArtFeedNoNearbyActivationsDescription,
-                actionLabel: hasQuery
-                    ? l10n.communityClearSearchTooltip
-                    : l10n.commonRefresh,
-                onAction: hasQuery
-                    ? () => _communitySearchController.clearQueryWithContext(
-                          context,
-                        )
-                    : () => _ensureArtFeedLoaded(force: true),
-              ),
-            ...filteredPosts.map(_buildArtPostCard),
-            if (_isLoadingArtFeed && filteredPosts.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: KubusSpacing.xl,
-                ),
-                child: Center(
-                  child: InlineLoading(
-                    expand: false,
-                    shape: BoxShape.circle,
-                    tileSize: 4,
-                    progress: null,
-                    color: Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor,
-                  ),
-                ),
-              ),
-          ],
-        ),
+    final query = _communitySearchQuery.toLowerCase();
+    return CommunityArtDiscoveryFeed(
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+        KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
       ),
+      postBuilder: (context, post) => _buildArtPostCard(post),
+      onRefresh: () => _ensureArtFeedLoaded(force: true),
+      onUseMyLocation: () =>
+          _ensureArtFeedLoaded(force: true, promptForLocation: true),
+      matches:
+          query.isEmpty ? null : (item) => _artDiscoveryMatches(item, query),
     );
+  }
+
+  /// The tab's search field applies to every kind of discovery entry.
+  bool _artDiscoveryMatches(ArtDiscoveryItem item, String query) {
+    switch (item.kind) {
+      case ArtDiscoveryKind.post:
+        return _filterPostsForQuery([item.post!]).isNotEmpty;
+      case ArtDiscoveryKind.artwork:
+        final art = item.artwork!;
+        return art.title.toLowerCase().contains(query) ||
+            art.artist.toLowerCase().contains(query) ||
+            art.tags.any((tag) => tag.toLowerCase().contains(query));
+      case ArtDiscoveryKind.exhibition:
+        final show = item.exhibition!;
+        return show.title.toLowerCase().contains(query) ||
+            (show.locationName ?? '').toLowerCase().contains(query);
+    }
   }
 
   List<CommunityPost> _filterPostsForQuery(List<CommunityPost> posts) {
@@ -240,148 +202,6 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
           mentionMatch ||
           groupMatch;
     }).toList(growable: false);
-  }
-
-  Widget _buildArtFeedHeader() {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final radiusKm = Provider.of<CommunityHubProvider>(context, listen: false)
-        .artFeedRadiusKm;
-    String subtitle;
-    if (_artFeedLatitude != null && _artFeedLongitude != null) {
-      subtitle = l10n.communityArtFeedCenterSubtitle(
-        _artFeedLatitude!.toStringAsFixed(3),
-        _artFeedLongitude!.toStringAsFixed(3),
-      );
-    } else {
-      subtitle = l10n.communityArtFeedEnablePreciseLocationHint;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: KubusRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.communityArtFeedHeaderTitle,
-            style: KubusTypography.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: scheme.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l10n.communityArtFeedRadiusSubtitle(
-              l10n.commonDistanceKm(radiusKm.toStringAsFixed(1)),
-            ),
-            style: KubusTypography.textTheme.bodySmall?.copyWith(
-              color: scheme.onPrimaryContainer.withValues(alpha: 0.78),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: KubusTypography.textTheme.labelSmall?.copyWith(
-              color: scheme.onPrimaryContainer.withValues(alpha: 0.68),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _ensureArtFeedLoaded(force: true),
-                icon: const Icon(Icons.near_me_outlined, size: 18),
-                label: Text(l10n.communityArtFeedRefreshLocationButton),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final l10n = AppLocalizations.of(context)!;
-                  await showModalBottomSheet(
-                    context: context,
-                    builder: (ctx) => Padding(
-                      padding: const EdgeInsets.all(KubusSpacing.lg),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.communityArtFeedAboutTitle,
-                            style: KubusTypography.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.communityArtFeedAboutBody,
-                            style: KubusTypography.inter(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.info_outline, size: 18),
-                label: Text(l10n.communityArtFeedAboutButton),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArtStatusCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    String? actionLabel,
-    VoidCallback? onAction,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: KubusSpacing.xl),
-      padding: const EdgeInsets.all(KubusSpacing.xl),
-      decoration: BoxDecoration(
-        borderRadius: KubusRadius.circular(18),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 42, color: Theme.of(context).colorScheme.onSurface),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: KubusTypography.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: KubusTypography.textTheme.bodySmall?.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimaryContainer
-                  .withValues(alpha: 0.78),
-            ),
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onAction,
-              child: Text(actionLabel),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   Widget _buildArtPostCard(CommunityPost post) {
@@ -952,9 +772,10 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
                   ),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
-                IconButton.filledTonal(
+                KubusIconActionButton(
+                  tooltip: l10n.commonSend,
                   onPressed: submitInlineComment,
-                  icon: const Icon(Icons.send_outlined, size: 18),
+                  icon: Icons.send_rounded,
                 ),
               ],
             ),

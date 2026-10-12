@@ -6532,9 +6532,13 @@ class BackendApiService
         headers: _getHeaders(),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to delete post: ${response.statusCode} - ${response.body}',
+      // 200/202/204 all mean the server removed the post. Anything else is
+      // surfaced with its status so callers can tell 401/403/404/409/5xx apart.
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId',
+          body: response.body,
         );
       }
     } catch (_) {
@@ -6656,6 +6660,7 @@ class BackendApiService
     int limit = 20,
     int page = 1,
     String sort = 'hybrid',
+    bool includeGeneral = false,
   }) async {
     try {
       final params = <String, String>{
@@ -6665,6 +6670,9 @@ class BackendApiService
         'limit': limit.toString(),
         'page': page.toString(),
         'sort': sort.trim().toLowerCase(),
+        // Also public posts that are not reviews, drops or events but sit in
+        // the area. Servers that predate the flag ignore it.
+        if (includeGeneral) 'includeGeneral': 'true',
       };
       final uri = Uri.parse(
         '$baseUrl/api/community/art-feed',

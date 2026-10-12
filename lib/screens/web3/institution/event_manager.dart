@@ -703,6 +703,7 @@ class _EventManagerState extends State<EventManager>
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.eventManagerDeleteTitle,
             style: KubusTextStyles.detailSectionTitle.copyWith(

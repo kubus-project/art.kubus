@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../utils/app_animations.dart';
@@ -273,11 +275,16 @@ class KubusMapAttributionControl extends StatelessWidget {
     required this.semanticsLabel,
     this.credit = kubusMapAttributionCredit,
     this.minHeight = KubusMapMetrics.chromeControlSize,
+    this.compact = false,
   });
 
   final VoidCallback onPressed;
   final String semanticsLabel;
   final String credit;
+
+  /// Shows only the info button (a square at [minHeight]); the credit text is
+  /// then reachable through the same tap, the tooltip and the semantics label.
+  final bool compact;
 
   /// Minimum tap height. The mobile map passes its 48px touch target.
   final double minHeight;
@@ -294,55 +301,130 @@ class KubusMapAttributionControl extends StatelessWidget {
       fontWeight: FontWeight.w500,
     );
 
-    return Semantics(
-      button: true,
-      label: semanticsLabel,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: buildKubusMapChromeSurface(
-          context: context,
-          borderRadius: radius,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: radius,
-              onTap: onPressed,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: minHeight),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                    vertical: KubusSpacing.xs,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        // Two lines at most, so a narrow map keeps the whole
-                        // credit visible instead of truncating it.
-                        child: Text(
-                          credit,
-                          maxLines: 2,
-                          style: creditStyle ??
-                              theme.textTheme.labelSmall?.copyWith(
+    return Tooltip(
+      message: compact ? '$semanticsLabel: $credit' : semanticsLabel,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: compact ? '$semanticsLabel: $credit' : semanticsLabel,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: buildKubusMapChromeSurface(
+            context: context,
+            borderRadius: radius,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: onPressed,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: minHeight),
+                  child: compact
+                      ? SizedBox.square(
+                          dimension: minHeight,
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: roles.foreground,
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                            vertical: KubusSpacing.xs,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                // Two lines at most, so a narrow map keeps the whole
+                                // credit visible instead of truncating it.
+                                child: Text(
+                                  credit,
+                                  maxLines: 2,
+                                  style: creditStyle ??
+                                      theme.textTheme.labelSmall?.copyWith(
+                                        color: roles.foreground,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(
+                                  width: KubusSpacing.xs + KubusSpacing.xxs),
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
                                 color: roles.foreground,
                               ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-                      Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: roles.foreground,
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The basemap credit as the map shows it: spelled out on arrival, then
+/// collapsed to the compact info button beside the map controls once the
+/// visitor has had a moment with it (or starts using the map).
+///
+/// The full credit stays one tap away (the same attribution dialog), in the
+/// tooltip and in the semantics label, so nothing the licences require is
+/// hidden; it is simply no longer a wide pill competing with the controls.
+class KubusMapCollapsingAttribution extends StatefulWidget {
+  const KubusMapCollapsingAttribution({
+    super.key,
+    required this.onPressed,
+    required this.semanticsLabel,
+    this.minHeight = KubusMapMetrics.chromeControlSize,
+    this.credit = kubusMapAttributionCredit,
+    this.expandedFor = const Duration(seconds: 6),
+  });
+
+  final VoidCallback onPressed;
+  final String semanticsLabel;
+  final double minHeight;
+  final String credit;
+
+  /// How long the spelled-out credit stays before collapsing.
+  final Duration expandedFor;
+
+  @override
+  State<KubusMapCollapsingAttribution> createState() =>
+      _KubusMapCollapsingAttributionState();
+}
+
+class _KubusMapCollapsingAttributionState
+    extends State<KubusMapCollapsingAttribution> {
+  Timer? _timer;
+  bool _expanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.expandedFor, () {
+      if (mounted) setState(() => _expanded = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KubusMapAttributionControl(
+      onPressed: widget.onPressed,
+      semanticsLabel: widget.semanticsLabel,
+      credit: widget.credit,
+      minHeight: widget.minHeight,
+      compact: !_expanded,
     );
   }
 }

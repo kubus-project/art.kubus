@@ -120,7 +120,7 @@ class _AvailabilityNodeOperatorBodyState
                 expiresInDays: _expiresInDays,
               );
       if (!mounted) return;
-      await showDialog<void>(
+      await showKubusDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
@@ -189,9 +189,10 @@ class _AvailabilityNodeOperatorBodyState
 
   Future<void> _revokeToken(AvailabilityOperatorTokenRecord token) async {
     final wallet = _resolveWallet();
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.availabilityNodeRevokeTitle),
         content: Text(l10n.availabilityNodeRevokeBody(token.label)),
         actions: [

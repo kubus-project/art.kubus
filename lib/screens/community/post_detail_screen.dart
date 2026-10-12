@@ -1,3 +1,5 @@
+import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -1512,90 +1514,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _confirmDeletePost() async {
     final post = _post;
     if (!mounted || post == null) return;
-    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+    final onClose = widget.onClose;
+    AppRefreshProvider? appRefresh;
+    try {
+      appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
+    } catch (_) {}
 
-    bool deleting = false;
-
-    await showKubusDialog<void>(
+    await confirmAndDeleteCommunityPost(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => KubusAlertDialog(
-          title: Text(
-            l10n.postDetailDeletePostTitle,
-            style: KubusTypography.inter(fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            l10n.postDetailDeletePostBody,
-            style: KubusTypography.inter(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: deleting
-                  ? null
-                  : () => Navigator.of(dialogContext).maybePop(),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: deleting
-                  ? null
-                  : () async {
-                      setDialogState(() => deleting = true);
-                      final messenger = ScaffoldMessenger.of(context);
-                      final dialogNavigator = Navigator.of(dialogContext);
-                      final navigator = Navigator.of(context);
-
-                      AppRefreshProvider? appRefresh;
-                      try {
-                        appRefresh = Provider.of<AppRefreshProvider>(
-                          context,
-                          listen: false,
-                        );
-                      } catch (_) {}
-
-                      final onClose = widget.onClose;
-
-                      try {
-                        await BackendApiService().deleteCommunityPost(post.id);
-                        ProfilePackageMutationTracker.postDeleted(
-                          authorWallet: post.authorWallet ?? post.authorId,
-                        );
-                        if (!mounted) return;
-                        appRefresh?.triggerCommunity();
-                        dialogNavigator.pop();
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content: Text(l10n.postDetailPostDeletedToast)),
-                        );
-                        if (onClose != null) {
-                          onClose();
-                        } else {
-                          navigator.maybePop();
-                        }
-                      } catch (e) {
-                        if (kDebugMode) {
-                          debugPrint(
-                              'PostDetailScreen: delete post failed: $e');
-                        }
-                        if (!mounted) return;
-                        setDialogState(() => deleting = false);
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content:
-                                  Text(l10n.postDetailDeletePostFailedToast)),
-                        );
-                      }
-                    },
-              child: deleting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: InlineLoading(tileSize: 4),
-                    )
-                  : Text(l10n.commonDelete),
-            ),
-          ],
-        ),
-      ),
+      post: post,
+      onDeleted: () {
+        appRefresh?.triggerCommunity();
+        if (onClose != null) {
+          onClose();
+        } else {
+          navigator.maybePop();
+        }
+      },
     );
   }
 
@@ -1968,15 +1904,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   const SizedBox(width: KubusSpacing.xs),
-                  IconButton.filled(
+                  KubusIconActionButton(
                     tooltip: l10n.commonSend,
                     onPressed: _submitComment,
-                    style: IconButton.styleFrom(
-                      backgroundColor: roles.active,
-                      foregroundColor: roles.onActive,
-                      minimumSize: const Size(48, 48),
-                    ),
-                    icon: const Icon(Icons.send_rounded, size: 20),
+                    icon: Icons.send_rounded,
                   ),
                 ],
               ),
@@ -2310,6 +2241,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       context: context,
                                       builder: (dialogContext) {
                                         return KubusAlertDialog(
+                                          size: KubusDialogSize.compact,
                                           title: Text(
                                               l10n.commentDeleteConfirmTitle),
                                           content: Text(

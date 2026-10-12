@@ -1,3 +1,5 @@
+import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -347,16 +349,17 @@ class HomeQuickActionExecutor {
             definition.labelKey.resolve(l10n),
           );
 
-    showDialog<void>(
+    showKubusDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
+        return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           title: Text(title),
           content: Text(message),
           actions: [
-            TextButton(
+            KubusButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.commonGotIt),
+              label: l10n.commonGotIt,
             ),
           ],
         );

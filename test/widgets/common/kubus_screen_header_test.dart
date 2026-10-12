@@ -103,8 +103,8 @@ void main() {
       ),
     );
 
-    final title =
-        tester.widget<Text>(find.text('Very Long Compact Section Header Title'));
+    final title = tester
+        .widget<Text>(find.text('Very Long Compact Section Header Title'));
 
     expect(title.maxLines, 2);
   });

@@ -15,6 +15,31 @@ import 'community_post_video_slide.dart';
 /// same stage, so changing slides never moves the feed.
 const double kCommunityMediaStageAspect = 4 / 3;
 
+/// A post with a single video takes the clip's own shape, bounded so neither
+/// an ultrawide strip nor a tall portrait breaks the feed. 32:9 is the widest
+/// stage (the shallowest card); 4:5 is the tallest, so a 9:16 clip is shown
+/// whole, pillarboxed, instead of filling the viewport.
+const double kCommunityVideoStageMinAspect = 4 / 5;
+const double kCommunityVideoStageMaxAspect = 32 / 9;
+
+/// Stage shape while a clip's shape is still unknown (no poster, not loaded).
+const double kCommunityVideoStageFallbackAspect = 16 / 9;
+
+/// The stage never gets shallower than this, so the player controls always
+/// have room, however wide the clip is.
+const double kCommunityVideoStageMinHeight = 112;
+
+/// Stage aspect ratio for a single video of [clipAspect] (width / height),
+/// or null when its shape is unknown.
+double communityVideoStageAspect(double? clipAspect) {
+  final raw = clipAspect != null && clipAspect.isFinite && clipAspect > 0
+      ? clipAspect
+      : kCommunityVideoStageFallbackAspect;
+  return raw
+      .clamp(kCommunityVideoStageMinAspect, kCommunityVideoStageMaxAspect)
+      .toDouble();
+}
+
 /// Quoted posts show one compact preview at this proportion.
 const double kCommunityMediaCompactAspect = 16 / 9;
 
@@ -55,6 +80,8 @@ class _CommunityPostMediaCarouselState
   final FocusNode _focusNode = FocusNode(debugLabel: 'community-media');
   final Map<int, _NaturalSizeProbe> _probes = <int, _NaturalSizeProbe>{};
   final Map<int, double> _naturalAspects = <int, double>{};
+  // Poster and loaded-clip shapes of video items, by index.
+  final Map<int, double> _videoAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
 
@@ -70,6 +97,7 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
+      _videoAspects.clear();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
     }
@@ -95,7 +123,10 @@ class _CommunityPostMediaCarouselState
     for (var i = 0; i < widget.mediaUrls.length; i++) {
       final index = i;
       final url = widget.mediaUrls[index];
-      if (communityMediaUrlIsVideo(url)) continue;
+      if (communityMediaUrlIsVideo(url)) {
+        _probeVideoPoster(index, url);
+        continue;
+      }
       final resolved = MediaUrlResolver.resolveDisplayUrl(url);
       if (resolved == null) continue;
       _probes[index] = _NaturalSizeProbe(
@@ -106,6 +137,40 @@ class _CommunityPostMediaCarouselState
         },
       );
     }
+  }
+
+  /// A single video's stage starts from what is already known about it: the
+  /// shape learned earlier this session, else its poster's own shape, else 16:9.
+  void _probeVideoPoster(int index, String url) {
+    if (widget.mediaUrls.length != 1) return;
+    final known =
+        CommunityPostVideoSlide.knownAspects[communityMediaVideoSourceUrl(url)];
+    if (known != null) {
+      _videoAspects[index] = known;
+      return;
+    }
+    final poster = communityMediaPosterReference(url);
+    final resolved =
+        poster == null ? null : MediaUrlResolver.resolveDisplayUrl(poster);
+    if (resolved == null) return;
+    _probes[index] = _NaturalSizeProbe(
+      NetworkImage(resolved),
+      onSize: (aspect) {
+        if (!mounted) return;
+        // The clip's real shape, once known, wins over the poster's.
+        if (CommunityPostVideoSlide.knownAspects
+            .containsKey(communityMediaVideoSourceUrl(url))) {
+          return;
+        }
+        setState(() => _videoAspects[index] = aspect);
+      },
+    );
+  }
+
+  void _onVideoAspect(int index, double aspect) {
+    if (!mounted || widget.mediaUrls.length != 1) return;
+    if (_videoAspects[index] == aspect) return;
+    setState(() => _videoAspects[index] = aspect);
   }
 
   void _disposeProbes() {
@@ -213,9 +278,37 @@ class _CommunityPostMediaCarouselState
     final count = widget.mediaUrls.length;
     final multiple = count > 1;
 
-    final stage = AspectRatio(
-      aspectRatio: kCommunityMediaStageAspect,
-      child: ClipRRect(
+    final singleVideo =
+        count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
+    final stageAspect = singleVideo
+        ? communityVideoStageAspect(_videoAspects[0])
+        : kCommunityMediaStageAspect;
+
+    Widget sizedStage(Widget child) {
+      if (!singleVideo) {
+        return AspectRatio(aspectRatio: stageAspect, child: child);
+      }
+      final reduceMotion =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      return TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: stageAspect),
+        duration:
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        builder: (context, aspect, _) => LayoutBuilder(
+          builder: (context, constraints) {
+            final height = math.max(
+              kCommunityVideoStageMinHeight,
+              constraints.maxWidth / aspect,
+            );
+            return SizedBox(height: height, child: child);
+          },
+        ),
+      );
+    }
+
+    final stage = sizedStage(
+      ClipRRect(
         borderRadius: BorderRadius.circular(KubusRadius.md),
         child: Stack(
           fit: StackFit.expand,
@@ -361,6 +454,7 @@ class _CommunityPostMediaCarouselState
         url: url,
         isActive: isActive,
         autoplay: autoplay,
+        onAspect: (aspect) => _onVideoAspect(index, aspect),
       );
     }
     return _CommunityMediaImageSlide(

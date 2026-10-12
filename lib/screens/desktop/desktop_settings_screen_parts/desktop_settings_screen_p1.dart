@@ -763,6 +763,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(KubusRadius.xl),
@@ -1066,6 +1067,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsResetAppDialogTitle,
@@ -1121,6 +1123,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsDeleteAccountDialogTitle,

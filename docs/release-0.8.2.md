@@ -255,3 +255,23 @@ Public CI builds pass `SUPPORT_TICKETS_ENABLED` from the repository variable `KU
 - Historical videos without posters use the fallback state; reduced-motion disables autoplay by design.
 - Support QA at 820 px Slovenian lost the first typed character of a reply in the harness twice (the reply reached the backend as "ser follow-up"); it did not happen at the other widths. Probably typing before the field takes focus; not investigated further and not seen by a person.
 - art.kubus#266 (an older release-state draft) is superseded by this document and should be closed unmerged.
+
+## Final UI corrections
+
+Corrections after owner testing of the development build. Each root cause was reproduced before it was changed.
+
+**Post deletion.** Reproduced on an isolated backend with a real signed-in session: `DELETE /api/community/posts/:id` returned 200 and the post was gone, yet the feed showed "Failed to delete post." and kept the dialog open. The cause was client-side. `getCommunityPosts` returns `toList(growable: false)`, the feed assigned that list directly, and `_removePostFromLocalFeeds` called `removeWhere` on it, which throws on a fixed-length list *after* the server had deleted. Post detail did not touch those lists, which is why it worked. All four surfaces (feed, desktop feed, group feed, post detail) now share `confirmAndDeleteCommunityPost`: one provider call, 404 treated as already deleted, status-aware messages (401, 403, 409, network, 5xx), a blocking pending state, and local cleanup isolated so it can never turn a completed deletion into a failure. Feed lists are copied on assignment and replaced, never mutated.
+
+**Marker continuity.** Recorded frame by frame while easing z3.5 to z9.5: past the overview exit zoom (8.0) the marker source was emptied until the camera settled and the detailed fetch landed, then markers faded up from opacity 0. The overview is now held as a hand-off and drawn until the detailed markers replace it, which then ease in softly. Blank run before: about 1.4 s (default motion) and the whole settle (reduced motion); after: none.
+
+**Dialogs.** `KubusAlertDialog` had no width contract. It now takes a `KubusDialogSize` (compact 420, standard 520, wide 720, from `KubusSizes.dialogWidth*`), defaults to standard, stacks its actions when they do not fit, and scrolls its content under fixed title and actions. 53 text-only confirmations are compact. Raw `AlertDialog` surfaces were moved to `showKubusDialog`. Large surfaces (fullscreen media, editors, the marker editor, the claims table, onboarding) are deliberately unchanged.
+
+**Actions.** `KubusIconActionButton` is the one icon-only action in the control geometry (rounded rectangle, `KubusRadius.control`, 48 px). It replaces the circular Send controls in direct messages, post detail, the feed and desktop inline comment composers and artwork comments. The app theme gives text, filled, outlined and icon buttons the same control shape. Avatars, radios, progress indicators, map markers, pills that are chips or badges and the glass map controls stay circular or pill by design.
+
+**Video.** A post with one video takes the clip's own shape: 16:9 until known, then the poster's shape, then the loaded clip's, bounded to 4:5 at the tallest and 32:9 at the shallowest, never below 112 px. Posts with several media keep the stable 4:3 stage. A clip with no poster that has not played yet is still 16:9 (its shape is unknown without downloading it).
+
+**Map chrome.** The basemap credit is spelled out on arrival and then collapses to the compact info button beside the control cluster; the full credit stays reachable by tap, tooltip and semantics label. The Discovery Path card takes exactly the width of the control cluster.
+
+**Art discovery.** The Art tab is one ranked feed (`ArtDiscoveryRanker`): follows and saves, proximity, recency and genuine engagement, with per-author and per-kind damping and one post per artwork. Sources are art-feed posts (radius widening 3, 15, 60, 250 km only while sparse), recent public posts, public artworks and published exhibitions. Location is the chosen area, then the map's area, then the device (never prompted unless the visitor asks), then the last used area; without any it is public discovery. Only entries within 25 km are labelled nearby. `GET /api/community/art-feed?includeGeneral=true` (backend PR, additive, group posts excluded) lets ordinary located posts qualify; servers without it simply return art categories only.
+
+Not done here: a UI to pick a named city (the map's area serves as the chosen area), and no migration, deployment, tag or version change.

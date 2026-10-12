@@ -18087,4 +18087,85 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get supportErrorAccountIdentity =>
       'Vaša seja ni primerna za zahtevke za podporo. Odjavite se, znova se prijavite in poskusite znova.';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Seja je potekla. Za izbris objave se znova prijavi.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'Izbrišeš lahko samo svoje objave.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'Te objave trenutno ni mogoče izbrisati. Osveži vir in poskusi znova.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Povezava z art.kubus ni uspela. Preveri povezavo in poskusi znova.';
+
+  @override
+  String get communityArtDiscoveryTitle => 'Odkrij umetnost';
+
+  @override
+  String get communityArtDiscoverySubtitleMap =>
+      'Okoli območja, ki si ga ogledoval na zemljevidu';
+
+  @override
+  String get communityArtDiscoverySubtitleDevice => 'V bližini tvoje lokacije';
+
+  @override
+  String get communityArtDiscoverySubtitleSaved =>
+      'Okoli zadnjega uporabljenega območja';
+
+  @override
+  String get communityArtDiscoverySubtitlePublic =>
+      'Umetnost in pogovori s celotne platforme';
+
+  @override
+  String communityArtDiscoveryWithin(Object distance) {
+    return 'V razdalji $distance';
+  }
+
+  @override
+  String get communityArtDiscoveryUseMyLocation => 'Uporabi mojo lokacijo';
+
+  @override
+  String get communityArtDiscoveryReasonForYou => 'Zate';
+
+  @override
+  String get communityArtDiscoveryReasonNearby => 'V bližini';
+
+  @override
+  String get communityArtDiscoveryReasonFollowed => 'Od umetnika, ki mu slediš';
+
+  @override
+  String get communityArtDiscoveryReasonNewArtwork => 'Novo delo';
+
+  @override
+  String get communityArtDiscoveryReasonDiscussion => 'Pogovor skupnosti';
+
+  @override
+  String get communityArtDiscoveryReasonReview => 'Nedavna recenzija';
+
+  @override
+  String get communityArtDiscoveryReasonExhibition => 'Razstava';
+
+  @override
+  String get communityArtDiscoveryEmptyTitle => 'Tu še ni ničesar';
+
+  @override
+  String get communityArtDiscoveryEmptyBody =>
+      'Trenutno ni mogoče najti javnih del, recenzij ali razstav. Poskusi znova čez trenutek ali raziskuj zemljevid.';
+
+  @override
+  String get communityArtDiscoveryErrorTitle =>
+      'Odkrivanja ni bilo mogoče naložiti';
+
+  @override
+  String get communityArtDiscoveryErrorBody =>
+      'Preveri povezavo in poskusi znova.';
+
+  @override
+  String get communityArtDiscoveryLoadMore => 'Pokaži več';
 }

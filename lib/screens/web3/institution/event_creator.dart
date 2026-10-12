@@ -1659,6 +1659,7 @@ class _EventCreatorState extends State<EventCreator>
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.eventCreatorHelpTitle,

@@ -459,6 +459,7 @@ class _SpatialLibraryDetailScreenState
       final proceed = await showKubusDialog<bool>(
             context: context,
             builder: (dialogContext) => KubusAlertDialog(
+              size: KubusDialogSize.compact,
               title: Text(l10n.spatialEditAssociationTitle),
               content: Text(l10n.spatialEditAssociationProcessedWarning),
               actions: <Widget>[
@@ -561,6 +562,7 @@ class _SpatialLibraryDetailScreenState
         final consent = await showKubusDialog<bool>(
               context: context,
               builder: (dialogContext) => KubusAlertDialog(
+                size: KubusDialogSize.compact,
                 title: Text(l10n.spatialRemotePrivacyTitle),
                 content: Text(l10n.spatialRemotePrivacyBody),
                 actions: <Widget>[
@@ -592,6 +594,7 @@ class _SpatialLibraryDetailScreenState
     final confirmed = await showKubusDialog<bool>(
           context: context,
           builder: (dialogContext) => KubusAlertDialog(
+            size: KubusDialogSize.compact,
             title: Text(l10n.spatialLibraryDeleteRecord),
             content: Text(l10n.spatialLibraryDeleteRecordWarning),
             actions: <Widget>[
