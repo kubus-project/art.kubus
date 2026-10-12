@@ -30,6 +30,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { chromium, firefox } from 'playwright';
+import {
+  FLOAT_PERIOD_MS,
+  MIN_SETTLED_FRAMES,
+  getSamplingDeadlineMs,
+  getSettledSamplingCoverage,
+} from './product_motion_sampling.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
@@ -72,8 +78,7 @@ const STILL_MAX = 0.6; // peak-to-peak when it must not move
 const SHADOW_MIN = 1.2; // accent shadow below the tile
 const REST_TOLERANCE = 0.6; // back at rest after exit
 const SETTLE_MS = 600; // entry (180 ms) is over
-const MIN_SETTLED_FRAMES = 14; // enough to cover one 2.2 s float period
-const MAX_HOLD_MS = 25000;
+const MAX_HOLD_MS = 60000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -233,21 +238,41 @@ async function measureCase(page, helper, c) {
   const t0 = Date.now();
   await page.mouse.move(cx, cy, { steps: 3 });
   const hoverFrames = [];
-  // Keep sampling until the window has passed AND enough settled frames cover
-  // a full float period, so a slow machine measures less often, never wrongly.
+  const captureDurations = [];
+  let sampleDeadlineMs = 25000;
+  // Keep the 14-frame and full-period requirements. If Firefox captures are
+  // slow under CI load, extend this window from measured latency up to 60 sec.
   while (true) {
     const elapsed = Date.now() - t0;
-    const settledCount = hoverFrames.filter((f) => f.t >= SETTLE_MS).length;
-    if (elapsed >= holdMs && settledCount >= MIN_SETTLED_FRAMES) break;
-    if (elapsed >= MAX_HOLD_MS) break;
-    hoverFrames.push({ t: elapsed, b64: await shot() });
+    const coverage = getSettledSamplingCoverage(hoverFrames, {
+      settleMs: SETTLE_MS,
+    });
+    if (elapsed >= holdMs && coverage.complete) break;
+    if (elapsed >= sampleDeadlineMs) break;
+    const captureStarted = Date.now();
+    const b64 = await shot();
+    const captureEnded = Date.now();
+    const captureMs = captureEnded - captureStarted;
+    captureDurations.push(captureMs);
+    const recentCaptures = captureDurations.slice(-5).sort((a, b) => a - b);
+    const medianCaptureMs = recentCaptures[Math.floor(recentCaptures.length / 2)];
+    sampleDeadlineMs = Math.max(
+      sampleDeadlineMs,
+      getSamplingDeadlineMs(medianCaptureMs, {
+        holdMs,
+        settleMs: SETTLE_MS,
+        maxHoldMs: MAX_HOLD_MS,
+      }),
+    );
+    hoverFrames.push({ t: (captureStarted + captureEnded) / 2 - t0, b64 });
   }
 
   await page.mouse.move(2, VIEW.height - 2, { steps: 3 });
   const t1 = Date.now();
   const exitFrames = [];
   while (Date.now() - t1 < 1200) {
-    exitFrames.push({ t: Date.now() - t1, b64: await shot() });
+    const b64 = await shot();
+    exitFrames.push({ t: Date.now() - t1, b64 });
   }
 
   const measured = await helper.evaluate(analyseInPage, {
@@ -262,11 +287,14 @@ async function measureCase(page, helper, c) {
 
   // Evidence frames: rest, the highest and the lowest point of the float.
   const settled = hover.map((m, i) => ({ ...m, i })).filter((m) => m.t >= SETTLE_MS);
-  const high = settled.reduce((a, b) => (b.dy < a.dy ? b : a), settled[0]);
-  const low = settled.reduce((a, b) => (b.dy > a.dy ? b : a), settled[0]);
+  const evidenceFrames = settled.length ? settled : hover.map((m, i) => ({ ...m, i }));
+  const high = evidenceFrames.reduce((a, b) => (b.dy < a.dy ? b : a), evidenceFrames[0]);
+  const low = evidenceFrames.reduce((a, b) => (b.dy > a.dy ? b : a), evidenceFrames[0]);
   await fs.writeFile(path.join(outDir, `${c.id}-0-rest.png`), Buffer.from(restB64, 'base64'));
-  await fs.writeFile(path.join(outDir, `${c.id}-1-high.png`), Buffer.from(hoverFrames[high.i].b64, 'base64'));
-  await fs.writeFile(path.join(outDir, `${c.id}-2-low.png`), Buffer.from(hoverFrames[low.i].b64, 'base64'));
+  if (high) {
+    await fs.writeFile(path.join(outDir, `${c.id}-1-high.png`), Buffer.from(hoverFrames[high.i].b64, 'base64'));
+    await fs.writeFile(path.join(outDir, `${c.id}-2-low.png`), Buffer.from(hoverFrames[low.i].b64, 'base64'));
+  }
 
   const dys = settled.map((m) => m.dy);
   const shadows = settled.map((m) => m.shadow);
@@ -277,6 +305,10 @@ async function measureCase(page, helper, c) {
     answer: c.answer,
     samples: hover.length,
     settledFrames: settled.length,
+    settledSpanMs: settled.length > 1 ? settled.at(-1).t - settled[0].t : 0,
+    captureMsMean: +stats(captureDurations).mean.toFixed(1),
+    captureMsMax: Math.max(...captureDurations),
+    sampleDeadlineMs,
     entry: hover.filter((m) => m.t < 400).map((m) => ({ t: m.t, dy: +m.dy.toFixed(2) })),
     liftMean: +lift.mean.toFixed(2),
     liftMin: +lift.min.toFixed(2),
@@ -291,7 +323,10 @@ async function measureCase(page, helper, c) {
 function judge(r) {
   const failures = [];
   if (r.settledFrames < MIN_SETTLED_FRAMES) {
-    failures.push(`only ${r.settledFrames} settled frames; the machine is too slow to measure a float`);
+    failures.push(`only ${r.settledFrames} settled pixel samples; need ${MIN_SETTLED_FRAMES}`);
+  }
+  if (r.settledSpanMs < FLOAT_PERIOD_MS) {
+    failures.push(`settled samples span ${r.settledSpanMs}ms; need a full ${FLOAT_PERIOD_MS}ms float period`);
   }
   if (r.answer === 'none') {
     if (Math.abs(r.liftMean) > STILL_MAX) failures.push(`moved ${r.liftMean}px but is disabled`);

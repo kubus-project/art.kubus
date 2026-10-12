@@ -195,6 +195,7 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix scripts/qa ci --no-audit --no-fund
+          node --test scripts/qa/product_motion_sampling.test.mjs
           npm --prefix scripts/qa exec -- playwright install --with-deps chromium firefox
           flutter build web --release -t tool/qa/product_motion_gallery_main.dart --output build/motion-gallery
           for browser in chromium firefox; do
