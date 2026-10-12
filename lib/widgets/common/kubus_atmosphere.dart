@@ -528,6 +528,12 @@ class KubusHoverResponse extends StatefulWidget {
   static const double floatAmplitude = 1.5;
   static const Duration floatPeriod = Duration(milliseconds: 2200);
 
+  /// The hover transition for any colour, shadow or field that answers a
+  /// hover: [duration], or none under reduced motion, so the whole answer
+  /// arrives on the first frame.
+  static Duration durationOf(BuildContext context) =>
+      motionAllowed(context) ? duration : Duration.zero;
+
   /// Whether decorative movement is allowed in [context].
   static bool motionAllowed(BuildContext context) =>
       !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);

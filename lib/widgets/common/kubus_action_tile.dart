@@ -291,7 +291,7 @@ class KubusActionTile extends StatelessWidget {
               maxWidth: maxWidth,
             ),
             child: AnimatedContainer(
-              duration: KubusHoverResponse.duration,
+              duration: KubusHoverResponse.durationOf(context),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
                 borderRadius: radius,
@@ -318,7 +318,7 @@ class KubusActionTile extends StatelessWidget {
                     Positioned.fill(
                       child: IgnorePointer(
                         child: AnimatedContainer(
-                          duration: KubusHoverResponse.duration,
+                          duration: KubusHoverResponse.durationOf(context),
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
                               center: Alignment.topRight,
@@ -375,7 +375,7 @@ class KubusActionTile extends StatelessWidget {
                           child: AnimatedContainer(
                             key: const ValueKey<String>(
                                 'kubus_action_tile_indicator'),
-                            duration: KubusHoverResponse.duration,
+                            duration: KubusHoverResponse.durationOf(context),
                             width: 3,
                             decoration: BoxDecoration(
                               color:

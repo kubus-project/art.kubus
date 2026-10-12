@@ -7,6 +7,7 @@ import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child, {Brightness brightness = Brightness.light}) =>
@@ -302,6 +303,41 @@ void main() {
         .where((r) => r.cursor == SystemMouseCursors.click);
     expect(regions, isEmpty);
     handle.dispose();
+  });
+
+  testWidgets('reduced motion paints the whole hover answer on the first frame',
+      (tester) async {
+    for (final expressive in [false, true]) {
+      await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: _wrap(KubusStatCard(
+          title: 'Views',
+          value: '42',
+          icon: Icons.visibility_outlined,
+          expressive: expressive,
+        )),
+      ));
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(tester.getCenter(find.byType(KubusStatCard)));
+      await tester.pump();
+
+      final shadowBox = find
+          .descendant(
+            of: find.byType(KubusStatCard),
+            matching: find.byType(AnimatedContainer),
+          )
+          .first;
+      final box = tester.renderObject<RenderDecoratedBox>(
+        find
+            .descendant(of: shadowBox, matching: find.byType(DecoratedBox))
+            .first,
+      );
+      final shadows = (box.decoration as BoxDecoration).boxShadow!;
+      expect(shadows.first.color.a, greaterThan(0.2),
+          reason: 'expressive: $expressive');
+      await gesture.removePointer();
+    }
   });
 
   testWidgets('a hovered stat card disposes its float cleanly', (tester) async {

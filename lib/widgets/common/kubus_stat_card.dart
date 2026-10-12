@@ -301,7 +301,7 @@ class KubusStatCard extends StatelessWidget {
                   Positioned.fill(
                     child: IgnorePointer(
                       child: AnimatedContainer(
-                        duration: KubusHoverResponse.duration,
+                        duration: KubusHoverResponse.durationOf(context),
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
                             center: Alignment.bottomRight,
@@ -345,7 +345,7 @@ class KubusStatCard extends StatelessWidget {
       // The shadow lives outside the clipped Material so it can fall past the
       // tile's edge.
       return AnimatedContainer(
-        duration: KubusHoverResponse.duration,
+        duration: KubusHoverResponse.durationOf(context),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           borderRadius: radius,

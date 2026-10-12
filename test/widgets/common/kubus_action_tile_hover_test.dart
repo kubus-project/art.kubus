@@ -371,6 +371,10 @@ void main() {
           moreOrLessEquals(lift, epsilon: 0.01),
           reason: 'a still lift',
         );
+        // The shadow is painted at full strength on that same first frame:
+        // no 180 ms transition hides behind the still lift.
+        expect(_paintedShadowAlpha(tester), inInclusiveRange(0.2, 0.4),
+            reason: 'reduced motion: the whole answer arrives at once');
         // ...and it stays exactly there: no float.
         final trace = await _floatTrace(tester, rest);
         expect(trace.toSet().length, 1, reason: 'no float');
