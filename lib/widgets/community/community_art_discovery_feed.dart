@@ -8,6 +8,7 @@ import '../../models/artwork.dart';
 import '../../models/exhibition.dart';
 import '../../providers/community_art_discovery_provider.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
@@ -394,8 +395,12 @@ class _ExhibitionCard extends StatelessWidget {
       button: true,
       label: exhibition.title,
       child: KubusCard(
-        onTap: () => Navigator.of(context).pushNamed(
-          '/exhibition/${exhibition.id}',
+        // Shell-aware: the desktop shell keeps its sidebar and header, mobile
+        // keeps a normal route.
+        onTap: () => CreatorShellNavigation.openExhibitionDetailWorkspace(
+          context,
+          exhibitionId: exhibition.id,
+          initialExhibition: exhibition,
         ),
         padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(

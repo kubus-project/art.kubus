@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../widgets/security/security_hub_view.dart';
+import '../desktop/desktop_shell_scope.dart';
 
 class SecurityHubScreen extends StatelessWidget {
   const SecurityHubScreen({
@@ -19,10 +20,20 @@ class SecurityHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final canNavigateBack = mode == SecurityHubMode.manage;
     final l10n = AppLocalizations.of(context);
+    // Inside the desktop shell the screen sits in the shell's own stack, not on
+    // a route, so the implied Back would target the outer route.
+    final inShell = DesktopShellScope.of(context)?.canPop ?? false;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        automaticallyImplyLeading: canNavigateBack,
+        automaticallyImplyLeading: canNavigateBack && !inShell,
+        leading: canNavigateBack && inShell
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: l10n?.commonBack,
+                onPressed: () => popDesktopShellAware(context),
+              )
+            : null,
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

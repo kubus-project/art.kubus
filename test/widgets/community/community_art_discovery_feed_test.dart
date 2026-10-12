@@ -5,6 +5,7 @@ import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/exhibition.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/community_art_discovery_provider.dart';
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,5 +107,75 @@ void main() {
     final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
     expect(find.text(l10n.commonNoResultsFound), findsOneWidget);
     expect(find.text(l10n.communityArtDiscoveryLoadMore), findsNothing);
+  });
+
+  testWidgets(
+      'tapping an exhibition inside the desktop shell stays in the shell',
+      (tester) async {
+    tester.view.physicalSize = const Size(900, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final pushed = <Widget>[];
+    final provider = CommunityArtDiscoveryProvider(pageSize: 12);
+    final sources = ArtDiscoverySources(
+      artFeed: (lat, lng, radius, {int limit = 30}) async => const [],
+      publicPosts: ({int limit = 30}) async => const <CommunityPost>[],
+      artworks: () async => const <Artwork>[],
+      exhibitions: (location, radius) async => [
+        Exhibition(
+          id: 'ex-1',
+          title: 'Harbour light',
+          status: 'published',
+          createdAt: _now.subtract(const Duration(days: 3)),
+        ),
+      ],
+      signals: () async => ArtDiscoverySignals.none,
+      selectedArea: () => null,
+      mapCenter: () => null,
+      deviceLocation: ({required bool prompt}) async => null,
+      savedLocation: () async => null,
+      saveLocation: (l) async {},
+      now: () => _now,
+    );
+    await provider.refresh(sources);
+    expect(provider.allItems, hasLength(1));
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<CommunityArtDiscoveryProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: DesktopShellScope(
+            pushScreen: pushed.add,
+            popScreen: () {},
+            navigateToRoute: (_) {},
+            openNotifications: () {},
+            openFunctionsPanel: (_, {content}) {},
+            setFunctionsPanelContent: (_) {},
+            closeFunctionsPanel: () {},
+            canPop: false,
+            child: Scaffold(
+              body: CommunityArtDiscoveryFeed(
+                postBuilder: (context, post) => const SizedBox(),
+                onRefresh: () async {},
+                onUseMyLocation: () async {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Harbour light'));
+    await tester.pump();
+
+    expect(pushed, hasLength(1));
+    expect(pushed.single, isA<DesktopSubScreen>());
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(navigator.canPop(), isFalse,
+        reason: 'no route was pushed over the shell');
   });
 }

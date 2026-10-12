@@ -190,6 +190,44 @@ void main() {
     expect(backupStateChanges, 1);
   });
 
+  testWidgets('the visible Back control walks the shell stack, not a route',
+      (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _app(Scaffold(body: _ShellHost(onStateChanged: () {}))),
+    );
+    await tester.tap(find.text('open backup'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.text('Show phrase'));
+    await tester.pump();
+    await tester.tap(find.text('Show phrase'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(MnemonicRevealScreen), findsOneWidget);
+
+    // Back from the phrase returns to the backup screen.
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(MnemonicRevealScreen), findsNothing);
+    expect(find.byType(SecurityHubView), findsOneWidget);
+
+    // Back from the backup screen returns to the caller, still without a route.
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SecurityHubView), findsNothing);
+    expect(find.text('open backup'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-sidebar')), findsOneWidget);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(navigator.canPop(), isFalse);
+  });
+
   testWidgets('without a shell the phrase is still an ordinary route',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 820));

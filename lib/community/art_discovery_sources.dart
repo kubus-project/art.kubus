@@ -13,6 +13,7 @@ import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
 import 'art_discovery.dart';
 
@@ -77,17 +78,13 @@ ArtDiscoverySources buildLiveArtDiscoverySources(BuildContext context) {
       final followed = <String>{};
       if (walletAddress != null && walletAddress.trim().isNotEmpty) {
         try {
-          final rows = await api.getFollowing(
+          // The shared follow graph: backend list, else the per-wallet cache,
+          // so a transient outage does not silently change the ranking.
+          final known = await UserService.getKnownFollowingUsers(
             walletAddress: walletAddress,
-            limit: 200,
           );
-          for (final row in rows) {
-            final raw = row['walletAddress'] ??
-                row['wallet_address'] ??
-                row['wallet'] ??
-                row['following_wallet'] ??
-                row['followingWallet'];
-            final key = WalletUtils.canonical(raw?.toString() ?? '');
+          for (final raw in known ?? const <String>[]) {
+            final key = WalletUtils.canonical(raw);
             if (key.isNotEmpty) followed.add(key);
           }
         } catch (_) {

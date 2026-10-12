@@ -30,6 +30,16 @@ class MnemonicRevealScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        // Hosted in the desktop shell's own stack (onShellExit set): Back pops
+        // that stack instead of an outer route.
+        automaticallyImplyLeading: onShellExit == null,
+        leading: onShellExit == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: l10n.commonBack,
+                onPressed: () => onShellExit!(false),
+              ),
         title: Text(l10n.mnemonicRevealTitle),
       ),
       body: Padding(
