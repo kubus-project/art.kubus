@@ -1,6 +1,6 @@
 # art.kubus — agent entrypoint
 
-Reviewed 2026-09-22. Read `AGENTS.md` and nested instructions before editing. The **single canonical master roadmap** is `docs/PRODUCT_UX_SEO_PROGRAM.md`; `docs/AGENT_EXECUTION_PLAN.md` supplies the bounded wave package and stop conditions. Read both before SEO, public entry, map, broad UI, institution, editorial, admin/DAO or spatial-delivery work. This documentation pass is Wave 0; it does not implement the product redesign.
+Read `AGENTS.md` and nested instructions before editing. The **single canonical master roadmap** is `docs/PRODUCT_UX_SEO_PROGRAM.md`; `docs/AGENT_EXECUTION_PLAN.md` supplies the bounded wave package and stop conditions. Read both before SEO, public entry, map, broad UI, institution, editorial, admin/DAO or spatial-delivery work. This documentation pass is Wave 0; it does not implement the product redesign.
 
 ## Source of truth
 
@@ -10,7 +10,7 @@ Reviewed 2026-09-22. Read `AGENTS.md` and nested instructions before editing. Th
 4. `docs/APP_NATIVE_PUBLIC_ENTRY.md`, `docs/seo-public-pages.md`, `docs/seo/domain-ownership.md`, `docs/public-entry-access-policy.md` — entity, renderer, URL and auth boundaries.
 5. `docs/engineering/branching-and-deployment.md` — branch/CI/release rules.
 
-Re-fetch before implementation. At this review, `art.kubus` `dev@35db11ee`, WORLD `art.kubus.site@redesign/a1-foundation@1ca922c6` (PR #17), and TIME `kubus.site@redesign/k1-foundation@8174330c` (PR #3). **Old public-site master visuals are not references.** Preserve current verified work on those branches.
+Re-fetch before implementation: branch heads, open PRs and release state change daily, so this file records none. The WORLD (`art.kubus.site`) and TIME (`kubus.site`) redesigns are merged and are the visual references; the SHAs of the September 2026 foundation branches (`a1-foundation`, `k1-foundation`) are historical only. **Old public-site master visuals are not references.**
 
 ## Family and PRODUCT
 
@@ -27,3 +27,17 @@ Start with the **read-only** SEO/data audit. Keep semantic entity HTML, metadata
 Audit every task/screen before broad polish. Classify KEEP/REFINE/REDESIGN/MERGE/REMOVE; do not polish REMOVE. Institution model/workspace, existing editorial CMS, participation funnels, admin/DAO lifecycle, Ljubljana field sessions and spatial derivative delivery follow the roadmap gates. Do not mass-deindex, change canonical policy, mutate production data or build a third CMS as incidental work.
 
 Agents must name the current state, files owned and excluded, exact data contract, tests, screenshot evidence and a stop condition before changing code. Do not merge or deploy without authorization.
+
+## Multi-agent orchestration and cost discipline
+
+Canonical detail: `docs/engineering/agent-orchestration.md`. The short form for Claude Code:
+
+- **One lead coordinator** (Sonnet by default) owns design, security-sensitive and SQL decisions, cross-repository integration, merges, deployments and the final acceptance. Specialists never merge, deploy or change HA state.
+- **Delegate bounded, independent work to Haiku 5.5** (`model: haiku`): focused searches, diff reviews, targeted tests, CI/log summaries, screenshot inspection, read-only diagnostics. Confirm the model a worker resolved to and report deviations. Do not escalate to the largest model automatically.
+- **At most three concurrent workers** normally; spawn only for genuinely independent work. If a task is one or two tool calls, do it directly.
+- **Explicit ownership:** before delegating, state role, model, repository, starting SHA, read-only or writable, exact files owned, tests and completion condition. Writers get exclusive files and separate worktrees; never two writers in one worktree.
+- **Lifecycle:** five minutes idle is a checkpoint, not an expiry. Resume a worker (`SendMessage`) when its context is useful, otherwise start a fresh one with a short checkpoint. No keepalives; do not kill running builds or tests on an idle-time assumption; retire finished workers.
+- **Context and tests:** narrow reads (`rg`, `git diff`, line ranges), concise worker handoffs with evidence on disk, progressive tests (focused, module, analyzer, CI, browser QA), reuse of immutable evidence for an unchanged SHA. Never skip a required final gate.
+- **Preflight every session:** `git fetch`, `git worktree list`, open PR heads and threads, `ListAgents` for peers on the same branch. Brief SHAs go stale; the remote is the truth.
+- **Truthful status:** report implemented / merged / deployed / tested / owner-accepted / released separately; never claim the last two on inference.
+

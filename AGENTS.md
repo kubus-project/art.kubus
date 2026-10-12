@@ -66,6 +66,19 @@ production data as part of an audit. `node.kubus.site` is the public website;
 - UI changes require responsive validation and visual evidence where layout or appearance changes. Backend schema changes must continue to update both schema snapshots.
 - Keep these rules consistent across nested `AGENTS.md` files, Copilot instructions, contributor documentation, and the canonical engineering guide.
 
+## Agent ownership and orchestration
+
+Canonical detail: `docs/engineering/agent-orchestration.md`. Model-independent rules:
+
+- One coordinator per programme owns the plan, integration, merges, deployments, review-thread resolution and the final release-readiness statement. Specialist agents do bounded, independent work and never merge, deploy or change HA/replication state.
+- Name the owner of every writable scope before work starts: repository, starting SHA, exact files, tests, completion condition. Writable scopes are exclusive; concurrent writers use separate worktrees. Never delete, reset or overwrite uncommitted work you did not create.
+- Preflight each session: fetch, list worktrees and open PRs, compare remote heads with any SHA in a brief, and check for peer sessions on the same branch. A brief's SHAs may be stale.
+- Do not duplicate an existing implementation. When two sessions overlap, keep the completed work, integrate once, and close duplicates unmerged with a pointer to the survivor.
+- The PR author fixes review findings, replies with the fixing SHA, and resolves a thread only after the fix is pushed. Required CI must be green on the exact head before merge.
+- UI work needs inspected screenshots or frame sequences; a passing analyzer is not visual verification. Evidence states whether it is live, a byte-identical artifact or a local build.
+- Report deployment only after the running system is verified (revision header, health, asset hashes). Keep implemented / merged / deployed / tested / owner-accepted / released as separate statuses; do not claim the last two on inference.
+- Claude Code-specific model routing (Sonnet coordinator, Haiku workers, worker limits) is described in `CLAUDE.md` and the guide, not here.
+
 ---
 
 ## 1) Core Guardrails (Must Follow)
