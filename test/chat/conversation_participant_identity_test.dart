@@ -1,16 +1,60 @@
 import 'package:art_kubus/models/resolved_conversation_participant.dart';
+import 'package:art_kubus/models/conversation.dart';
+import 'package:art_kubus/models/message.dart';
+import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('normalizeParticipantIdentityKey prefers wallet over userId', () {
+  test(
+      'normalizeParticipantIdentityKey keeps account identity across wallet changes',
+      () {
     expect(
       normalizeParticipantIdentityKey(
         walletAddress: '0xABC',
         userId: 'user_1',
         senderId: 'sender_1',
       ),
-      '0xabc',
+      'user_1',
     );
+  });
+
+  test('wallet-free messages resolve to their canonical conversation member',
+      () {
+    final provider = ChatProvider();
+    final conversation = Conversation.fromJson({
+      'id': 'conversation-1',
+      'memberProfiles': [
+        {'userId': 'account-a', 'wallet': null, 'displayName': 'Artist A'}
+      ],
+    });
+    provider.seedConversationParticipants(conversation);
+    final message = ChatMessage.fromJson({
+      'id': 'message-1',
+      'conversationId': 'conversation-1',
+      'senderUserId': 'account-a',
+      'senderWallet': null,
+      'message': 'Hello',
+    });
+    final participant = provider.resolveParticipantForMessage(
+        message: message, conversation: conversation);
+    expect(participant.identityKey, 'account-a');
+    expect(participant.userId, 'account-a');
+    expect(participant.walletAddress, isNull);
+    expect(participant.displayName, 'Artist A');
+    final hybrid = ChatMessage.fromJson({
+      'id': 'message-2',
+      'conversationId': 'conversation-1',
+      'senderUserId': 'account-a',
+      'senderWallet': 'linked-wallet',
+      'message': 'After linking',
+    });
+    expect(
+        provider
+            .resolveParticipantForMessage(
+                message: hybrid, conversation: conversation)
+            .identityKey,
+        participant.identityKey);
+    provider.dispose();
   });
 
   test('stableDisplayLabel uses displayName first', () {

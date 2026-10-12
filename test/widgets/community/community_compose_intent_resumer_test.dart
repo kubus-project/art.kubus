@@ -55,4 +55,41 @@ void main() {
     await tester.pump();
     expect(resumed, isEmpty);
   });
+
+  testWidgets(
+      'waits for the sign-in route to close before consuming the intent',
+      (tester) async {
+    final hub = CommunityHubProvider();
+    final navigator = GlobalKey<NavigatorState>();
+    final signedIn = ValueNotifier(false);
+    final resumed = <CommunityComposeIntent>[];
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+      value: hub,
+      child: MaterialApp(
+        navigatorKey: navigator,
+        home: ValueListenableBuilder<bool>(
+          valueListenable: signedIn,
+          builder: (_, value, __) => CommunityComposeIntentResumer(
+            isSignedIn: value,
+            onResume: resumed.add,
+            child: const Text('community'),
+          ),
+        ),
+      ),
+    ));
+    hub.rememberComposeIntentForAuth(CommunityComposeIntent.post);
+    navigator.currentState!.push(MaterialPageRoute<void>(
+      builder: (_) => const Scaffold(body: Text('sign-in')),
+    ));
+    await tester.pumpAndSettle();
+    signedIn.value = true;
+    await tester.pump();
+    expect(resumed, isEmpty);
+    expect(hub.hasPendingComposeIntent, isTrue);
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(resumed, [CommunityComposeIntent.post]);
+    expect(hub.hasPendingComposeIntent, isFalse);
+    signedIn.dispose();
+  });
 }

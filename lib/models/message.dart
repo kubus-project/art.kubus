@@ -2,12 +2,14 @@ import 'dart:convert';
 
 class MessageReply {
   final String messageId;
+  final String? senderUserId;
   final String senderWallet;
   final String? senderDisplayName;
   final String? message;
 
   const MessageReply({
     required this.messageId,
+    this.senderUserId,
     required this.senderWallet,
     this.senderDisplayName,
     this.message,
@@ -17,6 +19,7 @@ class MessageReply {
     return MessageReply(
       messageId:
           (j['messageId'] ?? j['message_id'] ?? j['id'] ?? '').toString(),
+      senderUserId: _optionalString(j['senderUserId'] ?? j['sender_user_id']),
       senderWallet:
           (j['senderWallet'] ?? j['sender_wallet'] ?? j['wallet'] ?? '')
               .toString(),
@@ -60,6 +63,7 @@ class ChatMessage {
   final String id;
   final String conversationId;
   final String senderWallet;
+  final String? senderUserId;
   final String? senderUsername;
   final String? senderDisplayName;
   final String? senderAvatar;
@@ -108,6 +112,7 @@ class ChatMessage {
     required this.id,
     required this.conversationId,
     required this.senderWallet,
+    this.senderUserId,
     this.senderUsername,
     this.senderDisplayName,
     this.senderAvatar,
@@ -249,6 +254,7 @@ class ChatMessage {
               j['wallet'] ??
               j['from']) as String? ??
           '',
+      senderUserId: _optionalString(j['senderUserId'] ?? j['sender_user_id']),
       senderUsername: (j['username'] ??
           j['sender_username'] ??
           j['senderUsername']) as String?,
@@ -286,6 +292,7 @@ class ChatMessage {
       id: id,
       conversationId: conversationId,
       senderWallet: senderWallet,
+      senderUserId: senderUserId,
       senderUsername: senderUsername,
       senderDisplayName: senderDisplayName,
       senderAvatar: senderAvatar,
@@ -299,6 +306,11 @@ class ChatMessage {
       createdAt: createdAt,
     );
   }
+}
+
+String? _optionalString(dynamic value) {
+  final normalized = value?.toString().trim();
+  return normalized == null || normalized.isEmpty ? null : normalized;
 }
 
 String _extractMessageText(Map<String, dynamic> j) {

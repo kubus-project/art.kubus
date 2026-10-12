@@ -27,39 +27,43 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
   Future<void> _openComposeIntent(CommunityComposeIntent intent) {
     switch (intent) {
       case CommunityComposeIntent.post:
-        return _handleFeedFabPressed();
+        return _handleFeedFabPressed(resetDraft: false);
       case CommunityComposeIntent.groupPost:
-        return _handleGroupFabPressed();
+        return _handleGroupFabPressed(resetDraft: false);
       case CommunityComposeIntent.artDrop:
-        return _handleArtFabPressed();
+        return _handleArtFabPressed(resetDraft: false);
       case CommunityComposeIntent.review:
-        return _handleReviewFabPressed();
+        return _handleReviewFabPressed(resetDraft: false);
       case CommunityComposeIntent.createGroup:
         return _handleCreateGroupPressed();
     }
   }
 
-  Future<void> _handleFeedFabPressed() async {
+  Future<void> _handleFeedFabPressed({bool resetDraft = true}) async {
     if (!await _ensureCanCompose(CommunityComposeIntent.post) || !mounted) {
       return;
     }
-    _createNewPost();
+    _createNewPost(resetDraft: resetDraft);
   }
 
-  Future<void> _handleGroupFabPressed() async {
+  Future<void> _handleGroupFabPressed({bool resetDraft = true}) async {
     if (!await _ensureCanCompose(CommunityComposeIntent.groupPost) ||
         !mounted) {
       return;
     }
     unawaited(_ensureGroupsLoaded());
-    _createNewPost(presetCategory: 'group');
+    _createNewPost(presetCategory: 'group', resetDraft: resetDraft);
   }
 
-  Future<void> _handleArtFabPressed() async {
+  Future<void> _handleArtFabPressed({bool resetDraft = true}) async {
     if (!await _ensureCanCompose(CommunityComposeIntent.artDrop) || !mounted) {
       return;
     }
-    _createNewPost(presetCategory: 'art_drop', artContext: true);
+    _createNewPost(
+      presetCategory: 'art_drop',
+      artContext: true,
+      resetDraft: resetDraft,
+    );
   }
 
   Future<void> _handleCreateGroupPressed() async {
@@ -74,11 +78,15 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     _showCreateGroupSheet();
   }
 
-  Future<void> _handleReviewFabPressed() async {
+  Future<void> _handleReviewFabPressed({bool resetDraft = true}) async {
     if (!await _ensureCanCompose(CommunityComposeIntent.review) || !mounted) {
       return;
     }
-    _createNewPost(presetCategory: 'review', artContext: true);
+    _createNewPost(
+      presetCategory: 'review',
+      artContext: true,
+      resetDraft: resetDraft,
+    );
   }
 
   // Navigation and interaction methods
@@ -140,14 +148,19 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       hub.setDraftGroup(presetGroup);
     }
 
-    _newPostController.clear();
-    _composerMedia.clear();
+    if (resetDraft) {
+      _newPostController.clear();
+      _composerMedia.clear();
 
-    // Dispose old controllers if they exist and create fresh ones
-    _composerTagController?.dispose();
-    _composerMentionController?.dispose();
-    _composerTagController = TextEditingController();
-    _composerMentionController = TextEditingController();
+      // Dispose old controllers if they exist and create fresh ones.
+      _composerTagController?.dispose();
+      _composerMentionController?.dispose();
+      _composerTagController = TextEditingController();
+      _composerMentionController = TextEditingController();
+    } else {
+      _composerTagController ??= TextEditingController();
+      _composerMentionController ??= TextEditingController();
+    }
     final tagController = _composerTagController!;
     final mentionController = _composerMentionController!;
 

@@ -28,7 +28,30 @@ class CommunityComposeIntentResumer extends StatelessWidget {
     final hasPending = context.select<CommunityHubProvider, bool>(
       (hub) => hub.hasPendingComposeIntent,
     );
-    if (isSignedIn && hasPending) {
+    final route = ModalRoute.of(context);
+    final transition = route?.secondaryAnimation;
+    if (transition != null) {
+      return AnimatedBuilder(
+        animation: transition,
+        builder: (context, child) {
+          _resumeWhenVisible(context, hasPending, route);
+          return child!;
+        },
+        child: child,
+      );
+    }
+    _resumeWhenVisible(context, hasPending, route);
+    return child;
+  }
+
+  void _resumeWhenVisible(
+    BuildContext context,
+    bool hasPending,
+    ModalRoute<dynamic>? route,
+  ) {
+    // Authentication updates the account before its route closes. Opening a
+    // composer underneath that route lets completion navigation dismiss it.
+    if (isSignedIn && hasPending && (route == null || route.isCurrent)) {
       final intent = context.read<CommunityHubProvider>().takeComposeIntent();
       if (intent != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,6 +60,5 @@ class CommunityComposeIntentResumer extends StatelessWidget {
         });
       }
     }
-    return child;
   }
 }

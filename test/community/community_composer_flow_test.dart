@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/community_hub_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
 import 'package:art_kubus/screens/community/group_feed_screen.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
@@ -19,6 +21,7 @@ import 'package:http/testing.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../support/product_surface_harness.dart';
 import '../support/product_v5_qa_fixtures.dart';
@@ -37,13 +40,14 @@ final bool _skipUnlessMulti = !AppConfig.enableCommunityMultiMedia;
 final _l10n = lookupAppLocalizations(const Locale('en'));
 final _wallet = qaOwner().walletAddress;
 
-String _jwt() {
+String _jwt({bool includeWallet = true}) {
   String b64(Map<String, Object?> m) =>
       base64Url.encode(utf8.encode(jsonEncode(m))).replaceAll('=', '');
   final exp = DateTime.now().add(const Duration(hours: 1));
   return '${b64({'alg': 'none'})}.'
       '${b64({
-        'walletAddress': _wallet,
+        'id': 'account-a',
+        if (includeWallet) 'walletAddress': _wallet,
         'exp': exp.millisecondsSinceEpoch ~/ 1000,
       })}.sig';
 }
@@ -75,6 +79,8 @@ class _FakePicker extends ImagePickerPlatform {
 }
 
 class _Api {
+  bool walletOptionalParticipation = false;
+
   /// Upload file names that must fail, with how many more times to fail.
   final Map<String, int> failUpload = <String, int>{};
   bool rateLimited = false;
@@ -83,6 +89,7 @@ class _Api {
   Completer<void>? holdCreate;
   final List<String> uploads = <String>[];
   final List<Map<String, dynamic>> creates = <Map<String, dynamic>>[];
+  final List<http.BaseRequest> postRequests = <http.BaseRequest>[];
   int created = 0;
 
   http.StreamedResponse _json(int status, Object body) => http.StreamedResponse(
@@ -97,6 +104,13 @@ class _Api {
   ) async {
     final path = request.url.path;
     final bytes = await body.toBytes();
+    if (request.method == 'GET' && path == '/health') {
+      return _json(200, {
+        'status': 'ok',
+        if (walletOptionalParticipation)
+          'contracts': {'walletOptionalParticipation': 1},
+      });
+    }
     if (request.method == 'POST' && path == '/api/upload') {
       final text = latin1.decode(bytes);
       final match = RegExp(r'filename="([^"]+)"').firstMatch(text);
@@ -127,6 +141,7 @@ class _Api {
     if (request.method == 'POST' &&
         (path == '/api/community/posts' ||
             path.endsWith('/posts') && path.startsWith('/api/groups/'))) {
+      postRequests.add(request);
       final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       creates.add(payload);
       await holdCreate?.future;
@@ -163,6 +178,36 @@ Future<void> _settle(WidgetTester tester, [int steps = 20]) async {
 }
 
 void main() {
+  test('participation contract parser rejects malformed or absent versions',
+      () {
+    bool parse(dynamic value) =>
+        BackendApiService.parseWalletOptionalParticipationContract(value);
+
+    expect(
+        parse({
+          'contracts': {'walletOptionalParticipation': 1}
+        }),
+        isTrue);
+    expect(
+        parse({
+          'contracts': {'walletOptionalParticipation': 0}
+        }),
+        isFalse);
+    expect(
+        parse({
+          'contracts': {'walletOptionalParticipation': '1'}
+        }),
+        isFalse);
+    expect(
+        parse({
+          'contracts': {'walletOptionalParticipation': true}
+        }),
+        isFalse);
+    expect(parse({'contracts': {}}), isFalse);
+    expect(parse({'status': 'ok'}), isFalse);
+    expect(parse(null), isFalse);
+  });
+
   for (final surface in ['mobile', 'inline', 'dialog', 'group']) {
     group(surface, () {
       late _Api api;
@@ -224,6 +269,35 @@ void main() {
         await _settle(tester);
       }
 
+      Future<void> openTextComposer(
+        WidgetTester tester, {
+        required bool walletFree,
+      }) async {
+        final prior = FlutterError.onError;
+        await pumpProductSurface(
+          tester,
+          child: const CommunityScreen(),
+          size: const Size(390, 844),
+          signedInProfile: walletFree
+              ? qaOwner().copyWith(
+                  id: 'account-a',
+                  userId: 'account-a',
+                  walletAddress: '',
+                )
+              : qaOwner(),
+        );
+        FlutterError.onError = prior;
+        await tester.tap(find.byType(FloatingActionButton).first);
+        await _settle(tester);
+        expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
+        final contentField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.decoration?.hintText == _l10n.communityComposerTextHint,
+        );
+        await tester.enterText(contentField, 'A community post');
+      }
+
       Finder postButton() => find
           .widgetWithText(
               ElevatedButton,
@@ -240,10 +314,15 @@ void main() {
         ImagePickerPlatform.instance = picker;
         BackendApiService()
           ..setHttpClient(MockClient.streaming(api.handle))
+          ..resetWalletOptionalParticipationForTesting()
           ..setAuthTokenForTesting(_jwt());
       });
 
-      tearDown(() => BackendApiService().setAuthTokenForTesting(null));
+      tearDown(() {
+        BackendApiService()
+          ..setAuthTokenForTesting(null)
+          ..resetWalletOptionalParticipationForTesting();
+      });
 
       Future<void> flush(WidgetTester tester) async {
         // The real providers open a socket and reconnect on a timer. Disconnect
@@ -254,6 +333,80 @@ void main() {
             await tester.pump(const Duration(seconds: 1));
           }
         }
+      }
+
+      if (surface == 'mobile') {
+        testWidgets(
+          'advertised participation contract posts with account JWT and no wallet',
+          (tester) async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            api.walletOptionalParticipation = true;
+            BackendApiService()
+                .setAuthTokenForTesting(_jwt(includeWallet: false));
+
+            await openTextComposer(tester, walletFree: true);
+            await tester.tap(postButton());
+            await _settle(tester, 60);
+
+            expect(api.creates, hasLength(1));
+            expect(api.postRequests.single.headers['authorization'],
+                startsWith('Bearer '));
+            expect(api.creates.single, isNot(contains('walletAddress')));
+            await flush(tester);
+          },
+        );
+
+        testWidgets(
+          'missing participation contract retains legacy wallet requirement',
+          (tester) async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            await openTextComposer(tester, walletFree: true);
+            await tester.tap(postButton());
+            await _settle(tester);
+
+            expect(api.creates, isEmpty);
+            expect(find.text(_l10n.communityConnectWalletFirstToast),
+                findsOneWidget);
+            await flush(tester);
+          },
+        );
+
+        testWidgets(
+          'pending guest draft restored after sign-in',
+          (tester) async {
+            SharedPreferences.setMockInitialValues(<String, Object>{});
+            BackendApiService().setAuthTokenForTesting(null);
+            final prior = FlutterError.onError;
+            await pumpProductSurface(
+              tester,
+              child: const CommunityScreen(),
+              size: const Size(390, 844),
+            );
+            FlutterError.onError = prior;
+
+            final context = tester.element(find.byType(CommunityScreen));
+            final hub = context.read<CommunityHubProvider>();
+            hub.addTag('restored-tag');
+            hub.rememberComposeIntentForAuth(CommunityComposeIntent.post);
+            await tester.pump();
+
+            BackendApiService()
+                .setAuthTokenForTesting(_jwt(includeWallet: false));
+            context.read<ProfileProvider>().setCurrentUser(
+                  qaOwner().copyWith(
+                    id: 'account-a',
+                    userId: 'account-a',
+                    walletAddress: '',
+                  ),
+                );
+            await _settle(tester);
+
+            expect(find.text(_l10n.communityComposerTitle), findsOneWidget);
+            expect(hub.draft.tags, contains('restored-tag'));
+            expect(find.text('#restored-tag'), findsOneWidget);
+            await flush(tester);
+          },
+        );
       }
 
       testWidgets('ten photos publish in order with one create request',

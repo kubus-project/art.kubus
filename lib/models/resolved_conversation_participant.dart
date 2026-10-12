@@ -99,11 +99,11 @@ String normalizeParticipantIdentityKey({
   String? userId,
   String? senderId,
 }) {
-  final wallet = _normalizeKey(walletAddress);
-  if (wallet.isNotEmpty) return wallet;
-
   final user = _normalizeKey(userId);
   if (user.isNotEmpty) return user;
+
+  final wallet = _normalizeKey(walletAddress);
+  if (wallet.isNotEmpty) return wallet;
 
   final sender = _normalizeKey(senderId);
   if (sender.isNotEmpty) return sender;
