@@ -49,6 +49,10 @@ production data as part of an audit. `node.kubus.site` is the public website;
 `kubus-node` is the runtime. Keep their analytics separate.
 
 
+## PRODUCT motion is a contract
+
+Hover and reduced-motion behaviour of the PRODUCT tile family (`KubusActionTile`, `KubusStatCard`, `KubusHoverResponse`, `KubusGhostGlyph`) is defined only in `docs/design/PRODUCT_V5_MOTION_CONTRACT.md`. Read it before touching any of them. The owner's PC reports `prefers-reduced-motion`, so verify reduced mode first, in a real browser. A hover change updates the code, the contract, the widget tests and `scripts/qa/product_motion_acceptance.mjs` together; CI (`flutter_quality`) fails when the painted float, shadow or rest return regress. Never gate a tile's visible answer on motion alone, and never let a layout default remove it.
+
 ## Branch, worktree, CI, and release governance
 
 - `master` is production-only. `dev` is the integration branch. Never develop or commit directly on either branch.

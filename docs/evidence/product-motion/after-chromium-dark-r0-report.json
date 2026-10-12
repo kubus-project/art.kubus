@@ -1,0 +1,220 @@
+{
+  "label": "after-chromium-dark-r0",
+  "browser": "chromium",
+  "theme": "dark",
+  "reducedMotion": false,
+  "results": [
+    {
+      "id": "action-stacked",
+      "answer": "float",
+      "samples": 15,
+      "settledFrames": 14,
+      "entry": [],
+      "liftMean": -2.97,
+      "liftMin": -4.47,
+      "liftMax": -1.48,
+      "bob": 2.98,
+      "shadow": 4.68,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-inline",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 156,
+          "dy": -1.5
+        }
+      ],
+      "liftMean": -2.93,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 4.69,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-compact",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 219,
+          "dy": -1.5
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 4.65,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-disabled",
+      "answer": "none",
+      "samples": 94,
+      "settledFrames": 78,
+      "entry": [
+        {
+          "t": 67,
+          "dy": 0
+        },
+        {
+          "t": 108,
+          "dy": 0
+        },
+        {
+          "t": 141,
+          "dy": 0
+        },
+        {
+          "t": 175,
+          "dy": 0
+        },
+        {
+          "t": 208,
+          "dy": 0
+        },
+        {
+          "t": 241,
+          "dy": 0
+        },
+        {
+          "t": 275,
+          "dy": 0
+        },
+        {
+          "t": 308,
+          "dy": 0
+        },
+        {
+          "t": 342,
+          "dy": 0
+        },
+        {
+          "t": 375,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 131,
+          "dy": -1.52
+        }
+      ],
+      "liftMean": -3.02,
+      "liftMin": -4.51,
+      "liftMax": -1.52,
+      "bob": 2.99,
+      "shadow": 4.7,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered-tap",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 126,
+          "dy": -1.52
+        }
+      ],
+      "liftMean": -3.02,
+      "liftMin": -4.52,
+      "liftMax": -1.52,
+      "bob": 3,
+      "shadow": 4.73,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 121,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -2.97,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 4.72,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-tap",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 139,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 4.71,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-expressive",
+      "answer": "float",
+      "samples": 16,
+      "settledFrames": 14,
+      "entry": [
+        {
+          "t": 127,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -2.98,
+      "liftMin": -4.51,
+      "liftMax": -1.51,
+      "bob": 3,
+      "shadow": 4.67,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    }
+  ],
+  "pageErrors": []
+}

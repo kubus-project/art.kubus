@@ -73,24 +73,23 @@ Material "icon square + title + subtitle + chevron" row is not a destination
 tile and the tile-system guard (`test/design/product_v5_tile_system_guard_test.dart`)
 rejects it.
 
-**Hover contract** (pointer only, 180 ms ease-out, never layout):
-
-| Layout | Answer |
-| --- | --- |
-| Stacked | 2 px paint-only lift, stronger field and edge, soft contextual accent shadow (`KubusHoverResponse.accentShadow`: a tinted drop, y offset 8, negative spread, alpha 0.24 light / 0.34 dark, not a glow), ghost glyph drifts 3 px and scales 1.03 inside the clip |
-| Inline | 2 px lift, stronger edge, accent shadow, arrow travels 2 px |
-| Compact | 2 px lift, accent shadow, stronger field and edge, a 3 px leading indicator, ghost glyph drift and scale; the arrow and text move with the surface, never relative to it |
-
-Every layout lifts (owner direction for 0.8.1: the older, obvious kubus
-surface response is restored on compact rows too; they are paint-only, so a
-list of them does not reflow). Reduced motion (`MediaQuery.disableAnimations`):
-no lift, glyph drift or arrow travel; field, edge, indicator and shadow state
-still change. Touch never hovers.
-`KubusStatCard` (expressive) answers hover as the same family: the surface
-lifts 2 px as one painted unit with the accent shadow while the glyph drifts
-and scales; the number and label never move relative to the card. A stat
-without `onTap` answers visually but keeps the default cursor and no button
-semantics.
+**Hover contract.** The canonical, machine-checked contract is
+[`PRODUCT_V5_MOTION_CONTRACT.md`](PRODUCT_V5_MOTION_CONTRACT.md); it wins over
+anything restated here. In short (pointer only, never layout): every layout
+**floats**. The tile rises 3 px over 180 ms ease-out, then keeps drifting
+gently (1.5 px, one cycle per 2.2 s) while the pointer stays, with the soft
+contextual accent shadow (`KubusHoverResponse.accentShadow`: a tinted drop, y
+offset 8, negative spread, alpha 0.24 light / 0.34 dark, not a glow), a
+stronger field and edge, and the ghost glyph's inward drift, scale and
+counter-float (stacked, compact). Inline adds a 2 px arrow travel; compact adds
+a 3 px leading indicator. The arrow and text move with the surface, never
+relative to it. Reduced motion (`MediaQuery.disableAnimations`) removes the
+animation, not the answer: the tile takes its lifted position, shadow, field,
+edge and indicator at once and stays still. Touch never hovers.
+`KubusStatCard` answers hover as the same family in **every** layout: expressive
+tiles also move their glyph and field, dense tiles take the accent on their
+hairline. A stat without `onTap` answers visually but keeps the default cursor
+and no button semantics.
 
 States: `enabled: false` mutes the tile and takes no tap (say why in the
 subtitle); `loading` swaps the arrow for a spinner.
@@ -130,10 +129,12 @@ atmosphere is removed rather than re-wrapped.
 - Dense (standard row): one compact context tile leads the row, because a
   cropped glyph is illegible at that size. No ghost glyph.
 - The value is primary and never ellipsised (it scales down if wider than
-  the tile); the label wraps. Expressive hover lifts the whole surface 2 px
-  (paint only) with the accent shadow and moves the glyph and field; the value
-  and label never move relative to the card. Reduced motion keeps the
-  brightening and the shadow state and drops the lift and the drift.
+  the tile); the label wraps. Hover floats the whole surface in both layouts
+  (see the motion contract), with the accent shadow; expressive tiles also move
+  the glyph and field. The value and label never move relative to the card.
+  Reduced motion keeps the lifted position and the shadow state, still, and
+  drops the float and the glyph drift. The layout decides the identity device,
+  never whether the tile answers the pointer.
 
 ### Analytics overview (not a destination tile)
 

@@ -1,0 +1,388 @@
+{
+  "label": "after-firefox-reduced",
+  "browser": "firefox",
+  "theme": "light",
+  "reducedMotion": true,
+  "results": [
+    {
+      "id": "action-stacked",
+      "answer": "float",
+      "samples": 57,
+      "entry": [
+        {
+          "t": 121,
+          "dy": -2.99
+        },
+        {
+          "t": 173,
+          "dy": -2.99
+        },
+        {
+          "t": 229,
+          "dy": -2.99
+        },
+        {
+          "t": 282,
+          "dy": -2.99
+        },
+        {
+          "t": 335,
+          "dy": -2.99
+        },
+        {
+          "t": 387,
+          "dy": -2.99
+        }
+      ],
+      "liftMean": -2.99,
+      "liftMin": -2.99,
+      "liftMax": -2.99,
+      "bob": 0,
+      "shadow": 3.51,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-inline",
+      "answer": "float",
+      "samples": 64,
+      "entry": [
+        {
+          "t": 77,
+          "dy": -3
+        },
+        {
+          "t": 125,
+          "dy": -3
+        },
+        {
+          "t": 176,
+          "dy": -3
+        },
+        {
+          "t": 227,
+          "dy": -3
+        },
+        {
+          "t": 277,
+          "dy": -3
+        },
+        {
+          "t": 328,
+          "dy": -3
+        },
+        {
+          "t": 380,
+          "dy": -3
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -3,
+      "liftMax": -3,
+      "bob": 0,
+      "shadow": 3.52,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-compact",
+      "answer": "float",
+      "samples": 63,
+      "entry": [
+        {
+          "t": 92,
+          "dy": -3
+        },
+        {
+          "t": 142,
+          "dy": -3
+        },
+        {
+          "t": 192,
+          "dy": -3
+        },
+        {
+          "t": 242,
+          "dy": -3
+        },
+        {
+          "t": 292,
+          "dy": -3
+        },
+        {
+          "t": 343,
+          "dy": -3
+        },
+        {
+          "t": 394,
+          "dy": -3
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -3,
+      "liftMax": -3,
+      "bob": 0,
+      "shadow": 3.52,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-disabled",
+      "answer": "none",
+      "samples": 64,
+      "entry": [
+        {
+          "t": 104,
+          "dy": 0
+        },
+        {
+          "t": 153,
+          "dy": 0
+        },
+        {
+          "t": 203,
+          "dy": 0
+        },
+        {
+          "t": 252,
+          "dy": 0
+        },
+        {
+          "t": 300,
+          "dy": 0
+        },
+        {
+          "t": 348,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered",
+      "answer": "float",
+      "samples": 62,
+      "entry": [
+        {
+          "t": 90,
+          "dy": -3.01
+        },
+        {
+          "t": 140,
+          "dy": -3.01
+        },
+        {
+          "t": 190,
+          "dy": -3.01
+        },
+        {
+          "t": 243,
+          "dy": -3.01
+        },
+        {
+          "t": 293,
+          "dy": -3.01
+        },
+        {
+          "t": 343,
+          "dy": -3.01
+        },
+        {
+          "t": 393,
+          "dy": -3.01
+        }
+      ],
+      "liftMean": -3.01,
+      "liftMin": -3.01,
+      "liftMax": -3.01,
+      "bob": 0,
+      "shadow": 3.54,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered-tap",
+      "answer": "float",
+      "samples": 62,
+      "entry": [
+        {
+          "t": 76,
+          "dy": -3.01
+        },
+        {
+          "t": 125,
+          "dy": -3.01
+        },
+        {
+          "t": 173,
+          "dy": -3.01
+        },
+        {
+          "t": 222,
+          "dy": -3.01
+        },
+        {
+          "t": 272,
+          "dy": -3.01
+        },
+        {
+          "t": 321,
+          "dy": -3.01
+        },
+        {
+          "t": 371,
+          "dy": -3.01
+        }
+      ],
+      "liftMean": -3.01,
+      "liftMin": -3.01,
+      "liftMax": -3.01,
+      "bob": 0,
+      "shadow": 3.54,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard",
+      "answer": "float",
+      "samples": 63,
+      "entry": [
+        {
+          "t": 70,
+          "dy": -3
+        },
+        {
+          "t": 118,
+          "dy": -3
+        },
+        {
+          "t": 169,
+          "dy": -3
+        },
+        {
+          "t": 219,
+          "dy": -3
+        },
+        {
+          "t": 267,
+          "dy": -3
+        },
+        {
+          "t": 316,
+          "dy": -3
+        },
+        {
+          "t": 363,
+          "dy": -3
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -3,
+      "liftMax": -3,
+      "bob": 0,
+      "shadow": 3.46,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-tap",
+      "answer": "float",
+      "samples": 63,
+      "entry": [
+        {
+          "t": 91,
+          "dy": -3
+        },
+        {
+          "t": 140,
+          "dy": -3
+        },
+        {
+          "t": 187,
+          "dy": -3
+        },
+        {
+          "t": 235,
+          "dy": -3
+        },
+        {
+          "t": 285,
+          "dy": -3
+        },
+        {
+          "t": 336,
+          "dy": -3
+        },
+        {
+          "t": 384,
+          "dy": -3
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -3,
+      "liftMax": -3,
+      "bob": 0,
+      "shadow": 3.46,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-expressive",
+      "answer": "float",
+      "samples": 62,
+      "entry": [
+        {
+          "t": 90,
+          "dy": -3
+        },
+        {
+          "t": 145,
+          "dy": -3
+        },
+        {
+          "t": 195,
+          "dy": -3
+        },
+        {
+          "t": 245,
+          "dy": -3
+        },
+        {
+          "t": 294,
+          "dy": -3
+        },
+        {
+          "t": 343,
+          "dy": -3
+        },
+        {
+          "t": 392,
+          "dy": -3
+        }
+      ],
+      "liftMean": -3,
+      "liftMin": -3,
+      "liftMax": -3,
+      "bob": 0,
+      "shadow": 3.46,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    }
+  ],
+  "pageErrors": []
+}
