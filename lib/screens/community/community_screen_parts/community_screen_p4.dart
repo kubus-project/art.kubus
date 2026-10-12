@@ -601,17 +601,17 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     }
 
     final api = BackendApiService();
+    final composerContext = context;
     final walletOptionalParticipation = hub.draft.targetGroup == null &&
         await api.ensureWalletOptionalParticipationKnown();
-    if (!mounted) return;
+    if (!mounted || !composerContext.mounted) return;
     if (!walletOptionalParticipation) {
       final walletAddress = await _ensureWalletForPosting(sheetContext);
       if (walletAddress == null) return;
     } else {
-      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       final canPost = await const ContextualAuthGate().ensureAuthenticated(
         requirements: ProtectedActionRequirements.participant,
-        context,
+        composerContext,
         actionLabel: l10n.communityComposeAuthAction,
         returnRoute: '/community',
         sourceScreen: 'community_screen',
