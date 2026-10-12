@@ -600,8 +600,26 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       return;
     }
 
-    final walletAddress = await _ensureWalletForPosting(sheetContext);
-    if (walletAddress == null) return;
+    final api = BackendApiService();
+    final walletOptionalParticipation = hub.draft.targetGroup == null &&
+        await api.ensureWalletOptionalParticipationKnown();
+    if (!mounted) return;
+    if (!walletOptionalParticipation) {
+      final walletAddress = await _ensureWalletForPosting(sheetContext);
+      if (walletAddress == null) return;
+    } else {
+      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+      final canPost = await const ContextualAuthGate().ensureAuthenticated(
+        requirements: ProtectedActionRequirements.participant,
+        context,
+        actionLabel: l10n.communityComposeAuthAction,
+        returnRoute: '/community',
+        sourceScreen: 'community_screen',
+        onAuthJourneyStarted: () =>
+            hub.rememberComposeIntentForAuth(CommunityComposeIntent.post),
+      );
+      if (!canPost || !mounted) return;
+    }
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -622,7 +640,6 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       final groupName = hub.draft.targetGroup?.name;
       final isGroupPost = hub.draft.targetGroup != null;
 
-      final api = BackendApiService();
       final createdPost = await _composerMedia.publish<CommunityPost>(
         upload: (item) => uploadCommunityComposerMediaItem(api, item),
         submit: (mediaUrls) => _submitCommunityPost(

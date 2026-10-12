@@ -2705,6 +2705,73 @@ class BackendApiService
     return level is num && level >= 1;
   }
 
+  // ================= Wallet-optional community participation contract =================
+
+  bool _walletOptionalParticipationSupported = false;
+  DateTime? _walletOptionalParticipationCheckedAt;
+
+  /// Reads the backend's wallet-optional community participation marker.
+  /// Unknown, unavailable, and older backends stay on the wallet flow.
+  Future<bool> ensureWalletOptionalParticipationKnown({
+    bool forceRefresh = false,
+  }) async {
+    final checkedAt = _walletOptionalParticipationCheckedAt;
+    if (!forceRefresh && checkedAt != null) {
+      final ttl = _walletOptionalParticipationSupported
+          ? const Duration(minutes: 10)
+          : const Duration(minutes: 1);
+      if (DateTime.now().difference(checkedAt) < ttl) {
+        return _walletOptionalParticipationSupported;
+      }
+    }
+
+    var supported = false;
+    try {
+      supported = await _performPublicRead<bool>(
+        liveRead: (candidateBaseUrl) async {
+          final response = await _get(
+            _buildApiUri(candidateBaseUrl, '/health'),
+            includeAuth: false,
+            headers: _getHeaders(includeAuth: false),
+            timeout: const Duration(seconds: 4),
+          );
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            throw Exception('Request failed: ${response.statusCode}');
+          }
+          return parseWalletOptionalParticipationContract(
+            jsonDecode(response.body),
+          );
+        },
+        snapshotRead: () async => false,
+        allowSnapshot: false,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.ensureWalletOptionalParticipationKnown failed: $e',
+      );
+    }
+
+    _walletOptionalParticipationCheckedAt = DateTime.now();
+    _walletOptionalParticipationSupported = supported;
+    return supported;
+  }
+
+  @visibleForTesting
+  void resetWalletOptionalParticipationForTesting() {
+    _walletOptionalParticipationSupported = false;
+    _walletOptionalParticipationCheckedAt = null;
+  }
+
+  /// True only for an explicitly advertised supported contract version.
+  @visibleForTesting
+  static bool parseWalletOptionalParticipationContract(dynamic decoded) {
+    if (decoded is! Map) return false;
+    final contracts = decoded['contracts'];
+    if (contracts is! Map) return false;
+    final level = contracts['walletOptionalParticipation'];
+    return level is num && level >= 1;
+  }
+
   /// The signed-in account's own artworks, drafts included, whether or not a
   /// wallet is linked. GET /api/artworks?mine=true&publicOnly=false
   Future<List<Artwork>> getMyArtworks({int page = 1, int limit = 50}) async {
