@@ -104,6 +104,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
               builder: (dialogContext) {
                 final confirmL10n = AppLocalizations.of(dialogContext)!;
                 return KubusAlertDialog(
+                  size: KubusDialogSize.compact,
                   title: Text(
                     confirmL10n.exhibitionDetailPoapEligibilityVerified,
                     style: Theme.of(dialogContext).textTheme.titleLarge,

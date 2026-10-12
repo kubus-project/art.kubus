@@ -176,6 +176,16 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   /// holds focus, including after a pointer press, so the side also requires
   /// keyboard highlight ([FocusHighlightMode.traditional]). Otherwise the
   /// button keeps its own side.
+  /// PRODUCT control geometry for every Material button family: a restrained
+  /// rounded rectangle, never the Material stadium or circle. Call sites that
+  /// need another shape (avatars, radios) set their own.
+  static final WidgetStateProperty<OutlinedBorder?> _controlShape =
+      WidgetStatePropertyAll<OutlinedBorder?>(
+    RoundedRectangleBorder(
+      borderRadius: KubusRadius.circular(KubusRadius.control),
+    ),
+  );
+
   static WidgetStateProperty<BorderSide?> _keyboardFocusSide(Color focus) =>
       WidgetStateProperty.resolveWith<BorderSide?>(
         (states) => states.contains(WidgetState.focused) &&
@@ -301,13 +311,18 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         // button type, so the focus side is painted for text buttons too.
         textButtonTheme: TextButtonThemeData(
           style: ButtonStyle(
+            shape: _controlShape,
             backgroundColor:
                 const WidgetStatePropertyAll<Color>(Colors.transparent),
             side: _keyboardFocusSide(KubusProductPalette.focusDark),
           ),
         ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(shape: _controlShape),
+        ),
         iconButtonTheme: IconButtonThemeData(
           style: ButtonStyle(
+            shape: _controlShape,
             side: _keyboardFocusSide(KubusProductPalette.focusDark),
           ),
         ),
@@ -321,6 +336,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: ButtonStyle(
+              shape: _controlShape,
               side: _keyboardFocusSide(KubusProductPalette.focusDark)),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -451,13 +467,18 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         // button type, so the focus side is painted for text buttons too.
         textButtonTheme: TextButtonThemeData(
           style: ButtonStyle(
+            shape: _controlShape,
             backgroundColor:
                 const WidgetStatePropertyAll<Color>(Colors.transparent),
             side: _keyboardFocusSide(KubusProductPalette.focusLight),
           ),
         ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(shape: _controlShape),
+        ),
         iconButtonTheme: IconButtonThemeData(
           style: ButtonStyle(
+            shape: _controlShape,
             side: _keyboardFocusSide(KubusProductPalette.focusLight),
           ),
         ),
@@ -471,6 +492,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: ButtonStyle(
+              shape: _controlShape,
               side: _keyboardFocusSide(KubusProductPalette.focusLight)),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(

@@ -7,6 +7,7 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 ## Start here
 
 - **Branching, CI, and deployment**: [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md)
+- **Agent orchestration (ownership, delegation, cost, handoffs)**: [`engineering/agent-orchestration.md`](engineering/agent-orchestration.md)
 - **Current product / SEO / UI-UX programme**: [`PRODUCT_UX_SEO_PROGRAM.md`](PRODUCT_UX_SEO_PROGRAM.md)
 - **Agent sequencing / work packages**: [`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md)
 - **Current design direction**: [`DESIGN_SYSTEM_V2.md`](DESIGN_SYSTEM_V2.md)

@@ -859,6 +859,7 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (ctx) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.promotionBuilderCancelDialogTitle),
         content: Text(
           l10n.promotionBuilderCancelDialogBody,

@@ -1415,6 +1415,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showKubusDialog(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(
           l10n.userProfileBlockDialogTitle(user!.name),
           style: KubusTextStyles.sectionTitle,

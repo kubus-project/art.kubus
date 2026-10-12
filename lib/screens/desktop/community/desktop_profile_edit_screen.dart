@@ -762,6 +762,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         showKubusDialog<void>(
           context: context,
           builder: (context) => KubusAlertDialog(
+            size: KubusDialogSize.compact,
             title: Text(l10n.profileEditUploadDebugInfoTitle),
             content: SingleChildScrollView(
               child: SelectableText(pretty),

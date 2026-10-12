@@ -137,7 +137,7 @@ class _PostMetadataSection extends StatelessWidget {
                   if (post.distanceKm != null) ...[
                     const SizedBox(width: KubusSpacing.sm),
                     Text(
-                      'â€¢ ${post.distanceKm!.toStringAsFixed(1)} km',
+                      '· ${post.distanceKm!.toStringAsFixed(1)} km',
                       style: KubusTextStyles.compactBadge.copyWith(
                         color:
                             scheme.onTertiaryContainer.withValues(alpha: 0.7),

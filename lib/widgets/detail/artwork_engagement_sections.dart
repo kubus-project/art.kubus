@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -627,6 +628,7 @@ class _ArtworkCommentsExpandableCardState
         context: context,
         builder: (dialogContext) {
           return KubusAlertDialog(
+            size: KubusDialogSize.compact,
             title: Text(l10n.commentDeleteConfirmTitle),
             content: Text(l10n.commentDeleteConfirmMessage),
             actions: [
@@ -876,29 +878,11 @@ class _ArtworkCommentsExpandableCardState
               ),
             ),
             const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () => _submitComment(provider, widget.isSignedIn),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                  vertical: KubusSpacing.sm + KubusSpacing.xs,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: InlineLoading(
-                        shape: BoxShape.circle,
-                        tileSize: 3.5,
-                      ),
-                    )
-                  : Icon(Icons.send, size: 18, color: scheme.onPrimary),
+            KubusIconActionButton(
+              tooltip: l10n.commonSend,
+              onPressed: () => _submitComment(provider, widget.isSignedIn),
+              isLoading: isSubmitting,
+              icon: Icons.send_rounded,
             ),
           ],
         ),

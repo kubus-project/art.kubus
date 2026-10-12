@@ -18,20 +18,39 @@ import '../../../providers/wallet_provider.dart';
 /// reused inside the onboarding flow (embedded in a Kubus dialog/sheet) without
 /// pushing a separate route.
 class MnemonicRevealScreen extends StatelessWidget {
-  const MnemonicRevealScreen({super.key});
+  const MnemonicRevealScreen({super.key, this.onShellExit});
+
+  /// Set when the screen is hosted inside the desktop shell instead of its own
+  /// route. Finishing or closing then calls this (with whether the backup was
+  /// confirmed) rather than popping a route that does not exist.
+  final void Function(bool completed)? onShellExit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        // Hosted in the desktop shell's own stack (onShellExit set): Back pops
+        // that stack instead of an outer route.
+        automaticallyImplyLeading: onShellExit == null,
+        leading: onShellExit == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: l10n.commonBack,
+                onPressed: () => onShellExit!(false),
+              ),
         title: Text(l10n.mnemonicRevealTitle),
       ),
       body: Padding(
         padding: const EdgeInsets.all(KubusSpacing.md),
         child: MnemonicRevealContent(
-          onCompleted: () => Navigator.of(context).maybePop(true),
-          onClose: () => Navigator.of(context).maybePop(),
+          onCompleted: () => onShellExit != null
+              ? onShellExit!(true)
+              : Navigator.of(context).maybePop(true),
+          onClose: () => onShellExit != null
+              ? onShellExit!(false)
+              : Navigator.of(context).maybePop(),
         ),
       ),
     );

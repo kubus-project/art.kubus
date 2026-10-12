@@ -225,6 +225,10 @@ class KubusSizes {
   /// for compact count badges that must stay readable.
   static const double badgeCountFontSize = 11.0;
 
+  /// Hit area of an icon-only action ([KubusIconActionButton]) in a composer
+  /// or toolbar row.
+  static const double iconActionSize = 48.0;
+
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
 
@@ -272,6 +276,9 @@ class KubusSizes {
   /// Common max widths for modal/dialog content.
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
+
+  /// Wide variant for dialogs that genuinely carry two columns or a table.
+  static const double dialogWidthXl = 720.0;
 
   /// Coloured state dot shown beside a status label (AR header, list rows).
   static const double statusDot = 8.0;

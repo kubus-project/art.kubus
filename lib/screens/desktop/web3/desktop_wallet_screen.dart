@@ -339,11 +339,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     ).push(MaterialPageRoute(builder: (_) => const TokenSwap()));
   }
 
-  Future<void> _openBackupProtection() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WalletBackupProtectionScreen()),
-    );
-  }
+  Future<void> _openBackupProtection() => openWalletBackupProtection(context);
 
   Widget _buildHeader(
     ThemeProvider themeProvider,

@@ -528,7 +528,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // Build a composite avatar widget from up to 4 member avatars.
     final count = wallets.length;
     if (count == 0) {
-      return CircleAvatar(radius: size / 2, child: Icon(Icons.group));
+      return KubusMonogramAvatar(
+          radius: size / 2, child: const Icon(Icons.group));
     }
     // Positioning for 1..4 avatars
     if (count == 1) {
@@ -757,8 +758,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       if (memberWallets.isNotEmpty) {
                         leading = _buildGroupAvatar(memberWallets, 48);
                       } else {
-                        leading =
-                            CircleAvatar(radius: 20, child: Icon(Icons.group));
+                        leading = const KubusMonogramAvatar(
+                            radius: 20, child: Icon(Icons.group));
                       }
                     } else {
                       // Fallback for one-to-one: use other participant's wallet if available
@@ -827,7 +828,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 _conversationNames[c.id]!.isEmpty) &&
                             (_convToWalletList[c.id]?.isNotEmpty ?? false);
                         leading = Stack(alignment: Alignment.center, children: [
-                          CircleAvatar(
+                          KubusMonogramAvatar(
+                              radius: 20,
                               child: Text(initials.isNotEmpty
                                   ? initials
                                   : l10n.messagesFallbackConversationInitial)),
@@ -1407,7 +1409,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 }),
             const SizedBox(width: 8),
             if (_avatarBytes != null)
-              CircleAvatar(backgroundImage: MemoryImage(_avatarBytes!))
+              KubusMonogramAvatar(radius: 20, image: MemoryImage(_avatarBytes!))
           ]),
           SwitchListTile(
               value: _isGroup,

@@ -193,8 +193,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is DesktopProfilePresentationScope &&
-            widget.presentation ==
-                DesktopProfilePresentation.communityOverlay,
+            widget.presentation == DesktopProfilePresentation.communityOverlay,
       ),
       findsNWidgets(2),
     );

@@ -108,13 +108,7 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
   }
 
   Future<void> _openBackupFlow() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const WalletBackupProtectionScreen(),
-      ),
-    );
-    if (!mounted) return;
-    await _load();
+    await openWalletBackupProtection(context, onBackupStateChanged: _load);
   }
 
   @override

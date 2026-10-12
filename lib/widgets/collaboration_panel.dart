@@ -496,6 +496,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           title: Text(l10n.collabPanelRemoveConfirmTitle),
           content: Text(l10n.collabPanelRemoveConfirmBody(
             member.user?.displayName ??

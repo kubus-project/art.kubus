@@ -17904,4 +17904,84 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supportErrorAccountIdentity =>
       'Your session cannot be used for support requests. Sign out, sign in again, then retry.';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Your session has expired. Sign in again to delete this post.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'You can only delete your own posts.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'This post can\'t be deleted right now. Refresh the feed and try again.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Couldn\'t reach art.kubus. Check your connection and try again.';
+
+  @override
+  String get communityArtDiscoveryTitle => 'Discover art';
+
+  @override
+  String get communityArtDiscoverySubtitleMap =>
+      'Around the area you were viewing on the map';
+
+  @override
+  String get communityArtDiscoverySubtitleDevice => 'Around your location';
+
+  @override
+  String get communityArtDiscoverySubtitleSaved =>
+      'Around the last area you used';
+
+  @override
+  String get communityArtDiscoverySubtitlePublic =>
+      'Art and conversations from across the platform';
+
+  @override
+  String communityArtDiscoveryWithin(Object distance) {
+    return 'Within $distance';
+  }
+
+  @override
+  String get communityArtDiscoveryUseMyLocation => 'Use my location';
+
+  @override
+  String get communityArtDiscoveryReasonForYou => 'For you';
+
+  @override
+  String get communityArtDiscoveryReasonNearby => 'Nearby';
+
+  @override
+  String get communityArtDiscoveryReasonFollowed => 'From an artist you follow';
+
+  @override
+  String get communityArtDiscoveryReasonNewArtwork => 'New artwork';
+
+  @override
+  String get communityArtDiscoveryReasonDiscussion => 'Community discussion';
+
+  @override
+  String get communityArtDiscoveryReasonReview => 'Recent review';
+
+  @override
+  String get communityArtDiscoveryReasonExhibition => 'Exhibition';
+
+  @override
+  String get communityArtDiscoveryEmptyTitle => 'Nothing here yet';
+
+  @override
+  String get communityArtDiscoveryEmptyBody =>
+      'No public art, reviews or exhibitions could be found right now. Try again in a moment, or explore the map.';
+
+  @override
+  String get communityArtDiscoveryErrorTitle => 'Couldn\'t load discovery';
+
+  @override
+  String get communityArtDiscoveryErrorBody =>
+      'Check your connection and try again.';
+
+  @override
+  String get communityArtDiscoveryLoadMore => 'Show more';
 }

@@ -626,6 +626,23 @@ class _GlassShimmerState extends State<GlassShimmer>
   }
 }
 
+/// Width class for [KubusAlertDialog]. Resolves to the shared
+/// `KubusSizes.dialogWidth*` tokens so no dialog stretches with the viewport.
+enum KubusDialogSize {
+  /// Short confirmations and single-question prompts.
+  compact(KubusSizes.dialogWidthMd),
+
+  /// Typical forms, settings and report dialogs.
+  standard(KubusSizes.dialogWidthLg),
+
+  /// Two-column or tabular content that genuinely needs room.
+  wide(KubusSizes.dialogWidthXl);
+
+  const KubusDialogSize(this.maxWidth);
+
+  final double maxWidth;
+}
+
 /// A glass-first dialog surface matching kubus liquid glass rules.
 ///
 /// Prefer using this with [showKubusDialog] so dialogs also blur the background.
@@ -651,6 +668,10 @@ class KubusAlertDialog extends StatelessWidget {
   final TextStyle? titleTextStyle;
   final TextStyle? contentTextStyle;
 
+  /// Maximum width class. On narrow viewports the dialog still uses the
+  /// available width minus [insetPadding].
+  final KubusDialogSize size;
+
   const KubusAlertDialog({
     super.key,
     this.icon,
@@ -673,6 +694,7 @@ class KubusAlertDialog extends StatelessWidget {
     this.elevation,
     this.titleTextStyle,
     this.contentTextStyle,
+    this.size = KubusDialogSize.standard,
   });
 
   @override
@@ -774,8 +796,13 @@ class KubusAlertDialog extends StatelessWidget {
         ? null
         : Padding(
             padding: effectiveActionsPadding,
-            child: Row(
-              mainAxisAlignment: actionsAlignment,
+            // OverflowBar keeps actions on one row while they fit and stacks
+            // them (full width) when they do not, so a long localized label
+            // on a phone is never clipped by the dialog edge.
+            child: OverflowBar(
+              alignment: actionsAlignment,
+              overflowAlignment: OverflowBarAlignment.end,
+              overflowSpacing: KubusSpacing.sm,
               children: actions!,
             ),
           );
@@ -801,6 +828,7 @@ class KubusAlertDialog extends StatelessWidget {
       insetPadding: insetPadding ?? const EdgeInsets.all(KubusSpacing.lg),
       clipBehavior: clipBehavior,
       shape: resolvedShape,
+      constraints: BoxConstraints(minWidth: 280, maxWidth: size.maxWidth),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
         margin: EdgeInsets.zero,

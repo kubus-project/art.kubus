@@ -11,7 +11,7 @@ import '../utils/kubus_color_roles.dart';
 class PermissionsRequestWidget extends StatefulWidget {
   final VoidCallback? onPermissionsGranted;
   final VoidCallback? onSkip;
-  
+
   const PermissionsRequestWidget({
     super.key,
     this.onPermissionsGranted,
@@ -19,7 +19,8 @@ class PermissionsRequestWidget extends StatefulWidget {
   });
 
   @override
-  State<PermissionsRequestWidget> createState() => _PermissionsRequestWidgetState();
+  State<PermissionsRequestWidget> createState() =>
+      _PermissionsRequestWidgetState();
 }
 
 class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
@@ -27,8 +28,9 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
   bool _locationGranted = false;
   bool _notificationGranted = false;
   bool _isRequesting = false;
-  
-  final PushNotificationService _pushNotificationService = PushNotificationService();
+
+  final PushNotificationService _pushNotificationService =
+      PushNotificationService();
 
   @override
   void initState() {
@@ -36,7 +38,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     _initializeServices();
     _checkPermissions();
   }
-  
+
   Future<void> _initializeServices() async {
     await _pushNotificationService.initialize();
   }
@@ -49,7 +51,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           : (await Permission.notification.status).isGranted;
 
       // On web, we don't request/check camera permission in the onboarding flow.
-      final cameraGranted = kIsWeb ? true : (await Permission.camera.status).isGranted;
+      final cameraGranted =
+          kIsWeb ? true : (await Permission.camera.status).isGranted;
 
       if (mounted) {
         setState(() {
@@ -72,7 +75,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
 
   Future<void> _requestAllPermissions() async {
     if (_isRequesting) return;
-    
+
     setState(() {
       _isRequesting = true;
     });
@@ -86,7 +89,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
             _cameraGranted = cameraStatus.isGranted;
           });
         } catch (e, st) {
-          debugPrint('PermissionsRequestWidget._requestAllPermissions camera.request failed: $e\n$st');
+          debugPrint(
+              'PermissionsRequestWidget._requestAllPermissions camera.request failed: $e\n$st');
           setState(() => _cameraGranted = false);
         }
       } else {
@@ -100,7 +104,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           _locationGranted = locationStatus.isGranted;
         });
       } catch (e, st) {
-        debugPrint('PermissionsRequestWidget._requestAllPermissions location.request failed: $e\n$st');
+        debugPrint(
+            'PermissionsRequestWidget._requestAllPermissions location.request failed: $e\n$st');
         setState(() => _locationGranted = false);
       }
 
@@ -119,7 +124,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           final notificationStatus = await Permission.notification.request();
           notificationIsGranted = notificationStatus.isGranted;
         } catch (e, st) {
-          debugPrint('PermissionsRequestWidget._requestAllPermissions notification.request failed: $e\n$st');
+          debugPrint(
+              'PermissionsRequestWidget._requestAllPermissions notification.request failed: $e\n$st');
           notificationIsGranted = false;
         }
 
@@ -127,7 +133,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
         try {
           pushGrantedLocal = await _pushNotificationService.requestPermission();
         } catch (e, st) {
-          debugPrint('PermissionsRequestWidget._requestAllPermissions push request failed: $e\n$st');
+          debugPrint(
+              'PermissionsRequestWidget._requestAllPermissions push request failed: $e\n$st');
           pushGrantedLocal = false;
         }
 
@@ -137,7 +144,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
       }
 
       // On web we don't request camera permission; require only location for core UX.
-      final requiredOk = kIsWeb ? _locationGranted : (_cameraGranted && _locationGranted);
+      final requiredOk =
+          kIsWeb ? _locationGranted : (_cameraGranted && _locationGranted);
       if (requiredOk) {
         widget.onPermissionsGranted?.call();
       } else {
@@ -156,6 +164,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     showKubusDialog(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: const Text('Permissions Required'),
         content: Text(
           kIsWeb
@@ -210,7 +219,8 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           _buildPermissionTile(
             icon: Icons.location_on,
             title: 'Location Access',
-            description: 'Find nearby artworks and enable location-based features',
+            description:
+                'Find nearby artworks and enable location-based features',
             isGranted: _locationGranted,
             color: roles.positiveAction,
           ),
@@ -346,9 +356,10 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
                       Expanded(
                         child: Text(
                           title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: scheme.onSurface,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: scheme.onSurface,
+                                  ),
                         ),
                       ),
                       if (isGranted)

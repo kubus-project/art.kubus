@@ -10,6 +10,7 @@ import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../screens/web3/wallet/mnemonic_reveal_screen.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/encrypted_wallet_backup_service.dart';
@@ -830,6 +831,23 @@ class _SecurityHubViewState extends State<SecurityHubView> {
   }
 
   Future<void> _revealRecoveryPhrase() async {
+    final shell = DesktopShellScope.of(context);
+    if (shell != null) {
+      // Inside the desktop shell the phrase opens in the content column like
+      // the backup screen that hosts this action, so the sidebar and header
+      // stay. The shell shows only its top screen, so this view is rebuilt (and
+      // reloads the backup state itself) when the reveal is popped.
+      final onBackupStateChanged = widget.onBackupStateChanged;
+      shell.pushScreen(
+        MnemonicRevealScreen(
+          onShellExit: (_) {
+            shell.popScreen();
+            unawaited(onBackupStateChanged?.call());
+          },
+        ),
+      );
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()),
     );
@@ -847,6 +865,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     final result = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(title),
         content: Text(body),
         actions: [

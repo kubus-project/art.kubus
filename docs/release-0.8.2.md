@@ -208,7 +208,7 @@ The Support Center client (#261) is deliberately **not** in the branch proposed 
 
 Gates before this reaches users: merge into `dev` after the required checks pass, then deploy the matching backend candidate before the Support client, and keep the Community multi-media switch tied to backend #79 as described above. Nothing here changes versions, tags or production configuration.
 
-## Development release candidate (state 2026-10-11)
+## Development release candidate (state 2026-10-11; superseded by "Final integration state" below)
 
 Implemented, merged, deployed and tested are different things; each row says which.
 
@@ -255,3 +255,57 @@ Public CI builds pass `SUPPORT_TICKETS_ENABLED` from the repository variable `KU
 - Historical videos without posters use the fallback state; reduced-motion disables autoplay by design.
 - Support QA at 820 px Slovenian lost the first typed character of a reply in the harness twice (the reply reached the backend as "ser follow-up"); it did not happen at the other widths. Probably typing before the field takes focus; not investigated further and not seen by a person.
 - art.kubus#266 (an older release-state draft) is superseded by this document and should be closed unmerged.
+
+## Final UI corrections
+
+Corrections after owner testing of the development build. Each root cause was reproduced before it was changed.
+
+**Post deletion.** Reproduced on an isolated backend with a real signed-in session: `DELETE /api/community/posts/:id` returned 200 and the post was gone, yet the feed showed "Failed to delete post." and kept the dialog open. The cause was client-side. `getCommunityPosts` returns `toList(growable: false)`, the feed assigned that list directly, and `_removePostFromLocalFeeds` called `removeWhere` on it, which throws on a fixed-length list *after* the server had deleted. Post detail did not touch those lists, which is why it worked. All four surfaces (feed, desktop feed, group feed, post detail) now share `confirmAndDeleteCommunityPost`: one provider call, 404 treated as already deleted, status-aware messages (401, 403, 409, network, 5xx), a blocking pending state, and local cleanup isolated so it can never turn a completed deletion into a failure. Feed lists are copied on assignment and replaced, never mutated.
+
+**Marker continuity.** Recorded frame by frame while easing z3.5 to z9.5: past the overview exit zoom (8.0) the marker source was emptied until the camera settled and the detailed fetch landed, then markers faded up from opacity 0. The overview is now held as a hand-off and drawn until the detailed markers replace it, which then ease in softly. Blank run before: about 1.4 s (default motion) and the whole settle (reduced motion); after: none.
+
+**Dialogs.** `KubusAlertDialog` had no width contract. It now takes a `KubusDialogSize` (compact 420, standard 520, wide 720, from `KubusSizes.dialogWidth*`), defaults to standard, stacks its actions when they do not fit, and scrolls its content under fixed title and actions. 53 text-only confirmations are compact. Raw `AlertDialog` surfaces were moved to `showKubusDialog`. Large surfaces (fullscreen media, editors, the marker editor, the claims table, onboarding) are deliberately unchanged.
+
+**Actions.** `KubusIconActionButton` is the one icon-only action in the control geometry (rounded rectangle, `KubusRadius.control`, 48 px). It replaces the circular Send controls in direct messages, post detail, the feed and desktop inline comment composers and artwork comments. The app theme gives text, filled, outlined and icon buttons the same control shape. Avatars, radios, progress indicators, map markers, pills that are chips or badges and the glass map controls stay circular or pill by design.
+
+**Video.** A post with one video takes the clip's own shape: 16:9 until known, then the poster's shape, then the loaded clip's, bounded to 4:5 at the tallest and 32:9 at the shallowest, never below 112 px. Posts with several media keep the stable 4:3 stage. A clip with no poster that has not played yet is still 16:9 (its shape is unknown without downloading it).
+
+**Map chrome.** The basemap credit is spelled out on arrival and then collapses to the compact info button beside the control cluster; the full credit stays reachable by tap, tooltip and semantics label. The Discovery Path card takes exactly the width of the control cluster.
+
+**Art discovery.** The Art tab is one ranked feed (`ArtDiscoveryRanker`): follows and saves, proximity, recency and genuine engagement, with per-author and per-kind damping and one post per artwork. Sources are art-feed posts (radius widening 3, 15, 60, 250 km only while sparse), recent public posts, public artworks and published exhibitions. Location is the chosen area, then the map's area, then the device (never prompted unless the visitor asks), then the last used area; without any it is public discovery. Only entries within 25 km are labelled nearby. `GET /api/community/art-feed?includeGeneral=true` (backend PR, additive, group posts excluded) lets ordinary located posts qualify; servers without it simply return art categories only.
+
+Not done here: a UI to pick a named city (the map's area serves as the chosen area), and no migration, deployment, tag or version change.
+
+## Final integration state (2026-10-12)
+
+Statuses are separate: **implemented**, **merged**, **deployed**, **tested**, **owner accepted**, **released**. The last two are never inferred. Revisions in this table are the ones recorded when the section was written; the release checkpoint in the PR descriptions is authoritative for later changes.
+
+| Part | PR / revision | Implemented | Merged | Deployed | Tested |
+| --- | --- | --- | --- | --- | --- |
+| Backend 0.8.2 (#86, migration 105) | `master` `32fb3160` | yes | yes | Oracle primary, running image tagged `candidate-32fb316`, rollback `rollback-pre-32fb316` | CI; running container reports the revision |
+| Admin Support console (#13) | `master` `438bde04` | yes | yes | Netcup `~/admin.kubus.site/httpdocs` | CI; browser checks against the real Support API |
+| Flutter 0.8.2 with Support (#272) | `dev` `c57232f6` | yes | yes | development web, run 38182460291, `KUBUS_SUPPORT_TICKETS_ENABLED=true` | CI; acceptance harness |
+| Art feed bounding box + index (backend #87, migration 106) | `master` `e0fa367c` (merge commit) | yes | yes | Oracle 2026-10-12: backend recreated from `e0fa367c` (running `GIT_COMMIT` verified, `/health/ready` and `/health/writable` primary, replica streaming), migration 106 applied (97 recorded, index present), rollback tag `rollback-pre-e0fa367` | CI; unit and route tests; disposable PostGIS: schema parity, clean bootstrap, plan and equivalence evidence; public `art-feed` answers 200 (400 for latitude 123), `/api/support/tickets` still 401 unauthenticated |
+| Admin reply/save/refresh keep unsaved edits (admin #14) | `master` `53a14e87` (merge commit) | yes | yes | Netcup `~/admin.kubus.site/httpdocs` 2026-10-12: built from `53a14e87` (Node 22.15.0, npm 11.7.0, `VITE_API_BASE_URL=https://api.kubus.site`), backup `~/backups/admin.kubus.site-pre-53a14e8-20261012T103352Z.tar.gz`, live `index.html` and main bundle byte-identical to the build, server `.htaccess` and `.well-known` untouched | `npm run verify` (302 tests); CI; authenticated checks not run (no credentials available to this session) |
+| Final UI corrections (#273) and desktop wallet shell (#276) | integration PR #279, merged heads `ba3e556b` and `4c719168`, plus review fixes `ec692ee1` | yes | pending until #279 merges | no | focused and combined Flutter tests (1849 before the last review fixes; the affected suites re-run), analyzer, docs doctor, browser Art-tab acceptance |
+
+### What the final integration adds over #272
+- Art tab: search is applied to the whole ranked feed before paging (a lower-ranked match used to be unreachable and Load more vanished); a search with no match says so; captionless posts with different media are kept apart while real duplicates are still suppressed.
+- Map overview: held hand-off dots bridge a zoom crossing only; a per-artwork filter (search, favourites, AR) drops them at once, so a failed detailed fetch cannot leave unfiltered dots on screen.
+- Wallet: the recovery phrase reveal opens inside the desktop shell like the backup screen that hosts it; mobile and no-shell hosts keep the route. Cryptography and persistence are untouched.
+- Admin: Refresh and Save keep unsaved status, priority, assignee, note and reason; Refresh is disabled while a reply or save is in flight.
+- Backend: the art-feed geographic scan is bounded by an indexable box (antimeridian split, pole handling, latitude validation) ahead of the exact radius check, with a partial index. On 300k posts the plan went from a sequential scan (6384 buffers, 75 ms) to an index scan (10 buffers, 0.03 ms); boxed and exact id sets are identical for seven test centres.
+
+### Evidence types
+- **Browser acceptance of the integrated build** (exact local release build of the merge of `ba3e556b` and `4c719168`, served locally; the API is the disposable integration backend, and the public-posts endpoint is answered by a 30-post fixture so a match can sit beyond the first page): Art tab at 1440 light/English and 1440 dark/Slovenian pass populated feed, Show more, search for a lower-ranked match, no-match message and restoring the feed (7/7 each); at 390 the populated feed and Show more pass, and the header search is not covered by the script. Evidence under `C:/kubus-build/evidence/final-int/shots/`.
+- **Wallet nested navigation** is verified by a widget test against a shell stand-in that, like the real shell, shows only the top screen (open backup, Show phrase, close). It is not a browser run: the harness has no signed-in wallet fixture.
+- **Map filter behaviour** is verified by controller tests; the unfiltered zoom hand-off keeps its earlier frame-sequence evidence (`C:/kubus-build/evidence/ui-fix/lod`).
+- A "Review" chip on a post card stays English in the Slovenian UI. It predates this work and is not changed here.
+
+### Operational state (read-only checks, 2026-10-12)
+- Oracle backend healthy, `GIT_COMMIT` equals `32fb3160`; `/health/writable` reports primary with one streaming replica and no synchronous standby. The home replication slot is active with no retained WAL (earlier growth was while the standby was offline); WAL directory 1104 MB against a 4096 MB slot cap.
+- `ipfs-cluster` runs at about 97% of its 768 MiB memory limit, with `context deadline exceeded` on repo stat and API 500s; the backend snapshot publisher logs `IPFS upload failed` about once a minute. Kubo itself is healthy. Raising the cluster memory limit needs an owner decision (compose change and container recreate).
+- Docker reclaimable space on Oracle is about 8.9 GB (images and build cache); host free space was not measurable from docker alone.
+
+### Remaining before production (unchanged order, owner decisions)
+Merge #279 and redeploy development, then repeat the Support lifecycle on the live host with an authorised test account (admin reply with unsaved edits, status and assignment, requester-visible updates, user reply, closure, account switch), then version bump, `dev` to `master`, tag, signed builds and physical-device checks. Nothing in this section authorises a production release.

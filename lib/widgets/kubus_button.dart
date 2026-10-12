@@ -373,3 +373,139 @@ class KubusOutlineButton extends StatelessWidget {
     return button;
   }
 }
+
+/// Icon-only action in the same geometry as [KubusButton]: a restrained
+/// rounded rectangle ([KubusRadius.control]), never a circle.
+///
+/// Use it for compact actions whose meaning is carried by an icon and a
+/// tooltip: Send, attach, copy, more. Variants, hover, focus, pressed,
+/// disabled and loading states match [KubusButton]. Glass icon buttons on the
+/// map keep [KubusGlassIconButton].
+class KubusIconActionButton extends StatelessWidget {
+  const KubusIconActionButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+    this.variant = KubusButtonVariant.primary,
+    this.isLoading = false,
+    this.size = KubusSizes.iconActionSize,
+    this.iconSize = 20,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  /// Tooltip and accessible name. Required: an icon alone is not a label.
+  final String tooltip;
+  final KubusButtonVariant variant;
+  final bool isLoading;
+
+  /// Edge length of the square hit area. 48 keeps the touch target the
+  /// composer rows need; never below 44.
+  final double size;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final isEnabled = !isLoading && onPressed != null;
+    final edge = size < 44 ? 44.0 : size;
+    final radius = KubusRadius.circular(KubusRadius.control);
+
+    final background = switch (variant) {
+      KubusButtonVariant.primary => roles.active,
+      KubusButtonVariant.secondary => roles.surfaceRaised,
+      KubusButtonVariant.quiet => Colors.transparent,
+      KubusButtonVariant.contextual => roles.surfaceRaised,
+      KubusButtonVariant.accent => roles.userAccent,
+      KubusButtonVariant.destructive => roles.destructive,
+    };
+    final foreground = switch (variant) {
+      KubusButtonVariant.primary => roles.onActive,
+      KubusButtonVariant.secondary ||
+      KubusButtonVariant.quiet ||
+      KubusButtonVariant.contextual =>
+        roles.foreground,
+      KubusButtonVariant.accent => roles.onUserAccent,
+      KubusButtonVariant.destructive => roles.onDestructive,
+    };
+    final borderColor = variant == KubusButtonVariant.secondary
+        ? roles.rule
+        : Colors.transparent;
+    final fill = variant == KubusButtonVariant.quiet
+        ? Colors.transparent
+        : background.withValues(alpha: isEnabled ? 1 : 0.54);
+
+    Widget button = KubusFocusRing(
+      borderRadius: radius,
+      enabled: isEnabled,
+      child: _KubusButtonInteraction(
+        enabled: isEnabled,
+        child: Material(
+          color: Colors.transparent,
+          child: Ink(
+            width: edge,
+            height: edge,
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: radius,
+              border: Border.all(
+                color: borderColor,
+                width: KubusSizes.hairline,
+              ),
+            ),
+            child: InkWell(
+              borderRadius: radius,
+              onTap: isEnabled ? onPressed : null,
+              excludeFromSemantics: true,
+              mouseCursor: isEnabled
+                  ? SystemMouseCursors.click
+                  : SystemMouseCursors.basic,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.focused)) {
+                  return roles.focus.withValues(alpha: 0.22);
+                }
+                if (states.contains(WidgetState.pressed)) {
+                  return foreground.withValues(alpha: 0.14);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return foreground.withValues(alpha: 0.07);
+                }
+                return Colors.transparent;
+              }),
+              child: Center(
+                child: isLoading
+                    ? SizedBox(
+                        width: iconSize,
+                        height: iconSize,
+                        child: InlineLoading(tileSize: 4, color: foreground),
+                      )
+                    : Icon(
+                        icon,
+                        size: iconSize,
+                        color: foreground.withValues(
+                          alpha: isEnabled ? 1 : 0.55,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    button = Semantics(
+      button: true,
+      enabled: isEnabled,
+      label: tooltip,
+      onTap: isEnabled ? onPressed : null,
+      child: button,
+    );
+    return Tooltip(
+      message: tooltip,
+      excludeFromSemantics: true,
+      child: button,
+    );
+  }
+}
