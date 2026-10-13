@@ -7,7 +7,6 @@ import 'package:art_kubus/utils/media_failure_registry.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -76,22 +75,26 @@ Future<ui.Color> _centerPixel(WidgetTester tester) async {
   }))!;
 }
 
+int _red8(ui.Color color) => (color.toARGB32() >> 16) & 0xff;
+int _green8(ui.Color color) => (color.toARGB32() >> 8) & 0xff;
+int _blue8(ui.Color color) => color.toARGB32() & 0xff;
+
 void _expectRed(ui.Color color) {
-  expect(color.red, greaterThanOrEqualTo(240));
-  expect(color.green, lessThanOrEqualTo(10));
-  expect(color.blue, lessThanOrEqualTo(10));
+  expect(_red8(color), greaterThanOrEqualTo(240));
+  expect(_green8(color), lessThanOrEqualTo(10));
+  expect(_blue8(color), lessThanOrEqualTo(10));
 }
 
 void _expectBlue(ui.Color color) {
-  expect(color.red, lessThanOrEqualTo(10));
-  expect(color.green, lessThanOrEqualTo(10));
-  expect(color.blue, greaterThanOrEqualTo(240));
+  expect(_red8(color), lessThanOrEqualTo(10));
+  expect(_green8(color), lessThanOrEqualTo(10));
+  expect(_blue8(color), greaterThanOrEqualTo(240));
 }
 
 void _expectYellow(ui.Color color) {
-  expect(color.red, greaterThanOrEqualTo(240));
-  expect(color.green, greaterThanOrEqualTo(240));
-  expect(color.blue, lessThanOrEqualTo(10));
+  expect(_red8(color), greaterThanOrEqualTo(240));
+  expect(_green8(color), greaterThanOrEqualTo(240));
+  expect(_blue8(color), lessThanOrEqualTo(10));
 }
 
 class _ChunkedImageOverrides extends HttpOverrides {
@@ -294,9 +297,9 @@ void main() {
         expect(
           await _centerPixel(tester),
           isA<ui.Color>()
-              .having((color) => color.red, 'red', greaterThanOrEqualTo(240))
-              .having((color) => color.green, 'green', lessThanOrEqualTo(10))
-              .having((color) => color.blue, 'blue', lessThanOrEqualTo(10)),
+              .having((color) => _red8(color), 'red', greaterThanOrEqualTo(240))
+              .having((color) => _green8(color), 'green', lessThanOrEqualTo(10))
+              .having((color) => _blue8(color), 'blue', lessThanOrEqualTo(10)),
           reason: 'the old decoded frame remains painted during B progress',
         );
 
@@ -306,7 +309,7 @@ void main() {
             () => Future<void>.delayed(const Duration(milliseconds: 10)),
           );
           await tester.pump();
-          if ((await _centerPixel(tester)).blue >= 240) break;
+          if (_blue8(await _centerPixel(tester)) >= 240) break;
         }
         _expectBlue(await _centerPixel(tester));
         expect(fixture.blueRequests, 1);

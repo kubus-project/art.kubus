@@ -107,6 +107,7 @@ class _FakeMapState implements KubusMapController {
     required this.manager,
   }) : rendered = _rendered();
 
+  @override
   final Set<String> registeredMapImages;
   final _FakeLayersManager manager;
   final List<KubusRenderedMarker> rendered;
@@ -146,6 +147,7 @@ class _FakeHost implements KubusMapMarkerSyncHost {
 
   ml.MapLibreMapController? _mapController;
   final _FakeMapState mapState;
+  @override
   final Set<String> registeredMapImages;
   BuildContext? context;
   MapMarkerOverview? overview;
