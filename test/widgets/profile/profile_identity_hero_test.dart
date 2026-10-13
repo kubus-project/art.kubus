@@ -8,7 +8,6 @@ import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
 import 'package:art_kubus/widgets/profile/profile_cover_field.dart';
 import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
