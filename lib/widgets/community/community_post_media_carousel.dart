@@ -29,6 +29,10 @@ const double kCommunityVideoStageFallbackAspect = 16 / 9;
 /// have room, however wide the clip is.
 const double kCommunityVideoStageMinHeight = 112;
 
+/// Keep a single-video stage below most of the visible viewport so portrait
+/// media and an unavailable-preview still cannot dominate a desktop feed.
+const double kCommunityVideoStageViewportFraction = 0.72;
+
 /// Stage aspect ratio for a single video of [clipAspect] (width / height),
 /// or null when its shape is unknown.
 double communityVideoStageAspect(double? clipAspect) {
@@ -297,9 +301,14 @@ class _CommunityPostMediaCarouselState
         curve: Curves.easeOutCubic,
         builder: (context, aspect, _) => LayoutBuilder(
           builder: (context, constraints) {
+            final viewportMaxHeight = math.max(
+              kCommunityVideoStageMinHeight,
+              MediaQuery.sizeOf(context).height *
+                  kCommunityVideoStageViewportFraction,
+            );
             final height = math.max(
               kCommunityVideoStageMinHeight,
-              constraints.maxWidth / aspect,
+              math.min(constraints.maxWidth / aspect, viewportMaxHeight),
             );
             return SizedBox(height: height, child: child);
           },

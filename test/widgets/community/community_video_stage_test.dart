@@ -1,5 +1,7 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:math' as math;
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_video_slide.dart';
@@ -10,16 +12,27 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 
 import '../../support/fake_video_player_platform.dart';
 
-Widget _harness(Widget child, {double width = 600}) => MaterialApp(
+Widget _harness(
+  Widget child, {
+  double width = 600,
+  double viewportHeight = 900,
+}) =>
+    MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: Center(child: SizedBox(width: width, child: child)),
+        body: MediaQuery(
+          data: MediaQueryData(size: Size(width, viewportHeight)),
+          child: SingleChildScrollView(
+            child: Center(child: SizedBox(width: width, child: child)),
+          ),
         ),
       ),
     );
+
+double _maximumStageHeight(double viewportHeight) =>
+    math.max(kCommunityVideoStageMinHeight, viewportHeight * 0.72);
 
 double _stageHeight(WidgetTester tester) =>
     tester.getSize(find.byType(ClipRRect).first).height;
@@ -59,7 +72,7 @@ void main() {
       ('4:3', 4 / 3, 450),
       ('1:1', 1, 600),
       // 9:16 is bounded to 4:5 so it cannot dominate the viewport.
-      ('9:16', 9 / 16, 750),
+      ('9:16', 9 / 16, 648),
     ]) {
       testWidgets('${c.$1} clip: stage height follows its shape',
           (tester) async {
@@ -100,6 +113,44 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+    });
+
+    testWidgets('portrait stage is capped by the available desktop viewport',
+        (tester) async {
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [url]),
+        width: 1200,
+        viewportHeight: 700,
+      ));
+      await tester.pumpAndSettle();
+      expect(_stageHeight(tester), closeTo(_maximumStageHeight(700), 0.6));
+    });
+
+    testWidgets('unavailable preview stays inside the capped desktop stage',
+        (tester) async {
+      const unavailableUrl = 'https://example.test/uploads/portrait.mp4';
+      CommunityPostVideoSlide.knownAspects[unavailableUrl] = 9 / 16;
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [unavailableUrl]),
+        width: 1200,
+        viewportHeight: 700,
+      ));
+      await tester.pumpAndSettle();
+
+      final stage = tester.getRect(find.byType(ClipRRect).first);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(CommunityPostMediaCarousel)),
+      )!;
+      expect(find.text(l10n.communityMediaVideoPreviewUnavailable),
+          findsOneWidget);
+      expect(stage.height, lessThanOrEqualTo(_maximumStageHeight(700) + 0.6));
+      expect(stage.height, lessThan(700));
+      final play = tester.getRect(
+        find.byTooltip(l10n.communityMediaVideoPlay),
+      );
+      expect(play.top, greaterThanOrEqualTo(stage.top));
+      expect(play.bottom, lessThanOrEqualTo(stage.bottom));
     });
 
     testWidgets('mixed media keeps the stable 4:3 stage on every page',
