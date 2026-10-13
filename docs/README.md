@@ -1,67 +1,52 @@
-# art.kubus Documentation
+﻿# Documentation
 
-This folder contains developer-facing documentation for the **art.kubus Flutter client**, plus notes about the open-platform boundary (what is open vs hosted/proprietary).
+Start with [Getting started](GETTING_STARTED.md). The permanent active hierarchy is:
 
-If you’re new to the repo, start with `GETTING_STARTED.md`.
+| Reference | Responsibility |
+| --- | --- |
+| [Roadmap](ROADMAP.md) | Product domains, status, dependencies and measurable completion |
+| [Design system](DESIGN_SYSTEM.md) | Visual semantics, typography, surfaces, responsive composition and motion |
+| [Architecture](ARCHITECTURE.md) | Flutter state, boot, routing, backend, identity and media boundaries |
+| [Map system](map-system.md) | Detailed shared MapLibre, marker, cover and continuity contract |
+| [Branching/deployment](engineering/branching-and-deployment.md) | Branches, exact-head CI, immutable artifacts, rollback and release gates |
+| [Agent orchestration](engineering/agent-orchestration.md) | Coordinator, exclusive ownership, workers and evidence |
 
-## Start here
+[AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) are concise entry points to
+these same contracts. Historical implementation notes are not additional design
+requirements. Update existing documentation first; use issues and PRs for temporary
+implementation tracking. New documents require an independent purpose; no new living
+design versions or permanent implementation waves.
 
-- **Branching, CI, and deployment**: [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md)
-- **Agent orchestration (ownership, delegation, cost, handoffs)**: [`engineering/agent-orchestration.md`](engineering/agent-orchestration.md)
-- **Current product / SEO / UI-UX programme**: [`PRODUCT_UX_SEO_PROGRAM.md`](PRODUCT_UX_SEO_PROGRAM.md)
-- **Agent sequencing / work packages**: [`AGENT_EXECUTION_PLAN.md`](AGENT_EXECUTION_PLAN.md)
-- **Current design direction**: [`DESIGN_SYSTEM_V2.md`](DESIGN_SYSTEM_V2.md)
-- **Canonical public-entry target**: [`APP_NATIVE_PUBLIC_ENTRY.md`](APP_NATIVE_PUBLIC_ENTRY.md)
-- **Guest-first entry and capability contract**: [`GUEST_FIRST_ENTRY.md`](GUEST_FIRST_ENTRY.md)
-- **Organic search baseline and index-quality handoff**: [`seo/organic-baseline-2026-10.md`](seo/organic-baseline-2026-10.md)
-- **Places, routes and field evidence**: [`PLACES_ROUTES_FIELD.md`](PLACES_ROUTES_FIELD.md)
-- **Institution, editorial and lifecycle**: [`INSTITUTION_EDITORIAL_LIFECYCLE.md`](INSTITUTION_EDITORIAL_LIFECYCLE.md)
-- **Future spatial delivery**: [`SPATIAL_DELIVERY_ROADMAP.md`](SPATIAL_DELIVERY_ROADMAP.md)
-- **Setup / run / build**: `GETTING_STARTED.md`
-- **What the app does**: `FEATURES.md`
-- **Where things live in the UI**: `SCREENS.md`
-- **How the client is structured**: `ARCHITECTURE.md`
-- **Open platform scope/boundary**: `OPEN_PLATFORM.md`
+## Developer references
 
-## Documentation index
+- [Local verification](LOCAL_VERIFICATION.md): tools, docs doctor and QA commands.
+- [Features](FEATURES.md), [screen inventory](SCREENS.md), [screenshots](SCREENSHOTS.md).
+- [Open platform boundary](OPEN_PLATFORM.md) and [licensing](licensing.md).
+- [Backend setup](../backend/README.md): the private backend gitlink is independently
+  validated; unprivileged frontend jobs need not materialize it.
+- [Contribution](../CONTRIBUTING.md), [support](../SUPPORT.md), [security](../SECURITY.md)
+  and the domain-specific [node threat model](node/threat-model.md).
 
-| Document | What you’ll find |
-|----------|------------------|
-| [Getting Started](GETTING_STARTED.md) | Prereqs, running locally, build basics, backend pointers |
-| [Features](FEATURES.md) | Feature-level detail and how pieces fit together |
-| [Screens](SCREENS.md) | Screen inventory and navigation map |
-| [Screenshots](SCREENSHOTS.md) | Where UI screenshots live and how to capture them |
-| [Project blurb](outreach/PROJECT_BLURB.md) | Short factual descriptions for directories and showcases |
-| [Architecture](ARCHITECTURE.md) | Provider-first architecture, boot sequence, key modules |
-| [Local Verification](LOCAL_VERIFICATION.md) | Root validation, docs doctor, and Playwright smoke commands |
-| [Open Platform](OPEN_PLATFORM.md) | What’s open-source, what’s hosted, and why |
-| [Terms of Service (draft)](legal/TERMS_OF_SERVICE.md) | Draft, non-final legal outline (not production terms) |
-| [Developer API Terms (draft)](legal/DEVELOPER_API_TERMS.md) | Draft, non-final API terms outline |
+## Independent domain contracts
 
-## Backend (optional)
+- [Guest-first discovery](GUEST_FIRST_ENTRY.md) and [public entry](APP_NATIVE_PUBLIC_ENTRY.md).
+- [SEO/public pages](seo-public-pages.md), [domain ownership](seo/domain-ownership.md)
+  and [public access policy](public-entry-access-policy.md).
+- [Places, routes and field evidence](PLACES_ROUTES_FIELD.md).
+- [Institution/editorial lifecycle](INSTITUTION_EDITORIAL_LIFECYCLE.md).
+- [Spatial delivery specification](SPATIAL_DELIVERY_ROADMAP.md): future derivative,
+  streaming, preservation and access details; product status belongs in Roadmap.
+- [Draft terms](legal/TERMS_OF_SERVICE.md) and [draft developer API terms](legal/DEVELOPER_API_TERMS.md).
 
-This repo also includes a Node/Express backend under `../backend/` for local development / reference.
+## Historical records and research
 
-- Backend overview & setup: `../backend/README.md`
+Release records retain software versions and their historical statements. Dated
+[organic discovery baseline](seo/organic-baseline-2026-10.md), benchmark artifacts,
+QA tools and evidence directories describe their pinned revisions/environments.
+Use their limitations when comparing results; do not infer current deployment,
+physical-device acceptance or a permanent performance guarantee.
 
-## Platform support (client)
-
-- Android / iOS
-- Web
-- Windows / macOS / Linux
-
-AR experiences are mobile-focused; web/desktop builds prioritize discovery and community workflows.
-
-## Contributing & policies
-
-- Contribution flow: `../CONTRIBUTING.md`
-- Support: `../SUPPORT.md`
-- Security: `../SECURITY.md`
-- Project guardrails: `../AGENTS.md`
-
-Licensing overview:
-
-- Client code: `../LICENSE` (MPL-2.0) + `../NOTICE`
-- Trademarks/branding: `../TRADEMARK.md`
-- Assets/content: `../LICENSE_ASSETS.md`
-- Full overview: [`licensing.md`](licensing.md)
+The former PRODUCT design/audit documents are consolidated into the permanent
+contracts above. Their original research remains available in Git history; retained
+[spatial evidence](evidence/product-v5-spatial/README.md) and existing capture/report
+artifacts provide reproducibility without a parallel active design hierarchy.

@@ -29,7 +29,7 @@ class KubusProductPalette {
   /// [KubusColors.accentTealLight] so it clears 4.5:1 on ground, surface and
   /// under white text; dark is [KubusColors.accentTealDark] (9.3:1 on
   /// surface). The exact values are a tested contract, see
-  /// docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md.
+  /// docs/DESIGN_SYSTEM.md.
   static const Color activeLight = Color(0xFF00766A);
   static const Color activeDark = Color(0xFF4ECDC4);
 
@@ -545,21 +545,45 @@ class KubusTypography {
         fontSize: 18,
       ),
       titleLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 18),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+      ),
       titleMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 16),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+      ),
       bodyLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 16),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 16,
+      ),
       bodyMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 14),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 14,
+      ),
       bodySmall: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 12),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 12,
+      ),
       labelLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 14),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
       labelMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 12),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w500,
+        fontSize: 12,
+      ),
       labelSmall: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 10),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w500,
+        fontSize: 10,
+      ),
     );
   }
 }
@@ -704,36 +728,26 @@ class KubusTextStyles {
 
   static TextStyle get display => KubusTypography.textTheme.displayLarge!;
   static TextStyle get entityTitle => KubusTypography.textTheme.headlineSmall!;
-  static TextStyle get lede => KubusTypography.textTheme.bodyLarge!
-      .copyWith(height: 1.5, fontWeight: FontWeight.w400);
+  static TextStyle get lede => KubusTypography.textTheme.bodyLarge!.copyWith(
+        height: 1.5,
+        fontWeight: FontWeight.w400,
+      );
   static TextStyle get body => KubusTypography.textTheme.bodyMedium!;
   static TextStyle get bodySmall => KubusTypography.textTheme.bodySmall!;
   static TextStyle get caption => KubusTypography.textTheme.labelSmall!;
   static TextStyle get actionLabel => KubusTypography.textTheme.labelLarge!;
-  static TextStyle get structuralLabel => KubusTypography.structural(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get metadataRegister => KubusTypography.structural(
-        fontSize: 11,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get ordinal => KubusTypography.structural(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      );
-  static TextStyle get machineValue => KubusTypography.machine(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get coordinate => KubusTypography.machine(
-        fontSize: 11,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get version => KubusTypography.machine(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-      );
+  static TextStyle get structuralLabel =>
+      KubusTypography.structural(fontSize: 12, fontWeight: FontWeight.w400);
+  static TextStyle get metadataRegister =>
+      KubusTypography.structural(fontSize: 11, fontWeight: FontWeight.w400);
+  static TextStyle get ordinal =>
+      KubusTypography.structural(fontSize: 12, fontWeight: FontWeight.w700);
+  static TextStyle get machineValue =>
+      KubusTypography.machine(fontSize: 12, fontWeight: FontWeight.w400);
+  static TextStyle get coordinate =>
+      KubusTypography.machine(fontSize: 11, fontWeight: FontWeight.w400);
+  static TextStyle get version =>
+      KubusTypography.machine(fontSize: 11, fontWeight: FontWeight.w700);
 
   static TextStyle get screenTitle =>
       KubusTypography.textTheme.headlineMedium!.copyWith(

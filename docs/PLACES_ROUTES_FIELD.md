@@ -1,6 +1,6 @@
 # Places, routes and Ljubljana field evidence
 
-Status: future data/product contract, not an approved migration or publication rule. Roadmap gates: `PRODUCT_UX_SEO_PROGRAM.md` Waves 1, 9 and 11; packages: `AGENT_EXECUTION_PLAN.md`. Reviewed 2026-09-22.
+Status: future data/product contract, not an approved migration or publication rule. Product status belongs to [Roadmap](ROADMAP.md); this document retains the places, routes and field-evidence contract.
 
 ## Current truth and first audit
 

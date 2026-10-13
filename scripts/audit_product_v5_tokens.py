@@ -158,6 +158,7 @@ def main() -> int:
 
     payload = {
         "schemaVersion": 1,
+        "notes": "Historical regex occurrence inventory, not runtime component counts or a current migration status. Compare the pinned baseline revision before reuse; the former migration plan is preserved only in immutable Git history.",
         "baselineRevision": args.baseline,
         "scope": ["lib/", "test/", "packages/"],
         "counting": "regex occurrence counts; files are distinct Dart paths",
