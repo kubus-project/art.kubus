@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { validateLocalMarkdownLinks } from './lib/markdown_local_links.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -76,38 +77,14 @@ function checkPackageScripts() {
 }
 
 function checkMarkdownLinks(relativePath) {
-  const text = readText(relativePath);
-  const prose = text.replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '');
-  const linkPattern = /\[[^\]]+\]\(<?([^)>]+)>?\)/g;
-  let match;
-
-  while ((match = linkPattern.exec(prose)) !== null) {
-    const rawTarget = match[1].trim();
-    if (
-      rawTarget.startsWith('#') ||
-      rawTarget.startsWith('http://') ||
-      rawTarget.startsWith('https://') ||
-      rawTarget.startsWith('mailto:')
-    ) {
-      continue;
-    }
-    markdownLinksChecked += 1;
-
-    const [targetWithoutAnchor] = rawTarget.split('#');
-    if (!targetWithoutAnchor) continue;
-
-    const target = decodeURIComponent(targetWithoutAnchor);
-    const resolved = resolve(dirname(absolute(relativePath)), target);
-    const backendRoot = absolute('backend');
-    if (!existsSync(resolved) && (resolved === backendRoot || resolved.startsWith(`${backendRoot}${process.platform === 'win32' ? '\\' : '/'}`))) {
-      // The private backend is a validated gitlink. Unprivileged PR jobs do not
-      // materialize it, so its internal documentation links are checked by the
-      // trusted scheduled/backend workflows instead.
-      continue;
-    }
-    if (!existsSync(resolved)) {
-      fail(`${relativePath} has a broken local Markdown link: ${rawTarget}`);
-    }
+  const result = validateLocalMarkdownLinks(readText(relativePath), {
+    sourcePath: relativePath,
+    rootDir,
+    backendRoot: absolute('backend'),
+  });
+  markdownLinksChecked += result.checked.length;
+  for (const issue of result.issues) {
+    fail(`${relativePath} ${issue}`);
   }
 }
 
