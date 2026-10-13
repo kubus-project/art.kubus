@@ -1,9 +1,58 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:art_kubus/features/map/map_layers_manager.dart';
 import 'package:art_kubus/widgets/map_marker_style_config.dart';
 
+class _AccuracyStyleController implements ml.MapLibreMapController {
+  final applied = Completer<ml.CircleLayerProperties>();
+  @override
+  Future<void> setLayerProperties(
+      String id, ml.LayerProperties properties) async {
+    applied.complete(properties as ml.CircleLayerProperties);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  test('accuracy animation preserves geometry and theme in every paint update',
+      () async {
+    for (final phase in <double>[0, 0.5]) {
+      final controller = _AccuracyStyleController();
+      KubusMarkerLayerStyler().requestUpdate(
+        controller: controller,
+        styleInitialized: true,
+        styleEpoch: 1,
+        getCurrentStyleEpoch: () => 1,
+        managedLayerIds: <String>{'accuracy'},
+        markerLayerId: 'marker',
+        cubeIconLayerId: 'cube',
+        locationAccuracyLayerId: 'accuracy',
+        state: KubusMarkerLayerStyleState(
+          pressedMarkerId: null,
+          hoveredMarkerId: null,
+          selectedMarkerId: null,
+          selectionPopAnimationValue: 0,
+          cubeLayerVisible: false,
+          markerPulsePhase: phase,
+          locationAccentColor: const Color(0xff00766a),
+        ),
+        force: true,
+      );
+      final properties =
+          await controller.applied.future.timeout(const Duration(seconds: 10));
+      expect(properties.circleRadius, isNotNull);
+      expect(properties.circleColor, '#00766a');
+      expect(properties.circleStrokeColor, '#00766a');
+      expect(properties.circleStrokeWidth, 1);
+      expect(properties.circlePitchAlignment, 'map');
+      expect(properties.circleOpacity, phase == 0 ? 0.10 : 0.18);
+    }
+  });
   group('KubusMarkerLayerStyler', () {
     test('interactiveIconImageExpression uses base icon when no selection', () {
       const state = KubusMarkerLayerStyleState(

@@ -180,6 +180,41 @@ class MapLibreLayersController implements MapLayersController {
   }
 }
 
+/// Complete accuracy style: layer updates replace paint properties on web.
+ml.CircleLayerProperties kubusLocationAccuracyProperties({
+  required Color color,
+  double pulsePhase = 0,
+}) =>
+    ml.CircleLayerProperties(
+      circleRadius: const <Object>[
+        'interpolate',
+        <Object>['exponential', 2],
+        <Object>['zoom'],
+        0,
+        <Object>[
+          'coalesce',
+          <Object>['get', 'accuracyRadiusZ0'],
+          0
+        ],
+        24,
+        <Object>[
+          '*',
+          16777216,
+          <Object>[
+            'coalesce',
+            <Object>['get', 'accuracyRadiusZ0'],
+            0
+          ]
+        ],
+      ],
+      circleColor: MapLibreStyleUtils.hexRgb(color),
+      circleOpacity: 0.10 + 0.04 * (1 - math.cos(pulsePhase * math.pi * 2)),
+      circleStrokeColor: MapLibreStyleUtils.hexRgb(color),
+      circleStrokeWidth: 1,
+      circleStrokeOpacity: 0.24,
+      circlePitchAlignment: 'map',
+    );
+
 @immutable
 class KubusMarkerLayerStyleState {
   const KubusMarkerLayerStyleState({
@@ -189,6 +224,7 @@ class KubusMarkerLayerStyleState {
     required this.selectionPopAnimationValue,
     required this.cubeLayerVisible,
     this.markerPulsePhase = 0.0,
+    this.locationAccentColor,
     this.markerBadgeBobOffsetPx = 0.0,
   });
 
@@ -203,6 +239,7 @@ class KubusMarkerLayerStyleState {
 
   /// 0..1 ambient pulse phase driving the soft ring around each dot.
   final double markerPulsePhase;
+  final Color? locationAccentColor;
 
   /// Current vertical bob offset (screen px) of the floating marker badge.
   final double markerBadgeBobOffsetPx;
@@ -398,7 +435,13 @@ class KubusMarkerLayerStyler {
     final canStyleCubeIconLayer = managedLayerIds.contains(cubeIconLayerId);
     final canStylePulseLayer =
         pulseLayerId != null && managedLayerIds.contains(pulseLayerId);
-    if (!canStyleMarkerLayer && !canStyleCubeIconLayer && !canStylePulseLayer) {
+    final canStyleAccuracyLayer = locationAccuracyLayerId != null &&
+        managedLayerIds.contains(locationAccuracyLayerId) &&
+        state.locationAccentColor != null;
+    if (!canStyleMarkerLayer &&
+        !canStyleCubeIconLayer &&
+        !canStylePulseLayer &&
+        !canStyleAccuracyLayer) {
       return;
     }
 
@@ -487,15 +530,13 @@ class KubusMarkerLayerStyler {
         );
       }
 
-      if (locationAccuracyLayerId != null &&
-          managedLayerIds.contains(locationAccuracyLayerId)) {
+      if (canStyleAccuracyLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
         await controller.setLayerProperties(
-          locationAccuracyLayerId,
-          ml.CircleLayerProperties(
-            // Accuracy geometry stays fixed; only the restrained field breathes.
-            circleOpacity: 0.10 +
-                0.04 * (1 - math.cos(state.markerPulsePhase * math.pi * 2)),
+          locationAccuracyLayerId!,
+          kubusLocationAccuracyProperties(
+            color: state.locationAccentColor!,
+            pulsePhase: state.markerPulsePhase,
           ),
         );
       }
@@ -808,6 +849,8 @@ class MapLayersManager {
   int _addLayerCalls = 0;
   int _removeLayerCalls = 0;
   int _removeSourceCalls = 0;
+
+  Color? get locationAccentColor => _themeSpec?.locationFill;
   int _sourceUpdateCalls = 0;
   int _sourceUpdateSkips = 0;
   int _layerPropertiesCalls = 0;
@@ -1724,35 +1767,7 @@ class MapLayersManager {
     await _controller.addCircleLayer(
       _ids.locationSourceId,
       _ids.locationAccuracyLayerId,
-      ml.CircleLayerProperties(
-        circleRadius: const <Object>[
-          'interpolate',
-          <Object>['exponential', 2],
-          <Object>['zoom'],
-          0,
-          <Object>[
-            'coalesce',
-            <Object>['get', 'accuracyRadiusZ0'],
-            0
-          ],
-          24,
-          <Object>[
-            '*',
-            16777216,
-            <Object>[
-              'coalesce',
-              <Object>['get', 'accuracyRadiusZ0'],
-              0
-            ]
-          ],
-        ],
-        circleColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
-        circleOpacity: 0.10,
-        circleStrokeColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
-        circleStrokeWidth: 1,
-        circleStrokeOpacity: 0.24,
-        circlePitchAlignment: 'map',
-      ),
+      kubusLocationAccuracyProperties(color: theme.locationFill),
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.locationAccuracyLayerId);

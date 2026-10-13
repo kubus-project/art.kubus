@@ -172,6 +172,7 @@ class MapMarkerRenderCoordinator {
       pulseLayerId: pulseLayerId,
       locationAccuracyLayerId: kubus.ids.layers.locationAccuracyLayerId,
       state: KubusMarkerLayerStyleState(
+        locationAccentColor: _getLayersManager()?.locationAccentColor,
         pressedMarkerId: kubus.pressedMarkerId,
         hoveredMarkerId: kubus.hoveredMarkerId,
         selectedMarkerId: kubus.selectedMarkerId,

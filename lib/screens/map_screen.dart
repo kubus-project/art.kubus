@@ -4606,19 +4606,7 @@ class _MapScreenState extends State<MapScreen>
 
     await _layersManager?.safeSetLayerProperties(
       _kubusMapController.ids.layers.locationAccuracyLayerId,
-      ml.CircleLayerProperties(
-        circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
-        circleStrokeColor:
-            KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
-      ),
-    );
-    await _layersManager?.safeSetLayerProperties(
-      _kubusMapController.ids.layers.locationAccuracyLayerId,
-      ml.CircleLayerProperties(
-        circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
-        circleStrokeColor:
-            KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
-      ),
+      kubusLocationAccuracyProperties(color: themeProvider.accentColor),
     );
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
