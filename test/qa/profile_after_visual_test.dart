@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:art_kubus/services/socket_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +31,7 @@ void main() {
     }
     final outputDir = Directory(outputPath);
     outputDir.createSync(recursive: true);
-    await QaFontLoader.ensureLoaded();
+    await tester.runAsync(QaFontLoader.ensureLoaded);
 
     const coverUrl = 'https://profile-fixture.invalid/wide.png';
     final user = ProfileFixtures.user(
@@ -92,6 +93,9 @@ void main() {
     ];
 
     for (final scene in scenes) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
       final fixture = ProfileImageHttpFixture();
       await tester.runAsync(fixture.prepare);
       final previousHttpClientProvider = debugNetworkImageHttpClientProvider;
@@ -110,6 +114,16 @@ void main() {
           textScale: scene.textScale,
           paintGround: true,
         );
+        final cover = find.byType(Image).first;
+        final coverWidget = tester.widget<Image>(cover);
+        await tester.runAsync(
+          () => precacheImage(coverWidget.image, tester.element(cover)),
+        );
+        await tester.pump();
+        final paintedCover = tester.renderObject<RenderImage>(
+          find.descendant(of: cover, matching: find.byType(RawImage)),
+        );
+        expect(paintedCover.image, isNotNull);
         expect(fixture.requests, 1);
         final data = await tester.runAsync(() async {
           final root = tester.binding.rootElement!.renderObject!;
@@ -124,9 +138,14 @@ void main() {
             '${scene.size.height.toInt()}-scale${scene.textScale.toInt()}.png';
         File('${outputDir.path}/$name').writeAsBytesSync(data!);
         expectNoUnexpectedRenderErrors();
+        await tester.pump(const Duration(seconds: 2));
       } finally {
         debugNetworkImageHttpClientProvider = previousHttpClientProvider;
       }
     }
+    await tester.pumpWidget(const SizedBox.shrink());
+    SocketService().disconnect();
+    // Complete offline provider deadlines after the captured tree is removed.
+    await tester.pump(const Duration(seconds: 30));
   });
 }
