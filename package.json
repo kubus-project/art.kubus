@@ -9,7 +9,7 @@
   },
   "scripts": {
     "guard:architecture": "node ./scripts/architecture_guard.mjs",
-    "docs:doctor": "node ./scripts/docs_doctor.mjs",
+    "docs:doctor": "node --test ./scripts/ci/markdown_local_links.test.mjs && node ./scripts/docs_doctor.mjs",
     "backend:status": "node ./scripts/backend_status.mjs",
     "verify:toolchain": "node ./scripts/verify_toolchain.mjs all",
     "verify:toolchain:node": "node ./scripts/verify_toolchain.mjs node",

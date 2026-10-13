@@ -17,9 +17,9 @@
 > builds the requested entity, so it follows a meaningful frame as the contract
 > below requires.
 >
-> Canonical planning detail: `APP_NATIVE_PUBLIC_ENTRY.md`; bounded work:
-> `AGENT_EXECUTION_PLAN.md` Waves 1–3. No indexing or canonical policy change
-> is authorized by these target notes.
+> Canonical public-entry detail: `APP_NATIVE_PUBLIC_ENTRY.md`. Product priorities
+> and delivery status belong to [Roadmap](ROADMAP.md). These target notes do not
+> authorize an indexing or canonical policy change.
 
 `/`, `/en` and `/sl` boot the Flutter application directly as an indexable
 app shell. Semantic server entity rendering applies to deeper public routes,

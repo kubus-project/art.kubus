@@ -95,12 +95,14 @@ class _DesktopInstitutionHubScreenState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final statsProvider = context.read<StatsProvider>();
-        unawaited(statsProvider.ensureSnapshot(
-          entityType: 'user',
-          entityId: wallet,
-          metrics: institutionDashboardMetrics,
-          scope: 'public',
-        ));
+        unawaited(
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: institutionDashboardMetrics,
+            scope: 'public',
+          ),
+        );
       });
     }
   }
@@ -165,8 +167,10 @@ class _DesktopInstitutionHubScreenState
 
     try {
       final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet,
-          forceRefresh: forceRefresh);
+      final review = await daoProvider.loadReviewForWallet(
+        requestedWallet,
+        forceRefresh: forceRefresh,
+      );
       if (!mounted || requestedWallet != _lastReviewWallet) return;
 
       setState(() {
@@ -210,10 +214,9 @@ class _DesktopInstitutionHubScreenState
                     decoration: BoxDecoration(
                       border: Border(
                         right: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -225,8 +228,9 @@ class _DesktopInstitutionHubScreenState
                             .read<DesktopDashboardStateProvider>()
                             .updateInstitutionSectionFromTabIndex(
                               tabIndex: tabIndex,
-                              exhibitionsEnabled:
-                                  AppConfig.isFeatureEnabled('exhibitions'),
+                              exhibitionsEnabled: AppConfig.isFeatureEnabled(
+                                'exhibitions',
+                              ),
                             );
                       },
                     ),
@@ -235,10 +239,7 @@ class _DesktopInstitutionHubScreenState
 
                 // Right: Quick actions, stats, and analytics
                 if (isLarge)
-                  SizedBox(
-                    width: 380,
-                    child: _buildRightPanel(themeProvider),
-                  ),
+                  SizedBox(width: 380, child: _buildRightPanel(themeProvider)),
               ],
             ),
           );
@@ -255,8 +256,8 @@ class _DesktopInstitutionHubScreenState
   /// `achievementTokensTotal` as "N KUB8": that counter is the sum of the
   /// KUB8 reward definitions on achievements the wallet has unlocked
   /// (statsService `SUM(achievements.reward_kub8)`), not income. No backend
-  /// field represents institution revenue, so nothing is shown. See
-  /// docs/design/PRODUCT_V5_APP_AUDIT.md (Wave 4C, "0 KUB8 Revenue").
+  /// field represents institution revenue, so nothing is shown. A historical
+  /// textual source audit is not runtime revenue evidence.
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
@@ -276,11 +277,13 @@ class _DesktopInstitutionHubScreenState
       walletAddress: wallet,
       review: review,
     );
-    final isApprovedInstitution =
-        verification.isApprovedFor(DaoRoleType.institution);
+    final isApprovedInstitution = verification.isApprovedFor(
+      DaoRoleType.institution,
+    );
     final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
-    final hasConflictingArtistReview =
-        verification.isPendingFor(DaoRoleType.artist);
+    final hasConflictingArtistReview = verification.isPendingFor(
+      DaoRoleType.artist,
+    );
     final canSelfServeInstitutionPromotion =
         isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
 

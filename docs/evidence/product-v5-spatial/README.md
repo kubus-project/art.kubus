@@ -1,6 +1,6 @@
 # Evidence: PRODUCT v5 spatial map system (Wave 5B)
 
-Companion to [`docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md`](../../design/PRODUCT_V5_SPATIAL_SYSTEM.md).
+Historical evidence for the map-system contract at its recorded source revision. The superseded narrative is available at [its immutable source revision](https://github.com/kubus-project/art.kubus/blob/307b165ec57e9b4cf8d8a012bd93f62ce0906c6a/docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md); current contracts live in [map-system](../../map-system.md).
 Bounded on purpose: curated captures and the text results of the final runs on
 the branch head. Intermediate runs, APKs, emulator logs and the A/B fixture are
 not kept. Every number in the design document comes from a file here or from the

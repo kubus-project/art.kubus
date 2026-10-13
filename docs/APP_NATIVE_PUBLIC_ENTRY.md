@@ -1,7 +1,8 @@
 # app.kubus.site — app-native public entity entry
 
-Status: **target architecture for the next SEO/web phase**
-Last updated: 2026-09-22. Implementation package: `AGENT_EXECUTION_PLAN.md` Wave 2; native association is Wave 3.
+Status: public-entry and native-association target contract, not a current
+indexing-policy change. Product priorities belong to [Roadmap](ROADMAP.md);
+delivery handoffs follow [agent orchestration](engineering/agent-orchestration.md).
 
 ## 1. Problem
 
