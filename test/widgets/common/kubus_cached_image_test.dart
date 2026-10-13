@@ -269,6 +269,7 @@ void main() {
               KubusCachedImage(
                 imageUrl: 'https://images.example.test/cover.png',
                 cacheVersion: version,
+                semanticLabel: 'Artwork A',
                 placeholderBuilder: (_) => const ColoredBox(
                     key: _placeholderKey, color: Color(0xFFFFFF00)),
               ),
@@ -294,6 +295,10 @@ void main() {
         );
         await tester.pump();
         expect(find.byKey(_placeholderKey), findsNothing);
+        expect(
+          tester.widget<Image>(find.byType(Image)).semanticLabel,
+          'Artwork A',
+        );
         expect(
           await _centerPixel(tester),
           isA<ui.Color>()
@@ -337,6 +342,79 @@ void main() {
       }
     },
   );
+
+  testWidgets('a replacement URL never paints the previous decoded frame', (
+    tester,
+  ) async {
+    final pngs = await tester.runAsync(
+      () async => (
+        await _solidPng(const ui.Color(0xFFFF0000)),
+        await _solidPng(const ui.Color(0xFF0000FF)),
+      ),
+    );
+    final fixture = _ChunkedImageOverrides(red: pngs!.$1, blue: pngs.$2);
+    imageCache
+      ..clear()
+      ..clearLiveImages();
+    final previousClientProvider = debugNetworkImageHttpClientProvider;
+    debugNetworkImageHttpClientProvider = () => fixture.createHttpClient(null);
+    KubusMediaFailureRegistry.shared.clear();
+    try {
+      Widget image(String source, String version, String label) => _pixelWrap(
+            KubusCachedImage(
+              imageUrl: source,
+              cacheVersion: version,
+              semanticLabel: label,
+              placeholderBuilder: (_) => const ColoredBox(
+                key: _placeholderKey,
+                color: Color(0xFFFFFF00),
+              ),
+            ),
+          );
+
+      await tester.pumpWidget(image(
+        'https://images.example.test/artwork-a.png',
+        'red',
+        'Artwork A',
+      ));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 30)),
+      );
+      await tester.pump();
+      _expectRed(await _centerPixel(tester));
+
+      await tester.pumpWidget(image(
+        'https://images.example.test/artwork-b.png',
+        'blue',
+        'Artwork B',
+      ));
+      await tester.runAsync(
+        () => fixture.blueChunkSent.future.timeout(const Duration(seconds: 5)),
+      );
+      await tester.pump();
+
+      expect(find.byKey(_placeholderKey), findsOneWidget);
+      _expectYellow(await _centerPixel(tester));
+      expect(
+          tester.widget<Image>(find.byType(Image)).semanticLabel, 'Artwork B');
+      expect(fixture.redRequests, 1);
+      expect(fixture.blueRequests, 1);
+
+      fixture.releaseBlue.complete();
+      for (var i = 0; i < 20; i += 1) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+        if (_blue8(await _centerPixel(tester)) >= 240) break;
+      }
+      _expectBlue(await _centerPixel(tester));
+    } finally {
+      if (!fixture.releaseBlue.isCompleted) fixture.releaseBlue.complete();
+      debugNetworkImageHttpClientProvider = previousClientProvider;
+      KubusMediaFailureRegistry.shared.clear();
+    }
+  });
 
   testWidgets('a URL removed between images resets the initial placeholder', (
     tester,

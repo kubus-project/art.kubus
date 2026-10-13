@@ -166,7 +166,7 @@ class KubusCachedImage extends StatefulWidget {
       fit: fit,
       alignment: alignment,
       filterQuality: filterQuality,
-      gaplessPlayback: true,
+      gaplessPlayback: state._preserveDecodedFrame,
       cacheWidth: effectiveCacheWidth,
       cacheHeight: effectiveCacheHeight,
       semanticLabel: resolvedSemanticLabel,
@@ -246,12 +246,15 @@ class _KubusCachedImageState extends State<KubusCachedImage> {
   int _candidateIndex = 0;
   bool _advancePending = false;
   bool _hasDecodedFrame = false;
+  bool _preserveDecodedFrame = true;
 
   @override
   void didUpdateWidget(covariant KubusCachedImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.imageUrl != widget.imageUrl) {
+    _preserveDecodedFrame = oldWidget.imageUrl == widget.imageUrl;
+    if (!_preserveDecodedFrame) {
       _candidateIndex = 0;
+      _hasDecodedFrame = false;
     }
   }
 
