@@ -1,8 +1,9 @@
 # Final 0.8.0 UX hardening: evidence
 
 Screenshots from the opt-in visual matrices, rendered from fixtures with the
-real screens (no network, no production data). Narrative and decisions:
-[PRODUCT_V5_FINAL_UX_HARDENING.md](../../design/PRODUCT_V5_FINAL_UX_HARDENING.md).
+real screens (no network, no production data). These are historical captures;
+they do not establish current visual or runtime acceptance. The former narrative
+is available at [its immutable source revision](https://github.com/kubus-project/art.kubus/blob/307b165ec57e9b4cf8d8a012bd93f62ce0906c6a/docs/design/PRODUCT_V5_FINAL_UX_HARDENING.md).
 
 | Surface | Files |
 | --- | --- |

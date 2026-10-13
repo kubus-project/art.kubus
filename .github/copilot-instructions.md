@@ -15,10 +15,9 @@ Ship production-ready art.kubus product changes without breaking:
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
 
 For SEO, public-entry, map, broad UI, institution, editorial, DAO or spatial
-delivery work, read `CLAUDE.md`, the canonical
-`docs/PRODUCT_UX_SEO_PROGRAM.md` roadmap, and the matching
-`docs/AGENT_EXECUTION_PLAN.md` package before editing. Then read the relevant
-design/domain contract. The current visual references are
+delivery work, read `CLAUDE.md`, `docs/ROADMAP.md`,
+`docs/engineering/agent-orchestration.md`, and the matching permanent
+design/domain contract before editing. The current visual references are
 `art.kubus.site@redesign/a1-foundation` (WORLD) and
 `kubus.site@redesign/k1-foundation` (TIME), not their older master-site
 appearance.
@@ -89,7 +88,7 @@ Branch and deployment governance is defined in [`docs/engineering/branching-and-
 ## Naming / Modeling Rules (Avoid Duplication)
 - Do not create new classes that collide with existing domain models (`Achievement`, `Task`, `Artwork`, `ArtMarker`, etc.).
 - Service-local structs must be suffixed to show intent: `*Definition`, `*Record`, `*Payload`, `*Dto`.
-- Profiles: `User.id` is the wallet identifier; `UserProfile.walletAddress` is the profile identifier (don't invent `walletAddress` on `User`).
+- Profiles: follow the canonical account, wallet and profile identity contract in `docs/ARCHITECTURE.md`; do not infer one identifier from another.
 
 ---
 

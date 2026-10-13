@@ -1,6 +1,6 @@
 {
   "schema": "kubus.product_v5_app_audit/1",
-  "notes": "Textual Dart source matches under lib/ excluding lib/l10n. Not runtime widget counts. See docs/design/PRODUCT_V5_APP_AUDIT.md.",
+  "notes": "Textual Dart source matches under lib/ excluding lib/l10n. Not runtime widget counts. This is a historical source-text snapshot; compare its baseline revision before use. The former narrative report is preserved only in immutable Git history.",
   "patterns": {
     "inter_helper": "\\bKubusTypography\\.inter\\s*\\(",
     "outfit_helper": "\\bKubusTypography\\.outfit\\s*\\(",

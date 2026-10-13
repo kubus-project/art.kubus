@@ -30,13 +30,15 @@ import '../support/product_surface_harness.dart';
 import '../support/product_v5_qa_fixtures.dart';
 
 /// Wave 5A-S semantic contract: one semantic idea, one primary expression.
-/// See docs/design/PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md.
+/// See docs/DESIGN_SYSTEM.md.
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{
-        'Artist Studio_onboarding_completed': true,
-        'Institution Hub_onboarding_completed': true,
-        'DAO_onboarding_completed': true,
-      }));
+  setUp(
+    () => SharedPreferences.setMockInitialValues(<String, Object>{
+      'Artist Studio_onboarding_completed': true,
+      'Institution Hub_onboarding_completed': true,
+      'DAO_onboarding_completed': true,
+    }),
+  );
 
   group('analytics overview', () {
     const cards = <AnalyticsOverviewCardData>[
@@ -77,34 +79,36 @@ void main() {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: MediaQuery(
-          data: MediaQueryData(
-            size: size,
-            textScaler: TextScaler.linear(scale),
-          ),
-          child: Scaffold(
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: AnalyticsOverviewGrid(
-                cards: cards,
-                isLoading: false,
-                selectedMetricId: 'viewsReceived',
-                onMetricSelected: (_) {},
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: size,
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: Scaffold(
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: AnalyticsOverviewGrid(
+                  cards: cards,
+                  isLoading: false,
+                  selectedMetricId: 'viewsReceived',
+                  onMetricSelected: (_) {},
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
       await tester.pump();
     }
 
     for (final size in const [
       Size(320, 900),
       Size(390, 900),
-      Size(1440, 900)
+      Size(1440, 900),
     ]) {
       for (final scale in const [1.0, 1.3, 2.0]) {
         testWidgets(
@@ -144,12 +148,14 @@ void main() {
 
   group('role badges', () {
     Future<void> pumpBadge(WidgetTester tester, Widget badge) async {
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: Scaffold(body: Center(child: badge)),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(body: Center(child: badge)),
+        ),
+      );
     }
 
     testWidgets('labelled pills say the role once, in words', (tester) async {
@@ -209,26 +215,35 @@ void main() {
         .length;
 
     testWidgets(
-        'desktop wallet: one signing state, one Refresh, one custody panel',
-        (tester) async {
-      final l10n = await pumpScreen(tester, const DesktopWalletScreen(),
+      'desktop wallet: one signing state, one Refresh, one custody panel',
+      (tester) async {
+        final l10n = await pumpScreen(
+          tester,
+          const DesktopWalletScreen(),
           size: const Size(1440, 1000),
           signedIn: qaOwner(),
-          extraProviders: [qaWalletProvider()]);
-      expect(textCount(tester, l10n.walletSessionSignerMissing), 1);
-      expect(textCount(tester, l10n.commonRefresh), 1);
-      expect(find.byType(WalletCustodyStatusPanel), findsOneWidget);
-      await drain(tester);
-    });
+          extraProviders: [qaWalletProvider()],
+        );
+        expect(textCount(tester, l10n.walletSessionSignerMissing), 1);
+        expect(textCount(tester, l10n.commonRefresh), 1);
+        expect(find.byType(WalletCustodyStatusPanel), findsOneWidget);
+        await drain(tester);
+      },
+    );
 
-    testWidgets('mobile wallet: the balance hero does not list the tokens',
-        (tester) async {
-      await pumpScreen(tester, const WalletHome(),
-          size: const Size(390, 2400),
-          signedIn: qaOwner(),
-          extraProviders: [qaWalletProvider()]);
-      final tokens =
-          find.byKey(const ValueKey<String>('wallet_tokens_section'));
+    testWidgets('mobile wallet: the balance hero does not list the tokens', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        const WalletHome(),
+        size: const Size(390, 2400),
+        signedIn: qaOwner(),
+        extraProviders: [qaWalletProvider()],
+      );
+      final tokens = find.byKey(
+        const ValueKey<String>('wallet_tokens_section'),
+      );
       expect(tokens, findsOneWidget);
       // The impostor token appears once, in the inventory, not the hero.
       expect(find.text('Not kubit'), findsOneWidget);
@@ -239,19 +254,29 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('studio (mobile): one review CTA for the locked state',
-        (tester) async {
-      final l10n = await pumpScreen(tester, const ArtistStudio(),
-          size: const Size(390, 1300), signedIn: qaOwner(isArtist: true));
+    testWidgets('studio (mobile): one review CTA for the locked state', (
+      tester,
+    ) async {
+      final l10n = await pumpScreen(
+        tester,
+        const ArtistStudio(),
+        size: const Size(390, 1300),
+        signedIn: qaOwner(isArtist: true),
+      );
       expect(textCount(tester, l10n.artistStudioCtaApplyForDaoReview), 1);
       expect(find.text(l10n.artistStudioLockedTitle), findsOneWidget);
       await drain(tester);
     });
 
-    testWidgets('institution hub (mobile): one review CTA, lock is named',
-        (tester) async {
-      final l10n = await pumpScreen(tester, const InstitutionHub(),
-          size: const Size(390, 1300), signedIn: qaOwner(isInstitution: true));
+    testWidgets('institution hub (mobile): one review CTA, lock is named', (
+      tester,
+    ) async {
+      final l10n = await pumpScreen(
+        tester,
+        const InstitutionHub(),
+        size: const Size(390, 1300),
+        signedIn: qaOwner(isInstitution: true),
+      );
       expect(textCount(tester, l10n.institutionHubApplyForReviewAction), 1);
       expect(find.text(l10n.institutionHubLockedTitle), findsOneWidget);
       // The page title is said by the dashboard header, not again by the bar.
@@ -259,13 +284,18 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('artwork editor: one explicit cover upload action',
-        (tester) async {
+    testWidgets('artwork editor: one explicit cover upload action', (
+      tester,
+    ) async {
       final artworks = ArtworkProvider()..addOrUpdateArtwork(qaArtwork());
       final l10n = await pumpScreen(
         tester,
-        qaShellHost(const ArtworkEditScreen(
-            artworkId: 'art-a', chrome: ArtworkEditChrome.workspace)),
+        qaShellHost(
+          const ArtworkEditScreen(
+            artworkId: 'art-a',
+            chrome: ArtworkEditChrome.workspace,
+          ),
+        ),
         size: const Size(1440, 1000),
         signedIn: qaOwner(isArtist: true),
         extraProviders: [
@@ -278,7 +308,8 @@ void main() {
       expect(find.text(l10n.mapMarkerDialogUploadCover), findsOneWidget);
       expect(
         find.byWidgetPredicate(
-            (w) => w is IconButton && w.tooltip == l10n.commonEdit),
+          (w) => w is IconButton && w.tooltip == l10n.commonEdit,
+        ),
         findsNothing,
       );
       final collab = Provider.of<CollabProvider>(
@@ -289,17 +320,23 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('DAO onboarding: the flow title is not repeated three times',
-        (tester) async {
+    testWidgets('DAO onboarding: the flow title is not repeated three times', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
-      final l10n = await pumpScreen(tester, const DesktopGovernanceHubScreen(),
-          size: const Size(1440, 1000), signedIn: qaOwner());
+      final l10n = await pumpScreen(
+        tester,
+        const DesktopGovernanceHubScreen(),
+        size: const Size(1440, 1000),
+        signedIn: qaOwner(),
+      );
       expect(textCount(tester, l10n.daoHubAppBarTitle), lessThanOrEqualTo(2));
       await drain(tester);
     });
 
-    testWidgets('desktop profile: empty states are not cards inside cards',
-        (tester) async {
+    testWidgets('desktop profile: empty states are not cards inside cards', (
+      tester,
+    ) async {
       await pumpScreen(
         tester,
         qaShellHost(const desktop_profile.ProfileScreen()),
