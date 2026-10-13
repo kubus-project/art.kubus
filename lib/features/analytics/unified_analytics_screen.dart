@@ -19,6 +19,7 @@ import '../../screens/desktop/desktop_settings_screen.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../core/shell_routes.dart';
 import '../../services/backend_api_service.dart';
+import '../../utils/design_tokens.dart';
 import 'analytics_blocked_copy.dart';
 import 'analytics_capability_resolver.dart';
 import 'analytics_entity_registry.dart';
@@ -106,6 +107,10 @@ class AnalyticsStandaloneStatePage extends StatelessWidget {
                 key: const ValueKey<String>('analytics_standalone_back'),
                 onPressed: onBack,
                 tooltip: l10n.commonBack,
+                constraints: const BoxConstraints.tightFor(
+                  width: KubusSizes.iconActionSize,
+                  height: KubusSizes.iconActionSize,
+                ),
                 icon: const Icon(Icons.arrow_back),
               ),
             ),
