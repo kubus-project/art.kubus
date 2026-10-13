@@ -171,6 +171,22 @@ void main() {
       );
     });
 
+    test('nearby minimum follows the measured natural header', () {
+      expect(source, contains('key: _nearbySheetKey'));
+      expect(source, contains('headerMeasurementKey: _nearbySheetHeaderKey'));
+      expect(source, contains('_scheduleNearbySheetGeometryMeasurement('));
+      expect(source, contains('KubusNearbyArtSheetExtentBounds('));
+      expect(source, contains('minChildSize: _nearbySheetMinExtent'));
+      expect(source, contains('snapSizes: _nearbySheetSnapSizes'));
+      expect(source, contains('_nearbySheetMinExtent + 0.02'));
+      expect(source, contains('_nearbySheetMinExtent + 0.008'));
+      expect(source, contains('_sheetController.jumpTo(bounds.minExtent)'));
+      expect(
+        source,
+        contains('target.clamp(_nearbySheetMinExtent, _nearbySheetMax)'),
+      );
+    });
+
     test('create marker becomes dominant only after prerequisites', () {
       final walletGuard =
           source.indexOf('if (wallet == null || wallet.isEmpty)');

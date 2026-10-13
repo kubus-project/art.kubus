@@ -422,7 +422,17 @@ class _MapScreenState extends State<MapScreen>
   /// controller stays attached to exactly one sheet for its whole lifetime.
   static const Key _nearbySheetKey = ValueKey<String>('map.nearbyArtSheet');
   final ValueNotifier<double> _nearbySheetExtentNotifier =
-      ValueNotifier<double>(_nearbySheetMin);
+      ValueNotifier<double>(_nearbySheetDefaultMin);
+  double _nearbySheetMinExtent = _nearbySheetDefaultMin;
+  List<double> _nearbySheetSnapSizes = const <double>[
+    _nearbySheetDefaultMin,
+    0.24,
+    0.50,
+  ];
+  bool _nearbyGeometryMeasurementScheduled = false;
+  Size? _pendingNearbyViewportSize;
+  double _pendingNearbyReservedBottom = 0;
+  String? _lastNearbyGeometrySignature;
   bool _isSheetInteracting = false;
   // Prevent intermediate extent notifications from reopening Nearby while a
   // dominant surface is deliberately collapsing the sheet.
@@ -437,11 +447,12 @@ class _MapScreenState extends State<MapScreen>
   bool _isSheetBlocking = false;
   bool _isometricViewEnabled = false;
 
-  static const double _nearbySheetMin = 0.12;
-  static const double _nearbySheetMax = 0.85;
-  static const double _nearbySheetBlockingOnThreshold = _nearbySheetMin + 0.02;
-  static const double _nearbySheetBlockingOffThreshold =
-      _nearbySheetMin + 0.008;
+  static const double _nearbySheetDefaultMin =
+      KubusNearbyArtSheetExtentBounds.baselineMinExtent;
+  static const double _nearbySheetMax =
+      KubusNearbyArtSheetExtentBounds.maxExtent;
+  double get _nearbySheetBlockingOnThreshold => _nearbySheetMinExtent + 0.02;
+  double get _nearbySheetBlockingOffThreshold => _nearbySheetMinExtent + 0.008;
 
   double get _effectiveMarkerRadiusKm => _filterState.nearMeRadiusKm;
 
@@ -449,6 +460,7 @@ class _MapScreenState extends State<MapScreen>
   final GlobalKey _tutorialMapKey = GlobalKey();
   final GlobalKey _tutorialFilterButtonKey = GlobalKey();
   final GlobalKey _tutorialNearbyTitleKey = GlobalKey();
+  final GlobalKey _nearbySheetHeaderKey = GlobalKey();
   final GlobalKey _tutorialCenterButtonKey = GlobalKey();
   final GlobalKey _tutorialAddMarkerButtonKey = GlobalKey();
 
@@ -1207,7 +1219,7 @@ class _MapScreenState extends State<MapScreen>
         mediaQuery: MediaQuery.of(context),
       ).panelEnter;
       await _sheetController.animateTo(
-        target,
+        target.clamp(_nearbySheetMinExtent, _nearbySheetMax).toDouble(),
         duration: motion.duration,
         curve: motion.curve,
       );
@@ -1230,12 +1242,12 @@ class _MapScreenState extends State<MapScreen>
           mediaQuery: MediaQuery.of(context),
         ).panelEnter;
         await _sheetController.animateTo(
-          _nearbySheetMin,
+          _nearbySheetMinExtent,
           duration: motion.duration,
           curve: motion.curve,
         );
       }
-      _setSheetBlocking(false, _nearbySheetMin);
+      _setSheetBlocking(false, _nearbySheetMinExtent);
     } catch (_) {
       // The sheet can detach during route changes; its next mount starts at
       // the compact extent, so no recovery mutation is needed.
@@ -2099,7 +2111,7 @@ class _MapScreenState extends State<MapScreen>
             );
             try {
               _sheetController.animateTo(
-                0.50,
+                0.50.clamp(_nearbySheetMinExtent, _nearbySheetMax).toDouble(),
                 duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
               );
@@ -3088,7 +3100,7 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
-    final clampedExtent = extent.clamp(_nearbySheetMin, _nearbySheetMax);
+    final clampedExtent = extent.clamp(_nearbySheetMinExtent, _nearbySheetMax);
     final blocking = _isSheetBlocking
         ? clampedExtent > _nearbySheetBlockingOffThreshold
         : clampedExtent > _nearbySheetBlockingOnThreshold;
@@ -3112,7 +3124,8 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _setSheetBlocking(bool value, double extent) {
-    final normalizedExtent = extent.clamp(_nearbySheetMin, _nearbySheetMax);
+    final normalizedExtent =
+        extent.clamp(_nearbySheetMinExtent, _nearbySheetMax);
     final previousExtent = _nearbySheetExtentNotifier.value;
     if ((previousExtent - normalizedExtent).abs() > 0.0001) {
       _nearbySheetExtentNotifier.value = normalizedExtent;
@@ -4173,6 +4186,10 @@ class _MapScreenState extends State<MapScreen>
             final usableHeight = math.max(
               0.0,
               constraints.maxHeight - reservedBottom,
+            );
+            _scheduleNearbySheetGeometryMeasurement(
+              viewportSize: Size(constraints.maxWidth, constraints.maxHeight),
+              reservedBottom: reservedBottom,
             );
             final sheetHeight = usableHeight * sheetExtent;
             final safeBottom = MapOverlaySizing.bottomSafeInset(media);
@@ -6255,6 +6272,72 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  void _scheduleNearbySheetGeometryMeasurement({
+    required Size viewportSize,
+    required double reservedBottom,
+  }) {
+    _pendingNearbyViewportSize = viewportSize;
+    _pendingNearbyReservedBottom = reservedBottom;
+    if (_nearbyGeometryMeasurementScheduled) return;
+    _nearbyGeometryMeasurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _nearbyGeometryMeasurementScheduled = false;
+      if (!mounted) return;
+      final latestViewport = _pendingNearbyViewportSize;
+      final headerObject =
+          _nearbySheetHeaderKey.currentContext?.findRenderObject();
+      if (latestViewport == null ||
+          headerObject is! RenderBox ||
+          !headerObject.hasSize) {
+        return;
+      }
+
+      final media = MediaQuery.of(context);
+      final locale = Localizations.maybeLocaleOf(context);
+      final headerHeight = headerObject.size.height;
+      final reservedBottom = _pendingNearbyReservedBottom;
+      final signature = <Object?>[
+        latestViewport.width,
+        latestViewport.height,
+        reservedBottom,
+        media.textScaler,
+        locale,
+        headerHeight,
+      ].join(':');
+      if (signature == _lastNearbyGeometrySignature) return;
+      _lastNearbyGeometrySignature = signature;
+
+      final bounds = KubusNearbyArtSheetExtentBounds(
+        availableHeight: math.max(0.0, latestViewport.height - reservedBottom),
+        headerHeight: headerHeight,
+      );
+      if ((_nearbySheetMinExtent - bounds.minExtent).abs() < 0.0001) return;
+
+      final previousMinimum = _nearbySheetMinExtent;
+      final previousExtent = _sheetController.isAttached
+          ? _sheetController.size
+          : _nearbySheetExtentNotifier.value;
+      final wasCollapsed = previousExtent <= previousMinimum + 0.0001;
+      _nearbySheetMinExtent = bounds.minExtent;
+      _nearbySheetSnapSizes = bounds.snapSizes;
+      _safeSetState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        var extent = _sheetController.isAttached
+            ? _sheetController.size
+            : _nearbySheetExtentNotifier.value;
+        if (_sheetController.isAttached &&
+            wasCollapsed &&
+            bounds.minExtent < previousMinimum &&
+            extent > bounds.minExtent + 0.0001) {
+          _sheetController.jumpTo(bounds.minExtent);
+          extent = _sheetController.size;
+        }
+        _handleSheetExtentNotification(extent);
+      });
+    });
+  }
+
   void _scheduleMobileRailMeasurement(Size viewportSize) {
     if (_railMeasurementScheduled) return;
     _railMeasurementScheduled = true;
@@ -6372,11 +6455,11 @@ class _MapScreenState extends State<MapScreen>
             controller: _sheetController,
             // The collapsed sheet is deliberately compact; its outer padding
             // keeps the peek fully above the persistent navigation bar.
-            initialChildSize: _nearbySheetMin,
-            minChildSize: _nearbySheetMin,
+            initialChildSize: _nearbySheetMinExtent,
+            minChildSize: _nearbySheetMinExtent,
             maxChildSize: _nearbySheetMax,
             snap: true,
-            snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
+            snapSizes: _nearbySheetSnapSizes,
             builder: (context, scrollController) {
               final base = _currentPosition ?? _cameraCenter;
               return _buildPassiveMapChrome(
@@ -6393,6 +6476,7 @@ class _MapScreenState extends State<MapScreen>
                       _filterState.scope == KubusMapScope.currentViewport,
                   radiusKm: _effectiveMarkerRadiusKm,
                   titleKey: _tutorialNearbyTitleKey,
+                  headerMeasurementKey: _nearbySheetHeaderKey,
                   discoveryProgress: discoveryProgress,
                   onRadiusTap: _openMarkerRadiusDialog,
                   onExpand: () {
@@ -6407,7 +6491,9 @@ class _MapScreenState extends State<MapScreen>
                     );
                     unawaited(
                       _sheetController.animateTo(
-                        0.50,
+                        0.50
+                            .clamp(_nearbySheetMinExtent, _nearbySheetMax)
+                            .toDouble(),
                         duration: motion.duration,
                         curve: motion.curve,
                       ),
