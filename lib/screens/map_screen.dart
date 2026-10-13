@@ -4247,6 +4247,7 @@ class _MapScreenState extends State<MapScreen>
                         ),
                       ),
                     if (ui.contextSurface == MapContextSurface.none ||
+                        ui.contextSurface == MapContextSurface.nearby ||
                         ui.contextSurface == MapContextSurface.markerPreview)
                       _buildPrimaryControls(
                         ui,
