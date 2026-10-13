@@ -230,25 +230,11 @@ The app uses **Provider** with `ChangeNotifier` for state management.
 
 ### Example Provider Pattern
 
-```dart
-class ExampleProvider extends ChangeNotifier {
-  bool _initialized = false;
-  
-  Future<void> initialize() async {
-    if (_initialized) return; // Idempotent
-    _initialized = true;
-    
-    // Load data
-    await _loadData();
-    notifyListeners();
-  }
-  
-  void bindToRefresh(AppRefreshProvider refreshProvider) {
-    // Idempotent binding
-    refreshProvider.addListener(_onRefresh);
-  }
-}
-```
+Reuse the existing provider pattern rather than copy a schematic initializer.
+Repeated binding to the same dependency is a no-op; replacing a dependency removes
+the old listener before adding the new one. Dispose owned listeners/resources.
+Initialization must handle in-flight calls and failures according to the provider's
+actual retry contract, rather than permanently marking a failed load initialized.
 
 ### Core Providers
 
@@ -257,7 +243,7 @@ class ExampleProvider extends ChangeNotifier {
 | `ProfileProvider` | Current user profile and preferences |
 | `WalletProvider` | Wallet state and balance |
 | `Web3Provider` | Web3 feature flags |
-| `MapProvider` | Map state and markers |
+| `KubusMapController` | Map camera, selection and renderer lifecycle (controller, not a provider) |
 | `CommunityHubProvider` | Social feed and posts |
 | `ChatProvider` | Messaging |
 | `NotificationProvider` | Push and in-app notifications |
@@ -277,7 +263,7 @@ All HTTP requests go through `BackendApiService`:
 ```dart
 // In services/providers
 final api = BackendApiService();
-final response = await api.get('/api/artworks');
+final artworks = await api.getArtworks();
 ```
 
 **Never** use `package:http` directly in screens or widgets.
@@ -294,7 +280,8 @@ Real-time features use `SocketService`:
 ### Backend Integration
 
 - Base URL configured in `AppConfig`
-- Auth token managed by `AuthService`
+- Auth session loaded through `BackendApiService.ensureAuthLoaded()` and the
+  centralized startup/authentication flow; do not assume a wallet connection is a session
 - Feature flags gate backend calls
 
 ---
@@ -424,8 +411,8 @@ Text(AppLocalizations.of(context)!.welcomeMessage)
 
 | Purpose | Utility |
 |---------|---------|
-| Category colors | `CategoryAccentColor.get(category)` |
-| Rarity colors | `RarityUI.getColor(rarity)` |
+| Category colors | `CategoryAccentColor.resolve(context, category)` |
+| Rarity colors | `RarityUi.collectibleColor(context, rarity)` |
 | Color transforms | `AppColorUtils.*` |
 
 ---
