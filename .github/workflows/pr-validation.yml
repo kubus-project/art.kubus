@@ -190,7 +190,7 @@ jobs:
         # Measures what is painted, not what is built: lift, continuous float,
         # accent shadow and return to rest for every tile layout, in Chromium
         # and Firefox, with and without prefers-reduced-motion.
-        # See docs/design/PRODUCT_V5_MOTION_CONTRACT.md.
+        # See docs/DESIGN_SYSTEM.md for the canonical PRODUCT motion contract.
         shell: bash
         run: |
           set -euo pipefail

@@ -176,7 +176,7 @@ def main() -> None:
     result: dict = {
         "schema": "kubus.product_v5_app_audit/1",
         "notes": "Textual Dart source matches under lib/ excluding lib/l10n. "
-        "Not runtime widget counts. See docs/design/PRODUCT_V5_APP_AUDIT.md.",
+        "Not runtime widget counts. This is a source-text snapshot, not current runtime evidence; compare its baseline revision before use. The former narrative report is preserved only in immutable Git history.",
         "patterns": PATTERNS,
         "legacy_blue_cyan_rgb": list(LEGACY_BLUE_CYAN),
     }

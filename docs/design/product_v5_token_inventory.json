@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "notes": "Historical regex occurrence inventory, not runtime component counts or a current migration status. Compare the pinned baseline revision before reuse; the former migration plan is preserved only in immutable Git history.",
   "baselineRevision": "251130ec6296c24ad317c5231d8dd365ed513874",
   "scope": [
     "lib/",

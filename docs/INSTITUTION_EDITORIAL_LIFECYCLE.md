@@ -1,6 +1,6 @@
 # Institutions, editorial and cultural-data lifecycle
 
-Status: staged target, not a schema migration. Read master `PRODUCT_UX_SEO_PROGRAM.md` and Wave 9–10 packages in `AGENT_EXECUTION_PLAN.md`. Reviewed 2026-09-22.
+Status: staged target, not a schema migration. Product priorities and current status belong to [Roadmap](ROADMAP.md); this document retains the institution/editorial domain contract.
 
 ## Institution identity before screen polish
 
