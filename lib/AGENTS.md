@@ -89,5 +89,5 @@ Only release and emergency hotfix pull requests target `master`.
 - `lib/providers/navigation_provider.dart` (line 58):
 	- “static const Map<String, ScreenDefinition> screenDefinitions = {”
 
-## Spatial system (Wave 5B)
-Read `docs/map-system.md` before touching the map; the root `AGENTS.md` has the full list. In `lib/`: one map, one `KubusMapController`, one selection owner. Capability comes from `KubusMapCapabilities` (web globe, flat map on Android and iOS), never a second renderer. Marker level of detail is `KubusMarkerLod` and any new marker sync trigger goes through `KubusMarkerRegroupGate`. Constraints that narrow results are `KubusMapConstraint`s. `KubusMapSessionMemory` is in-memory only and is cleared on sign-out.
+## Spatial system
+Read `docs/map-system.md` before touching the map; the root `AGENTS.md` links the canonical engineering contracts. In `lib/`: one map, one `KubusMapController`, one selection owner. Capability comes from `KubusMapCapabilities` (web globe, flat map on Android and iOS), never a second renderer. Marker level of detail is `KubusMarkerLod` and any new marker sync trigger goes through `KubusMarkerRegroupGate`. Constraints that narrow results are `KubusMapConstraint`s. `KubusMapSessionMemory` is in-memory only and is cleared on sign-out.
