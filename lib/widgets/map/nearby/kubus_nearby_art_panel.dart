@@ -132,7 +132,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       overlayName: 'nearby-art-panel',
       backdropRegionId:
           isMobile ? 'mobile-nearby-art-sheet' : 'desktop-nearby-art-panel',
-      enablePlatformBackdropRegion: !isMobile,
+      enablePlatformBackdropRegion: true,
       child: content,
     );
 

@@ -454,8 +454,11 @@ class _MapScreenState extends State<MapScreen>
 
   // Discovery and Progress
   final GlobalKey _searchSurfaceKey = GlobalKey();
+  final GlobalKey _searchExtraContentKey = GlobalKey();
   final GlobalKey _discoveryCardKey = GlobalKey();
   final GlobalKey _primaryControlsKey = GlobalKey();
+  bool _railMeasurementScheduled = false;
+  String? _lastRailMeasurementSignature;
   final GlobalKey _tutorialMapToolsButtonKey = GlobalKey();
   final GlobalKey _nearbyPeekKey = GlobalKey();
   final ValueNotifier<MapMarkerChromeOcclusionPlan>
@@ -4164,7 +4167,14 @@ class _MapScreenState extends State<MapScreen>
           builder: (context, constraints) {
             final media = MediaQuery.of(context);
             final sheetExtent = _nearbySheetExtentNotifier.value;
-            final sheetHeight = constraints.maxHeight * sheetExtent;
+            final reservedBottom = _isWalkingFocusedMode
+                ? media.viewPadding.bottom
+                : media.padding.bottom;
+            final usableHeight = math.max(
+              0.0,
+              constraints.maxHeight - reservedBottom,
+            );
+            final sheetHeight = usableHeight * sheetExtent;
             final safeBottom = MapOverlaySizing.bottomSafeInset(media);
             final double attributionBottomMargin = math
                 .max(sheetHeight + 12.0, safeBottom + 12.0)
@@ -4238,7 +4248,11 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     if (ui.contextSurface == MapContextSurface.none ||
                         ui.contextSurface == MapContextSurface.markerPreview)
-                      _buildPrimaryControls(ui),
+                      _buildPrimaryControls(
+                        ui,
+                        viewportHeight: constraints.maxHeight,
+                        reservedBottom: reservedBottom,
+                      ),
                     // Walking navigation is a focused, full-bleed mode: the
                     // browse chrome (search, Discovery Path, Nearby Art) is
                     // suppressed so only the map, the route, the instruction
@@ -4253,6 +4267,7 @@ class _MapScreenState extends State<MapScreen>
                         filteredArtworks,
                         discoveryProgress,
                         isLoadingArtworks,
+                        reservedBottom: reservedBottom,
                       ),
                     if (!_isWalkingFocusedMode)
                       _buildTopOverlays(theme, themeProvider, taskProvider),
@@ -5327,32 +5342,35 @@ class _MapScreenState extends State<MapScreen>
       // Section gap is owned here (the scaffold gap is suppressed via
       // sectionGap: 0) so a collapsed panel adds zero height.
       sectionGap: 0,
-      extraContent: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // What is narrowing the map, with a clear for each. Hidden while the
-          // filter panel is open (it already shows and resets the same state)
-          // and while a marker card is open (the card is anchored over this
-          // area and would cover the chips).
-          if (activeSurface != MapContextSurface.filters &&
-              activeSurface != MapContextSurface.markerPreview)
-            KubusMapConstraintStripBinding(
-              searchController: _mapSearchController,
-              filters: _filterState,
-              hasLocation: _currentPosition != null,
-              onFiltersChanged: _handleFilterStateChanged,
-              accentColor: themeProvider.accentColor,
-            ),
-          _buildFilterPanel(theme),
-          if (showDiscovery) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            _buildPassiveMapChrome(
-              measurementKey: _discoveryCardKey,
-              isOccluded: (plan) => plan.discoveryOccluded,
-              child: _buildDiscoveryCard(theme, taskProvider),
-            ),
+      extraContent: KeyedSubtree(
+        key: _searchExtraContentKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // What is narrowing the map, with a clear for each. Hidden while the
+            // filter panel is open (it already shows and resets the same state)
+            // and while a marker card is open (the card is anchored over this
+            // area and would cover the chips).
+            if (activeSurface != MapContextSurface.filters &&
+                activeSurface != MapContextSurface.markerPreview)
+              KubusMapConstraintStripBinding(
+                searchController: _mapSearchController,
+                filters: _filterState,
+                hasLocation: _currentPosition != null,
+                onFiltersChanged: _handleFilterStateChanged,
+                accentColor: themeProvider.accentColor,
+              ),
+            _buildFilterPanel(theme),
+            if (showDiscovery) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              _buildPassiveMapChrome(
+                measurementKey: _discoveryCardKey,
+                isOccluded: (plan) => plan.discoveryOccluded,
+                child: _buildDiscoveryCard(theme, taskProvider),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -6123,7 +6141,11 @@ class _MapScreenState extends State<MapScreen>
     return KubusMapTaskProgressRow.build(context: context, progress: progress);
   }
 
-  Widget _buildPrimaryControls(MapUiStateSnapshot ui) {
+  Widget _buildPrimaryControls(
+    MapUiStateSnapshot ui, {
+    required double viewportHeight,
+    required double reservedBottom,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     // Attribution lives in More Tools, while optional modes remain feature
     // gated inside that sheet.
@@ -6133,76 +6155,131 @@ class _MapScreenState extends State<MapScreen>
     return ValueListenableBuilder<double>(
       valueListenable: _nearbySheetExtentNotifier,
       builder: (context, sheetExtent, _) {
-        final height = MediaQuery.sizeOf(context).height;
-        // Focused walking mode has neither the shell bottom bar nor the Nearby
-        // Art sheet, so the controls sit against the safe area instead.
-        final navBarHeight =
-            _isWalkingFocusedMode ? 0.0 : KubusLayout.mainBottomNavBarHeight;
         final effectiveExtent = _isWalkingFocusedMode ? 0.0 : sheetExtent;
-        final sheetViewport = math.max(0.0, height - navBarHeight);
-        final bottomOffset = navBarHeight +
-            sheetViewport * effectiveExtent +
-            MediaQuery.paddingOf(context).bottom +
-            KubusMapMetrics.contextPanelSafeGap;
+        final searchRect = _rectInMapViewport(_searchSurfaceKey);
+        final extraContentRect = _rectInMapViewport(_searchExtraContentKey);
+        final topChromeBottom = _isWalkingFocusedMode
+            ? 0.0
+            : math.max(
+                searchRect?.bottom ?? 0.0,
+                extraContentRect?.bottom ?? 0.0,
+              );
+        final railHeight =
+            _rectInMapViewport(_primaryControlsKey)?.height ?? 0.0;
+        final geometry = KubusMapMobileRailGeometry(
+          viewportHeight: viewportHeight,
+          reservedBottom: reservedBottom,
+          sheetExtent: effectiveExtent,
+          topChromeBottom: topChromeBottom,
+          railHeight: railHeight,
+        );
+        _scheduleMobileRailMeasurement(Size(
+          MediaQuery.sizeOf(context).width,
+          viewportHeight,
+        ));
+        // Keep the rail out of the hit-test and semantics trees until its
+        // first layout provides a real size. Visibility still lays it out and
+        // retains its state, so the post-frame measurement can reveal it as
+        // soon as the measured top/sheet band is known to fit.
+        final showRail = geometry.canShowRail;
         return Positioned(
           right: KubusSpacing.md - KubusSpacing.xxs,
-          bottom: bottomOffset,
-          child: _buildPassiveMapChrome(
-            measurementKey: _primaryControlsKey,
-            isOccluded: (plan) => plan.controlsOccluded,
-            child: MapOverlayBlocker(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  KubusMapControls(
-                    controller: _kubusMapController,
-                    layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-                    onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
-                    onCreateMarker: () =>
-                        unawaited(_handleCurrentLocationTap()),
-                    centerOnMeActive: _autoFollow,
-                    resetBearingTooltip: l10n.mapResetBearingTooltip,
-                    centerOnMeKey: _tutorialCenterButtonKey,
-                    centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-                    createMarkerKey: _tutorialAddMarkerButtonKey,
-                    createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
-                    createMarkerHighlighted:
-                        ui.contextSurface == MapContextSurface.createMarker,
-                    buttonSize: KubusMapMetrics.mobileControlSize,
-                    showZoomControls: false,
-                    showSecondaryTools: hasSecondaryTools,
-                    onOpenSecondaryTools: _openMobileMapTools,
-                    secondaryToolsKey: _tutorialMapToolsButtonKey,
-                    secondaryToolsTooltip: l10n.mapToolsTitle,
-                    showIsometricViewToggle: false,
-                    isometricViewActive: _isometricViewEnabled,
-                    onToggleIsometricView: () {
-                      unawaited(
-                          _setIsometricViewEnabled(!_isometricViewEnabled));
-                    },
-                    isometricViewTooltipWhenActive:
-                        l10n.mapIsometricViewDisableTooltip,
-                    isometricViewTooltipWhenInactive:
-                        l10n.mapIsometricViewEnableTooltip,
+          bottom: geometry.railBottomOffset,
+          child: Visibility(
+            visible: showRail,
+            maintainState: true,
+            maintainAnimation: true,
+            maintainSize: true,
+            maintainSemantics: false,
+            maintainInteractivity: false,
+            child: TickerMode(
+              enabled: showRail,
+              child: _buildPassiveMapChrome(
+                measurementKey: _primaryControlsKey,
+                isOccluded: (plan) => plan.controlsOccluded,
+                child: MapOverlayBlocker(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      KubusMapControls(
+                        controller: _kubusMapController,
+                        layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+                        onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
+                        onCreateMarker: () =>
+                            unawaited(_handleCurrentLocationTap()),
+                        centerOnMeActive: _autoFollow,
+                        resetBearingTooltip: l10n.mapResetBearingTooltip,
+                        centerOnMeKey: _tutorialCenterButtonKey,
+                        centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+                        createMarkerKey: _tutorialAddMarkerButtonKey,
+                        createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+                        createMarkerHighlighted:
+                            ui.contextSurface == MapContextSurface.createMarker,
+                        buttonSize: KubusMapMetrics.mobileControlSize,
+                        showZoomControls: false,
+                        showSecondaryTools: hasSecondaryTools,
+                        onOpenSecondaryTools: _openMobileMapTools,
+                        secondaryToolsKey: _tutorialMapToolsButtonKey,
+                        secondaryToolsTooltip: l10n.mapToolsTitle,
+                        showIsometricViewToggle: false,
+                        isometricViewActive: _isometricViewEnabled,
+                        onToggleIsometricView: () {
+                          unawaited(
+                              _setIsometricViewEnabled(!_isometricViewEnabled));
+                        },
+                        isometricViewTooltipWhenActive:
+                            l10n.mapIsometricViewDisableTooltip,
+                        isometricViewTooltipWhenInactive:
+                            l10n.mapIsometricViewEnableTooltip,
+                      ),
+                      // The 48px credit target is icon-only from frame zero;
+                      // full license text remains in its dialog and semantics.
+                      const SizedBox(height: KubusSpacing.sm),
+                      KubusMapAttributionControl(
+                        compact: true,
+                        semanticsLabel: l10n.mapAttributionsTitle,
+                        minHeight: KubusMapMetrics.mobileControlSize,
+                        onPressed: () =>
+                            unawaited(showKubusMapAttributionDialog(context)),
+                      ),
+                    ],
                   ),
-                  // Basemap credit: the compact info button directly under the
-                  // rail, the same 48px column (spelled out on arrival, then
-                  // collapsed). The full credit stays one tap away.
-                  const SizedBox(height: KubusSpacing.sm),
-                  KubusMapCollapsingAttribution(
-                    semanticsLabel: l10n.mapAttributionsTitle,
-                    minHeight: KubusMapMetrics.mobileControlSize,
-                    onPressed: () =>
-                        unawaited(showKubusMapAttributionDialog(context)),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         );
       },
     );
+  }
+
+  void _scheduleMobileRailMeasurement(Size viewportSize) {
+    if (_railMeasurementScheduled) return;
+    _railMeasurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _railMeasurementScheduled = false;
+      if (!mounted) return;
+      final searchRect = _rectInMapViewport(_searchSurfaceKey);
+      final extraContentRect = _rectInMapViewport(_searchExtraContentKey);
+      final railRect = _rectInMapViewport(_primaryControlsKey);
+      final media = MediaQuery.of(context);
+      final reservedBottom = _isWalkingFocusedMode
+          ? media.viewPadding.bottom
+          : media.padding.bottom;
+      final signature = <Object?>[
+        viewportSize.width,
+        viewportSize.height,
+        reservedBottom,
+        _isWalkingFocusedMode,
+        searchRect?.bottom,
+        extraContentRect?.bottom,
+        railRect?.height,
+      ].join(':');
+      if (signature == _lastRailMeasurementSignature) return;
+      _lastRailMeasurementSignature = signature;
+      _safeSetState(() {});
+    });
   }
 
   void _openMobileMapTools() {
@@ -6270,12 +6347,9 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildBottomSheet(
-    ThemeData theme,
-    List<Artwork> artworks,
-    double discoveryProgress,
-    bool isLoading,
-  ) {
+  Widget _buildBottomSheet(ThemeData theme, List<Artwork> artworks,
+      double discoveryProgress, bool isLoading,
+      {required double reservedBottom}) {
     final sheet = Align(
       // Keeps this subtree's element across context-surface transitions so the
       // sheet is never re-inflated underneath _sheetController. See
@@ -6285,8 +6359,8 @@ class _MapScreenState extends State<MapScreen>
       child: Padding(
         // Nearby remains a peek above the persistent mobile navigation rather
         // than being partially covered by it at short heights.
-        padding: const EdgeInsets.only(
-          bottom: KubusLayout.mainBottomNavBarHeight,
+        padding: EdgeInsets.only(
+          bottom: reservedBottom,
         ),
         child: NotificationListener<DraggableScrollableNotification>(
           onNotification: (notification) {
