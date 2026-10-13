@@ -17,6 +17,9 @@ import '../../widgets/kubus_snackbar.dart';
 import '../../screens/settings_screen.dart';
 import '../../screens/desktop/desktop_settings_screen.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
+import '../../core/shell_routes.dart';
+import '../../services/backend_api_service.dart';
+import '../../utils/design_tokens.dart';
 import 'analytics_blocked_copy.dart';
 import 'analytics_capability_resolver.dart';
 import 'analytics_entity_registry.dart';
@@ -33,6 +36,91 @@ import 'widgets/analytics_overview_grid.dart';
 import 'widgets/analytics_shell_scaffold.dart';
 import 'widgets/analytics_state_widgets.dart';
 import 'widgets/analytics_trend_panel.dart';
+
+@visibleForTesting
+void handleAnalyticsBack(BuildContext context, {required bool hasAuthSession}) {
+  final shellScope = DesktopShellScope.of(context);
+  if (shellScope?.canPop ?? false) {
+    shellScope!.popScreen();
+    return;
+  }
+
+  final navigator = Navigator.of(context);
+  if (navigator.canPop()) {
+    navigator.pop();
+    return;
+  }
+
+  navigator.pushReplacementNamed(
+    hasAuthSession ? ShellRoutes.main : ShellRoutes.map,
+  );
+}
+
+class AnalyticsStandaloneBackScope extends StatelessWidget {
+  const AnalyticsStandaloneBackScope({
+    super.key,
+    required this.embedded,
+    required this.onBack,
+    required this.child,
+  });
+
+  final bool embedded;
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // DesktopShell already owns platform Back for its screen stack. A second
+    // PopScope here could consume one key press twice.
+    if (embedded || DesktopShellScope.of(context) != null) return child;
+    return PopScope<Object?>(
+      canPop: Navigator.of(context).canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) onBack();
+      },
+      child: child,
+    );
+  }
+}
+
+class AnalyticsStandaloneStatePage extends StatelessWidget {
+  const AnalyticsStandaloneStatePage({
+    super.key,
+    required this.onBack,
+    required this.child,
+  });
+
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                key: const ValueKey<String>('analytics_standalone_back'),
+                onPressed: onBack,
+                tooltip: l10n.commonBack,
+                constraints: const BoxConstraints.tightFor(
+                  width: KubusSizes.iconActionSize,
+                  height: KubusSizes.iconActionSize,
+                ),
+                icon: const Icon(Icons.arrow_back),
+              ),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class UnifiedAnalyticsScreen extends StatefulWidget {
   const UnifiedAnalyticsScreen({
@@ -78,6 +166,27 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scheduleRoleReviewLoad();
+  }
+
+  void _handleBack() {
+    handleAnalyticsBack(
+      context,
+      hasAuthSession: BackendApiService().hasAuthSession,
+    );
+  }
+
+  Widget _withStandaloneSystemBack(Widget child) {
+    return AnalyticsStandaloneBackScope(
+      embedded: widget.embedded,
+      onBack: _handleBack,
+      child: child,
+    );
+  }
+
+  Widget _standaloneStatePage(Widget state) {
+    return _withStandaloneSystemBack(
+      AnalyticsStandaloneStatePage(onBack: _handleBack, child: state),
+    );
   }
 
   @override
@@ -140,10 +249,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
             : null,
       );
       if (widget.embedded) return permissionState;
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(child: permissionState),
-      );
+      return _standaloneStatePage(permissionState);
     }
 
     final metrics = capabilities.allowedMetrics;
@@ -153,10 +259,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
         description: l10n.analyticsNoMetricsDescription,
       );
       if (widget.embedded) return empty;
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(child: empty),
-      );
+      return _standaloneStatePage(empty);
     }
 
     final selectedMetric = _selectedMetric(
@@ -181,12 +284,14 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     ];
 
     if (subjectId.isNotEmpty) {
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: entityType,
-        entityId: subjectId,
-        metrics: snapshotMetricIds,
-        scope: scopeValue,
-      ));
+      unawaited(
+        statsProvider.ensureSnapshot(
+          entityType: entityType,
+          entityId: subjectId,
+          metrics: snapshotMetricIds,
+          scope: scopeValue,
+        ),
+      );
     }
 
     final snapshot = subjectId.isEmpty
@@ -213,28 +318,32 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
         ) &&
         subjectId.isNotEmpty;
     if (canLoadSeries) {
-      unawaited(statsProvider.ensureSeries(
-        entityType: entityType,
-        entityId: subjectId,
-        metric: selectedMetric.id,
-        bucket: window.bucket,
-        timeframe: window.timeframe,
-        from: window.currentFrom.toIso8601String(),
-        to: window.currentTo.toIso8601String(),
-        groupBy: groupBy?.apiValue,
-        scope: scopeValue,
-      ));
-      unawaited(statsProvider.ensureSeries(
-        entityType: entityType,
-        entityId: subjectId,
-        metric: selectedMetric.id,
-        bucket: window.bucket,
-        timeframe: window.timeframe,
-        from: window.previousFrom.toIso8601String(),
-        to: window.previousTo.toIso8601String(),
-        groupBy: groupBy?.apiValue,
-        scope: scopeValue,
-      ));
+      unawaited(
+        statsProvider.ensureSeries(
+          entityType: entityType,
+          entityId: subjectId,
+          metric: selectedMetric.id,
+          bucket: window.bucket,
+          timeframe: window.timeframe,
+          from: window.currentFrom.toIso8601String(),
+          to: window.currentTo.toIso8601String(),
+          groupBy: groupBy?.apiValue,
+          scope: scopeValue,
+        ),
+      );
+      unawaited(
+        statsProvider.ensureSeries(
+          entityType: entityType,
+          entityId: subjectId,
+          metric: selectedMetric.id,
+          bucket: window.bucket,
+          timeframe: window.timeframe,
+          from: window.previousFrom.toIso8601String(),
+          to: window.previousTo.toIso8601String(),
+          groupBy: groupBy?.apiValue,
+          scope: scopeValue,
+        ),
+      );
     }
 
     final series = canLoadSeries
@@ -327,94 +436,101 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final insights = _insights(selectedMetric, summary, timeframe, l10n);
     final comparisons = _comparisons(selectedMetric, summary, l10n);
 
-    return AnalyticsShellScaffold(
-      embedded: widget.embedded,
-      header: AnalyticsHeader(
-        title: preset.localizedTitle(l10n),
-        subtitle: preset.localizedSubtitle(l10n),
-        scopeLabel: preset.localizedScopeLabel(l10n),
-        icon: preset.icon,
-        scopeBadge: capabilities.scope.localizedLabel(l10n),
-        availablePresets: availablePresets,
-        activePreset: preset,
-        onPresetSelected: (kind) {
-          setState(() => _activePresetKind = kind);
-          _scheduleRoleReviewLoad();
-        },
-        canExport: capabilities.canExport,
-        onExport: () => unawaited(_exportAnalytics(
-          preset: preset,
-          metric: selectedMetric,
-          summary: summary,
-          window: window,
-        )),
-        onShare: () => unawaited(_shareAnalytics(
-          preset: preset,
-          metric: selectedMetric,
-          summary: summary,
-          timeframe: timeframe,
-        )),
-      ),
-      filterBar: AnalyticsFilterBar(
-        metrics: metrics,
-        selectedMetricId: selectedMetric.id,
-        timeframe: timeframe,
-        onMetricChanged: (metricId) {
-          filtersProvider.setMetricFor(
-            preset.contextKey,
-            metricId,
-            allowedMetrics: metrics.map((metric) => metric.id),
-          );
-        },
-        onTimeframeChanged: (next) {
-          filtersProvider.setTimeframeFor(preset.contextKey, next);
-        },
-      ),
-      filterSummary: AnalyticsFilterSummaryBar(
-        metrics: metrics,
-        selectedMetricId: selectedMetric.id,
-        timeframe: timeframe,
-        onMetricChanged: (metricId) {
-          filtersProvider.setMetricFor(
-            preset.contextKey,
-            metricId,
-            allowedMetrics: metrics.map((metric) => metric.id),
-          );
-        },
-        onTimeframeChanged: (next) {
-          filtersProvider.setTimeframeFor(preset.contextKey, next);
-        },
-      ),
-      overview: AnalyticsOverviewGrid(
-        cards: overviewCards,
-        isLoading: snapshotLoading,
-        selectedMetricId: selectedMetric.id,
-        onMetricSelected: (metricId) {
-          filtersProvider.setMetricFor(
-            preset.contextKey,
-            metricId,
-            allowedMetrics: metrics.map((metric) => metric.id),
-          );
-        },
-      ),
-      trend: canLoadSeries
-          ? AnalyticsTrendPanel(
+    return _withStandaloneSystemBack(
+      AnalyticsShellScaffold(
+        embedded: widget.embedded,
+        header: AnalyticsHeader(
+          title: preset.localizedTitle(l10n),
+          subtitle: preset.localizedSubtitle(l10n),
+          scopeLabel: preset.localizedScopeLabel(l10n),
+          icon: preset.icon,
+          scopeBadge: capabilities.scope.localizedLabel(l10n),
+          availablePresets: availablePresets,
+          activePreset: preset,
+          onPresetSelected: (kind) {
+            setState(() => _activePresetKind = kind);
+            _scheduleRoleReviewLoad();
+          },
+          canExport: capabilities.canExport,
+          onBack: widget.embedded ? null : _handleBack,
+          onExport: () => unawaited(
+            _exportAnalytics(
+              preset: preset,
               metric: selectedMetric,
               summary: summary,
-              labels: window.labels(),
-              timeframe: timeframe,
-              isLoading: seriesLoading,
-              error: seriesError,
-            )
-          : AnalyticsInlineEmptyState(
-              title: l10n.analyticsSeriesUnavailableTitle,
-              description: l10n.analyticsSeriesUnavailableDescription,
-              kind: AnalyticsInlineStateKind.unsupported,
+              window: window,
             ),
-      insights: AnalyticsInsightsPanel(insights: insights),
-      comparison: AnalyticsComparePanel(
-        comparisons: comparisons,
-        groupTotals: summary.groupTotals,
+          ),
+          onShare: () => unawaited(
+            _shareAnalytics(
+              preset: preset,
+              metric: selectedMetric,
+              summary: summary,
+              timeframe: timeframe,
+            ),
+          ),
+        ),
+        filterBar: AnalyticsFilterBar(
+          metrics: metrics,
+          selectedMetricId: selectedMetric.id,
+          timeframe: timeframe,
+          onMetricChanged: (metricId) {
+            filtersProvider.setMetricFor(
+              preset.contextKey,
+              metricId,
+              allowedMetrics: metrics.map((metric) => metric.id),
+            );
+          },
+          onTimeframeChanged: (next) {
+            filtersProvider.setTimeframeFor(preset.contextKey, next);
+          },
+        ),
+        filterSummary: AnalyticsFilterSummaryBar(
+          metrics: metrics,
+          selectedMetricId: selectedMetric.id,
+          timeframe: timeframe,
+          onMetricChanged: (metricId) {
+            filtersProvider.setMetricFor(
+              preset.contextKey,
+              metricId,
+              allowedMetrics: metrics.map((metric) => metric.id),
+            );
+          },
+          onTimeframeChanged: (next) {
+            filtersProvider.setTimeframeFor(preset.contextKey, next);
+          },
+        ),
+        overview: AnalyticsOverviewGrid(
+          cards: overviewCards,
+          isLoading: snapshotLoading,
+          selectedMetricId: selectedMetric.id,
+          onMetricSelected: (metricId) {
+            filtersProvider.setMetricFor(
+              preset.contextKey,
+              metricId,
+              allowedMetrics: metrics.map((metric) => metric.id),
+            );
+          },
+        ),
+        trend: canLoadSeries
+            ? AnalyticsTrendPanel(
+                metric: selectedMetric,
+                summary: summary,
+                labels: window.labels(),
+                timeframe: timeframe,
+                isLoading: seriesLoading,
+                error: seriesError,
+              )
+            : AnalyticsInlineEmptyState(
+                title: l10n.analyticsSeriesUnavailableTitle,
+                description: l10n.analyticsSeriesUnavailableDescription,
+                kind: AnalyticsInlineStateKind.unsupported,
+              ),
+        insights: AnalyticsInsightsPanel(insights: insights),
+        comparison: AnalyticsComparePanel(
+          comparisons: comparisons,
+          groupTotals: summary.groupTotals,
+        ),
       ),
     );
   }
@@ -589,9 +705,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final metricLabel = metric.localizedLabel(l10n);
     final insights = <AnalyticsInsightData>[
       AnalyticsInsightData(
-        title: l10n.analyticsInsightActivePatternTitle(
-          timeframe.toUpperCase(),
-        ),
+        title: l10n.analyticsInsightActivePatternTitle(timeframe.toUpperCase()),
         description: l10n.analyticsInsightActivePatternDescription(
           activeBuckets,
           totalBuckets,
@@ -677,12 +791,14 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       ..writeln(presetTitle)
       ..writeln(l10n.analyticsShareMetricValue(metricLabel))
       ..writeln(l10n.analyticsSharePeriodValue(timeframe.toUpperCase()))
-      ..writeln(l10n.analyticsShareTotalValue(
-        metric.formatValue(summary.currentTotal),
-      ))
-      ..writeln(l10n.analyticsShareChangeValue(
-        _formatChange(l10n, summary.changePercent),
-      ));
+      ..writeln(
+        l10n.analyticsShareTotalValue(metric.formatValue(summary.currentTotal)),
+      )
+      ..writeln(
+        l10n.analyticsShareChangeValue(
+          _formatChange(l10n, summary.changePercent),
+        ),
+      );
 
     try {
       await SharePlus.instance.share(

@@ -5,6 +5,8 @@ import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
 import 'package:art_kubus/widgets/detail/profile_relationship_actions.dart';
 import 'package:art_kubus/widgets/detail/profile_utility_actions.dart';
 import 'package:art_kubus/widgets/institution_badge.dart';
+import 'package:art_kubus/widgets/profile/profile_owner_identity.dart';
+import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,7 +21,7 @@ import '../support/profile_screen_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const mobileWidths = <double>[320, 360, 390, 412];
+  const mobileWidths = <double>[320, 360, 390, 393, 412, 430];
   const desktopWidths = <double>[768, 1024, 1200, 1440];
 
   final variants = <String, User>{
@@ -199,6 +201,182 @@ void main() {
   });
 
   group('action hierarchy and geometry', () {
+    testWidgets('ordinary phone widths keep identity beside the avatar', (
+      tester,
+    ) async {
+      for (final surface in <ProfileSurface>[
+        ProfileSurface.mobileOwner,
+        ProfileSurface.mobilePublic,
+      ]) {
+        for (final width in <double>[320, 360, 393, 412, 430]) {
+          await pumpProfileSurface(
+            tester,
+            surface: surface,
+            size: Size(width, 1000),
+            user: variants['long name + long handle'],
+          );
+          final avatar = tester.getRect(
+            find.byKey(const ValueKey<String>('profile-hero-avatar-mount')),
+          );
+          final hero = find
+              .ancestor(
+                of: find.byKey(
+                  const ValueKey<String>('profile-hero-avatar-mount'),
+                ),
+                matching: find.byType(ProfileIdentityHero),
+              )
+              .first;
+          final identity = tester.getRect(
+            find
+                .descendant(
+                  of: hero,
+                  matching: find.byType(ProfileIdentityBlock),
+                )
+                .first,
+          );
+          expect(
+            identity.left,
+            greaterThan(avatar.right),
+            reason: '$surface width=$width',
+          );
+          expect(
+            (identity.top - avatar.top).abs(),
+            lessThan(40),
+            reason: '$surface width=$width',
+          );
+          expectNoUnexpectedRenderErrors();
+        }
+      }
+    });
+
+    testWidgets('mobile owner and visitor actions follow the identity group', (
+      tester,
+    ) async {
+      for (final surface in <ProfileSurface>[
+        ProfileSurface.mobileOwner,
+        ProfileSurface.mobilePublic,
+      ]) {
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          size: const Size(393, 1100),
+          user: variants['artist'],
+        );
+        final hero = find
+            .ancestor(
+              of: find.byKey(
+                const ValueKey<String>('profile-hero-avatar-mount'),
+              ),
+              matching: find.byType(ProfileIdentityHero),
+            )
+            .first;
+        final identity = tester.getRect(
+          find
+              .descendant(
+                of: hero,
+                matching: find.byType(ProfileIdentityBlock),
+              )
+              .first,
+        );
+        final actions = surface == ProfileSurface.mobileOwner
+            ? find.byType(ProfileOwnerActions)
+            : find.byType(ProfileRelationshipActions);
+        expect(actions, findsOneWidget, reason: '$surface');
+        expect(
+          tester.getRect(actions).top,
+          greaterThan(identity.bottom),
+          reason: '$surface actions have a full-width run',
+        );
+        expectNoUnexpectedRenderErrors();
+      }
+    });
+
+    testWidgets('long identity stays legible at 200% on phone widths', (
+      tester,
+    ) async {
+      for (final surface in <ProfileSurface>[
+        ProfileSurface.mobileOwner,
+        ProfileSurface.mobilePublic,
+      ]) {
+        for (final width in <double>[320, 360, 393, 412, 430]) {
+          await pumpProfileSurface(
+            tester,
+            surface: surface,
+            size: Size(width, 1200),
+            textScale: 2.0,
+            user: variants['long name + long handle'],
+          );
+          _assertHandleIntegrity(tester, variants['long name + long handle']!);
+          final avatar = tester.getRect(
+            find.byKey(const ValueKey<String>('profile-hero-avatar-mount')),
+          );
+          final hero = find
+              .ancestor(
+                of: find.byKey(
+                  const ValueKey<String>('profile-hero-avatar-mount'),
+                ),
+                matching: find.byType(ProfileIdentityHero),
+              )
+              .first;
+          final identity = tester.getRect(
+            find
+                .descendant(
+                  of: hero,
+                  matching: find.byType(ProfileIdentityBlock),
+                )
+                .first,
+          );
+          expect(
+            identity.left,
+            greaterThan(avatar.right),
+            reason: '$surface width=$width at 200%',
+          );
+          expectNoUnexpectedRenderErrors();
+        }
+      }
+    });
+
+    testWidgets('desktop identity and action row stay beside the avatar', (
+      tester,
+    ) async {
+      for (final surface in <ProfileSurface>[
+        ProfileSurface.desktopOwner,
+        ProfileSurface.desktopPublic,
+      ]) {
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          size: const Size(1024, 1000),
+        );
+        final avatar = tester.getRect(
+          find.byKey(const ValueKey<String>('profile-hero-avatar-mount')),
+        );
+        final hero = find
+            .ancestor(
+              of: find.byKey(
+                const ValueKey<String>('profile-hero-avatar-mount'),
+              ),
+              matching: find.byType(ProfileIdentityHero),
+            )
+            .first;
+        final identity = tester.getRect(
+          find
+              .descendant(
+                of: hero,
+                matching: find.byType(ProfileIdentityBlock),
+              )
+              .first,
+        );
+        expect(identity.left, greaterThan(avatar.right), reason: '$surface');
+        expect(
+          (identity.top - avatar.top).abs(),
+          lessThan(48),
+          reason: '$surface',
+        );
+        expectNoUnexpectedRenderErrors();
+      }
+    });
+
     testWidgets('overlay utility actions all meet the 44px target', (
       tester,
     ) async {

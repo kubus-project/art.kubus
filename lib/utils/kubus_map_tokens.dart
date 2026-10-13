@@ -65,6 +65,9 @@ abstract final class KubusMapMetrics {
   /// Visible mobile primary control size, including its tap target.
   static const double mobileControlSize = 48.0;
 
+  /// Separation between the mobile map rail and the Nearby sheet edge.
+  static const double mobileControlSheetGap = 14.0;
+
   /// Map chrome control target on every platform (desktop toolbar, filter and
   /// discovery toggles, credit row). The app header keeps its own 44px metric.
   static const double chromeControlSize = 48.0;

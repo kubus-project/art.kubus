@@ -24,6 +24,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     required this.viewportScope,
     required this.radiusKm,
     required this.titleKey,
+    required this.headerMeasurementKey,
     required this.discoveryProgress,
     required this.sort,
     required this.useGrid,
@@ -45,6 +46,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
   final bool viewportScope;
   final double radiusKm;
   final Key? titleKey;
+  final Key? headerMeasurementKey;
   final double? discoveryProgress;
   final KubusNearbyArtSort sort;
   final bool useGrid;
@@ -132,6 +134,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
           child: KubusNearbyArtPanelHeader(
             layout: layout,
             titleKey: titleKey,
+            measurementKey: headerMeasurementKey,
             artworkCount: artworks.length,
             discoveryProgress: discoveryProgress,
             viewportScope: viewportScope,

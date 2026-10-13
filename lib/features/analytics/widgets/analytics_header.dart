@@ -19,6 +19,7 @@ class AnalyticsHeader extends StatelessWidget {
     required this.canExport,
     required this.onExport,
     required this.onShare,
+    this.onBack,
   });
 
   final String title;
@@ -32,6 +33,7 @@ class AnalyticsHeader extends StatelessWidget {
   final bool canExport;
   final VoidCallback onExport;
   final VoidCallback onShare;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +53,7 @@ class AnalyticsHeader extends StatelessWidget {
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(KubusRadius.sm),
-            border: Border.all(
-              color: accent.withValues(alpha: 0.32),
-            ),
+            border: Border.all(color: accent.withValues(alpha: 0.32)),
           ),
           child: Icon(icon, color: accent),
         ),
@@ -108,11 +108,7 @@ class AnalyticsHeader extends StatelessWidget {
       children: [
         OutlinedButton.icon(
           onPressed: onShare,
-          icon: Icon(
-            Icons.ios_share_outlined,
-            size: 18,
-            color: accent,
-          ),
+          icon: Icon(Icons.ios_share_outlined, size: 18, color: accent),
           label: Text(l10n.commonShare),
         ),
         FilledButton.tonalIcon(
@@ -127,6 +123,21 @@ class AnalyticsHeader extends StatelessWidget {
       ],
     );
 
+    final titleWithBack = onBack == null
+        ? titleBlock
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                key: const ValueKey<String>('analytics_standalone_back'),
+                onPressed: onBack,
+                tooltip: l10n.commonBack,
+                icon: const Icon(Icons.arrow_back),
+              ),
+              Expanded(child: titleBlock),
+            ],
+          );
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         compact ? KubusSpacing.md : KubusSpacing.xl,
@@ -138,13 +149,20 @@ class AnalyticsHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (compact) ...[
-            titleBlock,
+            titleWithBack,
             const SizedBox(height: KubusSpacing.md),
             actions,
           ] else
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (onBack != null)
+                  IconButton(
+                    key: const ValueKey<String>('analytics_standalone_back'),
+                    onPressed: onBack,
+                    tooltip: l10n.commonBack,
+                    icon: const Icon(Icons.arrow_back),
+                  ),
                 Expanded(child: titleBlock),
                 const SizedBox(width: KubusSpacing.lg),
                 actions,
@@ -157,8 +175,10 @@ class AnalyticsHeader extends StatelessWidget {
               runSpacing: KubusSpacing.sm,
               children: availablePresets.map((preset) {
                 final selected = preset.kind == activePreset.kind;
-                final chipAccent =
-                    AnalyticsMetricColors.resolvePreset(context, preset.kind);
+                final chipAccent = AnalyticsMetricColors.resolvePreset(
+                  context,
+                  preset.kind,
+                );
                 return ChoiceChip(
                   selected: selected,
                   avatar: Icon(

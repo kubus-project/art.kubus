@@ -32,13 +32,15 @@ import 'profile_cover_field.dart';
 /// * The plate is as wide as the identity it carries (capped at
 ///   [plateMaxWidth]), not as wide as the row: a short name gets a compact
 ///   plate, never a slab that fills the space because the space exists.
-/// * Relationship actions belong to the same horizontal composition: directly
-///   after the compact plate, top-aligned with it, where the width allows it;
-///   on their own run inside the plate where it does not. A wide plate never
-///   leaves the actions as a detached island.
+/// * Relationship and owner actions belong to the same composition. Wide
+///   layouts place them beside the identity; phone layouts give them a
+///   full-width run immediately below the avatar/identity group, so they do
+///   not compete with the narrow text measure.
 /// * The role is said once. Artist and institution accounts carry their role
 ///   badge inside the identity block, so the hero's role eyebrow is shown only
 ///   for an account without a role badge.
+/// * On ordinary phone widths, the avatar sits beside a wrapping identity
+///   block. Only exceptionally narrow containers stack the two.
 /// * The avatar is mounted bare: its own shape plus a soft neutral shadow for
 ///   contrast over a photograph, no second frame around an already-shaped
 ///   mark.
@@ -62,7 +64,6 @@ class ProfileIdentityHero extends StatelessWidget {
     this.isVerified = false,
     this.coverImageUrl,
     this.coverSemanticLabel,
-    this.onCoverError,
     this.roleLabel,
     this.actions,
     this.identityStatus,
@@ -93,10 +94,6 @@ class ProfileIdentityHero extends StatelessWidget {
   /// Public entity media is content, so a public profile passes a label.
   final String? coverSemanticLabel;
 
-  /// Called once when the cover image fails, so the surface can stop
-  /// re-requesting a known-bad URL.
-  final VoidCallback? onCoverError;
-
   /// The role as a word above the name, for an account whose role is not
   /// already carried by a badge. Ignored for artists and institutions: their
   /// [ProfileIdentityBlock] badge is the one public role indicator.
@@ -126,8 +123,9 @@ class ProfileIdentityHero extends StatelessWidget {
   /// Above this available width the actions share the plate's row.
   static const double actionsBesideIdentityWidth = 680;
 
-  /// Below this the avatar sits above the plate instead of beside it.
-  static const double avatarAbovePlateWidth = 400;
+  /// Below this exceptionally narrow width, the avatar sits above the plate.
+  /// Ordinary phones keep the avatar beside a wrapping identity block.
+  static const double avatarAbovePlateWidth = 256;
 
   /// Width reserved for the actions when they sit beside the identity: wide
   /// enough that Follow and Message share one row (the actions stack below
@@ -168,12 +166,9 @@ class ProfileIdentityHero extends StatelessWidget {
           identityStatus: identityStatus,
           density: density,
           nameStyle: nameStyle,
-          // Actions wrap into the plate on their own run whenever the row is
-          // too narrow to hold them beside the identity.
-          actions: actionsBeside ? null : actions,
         );
 
-        final composition = avatarBesidePlate
+        final identity = avatarBesidePlate
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -206,16 +201,28 @@ class ProfileIdentityHero extends StatelessWidget {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Phone: the same conceptual order — mark, then identity,
-                  // then relationship — stacked rather than a shrunken copy
-                  // of the desktop row.
+                  // Only exceptionally narrow containers stack the mark and
+                  // identity. Ordinary phone widths use the shared row.
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child:
-                        ProfileAvatarMount(radius: avatarRadius, child: avatar),
+                    child: ProfileAvatarMount(
+                      radius: avatarRadius,
+                      child: avatar,
+                    ),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
                   plate,
+                ],
+              );
+        final composition = actionsBeside || actions == null
+            ? identity
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  identity,
+                  const SizedBox(height: KubusSpacing.md),
+                  actions!,
                 ],
               );
 
@@ -238,17 +245,15 @@ class ProfileIdentityHero extends StatelessWidget {
                             imageUrl: coverImageUrl,
                             fit: BoxFit.cover,
                             filterQuality: FilterQuality.medium,
+                            skipRecentlyFailed: true,
                             semanticLabel: coverSemanticLabel,
                             excludeFromSemantics: coverSemanticLabel == null,
                             placeholderBuilder: (context) =>
                                 ColoredBox(color: roles.surfaceRaised),
-                            errorBuilder: (context, _, __) {
-                              onCoverError?.call();
-                              return ProfileCoverField(
-                                isArtist: isArtist,
-                                isInstitution: isInstitution,
-                              );
-                            },
+                            errorBuilder: (context, _, __) => ProfileCoverField(
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                            ),
                           ),
                           // Light scrim: the plate carries its own tint, so
                           // this only settles the image under the avatar and
@@ -343,7 +348,6 @@ class _IdentityPlate extends StatelessWidget {
     required this.identityStatus,
     required this.density,
     required this.nameStyle,
-    required this.actions,
   });
 
   final Color accent;
@@ -356,7 +360,6 @@ class _IdentityPlate extends StatelessWidget {
   final Widget? identityStatus;
   final ProfileIdentityDensity density;
   final TextStyle? nameStyle;
-  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -379,8 +382,9 @@ class _IdentityPlate extends StatelessWidget {
           showBorder: false,
           // Enough tint that foreground contrast is the ordinary surface
           // contrast, whatever photograph is underneath.
-          backgroundColor:
-              roles.surface.withValues(alpha: isDark ? 0.84 : 0.88),
+          backgroundColor: roles.surface.withValues(
+            alpha: isDark ? 0.84 : 0.88,
+          ),
           padding: const EdgeInsets.fromLTRB(
             KubusSpacing.md,
             KubusSpacing.md,
@@ -430,10 +434,6 @@ class _IdentityPlate extends StatelessWidget {
               if (identityStatus != null) ...[
                 const SizedBox(height: KubusSpacing.sm),
                 identityStatus!,
-              ],
-              if (actions != null) ...[
-                const SizedBox(height: KubusSpacing.md),
-                actions!,
               ],
             ],
           ),

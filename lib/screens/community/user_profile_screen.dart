@@ -145,8 +145,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _profileController.removeListener(_syncProfileControllerState);
     _profileController.dispose();
     try {
-      Provider.of<WalletProvider>(context, listen: false)
-          .removeListener(_onWalletChanged);
+      Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onWalletChanged);
     } catch (_) {}
     try {
       SocketService().removePostListener(_handleIncomingPost);
@@ -187,8 +189,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Future<void> _loadUserStats(
-      {bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
+  Future<void> _loadUserStats({
+    bool skipFollowersOverwrite = false,
+    bool forceRefresh = false,
+  }) async {
     await _profileController.loadStats(
       statsProvider: context.read<StatsProvider>(),
       skipFollowersOverwrite: skipFollowersOverwrite,
@@ -250,7 +254,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
     } catch (e) {
       debugPrint(
-          'UserProfileScreen: failed to toggle follow for ${profile.id}: $e');
+        'UserProfileScreen: failed to toggle follow for ${profile.id}: $e',
+      );
       if (!mounted) return;
 
       final message = e.toString().contains('401')
@@ -312,12 +317,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (!mounted) return;
 
     try {
-      unawaited(ProfileScreenMethods.prefetchOtherUserProfileData(
-        context,
-        walletAddress: user!.id,
-        force: true,
-        prefetchStatsSnapshot: false,
-      ));
+      unawaited(
+        ProfileScreenMethods.prefetchOtherUserProfileData(
+          context,
+          walletAddress: user!.id,
+          force: true,
+          prefetchStatsSnapshot: false,
+        ),
+      );
     } catch (_) {}
 
     if (mounted) {
@@ -337,8 +344,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
+          flexibleSpace: const KubusGlassAppBarBackdrop(
+            showBottomDivider: true,
+          ),
           title: Text(
             l10n.userProfileTitle,
             style: KubusTextStyles.mobileAppBarTitle,
@@ -351,16 +359,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (user == null) {
       return Scaffold(
         appBar: AppBar(
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
+          flexibleSpace: const KubusGlassAppBarBackdrop(
+            showBottomDivider: true,
+          ),
           title: Text(
             l10n.userProfileTitle,
             style: KubusTextStyles.mobileAppBarTitle,
           ),
         ),
-        body: Center(
-          child: Text(l10n.userProfileNotFound),
-        ),
+        body: Center(child: Text(l10n.userProfileNotFound)),
       );
     }
 
@@ -396,9 +403,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         flexibleSpace: isCanonicalPublicEntry
             ? DecoratedBox(
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: roles.rule),
-                  ),
+                  border: Border(bottom: BorderSide(color: roles.rule)),
                 ),
               )
             : const KubusGlassAppBarBackdrop(showBottomDivider: true),
@@ -409,9 +414,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ? user!.name
                   : l10n.userProfileTitle,
           style: isCanonicalPublicEntry
-              ? KubusTextStyles.screenTitle.copyWith(
-                  color: roles.foreground,
-                )
+              ? KubusTextStyles.screenTitle.copyWith(color: roles.foreground)
               : KubusTextStyles.mobileAppBarTitle,
         ),
         actions: [
@@ -483,8 +486,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _showMoreOptions() async {
     final l10n = AppLocalizations.of(context)!;
-    final target =
-        ShareTarget.profile(walletAddress: user!.id, title: user!.name);
+    final target = ShareTarget.profile(
+      walletAddress: user!.id,
+      title: user!.name,
+    );
 
     await showModalBottomSheet<void>(
       context: context,
@@ -503,8 +508,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.ios_share),
-                    title: Text(l10n.commonShare,
-                        style: KubusTextStyles.sectionTitle),
+                    title: Text(
+                      l10n.commonShare,
+                      style: KubusTextStyles.sectionTitle,
+                    ),
                     onTap: () async {
                       Navigator.of(sheetContext).pop();
                       await ShareService().showShareSheet(
@@ -516,8 +523,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.block),
-                    title: Text(l10n.userProfileMoreOptionsBlockUser,
-                        style: KubusTextStyles.sectionTitle),
+                    title: Text(
+                      l10n.userProfileMoreOptionsBlockUser,
+                      style: KubusTextStyles.sectionTitle,
+                    ),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _showBlockConfirmation();
@@ -525,8 +534,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.report),
-                    title: Text(l10n.userProfileMoreOptionsReportUser,
-                        style: KubusTextStyles.sectionTitle),
+                    title: Text(
+                      l10n.userProfileMoreOptionsReportUser,
+                      style: KubusTextStyles.sectionTitle,
+                    ),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _showReportDialog();
@@ -544,13 +555,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   /// Identity first: the cover is the canvas, the avatar and the glass
   /// identity plate sit on it, and Follow/Message belong to the same
   /// composition. Practice follows directly underneath.
-  Widget _buildProfileHeader(ThemeProvider themeProvider,
-      {required bool isArtist, required bool isInstitution}) {
+  Widget _buildProfileHeader(
+    ThemeProvider themeProvider, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
     final l10n = AppLocalizations.of(context)!;
-    final coverImageUrl =
-        MediaUrlResolver.resolveDisplayUrl(user!.coverImageUrl);
-    final coverUrlIsKnownBad =
-        coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+    final coverImageUrl = MediaUrlResolver.resolveDisplayUrl(
+      user!.coverImageUrl,
+    );
     const avatarRadius = 42.0;
 
     return Column(
@@ -562,9 +575,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           isVerified: user!.isVerified,
           isArtist: isArtist,
           isInstitution: isInstitution,
-          coverImageUrl: coverUrlIsKnownBad ? null : coverImageUrl,
+          coverImageUrl: coverImageUrl,
           coverSemanticLabel: user!.name,
-          onCoverError: () => _noteFailedCoverImage(coverImageUrl),
           roleLabel: _profileRoleLabel(
             l10n,
             isArtist: isArtist,
@@ -597,15 +609,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _noteFailedCoverImage(String? url) {
-    if (url == null || url.isEmpty) return;
-    if (_failedCoverImageUrl == url) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() => _failedCoverImageUrl = url);
-    });
-  }
-
   String _profileRoleLabel(
     AppLocalizations l10n, {
     required bool isArtist,
@@ -619,10 +622,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   /// Practice before paperwork: the biography carries the weight, the practice
   /// fields support it, and activity and the join date are the quiet last
   /// line rather than cards of their own.
-  Widget _buildPracticeBlock(
-    AppLocalizations l10n, {
-    required bool isArtist,
-  }) {
+  Widget _buildPracticeBlock(AppLocalizations l10n, {required bool isArtist}) {
     final roles = KubusColorRoles.of(context);
     final bio = user!.bio.trim();
     final placeLabel = _publicEntryPlaceLabel();
@@ -693,10 +693,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             : l10n.userProfileTitle;
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
-      KubusTypography.content(
-        fontSize: 40,
-        fontWeight: FontWeight.w700,
-      ),
+      KubusTypography.content(fontSize: 40, fontWeight: FontWeight.w700),
       availableWidth: MediaQuery.sizeOf(context).width - (KubusSpacing.md * 2),
     ).copyWith(height: 1.02, letterSpacing: -0.45);
 
@@ -946,9 +943,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    final artworksCount = Provider.of<ArtworkProvider>(context, listen: true)
-        .artworksForWallet(user!.id)
-        .length;
+    final artworksCount = Provider.of<ArtworkProvider>(
+      context,
+      listen: true,
+    ).artworksForWallet(user!.id).length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1077,8 +1075,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final conv = await chatProvider.createConversation('', false, [user!.id]);
       if (conv != null) {
         if (!mounted) return;
-        final preloaded = Provider.of<ChatProvider>(context, listen: false)
-            .getPreloadedProfileMapsForConversation(conv.id);
+        final preloaded = Provider.of<ChatProvider>(
+          context,
+          listen: false,
+        ).getPreloadedProfileMapsForConversation(conv.id);
         // Ensure we pass non-empty members and sensible fallbacks for
         // avatars / display names.
         final rawMembers =
@@ -1150,7 +1150,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildAchievements(
-      ThemeProvider themeProvider, AppLocalizations l10n) {
+    ThemeProvider themeProvider,
+    AppLocalizations l10n,
+  ) {
     if (!(user?.showAchievements ?? true)) {
       return const SizedBox.shrink();
     }
@@ -1176,8 +1178,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       error: _postsError,
       onRetry: _loadPosts,
       totalCount: user?.postsCount,
-      accentColor:
-          Provider.of<ThemeProvider>(context, listen: false).accentColor,
+      accentColor: Provider.of<ThemeProvider>(
+        context,
+        listen: false,
+      ).accentColor,
       emptyDescription: l10n.userProfileNoPostsDescription(user!.name),
       onOpenPost: (post) => Navigator.push(
         context,
@@ -1432,13 +1436,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ElevatedButton(
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
-              final targetWallet =
-                  WalletUtils.canonical(user?.id ?? widget.userId);
+              final targetWallet = WalletUtils.canonical(
+                user?.id ?? widget.userId,
+              );
               if (targetWallet.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showKubusSnackBar(SnackBar(
-                    content: Text(l10n.userProfileUnableToBlockToast)));
+                messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.userProfileUnableToBlockToast)),
+                );
                 return;
               }
 
@@ -1449,7 +1455,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 if (!mounted) return;
                 Navigator.pop(context);
                 messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
+                  SnackBar(content: Text(l10n.userProfileBlockFailedToast)),
+                );
                 return;
               }
 
@@ -1457,8 +1464,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               Navigator.pop(context);
               messenger.showKubusSnackBar(
                 SnackBar(
-                    content: Text(l10n
-                        .userProfileBlockedToast(user?.name ?? targetWallet))),
+                  content: Text(
+                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                  ),
+                ),
               );
             },
             child: Text(l10n.userProfileBlockButtonLabel),
@@ -1487,11 +1496,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             const SizedBox(height: 16),
             _buildReportOption(dialogContext, l10n.userProfileReportReasonSpam),
             _buildReportOption(
-                dialogContext, l10n.userProfileReportReasonInappropriate),
+              dialogContext,
+              l10n.userProfileReportReasonInappropriate,
+            ),
             _buildReportOption(
-                dialogContext, l10n.userProfileReportReasonHarassment),
+              dialogContext,
+              l10n.userProfileReportReasonHarassment,
+            ),
             _buildReportOption(
-                dialogContext, l10n.userProfileReportReasonOther),
+              dialogContext,
+              l10n.userProfileReportReasonOther,
+            ),
           ],
         ),
         actions: [
@@ -1517,8 +1532,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         if (targetWallet.isEmpty) {
           messenger.showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.commonActionFailedToast),
-                duration: const Duration(seconds: 2)),
+              content: Text(l10n.commonActionFailedToast),
+              duration: const Duration(seconds: 2),
+            ),
           );
           return;
         }
@@ -1532,15 +1548,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           if (!mounted) return;
           messenger.showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.userProfileReportSubmittedToast),
-                duration: const Duration(seconds: 2)),
+              content: Text(l10n.userProfileReportSubmittedToast),
+              duration: const Duration(seconds: 2),
+            ),
           );
         } catch (_) {
           if (!mounted) return;
           messenger.showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.commonActionFailedToast),
-                duration: const Duration(seconds: 2)),
+              content: Text(l10n.commonActionFailedToast),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       },

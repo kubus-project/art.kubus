@@ -7,6 +7,48 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_map_tokens.dart';
 
+/// Geometry shared by the compact map control rail and its Nearby sheet.
+/// [viewportHeight] is the actual Stack extent; [reservedBottom] is shared by
+/// both the sheet and rail.
+@immutable
+class KubusMapMobileRailGeometry {
+  const KubusMapMobileRailGeometry({
+    required this.viewportHeight,
+    required this.reservedBottom,
+    required this.sheetExtent,
+    required this.topChromeBottom,
+    required this.railHeight,
+    this.clearance = KubusMapMetrics.mobileControlSheetGap,
+  });
+
+  final double viewportHeight;
+  final double reservedBottom;
+  final double sheetExtent;
+  final double topChromeBottom;
+  final double railHeight;
+  final double clearance;
+
+  double get sheetTop {
+    final safeViewportHeight = viewportHeight.clamp(0.0, double.infinity);
+    final bottomReservation =
+        reservedBottom.clamp(0.0, safeViewportHeight).toDouble();
+    final usableHeight = safeViewportHeight - bottomReservation;
+    return safeViewportHeight -
+        bottomReservation -
+        usableHeight * sheetExtent.clamp(0.0, 1.0).toDouble();
+  }
+
+  double get railBottomOffset => viewportHeight - sheetTop + clearance;
+
+  double get availableBandHeight => sheetTop - clearance - topChromeBottom;
+
+  bool get fits => availableBandHeight >= railHeight;
+
+  /// A zero extent means the first layout has not measured the real control
+  /// stack yet. Keep that rail hidden until its actual height is known.
+  bool get canShowRail => railHeight > 0 && fits;
+}
+
 /// Credit line for the basemap, shown visibly on the map.
 ///
 /// Mirrors the `attribution` string of the vendored Kubus styles
@@ -294,6 +336,8 @@ class KubusMapAttributionControl extends StatelessWidget {
     final theme = Theme.of(context);
     final roles = KubusColorRoles.of(context);
     final radius = BorderRadius.circular(KubusRadius.surface);
+    final compactContentExtent =
+        (minHeight - 2 * KubusSizes.hairline).clamp(0.0, minHeight).toDouble();
     final creditStyle = KubusTypography.textTheme.labelSmall?.copyWith(
       color: roles.foreground,
       fontSize: 12,
@@ -318,10 +362,14 @@ class KubusMapAttributionControl extends StatelessWidget {
                 borderRadius: radius,
                 onTap: onPressed,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: minHeight),
+                  constraints: BoxConstraints(
+                    minHeight: compact ? compactContentExtent : minHeight,
+                  ),
                   child: compact
                       ? SizedBox.square(
-                          dimension: minHeight,
+                          // The surrounding one-pixel rule is included in
+                          // the requested hit target, not added outside it.
+                          dimension: compactContentExtent,
                           child: Icon(
                             Icons.info_outline,
                             size: 20,
