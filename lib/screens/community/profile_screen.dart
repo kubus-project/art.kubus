@@ -58,6 +58,7 @@ import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/profile/profile_badges_verification_section.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
+import '../../core/shell_routes.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/common/kubus_action_tile.dart';
 import '../activity/advanced_analytics_screen.dart';
@@ -385,6 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             Navigator.push(
               context,
               MaterialPageRoute(
+                settings: const RouteSettings(name: ShellRoutes.analytics),
                 builder: (_) => AdvancedAnalyticsScreen(
                   statType: '',
                   walletAddress: wallet,
