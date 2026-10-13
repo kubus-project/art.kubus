@@ -105,7 +105,6 @@ class _FakeMapState implements KubusMapController {
   _FakeMapState({
     required this.registeredMapImages,
     required this.manager,
-    this.overview,
   }) : rendered = _rendered();
 
   final Set<String> registeredMapImages;
