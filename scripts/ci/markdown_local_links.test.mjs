@@ -82,7 +82,7 @@ test('long fences close only on an equal-or-longer run of the same marker', () =
         '[short nested fence](missing-short-nested.md)\n' +
         '~~~~~\n' +
         '[mismatched marker](missing-mismatched-marker.md)\n' +
-        '`````\n' +
+        '   ````\n' +
         '[after backtick fence](missing-after-backtick.md)\n' +
         '~~~~~md\n' +
         '~~~~\n' +
@@ -90,7 +90,9 @@ test('long fences close only on an equal-or-longer run of the same marker', () =
         '`````\n' +
         '[mismatched backtick marker](missing-mismatched-backtick.md)\n' +
         '~~~~~~\n' +
-        '[after tilde fence](missing-after-tilde.md)\n',
+        '[after tilde fence](missing-after-tilde.md)\n' +
+        '```` bad`info\n' +
+        '[invalid opener link](missing-after-invalid-opener.md)\n',
       rootDir,
     );
 
@@ -98,7 +100,8 @@ test('long fences close only on an equal-or-longer run of the same marker', () =
       'missing-before.md',
       'missing-after-backtick.md',
       'missing-after-tilde.md',
+      'missing-after-invalid-opener.md',
     ]);
-    assert.equal(result.issues.length, 3);
+    assert.equal(result.issues.length, 4);
   });
 });

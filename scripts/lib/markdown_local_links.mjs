@@ -8,7 +8,9 @@ function withoutFencedCode(markdown) {
   for (const line of markdown.split(/\r?\n/)) {
     const opening = /^ {0,3}(`{3,}|~{3,})/.exec(line);
     if (!fence) {
-      if (opening) {
+      const hasInvalidBacktickInfo =
+        opening && opening[1][0] === '`' && line.slice(opening[0].length).includes('`');
+      if (opening && !hasInvalidBacktickInfo) {
         fence = { marker: opening[1][0], length: opening[1].length };
       } else {
         prose.push(line);
