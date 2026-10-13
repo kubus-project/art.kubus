@@ -39,6 +39,11 @@ controller and style epoch before registering state or publishing sources. A sta
 completion must not mark an image as registered in a replacement style. Preserve
 manager queue guards and controller lifecycle disposal.
 
+Overlapping direct marker syncs also need latest-request ownership within the same
+style: an older feature-building completion must not overwrite a newer dataset.
+Source-publication generation and controller/style freshness are separate guards.
+Do not use source generation to cancel useful cover jobs on every ordinary refresh.
+
 ## Marker presentation and grouping
 
 Canonical marker visibility depends on marker data and canonical icon assets, never
