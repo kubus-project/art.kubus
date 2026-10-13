@@ -72,3 +72,33 @@ test('links inside fenced examples and unresolved backend gitlink targets are sk
     assert.deepEqual(result.issues, []);
   });
 });
+
+test('long fences close only on an equal-or-longer run of the same marker', () => {
+  withRoot((rootDir) => {
+    const result = validate(
+      '[before](missing-before.md)\n' +
+        '````md\n' +
+        '```\n' +
+        '[short nested fence](missing-short-nested.md)\n' +
+        '~~~~~\n' +
+        '[mismatched marker](missing-mismatched-marker.md)\n' +
+        '`````\n' +
+        '[after backtick fence](missing-after-backtick.md)\n' +
+        '~~~~~md\n' +
+        '~~~~\n' +
+        '[short tilde close](missing-short-tilde-close.md)\n' +
+        '`````\n' +
+        '[mismatched backtick marker](missing-mismatched-backtick.md)\n' +
+        '~~~~~~\n' +
+        '[after tilde fence](missing-after-tilde.md)\n',
+      rootDir,
+    );
+
+    assert.deepEqual(result.checked, [
+      'missing-before.md',
+      'missing-after-backtick.md',
+      'missing-after-tilde.md',
+    ]);
+    assert.equal(result.issues.length, 3);
+  });
+});
