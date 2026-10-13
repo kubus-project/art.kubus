@@ -8,6 +8,7 @@ import 'package:art_kubus/features/map/map_layers_manager.dart';
 
 class _FakeMapLayersController implements MapLayersController {
   final List<String> calls = <String>[];
+  List<String> existingLayers = <String>[];
   final Map<String, Map<String, dynamic>> initialSourceData =
       <String, Map<String, dynamic>>{};
   final Map<String, Map<String, dynamic>> updatedSourceData =
@@ -19,7 +20,7 @@ class _FakeMapLayersController implements MapLayersController {
   @override
   Future<List<dynamic>> getLayerIds() async {
     _record('getLayerIds');
-    return const <dynamic>[];
+    return existingLayers;
   }
 
   @override
@@ -339,8 +340,19 @@ void main() {
         contains('setLayerVisibility:${ids.walkingLocationSymbolLayerId}:true'),
       );
 
+      controller.existingLayers = <String>[
+        ids.locationLayerId,
+        ids.locationAccuracyLayerId,
+        ids.walkingLocationSymbolLayerId,
+      ];
+      final reinstallStart = controller.calls.length;
       manager.onNewStyle(styleEpoch: 2);
       await manager.ensureInitialized(styleEpoch: 2);
+      final reinstall = controller.calls.sublist(reinstallStart);
+      expect(reinstall.indexOf('removeLayer:${ids.locationAccuracyLayerId}'),
+          greaterThanOrEqualTo(0));
+      expect(reinstall.indexOf('removeLayer:${ids.locationAccuracyLayerId}'),
+          lessThan(reinstall.indexOf('removeSource:${ids.locationSourceId}')));
 
       expect(controller.initialSourceData[ids.walkingRouteSourceId], route);
       final glyphVisibleCalls = controller.calls

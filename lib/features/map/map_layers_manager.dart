@@ -1272,6 +1272,8 @@ class MapLayersManager {
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeIconLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.locationLayerId);
     await _safeRemoveLayerIfExists(
+        existingLayerIds, _ids.locationAccuracyLayerId);
+    await _safeRemoveLayerIfExists(
       existingLayerIds,
       _ids.walkingLocationSymbolLayerId,
     );
