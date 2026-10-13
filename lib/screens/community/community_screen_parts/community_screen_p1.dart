@@ -876,16 +876,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final labelFontSize =
-            KubusTypography.textTheme.labelSmall?.fontSize ?? 12.0;
-        final scaledLabelFontSize =
-            MediaQuery.textScalerOf(context).scale(labelFontSize);
-        final tabHeight = (KubusHeaderMetrics.actionIcon +
-                KubusSpacing.xxs +
-                scaledLabelFontSize * 2.4 +
-                KubusSpacing.md)
-            .clamp(60.0, 112.0)
-            .toDouble();
+        final labelStyle = KubusTypography.textTheme.labelSmall;
+        final scaledLabelFontSize = MediaQuery.textScalerOf(context)
+            .scale(labelStyle?.fontSize ?? 10.0);
+        final labelLineHeight =
+            scaledLabelFontSize * (labelStyle?.height ?? 1.2);
+        final measuredTabHeight = KubusHeaderMetrics.actionIcon +
+            KubusSpacing.xxs +
+            labelLineHeight * 2 +
+            KubusSpacing.md;
+        final tabHeight = measuredTabHeight < 60 ? 60.0 : measuredTabHeight;
 
         final roles = KubusColorRoles.of(context);
         final radius = BorderRadius.circular(KubusRadius.surface);

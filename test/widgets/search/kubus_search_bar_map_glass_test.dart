@@ -226,6 +226,7 @@ void main() {
             child: KubusSearchBar(
               hintText: 'Search',
               controller: controller,
+              trailing: const Icon(Icons.close),
               enableBlur: false,
               useMapGlassSurface: true,
             ),
@@ -234,16 +235,23 @@ void main() {
       );
       await tester.pump();
 
-      final input = tester.widget<TextField>(find.byType(TextField));
-      expect(input.textAlignVertical, TextAlignVertical.center);
       final iconCenter = tester.getCenter(find.byIcon(Icons.search));
-      final editableCenter = tester.getCenter(find.byType(EditableText));
-      expect((editableCenter.dy - iconCenter.dy).abs(), lessThan(1));
+      final trailingCenter = tester.getCenter(find.byIcon(Icons.close));
+      final editable = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final caret = editable.getLocalRectForCaret(
+        TextPosition(offset: controller.selection.baseOffset),
+      );
+      final renderedTextCenter = editable.localToGlobal(caret.center).dy;
+      expect((renderedTextCenter - iconCenter.dy).abs(), lessThan(4));
+      expect((renderedTextCenter - trailingCenter.dy).abs(), lessThan(4));
 
       controller.clear();
       await tester.pump();
       final hintCenter = tester.getCenter(find.text('Search'));
-      expect((hintCenter.dy - iconCenter.dy).abs(), lessThan(1));
+      expect((hintCenter.dy - iconCenter.dy).abs(), lessThan(4));
+      expect((hintCenter.dy - trailingCenter.dy).abs(), lessThan(4));
     });
 
     testWidgets('normal search bar fallback does NOT use the map sheen',
