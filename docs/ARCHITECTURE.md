@@ -2,6 +2,67 @@
 
 This document describes the high-level architecture of the art.kubus Flutter application.
 
+The permanent [Design system](DESIGN_SYSTEM.md) owns visual contracts and the
+[Roadmap](ROADMAP.md) owns product priorities. Detailed renderer/marker/media
+ownership is in [Map system](map-system.md), rather than duplicated in agent entry
+points. Source implementations and active security/data contracts must be checked
+before changing a boundary; historical diagrams are not deployment proof.
+
+## Identity, routing and system boundaries
+
+Profiles can carry a backend account `userId` and an optional wallet address.
+`ProfileProvider` restores account identity independently of the wallet; do not
+assume a wallet identifier is the universal account principal. Preserve each API's
+actual identifier contract and permission checks. Wallet signing/attribution and
+account authentication are distinct. Artwork authorship is distinct from uploader,
+contributor/owner and provenance credit.
+
+`ShellRoutes` and the initializer own named app entry and hydrated startup. Existing
+Navigator routes and desktop shell-local history own in-app return navigation;
+avoid an additional competing stack. Deep-link/refresh entry must hydrate auth and
+providers before protected data access. Degraded startup retains public discovery.
+Do not trust query parameters as capability or identity inputs. Public URL/renderer
+ownership remains in [public entry](APP_NATIVE_PUBLIC_ENTRY.md) and
+[SEO contracts](seo-public-pages.md).
+
+The hosted backend owns PostgreSQL publication/account data and API authorization.
+Public mutations use `publicSyncService` according to `ORBITDB_SYNC_MODE`; database
+changes update both schema snapshots. IPFS/OrbitDB and optional kubus Node availability
+do not make private drafts, messages or account material part of the public archive.
+`node.kubus.site` visitor analytics and `kubus-node` fleet telemetry are separate.
+
+## Deployment and public fallback invariants
+
+The recorded deployment model uses Oracle writable primary, home standby backend
+and a DNSLink/IPFS public snapshot fallback. Revalidate live roles before operational
+work; topology prose does not authorize failover or destructive recovery. The stable
+snapshot pointer `ipns://public.kubus.site/public-index.json` is DNSLink-backed: the
+writable backend updates `_dnslink.public.kubus.site`, and gateways resolve it through
+`/ipns/public.kubus.site/...`. Do not reintroduce retired `cloudflare-ipfs.com` URLs.
+
+`GET /health/ready` is process/container health; `GET /health/writable` is writable-role
+health. The recorded Oracle HTTPS boundary uses reverse-proxy Cloudflare Origin CA;
+home uses HTTP behind Cloudflare Tunnel. HA images bake PostgreSQL and nginx config;
+the `artkubus-nginx-ssl` volume holds the Oracle secret. Preserve these constraints
+unless a separately reviewed deployment change updates the actual infrastructure.
+Never print secrets or infer primary/standby health from frontend CI.
+
+## Retained fallback and hardening constraints
+
+Preserve `CollectiblesProvider`/`CollectiblesStorage` local galleries and marketplace
+data, institution/event provider storage and `BlockListService` local state. Cached
+fallbacks are not proof that every media asset works offline. Shared storage/provider
+ownership avoids a second persistence path.
+
+Keep map web-style asset normalization and production fallback, tutorial pointer
+blocking, pre-login reauth/app-lock suppression, and configured PIN/biometric gates.
+Polling/timers are visibility/feature-gated. Backend hardening concerns retained from
+the agent audit include consistent marker ownership identifiers, shared TTL auth
+challenges for multi-instance deployment, OrbitDB write schema/size/rate limits,
+safe upload identifiers/static retrieval and alerting on repeated invalid socket joins
+or challenge bursts. These are a watchlist to revalidate against source and the
+[security policy](../SECURITY.md), not claims that every fix has shipped.
+
 ---
 
 ## Overview
