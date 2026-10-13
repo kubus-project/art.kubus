@@ -11,7 +11,7 @@ import 'kubus_cover_perf_probe.dart';
 /// marker source to be rebuilt. Done per cover and while the camera moves, that
 /// is a burst of long main-thread tasks in the middle of a pan or zoom (measured
 /// in the Wave 5B web A/B/C experiment, see
-/// `docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md`). The gate has two jobs:
+/// `docs/map-system.md`). The gate has two jobs:
 ///
 /// * [runSerial] runs cover jobs one at a time with a short breather between
 ///   them, so readbacks never occupy consecutive frames, and skips a job whose

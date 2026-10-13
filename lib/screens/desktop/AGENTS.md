@@ -38,4 +38,4 @@ Only release and emergency hotfix pull requests target `master`.
 	- “// Travel mode is viewport-based (bounds query), not huge-radius.”
 
 ## Spatial system (Wave 5B)
-`desktop_map_screen.dart` mirrors the phone map's spatial behaviour (levels of detail, constraints chips, session memory, selection pinning, follow-me yielding to a map target or search result). Change both together; see the root `AGENTS.md` and `docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md`.
+`desktop_map_screen.dart` mirrors the phone map's spatial behaviour (levels of detail, constraints chips, session memory, selection pinning, follow-me yielding to a map target or search result). Change both together; see the root `AGENTS.md` and `docs/map-system.md`.

@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
+let markdownFilesChecked = 0;
+let markdownLinksChecked = 0;
 
 const requiredFiles = [
   '.gitmodules',
@@ -75,10 +77,11 @@ function checkPackageScripts() {
 
 function checkMarkdownLinks(relativePath) {
   const text = readText(relativePath);
-  const linkPattern = /\[[^\]]+\]\(([^)]+)\)/g;
+  const prose = text.replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '');
+  const linkPattern = /\[[^\]]+\]\(<?([^)>]+)>?\)/g;
   let match;
 
-  while ((match = linkPattern.exec(text)) !== null) {
+  while ((match = linkPattern.exec(prose)) !== null) {
     const rawTarget = match[1].trim();
     if (
       rawTarget.startsWith('#') ||
@@ -88,6 +91,7 @@ function checkMarkdownLinks(relativePath) {
     ) {
       continue;
     }
+    markdownLinksChecked += 1;
 
     const [targetWithoutAnchor] = rawTarget.split('#');
     if (!targetWithoutAnchor) continue;
@@ -103,6 +107,51 @@ function checkMarkdownLinks(relativePath) {
     }
     if (!existsSync(resolved)) {
       fail(`${relativePath} has a broken local Markdown link: ${rawTarget}`);
+    }
+  }
+}
+
+function trackedMarkdownFiles() {
+  const result = spawnSync('git', ['ls-files', '--', '*.md', '**/*.md'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  if (result.status !== 0) {
+    fail(`Unable to inspect tracked Markdown: ${result.stderr || result.error?.message}`);
+    return [];
+  }
+  return [...new Set(result.stdout.split(/\r?\n/).filter(Boolean))];
+}
+
+function checkAllTrackedMarkdown() {
+  const removedPaths = [
+    'docs/PRODUCT_UX_SEO_PROGRAM.md',
+    'docs/AGENT_EXECUTION_PLAN.md',
+    'docs/DESIGN_SYSTEM_V2.md',
+    'docs/design/PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md',
+    'docs/design/PRODUCT_V5_ART_DIRECTION_RESTORATION.md',
+    'docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md',
+    'docs/design/PRODUCT_V5_MOTION_CONTRACT.md',
+    'docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md',
+    'docs/design/PRODUCT_V5_APP_AUDIT.md',
+    'docs/design/PRODUCT_V5_FINAL_UX_HARDENING.md',
+    'docs/design/PRODUCT_V5_TILE_SYSTEM_INVENTORY.md',
+    'docs/design/PRODUCT_V5_TOKEN_MIGRATION.md',
+    'docs/DESIGN_UNIFICATION_NOTES.md',
+  ];
+  for (const relativePath of trackedMarkdownFiles()) {
+    markdownFilesChecked += 1;
+    const text = readText(relativePath);
+    checkMarkdownLinks(relativePath);
+    const prose = text
+      .replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '')
+      .replace(/https?:\/\/[^\s)]+/g, '');
+    for (const removedPath of removedPaths) {
+      const escaped = removedPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replaceAll('/', '[\\\\/]');
+      if (new RegExp(escaped, 'i').test(prose)) {
+        fail(`${relativePath} refers to retired documentation path ${removedPath}`);
+      }
     }
   }
 }
@@ -214,10 +263,7 @@ requireIncludes('DESLOPPIFY.md', [
   '## Completed tasks',
 ]);
 
-checkMarkdownLinks('docs/README.md');
-checkMarkdownLinks('docs/LOCAL_VERIFICATION.md');
-checkMarkdownLinks('docs/engineering/branching-and-deployment.md');
-checkMarkdownLinks('CONTRIBUTING.md');
+checkAllTrackedMarkdown();
 
 for (const file of requiredFiles.filter((name) => name.endsWith('.md'))) {
   checkMojibake(file);
@@ -231,4 +277,8 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Docs doctor passed (${requiredFiles.length} required files checked).`);
+console.log(
+  `Docs doctor passed (${requiredFiles.length} required files, ` +
+    `${markdownFilesChecked} tracked Markdown files and ` +
+    `${markdownLinksChecked} local links checked; 0 broken links or retired-path references).`,
+);
