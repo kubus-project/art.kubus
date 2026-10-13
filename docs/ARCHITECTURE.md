@@ -463,17 +463,11 @@ navigator.pop();
 
 ### API Errors
 
-Services return typed results; providers handle errors gracefully:
-
-```dart
-try {
-  final result = await api.getData();
-  // Handle success
-} catch (e) {
-  // Log and show user-friendly message
-  _setError('Failed to load data');
-}
-```
+Follow the service's actual typed result/exception and fallback contract. Providers
+retain usable cached state and expose a localized error/retry state; a failed API
+call must not become fake success or erase valid content. Log useful diagnostics
+only under the established debug guards. Authorization failures are not permission
+to request private data from a public fallback.
 
 ---
 
