@@ -1,10 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:art_kubus/community/community_interactions.dart';
-import 'package:art_kubus/models/user.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
