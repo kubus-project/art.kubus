@@ -533,7 +533,7 @@ class KubusMarkerLayerStyler {
       if (canStyleAccuracyLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
         await controller.setLayerProperties(
-          locationAccuracyLayerId!,
+          locationAccuracyLayerId,
           kubusLocationAccuracyProperties(
             color: state.locationAccentColor!,
             pulsePhase: state.markerPulsePhase,

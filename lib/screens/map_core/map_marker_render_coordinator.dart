@@ -38,6 +38,7 @@ class MapMarkerRenderCoordinator {
     required KubusMapController Function() getKubusMapController,
     required ml.MapLibreMapController? Function() getMapController,
     required MapLayersManager? Function() getLayersManager,
+    Color Function()? getLocationAccentColor,
     required AnimationController Function() getSelectionController,
     required AnimationController Function() getAmbientController,
     required Set<String> Function() getManagedLayerIds,
@@ -50,6 +51,7 @@ class MapMarkerRenderCoordinator {
         _getKubusMapController = getKubusMapController,
         _getMapController = getMapController,
         _getLayersManager = getLayersManager,
+        _getLocationAccentColor = getLocationAccentColor,
         _getSelectionController = getSelectionController,
         _getAmbientController = getAmbientController,
         _getManagedLayerIds = getManagedLayerIds,
@@ -69,6 +71,7 @@ class MapMarkerRenderCoordinator {
   final KubusMapController Function() _getKubusMapController;
   final ml.MapLibreMapController? Function() _getMapController;
   final MapLayersManager? Function() _getLayersManager;
+  final Color Function()? _getLocationAccentColor;
   final AnimationController Function() _getSelectionController;
   final AnimationController Function() _getAmbientController;
   final Set<String> Function() _getManagedLayerIds;
@@ -172,7 +175,8 @@ class MapMarkerRenderCoordinator {
       pulseLayerId: pulseLayerId,
       locationAccuracyLayerId: kubus.ids.layers.locationAccuracyLayerId,
       state: KubusMarkerLayerStyleState(
-        locationAccentColor: _getLayersManager()?.locationAccentColor,
+        locationAccentColor: _getLocationAccentColor?.call() ??
+            _getLayersManager()?.locationAccentColor,
         pressedMarkerId: kubus.pressedMarkerId,
         hoveredMarkerId: kubus.hoveredMarkerId,
         selectedMarkerId: kubus.selectedMarkerId,

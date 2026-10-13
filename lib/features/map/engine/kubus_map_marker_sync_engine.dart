@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as dev;
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:provider/provider.dart';
 
@@ -143,19 +141,16 @@ class KubusMapMarkerSyncEngine {
   void dispose() {
     _disposed = true;
     _sourceSyncGeneration += 1;
+    _topologyFrameTimer?.cancel();
+    _clusterTransition.reset();
     _coverGate.dispose();
     _coverLoader.dispose();
   }
 
-  List<KubusClusterTransitionNode> _lastRenderedTopology =
-      const <KubusClusterTransitionNode>[];
-  String _stableTopologySignature = '';
-  String? _transitionTargetSignature;
-  List<KubusClusterTransitionNode> _transitionOriginTopology =
-      const <KubusClusterTransitionNode>[];
-  // Per-feature regroup progress of the transition in flight. Monotonic: a
-  // feature that has started moving towards its target never slides back.
-  final Map<String, double> _transitionProgressById = <String, double>{};
+  final _clusterTransition = KubusClusterTopologyTransition(
+    durationMs: MapMarkerCollisionConfig.entryRegroupDurationMs,
+  );
+  Timer? _topologyFrameTimer;
 
   Future<void> syncMarkersSafe({required ThemeProvider themeProvider}) async {
     try {
@@ -178,11 +173,9 @@ class KubusMapMarkerSyncEngine {
     final styleEpoch = mapController.styleEpoch;
     if (_topologyStyleEpoch != styleEpoch) {
       _topologyStyleEpoch = styleEpoch;
-      _lastRenderedTopology = const <KubusClusterTransitionNode>[];
-      _stableTopologySignature = '';
-      _transitionTargetSignature = null;
-      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
-      _transitionProgressById.clear();
+      _clusterTransition.reset();
+      _topologyFrameTimer?.cancel();
+      _topologyFrameTimer = null;
     }
     final sourceGeneration = ++_sourceSyncGeneration;
     bool isFresh() =>
@@ -585,117 +578,26 @@ class KubusMapMarkerSyncEngine {
     }
   }
 
-  void _applyClusterTopologyTransition(
-    List<Map<String, dynamic>> features, {
-    required bool reduceMotion,
-  }) {
-    final targetNodes = _topologyNodesFromFeatures(features);
-    final targetSignature = kubusClusterTopologySignature(targetNodes);
-    if (reduceMotion) {
-      _lastRenderedTopology = targetNodes;
-      _stableTopologySignature = targetSignature;
-      _transitionTargetSignature = null;
-      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
-      _transitionProgressById.clear();
+  void _applyClusterTopologyTransition(List<Map<String, dynamic>> features,
+      {required bool reduceMotion}) {
+    final active =
+        _clusterTransition.apply(features, reduceMotion: reduceMotion);
+    if (!active) {
+      _topologyFrameTimer?.cancel();
+      _topologyFrameTimer = null;
       return;
     }
-    if (_lastRenderedTopology.isEmpty || _stableTopologySignature.isEmpty) {
-      _lastRenderedTopology = targetNodes;
-      _stableTopologySignature = targetSignature;
-      _transitionTargetSignature = null;
-      return;
-    }
-    if (targetSignature == _stableTopologySignature) {
-      _lastRenderedTopology = targetNodes;
-      _transitionTargetSignature = null;
-      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
-      _transitionProgressById.clear();
-      return;
-    }
-
-    if (_transitionTargetSignature != targetSignature) {
-      _transitionTargetSignature = targetSignature;
-      _transitionOriginTopology = _lastRenderedTopology;
-      _transitionProgressById.clear();
-    }
-
-    // Each feature travels from its origin in the previous arrangement as its
-    // own (centre-out staggered) regroup entrance runs, so a dissolving cluster
-    // fans out progressively instead of every marker leaving at once.
-    var minProgress = 1.0;
-    final renderedNodes = <KubusClusterTransitionNode>[];
-    for (var index = 0; index < features.length; index++) {
-      final target = targetNodes[index];
-      final properties = features[index]['properties'];
-      final entryOpacity = properties is Map
-          ? (properties['entryOpacity'] as num?)?.toDouble() ?? 1.0
-          : 1.0;
-      final raw = kubusClusterRegroupFeatureProgress(
-        entryOpacity: entryOpacity,
-        startOpacity: MapMarkerCollisionConfig.entryRegroupStartOpacity,
-      );
-      final previousProgress = _transitionProgressById[target.id] ?? 0.0;
-      final featureProgress = math.max(previousProgress, raw);
-      _transitionProgressById[target.id] = featureProgress;
-      if (featureProgress < minProgress) minProgress = featureProgress;
-      final progress = Curves.easeOutCubic.transform(featureProgress);
-      final origin = resolveKubusClusterTransitionOrigin(
-        target: target,
-        previous: _transitionOriginTopology,
-      );
-      final position = origin == null
-          ? target.position
-          : interpolateKubusClusterPosition(origin, target.position, progress);
-      final geometry = features[index]['geometry'];
-      if (geometry is Map<String, dynamic>) {
-        geometry['coordinates'] = <double>[
-          position.longitude,
-          position.latitude,
-        ];
+    if (_topologyFrameTimer != null) return;
+    final epoch = _topologyStyleEpoch;
+    _topologyFrameTimer = Timer(const Duration(milliseconds: 32), () {
+      _topologyFrameTimer = null;
+      if (!_disposed &&
+          host.hostMounted &&
+          host.styleInitialized &&
+          host.kubusMapController.styleEpoch == epoch) {
+        host.requestMarkerResync();
       }
-      renderedNodes.add(
-        KubusClusterTransitionNode(
-          id: target.id,
-          memberIds: target.memberIds,
-          position: position,
-        ),
-      );
-    }
-    _lastRenderedTopology = List<KubusClusterTransitionNode>.unmodifiable(
-      renderedNodes,
-    );
-    if (minProgress >= 0.999) {
-      _stableTopologySignature = targetSignature;
-      _transitionTargetSignature = null;
-      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
-      _transitionProgressById.clear();
-      _lastRenderedTopology = targetNodes;
-    }
-  }
-
-  List<KubusClusterTransitionNode> _topologyNodesFromFeatures(
-    List<Map<String, dynamic>> features,
-  ) {
-    return List<KubusClusterTransitionNode>.unmodifiable(
-      features.map((feature) {
-        final properties = feature['properties'] as Map;
-        final geometry = feature['geometry'] as Map;
-        final coordinates = geometry['coordinates'] as List;
-        final id = (properties['id'] ?? feature['id']).toString();
-        final rawMembers = properties['clusterMemberIds'];
-        final memberIds = rawMembers is List
-            ? rawMembers.map((value) => value.toString()).toSet()
-            : <String>{(properties['markerId'] ?? id).toString()};
-        return KubusClusterTransitionNode(
-          id: id,
-          memberIds: Set<String>.unmodifiable(memberIds),
-          position: LatLng(
-            (coordinates[1] as num).toDouble(),
-            (coordinates[0] as num).toDouble(),
-          ),
-        );
-      }),
-    );
+    });
   }
 
   /// Pre-registers marker icons in batched parallel to avoid waterfall.

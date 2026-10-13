@@ -987,6 +987,7 @@ class _MapScreenState extends State<MapScreen>
       getKubusMapController: () => _kubusMapController,
       getMapController: () => _mapController,
       getLayersManager: () => _layersManager,
+      getLocationAccentColor: () => context.read<ThemeProvider>().accentColor,
       getSelectionController: () => _animationController,
       getAmbientController: () => _ambientMarkerController,
       getManagedLayerIds: () => _managedLayerIds,
