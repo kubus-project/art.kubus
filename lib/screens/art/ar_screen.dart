@@ -316,7 +316,7 @@ class _ARScreenState extends State<ARScreen>
   );
   final ARMarkerService _arMarkerService = ARMarkerService();
   final WalkingLocationApi _locationService =
-      const GeolocatorWalkingLocationService();
+      GeolocatorWalkingLocationService.shared;
 
   /// Owns mode selection and the camera handoff between the scanner and AR.
   late final ArCameraOrchestrator _cameraOrchestrator = ArCameraOrchestrator(

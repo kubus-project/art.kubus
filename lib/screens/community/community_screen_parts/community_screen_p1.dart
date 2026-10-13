@@ -74,38 +74,27 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
   Future<loc.LocationData?> _obtainCurrentLocation() async {
     final l10n = AppLocalizations.of(context)!;
-    final location = loc.Location();
-    try {
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          _showSnack(l10n.communityLocationEnableServicesToast);
-          return null;
-        }
-      }
-
-      var permission = await location.hasPermission();
-      if (permission == loc.PermissionStatus.denied) {
-        permission = await location.requestPermission();
-      }
-      if (permission != loc.PermissionStatus.granted &&
-          permission != loc.PermissionStatus.grantedLimited) {
-        _showSnack(l10n.communityLocationPermissionRequiredToast);
-        return null;
-      }
-
-      final locationData = await location.getLocation();
-      if (locationData.latitude == null || locationData.longitude == null) {
-        _showSnack(l10n.communityLocationUnableToDetermineToast);
-        return null;
-      }
-      return locationData;
-    } catch (e) {
-      debugPrint('Location error: $e');
-      _showSnack(l10n.communityLocationUnableToAccessToast);
-      return null;
+    final result = await GeolocatorWalkingLocationService.shared
+        .acquireLiveFix(requestPermission: true);
+    if (!mounted) return null;
+    final fix = result.fix;
+    if (result.isAvailable && fix != null) {
+      return loc.LocationData.fromMap(<String, dynamic>{
+        'latitude': fix.position.latitude,
+        'longitude': fix.position.longitude,
+        'accuracy': fix.accuracyMeters,
+      });
     }
+    _showSnack(switch (result.status) {
+      WalkingLocationAccessStatus.serviceDisabled =>
+        l10n.communityLocationEnableServicesToast,
+      WalkingLocationAccessStatus.permissionDenied ||
+      WalkingLocationAccessStatus.permissionDeniedPermanently ||
+      WalkingLocationAccessStatus.permissionNotRequested =>
+        l10n.communityLocationPermissionRequiredToast,
+      _ => l10n.communityLocationUnableToDetermineToast,
+    });
+    return null;
   }
 
   /// Loads the Art discovery feed: personalised, nearby and new content

@@ -427,6 +427,7 @@ class KubusMapSourceSyncHelpers {
     required String sourceId,
     required String featureId,
     required LatLng? position,
+    double? accuracyMeters,
   }) async {
     if (controller == null) return;
     if (!styleInitialized) return;
@@ -435,6 +436,7 @@ class KubusMapSourceSyncHelpers {
     final data = pointFeatureCollection(
       featureId: featureId,
       position: position,
+      accuracyMeters: accuracyMeters,
     );
     await controller.setGeoJsonSource(sourceId, data);
   }
@@ -442,6 +444,7 @@ class KubusMapSourceSyncHelpers {
   static Map<String, dynamic> pointFeatureCollection({
     required String featureId,
     required LatLng? position,
+    double? accuracyMeters,
   }) {
     if (position == null) {
       return const <String, dynamic>{
@@ -456,7 +459,17 @@ class KubusMapSourceSyncHelpers {
         <String, dynamic>{
           'type': 'Feature',
           'id': featureId,
-          'properties': <String, dynamic>{'id': featureId},
+          'properties': <String, dynamic>{
+            'id': featureId,
+            if (accuracyMeters != null &&
+                accuracyMeters.isFinite &&
+                accuracyMeters > 0)
+              'accuracyRadiusZ0': accuracyMeters /
+                  (78271.516964 *
+                      math.cos(position.latitude.clamp(-85.051129, 85.051129) *
+                          math.pi /
+                          180)),
+          },
           'geometry': <String, dynamic>{
             'type': 'Point',
             'coordinates': <double>[position.longitude, position.latitude],

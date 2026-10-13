@@ -170,6 +170,7 @@ class MapMarkerRenderCoordinator {
       markerLayerId: markerLayerId,
       cubeIconLayerId: cubeIconLayerId,
       pulseLayerId: pulseLayerId,
+      locationAccuracyLayerId: kubus.ids.layers.locationAccuracyLayerId,
       state: KubusMarkerLayerStyleState(
         pressedMarkerId: kubus.pressedMarkerId,
         hoveredMarkerId: kubus.hoveredMarkerId,

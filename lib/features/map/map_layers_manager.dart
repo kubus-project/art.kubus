@@ -239,6 +239,7 @@ class KubusMarkerLayerStyler {
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
+    String? locationAccuracyLayerId,
     bool force = false,
   }) {
     if (controller == null) return;
@@ -266,6 +267,7 @@ class KubusMarkerLayerStyler {
         markerLayerId: markerLayerId,
         cubeIconLayerId: cubeIconLayerId,
         pulseLayerId: pulseLayerId,
+        locationAccuracyLayerId: locationAccuracyLayerId,
         state: state,
       ).whenComplete(() {
         _markerLayerStyleUpdateInFlight = false;
@@ -280,6 +282,7 @@ class KubusMarkerLayerStyler {
             markerLayerId: markerLayerId,
             cubeIconLayerId: cubeIconLayerId,
             pulseLayerId: pulseLayerId,
+            locationAccuracyLayerId: locationAccuracyLayerId,
             state: state,
             force: true,
           );
@@ -386,6 +389,7 @@ class KubusMarkerLayerStyler {
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
+    String? locationAccuracyLayerId,
   }) async {
     if (!styleInitialized) return;
     if (styleEpoch != getCurrentStyleEpoch()) return;
@@ -479,6 +483,19 @@ class KubusMarkerLayerStyler {
             circleBlur: 0.35,
             circleStrokeWidth: 0.0,
             circlePitchAlignment: 'map',
+          ),
+        );
+      }
+
+      if (locationAccuracyLayerId != null &&
+          managedLayerIds.contains(locationAccuracyLayerId)) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await controller.setLayerProperties(
+          locationAccuracyLayerId,
+          ml.CircleLayerProperties(
+            // Accuracy geometry stays fixed; only the restrained field breathes.
+            circleOpacity: 0.10 +
+                0.04 * (1 - math.cos(state.markerPulsePhase * math.pi * 2)),
           ),
         );
       }
@@ -607,6 +624,7 @@ class MapLayersIds {
 
   final String locationSourceId;
   final String locationLayerId;
+  String get locationAccuracyLayerId => '${locationLayerId}_accuracy';
 
   final String walkingRouteSourceId;
   final String walkingRouteCasingLayerId;
@@ -1180,6 +1198,7 @@ class MapLayersManager {
     }
     if (userLocation != null) {
       await safeSetLayerVisibility(_ids.locationLayerId, userLocation);
+      await safeSetLayerVisibility(_ids.locationAccuracyLayerId, userLocation);
     }
     if (pendingMarker != null && _ids.pendingLayerId != null) {
       await safeSetLayerVisibility(_ids.pendingLayerId!, pendingMarker);
@@ -1699,6 +1718,42 @@ class MapLayersManager {
     );
     _addSourceCalls += 1;
     _sourceIds.add(_ids.locationSourceId);
+
+    await _controller.addCircleLayer(
+      _ids.locationSourceId,
+      _ids.locationAccuracyLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: const <Object>[
+          'interpolate',
+          <Object>['exponential', 2],
+          <Object>['zoom'],
+          0,
+          <Object>[
+            'coalesce',
+            <Object>['get', 'accuracyRadiusZ0'],
+            0
+          ],
+          24,
+          <Object>[
+            '*',
+            16777216,
+            <Object>[
+              'coalesce',
+              <Object>['get', 'accuracyRadiusZ0'],
+              0
+            ]
+          ],
+        ],
+        circleColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
+        circleOpacity: 0.10,
+        circleStrokeColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
+        circleStrokeWidth: 1,
+        circleStrokeOpacity: 0.24,
+        circlePitchAlignment: 'map',
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.locationAccuracyLayerId);
 
     await _controller.addCircleLayer(
       _ids.locationSourceId,

@@ -551,6 +551,7 @@ class _MapScreenState extends State<MapScreen>
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
+  int? _lastAppliedMapAccentArgb;
   bool _themeResyncScheduled = false;
 
   static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
@@ -628,7 +629,7 @@ class _MapScreenState extends State<MapScreen>
       scheme: scheme,
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
-        locationFill: scheme.secondary,
+        locationFill: themeProvider.accentColor,
         locationStroke: scheme.surface,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
@@ -689,7 +690,7 @@ class _MapScreenState extends State<MapScreen>
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
-        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
+        widget.walkingLocationApi ?? GeolocatorWalkingLocationService.shared;
     StartupTrace.mark('map screen init');
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
@@ -4593,7 +4594,7 @@ class _MapScreenState extends State<MapScreen>
         _locationLayerId,
         ml.CircleLayerProperties(
           circleRadius: 6,
-          circleColor: KubusMapMarkerHelpers.hexRgb(scheme.secondary),
+          circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
           circleOpacity: 1.0,
           circleStrokeWidth: 2,
           circleStrokeColor: KubusMapMarkerHelpers.hexRgb(scheme.surface),
@@ -4603,6 +4604,21 @@ class _MapScreenState extends State<MapScreen>
       // Best-effort: style swaps or platform limitations can reject updates.
     }
 
+    await _layersManager?.safeSetLayerProperties(
+      _kubusMapController.ids.layers.locationAccuracyLayerId,
+      ml.CircleLayerProperties(
+        circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
+        circleStrokeColor:
+            KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
+      ),
+    );
+    await _layersManager?.safeSetLayerProperties(
+      _kubusMapController.ids.layers.locationAccuracyLayerId,
+      ml.CircleLayerProperties(
+        circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
+        circleStrokeColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
+      ),
+    );
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
   }
@@ -4610,7 +4626,9 @@ class _MapScreenState extends State<MapScreen>
   void _maybeScheduleThemeResync(ThemeProvider themeProvider) {
     final isDark = themeProvider.isDarkMode;
     final last = _lastAppliedMapThemeDark;
-    if (last != null && last == isDark) return;
+    final accentArgb = themeProvider.accentColor.toARGB32();
+    if (last == isDark && _lastAppliedMapAccentArgb == accentArgb) return;
+    _lastAppliedMapAccentArgb = accentArgb;
     _lastAppliedMapThemeDark = isDark;
     if (!_styleInitialized) return;
     if (_themeResyncScheduled) return;
@@ -4635,6 +4653,8 @@ class _MapScreenState extends State<MapScreen>
       sourceId: _locationSourceId,
       featureId: 'me',
       position: _currentPosition,
+      accuracyMeters:
+          _hasLiveLocationFix ? _currentPositionAccuracyMeters : null,
     );
   }
 

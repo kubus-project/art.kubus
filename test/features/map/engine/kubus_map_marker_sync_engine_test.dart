@@ -259,6 +259,8 @@ class _BlockingFeatureEngine extends KubusMapMarkerSyncEngine {
 
 void _addCanonicalIcons(Set<String> images) {
   for (final isDark in <bool>[false, true]) {
+    images.add(MapMarkerIconIds.cluster(
+        categorySignature: 'artwork', label: '3', isDark: isDark));
     images
       ..add(
         MapMarkerIconIds.markerBase(
@@ -303,6 +305,31 @@ Widget _testApp(ThemeProvider theme, ValueChanged<BuildContext> onBuild) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('disposal invalidates pending marker work while host is mounted',
+      (tester) async {
+    final images = <String>{};
+    _addCanonicalIcons(images);
+    final manager = _FakeLayersManager();
+    final state = _FakeMapState(registeredMapImages: images, manager: manager);
+    final host =
+        _FakeHost(mapController: _FakeMapController(), mapState: state);
+    final theme = ThemeProvider();
+    await tester
+        .pumpWidget(_testApp(theme, (context) => host.context = context));
+    final engine = _BlockingFeatureEngine(host);
+    final pending = engine.syncMarkers(themeProvider: theme);
+    await tester.runAsync(() =>
+        engine.featureEntered.future.timeout(const Duration(seconds: 10)));
+    engine.dispose();
+    engine.releaseFeature.complete();
+    await pending;
+    expect(manager.markerCollections, isEmpty);
+    expect(host.sourceWrites, 0);
+    expect(host.afterSyncs, 0);
+    await engine.syncMarkers(themeProvider: theme);
+    expect(manager.markerCollections, isEmpty);
+  });
+
   testWidgets(
     'detailed and overview feature work aborts after a style/controller swap',
     (tester) async {
@@ -341,6 +368,7 @@ void main() {
                 )
               : null;
           state.overview = host.overview;
+          _addCanonicalIcons(images);
           host.sourceWrites = 0;
           host.afterSyncs = 0;
           final engine = _BlockingFeatureEngine(host);
@@ -366,6 +394,7 @@ void main() {
       }
 
       host._mapController = _FakeMapController();
+      _addCanonicalIcons(images);
       final healthyEngine = _BlockingFeatureEngine(host)
         ..releaseFeature.complete();
       await healthyEngine.syncMarkers(themeProvider: theme);

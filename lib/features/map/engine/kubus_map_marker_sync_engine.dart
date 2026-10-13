@@ -121,6 +121,8 @@ class KubusMapMarkerSyncEngine {
   // The source pipeline is latest-request-wins; long-lived icon/cover asset
   // work remains guarded only by controller/style freshness below.
   int _sourceSyncGeneration = 0;
+  bool _disposed = false;
+  int _topologyStyleEpoch = -1;
 
   // Cover icons registered per style epoch. MapLibre has no image removal (and
   // the web plugin ignores a re-added name), so the total is capped instead:
@@ -139,6 +141,8 @@ class KubusMapMarkerSyncEngine {
   int get coverImagesRegistered => _coverImagesRegistered;
 
   void dispose() {
+    _disposed = true;
+    _sourceSyncGeneration += 1;
     _coverGate.dispose();
     _coverLoader.dispose();
   }
@@ -164,6 +168,7 @@ class KubusMapMarkerSyncEngine {
   }
 
   Future<void> syncMarkers({required ThemeProvider themeProvider}) async {
+    if (_disposed) return;
     final controller = host.mapController;
     if (controller == null) return;
     final mapController = host.kubusMapController;
@@ -171,8 +176,17 @@ class KubusMapMarkerSyncEngine {
     if (!host.managedSourceIds.contains(host.markerSourceId)) return;
     if (!host.hostMounted) return;
     final styleEpoch = mapController.styleEpoch;
+    if (_topologyStyleEpoch != styleEpoch) {
+      _topologyStyleEpoch = styleEpoch;
+      _lastRenderedTopology = const <KubusClusterTransitionNode>[];
+      _stableTopologySignature = '';
+      _transitionTargetSignature = null;
+      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      _transitionProgressById.clear();
+    }
     final sourceGeneration = ++_sourceSyncGeneration;
     bool isFresh() =>
+        !_disposed &&
         host.hostMounted &&
         host.styleInitialized &&
         identical(host.mapController, controller) &&
@@ -444,20 +458,76 @@ class KubusMapMarkerSyncEngine {
       for (final node in overview.nodes)
         if (node.restrictedTo(typeIsVisible) case final visible?) visible,
     ];
-    final features = <Map<String, dynamic>>[
-      for (final node in nodes)
-        kubusOverviewNodeFeature(
-          node: node,
-          blankIconId: blankIconId,
-          colorHex: MapLibreStyleUtils.hexRgb(
-            AppColorUtils.markerSubjectColor(
-              markerType: node.dominantType,
-              scheme: scheme,
-              roles: roles,
-            ),
+    final features = <Map<String, dynamic>>[];
+    // Overview data can outlive the far LOD while detail is loading. Give its
+    // exact aggregates canonical badges instead of invisible hitbox images.
+    // Reuse the existing category/count cache and render one image at a time.
+    for (final node in nodes) {
+      String? artworkIconId;
+      if (KubusMarkerLod.needsMarkerArtwork(zoom)) {
+        final counts = <ArtMarkerType, int>{};
+        final types = node.types.isEmpty
+            ? <String, int>{node.dominantType: node.count}
+            : node.types;
+        for (final entry in types.entries) {
+          final type = ArtMarker.parseMarkerType(entry.key, null);
+          counts.update(type, (count) => count + entry.value,
+              ifAbsent: () => entry.value);
+        }
+        final categories = counts.entries.toList()
+          ..sort((a, b) {
+            final count = b.value.compareTo(a.value);
+            return count != 0 ? count : a.key.index.compareTo(b.key.index);
+          });
+        final breakdown = <KubusClusterCategory>[
+          for (final entry in categories)
+            KubusClusterCategory(type: entry.key, count: entry.value),
+        ];
+        final iconId = MapMarkerIconIds.cluster(
+          categorySignature: kubusClusterCategorySignature(breakdown),
+          label: node.count > 99 ? '99+' : '${node.count}',
+          isDark: isDark,
+        );
+        if (!host.registeredMapImages.contains(iconId)) {
+          final badges = <ClusterCategoryBadge>[
+            for (final entry
+                in categories.take(kKubusClusterMaxBadgeCategories))
+              ClusterCategoryBadge(
+                shape: ArtMapMarkerShape.forType(entry.key),
+                color: AppColorUtils.markerSubjectColor(
+                    markerType: entry.key.name, scheme: scheme, roles: roles),
+                count: entry.value,
+                icon: KubusMapMarkerHelpers.resolveArtMarkerIcon(entry.key),
+              ),
+          ];
+          final bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
+            count: node.count,
+            baseColor: badges.first.color,
+            categories: badges,
+            scheme: scheme,
+            isDark: isDark,
+            pixelRatio: host.markerPixelRatio(),
+          );
+          if (shouldAbort() || !isCurrentSource()) return;
+          await controller.addImage(iconId, bytes);
+          if (shouldAbort() || !isCurrentSource()) return;
+          host.registeredMapImages.add(iconId);
+        }
+        artworkIconId = iconId;
+      }
+      features.add(kubusOverviewNodeFeature(
+        node: node,
+        blankIconId: blankIconId,
+        artworkIconId: artworkIconId,
+        colorHex: MapLibreStyleUtils.hexRgb(
+          AppColorUtils.markerSubjectColor(
+            markerType: node.dominantType,
+            scheme: scheme,
+            roles: roles,
           ),
         ),
-    ];
+      ));
+    }
 
     final pinnedRendered = renderedMarkers
         .where((rendered) => pinned.contains(rendered.marker.id))
