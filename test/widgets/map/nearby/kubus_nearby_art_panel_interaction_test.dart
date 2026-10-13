@@ -165,6 +165,15 @@ void main() {
       expect(state.snapSizes.first, state.minExtent);
       expect(state.snapSizes, everyElement(inInclusiveRange(0.12, 0.85)));
       expect(state.sheetController.isAttached, isTrue);
+
+      await showViewport(const Size(320, 700), 2);
+      _expectHeaderFits(tester, headerKey, const Size(320, 700), 64);
+      expect(state.sheetController, same(firstController));
+      expect(state.sheetController.isAttached, isTrue);
+      expect(
+        state.sheetController.size,
+        greaterThanOrEqualTo(state.minExtent),
+      );
     },
   );
 
