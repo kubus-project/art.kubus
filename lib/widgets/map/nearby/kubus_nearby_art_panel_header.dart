@@ -12,6 +12,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     super.key,
     required this.layout,
     required this.titleKey,
+    required this.measurementKey,
     required this.artworkCount,
     required this.discoveryProgress,
     required this.viewportScope,
@@ -28,6 +29,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
 
   final KubusNearbyArtPanelLayout layout;
   final Key? titleKey;
+  final Key? measurementKey;
   final int artworkCount;
   final double? discoveryProgress;
   final bool viewportScope;
@@ -147,32 +149,35 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     );
 
     if (isMobile) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          KubusSpacing.md,
-          KubusSpacing.md - KubusSpacing.xxs,
-          KubusSpacing.md,
-          0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: ExcludeSemantics(
-                child: Container(
-                  width: KubusHeaderMetrics.searchBarHeight,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: scheme.outlineVariant.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(2),
+      return KeyedSubtree(
+        key: measurementKey,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            KubusSpacing.md,
+            KubusSpacing.md - KubusSpacing.xxs,
+            KubusSpacing.md,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: ExcludeSemantics(
+                  child: Container(
+                    width: KubusHeaderMetrics.searchBarHeight,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: scheme.outlineVariant.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: KubusSpacing.md - KubusSpacing.xxs),
-            headerRow,
-            const SizedBox(height: KubusSpacing.sm),
-          ],
+              const SizedBox(height: KubusSpacing.md - KubusSpacing.xxs),
+              headerRow,
+              const SizedBox(height: KubusSpacing.sm),
+            ],
+          ),
         ),
       );
     }
