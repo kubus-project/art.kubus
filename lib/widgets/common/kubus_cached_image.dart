@@ -4,10 +4,7 @@ import '../../utils/media_failure_registry.dart';
 import '../../utils/media_url_resolver.dart';
 
 typedef KubusImageErrorBuilder = Widget Function(
-  BuildContext context,
-  Object error,
-  StackTrace? stackTrace,
-);
+    BuildContext context, Object error, StackTrace? stackTrace);
 
 /// Shared network image widget for stable URL normalization and cache-friendly
 /// rendering across map + creator surfaces.
@@ -111,6 +108,7 @@ class KubusCachedImage extends StatefulWidget {
     var candidateIndex = candidates.isEmpty
         ? 0
         : state._candidateIndex.clamp(0, candidates.length - 1);
+    if (candidates.isEmpty) state._hasDecodedFrame = false;
     if (skipRecentlyFailed && candidates.isNotEmpty) {
       // A candidate that failed moments ago is passed over, not retried: the
       // next eligible gateway is tried, and only when none is left does the
@@ -122,6 +120,7 @@ class KubusCachedImage extends StatefulWidget {
         candidateIndex++;
       }
       if (candidateIndex >= candidates.length) {
+        state._hasDecodedFrame = false;
         return _withFallbackSemantics(
           errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
               _buildFallback(context),
@@ -132,6 +131,7 @@ class KubusCachedImage extends StatefulWidget {
     final resolved = candidates.isEmpty ? null : candidates[candidateIndex];
     final urlWithVersion = withStableVersion(resolved, cacheVersion);
     if (urlWithVersion == null || urlWithVersion.isEmpty) {
+      state._hasDecodedFrame = false;
       return _withFallbackSemantics(
         _buildFallback(context),
         resolvedSemanticLabel,
@@ -171,7 +171,14 @@ class KubusCachedImage extends StatefulWidget {
       cacheHeight: effectiveCacheHeight,
       semanticLabel: resolvedSemanticLabel,
       excludeFromSemantics: excludeFromSemantics,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (frame != null || wasSynchronouslyLoaded) {
+          state._hasDecodedFrame = true;
+        }
+        return child;
+      },
       errorBuilder: (context, error, stackTrace) {
+        state._hasDecodedFrame = false;
         KubusMediaFailureRegistry.shared.markFailed(urlWithVersion);
         if (candidateIndex + 1 < candidates.length) {
           state._advanceCandidate(candidateIndex);
@@ -191,7 +198,10 @@ class KubusCachedImage extends StatefulWidget {
         return _withFallbackSemantics(fallback, resolvedSemanticLabel);
       },
       loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
+        // Image.network keeps its last decoded frame when gaplessPlayback is
+        // enabled. Keep that painted child during a URL refresh; the fallback
+        // is only for the initial load before any frame has decoded.
+        if (state._hasDecodedFrame) return child;
         return _withFallbackSemantics(
           placeholderBuilder?.call(context) ?? _buildFallback(context),
           resolvedSemanticLabel,
@@ -235,6 +245,7 @@ class KubusCachedImage extends StatefulWidget {
 class _KubusCachedImageState extends State<KubusCachedImage> {
   int _candidateIndex = 0;
   bool _advancePending = false;
+  bool _hasDecodedFrame = false;
 
   @override
   void didUpdateWidget(covariant KubusCachedImage oldWidget) {

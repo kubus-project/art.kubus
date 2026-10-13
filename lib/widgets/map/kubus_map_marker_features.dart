@@ -72,6 +72,7 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
     if (shouldAbort()) return const <String, dynamic>{};
     try {
       await controller.addImage(iconId, bytes);
+      if (shouldAbort()) return const <String, dynamic>{};
       registeredMapImages.add(iconId);
     } catch (e) {
       if (kDebugMode) {
@@ -244,6 +245,7 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
     if (shouldAbort()) return const <String, dynamic>{};
     try {
       await controller.addImage(iconId, bytes);
+      if (shouldAbort()) return const <String, dynamic>{};
       registeredMapImages.add(iconId);
     } catch (e) {
       if (kDebugMode) {
