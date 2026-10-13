@@ -305,6 +305,54 @@ Widget _testApp(ThemeProvider theme, ValueChanged<BuildContext> onBuild) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('cover reveal preserves identity, entry and canonical fallback',
+      (tester) async {
+    final images = <String>{};
+    _addCanonicalIcons(images);
+    final state = _FakeMapState(
+        registeredMapImages: images, manager: _FakeLayersManager());
+    final host =
+        _FakeHost(mapController: _FakeMapController(), mapState: state);
+    final theme = ThemeProvider();
+    await tester
+        .pumpWidget(_testApp(theme, (context) => host.context = context));
+    var now = 1000;
+    final engine = KubusMapMarkerSyncEngine(host, nowMs: () => now);
+    addTearDown(engine.dispose);
+    Future<Map<String, dynamic>> feature({bool covered = true}) =>
+        engine.markerFeatureFor(
+          marker: state.rendered.single.marker,
+          renderMarker: state.rendered.single,
+          themeProvider: theme,
+          scheme: Theme.of(host.hostContext).colorScheme,
+          roles: KubusColorRoles.of(host.hostContext),
+          isDark: false,
+          cover: covered
+              ? const KubusMarkerCoverIcons(
+                  base: 'cover', selected: 'cover-selected')
+              : null,
+        );
+    final canonical = await feature(covered: false);
+    for (final elapsed in <int>[0, 110, 220, 440]) {
+      now = 1000 + elapsed;
+      final revealed = await feature();
+      expect(revealed['id'], canonical['id']);
+      expect(revealed['geometry'], canonical['geometry']);
+      final properties = revealed['properties'] as Map;
+      final original = canonical['properties'] as Map;
+      expect(properties['icon'], original['icon']);
+      expect(properties['iconSelected'], original['iconSelected']);
+      expect(properties['entryOpacity'], 1);
+      expect(properties['entryScale'], 1);
+      expect(properties['coverReveal'], (elapsed / 220).clamp(0, 1));
+      expect(properties['coverIconSelected'], 'cover-selected');
+    }
+    final fallback = await feature(covered: false);
+    expect((fallback['properties'] as Map)['icon'],
+        (canonical['properties'] as Map)['icon']);
+    expect((fallback['properties'] as Map).containsKey('coverReveal'), isFalse);
+  });
+
   testWidgets('disposal invalidates pending marker work while host is mounted',
       (tester) async {
     final images = <String>{};

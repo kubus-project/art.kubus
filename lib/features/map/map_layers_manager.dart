@@ -46,6 +46,9 @@ abstract class MapLayersController {
     ml.CircleLayerProperties properties,
   );
 
+  Future<void> addFillLayer(
+      String sourceId, String layerId, ml.FillLayerProperties properties);
+
   Future<void> addLineLayer(
     String sourceId,
     String layerId,
@@ -72,6 +75,12 @@ class MapLibreLayersController implements MapLayersController {
   MapLibreLayersController(this._controller);
 
   final ml.MapLibreMapController _controller;
+
+  @override
+  Future<void> addFillLayer(
+          String sourceId, String layerId, ml.FillLayerProperties properties) =>
+      _controller.addFillLayer(sourceId, layerId, properties,
+          enableInteraction: false);
 
   @override
   Future<List<dynamic>> getLayerIds() => _controller.getLayerIds();
@@ -277,6 +286,7 @@ class KubusMarkerLayerStyler {
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
     String? locationAccuracyLayerId,
+    String? locationHeadingLayerId,
     bool force = false,
   }) {
     if (controller == null) return;
@@ -305,6 +315,7 @@ class KubusMarkerLayerStyler {
         cubeIconLayerId: cubeIconLayerId,
         pulseLayerId: pulseLayerId,
         locationAccuracyLayerId: locationAccuracyLayerId,
+        locationHeadingLayerId: locationHeadingLayerId,
         state: state,
       ).whenComplete(() {
         _markerLayerStyleUpdateInFlight = false;
@@ -320,6 +331,7 @@ class KubusMarkerLayerStyler {
             cubeIconLayerId: cubeIconLayerId,
             pulseLayerId: pulseLayerId,
             locationAccuracyLayerId: locationAccuracyLayerId,
+            locationHeadingLayerId: locationHeadingLayerId,
             state: state,
             force: true,
           );
@@ -397,12 +409,20 @@ class KubusMarkerLayerStyler {
     );
   }
 
-  static Object interactiveIconImageExpression(
-    KubusMarkerLayerStyleState state,
-  ) {
+  static Object interactiveIconImageExpression(KubusMarkerLayerStyleState state,
+      {bool cover = false}) {
+    final base = cover ? 'coverIcon' : 'icon';
+    final selected = cover ? 'coverIconSelected' : 'iconSelected';
+    final Object baseImage = cover
+        ? <Object>[
+            'coalesce',
+            <Object>['get', base],
+            ''
+          ]
+        : <Object>['get', base];
     final selectedId = state.selectedMarkerId;
     if (selectedId == null || selectedId.isEmpty) {
-      return const <Object>['get', 'icon'];
+      return baseImage;
     }
     return <Object>[
       'case',
@@ -411,8 +431,14 @@ class KubusMarkerLayerStyler {
         <Object>['id'],
         selectedId,
       ],
-      const <Object>['get', 'iconSelected'],
-      const <Object>['get', 'icon'],
+      cover
+          ? <Object>[
+              'coalesce',
+              <Object>['get', selected],
+              baseImage
+            ]
+          : <Object>['get', selected],
+      baseImage,
     ];
   }
 
@@ -427,6 +453,7 @@ class KubusMarkerLayerStyler {
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
     String? locationAccuracyLayerId,
+    String? locationHeadingLayerId,
   }) async {
     if (!styleInitialized) return;
     if (styleEpoch != getCurrentStyleEpoch()) return;
@@ -541,6 +568,18 @@ class KubusMarkerLayerStyler {
         );
       }
 
+      if (locationHeadingLayerId != null &&
+          managedLayerIds.contains(locationHeadingLayerId) &&
+          state.locationAccentColor != null) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await controller.setLayerProperties(
+            locationHeadingLayerId,
+            ml.FillLayerProperties(
+                fillColor:
+                    MapLibreStyleUtils.hexRgb(state.locationAccentColor!),
+                fillOpacity: 0.16));
+      }
+
       if (canStyleCubeIconLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
         await controller.setLayerProperties(
@@ -558,6 +597,44 @@ class KubusMarkerLayerStyler {
               state.markerBadgeBobOffsetPx,
             ),
             visibility: cubeIconVisible ? 'visible' : 'none',
+          ),
+        );
+      }
+      final coverLayerId = '${markerLayerId}_cover';
+      if (managedLayerIds.contains(coverLayerId)) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await controller.setLayerProperties(
+          coverLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: interactiveIconImageExpression(state, cover: true),
+            iconSize: cubeIconVisible ? cubeIconSize : iconSize,
+            iconOpacity: KubusMarkerLod.markerOpacityExpression(
+              entryOpacity: const <Object>[
+                '*',
+                <Object>[
+                  'coalesce',
+                  <Object>['get', 'entryOpacity'],
+                  1.0
+                ],
+                <Object>[
+                  'coalesce',
+                  <Object>['get', 'coverReveal'],
+                  0.0
+                ]
+              ],
+              selectedId: state.selectedMarkerId,
+            ),
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'bottom',
+            iconPitchAlignment: 'viewport',
+            iconRotationAlignment: 'viewport',
+            iconOffset: cubeIconVisible
+                ? MapMarkerStyleConfig.isometricBadgeOffset(
+                    state.markerBadgeBobOffsetPx)
+                : MapMarkerStyleConfig.badgeBobOffset(
+                    state.markerBadgeBobOffsetPx),
+            symbolSortKey: symbolSortKey,
           ),
         );
       }
@@ -651,6 +728,7 @@ class MapLayersIds {
 
   final String markerSourceId;
   final String markerLayerId;
+  String get markerCoverLayerId => '${markerLayerId}_cover';
   final String markerHitboxLayerId;
   final String markerHitboxImageId;
 
@@ -666,6 +744,7 @@ class MapLayersIds {
   final String locationSourceId;
   final String locationLayerId;
   String get locationAccuracyLayerId => '${locationLayerId}_accuracy';
+  String get locationHeadingLayerId => '${locationLayerId}_heading';
 
   final String walkingRouteSourceId;
   final String walkingRouteCasingLayerId;
@@ -1308,12 +1387,15 @@ class MapLayersManager {
     // same IDs. Clear them best-effort.
     final existingLayerIds = await _fetchExistingLayerIds();
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerLayerId);
+    await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerCoverLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerHitboxLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerDotLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerPulseLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeIconLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.locationLayerId);
+    await _safeRemoveLayerIfExists(
+        existingLayerIds, _ids.locationHeadingLayerId);
     await _safeRemoveLayerIfExists(
         existingLayerIds, _ids.locationAccuracyLayerId);
     await _safeRemoveLayerIfExists(
@@ -1609,6 +1691,47 @@ class MapLayersManager {
     _addLayerCalls += 1;
     _layerIds.add(_ids.cubeIconLayerId);
 
+    // One cover paint pass over the same canonical features. Its geometry,
+    // identity and hitbox never change when an asynchronous image arrives.
+    await _controller.addSymbolLayer(
+      _ids.markerSourceId,
+      _ids.markerCoverLayerId,
+      ml.SymbolLayerProperties(
+        iconImage: const <Object>[
+          'coalesce',
+          <Object>['get', 'coverIcon'],
+          ''
+        ],
+        iconSize:
+            MapMarkerStyleConfig.iconSizeExpression(multiplier: const <Object>[
+          'coalesce',
+          <Object>['get', 'entryScale'],
+          1.0
+        ]),
+        iconOpacity:
+            KubusMarkerLod.markerOpacityExpression(entryOpacity: const <Object>[
+          '*',
+          <Object>[
+            'coalesce',
+            <Object>['get', 'entryOpacity'],
+            1.0
+          ],
+          <Object>[
+            'coalesce',
+            <Object>['get', 'coverReveal'],
+            0.0
+          ]
+        ]),
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        iconAnchor: 'bottom',
+        iconPitchAlignment: 'viewport',
+        iconRotationAlignment: 'viewport',
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.markerCoverLayerId);
+
     await _ensureHitboxImageRegistered();
 
     final Object hitboxIconSize = kIsWeb
@@ -1772,6 +1895,19 @@ class MapLayersManager {
     _addLayerCalls += 1;
     _layerIds.add(_ids.locationAccuracyLayerId);
 
+    // Only reliable native heading fixes add a polygon to the location source.
+    // Without a heading this layer has no geometry and the ordinary dot remains.
+    await _controller.addFillLayer(
+      _ids.locationSourceId,
+      _ids.locationHeadingLayerId,
+      ml.FillLayerProperties(
+        fillColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
+        fillOpacity: 0.16,
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.locationHeadingLayerId);
+
     await _controller.addCircleLayer(
       _ids.locationSourceId,
       _ids.locationLayerId,
@@ -1793,6 +1929,16 @@ class MapLayersManager {
         _ids.walkingLocationSymbolLayerId,
         ml.SymbolLayerProperties(
           iconImage: _ids.walkingLocationImageId,
+          iconOpacity: const <Object>[
+            'case',
+            <Object>[
+              '==',
+              <Object>['geometry-type'],
+              'Point'
+            ],
+            1.0,
+            0.0
+          ],
           iconSize: 0.6,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,

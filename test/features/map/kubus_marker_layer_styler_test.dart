@@ -18,7 +18,54 @@ class _AccuracyStyleController implements ml.MapLibreMapController {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _CoverStyleController implements ml.MapLibreMapController {
+  final layers = <String, ml.SymbolLayerProperties>{};
+  final completed = Completer<void>();
+  @override
+  Future<void> setLayerProperties(
+      String id, ml.LayerProperties properties) async {
+    layers[id] = properties as ml.SymbolLayerProperties;
+    if (id == 'marker_cover') completed.complete();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  test('cover paint follows selected badge geometry in 2D and 3D', () async {
+    for (final cubeVisible in <bool>[false, true]) {
+      final controller = _CoverStyleController();
+      KubusMarkerLayerStyler().requestUpdate(
+        controller: controller,
+        styleInitialized: true,
+        styleEpoch: 1,
+        getCurrentStyleEpoch: () => 1,
+        managedLayerIds: {'marker', 'cube', 'marker_cover'},
+        markerLayerId: 'marker',
+        cubeIconLayerId: 'cube',
+        force: true,
+        state: KubusMarkerLayerStyleState(
+            pressedMarkerId: null,
+            hoveredMarkerId: null,
+            selectedMarkerId: 'selected',
+            selectionPopAnimationValue: 0.6,
+            cubeLayerVisible: cubeVisible,
+            markerBadgeBobOffsetPx: 2),
+      );
+      await controller.completed.future.timeout(const Duration(seconds: 10));
+      final cover = controller.layers['marker_cover']!;
+      final canonical = controller.layers[cubeVisible ? 'cube' : 'marker']!;
+      expect(cover.iconSize, canonical.iconSize);
+      expect(cover.iconOffset, canonical.iconOffset);
+      expect(cover.iconAnchor, canonical.iconAnchor);
+      expect(cover.iconRotationAlignment, canonical.iconRotationAlignment);
+      expect(cover.iconImage.toString(), contains('coverIconSelected'));
+      expect((cover.iconOpacity as List).first, 'interpolate');
+      expect(cover.iconOpacity.toString(), contains('coverReveal'));
+      expect(cover.iconOpacity.toString(), contains('entryOpacity'));
+    }
+  });
   test('accuracy animation preserves geometry and theme in every paint update',
       () async {
     for (final phase in <double>[0, 0.5]) {

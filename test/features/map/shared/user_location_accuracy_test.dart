@@ -3,6 +3,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 void main() {
+  test('reliable heading creates one cone; invalid sensors leave only the dot',
+      () {
+    for (final accuracy in <double?>[
+      null,
+      -1,
+      26,
+      double.nan,
+      double.infinity
+    ]) {
+      expect(KubusMapSourceSyncHelpers.reliableHeading(90, accuracy), isNull);
+    }
+    expect(KubusMapSourceSyncHelpers.reliableHeading(double.nan, 3), isNull);
+    expect(KubusMapSourceSyncHelpers.reliableHeading(450, 3), 90);
+    final data = KubusMapSourceSyncHelpers.pointFeatureCollection(
+      featureId: 'me',
+      position: const LatLng(46, 14),
+      headingDegrees: 0,
+    );
+    final features = data['features'] as List;
+    expect(features.map((feature) => feature['id']), ['me', 'me_heading']);
+    final ring = features.last['geometry']['coordinates'][0] as List;
+    expect(ring.first, ring.last);
+    expect(ring[6][1], greaterThan(46));
+    expect(ring[6][0], closeTo(14, 0.000001));
+  });
   test('accuracy field uses live meters and stable location identity', () {
     final data = KubusMapSourceSyncHelpers.pointFeatureCollection(
       featureId: 'me',

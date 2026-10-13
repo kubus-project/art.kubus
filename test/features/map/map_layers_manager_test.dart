@@ -44,6 +44,10 @@ class _FakeMapLayersController implements MapLayersController {
   }
 
   @override
+  Future<void> addFillLayer(String sourceId, String layerId,
+      ml.FillLayerProperties properties) async {}
+
+  @override
   Future<void> addFillExtrusionLayer(
     String sourceId,
     String layerId,

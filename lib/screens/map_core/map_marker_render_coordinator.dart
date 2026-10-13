@@ -174,6 +174,7 @@ class MapMarkerRenderCoordinator {
       cubeIconLayerId: cubeIconLayerId,
       pulseLayerId: pulseLayerId,
       locationAccuracyLayerId: kubus.ids.layers.locationAccuracyLayerId,
+      locationHeadingLayerId: kubus.ids.layers.locationHeadingLayerId,
       state: KubusMarkerLayerStyleState(
         locationAccentColor: _getLocationAccentColor?.call() ??
             _getLayersManager()?.locationAccentColor,

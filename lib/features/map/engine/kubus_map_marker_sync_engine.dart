@@ -97,8 +97,11 @@ abstract class KubusMapMarkerSyncHost {
 /// `_preregisterMarkerIcons` / `_markerFeatureFor` / `_clusterFeatureFor`
 /// method families (see docs/superpowers/specs/2026-07-11-map-marker-engine-design.md).
 class KubusMapMarkerSyncEngine {
-  KubusMapMarkerSyncEngine(this.host, {KubusMarkerCoverLoader? coverLoader})
-      : _coverLoader = coverLoader ?? KubusMarkerCoverLoader();
+  KubusMapMarkerSyncEngine(this.host,
+      {KubusMarkerCoverLoader? coverLoader, int Function()? nowMs})
+      : _coverLoader = coverLoader ?? KubusMarkerCoverLoader(),
+        _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
+  final int Function() _nowMs;
 
   final KubusMapMarkerSyncHost host;
   final KubusMarkerCoverLoader _coverLoader;
@@ -127,6 +130,8 @@ class KubusMapMarkerSyncEngine {
   // once the pool is spent, further markers simply keep their canonical badge
   // until the next style reload clears the images.
   int _coverImagesRegistered = 0;
+  final Map<String, int> _coverRevealStarted = {};
+  bool _coverAnimationActive = false;
 
   /// The markers the latest plan wants a cover for. A cover that finishes
   /// loading after the camera has moved on is dropped, never drawn offscreen.
@@ -220,6 +225,7 @@ class KubusMapMarkerSyncEngine {
       // canonical geometry. The selected marker is pinned out of clusters at
       // every level so it can never be absorbed into a count badge.
       final needsArtwork = KubusMarkerLod.needsMarkerArtwork(zoom);
+      _coverAnimationActive = false;
       final selectedId = host.kubusMapController.selectedMarkerId;
       final pinned = <String>{
         if (selectedId != null && selectedId.isNotEmpty) selectedId,
@@ -227,6 +233,7 @@ class KubusMapMarkerSyncEngine {
       if (_coverEpoch != styleEpoch) {
         _coverEpoch = styleEpoch;
         _coverImagesRegistered = 0;
+        _coverRevealStarted.clear();
         _pendingCoverKeys.clear();
       }
 
@@ -580,8 +587,9 @@ class KubusMapMarkerSyncEngine {
 
   void _applyClusterTopologyTransition(List<Map<String, dynamic>> features,
       {required bool reduceMotion}) {
-    final active =
+    final topologyActive =
         _clusterTransition.apply(features, reduceMotion: reduceMotion);
+    final active = topologyActive || _coverAnimationActive;
     if (!active) {
       _topologyFrameTimer?.cancel();
       _topologyFrameTimer = null;
@@ -656,6 +664,10 @@ class KubusMapMarkerSyncEngine {
     final abort = shouldAbort ?? () => !host.hostMounted;
     if (abort()) return const <String, dynamic>{};
 
+    final media = MediaQuery.maybeOf(host.hostContext);
+    final reduceMotion =
+        media?.disableAnimations == true || media?.accessibleNavigation == true;
+
     final feature = await kubusMarkerFeatureFor(
       controller: activeController,
       registeredMapImages: host.registeredMapImages,
@@ -677,10 +689,17 @@ class KubusMapMarkerSyncEngine {
     if (abort()) return const <String, dynamic>{};
     final properties = feature['properties'];
     if (cover != null && properties is Map<String, dynamic>) {
-      // The cover lives inside the canonical badge geometry: only the image
-      // changes, never the layer, size, anchor or hitbox.
-      properties['icon'] = cover.base;
-      if (cover.selected != null) properties['iconSelected'] = cover.selected;
+      // Fade a colocated cover over the canonical badge without restarting
+      // entry, replacing its identity or changing its size/anchor/hitbox.
+      properties['coverIcon'] = cover.base;
+      properties['coverIconSelected'] = cover.selected ?? cover.base;
+      final now = _nowMs();
+      final started = _coverRevealStarted.putIfAbsent(cover.base, () => now);
+      final progress = reduceMotion
+          ? 1.0
+          : ((now - started) / 220).clamp(0.0, 1.0).toDouble();
+      properties['coverReveal'] = progress;
+      _coverAnimationActive = _coverAnimationActive || progress < 1;
     }
     return feature;
   }

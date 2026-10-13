@@ -298,6 +298,8 @@ class _MapScreenState extends State<MapScreen>
       KubusMapBackdropHostController();
   bool _autoFollow = true;
   double? _direction; // Compass direction
+  int _lastHeadingUpdateMs = 0;
+  Timer? _headingExpiryTimer;
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<WalkingLocationFix>? _mobileLocationSubscription;
   StreamSubscription<WalkingLocationFix>? _webPositionSubscription;
@@ -2189,6 +2191,8 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    _userLocationAnimator.dispose();
+    _headingExpiryTimer?.cancel();
     _mapSearchFocusNode.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
@@ -2338,7 +2342,8 @@ class _MapScreenState extends State<MapScreen>
           _perf.subscriptionStopped('compass');
           _compassSubscription = compassStream.listen((CompassEvent event) {
             if (mounted) {
-              _updateDirection(event.heading);
+              _updateDirection(KubusMapSourceSyncHelpers.reliableHeading(
+                  event.heading, event.accuracy));
             }
           });
           _perf.subscriptionStarted('compass');
@@ -4131,6 +4136,22 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _updateDirection(double? heading) {
+    if (!mounted) return;
+    _headingExpiryTimer?.cancel();
+    if (heading != null) {
+      _headingExpiryTimer =
+          Timer(const Duration(seconds: 10), () => _updateDirection(null));
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final delta = _direction == null
+          ? 360.0
+          : ((heading - _direction! + 540) % 360 - 180).abs();
+      if (now - _lastHeadingUpdateMs < 100 || delta < 3) return;
+      _lastHeadingUpdateMs = now;
+    } else if (_direction == null) {
+      return;
+    }
+    _direction = heading;
+    unawaited(_syncUserLocation());
     if (mounted && heading != null) {
       setState(() {
         _direction = heading;
@@ -4148,6 +4169,7 @@ class _MapScreenState extends State<MapScreen>
         );
       }
     } else if (mounted && heading == null) {
+      setState(() => _direction = null);
       // Animate back to dot when stationary
       _locationIndicatorController?.reverse();
     }
@@ -4635,16 +4657,30 @@ class _MapScreenState extends State<MapScreen>
     await _markerInteractionController.handleMapClick(point);
   }
 
+  late final KubusUserLocationAnimator _userLocationAnimator =
+      KubusUserLocationAnimator(write: _writeUserLocation);
+
   Future<void> _syncUserLocation() async {
+    if (!mounted || !_styleInitialized) return;
+    final media = MediaQuery.maybeOf(context);
+    await _userLocationAnimator.update(_currentPosition,
+        styleEpoch: _kubusMapController.styleEpoch,
+        reduceMotion: media?.disableAnimations == true ||
+            media?.accessibleNavigation == true);
+  }
+
+  Future<void> _writeUserLocation(LatLng? position, int epoch) async {
+    if (!mounted || _kubusMapController.styleEpoch != epoch) return;
     await KubusMapSourceSyncHelpers.syncPointSource(
       controller: _mapController,
       styleInitialized: _styleInitialized,
       managedSourceIds: _managedSourceIds,
       sourceId: _locationSourceId,
       featureId: 'me',
-      position: _currentPosition,
+      position: position,
       accuracyMeters:
           _hasLiveLocationFix ? _currentPositionAccuracyMeters : null,
+      headingDegrees: _hasLiveLocationFix ? _direction : null,
     );
   }
 

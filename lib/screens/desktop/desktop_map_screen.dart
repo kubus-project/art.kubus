@@ -2042,14 +2042,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  late final KubusUserLocationAnimator _userLocationAnimator =
+      KubusUserLocationAnimator(write: _writeUserLocation);
+
   Future<void> _syncUserLocation() async {
+    if (!mounted || !_styleInitialized) return;
+    final media = MediaQuery.maybeOf(context);
+    await _userLocationAnimator.update(_userLocation,
+        styleEpoch: _kubusMapController.styleEpoch,
+        reduceMotion: media?.disableAnimations == true ||
+            media?.accessibleNavigation == true);
+  }
+
+  Future<void> _writeUserLocation(LatLng? position, int epoch) async {
+    if (!mounted || _kubusMapController.styleEpoch != epoch) return;
     await KubusMapSourceSyncHelpers.syncPointSource(
       controller: _mapController,
       styleInitialized: _styleInitialized,
       managedSourceIds: _managedSourceIds,
       sourceId: _locationSourceId,
       featureId: 'me',
-      position: _userLocation,
+      position: position,
       accuracyMeters: _userLocationAccuracyMeters,
     );
   }
@@ -2393,6 +2406,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    _userLocationAnimator.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
