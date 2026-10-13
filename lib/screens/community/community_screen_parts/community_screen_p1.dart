@@ -876,7 +876,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 360;
+        final labelFontSize =
+            KubusTypography.textTheme.labelSmall?.fontSize ?? 12.0;
+        final scaledLabelFontSize =
+            MediaQuery.textScalerOf(context).scale(labelFontSize);
+        final tabHeight = (KubusHeaderMetrics.actionIcon +
+                KubusSpacing.xxs +
+                scaledLabelFontSize * 2.4 +
+                KubusSpacing.md)
+            .clamp(60.0, 112.0)
+            .toDouble();
 
         final roles = KubusColorRoles.of(context);
         final radius = BorderRadius.circular(KubusRadius.surface);
@@ -893,12 +902,12 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           ),
           child: TabBar(
             controller: _tabController,
-            // Four labels fit in one row from 340 px; only narrower widths
-            // scroll, so the segmented control spans the header width.
-            isScrollable: constraints.maxWidth < 340,
-            tabAlignment: constraints.maxWidth < 340
-                ? TabAlignment.start
-                : TabAlignment.fill,
+            // Keep all four destinations visible as equal segments on narrow
+            // phones; their labels wrap within the segment instead of scrolling.
+            isScrollable: false,
+            tabAlignment: TabAlignment.fill,
+            labelPadding: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
             indicator: BoxDecoration(
               color: roles.active.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(KubusRadius.control + 2),
@@ -919,7 +928,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             tabs: [
               for (final tab in tabs)
                 Tab(
-                  height: isCompact ? 56 : 60,
+                  height: tabHeight,
                   iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
                   icon: Icon(
                     tab.icon,
@@ -927,8 +936,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                   ),
                   child: Text(
                     tab.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    softWrap: true,
+                    textAlign: TextAlign.center,
                   ),
                 ),
             ],

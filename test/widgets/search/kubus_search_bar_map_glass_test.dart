@@ -214,6 +214,38 @@ void main() {
       expect(input.decoration?.disabledBorder, InputBorder.none);
     });
 
+    testWidgets('text and hint share the icon center in a 48px field',
+        (tester) async {
+      final controller = TextEditingController(text: 'Mural search');
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 360,
+            height: KubusHeaderMetrics.searchBarHeight,
+            child: KubusSearchBar(
+              hintText: 'Search',
+              controller: controller,
+              enableBlur: false,
+              useMapGlassSurface: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final input = tester.widget<TextField>(find.byType(TextField));
+      expect(input.textAlignVertical, TextAlignVertical.center);
+      final iconCenter = tester.getCenter(find.byIcon(Icons.search));
+      final editableCenter = tester.getCenter(find.byType(EditableText));
+      expect((editableCenter.dy - iconCenter.dy).abs(), lessThan(1));
+
+      controller.clear();
+      await tester.pump();
+      final hintCenter = tester.getCenter(find.text('Search'));
+      expect((hintCenter.dy - iconCenter.dy).abs(), lessThan(1));
+    });
+
     testWidgets('normal search bar fallback does NOT use the map sheen',
         (tester) async {
       await tester.pumpWidget(

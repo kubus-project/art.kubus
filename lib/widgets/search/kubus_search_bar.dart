@@ -334,6 +334,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
     final textField = TextField(
       controller: _controller,
       focusNode: _focusNode,
+      textAlignVertical: TextAlignVertical.center,
       readOnly: widget.readOnly,
       autofocus: widget.autofocus,
       enabled: widget.enabled,
