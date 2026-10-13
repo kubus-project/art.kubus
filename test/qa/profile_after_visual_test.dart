@@ -22,6 +22,7 @@ void main() {
       markTestSkipped(
         'Set KUBUS_RUN_VISUAL_QA=1 to capture after screenshots.',
       );
+      return;
     }
     final outputPath = Platform.environment['KUBUS_PROFILE_QA_OUTPUT'];
     if (outputPath == null || outputPath.trim().isEmpty) {
