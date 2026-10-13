@@ -23,6 +23,14 @@ LatLng? resolveKubusClusterTransitionOrigin({
   required KubusClusterTransitionNode target,
   required List<KubusClusterTransitionNode> previous,
 }) {
+  // An interrupted merge can contain both a parent and its retiring children.
+  // A child that survives the reversal must start at its own displayed point,
+  // rather than a centroid that counts that member twice.
+  for (final node in previous) {
+    if (node.id == target.id && setEquals(node.memberIds, target.memberIds)) {
+      return node.position;
+    }
+  }
   var latitude = 0.0;
   var longitude = 0.0;
   var weight = 0;

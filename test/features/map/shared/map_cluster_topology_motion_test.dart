@@ -102,6 +102,12 @@ void main() {
     expect(motion.apply(reversing, reduceMotion: false), isTrue);
     expect(longitude(reversing[0]), greaterThan(0));
     expect(longitude(reversing[1]), lessThan(10));
+    for (final child in reversing) {
+      final previouslyDisplayed =
+          merging.singleWhere((f) => f['id'] == child['id']);
+      expect(longitude(child), longitude(previouslyDisplayed),
+          reason: 'reversal starts at the exact displayed child position');
+    }
     expect(reversing.map((f) => f['id']).toSet().length, reversing.length);
     now = 300;
     final settled = [
