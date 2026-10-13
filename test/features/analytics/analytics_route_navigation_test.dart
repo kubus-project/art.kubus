@@ -323,30 +323,41 @@ void main() {
   });
 
   for (final stateTitle in <String>['Access denied', 'No metrics']) {
-    testWidgets('standalone $stateTitle state shows a visible Back action', (
-      tester,
-    ) async {
-      var backCalls = 0;
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AnalyticsStandaloneStatePage(
-            onBack: () => backCalls++,
-            child: Text(stateTitle),
-          ),
-        ),
-      );
+    for (final density in <VisualDensity>[
+      VisualDensity.standard,
+      VisualDensity.compact,
+    ]) {
+      testWidgets(
+        'standalone $stateTitle Back action meets touch size at $density',
+        (tester) async {
+          var backCalls = 0;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: ThemeData(visualDensity: density),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AnalyticsStandaloneStatePage(
+                onBack: () => backCalls++,
+                child: Text(stateTitle),
+              ),
+            ),
+          );
 
-      expect(
-        find.byKey(const ValueKey<String>('analytics_standalone_back')),
-        findsOneWidget,
+          final backButton =
+              find.byKey(const ValueKey<String>('analytics_standalone_back'));
+          expect(backButton, findsOneWidget);
+          final size = tester.getSize(backButton);
+          expect(size.width, greaterThanOrEqualTo(44));
+          expect(size.height, greaterThanOrEqualTo(44));
+          if (density == VisualDensity.standard) {
+            expect(size, const Size(48, 48));
+          }
+
+          await tester.tap(backButton);
+          expect(backCalls, 1);
+        },
       );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('analytics_standalone_back')),
-      );
-      expect(backCalls, 1);
-    });
+    }
   }
 
   testWidgets('analytics header exposes Back in loading and data composition', (
