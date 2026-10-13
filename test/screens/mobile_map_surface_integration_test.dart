@@ -58,6 +58,20 @@ void main() {
       );
     });
 
+    test('primary controls remain mounted over the nearby sheet', () {
+      expect(
+        source,
+        matches(
+          RegExp(
+            r'if \(ui\.contextSurface == MapContextSurface\.none\s*\|\|\s*'
+            r'ui\.contextSurface == MapContextSurface\.nearby\s*\|\|\s*'
+            r'ui\.contextSurface == MapContextSurface\.markerPreview\)\s*'
+            r'_buildPrimaryControls\(',
+          ),
+        ),
+      );
+    });
+
     test('marker preview uses the live anchored standard card', () {
       expect(
         source,
