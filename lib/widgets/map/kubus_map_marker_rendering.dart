@@ -86,11 +86,8 @@ String kubusClusterCategorySignature(
 /// [signature] keys the cached icon, [badges] are the per-category shape+colour
 /// pips (dominant first, capped at [kKubusClusterMaxBadgeCategories]) and
 /// [baseColor] is the dominant category colour used for the central body.
-({
-  String signature,
-  Color baseColor,
-  List<ClusterCategoryBadge> badges,
-}) kubusClusterBadgeRenderData(
+({String signature, Color baseColor, List<ClusterCategoryBadge> badges})
+    kubusClusterBadgeRenderData(
   List<ArtMarker> markers, {
   required ColorScheme scheme,
   required KubusColorRoles roles,
@@ -260,8 +257,10 @@ Future<void> kubusPreregisterMarkerIcons({
   required double pixelRatio,
   required IconData Function(ArtMarkerType type) resolveMarkerIcon,
   required Color Function(ArtMarker marker) resolveMarkerBaseColor,
+  required bool Function() shouldAbort,
   Set<String> pinnedMarkerIds = const <String>{},
 }) async {
+  if (shouldAbort()) return;
   final toRender = <KubusIconRenderTask>[];
 
   if (useClustering) {
@@ -430,54 +429,59 @@ Future<void> kubusPreregisterMarkerIcons({
   for (var i = 0; i < tasks.length; i += batchSize) {
     final batch = tasks.skip(i).take(batchSize).toList(growable: false);
 
-    await Future.wait(batch.map((task) async {
-      if (registeredMapImages.contains(task.iconId)) return;
+    await Future.wait(
+      batch.map((task) async {
+        if (shouldAbort() || registeredMapImages.contains(task.iconId)) return;
 
-      try {
-        Uint8List bytes;
-        if (task.isCluster && task.cluster != null) {
-          final renderData = kubusClusterBadgeRenderData(
-            task.cluster!.markers,
-            scheme: scheme,
-            roles: roles,
-            resolveIcon: resolveMarkerIcon,
-          );
-          bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
-            count: task.cluster!.markers.length,
-            baseColor: renderData.baseColor,
-            scheme: scheme,
-            isDark: isDark,
-            categories: renderData.badges,
-            pixelRatio: pixelRatio,
-          );
-        } else if (task.marker != null) {
-          final marker = task.marker!;
-          final baseColor = resolveMarkerBaseColor(marker);
-          bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
-            baseColor: baseColor,
-            icon: resolveMarkerIcon(marker.type),
-            tier: marker.signalTier,
-            shape: ArtMapMarkerShape.forType(marker.type),
-            scheme: scheme,
-            roles: roles,
-            isDark: isDark,
-            forceGlow: task.selected,
-            showPromotionStar: marker.isPromoted,
-            pixelRatio: pixelRatio,
-          );
-        } else {
-          return;
-        }
+        try {
+          Uint8List bytes;
+          if (task.isCluster && task.cluster != null) {
+            final renderData = kubusClusterBadgeRenderData(
+              task.cluster!.markers,
+              scheme: scheme,
+              roles: roles,
+              resolveIcon: resolveMarkerIcon,
+            );
+            bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
+              count: task.cluster!.markers.length,
+              baseColor: renderData.baseColor,
+              scheme: scheme,
+              isDark: isDark,
+              categories: renderData.badges,
+              pixelRatio: pixelRatio,
+            );
+          } else if (task.marker != null) {
+            final marker = task.marker!;
+            final baseColor = resolveMarkerBaseColor(marker);
+            bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+              baseColor: baseColor,
+              icon: resolveMarkerIcon(marker.type),
+              tier: marker.signalTier,
+              shape: ArtMapMarkerShape.forType(marker.type),
+              scheme: scheme,
+              roles: roles,
+              isDark: isDark,
+              forceGlow: task.selected,
+              showPromotionStar: marker.isPromoted,
+              pixelRatio: pixelRatio,
+            );
+          } else {
+            return;
+          }
 
-        await controller.addImage(task.iconId, bytes);
-        registeredMapImages.add(task.iconId);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'kubusPreregisterMarkerIcons: addImage failed (${task.iconId}): $e');
+          if (shouldAbort()) return;
+          await controller.addImage(task.iconId, bytes);
+          if (shouldAbort()) return;
+          registeredMapImages.add(task.iconId);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              'kubusPreregisterMarkerIcons: addImage failed (${task.iconId}): $e',
+            );
+          }
         }
-      }
-    }));
+      }),
+    );
   }
 }
 
