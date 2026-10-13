@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../main_app.dart';
+import '../screens/activity/advanced_analytics_screen.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'shell_entry_screen.dart';
@@ -19,6 +20,7 @@ class ShellRoutes {
   static const String main = '/main';
   static const String map = '/map';
   static const String community = '/community';
+  static const String analytics = '/analytics';
 
   /// Routes that should go through [AppInitializer] on cold start so providers
   /// hydrate before the shell renders.
@@ -26,9 +28,13 @@ class ShellRoutes {
     main,
     map,
     community,
+    analytics,
   };
 
   static bool shouldWrapInitialUri(Uri uri) {
+    // Analytics is a cold entry only after AppInitializer has hydrated the
+    // existing provider tree. Query values are deliberately inert here.
+    if (uri.path == analytics) return true;
     if (!initializerWrapped.contains(uri.path)) return false;
     return uri.queryParameters.keys.every(_isBenignLaunchParameter);
   }
@@ -75,5 +81,9 @@ class ShellRoutes {
     // their canonical `/m/<id>` route identity.
     map: (_) => const ShellEntryScreen.map(),
     community: (_) => const ShellEntryScreen.community(),
+    analytics: (_) => const AdvancedAnalyticsScreen(
+          statType: 'views',
+          initialContext: AnalyticsExperienceContext.profile,
+        ),
   };
 }

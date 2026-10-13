@@ -50,12 +50,23 @@ bool shouldActivateGuestForPublicEntry({
     !hasLocalAccount &&
     accessPolicy == DeepLinkAccessPolicy.publicRead;
 
+@visibleForTesting
+ColdStartEntry resolveDegradedPublicDiscoveryEntry({
+  required String? preferredShellRoute,
+  required bool hasLocalAccount,
+}) {
+  final normalized = ShellRoutes.resolvePreferredShellRoute(
+    preferredShellRoute,
+  );
+  return resolveColdStartEntry(
+    preferredShellRoute: normalized,
+    hasValidSession: false,
+    hasLocalAccount: hasLocalAccount,
+  );
+}
+
 class AppInitializer extends StatefulWidget {
-  const AppInitializer({
-    super.key,
-    this.preferredShellRoute,
-    this.initialUri,
-  });
+  const AppInitializer({super.key, this.preferredShellRoute, this.initialUri});
 
   final String? preferredShellRoute;
   final Uri? initialUri;
@@ -133,9 +144,8 @@ class _AppInitializerState extends State<AppInitializer> {
     NavigatorState navigator, {
     required bool hasLocalAccount,
   }) async {
-    final entry = resolveColdStartEntry(
+    final entry = resolveDegradedPublicDiscoveryEntry(
       preferredShellRoute: widget.preferredShellRoute,
-      hasValidSession: false,
       hasLocalAccount: hasLocalAccount,
     );
     if (entry.activateGuestMode) {
@@ -270,8 +280,10 @@ class _AppInitializerState extends State<AppInitializer> {
       StartupTrace.mark('auth token loaded');
       if (!mounted) return;
 
-      final localeProvider =
-          Provider.of<LocaleProvider>(context, listen: false);
+      final localeProvider = Provider.of<LocaleProvider>(
+        context,
+        listen: false,
+      );
       // Resolve the launch locale from the entry URL BEFORE initialize() so a
       // direct /en or /sl entry (or ?lang=/?locale=) renders in the right
       // language on the first meaningful frame instead of flashing the persisted
@@ -287,9 +299,11 @@ class _AppInitializerState extends State<AppInitializer> {
         GuestSessionService.snapshotLaunchUrl(override: entryUri);
       }
       final entryLocale = LocaleProvider.localeCodeFromUri(entryUri);
-      await _safeStep<void>('locale.initialize',
-          () => localeProvider.initialize(overrideLanguageCode: entryLocale),
-          timeout: const Duration(seconds: 4));
+      await _safeStep<void>(
+        'locale.initialize',
+        () => localeProvider.initialize(overrideLanguageCode: entryLocale),
+        timeout: const Duration(seconds: 4),
+      );
       final deepLinkLocale = _pendingShareTarget?.localeCode;
       final launchLocale = widget.initialUri?.queryParameters['lang'] ??
           widget.initialUri?.queryParameters['locale'];
@@ -307,10 +321,15 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted) return;
 
       // Initialize ConfigProvider first
-      final configProvider =
-          Provider.of<ConfigProvider>(context, listen: false);
-      await _safeStep<void>('config.initialize', configProvider.initialize,
-          timeout: const Duration(seconds: 6));
+      final configProvider = Provider.of<ConfigProvider>(
+        context,
+        listen: false,
+      );
+      await _safeStep<void>(
+        'config.initialize',
+        configProvider.initialize,
+        timeout: const Duration(seconds: 6),
+      );
       StartupTrace.mark('config ready');
       if (!mounted) return;
 
@@ -324,13 +343,17 @@ class _AppInitializerState extends State<AppInitializer> {
       // first paint. Kick it off without awaiting; the mode self-corrects (and
       // notifies listeners) in the background if the backend is actually
       // degraded.
-      final appModeProvider =
-          Provider.of<AppModeProvider>(context, listen: false);
-      unawaited(_safeStep<void>(
-        'app_mode.initialize',
-        appModeProvider.initialize,
-        timeout: const Duration(seconds: 8),
-      ));
+      final appModeProvider = Provider.of<AppModeProvider>(
+        context,
+        listen: false,
+      );
+      unawaited(
+        _safeStep<void>(
+          'app_mode.initialize',
+          appModeProvider.initialize,
+          timeout: const Duration(seconds: 8),
+        ),
+      );
       StartupTrace.mark('app_mode init kicked off (deferred)');
       if (!mounted) return;
 
@@ -343,22 +366,29 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // Ensure cache provider is hydrated before any screen depends on it.
       final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
-      await _safeStep<void>('cache.initialize', cacheProvider.initialize,
-          timeout: const Duration(seconds: 6));
+      await _safeStep<void>(
+        'cache.initialize',
+        cacheProvider.initialize,
+        timeout: const Duration(seconds: 6),
+      );
       StartupTrace.mark('cache ready');
       if (!mounted) return;
 
       // Initialize WalletProvider early to restore cached wallet (safe for fresh starts).
       StartupTrace.mark('wallet restore start');
-      final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
-      await _safeStep<void>('wallet.initialize', walletProvider.initialize,
-          timeout: const Duration(seconds: 8));
+      final walletProvider = Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      );
+      await _safeStep<void>(
+        'wallet.initialize',
+        walletProvider.initialize,
+        timeout: const Duration(seconds: 8),
+      );
       await _safeStep<void>(
         'wallet.restoreAccountShell',
-        () => walletProvider.restoreAccountShellFromBackend(
-          allowRefresh: false,
-        ),
+        () =>
+            walletProvider.restoreAccountShellFromBackend(allowRefresh: false),
         timeout: const Duration(seconds: 8),
       );
       StartupTrace.mark('wallet restore end');
@@ -369,17 +399,23 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted) return;
 
       // Initialize ProfileProvider and load profile if wallet exists
-      final profileProvider =
-          Provider.of<ProfileProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
       final pendingBeforeAccountHydration = _pendingShareTarget;
       final signedOutPublicRead = pendingBeforeAccountHydration != null &&
-          const DeepLinkStartupRouting()
-                  .accessPolicyFor(pendingBeforeAccountHydration) ==
+          const DeepLinkStartupRouting().accessPolicyFor(
+                pendingBeforeAccountHydration,
+              ) ==
               DeepLinkAccessPolicy.publicRead &&
           !BackendApiService().hasAuthSession;
       if (!signedOutPublicRead) {
-        await _safeStep<void>('profile.initialize', profileProvider.initialize,
-            timeout: const Duration(seconds: 8));
+        await _safeStep<void>(
+          'profile.initialize',
+          profileProvider.initialize,
+          timeout: const Duration(seconds: 8),
+        );
       }
       if (!signedOutPublicRead &&
           walletAddress != null &&
@@ -401,7 +437,8 @@ class _AppInitializerState extends State<AppInitializer> {
         );
         if (alreadyHydratedForWallet) {
           StartupTrace.mark(
-              'profile already hydrated by initialize (skip duplicate load)');
+            'profile already hydrated by initialize (skip duplicate load)',
+          );
         } else {
           StartupTrace.mark('profile load start');
           try {
@@ -410,7 +447,8 @@ class _AppInitializerState extends State<AppInitializer> {
                 .timeout(const Duration(seconds: 6));
           } catch (e) {
             AppConfig.debugPrint(
-                'AppInitializer: ProfileProvider load failed: $e');
+              'AppInitializer: ProfileProvider load failed: $e',
+            );
           }
           StartupTrace.mark('profile load end');
         }
@@ -423,13 +461,18 @@ class _AppInitializerState extends State<AppInitializer> {
       // (/api/saved) sitting on the critical, pre-shell path — so start it here
       // but don't block the shell route on it. Saved-state simply hydrates a
       // moment later (unchanged from the warm-up path), with no routing impact.
-      final savedItemsProvider =
-          Provider.of<SavedItemsProvider>(context, listen: false);
-      unawaited(_safeStep<void>(
-        'saved_items.initialize',
-        () => savedItemsProvider.initialize(syncBackend: !signedOutPublicRead),
-        timeout: const Duration(seconds: 6),
-      ));
+      final savedItemsProvider = Provider.of<SavedItemsProvider>(
+        context,
+        listen: false,
+      );
+      unawaited(
+        _safeStep<void>(
+          'saved_items.initialize',
+          () =>
+              savedItemsProvider.initialize(syncBackend: !signedOutPublicRead),
+          timeout: const Duration(seconds: 6),
+        ),
+      );
       if (!mounted) return;
 
       // ProfileProvider always uses backend data.
@@ -458,11 +501,13 @@ class _AppInitializerState extends State<AppInitializer> {
       bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
       if (sessionStatus == StoredSessionStatus.refreshRequired) {
         try {
-          hasValidSession = await BackendApiService()
-              .restoreExistingSession(allowRefresh: false);
+          hasValidSession = await BackendApiService().restoreExistingSession(
+            allowRefresh: false,
+          );
         } catch (e) {
           AppConfig.debugPrint(
-              'AppInitializer: restoreExistingSession failed: $e');
+            'AppInitializer: restoreExistingSession failed: $e',
+          );
         }
       }
       if (hasValidSession &&
@@ -482,11 +527,13 @@ class _AppInitializerState extends State<AppInitializer> {
           }
         } catch (e) {
           AppConfig.debugPrint(
-              'AppInitializer: managed wallet reconnect failed: $e');
+            'AppInitializer: managed wallet reconnect failed: $e',
+          );
         }
       }
-      final hasLocalAccount =
-          AuthGatingService.hasLocalAccountSync(prefs: prefs);
+      final hasLocalAccount = AuthGatingService.hasLocalAccountSync(
+        prefs: prefs,
+      );
 
       // Campaign attribution (`?mode=guest&intent=discover`, utm_*) is captured
       // for every entry. It no longer decides whether the visitor sees
@@ -551,7 +598,8 @@ class _AppInitializerState extends State<AppInitializer> {
         debugPrint('  sessionStatus: $sessionStatus');
         debugPrint('  hasPendingAuthOnboarding: $hasPendingAuthOnboarding');
         debugPrint(
-            '  pendingAuthOnboardingStepId: ${pendingAuthOnboardingStepId ?? 'none'}');
+          '  pendingAuthOnboardingStepId: ${pendingAuthOnboardingStepId ?? 'none'}',
+        );
       }
 
       if (!mounted) return;
@@ -571,10 +619,8 @@ class _AppInitializerState extends State<AppInitializer> {
       // trigger expensive polling / socket setup while the user isn't in the
       // shell yet (and increases perceived startup jank).
       final bootstrapper = AppBootstrapService();
-      Future<void> startWarmUp() => bootstrapper.warmUp(
-            context: context,
-            walletAddress: walletAddress,
-          );
+      Future<void> startWarmUp() =>
+          bootstrapper.warmUp(context: context, walletAddress: walletAddress);
       Future<void> maybeStartWarmUp({bool publicRead = false}) {
         if (publicRead && !hasValidSession) return Future<void>.value();
         return startWarmUp();
@@ -583,15 +629,19 @@ class _AppInitializerState extends State<AppInitializer> {
       // Initial AppLinks resolution is asynchronous. Decide public/auth entry
       // only after it has had a bounded chance to seed its target. A later
       // result is replayed by the platform listener after startup completes.
-      await _safeStep<void>('resolve platform initial link',
-          GuestSessionService.waitForPlatformInitialLinkResolution,
-          timeout: const Duration(seconds: 3));
+      await _safeStep<void>(
+        'resolve platform initial link',
+        GuestSessionService.waitForPlatformInitialLinkResolution,
+        timeout: const Duration(seconds: 3),
+      );
       if (!mounted || _didNavigate) return;
 
       final pendingAuthLink = (() {
         try {
-          return Provider.of<AuthDeepLinkProvider>(context, listen: false)
-              .consumePending();
+          return Provider.of<AuthDeepLinkProvider>(
+            context,
+            listen: false,
+          ).consumePending();
         } catch (_) {
           return null;
         }
@@ -641,8 +691,10 @@ class _AppInitializerState extends State<AppInitializer> {
         // action.
         if (hasPendingAuthOnboarding || hasActiveOnboardingGuard) {
           try {
-            Provider.of<DeferredOnboardingProvider>(context, listen: false)
-                .enableForProtectedAction(
+            Provider.of<DeferredOnboardingProvider>(
+              context,
+              listen: false,
+            ).enableForProtectedAction(
               initialStepId:
                   (pendingAuthOnboardingStepId ?? '').trim().isNotEmpty
                       ? pendingAuthOnboardingStepId!.trim()
@@ -661,14 +713,15 @@ class _AppInitializerState extends State<AppInitializer> {
           initialUri: widget.initialUri,
         );
         if (decision == null) return;
-        StartupTrace.publicEntry('startup_decision',
-            entityType: pendingDeepLink.type.name,
-            accessPolicy: decision.accessPolicy.name,
-            hasSession: hasValidSession,
-            route: decision.requiresSignIn
-                ? '/sign-in'
-                : decision.browserRoutePath,
-            caller: 'AppInitializer');
+        StartupTrace.publicEntry(
+          'startup_decision',
+          entityType: pendingDeepLink.type.name,
+          accessPolicy: decision.accessPolicy.name,
+          hasSession: hasValidSession,
+          route:
+              decision.requiresSignIn ? '/sign-in' : decision.browserRoutePath,
+          caller: 'AppInitializer',
+        );
 
         if (decision.requiresSignIn) {
           if (!mounted) return;
@@ -694,17 +747,23 @@ class _AppInitializerState extends State<AppInitializer> {
         // own data; warm-up (markers/artworks/web3/profile refresh) runs in the
         // background after the first frame instead of holding the splash for up
         // to 15s.
-        unawaited(maybeStartWarmUp(
-          publicRead: decision.accessPolicy == DeepLinkAccessPolicy.publicRead,
-        ));
+        unawaited(
+          maybeStartWarmUp(
+            publicRead:
+                decision.accessPolicy == DeepLinkAccessPolicy.publicRead,
+          ),
+        );
         if (!mounted) return;
         _didNavigate = true;
 
         final destination = decision.preferredShellRoute == ShellRoutes.map
             ? const ShellEntryScreen.map()
             : const MainApp();
-        StartupTrace.publicEntry('shell_route',
-            route: decision.preferredShellRoute, caller: 'AppInitializer');
+        StartupTrace.publicEntry(
+          'shell_route',
+          route: decision.preferredShellRoute,
+          caller: 'AppInitializer',
+        );
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,
@@ -764,8 +823,9 @@ class _AppInitializerState extends State<AppInitializer> {
         // The helper returns 'none' for valid-session cases (deferred to resolver below).
         final hasPendingVerificationEmail =
             prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
-        final pendingVerificationEmail =
-            prefs.getString('onboarding_verification_email_v3');
+        final pendingVerificationEmail = prefs.getString(
+          'onboarding_verification_email_v3',
+        );
 
         if (hasActiveAccountLinkGuard && hasValidSession) {
           final hydratedProfileWallet =
@@ -805,7 +865,8 @@ class _AppInitializerState extends State<AppInitializer> {
           // Pending auth onboarding without valid session -> onboarding
           if (kDebugMode) {
             debugPrint(
-                'AppInitializer: route -> OnboardingFlowScreen (pending auth, no session, initialStep=${startupDecision.onboardingInitialStepId})');
+              'AppInitializer: route -> OnboardingFlowScreen (pending auth, no session, initialStep=${startupDecision.onboardingInitialStepId})',
+            );
           }
           _didNavigate = true;
           navigator.pushReplacement(
@@ -833,7 +894,8 @@ class _AppInitializerState extends State<AppInitializer> {
         } else {
           if (kDebugMode) {
             debugPrint(
-                'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding resume)');
+              'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding resume)',
+            );
           }
           _didNavigate = true;
           navigator.pushReplacement(
@@ -923,7 +985,8 @@ class _AppInitializerState extends State<AppInitializer> {
         }
         if (kDebugMode) {
           debugPrint(
-              'AppInitializer: route -> ${entry.shellRoute} (discovery)');
+            'AppInitializer: route -> ${entry.shellRoute} (discovery)',
+          );
         }
         if (!mounted) return;
         _didNavigate = true;

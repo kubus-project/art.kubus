@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/core/app_initializer.dart'
-    show shouldActivateGuestForPublicEntry;
+    show resolveDegradedPublicDiscoveryEntry, shouldActivateGuestForPublicEntry;
 import 'package:art_kubus/core/app_initializer_helper.dart';
 import 'package:art_kubus/core/deep_link_startup_routing.dart';
 
@@ -35,46 +35,49 @@ void main() {
   });
 
   test(
-      'pending auth onboarding with verification email -> onboarding:verifyEmail',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: true,
-      hasValidSession: false,
-      hasPendingVerificationEmailFlag: true,
-      pendingVerificationEmail: 'user@example.com',
-    );
+    'pending auth onboarding with verification email -> onboarding:verifyEmail',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: true,
+        hasValidSession: false,
+        hasPendingVerificationEmailFlag: true,
+        pendingVerificationEmail: 'user@example.com',
+      );
 
-    expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, 'verifyEmail');
-  });
-
-  test(
-      'pending auth onboarding without verification email -> onboarding:account',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: true,
-      hasValidSession: false,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-    );
-
-    expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, 'account');
-  });
+      expect(decision.route, StartupRouteType.onboarding);
+      expect(decision.onboardingInitialStepId, 'verifyEmail');
+    },
+  );
 
   test(
-      'pending auth onboarding with valid session -> none (deferred to resolver)',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: true,
-      hasValidSession: true,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-    );
+    'pending auth onboarding without verification email -> onboarding:account',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: true,
+        hasValidSession: false,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+      );
 
-    expect(decision.route, StartupRouteType.none);
-    expect(decision.onboardingInitialStepId, isNull);
-  });
+      expect(decision.route, StartupRouteType.onboarding);
+      expect(decision.onboardingInitialStepId, 'account');
+    },
+  );
+
+  test(
+    'pending auth onboarding with valid session -> none (deferred to resolver)',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: true,
+        hasValidSession: true,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+      );
+
+      expect(decision.route, StartupRouteType.none);
+      expect(decision.onboardingInitialStepId, isNull);
+    },
+  );
 
   test('pending verification flag true but empty email -> account', () {
     final decision = decideStartupRoute(
@@ -89,18 +92,19 @@ void main() {
   });
 
   test(
-      'a fresh anonymous visitor with no journey in flight is never onboarding',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: false,
-      hasValidSession: false,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-    );
+    'a fresh anonymous visitor with no journey in flight is never onboarding',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: false,
+        hasValidSession: false,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+      );
 
-    expect(decision.route, StartupRouteType.none);
-    expect(decision.onboardingInitialStepId, isNull);
-  });
+      expect(decision.route, StartupRouteType.none);
+      expect(decision.onboardingInitialStepId, isNull);
+    },
+  );
 
   group('resolveColdStartEntry (guest-first)', () {
     for (final route in <String?>[null, '', '/', '/main', '/map', '/unknown']) {
@@ -163,6 +167,41 @@ void main() {
         ).shellRoute,
         '/community',
       );
+      expect(
+        resolveColdStartEntry(
+          preferredShellRoute: '/analytics',
+          hasValidSession: true,
+          hasLocalAccount: true,
+        ).shellRoute,
+        '/analytics',
+      );
+    });
+
+    test('analytics cold entry retains its route after ordinary hydration', () {
+      final guestEntry = resolveColdStartEntry(
+        preferredShellRoute: '/analytics',
+        hasValidSession: false,
+        hasLocalAccount: false,
+      );
+      expect(guestEntry.shellRoute, '/analytics');
+      expect(guestEntry.activateGuestMode, isTrue);
+
+      final lapsedAccountEntry = resolveColdStartEntry(
+        preferredShellRoute: '/analytics',
+        hasValidSession: false,
+        hasLocalAccount: true,
+      );
+      expect(lapsedAccountEntry.shellRoute, '/analytics');
+      expect(lapsedAccountEntry.activateGuestMode, isFalse);
+    });
+
+    test('degraded analytics entry is normalized back to public discovery', () {
+      final entry = resolveDegradedPublicDiscoveryEntry(
+        preferredShellRoute: '/analytics',
+        hasLocalAccount: false,
+      );
+      expect(entry.shellRoute, '/map');
+      expect(entry.activateGuestMode, isTrue);
     });
   });
 
@@ -179,20 +218,22 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test('Google onboarding guard keeps wallet optional during account setup',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: true,
-      hasValidSession: true,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-      hasActiveGoogleOnboardingGuard: true,
-      hasWallet: false,
-    );
+  test(
+    'Google onboarding guard keeps wallet optional during account setup',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: true,
+        hasValidSession: true,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+        hasActiveGoogleOnboardingGuard: true,
+        hasWallet: false,
+      );
 
-    expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, isNull);
-  });
+      expect(decision.route, StartupRouteType.onboarding);
+      expect(decision.onboardingInitialStepId, isNull);
+    },
+  );
 
   test('account-link guard without session never routes to sign-in', () {
     final decision = decideStartupRoute(
@@ -207,37 +248,40 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test('account-link guard with session and no wallet routes to walletConnect',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: false,
-      hasValidSession: true,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-      hasActiveAccountLinkGuard: true,
-      hasWallet: false,
-    );
+  test(
+    'account-link guard with session and no wallet routes to walletConnect',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: false,
+        hasValidSession: true,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+        hasActiveAccountLinkGuard: true,
+        hasWallet: false,
+      );
 
-    expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, 'walletConnect');
-  });
+      expect(decision.route, StartupRouteType.onboarding);
+      expect(decision.onboardingInitialStepId, 'walletConnect');
+    },
+  );
 
   test(
-      'account-link guard with session and wallet resumes structured onboarding',
-      () {
-    final decision = decideStartupRoute(
-      hasPendingAuthOnboarding: false,
-      hasValidSession: true,
-      hasPendingVerificationEmailFlag: false,
-      pendingVerificationEmail: null,
-      hasActiveAccountLinkGuard: true,
-      hasWallet: true,
-      structuredOnboardingStepId: 'walletBackupIntro',
-    );
+    'account-link guard with session and wallet resumes structured onboarding',
+    () {
+      final decision = decideStartupRoute(
+        hasPendingAuthOnboarding: false,
+        hasValidSession: true,
+        hasPendingVerificationEmailFlag: false,
+        pendingVerificationEmail: null,
+        hasActiveAccountLinkGuard: true,
+        hasWallet: true,
+        structuredOnboardingStepId: 'walletBackupIntro',
+      );
 
-    expect(decision.route, StartupRouteType.onboarding);
-    expect(decision.onboardingInitialStepId, 'walletBackupIntro');
-  });
+      expect(decision.route, StartupRouteType.onboarding);
+      expect(decision.onboardingInitialStepId, 'walletBackupIntro');
+    },
+  );
 
   group('canSkipRedundantCriticalProfileLoad', () {
     test('skips when hydrated profile matches the routing wallet', () {
@@ -273,17 +317,19 @@ void main() {
       );
     });
 
-    test('does not skip when the hydrated wallet differs from routing wallet',
-        () {
-      expect(
-        canSkipRedundantCriticalProfileLoad(
-          hasHydratedProfile: true,
-          hydratedWalletAddress: 'WalletA',
-          routeWalletAddress: 'WalletB',
-        ),
-        isFalse,
-      );
-    });
+    test(
+      'does not skip when the hydrated wallet differs from routing wallet',
+      () {
+        expect(
+          canSkipRedundantCriticalProfileLoad(
+            hasHydratedProfile: true,
+            hydratedWalletAddress: 'WalletA',
+            routeWalletAddress: 'WalletB',
+          ),
+          isFalse,
+        );
+      },
+    );
 
     test('does not skip when either wallet is null or empty', () {
       expect(
@@ -308,27 +354,33 @@ void main() {
   group('shouldActivateGuestForPublicEntry', () {
     test('fresh anonymous user opening a public link becomes a guest', () {
       expect(
-          shouldActivateGuestForPublicEntry(
-              hasValidSession: false,
-              hasLocalAccount: false,
-              accessPolicy: DeepLinkAccessPolicy.publicRead),
-          isTrue);
+        shouldActivateGuestForPublicEntry(
+          hasValidSession: false,
+          hasLocalAccount: false,
+          accessPolicy: DeepLinkAccessPolicy.publicRead,
+        ),
+        isTrue,
+      );
     });
     test('returning local account with expired session is not a guest', () {
       expect(
-          shouldActivateGuestForPublicEntry(
-              hasValidSession: false,
-              hasLocalAccount: true,
-              accessPolicy: DeepLinkAccessPolicy.publicRead),
-          isFalse);
+        shouldActivateGuestForPublicEntry(
+          hasValidSession: false,
+          hasLocalAccount: true,
+          accessPolicy: DeepLinkAccessPolicy.publicRead,
+        ),
+        isFalse,
+      );
     });
     test('valid session is never marked guest', () {
       expect(
-          shouldActivateGuestForPublicEntry(
-              hasValidSession: true,
-              hasLocalAccount: true,
-              accessPolicy: DeepLinkAccessPolicy.publicRead),
-          isFalse);
+        shouldActivateGuestForPublicEntry(
+          hasValidSession: true,
+          hasLocalAccount: true,
+          accessPolicy: DeepLinkAccessPolicy.publicRead,
+        ),
+        isFalse,
+      );
     });
   });
 }
