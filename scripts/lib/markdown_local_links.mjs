@@ -2,7 +2,31 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 function withoutFencedCode(markdown) {
-  return markdown.replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '');
+  const prose = [];
+  let fence = null;
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const opening = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (!fence) {
+      if (opening) {
+        fence = { marker: opening[1][0], length: opening[1].length };
+      } else {
+        prose.push(line);
+      }
+      continue;
+    }
+
+    const closing = /^ {0,3}(`+|~+)[ \t]*$/.exec(line);
+    if (
+      closing &&
+      closing[1][0] === fence.marker &&
+      closing[1].length >= fence.length
+    ) {
+      fence = null;
+    }
+  }
+
+  return prose.join('\n');
 }
 
 function localLinkTargets(markdown) {
