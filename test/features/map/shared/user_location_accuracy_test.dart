@@ -24,7 +24,8 @@ void main() {
         accuracyMeters: accuracy,
       );
       final feature = (data['features'] as List).single as Map;
-      expect((feature['properties'] as Map).containsKey('accuracyRadiusZ0'), false);
+      expect((feature['properties'] as Map).containsKey('accuracyRadiusZ0'),
+          false);
     }
   });
 }

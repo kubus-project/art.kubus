@@ -4616,7 +4616,8 @@ class _MapScreenState extends State<MapScreen>
       _kubusMapController.ids.layers.locationAccuracyLayerId,
       ml.CircleLayerProperties(
         circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
-        circleStrokeColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
+        circleStrokeColor:
+            KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
       ),
     );
     if (!mounted) return;
