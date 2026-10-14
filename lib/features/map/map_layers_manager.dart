@@ -264,7 +264,39 @@ class KubusMarkerLayerStyleState {
 ///
 /// This helper keeps behavior stable while making styling a single source of
 /// truth.
+/// The SDK otherwise serializes every absent property as null, resetting
+/// unrelated layout/paint. A patch must contain only the supplied properties.
+class _KubusLayerPropertyPatch implements ml.LayerProperties {
+  _KubusLayerPropertyPatch(this.values);
+  final Map<String, dynamic> values;
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) => Map.of(values);
+}
+
 class KubusMarkerLayerStyler {
+  ml.MapLibreMapController? _cachedController;
+  int? _cachedEpoch;
+  final Map<String, Map<String, String>> _appliedProperties = {};
+
+  Future<void> _setChangedProperties(ml.MapLibreMapController controller,
+      String layerId, ml.LayerProperties properties) async {
+    final previous = _appliedProperties[layerId] ?? <String, String>{};
+    final supplied = properties.toJson();
+    final signatures =
+        supplied.map((key, value) => MapEntry(key, jsonEncode(value)));
+    final changes = <String, dynamic>{
+      for (final entry in supplied.entries)
+        if (previous[entry.key] != signatures[entry.key])
+          entry.key: entry.value,
+    };
+    if (changes.isEmpty) return;
+    await controller.setLayerProperties(
+        layerId, _KubusLayerPropertyPatch(changes));
+    if (identical(_cachedController, controller)) {
+      _appliedProperties[layerId] = {...previous, ...signatures};
+    }
+  }
+
   KubusMarkerLayerStyler({
     Duration minInterval = const Duration(milliseconds: 66),
   }) : _minIntervalMs = minInterval.inMilliseconds;
@@ -457,6 +489,12 @@ class KubusMarkerLayerStyler {
   }) async {
     if (!styleInitialized) return;
     if (styleEpoch != getCurrentStyleEpoch()) return;
+    if (!identical(_cachedController, controller) ||
+        _cachedEpoch != styleEpoch) {
+      _cachedController = controller;
+      _cachedEpoch = styleEpoch;
+      _appliedProperties.clear();
+    }
 
     final canStyleMarkerLayer = managedLayerIds.contains(markerLayerId);
     final canStyleCubeIconLayer = managedLayerIds.contains(cubeIconLayerId);
@@ -512,7 +550,8 @@ class KubusMarkerLayerStyler {
     try {
       if (canStyleMarkerLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           markerLayerId,
           ml.SymbolLayerProperties(
             iconImage: iconImage,
@@ -542,7 +581,8 @@ class KubusMarkerLayerStyler {
 
       if (canStylePulseLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           pulseLayerId,
           ml.CircleLayerProperties(
             circleRadius: MapMarkerStyleConfig.pulseRadiusForPhase(
@@ -563,7 +603,8 @@ class KubusMarkerLayerStyler {
 
       if (canStyleAccuracyLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           locationAccuracyLayerId,
           kubusLocationAccuracyProperties(
             color: state.locationAccentColor!,
@@ -576,7 +617,8 @@ class KubusMarkerLayerStyler {
           managedLayerIds.contains(locationHeadingLayerId) &&
           state.locationAccentColor != null) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+            controller,
             locationHeadingLayerId,
             ml.FillLayerProperties(
                 fillColor:
@@ -586,7 +628,8 @@ class KubusMarkerLayerStyler {
 
       if (canStyleCubeIconLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           cubeIconLayerId,
           ml.SymbolLayerProperties(
             iconImage: iconImage,
@@ -608,7 +651,8 @@ class KubusMarkerLayerStyler {
       final coverLayerId = '${markerLayerId}_cover';
       if (managedLayerIds.contains(coverLayerId)) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           coverLayerId,
           ml.SymbolLayerProperties(
             iconImage: interactiveIconImageExpression(state, cover: true),

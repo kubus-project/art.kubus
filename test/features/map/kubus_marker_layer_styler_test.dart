@@ -11,7 +11,8 @@ class _AccuracyStyleController implements ml.MapLibreMapController {
   @override
   Future<void> setLayerProperties(
       String id, ml.LayerProperties properties) async {
-    applied.complete(properties as ml.CircleLayerProperties);
+    applied.complete(
+        ml.CircleLayerProperties.fromJson(properties.toJson(skipNulls: false)));
   }
 
   @override
@@ -20,12 +21,17 @@ class _AccuracyStyleController implements ml.MapLibreMapController {
 
 class _CoverStyleController implements ml.MapLibreMapController {
   final layers = <String, ml.SymbolLayerProperties>{};
+  final updates = <Map<String, dynamic>>[];
+  final snapshots = <String, Map<String, dynamic>>{};
   final completed = Completer<void>();
   @override
   Future<void> setLayerProperties(
       String id, ml.LayerProperties properties) async {
-    layers[id] = properties as ml.SymbolLayerProperties;
-    if (id == 'marker_cover') completed.complete();
+    final values = properties.toJson(skipNulls: false);
+    updates.add(values);
+    snapshots[id] = {...?snapshots[id], ...values};
+    layers[id] = ml.SymbolLayerProperties.fromJson(snapshots[id]!);
+    if (id == 'marker_cover' && !completed.isCompleted) completed.complete();
   }
 
   @override
@@ -33,6 +39,57 @@ class _CoverStyleController implements ml.MapLibreMapController {
 }
 
 void main() {
+  test(
+      'ambient ticks send only changed paint and replay layout after style reset',
+      () async {
+    final controller = _CoverStyleController();
+    final styler = KubusMarkerLayerStyler();
+    var epoch = 1;
+    void update(double bob) => styler.requestUpdate(
+          controller: controller,
+          styleInitialized: true,
+          styleEpoch: epoch,
+          getCurrentStyleEpoch: () => epoch,
+          managedLayerIds: {'marker', 'cube', 'marker_cover'},
+          markerLayerId: 'marker',
+          cubeIconLayerId: 'cube',
+          force: true,
+          state: KubusMarkerLayerStyleState(
+              pressedMarkerId: null,
+              hoveredMarkerId: null,
+              selectedMarkerId: 'selected',
+              selectionPopAnimationValue: 0,
+              cubeLayerVisible: false,
+              markerBadgeBobOffsetPx: bob),
+        );
+    update(2);
+    await controller.completed.future;
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        controller.updates
+            .every((patch) => patch.values.every((value) => value != null)),
+        isTrue,
+        reason: 'SDK skipNulls:false must not reset unrequested properties');
+    final before = controller.updates.length;
+    update(4);
+    await Future<void>.delayed(Duration.zero);
+    final paintPatches = controller.updates.skip(before).toList();
+    expect(paintPatches, hasLength(3));
+    for (final patch in paintPatches) {
+      expect(patch.keys, ['icon-translate']);
+      expect(patch['icon-translate'], <Object>[0.0, 4.0]);
+    }
+    final settled = controller.updates.length;
+    update(4);
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.updates.length, settled,
+        reason: 'unchanged frames write nothing');
+    epoch = 2;
+    update(4);
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.updates.last, contains('icon-image'),
+        reason: 'a new style needs its complete layout again');
+  });
   test('cover paint follows selected badge geometry in 2D and 3D', () async {
     for (final cubeVisible in <bool>[false, true]) {
       final controller = _CoverStyleController();
