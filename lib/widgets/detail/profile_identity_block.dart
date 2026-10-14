@@ -53,6 +53,7 @@ class ProfileIdentityBlock extends StatelessWidget {
     this.isVerified = false,
     this.isArtist = false,
     this.isInstitution = false,
+    this.showRoleBadges = true,
     this.density = ProfileIdentityDensity.compact,
     this.nameStyle,
     this.handleStyle,
@@ -72,6 +73,10 @@ class ProfileIdentityBlock extends StatelessWidget {
   final bool isVerified;
   final bool isArtist;
   final bool isInstitution;
+
+  /// Hide duplicate role labels when the surrounding identity already renders
+  /// an accessible role indicator, such as the mobile avatar badge.
+  final bool showRoleBadges;
   final ProfileIdentityDensity density;
 
   final TextStyle? nameStyle;
@@ -112,8 +117,8 @@ class ProfileIdentityBlock extends StatelessWidget {
           color: scheme.primary,
           size: KubusHeaderMetrics.actionIcon,
         ),
-      if (isArtist) const ArtistBadge(),
-      if (isInstitution) const InstitutionBadge(),
+      if (showRoleBadges && isArtist) const ArtistBadge(),
+      if (showRoleBadges && isInstitution) const InstitutionBadge(),
     ];
 
     return MergeSemantics(

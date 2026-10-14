@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
@@ -189,7 +190,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final body = Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
+      body: CommunityMediaViewport(
+          child: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
           return FadeTransition(
@@ -245,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           );
         },
-      ),
+      )),
     );
 
     // Pushed inside the desktop shell the profile owns the one header row:
@@ -263,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   /// What one [ProfileSection] contributes to the content column(s) of "My
   /// profile"; empty when the section does not apply to this profile. Identity
-  /// (the card above), the closing statistics and the owner's tools are laid out
+  /// (the card above), the statistics after practice and the owner's tools are laid out
   /// full width by the callers, not here.
   List<Widget> _contentSectionWidgets(
     ProfileSection section,
@@ -328,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// The narrative between the identity and the closing statistics, in
+  /// The narrative between the identity and the statistics after practice, in
   /// canonical order.
   static final List<ProfileSection> _narrativeSections = publicProfileSections
       .where((section) =>
@@ -336,12 +338,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       .toList(growable: false);
 
   /// "My profile" follows the public profile's hierarchy (see
-  /// [ownerProfileSections]): identity (the card above), work, activity,
-  /// recognition, closing stats, then the owner's tools as their own block.
+  /// [ownerProfileSections]): identity (the card above), stats, work, activity,
+  /// recognition, then the owner's tools as their own block.
   ///
   /// Two-column from 1200 px: the wide main column carries work and posts; the
   /// narrow side column carries recognition (badges, achievements). The stats
-  /// and the owner's tools follow full width.
+  /// lead full width after the identity; the owner's tools follow the content.
   Widget _buildTwoColumnLayout({
     required ThemeProvider themeProvider,
     required ProfileProvider profileProvider,
@@ -351,6 +353,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildStatsCards(themeProvider, profileProvider, true),
+        const SizedBox(height: DetailSpacing.xl),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -375,8 +379,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        const SizedBox(height: DetailSpacing.xl),
-        _buildStatsCards(themeProvider, profileProvider, true),
         ..._ownerTools(themeProvider,
             isArtist: isArtist, isInstitution: isInstitution),
       ],
@@ -393,14 +395,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildStatsCards(themeProvider, profileProvider, false),
+        const SizedBox(height: DetailSpacing.xl),
         _contentColumn(
           _narrativeSections,
           themeProvider,
           isArtist: isArtist,
           isInstitution: isInstitution,
         ),
-        const SizedBox(height: DetailSpacing.xl),
-        _buildStatsCards(themeProvider, profileProvider, false),
         ..._ownerTools(themeProvider,
             isArtist: isArtist, isInstitution: isInstitution),
       ],

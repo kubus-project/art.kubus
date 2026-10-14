@@ -7524,5 +7524,12 @@
   "communityArtDiscoveryEmptyBody": "No public art, reviews or exhibitions could be found right now. Try again in a moment, or explore the map.",
   "communityArtDiscoveryErrorTitle": "Couldn't load discovery",
   "communityArtDiscoveryErrorBody": "Check your connection and try again.",
-  "communityArtDiscoveryLoadMore": "Show more"
+  "communityArtDiscoveryLoadMore": "Show more",
+  "contributionHeadline": "Art is everywhere. Help put it on the map.",
+  "contributionBody": "Discover local art, document what you find, and connect with the people behind it.",
+  "contributionJoin": "Join art.kubus",
+  "contributionDocument": "Document public art",
+  "contributionArtwork": "Add artwork",
+  "contributionExhibition": "Add exhibition or event",
+  "contributionApplication": "View application status"
 }

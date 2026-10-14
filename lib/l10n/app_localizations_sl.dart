@@ -18168,4 +18168,27 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityArtDiscoveryLoadMore => 'Pokaži več';
+
+  @override
+  String get contributionHeadline =>
+      'Umetnost je povsod. Pomagaj jo postaviti na zemljevid.';
+
+  @override
+  String get contributionBody =>
+      'Odkrij lokalno umetnost, dokumentiraj, kar najdeš, in spoznaj ljudi, ki jo ustvarjajo.';
+
+  @override
+  String get contributionJoin => 'Pridruži se art.kubus';
+
+  @override
+  String get contributionDocument => 'Dokumentiraj umetnost v javnem prostoru';
+
+  @override
+  String get contributionArtwork => 'Dodaj umetniško delo';
+
+  @override
+  String get contributionExhibition => 'Dodaj razstavo ali dogodek';
+
+  @override
+  String get contributionApplication => 'Preveri stanje prijave';
 }

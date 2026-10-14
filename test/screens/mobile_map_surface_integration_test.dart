@@ -58,6 +58,20 @@ void main() {
       );
     });
 
+    test('primary controls remain mounted over the nearby sheet', () {
+      expect(
+        source,
+        matches(
+          RegExp(
+            r'if \(ui\.contextSurface == MapContextSurface\.none\s*\|\|\s*'
+            r'ui\.contextSurface == MapContextSurface\.nearby\s*\|\|\s*'
+            r'ui\.contextSurface == MapContextSurface\.markerPreview\)\s*'
+            r'_buildPrimaryControls\(',
+          ),
+        ),
+      );
+    });
+
     test('marker preview uses the live anchored standard card', () {
       expect(
         source,
@@ -154,6 +168,22 @@ void main() {
         source,
         contains('_sheetController.animateTo(\n'
             '          _nearbySheetMin'),
+      );
+    });
+
+    test('nearby minimum follows the measured natural header', () {
+      expect(source, contains('key: _nearbySheetKey'));
+      expect(source, contains('headerMeasurementKey: _nearbySheetHeaderKey'));
+      expect(source, contains('_scheduleNearbySheetGeometryMeasurement('));
+      expect(source, contains('KubusNearbyArtSheetExtentBounds('));
+      expect(source, contains('minChildSize: _nearbySheetMinExtent'));
+      expect(source, contains('snapSizes: _nearbySheetSnapSizes'));
+      expect(source, contains('_nearbySheetMinExtent + 0.02'));
+      expect(source, contains('_nearbySheetMinExtent + 0.008'));
+      expect(source, contains('_sheetController.jumpTo(bounds.minExtent)'));
+      expect(
+        source,
+        contains('target.clamp(_nearbySheetMinExtent, _nearbySheetMax)'),
       );
     });
 

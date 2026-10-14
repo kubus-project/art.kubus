@@ -19,6 +19,17 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  test('nearby sheet snaps stay unique when the measured minimum reaches max',
+      () {
+    final bounds = KubusNearbyArtSheetExtentBounds(
+      availableHeight: 100,
+      headerHeight: 95,
+    );
+
+    expect(bounds.minExtent, 0.85);
+    expect(bounds.snapSizes, <double>[0.85]);
+  });
+
   testWidgets(
     'nearby panel radius button and artwork list item callbacks fire',
     (tester) async {
@@ -75,6 +86,94 @@ void main() {
       expect(mapDelegate.selectedMarker?.id, marker.id);
       expect(mapDelegate.animateCallCount, 1);
       expect(mapDelegate.lastAnimatedTarget, marker.position);
+    },
+  );
+
+  testWidgets(
+    'measured mobile header stays above navigation across compact resizes',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = NearbyArtController(map: _FakeNearbyMapDelegate());
+      final headerKey = GlobalKey();
+      final hostKey = GlobalKey<_MeasuredNearbySheetHostState>();
+
+      Future<void> showViewport(Size size, double textScale) async {
+        tester.view.physicalSize = size;
+        await tester.pumpWidget(
+          _buildApp(
+            MediaQuery(
+              data: MediaQueryData(
+                size: size,
+                textScaler: TextScaler.linear(textScale),
+              ),
+              child: _MeasuredNearbySheetHost(
+                key: hostKey,
+                controller: controller,
+                headerKey: headerKey,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await showViewport(const Size(320, 700), 1);
+      final state = hostKey.currentState!;
+      final firstController = state.sheetController;
+      _expectHeaderFits(tester, headerKey, const Size(320, 700), 64);
+      expect(state.sheetController.isAttached, isTrue);
+
+      await tester.tap(find.byKey(const ValueKey<String>('unrelated-state')));
+      await tester.pumpAndSettle();
+      expect(state.sheetController, same(firstController));
+      expect(state.sheetController.isAttached, isTrue);
+
+      final expand = state.sheetController.animateTo(
+        0.50,
+        duration: const Duration(milliseconds: 1),
+        curve: Curves.linear,
+      );
+      await tester.pumpAndSettle();
+      await expand;
+      expect(state.sheetController.size, closeTo(0.50, 0.001));
+
+      await showViewport(const Size(852, 393), 1.5);
+      _expectHeaderFits(tester, headerKey, const Size(852, 393), 64);
+      expect(state.sheetController, same(firstController));
+      expect(state.sheetController.isAttached, isTrue);
+      if (state.minExtent <= 0.50) {
+        expect(state.sheetController.size, closeTo(0.50, 0.001));
+      } else {
+        expect(
+          state.sheetController.size,
+          greaterThanOrEqualTo(state.minExtent),
+        );
+      }
+
+      final collapse = state.sheetController.animateTo(
+        state.minExtent,
+        duration: const Duration(milliseconds: 1),
+        curve: Curves.linear,
+      );
+      await tester.pumpAndSettle();
+      await collapse;
+      await showViewport(const Size(320, 700), 1);
+      _expectHeaderFits(tester, headerKey, const Size(320, 700), 64);
+      expect(state.sheetController.size, closeTo(state.minExtent, 0.001));
+      expect(state.snapSizes, orderedEquals(state.snapSizes.toSet().toList()));
+      expect(state.snapSizes.first, state.minExtent);
+      expect(state.snapSizes, everyElement(inInclusiveRange(0.12, 0.85)));
+      expect(state.sheetController.isAttached, isTrue);
+
+      await showViewport(const Size(320, 700), 2);
+      _expectHeaderFits(tester, headerKey, const Size(320, 700), 64);
+      expect(state.sheetController, same(firstController));
+      expect(state.sheetController.isAttached, isTrue);
+      expect(
+        state.sheetController.size,
+        greaterThanOrEqualTo(state.minExtent),
+      );
     },
   );
 
@@ -268,6 +367,135 @@ Widget _buildApp(Widget child) {
       home: Scaffold(body: child),
     ),
   );
+}
+
+class _MeasuredNearbySheetHost extends StatefulWidget {
+  const _MeasuredNearbySheetHost({
+    super.key,
+    required this.controller,
+    required this.headerKey,
+  });
+
+  final NearbyArtController controller;
+  final GlobalKey headerKey;
+
+  @override
+  State<_MeasuredNearbySheetHost> createState() =>
+      _MeasuredNearbySheetHostState();
+}
+
+class _MeasuredNearbySheetHostState extends State<_MeasuredNearbySheetHost> {
+  static const double _reservedBottom = 64;
+  final DraggableScrollableController sheetController =
+      DraggableScrollableController();
+  double minExtent = KubusNearbyArtSheetExtentBounds.baselineMinExtent;
+  List<double> snapSizes = const <double>[0.12, 0.24, 0.50];
+  bool _measurementScheduled = false;
+  Size? _pendingViewport;
+  int _unrelatedRevision = 0;
+
+  @override
+  void dispose() {
+    sheetController.dispose();
+    super.dispose();
+  }
+
+  void _scheduleMeasurement(Size viewport) {
+    _pendingViewport = viewport;
+    if (_measurementScheduled) return;
+    _measurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurementScheduled = false;
+      if (!mounted) return;
+      final renderObject = widget.headerKey.currentContext?.findRenderObject();
+      final latestViewport = _pendingViewport;
+      if (renderObject is! RenderBox ||
+          !renderObject.hasSize ||
+          latestViewport == null) {
+        return;
+      }
+      final bounds = KubusNearbyArtSheetExtentBounds(
+        availableHeight: latestViewport.height - _reservedBottom,
+        headerHeight: renderObject.size.height,
+      );
+      if ((bounds.minExtent - minExtent).abs() < 0.0001) return;
+      final previousMinimum = minExtent;
+      final previousExtent =
+          sheetController.isAttached ? sheetController.size : minExtent;
+      final wasCollapsed = previousExtent <= previousMinimum + 0.0001;
+      setState(() {
+        minExtent = bounds.minExtent;
+        snapSizes = bounds.snapSizes;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !sheetController.isAttached) return;
+        if (wasCollapsed &&
+            bounds.minExtent < previousMinimum &&
+            sheetController.size > bounds.minExtent + 0.0001) {
+          sheetController.jumpTo(bounds.minExtent);
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _scheduleMeasurement(Size(constraints.maxWidth, constraints.maxHeight));
+        return Stack(
+          children: [
+            Positioned.fill(
+              bottom: _reservedBottom,
+              child: DraggableScrollableSheet(
+                key: const ValueKey<String>('stable-nearby-sheet'),
+                controller: sheetController,
+                initialChildSize: minExtent,
+                minChildSize: minExtent,
+                maxChildSize: KubusNearbyArtSheetExtentBounds.maxExtent,
+                snap: true,
+                snapSizes: snapSizes,
+                builder: (context, scrollController) => KubusNearbyArtPanel(
+                  controller: widget.controller,
+                  layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+                  artworks: <Artwork>[_artwork()],
+                  markers: const <ArtMarker>[],
+                  basePosition: const LatLng(46.0569, 14.5058),
+                  isLoading: false,
+                  viewportScope: false,
+                  radiusKm: 2,
+                  headerMeasurementKey: widget.headerKey,
+                  onRadiusTap: () {},
+                  scrollController: scrollController,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: TextButton(
+                key: const ValueKey<String>('unrelated-state'),
+                onPressed: () => setState(() => _unrelatedRevision++),
+                child: Text('Refresh $_unrelatedRevision'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+void _expectHeaderFits(
+  WidgetTester tester,
+  GlobalKey headerKey,
+  Size viewport,
+  double reservedBottom,
+) {
+  final headerRect = tester.getRect(find.byKey(headerKey));
+  expect(headerRect.top, greaterThanOrEqualTo(0));
+  expect(headerRect.bottom,
+      lessThanOrEqualTo(viewport.height - reservedBottom + 0.5));
 }
 
 Artwork _artwork() {

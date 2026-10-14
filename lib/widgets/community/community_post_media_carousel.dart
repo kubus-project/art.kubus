@@ -15,29 +15,59 @@ import 'community_post_video_slide.dart';
 /// same stage, so changing slides never moves the feed.
 const double kCommunityMediaStageAspect = 4 / 3;
 
-/// A post with a single video takes the clip's own shape, bounded so neither
-/// an ultrawide strip nor a tall portrait breaks the feed. 32:9 is the widest
-/// stage (the shallowest card); 4:5 is the tallest, so a 9:16 clip is shown
-/// whole, pillarboxed, instead of filling the viewport.
-const double kCommunityVideoStageMinAspect = 4 / 5;
-const double kCommunityVideoStageMaxAspect = 32 / 9;
-
-/// Stage shape while a clip's shape is still unknown (no poster, not loaded).
+/// Stable desktop stage shape, independent of poster or playback metadata.
 const double kCommunityVideoStageFallbackAspect = 16 / 9;
 
 /// The stage never gets shallower than this, so the player controls always
 /// have room, however wide the clip is.
 const double kCommunityVideoStageMinHeight = 112;
 
-/// Stage aspect ratio for a single video of [clipAspect] (width / height),
-/// or null when its shape is unknown.
-double communityVideoStageAspect(double? clipAspect) {
-  final raw = clipAspect != null && clipAspect.isFinite && clipAspect > 0
-      ? clipAspect
-      : kCommunityVideoStageFallbackAspect;
-  return raw
-      .clamp(kCommunityVideoStageMinAspect, kCommunityVideoStageMaxAspect)
-      .toDouble();
+/// Keep a single-video stage below most of the visible viewport so portrait
+/// media and an unavailable-preview still cannot dominate a desktop feed.
+const double kCommunityVideoStageViewportFraction = 0.72;
+
+/// Captures the bounded content viewport before a scroll view makes its child
+/// height unbounded. Scaffold/navigation and SafeArea have already reserved
+/// their space here; video stages must not use the entire device height.
+class CommunityMediaViewport extends StatelessWidget {
+  const CommunityMediaViewport({
+    super.key,
+    required this.child,
+    this.reservedHeight = 0,
+  });
+
+  final Widget child;
+  final double reservedHeight;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final media = MediaQuery.of(context);
+          final height = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : media.size.height;
+          return _CommunityMediaViewportScope(
+            usableHeight: math.max(
+              0,
+              height - reservedHeight - media.padding.vertical,
+            ),
+            child: child,
+          );
+        },
+      );
+}
+
+class _CommunityMediaViewportScope extends InheritedWidget {
+  const _CommunityMediaViewportScope({
+    required this.usableHeight,
+    required super.child,
+  });
+
+  final double usableHeight;
+
+  @override
+  bool updateShouldNotify(_CommunityMediaViewportScope oldWidget) =>
+      usableHeight != oldWidget.usableHeight;
 }
 
 /// Quoted posts show one compact preview at this proportion.
@@ -80,8 +110,6 @@ class _CommunityPostMediaCarouselState
   final FocusNode _focusNode = FocusNode(debugLabel: 'community-media');
   final Map<int, _NaturalSizeProbe> _probes = <int, _NaturalSizeProbe>{};
   final Map<int, double> _naturalAspects = <int, double>{};
-  // Poster and loaded-clip shapes of video items, by index.
-  final Map<int, double> _videoAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
 
@@ -97,7 +125,6 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
-      _videoAspects.clear();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
     }
@@ -123,10 +150,7 @@ class _CommunityPostMediaCarouselState
     for (var i = 0; i < widget.mediaUrls.length; i++) {
       final index = i;
       final url = widget.mediaUrls[index];
-      if (communityMediaUrlIsVideo(url)) {
-        _probeVideoPoster(index, url);
-        continue;
-      }
+      if (communityMediaUrlIsVideo(url)) continue;
       final resolved = MediaUrlResolver.resolveDisplayUrl(url);
       if (resolved == null) continue;
       _probes[index] = _NaturalSizeProbe(
@@ -137,40 +161,6 @@ class _CommunityPostMediaCarouselState
         },
       );
     }
-  }
-
-  /// A single video's stage starts from what is already known about it: the
-  /// shape learned earlier this session, else its poster's own shape, else 16:9.
-  void _probeVideoPoster(int index, String url) {
-    if (widget.mediaUrls.length != 1) return;
-    final known =
-        CommunityPostVideoSlide.knownAspects[communityMediaVideoSourceUrl(url)];
-    if (known != null) {
-      _videoAspects[index] = known;
-      return;
-    }
-    final poster = communityMediaPosterReference(url);
-    final resolved =
-        poster == null ? null : MediaUrlResolver.resolveDisplayUrl(poster);
-    if (resolved == null) return;
-    _probes[index] = _NaturalSizeProbe(
-      NetworkImage(resolved),
-      onSize: (aspect) {
-        if (!mounted) return;
-        // The clip's real shape, once known, wins over the poster's.
-        if (CommunityPostVideoSlide.knownAspects
-            .containsKey(communityMediaVideoSourceUrl(url))) {
-          return;
-        }
-        setState(() => _videoAspects[index] = aspect);
-      },
-    );
-  }
-
-  void _onVideoAspect(int index, double aspect) {
-    if (!mounted || widget.mediaUrls.length != 1) return;
-    if (_videoAspects[index] == aspect) return;
-    setState(() => _videoAspects[index] = aspect);
   }
 
   void _disposeProbes() {
@@ -235,10 +225,13 @@ class _CommunityPostMediaCarouselState
             fit: StackFit.expand,
             children: [
               // A quoted preview shows a video's poster but never autoplays.
-              _buildSlide(0, first,
-                  fit: BoxFit.cover,
-                  onTap: widget.onOpenMedia,
-                  autoplay: false),
+              _buildSlide(
+                0,
+                first,
+                fit: BoxFit.cover,
+                onTap: widget.onOpenMedia,
+                autoplay: false,
+              ),
               if (extra > 0)
                 Positioned(
                   right: KubusSpacing.sm,
@@ -280,30 +273,43 @@ class _CommunityPostMediaCarouselState
 
     final singleVideo =
         count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
-    final stageAspect = singleVideo
-        ? communityVideoStageAspect(_videoAspects[0])
-        : kCommunityMediaStageAspect;
+    final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
       if (!singleVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
-      final reduceMotion =
-          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-      return TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: stageAspect),
-        duration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        builder: (context, aspect, _) => LayoutBuilder(
-          builder: (context, constraints) {
-            final height = math.max(
-              kCommunityVideoStageMinHeight,
-              constraints.maxWidth / aspect,
-            );
-            return SizedBox(height: height, child: child);
-          },
-        ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final stageWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final media = MediaQuery.of(context);
+          final viewport = context.dependOnInheritedWidgetOfExactType<
+              _CommunityMediaViewportScope>();
+          final usableHeight = viewport?.usableHeight ??
+              math.max(
+                0,
+                media.size.height -
+                    media.padding.vertical -
+                    media.viewInsets.bottom,
+              );
+          // Mobile reserves a stable viewing stage independent of metadata.
+          // The player contains every source aspect, including unknown media.
+          // Desktop retains its bounded feed stage. Resizing is deliberate;
+          // loading a poster/controller can never move the scroll anchor.
+          final mobile = media.size.shortestSide < 600;
+          final height = mobile
+              ? usableHeight
+              : math.min(
+                  math.max(
+                    kCommunityVideoStageMinHeight,
+                    stageWidth / kCommunityVideoStageFallbackAspect,
+                  ),
+                  usableHeight * kCommunityVideoStageViewportFraction,
+                );
+          return SizedBox(height: height, child: child);
+        },
       );
     }
 
@@ -454,14 +460,9 @@ class _CommunityPostMediaCarouselState
         url: url,
         isActive: isActive,
         autoplay: autoplay,
-        onAspect: (aspect) => _onVideoAspect(index, aspect),
       );
     }
-    return _CommunityMediaImageSlide(
-      url: url,
-      fit: fit,
-      onTap: onTap,
-    );
+    return _CommunityMediaImageSlide(url: url, fit: fit, onTap: onTap);
   }
 }
 
@@ -573,16 +574,13 @@ class _ArrowButton extends StatelessWidget {
 class _NaturalSizeProbe {
   _NaturalSizeProbe(ImageProvider provider, {required this.onSize}) {
     _stream = provider.resolve(ImageConfiguration.empty);
-    _listener = ImageStreamListener(
-      (info, _) {
-        final height = info.image.height;
-        if (height > 0) {
-          onSize(info.image.width / height);
-        }
-        _detach();
-      },
-      onError: (_, __) => _detach(),
-    );
+    _listener = ImageStreamListener((info, _) {
+      final height = info.image.height;
+      if (height > 0) {
+        onSize(info.image.width / height);
+      }
+      _detach();
+    }, onError: (_, __) => _detach());
     _stream.addListener(_listener);
   }
 

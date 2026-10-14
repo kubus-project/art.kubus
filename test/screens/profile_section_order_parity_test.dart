@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:art_kubus/widgets/profile/profile_posts_preview_section.dart';
 import 'package:flutter/material.dart';
@@ -10,22 +11,35 @@ import '../support/profile_screen_harness.dart';
 
 /// The public profile's hierarchy, shared by mobile and desktop.
 ///
-/// Identity, practice, work, public contribution, community, recognition, then
-/// the numbers. This supersedes the earlier ordering, which put the follower
-/// statistics between the posts and the achievements: the large closing
-/// statistics are the composition's visual ending, so they come last and
-/// nothing unbounded may sit above them.
+/// Identity and practice lead, followed by statistics, work, public contribution,
+/// community and recognition on every public profile surface.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  double topOf(WidgetTester tester, String text) =>
-      tester.getTopLeft(find.text(text).first).dy;
+  double topOf(WidgetTester tester, String text) {
+    final headings = find.byElementPredicate((element) {
+      if (element.widget is! Text || (element.widget as Text).data != text) {
+        return false;
+      }
+      var metric = false;
+      element.visitAncestorElements((ancestor) {
+        metric = ancestor.widget is KubusStatCard;
+        return !metric;
+      });
+      return !metric;
+    });
+    return tester
+        .getTopLeft(
+            (headings.evaluate().isNotEmpty ? headings : find.text(text)).first)
+        .dy;
+  }
 
   AppLocalizations l10nOf(WidgetTester tester) => AppLocalizations.of(
         tester.element(find.byType(ProfileIdentityBlock).first),
       )!;
 
-  group('work, community and recognition all precede the closing statistics',
+  group(
+      'statistics follow practice and precede work, community and recognition',
       () {
     for (final width in const <double>[1024, 1440]) {
       testWidgets('desktop artist @ ${width.toInt()}', (tester) async {
@@ -47,7 +61,7 @@ void main() {
         final followers = topOf(tester, l10n.userProfileFollowersStatLabel);
 
         expect(portfolio, lessThan(posts));
-        expect(posts, lessThan(followers));
+        expect(followers, lessThan(portfolio));
       });
     }
 
@@ -70,7 +84,7 @@ void main() {
       final followers = topOf(tester, l10n.userProfileFollowersStatLabel);
 
       expect(portfolio, lessThan(posts));
-      expect(posts, lessThan(followers));
+      expect(followers, lessThan(portfolio));
     });
   });
 

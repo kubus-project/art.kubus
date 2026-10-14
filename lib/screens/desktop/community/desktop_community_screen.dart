@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -6,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
-import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
@@ -83,9 +83,8 @@ import '../../community/conversation_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
-import '../../season0/season0_screen.dart';
 import '../../web3/achievements/achievements_page.dart';
-import '../../../widgets/community/community_season0_banner.dart';
+import '../../../widgets/community/contextual_contribution_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
@@ -279,7 +278,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: Stack(
+          body: CommunityMediaViewport(
+              child: Stack(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +326,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               // Compose dialog
               if (_showComposeDialog) _buildComposeDialog(themeProvider),
             ],
-          ),
+          )),
         ),
       ),
     );

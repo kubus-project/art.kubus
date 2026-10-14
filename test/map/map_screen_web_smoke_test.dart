@@ -15,6 +15,8 @@ import 'package:art_kubus/providers/tile_providers.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/screens/map_screen.dart';
+import 'package:art_kubus/widgets/map/kubus_map_chrome.dart';
+import 'package:art_kubus/widgets/map/nearby/kubus_nearby_art_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +55,9 @@ Widget _wrapWithProviders({
 
 void main() {
   testWidgets('MapScreen mounts on web without exceptions', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(420, 820);
+    addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(
       _wrapWithProviders(
         size: const Size(420, 820),
@@ -66,9 +71,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byType(MapScreen), findsOneWidget);
+    final credit = tester.getRect(find.byType(KubusMapAttributionControl));
+    final nearbyPanel = tester.getRect(find.byType(KubusNearbyArtPanel));
+    expect(
+      nearbyPanel.top - credit.bottom,
+      closeTo(14, 1),
+      reason: 'the rendered info target stays 14px above the Nearby sheet',
+    );
+    expect(find.byIcon(Icons.info_outline), findsOneWidget);
   });
 
-  testWidgets('DesktopMapScreen mounts on web without exceptions', (tester) async {
+  testWidgets('DesktopMapScreen mounts on web without exceptions',
+      (tester) async {
     await tester.pumpWidget(
       _wrapWithProviders(
         size: const Size(1280, 900),
@@ -82,4 +96,3 @@ void main() {
     expect(find.byType(DesktopMapScreen), findsOneWidget);
   });
 }
-

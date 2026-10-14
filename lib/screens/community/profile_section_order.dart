@@ -3,8 +3,8 @@
 /// diverge again.
 ///
 /// The person comes first: who they are, what they make or programme, what
-/// they have said, what they are recognised for, and the numbers as the
-/// closing composition. Account management is not part of that narrative; the
+/// their practice and statistics, their work, public contributions, posts and
+/// recognition. Account management is not part of that narrative; the
 /// owner's tools sit after it as their own, secondary block.
 enum ProfileSection {
   /// Cover, avatar, name, handle, role, bio and the practice fields (field of
@@ -25,7 +25,7 @@ enum ProfileSection {
   /// Achievements and the verified role / public badges.
   recognition,
 
-  /// The closing expressive statistic tiles.
+  /// Profile statistics, immediately after identity and practice.
   stats,
 
   /// Owner only: account health, saved items, performance and similar
@@ -36,11 +36,11 @@ enum ProfileSection {
 /// The sections of a viewed (public) profile, in order.
 const List<ProfileSection> publicProfileSections = <ProfileSection>[
   ProfileSection.identity,
+  ProfileSection.stats,
   ProfileSection.work,
   ProfileSection.publicArt,
   ProfileSection.activity,
   ProfileSection.recognition,
-  ProfileSection.stats,
 ];
 
 /// The sections of "My profile": the public sequence, then the owner's tools.

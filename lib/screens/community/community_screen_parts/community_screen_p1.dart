@@ -74,38 +74,27 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
   Future<loc.LocationData?> _obtainCurrentLocation() async {
     final l10n = AppLocalizations.of(context)!;
-    final location = loc.Location();
-    try {
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          _showSnack(l10n.communityLocationEnableServicesToast);
-          return null;
-        }
-      }
-
-      var permission = await location.hasPermission();
-      if (permission == loc.PermissionStatus.denied) {
-        permission = await location.requestPermission();
-      }
-      if (permission != loc.PermissionStatus.granted &&
-          permission != loc.PermissionStatus.grantedLimited) {
-        _showSnack(l10n.communityLocationPermissionRequiredToast);
-        return null;
-      }
-
-      final locationData = await location.getLocation();
-      if (locationData.latitude == null || locationData.longitude == null) {
-        _showSnack(l10n.communityLocationUnableToDetermineToast);
-        return null;
-      }
-      return locationData;
-    } catch (e) {
-      debugPrint('Location error: $e');
-      _showSnack(l10n.communityLocationUnableToAccessToast);
-      return null;
+    final result = await GeolocatorWalkingLocationService.shared
+        .acquireLiveFix(requestPermission: true);
+    if (!mounted) return null;
+    final fix = result.fix;
+    if (result.isAvailable && fix != null) {
+      return loc.LocationData.fromMap(<String, dynamic>{
+        'latitude': fix.position.latitude,
+        'longitude': fix.position.longitude,
+        'accuracy': fix.accuracyMeters,
+      });
     }
+    _showSnack(switch (result.status) {
+      WalkingLocationAccessStatus.serviceDisabled =>
+        l10n.communityLocationEnableServicesToast,
+      WalkingLocationAccessStatus.permissionDenied ||
+      WalkingLocationAccessStatus.permissionDeniedPermanently ||
+      WalkingLocationAccessStatus.permissionNotRequested =>
+        l10n.communityLocationPermissionRequiredToast,
+      _ => l10n.communityLocationUnableToDetermineToast,
+    });
+    return null;
   }
 
   /// Loads the Art discovery feed: personalised, nearby and new content
@@ -876,7 +865,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 360;
+        final labelStyle = KubusTypography.textTheme.labelSmall;
+        final scaledLabelFontSize = MediaQuery.textScalerOf(context)
+            .scale(labelStyle?.fontSize ?? 10.0);
+        final labelLineHeight =
+            scaledLabelFontSize * (labelStyle?.height ?? 1.2);
+        final measuredTabHeight = KubusHeaderMetrics.actionIcon +
+            KubusSpacing.xxs +
+            labelLineHeight * 2 +
+            KubusSpacing.md;
+        final tabHeight = measuredTabHeight < 60 ? 60.0 : measuredTabHeight;
 
         final roles = KubusColorRoles.of(context);
         final radius = BorderRadius.circular(KubusRadius.surface);
@@ -893,12 +891,12 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           ),
           child: TabBar(
             controller: _tabController,
-            // Four labels fit in one row from 340 px; only narrower widths
-            // scroll, so the segmented control spans the header width.
-            isScrollable: constraints.maxWidth < 340,
-            tabAlignment: constraints.maxWidth < 340
-                ? TabAlignment.start
-                : TabAlignment.fill,
+            // Keep all four destinations visible as equal segments on narrow
+            // phones; their labels wrap within the segment instead of scrolling.
+            isScrollable: false,
+            tabAlignment: TabAlignment.fill,
+            labelPadding: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
             indicator: BoxDecoration(
               color: roles.active.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(KubusRadius.control + 2),
@@ -919,7 +917,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             tabs: [
               for (final tab in tabs)
                 Tab(
-                  height: isCompact ? 56 : 60,
+                  height: tabHeight,
                   iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
                   icon: Icon(
                     tab.icon,
@@ -927,8 +925,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                   ),
                   child: Text(
                     tab.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    softWrap: true,
+                    textAlign: TextAlign.center,
                   ),
                 ),
             ],
@@ -983,17 +982,23 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             padding: const EdgeInsets.only(
               bottom: KubusLayout.mainBottomNavBarHeight,
             ),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.6,
-              width: double.infinity,
-              child: EmptyStateCard(
-                icon: emptyIcon,
-                title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
-                description: hasQuery
-                    ? l10n.communitySearchEmptyNoResults
-                    : emptySubtitle,
+            child: Column(children: [
+              Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: _buildContributionCard(),
               ),
-            ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                width: double.infinity,
+                child: EmptyStateCard(
+                  icon: emptyIcon,
+                  title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
+                  description: hasQuery
+                      ? l10n.communitySearchEmptyNoResults
+                      : emptySubtitle,
+                ),
+              ),
+            ]),
           ),
         ),
       );
@@ -1011,15 +1016,13 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
               KubusSpacing.lg,
               KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
             ),
-            itemCount: filteredPosts.length +
-                (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+            itemCount: filteredPosts.length + 1,
             itemBuilder: (context, index) {
-              // Season 0 banner at the top if enabled
-              if (AppConfig.isFeatureEnabled('season0') && index == 0) {
-                return _buildSeason0Banner();
+              // One contextual contribution entry for this timeline.
+              if (index == 0) {
+                return _buildContributionCard();
               }
-              final postIndex =
-                  AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+              final postIndex = index - 1;
               return _buildPostCardForPost(filteredPosts[postIndex]);
             },
           ),
@@ -1063,18 +1066,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     );
   }
 
-  Widget _buildSeason0Banner() {
-    final l10n = AppLocalizations.of(context)!;
-    return CommunitySeason0Banner(
-      title: l10n.season0BannerTitle,
-      subtitle: l10n.season0BannerTap,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const Season0Screen()),
-        );
-      },
-    );
+  Widget _buildContributionCard() {
+    return const ContextualContributionCard(returnRoute: '/community');
   }
 
   Widget _buildGroupsTab() {

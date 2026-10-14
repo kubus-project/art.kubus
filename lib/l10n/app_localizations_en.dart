@@ -17984,4 +17984,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityArtDiscoveryLoadMore => 'Show more';
+
+  @override
+  String get contributionHeadline =>
+      'Art is everywhere. Help put it on the map.';
+
+  @override
+  String get contributionBody =>
+      'Discover local art, document what you find, and connect with the people behind it.';
+
+  @override
+  String get contributionJoin => 'Join art.kubus';
+
+  @override
+  String get contributionDocument => 'Document public art';
+
+  @override
+  String get contributionArtwork => 'Add artwork';
+
+  @override
+  String get contributionExhibition => 'Add exhibition or event';
+
+  @override
+  String get contributionApplication => 'View application status';
 }

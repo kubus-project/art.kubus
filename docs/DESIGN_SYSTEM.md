@@ -111,12 +111,42 @@ relationship. Actions follow the identity group; ownership changes the action se
 not the composition. Retain Edit, Share, Analytics, Follow and Message where their
 real permissions allow them.
 
+The shared profile hierarchy is identity → biography/practice → statistics →
+artworks/portfolio → public contributions → posts → achievements. Owner management
+tools follow that public sequence. Keep the desktop hero and its responsive columns;
+statistics span the content before the work columns, rather than closing the page.
+
 Profile covers are user-authored compositions. Preserve approved desktop framing.
-Mobile uses a stable viewport with source aspect ratio preserved and excess width
+Mobile identity uses the cover-led dark contextual glass panel beside the floating
+avatar, overlapping the cover edge. Use dark semantic surface/foreground tokens
+even in light theme; name, full handle, role and verification stay readable within
+that identity composition. Keep content in normal flow as names and text scale grow.
+On mobile the avatar's lower-right badge uses the role's contextual color and
+corresponding artist, institution or account icon. Verification qualifies its
+accessible label only when verified; a role icon never grants verification.
+The mobile avatar badge is the single role/verification indicator, including its
+accessible label; do not repeat role chips inside the identity panel. Desktop
+keeps its name-adjacent role badges.
+Preserve the canonical rounded-square avatar and the separate upper-right active
+presence indicator. Presence appears only for fresh, visible provider data; do not
+invent an online status or cover it with the identity badge.
+Desktop retains the existing name-adjacent verification composition.
+Mobile profile covers use a stable viewport with source aspect ratio preserved and excess width
 cropped at the sides, centered by default; honor saved focal metadata when the
 media contract supports it. `BoxFit.cover` must have appropriate parent constraints.
 Keep avatar overlap and viewport geometry stable through asynchronous load and
 failure. Missing-cover fallback and failed authored-cover framing are distinct.
+
+Single-video Community stages on mobile reserve the usable content viewport before
+scrolling, excluding safe areas and persistent navigation/composer chrome. Posters,
+loading and playback share that stable height; metadata must not move the scroll
+anchor. Fit every video aspect whole without distortion or blanket cover cropping.
+Desktop retains its viewport cap; quoted previews and mixed carousels retain their
+compact and shared stage geometry.
+Every full-size Community card host captures its bounded viewing height before
+scrolling, including group feeds, profile history/previews and desktop panes.
+Modal previews capture the remaining space below persistent controls; do not
+fall back to device height inside an unbounded scroll child.
 
 ## PRODUCT hover motion
 

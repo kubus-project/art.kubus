@@ -48,14 +48,19 @@ ColdStartEntry resolveColdStartEntry({
     final route = switch (preferred) {
       '/map' => '/map',
       '/community' => '/community',
+      '/analytics' => '/analytics',
       _ => '/main',
     };
     return ColdStartEntry(shellRoute: route, activateGuestMode: false);
   }
   return ColdStartEntry(
-    // `/community` is a public destination in its own right; every other
+    // `/community` and `/analytics` are explicit destinations. Every other
     // anonymous entry (`/`, `/main`, `/map`, an unknown path) opens discovery.
-    shellRoute: preferred == '/community' ? '/community' : '/map',
+    shellRoute: switch (preferred) {
+      '/community' => '/community',
+      '/analytics' => '/analytics',
+      _ => '/map',
+    },
     // Guest mode is the "no account yet" flag. A returning account whose
     // session merely lapsed is not a guest and must not be relabelled as one.
     activateGuestMode: !hasLocalAccount,
@@ -131,7 +136,9 @@ StartupDecision decideStartupRoute({
       initial = 'verifyEmail';
     }
     return StartupDecision(
-        route: StartupRouteType.onboarding, onboardingInitialStepId: initial);
+      route: StartupRouteType.onboarding,
+      onboardingInitialStepId: initial,
+    );
   }
 
   // Pending verification flag true but empty email -> use account, not verifyEmail
@@ -152,8 +159,9 @@ StartupDecision decideDegradedStartup(SharedPreferences prefs) {
     hasValidSession: false,
     hasPendingVerificationEmailFlag:
         prefs.getBool('onboarding_pending_email_verification_v1') ?? false,
-    pendingVerificationEmail:
-        prefs.getString('onboarding_verification_email_v3'),
+    pendingVerificationEmail: prefs.getString(
+      'onboarding_verification_email_v3',
+    ),
     hasActiveGoogleOnboardingGuard:
         OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
       prefs,

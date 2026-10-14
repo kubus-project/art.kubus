@@ -266,7 +266,7 @@ void main() {
       'key remains load-bearing',
       () {
         // Primary controls: gated, mounted BEFORE the sheet.
-        final controlsIndex = source.indexOf('_buildPrimaryControls(ui)');
+        final controlsIndex = source.indexOf('_buildPrimaryControls(');
         final sheetIndex = source.indexOf('_buildBottomSheet(');
         // Activation prompt: gated, mounted AFTER the sheet.
         final activationIndex = source.indexOf('KubusActivationPromptCard()');
