@@ -301,6 +301,7 @@ Map<String, dynamic> kubusOverviewNodeFeature({
   required MapMarkerOverviewNode node,
   required String colorHex,
   required String blankIconId,
+  String? artworkIconId,
 }) {
   // The cluster id prefix is what makes the tap and hover paths treat this as a
   // cluster: a tap activates it (it holds no loaded members, so the camera
@@ -312,13 +313,13 @@ Map<String, dynamic> kubusOverviewNodeFeature({
     'properties': <String, dynamic>{
       'id': id,
       'kind': 'cluster',
-      'icon': blankIconId,
+      'icon': artworkIconId ?? blankIconId,
       'color': colorHex,
       'lat': node.position.latitude,
       'lng': node.position.longitude,
       'renderMode': 'cluster',
       'clusterCount': node.count,
-      // Marks a low-zoom overview node: a dot only, at every zoom.
+      // The same aggregate remains selectable during the detailed-data handoff.
       'overview': true,
       'overviewDominantType': node.dominantType,
       'entryScale': 1.0,

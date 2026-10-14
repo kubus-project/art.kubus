@@ -46,6 +46,9 @@ abstract class MapLayersController {
     ml.CircleLayerProperties properties,
   );
 
+  Future<void> addFillLayer(
+      String sourceId, String layerId, ml.FillLayerProperties properties);
+
   Future<void> addLineLayer(
     String sourceId,
     String layerId,
@@ -72,6 +75,12 @@ class MapLibreLayersController implements MapLayersController {
   MapLibreLayersController(this._controller);
 
   final ml.MapLibreMapController _controller;
+
+  @override
+  Future<void> addFillLayer(
+          String sourceId, String layerId, ml.FillLayerProperties properties) =>
+      _controller.addFillLayer(sourceId, layerId, properties,
+          enableInteraction: false);
 
   @override
   Future<List<dynamic>> getLayerIds() => _controller.getLayerIds();
@@ -180,6 +189,41 @@ class MapLibreLayersController implements MapLayersController {
   }
 }
 
+/// Complete accuracy style: layer updates replace paint properties on web.
+ml.CircleLayerProperties kubusLocationAccuracyProperties({
+  required Color color,
+  double pulsePhase = 0,
+}) =>
+    ml.CircleLayerProperties(
+      circleRadius: const <Object>[
+        'interpolate',
+        <Object>['exponential', 2],
+        <Object>['zoom'],
+        0,
+        <Object>[
+          'coalesce',
+          <Object>['get', 'accuracyRadiusZ0'],
+          0
+        ],
+        24,
+        <Object>[
+          '*',
+          16777216,
+          <Object>[
+            'coalesce',
+            <Object>['get', 'accuracyRadiusZ0'],
+            0
+          ]
+        ],
+      ],
+      circleColor: MapLibreStyleUtils.hexRgb(color),
+      circleOpacity: 0.10 + 0.04 * (1 - math.cos(pulsePhase * math.pi * 2)),
+      circleStrokeColor: MapLibreStyleUtils.hexRgb(color),
+      circleStrokeWidth: 1,
+      circleStrokeOpacity: 0.24,
+      circlePitchAlignment: 'map',
+    );
+
 @immutable
 class KubusMarkerLayerStyleState {
   const KubusMarkerLayerStyleState({
@@ -189,6 +233,7 @@ class KubusMarkerLayerStyleState {
     required this.selectionPopAnimationValue,
     required this.cubeLayerVisible,
     this.markerPulsePhase = 0.0,
+    this.locationAccentColor,
     this.markerBadgeBobOffsetPx = 0.0,
   });
 
@@ -203,6 +248,7 @@ class KubusMarkerLayerStyleState {
 
   /// 0..1 ambient pulse phase driving the soft ring around each dot.
   final double markerPulsePhase;
+  final Color? locationAccentColor;
 
   /// Current vertical bob offset (screen px) of the floating marker badge.
   final double markerBadgeBobOffsetPx;
@@ -218,7 +264,39 @@ class KubusMarkerLayerStyleState {
 ///
 /// This helper keeps behavior stable while making styling a single source of
 /// truth.
+/// The SDK otherwise serializes every absent property as null, resetting
+/// unrelated layout/paint. A patch must contain only the supplied properties.
+class _KubusLayerPropertyPatch implements ml.LayerProperties {
+  _KubusLayerPropertyPatch(this.values);
+  final Map<String, dynamic> values;
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) => Map.of(values);
+}
+
 class KubusMarkerLayerStyler {
+  ml.MapLibreMapController? _cachedController;
+  int? _cachedEpoch;
+  final Map<String, Map<String, String>> _appliedProperties = {};
+
+  Future<void> _setChangedProperties(ml.MapLibreMapController controller,
+      String layerId, ml.LayerProperties properties) async {
+    final previous = _appliedProperties[layerId] ?? <String, String>{};
+    final supplied = properties.toJson();
+    final signatures =
+        supplied.map((key, value) => MapEntry(key, jsonEncode(value)));
+    final changes = <String, dynamic>{
+      for (final entry in supplied.entries)
+        if (previous[entry.key] != signatures[entry.key])
+          entry.key: entry.value,
+    };
+    if (changes.isEmpty) return;
+    await controller.setLayerProperties(
+        layerId, _KubusLayerPropertyPatch(changes));
+    if (identical(_cachedController, controller)) {
+      _appliedProperties[layerId] = {...previous, ...signatures};
+    }
+  }
+
   KubusMarkerLayerStyler({
     Duration minInterval = const Duration(milliseconds: 66),
   }) : _minIntervalMs = minInterval.inMilliseconds;
@@ -239,6 +317,8 @@ class KubusMarkerLayerStyler {
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
+    String? locationAccuracyLayerId,
+    String? locationHeadingLayerId,
     bool force = false,
   }) {
     if (controller == null) return;
@@ -266,6 +346,8 @@ class KubusMarkerLayerStyler {
         markerLayerId: markerLayerId,
         cubeIconLayerId: cubeIconLayerId,
         pulseLayerId: pulseLayerId,
+        locationAccuracyLayerId: locationAccuracyLayerId,
+        locationHeadingLayerId: locationHeadingLayerId,
         state: state,
       ).whenComplete(() {
         _markerLayerStyleUpdateInFlight = false;
@@ -280,6 +362,8 @@ class KubusMarkerLayerStyler {
             markerLayerId: markerLayerId,
             cubeIconLayerId: cubeIconLayerId,
             pulseLayerId: pulseLayerId,
+            locationAccuracyLayerId: locationAccuracyLayerId,
+            locationHeadingLayerId: locationHeadingLayerId,
             state: state,
             force: true,
           );
@@ -357,12 +441,20 @@ class KubusMarkerLayerStyler {
     );
   }
 
-  static Object interactiveIconImageExpression(
-    KubusMarkerLayerStyleState state,
-  ) {
+  static Object interactiveIconImageExpression(KubusMarkerLayerStyleState state,
+      {bool cover = false}) {
+    final base = cover ? 'coverIcon' : 'icon';
+    final selected = cover ? 'coverIconSelected' : 'iconSelected';
+    final Object baseImage = cover
+        ? <Object>[
+            'coalesce',
+            <Object>['get', base],
+            ''
+          ]
+        : <Object>['get', base];
     final selectedId = state.selectedMarkerId;
     if (selectedId == null || selectedId.isEmpty) {
-      return const <Object>['get', 'icon'];
+      return baseImage;
     }
     return <Object>[
       'case',
@@ -371,8 +463,14 @@ class KubusMarkerLayerStyler {
         <Object>['id'],
         selectedId,
       ],
-      const <Object>['get', 'iconSelected'],
-      const <Object>['get', 'icon'],
+      cover
+          ? <Object>[
+              'coalesce',
+              <Object>['get', selected],
+              baseImage
+            ]
+          : <Object>['get', selected],
+      baseImage,
     ];
   }
 
@@ -386,15 +484,29 @@ class KubusMarkerLayerStyler {
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
     String? pulseLayerId,
+    String? locationAccuracyLayerId,
+    String? locationHeadingLayerId,
   }) async {
     if (!styleInitialized) return;
     if (styleEpoch != getCurrentStyleEpoch()) return;
+    if (!identical(_cachedController, controller) ||
+        _cachedEpoch != styleEpoch) {
+      _cachedController = controller;
+      _cachedEpoch = styleEpoch;
+      _appliedProperties.clear();
+    }
 
     final canStyleMarkerLayer = managedLayerIds.contains(markerLayerId);
     final canStyleCubeIconLayer = managedLayerIds.contains(cubeIconLayerId);
     final canStylePulseLayer =
         pulseLayerId != null && managedLayerIds.contains(pulseLayerId);
-    if (!canStyleMarkerLayer && !canStyleCubeIconLayer && !canStylePulseLayer) {
+    final canStyleAccuracyLayer = locationAccuracyLayerId != null &&
+        managedLayerIds.contains(locationAccuracyLayerId) &&
+        state.locationAccentColor != null;
+    if (!canStyleMarkerLayer &&
+        !canStyleCubeIconLayer &&
+        !canStylePulseLayer &&
+        !canStyleAccuracyLayer) {
       return;
     }
 
@@ -438,7 +550,8 @@ class KubusMarkerLayerStyler {
     try {
       if (canStyleMarkerLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           markerLayerId,
           ml.SymbolLayerProperties(
             iconImage: iconImage,
@@ -453,9 +566,13 @@ class KubusMarkerLayerStyler {
             iconAnchor: 'bottom',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.badgeBobOffset(
-              state.markerBadgeBobOffsetPx,
-            ),
+            // Ambient movement is paint, not layout. Updating iconOffset each
+            // frame re-builds symbol buckets and can invalidate feature queries
+            // while a camera/source update is in flight.
+            iconOffset: MapMarkerStyleConfig.badgeBobOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
             symbolSortKey: symbolSortKey,
             visibility: markerVisible ? 'visible' : 'none',
           ),
@@ -464,7 +581,8 @@ class KubusMarkerLayerStyler {
 
       if (canStylePulseLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           pulseLayerId,
           ml.CircleLayerProperties(
             circleRadius: MapMarkerStyleConfig.pulseRadiusForPhase(
@@ -483,9 +601,35 @@ class KubusMarkerLayerStyler {
         );
       }
 
+      if (canStyleAccuracyLayer) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await _setChangedProperties(
+          controller,
+          locationAccuracyLayerId,
+          kubusLocationAccuracyProperties(
+            color: state.locationAccentColor!,
+            pulsePhase: state.markerPulsePhase,
+          ),
+        );
+      }
+
+      if (locationHeadingLayerId != null &&
+          managedLayerIds.contains(locationHeadingLayerId) &&
+          state.locationAccentColor != null) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await _setChangedProperties(
+            controller,
+            locationHeadingLayerId,
+            ml.FillLayerProperties(
+                fillColor:
+                    MapLibreStyleUtils.hexRgb(state.locationAccentColor!),
+                fillOpacity: 0.16));
+      }
+
       if (canStyleCubeIconLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
-        await controller.setLayerProperties(
+        await _setChangedProperties(
+          controller,
           cubeIconLayerId,
           ml.SymbolLayerProperties(
             iconImage: iconImage,
@@ -496,10 +640,51 @@ class KubusMarkerLayerStyler {
             iconAnchor: 'bottom',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(
-              state.markerBadgeBobOffsetPx,
-            ),
+            iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
             visibility: cubeIconVisible ? 'visible' : 'none',
+          ),
+        );
+      }
+      final coverLayerId = '${markerLayerId}_cover';
+      if (managedLayerIds.contains(coverLayerId)) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await _setChangedProperties(
+          controller,
+          coverLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: interactiveIconImageExpression(state, cover: true),
+            iconSize: cubeIconVisible ? cubeIconSize : iconSize,
+            iconOpacity: KubusMarkerLod.markerOpacityExpression(
+              entryOpacity: const <Object>[
+                '*',
+                <Object>[
+                  'coalesce',
+                  <Object>['get', 'entryOpacity'],
+                  1.0
+                ],
+                <Object>[
+                  'coalesce',
+                  <Object>['get', 'coverReveal'],
+                  0.0
+                ]
+              ],
+              selectedId: state.selectedMarkerId,
+            ),
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'bottom',
+            iconPitchAlignment: 'viewport',
+            iconRotationAlignment: 'viewport',
+            iconOffset: cubeIconVisible
+                ? MapMarkerStyleConfig.isometricBadgeOffset(0)
+                : MapMarkerStyleConfig.badgeBobOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
+            symbolSortKey: symbolSortKey,
           ),
         );
       }
@@ -593,6 +778,7 @@ class MapLayersIds {
 
   final String markerSourceId;
   final String markerLayerId;
+  String get markerCoverLayerId => '${markerLayerId}_cover';
   final String markerHitboxLayerId;
   final String markerHitboxImageId;
 
@@ -607,6 +793,8 @@ class MapLayersIds {
 
   final String locationSourceId;
   final String locationLayerId;
+  String get locationAccuracyLayerId => '${locationLayerId}_accuracy';
+  String get locationHeadingLayerId => '${locationLayerId}_heading';
 
   final String walkingRouteSourceId;
   final String walkingRouteCasingLayerId;
@@ -790,6 +978,8 @@ class MapLayersManager {
   int _addLayerCalls = 0;
   int _removeLayerCalls = 0;
   int _removeSourceCalls = 0;
+
+  Color? get locationAccentColor => _themeSpec?.locationFill;
   int _sourceUpdateCalls = 0;
   int _sourceUpdateSkips = 0;
   int _layerPropertiesCalls = 0;
@@ -1180,6 +1370,7 @@ class MapLayersManager {
     }
     if (userLocation != null) {
       await safeSetLayerVisibility(_ids.locationLayerId, userLocation);
+      await safeSetLayerVisibility(_ids.locationAccuracyLayerId, userLocation);
     }
     if (pendingMarker != null && _ids.pendingLayerId != null) {
       await safeSetLayerVisibility(_ids.pendingLayerId!, pendingMarker);
@@ -1246,12 +1437,17 @@ class MapLayersManager {
     // same IDs. Clear them best-effort.
     final existingLayerIds = await _fetchExistingLayerIds();
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerLayerId);
+    await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerCoverLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerHitboxLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerDotLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerPulseLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeIconLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.locationLayerId);
+    await _safeRemoveLayerIfExists(
+        existingLayerIds, _ids.locationHeadingLayerId);
+    await _safeRemoveLayerIfExists(
+        existingLayerIds, _ids.locationAccuracyLayerId);
     await _safeRemoveLayerIfExists(
       existingLayerIds,
       _ids.walkingLocationSymbolLayerId,
@@ -1545,6 +1741,47 @@ class MapLayersManager {
     _addLayerCalls += 1;
     _layerIds.add(_ids.cubeIconLayerId);
 
+    // One cover paint pass over the same canonical features. Its geometry,
+    // identity and hitbox never change when an asynchronous image arrives.
+    await _controller.addSymbolLayer(
+      _ids.markerSourceId,
+      _ids.markerCoverLayerId,
+      ml.SymbolLayerProperties(
+        iconImage: const <Object>[
+          'coalesce',
+          <Object>['get', 'coverIcon'],
+          ''
+        ],
+        iconSize:
+            MapMarkerStyleConfig.iconSizeExpression(multiplier: const <Object>[
+          'coalesce',
+          <Object>['get', 'entryScale'],
+          1.0
+        ]),
+        iconOpacity:
+            KubusMarkerLod.markerOpacityExpression(entryOpacity: const <Object>[
+          '*',
+          <Object>[
+            'coalesce',
+            <Object>['get', 'entryOpacity'],
+            1.0
+          ],
+          <Object>[
+            'coalesce',
+            <Object>['get', 'coverReveal'],
+            0.0
+          ]
+        ]),
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        iconAnchor: 'bottom',
+        iconPitchAlignment: 'viewport',
+        iconRotationAlignment: 'viewport',
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.markerCoverLayerId);
+
     await _ensureHitboxImageRegistered();
 
     final Object hitboxIconSize = kIsWeb
@@ -1702,6 +1939,27 @@ class MapLayersManager {
 
     await _controller.addCircleLayer(
       _ids.locationSourceId,
+      _ids.locationAccuracyLayerId,
+      kubusLocationAccuracyProperties(color: theme.locationFill),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.locationAccuracyLayerId);
+
+    // Only reliable native heading fixes add a polygon to the location source.
+    // Without a heading this layer has no geometry and the ordinary dot remains.
+    await _controller.addFillLayer(
+      _ids.locationSourceId,
+      _ids.locationHeadingLayerId,
+      ml.FillLayerProperties(
+        fillColor: MapLibreStyleUtils.hexRgb(theme.locationFill),
+        fillOpacity: 0.16,
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.locationHeadingLayerId);
+
+    await _controller.addCircleLayer(
+      _ids.locationSourceId,
       _ids.locationLayerId,
       ml.CircleLayerProperties(
         circleRadius: 6,
@@ -1721,6 +1979,16 @@ class MapLayersManager {
         _ids.walkingLocationSymbolLayerId,
         ml.SymbolLayerProperties(
           iconImage: _ids.walkingLocationImageId,
+          iconOpacity: const <Object>[
+            'case',
+            <Object>[
+              '==',
+              <Object>['geometry-type'],
+              'Point'
+            ],
+            1.0,
+            0.0
+          ],
           iconSize: 0.6,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,

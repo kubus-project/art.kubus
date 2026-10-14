@@ -417,6 +417,92 @@ class KubusMapStyleInitHelpers {
   }
 }
 
+/// One screen-owned interpolation clock, with at most one source write in flight.
+/// A new fix retargets from the displayed point; style swaps and disposal cancel
+/// pending frames. Actual navigation/location state always retains the real fix.
+class KubusUserLocationAnimator {
+  KubusUserLocationAnimator({required this.write, int Function()? nowMs})
+      : _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
+  final Future<void> Function(LatLng? position, int styleEpoch) write;
+  final int Function() _nowMs;
+  LatLng? _displayed;
+  LatLng? _from;
+  LatLng? _target;
+  int? _epoch;
+  int _started = 0;
+  int _generation = 0;
+  bool _disposed = false;
+  bool _writing = false;
+  Timer? _timer;
+
+  Future<void> update(LatLng? position,
+      {required int styleEpoch, required bool reduceMotion}) async {
+    if (_disposed) return;
+    if (!reduceMotion &&
+        _epoch == styleEpoch &&
+        _timer != null &&
+        position?.latitude == _target?.latitude &&
+        position?.longitude == _target?.longitude) {
+      return;
+    }
+    _generation++;
+    _timer?.cancel();
+    final samePosition = _displayed != null &&
+        position != null &&
+        _displayed!.latitude == position.latitude &&
+        _displayed!.longitude == position.longitude;
+    final snap = reduceMotion ||
+        _epoch != styleEpoch ||
+        _displayed == null ||
+        position == null ||
+        samePosition ||
+        const Distance().as(LengthUnit.Meter, _displayed!, position) > 120;
+    _epoch = styleEpoch;
+    _target = position;
+    _from = snap ? position : _displayed;
+    _started = _nowMs();
+    if (snap) _displayed = position;
+    await _frame(_generation, snap: snap);
+  }
+
+  Future<void> _frame(int generation, {bool snap = false}) async {
+    if (_disposed || generation != _generation) return;
+    _timer = null;
+    if (_writing) {
+      _timer = Timer(const Duration(milliseconds: 33),
+          () => _frame(generation, snap: snap));
+      return;
+    }
+    final progress =
+        snap ? 1.0 : ((_nowMs() - _started) / 264).clamp(0.0, 1.0).toDouble();
+    if (_from != null && _target != null) {
+      final longitudeDelta =
+          (_target!.longitude - _from!.longitude + 540) % 360 - 180;
+      _displayed = LatLng(
+          _from!.latitude + (_target!.latitude - _from!.latitude) * progress,
+          (_from!.longitude + longitudeDelta * progress + 540) % 360 - 180);
+    }
+    _writing = true;
+    try {
+      await write(_displayed, _epoch!);
+    } catch (error) {
+      AppConfig.debugPrint('User location paint failed: ${error.runtimeType}');
+    } finally {
+      _writing = false;
+    }
+    if (!_disposed && generation == _generation && progress < 1) {
+      _timer =
+          Timer(const Duration(milliseconds: 33), () => _frame(generation));
+    }
+  }
+
+  void dispose() {
+    _disposed = true;
+    _generation++;
+    _timer?.cancel();
+  }
+}
+
 class KubusMapSourceSyncHelpers {
   const KubusMapSourceSyncHelpers._();
 
@@ -427,6 +513,8 @@ class KubusMapSourceSyncHelpers {
     required String sourceId,
     required String featureId,
     required LatLng? position,
+    double? accuracyMeters,
+    double? headingDegrees,
   }) async {
     if (controller == null) return;
     if (!styleInitialized) return;
@@ -435,6 +523,8 @@ class KubusMapSourceSyncHelpers {
     final data = pointFeatureCollection(
       featureId: featureId,
       position: position,
+      accuracyMeters: accuracyMeters,
+      headingDegrees: headingDegrees,
     );
     await controller.setGeoJsonSource(sourceId, data);
   }
@@ -442,6 +532,8 @@ class KubusMapSourceSyncHelpers {
   static Map<String, dynamic> pointFeatureCollection({
     required String featureId,
     required LatLng? position,
+    double? accuracyMeters,
+    double? headingDegrees,
   }) {
     if (position == null) {
       return const <String, dynamic>{
@@ -456,13 +548,67 @@ class KubusMapSourceSyncHelpers {
         <String, dynamic>{
           'type': 'Feature',
           'id': featureId,
-          'properties': <String, dynamic>{'id': featureId},
+          'properties': <String, dynamic>{
+            'id': featureId,
+            if (accuracyMeters != null &&
+                accuracyMeters.isFinite &&
+                accuracyMeters > 0)
+              'accuracyRadiusZ0': accuracyMeters /
+                  (78271.516964 *
+                      math.cos(position.latitude.clamp(-85.051129, 85.051129) *
+                          math.pi /
+                          180)),
+          },
           'geometry': <String, dynamic>{
             'type': 'Point',
             'coordinates': <double>[position.longitude, position.latitude],
           },
         },
+        if (headingDegrees != null && headingDegrees.isFinite)
+          _headingCone(featureId, position, headingDegrees),
       ],
+    };
+  }
+
+  /// Unknown or poorly calibrated sensors must not imply reliable direction.
+  static double? reliableHeading(double? heading, double? accuracyDegrees) {
+    if (heading == null ||
+        !heading.isFinite ||
+        accuracyDegrees == null ||
+        !accuracyDegrees.isFinite ||
+        accuracyDegrees < 0 ||
+        accuracyDegrees > 25) {
+      return null;
+    }
+    return heading % 360;
+  }
+
+  static Map<String, dynamic> _headingCone(
+      String id, LatLng position, double heading) {
+    // A restrained 24 metre sector; geometry updates only with location/heading,
+    // never with the ambient pulse ticker.
+    final coordinates = <List<double>>[
+      [position.longitude, position.latitude]
+    ];
+    for (var offset = -25; offset <= 25; offset += 5) {
+      final bearing = (heading + offset) * math.pi / 180;
+      final latitude = position.latitude + 24 * math.cos(bearing) / 111320;
+      final longitude = position.longitude +
+          24 *
+              math.sin(bearing) /
+              (111320 *
+                  math.cos(position.latitude.clamp(-85, 85) * math.pi / 180));
+      coordinates.add([longitude, latitude]);
+    }
+    coordinates.add(coordinates.first);
+    return {
+      'type': 'Feature',
+      'id': '${id}_heading',
+      'properties': {'id': '${id}_heading'},
+      'geometry': {
+        'type': 'Polygon',
+        'coordinates': [coordinates]
+      }
     };
   }
 }

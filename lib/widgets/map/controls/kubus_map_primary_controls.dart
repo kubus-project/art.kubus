@@ -343,7 +343,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           key: createMarkerKey,
           child: _KubusSquareControlButton.mobile(
             size: resolvedButtonSize,
-            icon: createMarkerIcon ?? Icons.add_location_alt,
+            icon: createMarkerIcon ?? Icons.add,
             tooltip: createMarkerTooltip,
             onTap: onCreateMarker,
             // Visual parity with the desktop toolbar's
@@ -530,7 +530,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
           child: _KubusSquareControlButton.desktop(
             size: resolvedButtonSize,
             accent: accent,
-            icon: createMarkerIcon ?? Icons.add_location_alt_outlined,
+            icon: createMarkerIcon ?? Icons.add,
             tooltip: createMarkerTooltip,
             onTap: onCreateMarker,
             active: createMarkerHighlighted,

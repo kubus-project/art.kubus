@@ -32,6 +32,8 @@ import 'package:provider/provider.dart';
 import '../../providers/app_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:location/location.dart' as loc;
+import '../../services/walking_location_service.dart';
+import '../../features/map/navigation/walking_navigation_models.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
 import '../../providers/wallet_provider.dart';
