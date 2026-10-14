@@ -111,6 +111,11 @@ relationship. Actions follow the identity group; ownership changes the action se
 not the composition. Retain Edit, Share, Analytics, Follow and Message where their
 real permissions allow them.
 
+The shared profile hierarchy is identity → biography/practice → statistics →
+artworks/portfolio → public contributions → posts → achievements. Owner management
+tools follow that public sequence. Keep the desktop hero and its responsive columns;
+statistics span the content before the work columns, rather than closing the page.
+
 Profile covers are user-authored compositions. Preserve approved desktop framing.
 Mobile identity uses the cover-led dark contextual glass panel beside the floating
 avatar, overlapping the cover edge. Use dark semantic surface/foreground tokens
