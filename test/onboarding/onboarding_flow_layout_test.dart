@@ -228,6 +228,31 @@ void main() {
     api.setHttpClient(createPlatformHttpClient());
   });
 
+  testWidgets('rapid primary taps advance once and retire outgoing step',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_buildTestApp(
+      child: const OnboardingFlowScreen(),
+      locale: const Locale('en'),
+    ));
+    await _pumpOnboardingReady(tester);
+    await tester.tap(find.widgetWithText(KubusButton, 'Discover art'));
+    await tester.pumpAndSettle();
+    final dynamic state = tester.state(find.byType(OnboardingFlowScreen));
+    expect(state.debugCurrentStepId, 'guestPermissions');
+    final first = state.debugTriggerPrimaryAction() as Future<void>;
+    final repeated = state.debugTriggerPrimaryAction() as Future<void>;
+    await tester.runAsync(() => Future.wait([first, repeated]));
+    await tester.pump();
+    expect(state.debugCurrentStepId, 'done');
+    expect(find.text('Choose what to enable'), findsNothing);
+    expect(find.text('Main shell'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(find.text('Choose what to enable'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('onboarding starts at unified welcome phase', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() async => tester.binding.setSurfaceSize(null));

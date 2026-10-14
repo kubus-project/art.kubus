@@ -31234,6 +31234,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show more'**
   String get communityArtDiscoveryLoadMore;
+
+  /// No description provided for @contributionHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Art is everywhere. Help put it on the map.'**
+  String get contributionHeadline;
+
+  /// No description provided for @contributionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover local art, document what you find, and connect with the people behind it.'**
+  String get contributionBody;
+
+  /// No description provided for @contributionJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join art.kubus'**
+  String get contributionJoin;
+
+  /// No description provided for @contributionDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Document public art'**
+  String get contributionDocument;
+
+  /// No description provided for @contributionArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Add artwork'**
+  String get contributionArtwork;
+
+  /// No description provided for @contributionExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exhibition or event'**
+  String get contributionExhibition;
+
+  /// No description provided for @contributionApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'View application status'**
+  String get contributionApplication;
 }
 
 class _AppLocalizationsDelegate

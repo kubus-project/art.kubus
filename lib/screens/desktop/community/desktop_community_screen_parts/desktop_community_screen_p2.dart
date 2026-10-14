@@ -509,16 +509,22 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
 
     if (posts.isEmpty) {
       final hasQuery = _communitySearchController.state.query.trim().isNotEmpty;
-      return _buildEmptyState(
-        themeProvider,
-        Icons.travel_explore,
-        !hasQuery
-            ? l10n.desktopCommunityEmptyDiscoverTitle
-            : l10n.desktopCommunityEmptySearchTitle,
-        !hasQuery
-            ? l10n.desktopCommunityEmptyDiscoverBody
-            : l10n.desktopCommunityEmptySearchBody,
-      );
+      return Column(children: [
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: _buildContributionCard()),
+        Expanded(
+            child: _buildEmptyState(
+          themeProvider,
+          Icons.travel_explore,
+          !hasQuery
+              ? l10n.desktopCommunityEmptyDiscoverTitle
+              : l10n.desktopCommunityEmptySearchTitle,
+          !hasQuery
+              ? l10n.desktopCommunityEmptyDiscoverBody
+              : l10n.desktopCommunityEmptySearchBody,
+        )),
+      ]);
     }
 
     return RefreshIndicator(
@@ -526,42 +532,20 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
       color: themeProvider.accentColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        itemCount:
-            posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+        itemCount: posts.length + 1,
         itemBuilder: (context, index) {
-          if (AppConfig.isFeatureEnabled('season0') && index == 0) {
-            return _buildSeason0Banner();
+          if (index == 0) {
+            return _buildContributionCard();
           }
-          final postIndex =
-              AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+          final postIndex = index - 1;
           return _buildPostCard(posts[postIndex], themeProvider);
         },
       ),
     );
   }
 
-  Widget _buildSeason0Banner() {
-    final l10n = AppLocalizations.of(context)!;
-    return CommunitySeason0Banner(
-      title: l10n.season0BannerTitle,
-      subtitle: l10n.season0BannerTap,
-      onTap: () {
-        final shellScope = DesktopShellScope.of(context);
-        if (shellScope != null) {
-          shellScope.pushScreen(
-            DesktopSubScreen(
-              title: l10n.season0ScreenTitle,
-              child: const Season0Screen(embedded: true),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const Season0Screen()),
-          );
-        }
-      },
-    );
+  Widget _buildContributionCard() {
+    return const ContextualContributionCard(returnRoute: '/community');
   }
 
   Widget _buildFollowingFeed(ThemeProvider themeProvider) {

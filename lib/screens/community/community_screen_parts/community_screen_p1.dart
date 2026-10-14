@@ -982,17 +982,23 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             padding: const EdgeInsets.only(
               bottom: KubusLayout.mainBottomNavBarHeight,
             ),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.6,
-              width: double.infinity,
-              child: EmptyStateCard(
-                icon: emptyIcon,
-                title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
-                description: hasQuery
-                    ? l10n.communitySearchEmptyNoResults
-                    : emptySubtitle,
+            child: Column(children: [
+              Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: _buildContributionCard(),
               ),
-            ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                width: double.infinity,
+                child: EmptyStateCard(
+                  icon: emptyIcon,
+                  title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
+                  description: hasQuery
+                      ? l10n.communitySearchEmptyNoResults
+                      : emptySubtitle,
+                ),
+              ),
+            ]),
           ),
         ),
       );
@@ -1010,15 +1016,13 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
               KubusSpacing.lg,
               KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
             ),
-            itemCount: filteredPosts.length +
-                (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+            itemCount: filteredPosts.length + 1,
             itemBuilder: (context, index) {
-              // Season 0 banner at the top if enabled
-              if (AppConfig.isFeatureEnabled('season0') && index == 0) {
-                return _buildSeason0Banner();
+              // One contextual contribution entry for this timeline.
+              if (index == 0) {
+                return _buildContributionCard();
               }
-              final postIndex =
-                  AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+              final postIndex = index - 1;
               return _buildPostCardForPost(filteredPosts[postIndex]);
             },
           ),
@@ -1062,18 +1066,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     );
   }
 
-  Widget _buildSeason0Banner() {
-    final l10n = AppLocalizations.of(context)!;
-    return CommunitySeason0Banner(
-      title: l10n.season0BannerTitle,
-      subtitle: l10n.season0BannerTap,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const Season0Screen()),
-        );
-      },
-    );
+  Widget _buildContributionCard() {
+    return const ContextualContributionCard(returnRoute: '/community');
   }
 
   Widget _buildGroupsTab() {

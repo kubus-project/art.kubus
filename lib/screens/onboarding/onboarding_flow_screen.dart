@@ -247,6 +247,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   ProtectedActionRequirements? _scope;
 
   int _currentIndex = 0;
+  bool _primaryActionInFlight = false;
+  _OnboardingStep? _lastSideEffectStep;
   bool _isInitializing = true;
   bool _locationEnabled = false;
   bool _notificationEnabled = false;
@@ -1517,7 +1519,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _goBackStep() async {
-    if (!mounted || _currentIndex <= 0) return;
+    if (!mounted || _primaryActionInFlight || _currentIndex <= 0) return;
     setState(() {
       _currentIndex = (_currentIndex - 1).clamp(0, _steps.length - 1);
     });
@@ -1885,6 +1887,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   void _syncStepSideEffects() {
+    if (_lastSideEffectStep != _currentStep) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      _lastSideEffectStep = _currentStep;
+    }
     _startVerificationPollingIfNeeded();
     if (_currentStep == _OnboardingStep.daoReview) {
       unawaited(_syncDaoReviewStateIfNeeded());
@@ -2927,6 +2933,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _onPrimaryAction() async {
+    if (_primaryActionInFlight) return;
+    _primaryActionInFlight = true;
+    try {
+      await _performPrimaryAction();
+    } finally {
+      _primaryActionInFlight = false;
+    }
+  }
+
+  Future<void> _performPrimaryAction() async {
     switch (_currentStep) {
       case _OnboardingStep.welcome:
         return;
@@ -3755,7 +3771,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       layoutBuilder: (currentChild, previousChildren) => Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          ...previousChildren,
+          // Only the incoming step participates in layout and interaction.
+          // Reattaching a rapidly revisited form beside its outgoing copy
+          // shares controllers/focus nodes and exposes stale step actions.
           if (currentChild != null) currentChild,
         ],
       ),

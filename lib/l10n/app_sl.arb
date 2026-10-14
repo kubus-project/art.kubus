@@ -7485,5 +7485,12 @@
   "communityArtDiscoveryEmptyBody": "Trenutno ni mogoče najti javnih del, recenzij ali razstav. Poskusi znova čez trenutek ali raziskuj zemljevid.",
   "communityArtDiscoveryErrorTitle": "Odkrivanja ni bilo mogoče naložiti",
   "communityArtDiscoveryErrorBody": "Preveri povezavo in poskusi znova.",
-  "communityArtDiscoveryLoadMore": "Pokaži več"
+  "communityArtDiscoveryLoadMore": "Pokaži več",
+  "contributionHeadline": "Umetnost je povsod. Pomagaj jo postaviti na zemljevid.",
+  "contributionBody": "Odkrij lokalno umetnost, dokumentiraj, kar najdeš, in spoznaj ljudi, ki jo ustvarjajo.",
+  "contributionJoin": "Pridruži se art.kubus",
+  "contributionDocument": "Dokumentiraj umetnost v javnem prostoru",
+  "contributionArtwork": "Dodaj umetniško delo",
+  "contributionExhibition": "Dodaj razstavo ali dogodek",
+  "contributionApplication": "Preveri stanje prijave"
 }
