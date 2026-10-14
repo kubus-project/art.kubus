@@ -44,7 +44,7 @@ abstract class WalkingLocationApi {
 /// Cached coordinates deliberately do not enter this API. Callers may retain
 /// them for passive map positioning, but every route starts from a live fix.
 class GeolocatorWalkingLocationService implements WalkingLocationApi {
-  const GeolocatorWalkingLocationService({
+  GeolocatorWalkingLocationService({
     this.fixTimeout = const Duration(seconds: 12),
     Future<bool> Function()? serviceEnabled,
     Future<LocationPermission> Function()? checkPermission,
@@ -61,6 +61,12 @@ class GeolocatorWalkingLocationService implements WalkingLocationApi {
         _appSettingsOpener = appSettingsOpener,
         _locationSettingsOpener = locationSettingsOpener;
 
+  /// Shared permission ownership across Map, AR and Community. Passive reads
+  /// never join an explicit request, so a refresh cannot initiate a prompt.
+  static final shared = GeolocatorWalkingLocationService();
+  Future<WalkingLocationAccessResult>? _explicitRequest;
+  Future<WalkingLocationAccessResult>? _passiveRequest;
+
   final Duration fixTimeout;
   final Future<bool> Function()? _serviceEnabled;
   final Future<LocationPermission> Function()? _checkPermission;
@@ -72,6 +78,26 @@ class GeolocatorWalkingLocationService implements WalkingLocationApi {
 
   @override
   Future<WalkingLocationAccessResult> acquireLiveFix({
+    required bool requestPermission,
+  }) {
+    final pending = requestPermission ? _explicitRequest : _passiveRequest;
+    if (pending != null) return pending;
+    final request = _acquireLiveFix(requestPermission: requestPermission);
+    if (requestPermission) {
+      _explicitRequest = request;
+    } else {
+      _passiveRequest = request;
+    }
+    return request.whenComplete(() {
+      if (requestPermission) {
+        _explicitRequest = null;
+      } else {
+        _passiveRequest = null;
+      }
+    });
+  }
+
+  Future<WalkingLocationAccessResult> _acquireLiveFix({
     required bool requestPermission,
   }) async {
     try {

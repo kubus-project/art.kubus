@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:location/location.dart' as loc;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +13,7 @@ import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
+import '../services/walking_location_service.dart';
 import '../utils/wallet_utils.dart';
 import 'art_discovery.dart';
 
@@ -115,28 +115,14 @@ ArtDiscoverySources buildLiveArtDiscoverySources(BuildContext context) {
 }
 
 Future<ArtDiscoveryLocation?> _deviceLocation({required bool prompt}) async {
-  final location = loc.Location();
   try {
-    if (!await location.serviceEnabled()) {
-      if (!prompt || !await location.requestService()) return null;
-    }
-    var permission = await location.hasPermission();
-    if (permission == loc.PermissionStatus.denied && prompt) {
-      permission = await location.requestPermission();
-    }
-    if (permission != loc.PermissionStatus.granted &&
-        permission != loc.PermissionStatus.grantedLimited) {
-      return null;
-    }
-    final data = await location.getLocation().timeout(
-          const Duration(seconds: 6),
-        );
-    final lat = data.latitude;
-    final lng = data.longitude;
-    if (lat == null || lng == null) return null;
+    final result = await GeolocatorWalkingLocationService.shared
+        .acquireLiveFix(requestPermission: prompt);
+    if (!result.isAvailable) return null;
+    final position = result.fix!.position;
     return ArtDiscoveryLocation(
-      latitude: lat,
-      longitude: lng,
+      latitude: position.latitude,
+      longitude: position.longitude,
       source: ArtDiscoveryLocationSource.device,
     );
   } catch (_) {

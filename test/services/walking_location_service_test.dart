@@ -14,6 +14,51 @@ final _fix = WalkingLocationFix(
 final _timestamp = DateTime(2026, 1, 1);
 
 void main() {
+  test('concurrent explicit actions share one permission request and fix',
+      () async {
+    var requests = 0;
+    var fixes = 0;
+    final permission = Completer<LocationPermission>();
+    final service = GeolocatorWalkingLocationService(
+      serviceEnabled: () async => true,
+      checkPermission: () async => LocationPermission.denied,
+      requestPermission: () {
+        requests += 1;
+        return permission.future;
+      },
+      liveFixLoader: () async {
+        fixes += 1;
+        return _fix;
+      },
+    );
+    final first = service.acquireLiveFix(requestPermission: true);
+    final second = service.acquireLiveFix(requestPermission: true);
+    final passive = await service.acquireLiveFix(requestPermission: false);
+    expect(passive.status, WalkingLocationAccessStatus.permissionNotRequested);
+    expect(requests, 1);
+    permission.complete(LocationPermission.whileInUse);
+    expect((await first).fix, same(_fix));
+    expect((await second).fix, same(_fix));
+    expect(fixes, 1);
+  });
+
+  test('granted permission revisit never requests permission', () async {
+    var requests = 0;
+    final service = GeolocatorWalkingLocationService(
+      serviceEnabled: () async => true,
+      checkPermission: () async => LocationPermission.whileInUse,
+      requestPermission: () async {
+        requests += 1;
+        return LocationPermission.whileInUse;
+      },
+      liveFixLoader: () async => _fix,
+    );
+    await service.acquireLiveFix(requestPermission: true);
+    await service.acquireLiveFix(requestPermission: false);
+    await service.acquireLiveFix(requestPermission: true);
+    expect(requests, 0);
+  });
+
   test('explicit user action requests a previously denied permission again',
       () async {
     var requests = 0;

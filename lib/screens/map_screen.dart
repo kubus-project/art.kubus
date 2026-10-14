@@ -298,6 +298,8 @@ class _MapScreenState extends State<MapScreen>
       KubusMapBackdropHostController();
   bool _autoFollow = true;
   double? _direction; // Compass direction
+  int _lastHeadingUpdateMs = 0;
+  Timer? _headingExpiryTimer;
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<WalkingLocationFix>? _mobileLocationSubscription;
   StreamSubscription<WalkingLocationFix>? _webPositionSubscription;
@@ -551,6 +553,7 @@ class _MapScreenState extends State<MapScreen>
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
+  int? _lastAppliedMapAccentArgb;
   bool _themeResyncScheduled = false;
 
   static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
@@ -628,7 +631,7 @@ class _MapScreenState extends State<MapScreen>
       scheme: scheme,
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
-        locationFill: scheme.secondary,
+        locationFill: themeProvider.accentColor,
         locationStroke: scheme.surface,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
@@ -689,7 +692,7 @@ class _MapScreenState extends State<MapScreen>
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _lastZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
-        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
+        widget.walkingLocationApi ?? GeolocatorWalkingLocationService.shared;
     StartupTrace.mark('map screen init');
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
@@ -986,6 +989,7 @@ class _MapScreenState extends State<MapScreen>
       getKubusMapController: () => _kubusMapController,
       getMapController: () => _mapController,
       getLayersManager: () => _layersManager,
+      getLocationAccentColor: () => context.read<ThemeProvider>().accentColor,
       getSelectionController: () => _animationController,
       getAmbientController: () => _ambientMarkerController,
       getManagedLayerIds: () => _managedLayerIds,
@@ -2187,6 +2191,8 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    _userLocationAnimator.dispose();
+    _headingExpiryTimer?.cancel();
     _mapSearchFocusNode.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
@@ -2336,7 +2342,8 @@ class _MapScreenState extends State<MapScreen>
           _perf.subscriptionStopped('compass');
           _compassSubscription = compassStream.listen((CompassEvent event) {
             if (mounted) {
-              _updateDirection(event.heading);
+              _updateDirection(KubusMapSourceSyncHelpers.reliableHeading(
+                  event.heading, event.accuracy));
             }
           });
           _perf.subscriptionStarted('compass');
@@ -4129,6 +4136,22 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _updateDirection(double? heading) {
+    if (!mounted) return;
+    _headingExpiryTimer?.cancel();
+    if (heading != null) {
+      _headingExpiryTimer =
+          Timer(const Duration(seconds: 10), () => _updateDirection(null));
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final delta = _direction == null
+          ? 360.0
+          : ((heading - _direction! + 540) % 360 - 180).abs();
+      if (now - _lastHeadingUpdateMs < 100 || delta < 3) return;
+      _lastHeadingUpdateMs = now;
+    } else if (_direction == null) {
+      return;
+    }
+    _direction = heading;
+    unawaited(_syncUserLocation());
     if (mounted && heading != null) {
       setState(() {
         _direction = heading;
@@ -4146,6 +4169,7 @@ class _MapScreenState extends State<MapScreen>
         );
       }
     } else if (mounted && heading == null) {
+      setState(() => _direction = null);
       // Animate back to dot when stationary
       _locationIndicatorController?.reverse();
     }
@@ -4593,7 +4617,7 @@ class _MapScreenState extends State<MapScreen>
         _locationLayerId,
         ml.CircleLayerProperties(
           circleRadius: 6,
-          circleColor: KubusMapMarkerHelpers.hexRgb(scheme.secondary),
+          circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
           circleOpacity: 1.0,
           circleStrokeWidth: 2,
           circleStrokeColor: KubusMapMarkerHelpers.hexRgb(scheme.surface),
@@ -4603,6 +4627,10 @@ class _MapScreenState extends State<MapScreen>
       // Best-effort: style swaps or platform limitations can reject updates.
     }
 
+    await _layersManager?.safeSetLayerProperties(
+      _kubusMapController.ids.layers.locationAccuracyLayerId,
+      kubusLocationAccuracyProperties(color: themeProvider.accentColor),
+    );
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
   }
@@ -4610,7 +4638,9 @@ class _MapScreenState extends State<MapScreen>
   void _maybeScheduleThemeResync(ThemeProvider themeProvider) {
     final isDark = themeProvider.isDarkMode;
     final last = _lastAppliedMapThemeDark;
-    if (last != null && last == isDark) return;
+    final accentArgb = themeProvider.accentColor.toARGB32();
+    if (last == isDark && _lastAppliedMapAccentArgb == accentArgb) return;
+    _lastAppliedMapAccentArgb = accentArgb;
     _lastAppliedMapThemeDark = isDark;
     if (!_styleInitialized) return;
     if (_themeResyncScheduled) return;
@@ -4627,14 +4657,30 @@ class _MapScreenState extends State<MapScreen>
     await _markerInteractionController.handleMapClick(point);
   }
 
+  late final KubusUserLocationAnimator _userLocationAnimator =
+      KubusUserLocationAnimator(write: _writeUserLocation);
+
   Future<void> _syncUserLocation() async {
+    if (!mounted || !_styleInitialized) return;
+    final media = MediaQuery.maybeOf(context);
+    await _userLocationAnimator.update(_currentPosition,
+        styleEpoch: _kubusMapController.styleEpoch,
+        reduceMotion: media?.disableAnimations == true ||
+            media?.accessibleNavigation == true);
+  }
+
+  Future<void> _writeUserLocation(LatLng? position, int epoch) async {
+    if (!mounted || _kubusMapController.styleEpoch != epoch) return;
     await KubusMapSourceSyncHelpers.syncPointSource(
       controller: _mapController,
       styleInitialized: _styleInitialized,
       managedSourceIds: _managedSourceIds,
       sourceId: _locationSourceId,
       featureId: 'me',
-      position: _currentPosition,
+      position: position,
+      accuracyMeters:
+          _hasLiveLocationFix ? _currentPositionAccuracyMeters : null,
+      headingDegrees: _hasLiveLocationFix ? _direction : null,
     );
   }
 
