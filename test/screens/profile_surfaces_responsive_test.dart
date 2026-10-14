@@ -427,7 +427,7 @@ void main() {
       expect(tester.getRect(actions).top, greaterThan(identity.top));
     });
 
-    testWidgets('role badges stay visible next to the identity', (
+    testWidgets('mobile identity exposes its role once on the avatar', (
       tester,
     ) async {
       await pumpProfileSurface(
@@ -436,8 +436,25 @@ void main() {
         size: const Size(320, 900),
         user: variants['artist+institution'],
       );
-      expect(find.byType(ArtistBadge), findsWidgets);
-      expect(find.byType(InstitutionBadge), findsWidgets);
+      expect(find.byType(ArtistBadge), findsNothing);
+      expect(find.byType(InstitutionBadge), findsNothing);
+      final badge = find.byKey(
+        const ValueKey<String>('profile-avatar-role-badge'),
+      );
+      expect(badge, findsOneWidget);
+      final icon = tester.widget<Icon>(find.descendant(
+        of: badge,
+        matching: find.byType(Icon),
+      ));
+      // Institution is the primary display role for a dual-role account.
+      expect(icon.icon, Icons.account_balance_rounded);
+      expect(icon.semanticLabel, contains('Institution'));
+      final identity = tester.widget<ProfileIdentityBlock>(
+        find.byType(ProfileIdentityBlock).first,
+      );
+      expect(identity.isArtist, isTrue);
+      expect(identity.isInstitution, isTrue);
+      expect(identity.showRoleBadges, isFalse);
     });
   });
 }
