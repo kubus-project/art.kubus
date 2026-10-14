@@ -9,8 +9,8 @@ import '../detail/profile_identity_block.dart';
 import '../glass_components.dart';
 import 'profile_cover_field.dart';
 
-/// The canonical profile hero: cover, avatar, identity plate and relationship
-/// actions composed as **one** identity system.
+/// The canonical profile hero: cover, overlapping avatar, shared identity block
+/// and relationship actions composed as **one** identity system.
 ///
 /// Before this, every profile surface stacked a cover, then a detached avatar,
 /// then a detached name, then a detached description, then a row of buttons —
@@ -24,14 +24,10 @@ import 'profile_cover_field.dart';
 ///   not. An image-less profile is still a designed surface.
 /// * The avatar overlaps the cover's lower edge. It is a constant size, so the
 ///   overlap is a constant too and cannot drift with text scale.
-/// * The identity plate is restrained contextual glass: it sits *over* media,
-///   which is the one place in the product where translucency is earned. It
-///   carries the display name, the full handle, verification and the role, and
-///   it is tinted with the surface colour rather than left transparent, so
-///   ordinary foreground contrast holds over any photograph.
-/// * The plate is as wide as the identity it carries (capped at
-///   [plateMaxWidth]), not as wide as the row: a short name gets a compact
-///   plate, never a slab that fills the space because the space exists.
+/// * Desktop identity uses restrained contextual glass over the cover. Mobile
+///   identity sits directly beside the overlapping avatar without a second card.
+/// * The shared [ProfileIdentityBlock] carries the name, full handle,
+///   verification and role on both layouts.
 /// * Relationship and owner actions belong to the same composition. Wide
 ///   layouts place them beside the identity; phone layouts give them a
 ///   full-width run immediately below the avatar/identity group, so they do
@@ -39,19 +35,14 @@ import 'profile_cover_field.dart';
 /// * The role is said once. Artist and institution accounts carry their role
 ///   badge inside the identity block, so the hero's role eyebrow is shown only
 ///   for an account without a role badge.
-/// * On ordinary phone widths, the avatar sits beside a wrapping identity
-///   block. Only exceptionally narrow containers stack the two.
+/// * The avatar overlaps the cover. On ordinary phone widths the shared
+///   identity block wraps beside it, and actions follow below the group.
 /// * The avatar is mounted bare: its own shape plus a soft neutral shadow for
 ///   contrast over a photograph, no second frame around an already-shaped
 ///   mark.
 ///
-/// ## Why the plate is laid out below the cover rather than positioned in it
-/// Identity text grows. A `Positioned` plate anchored to the cover's bottom
-/// edge grows *upward* and, at 200% text, climbs out of the stack and collides
-/// with the chrome above. Here the plate is the stack's own sizing child, offset
-/// from the top by a constant, so it can only ever grow downward — the hero
-/// simply gets taller. The avatar is the only thing that may be positioned,
-/// because it is the only thing that cannot change size.
+/// Identity text grows. Only the avatar is positioned over the cover; the
+/// identity and actions remain in normal flow and grow down with text scale.
 class ProfileIdentityHero extends StatelessWidget {
   const ProfileIdentityHero({
     super.key,
@@ -155,7 +146,7 @@ class ProfileIdentityHero extends StatelessWidget {
         final avatarBesidePlate = width >= avatarAbovePlateWidth;
         final actionsBeside =
             actions != null && width >= actionsBesideIdentityWidth;
-        final plate = _IdentityPlate(
+        final identityContent = _IdentityContent(
           accent: accent,
           displayName: displayName,
           handle: handle,
@@ -167,6 +158,65 @@ class ProfileIdentityHero extends StatelessWidget {
           density: density,
           nameStyle: nameStyle,
         );
+        final plate = _IdentityPlate(
+          accent: accent,
+          child: identityContent,
+        );
+        final identityPresentation = width < actionsBesideIdentityWidth
+            ? Padding(
+                // The avatar overlaps the cover; identity text starts on
+                // the plain surface below it so contrast is independent
+                // of the account's photograph.
+                padding:
+                    const EdgeInsets.only(top: plateOverlap + KubusSpacing.sm),
+                child: identityContent,
+              )
+            : plate;
+
+        final cover = ClipRRect(
+          key: const ValueKey<String>('profile-identity-hero-cover'),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          child: hasCover
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    KubusCachedImage(
+                      imageUrl: coverImageUrl,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      skipRecentlyFailed: true,
+                      semanticLabel: coverSemanticLabel,
+                      excludeFromSemantics: coverSemanticLabel == null,
+                      placeholderBuilder: (context) =>
+                          ColoredBox(color: roles.surfaceRaised),
+                      errorBuilder: (context, _, __) => ProfileCoverField(
+                        isArtist: isArtist,
+                        isInstitution: isInstitution,
+                      ),
+                    ),
+                    // Light scrim settles the photograph beneath the avatar.
+                    IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.10),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.26),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : ProfileCoverField(
+                  isArtist: isArtist,
+                  isInstitution: isInstitution,
+                ),
+        );
 
         final identity = avatarBesidePlate
             ? Row(
@@ -174,14 +224,14 @@ class ProfileIdentityHero extends StatelessWidget {
                 children: [
                   ProfileAvatarMount(radius: avatarRadius, child: avatar),
                   const SizedBox(width: KubusSpacing.md),
-                  // Loose, capped: the plate covers the identity content,
-                  // it does not take the row's remaining width.
+                  // Content stays as wide as its identity, not as wide as the
+                  // entire row. Desktop keeps the plate; mobile stays unboxed.
                   Flexible(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
                         maxWidth: plateMaxWidth,
                       ),
-                      child: plate,
+                      child: identityPresentation,
                     ),
                   ),
                   if (actionsBeside) ...[
@@ -211,7 +261,7 @@ class ProfileIdentityHero extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
-                  plate,
+                  identityContent,
                 ],
               );
         final composition = actionsBeside || actions == null
@@ -227,6 +277,7 @@ class ProfileIdentityHero extends StatelessWidget {
               );
 
         return Stack(
+          clipBehavior: Clip.none,
           children: [
             // Positioned: painted behind, never the stack's sizing child, so a
             // growing plate cannot push the cover around.
@@ -234,52 +285,10 @@ class ProfileIdentityHero extends StatelessWidget {
               top: 0,
               left: 0,
               right: 0,
-              height: coverHeight + plateOverlap,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                child: hasCover
-                    ? Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          KubusCachedImage(
-                            imageUrl: coverImageUrl,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.medium,
-                            skipRecentlyFailed: true,
-                            semanticLabel: coverSemanticLabel,
-                            excludeFromSemantics: coverSemanticLabel == null,
-                            placeholderBuilder: (context) =>
-                                ColoredBox(color: roles.surfaceRaised),
-                            errorBuilder: (context, _, __) => ProfileCoverField(
-                              isArtist: isArtist,
-                              isInstitution: isInstitution,
-                            ),
-                          ),
-                          // Light scrim: the plate carries its own tint, so
-                          // this only settles the image under the avatar and
-                          // keeps a bright photograph from glaring.
-                          IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.10),
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.26),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : ProfileCoverField(
-                        isArtist: isArtist,
-                        isInstitution: isInstitution,
-                      ),
-              ),
+              height: width < actionsBesideIdentityWidth
+                  ? coverHeight
+                  : coverHeight + plateOverlap,
+              child: cover,
             ),
             Padding(
               padding: EdgeInsets.only(
@@ -339,6 +348,46 @@ class ProfileAvatarMount extends StatelessWidget {
 class _IdentityPlate extends StatelessWidget {
   const _IdentityPlate({
     required this.accent,
+    required this.child,
+  });
+
+  final Color accent;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(KubusRadius.md);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: accent.withValues(alpha: isDark ? 0.34 : 0.26),
+          width: KubusSizes.hairline,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: LiquidGlassPanel(
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: roles.surface.withValues(
+            alpha: isDark ? 0.84 : 0.88,
+          ),
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _IdentityContent extends StatelessWidget {
+  const _IdentityContent({
+    required this.accent,
     required this.displayName,
     required this.handle,
     required this.isVerified,
@@ -364,81 +413,49 @@ class _IdentityPlate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: accent.withValues(alpha: isDark ? 0.34 : 0.26),
-          width: KubusSizes.hairline,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: LiquidGlassPanel(
-          borderRadius: radius,
-          showBorder: false,
-          // Enough tint that foreground contrast is the ordinary surface
-          // contrast, whatever photograph is underneath.
-          backgroundColor: roles.surface.withValues(
-            alpha: isDark ? 0.84 : 0.88,
-          ),
-          padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.md,
-            KubusSpacing.md,
-            KubusSpacing.md,
-            KubusSpacing.md,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if ((roleLabel ?? '').trim().isNotEmpty) ...[
+          Row(
             children: [
-              if ((roleLabel ?? '').trim().isNotEmpty) ...[
-                Row(
-                  children: [
-                    // The role's own colour as a short rule, not a filled
-                    // badge: the colour is the signal, the word is the label.
-                    Container(
-                      width: KubusSpacing.md,
-                      height: KubusSizes.hairline + 1,
-                      color: accent,
-                    ),
-                    const SizedBox(width: KubusSpacing.xs),
-                    Flexible(
-                      child: Text(
-                        roleLabel!.toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.structuralLabel.copyWith(
-                          color: roles.foregroundMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-              ],
-              ProfileIdentityBlock(
-                displayName: displayName,
-                handle: handle,
-                isVerified: isVerified,
-                isArtist: isArtist,
-                isInstitution: isInstitution,
-                density: density,
-                nameStyle: nameStyle,
-                nameColor: roles.foreground,
-                handleColor: roles.foregroundMuted,
+              Container(
+                width: KubusSpacing.md,
+                height: KubusSizes.hairline + 1,
+                color: accent,
               ),
-              if (identityStatus != null) ...[
-                const SizedBox(height: KubusSpacing.sm),
-                identityStatus!,
-              ],
+              const SizedBox(width: KubusSpacing.xs),
+              Flexible(
+                child: Text(
+                  roleLabel!.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.structuralLabel.copyWith(
+                    color: roles.foregroundMuted,
+                  ),
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
+        ProfileIdentityBlock(
+          displayName: displayName,
+          handle: handle,
+          isVerified: isVerified,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          density: density,
+          nameStyle: nameStyle,
+          nameColor: roles.foreground,
+          handleColor: roles.foregroundMuted,
         ),
-      ),
+        if (identityStatus != null) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          identityStatus!,
+        ],
+      ],
     );
   }
 }

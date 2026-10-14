@@ -5,6 +5,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/media_failure_registry.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/profile/profile_cover_field.dart';
 import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../../support/profile_image_http_fixture.dart';
 const _avatarKey = ValueKey<String>('test-avatar');
 const _actionsKey = ValueKey<String>('test-actions');
 const _mountKey = ValueKey<String>('profile-hero-avatar-mount');
+const _coverKey = ValueKey<String>('profile-identity-hero-cover');
 
 Future<T> _withImageFixture<T>(
   ProfileImageHttpFixture fixture,
@@ -56,6 +58,7 @@ ProfileIdentityHero _hero({
   String handle = 'rok',
   bool isArtist = true,
   bool isInstitution = false,
+  bool isVerified = false,
   String? roleLabel = 'Artist profile',
   bool withActions = true,
   String? coverImageUrl,
@@ -65,6 +68,7 @@ ProfileIdentityHero _hero({
     handle: handle,
     isArtist: isArtist,
     isInstitution: isInstitution,
+    isVerified: isVerified,
     roleLabel: roleLabel,
     coverImageUrl: coverImageUrl,
     avatarRadius: 44,
@@ -213,14 +217,82 @@ void main() {
       await tester.pump();
       final avatar = tester.getRect(find.byKey(_avatarKey));
       final identity = tester.getRect(find.byType(ProfileIdentityBlock));
+      final cover = tester.getRect(find.byKey(_coverKey));
       expect(identity.left, greaterThan(avatar.right), reason: 'width=$width');
       expect(
-        (identity.top - avatar.top).abs(),
-        lessThan(40),
-        reason: 'width=$width',
+        avatar.top,
+        lessThan(cover.bottom),
+        reason: 'the avatar overlaps the cover at width=$width',
+      );
+      expect(
+        avatar.bottom,
+        greaterThan(cover.bottom),
+        reason: 'the avatar extends beyond the cover at width=$width',
+      );
+      expect(
+        identity.top,
+        greaterThanOrEqualTo(cover.bottom),
+        reason: 'the mobile identity stays beside the avatar at width=$width',
       );
       expect(tester.takeException(), isNull, reason: 'width=$width');
     }
+  });
+
+  testWidgets('mobile identity stays unified without a separate glass plate', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        _hero(
+          name: 'Ana Kovač Institute for Contemporary Muralism',
+          handle: 'ana_kovac_contemporary_muralism',
+          isVerified: true,
+        ),
+        width: 390,
+        textScale: 2,
+      ),
+    );
+    await tester.pump();
+
+    final avatar = tester.getRect(find.byKey(_avatarKey));
+    final identity = tester.getRect(find.byType(ProfileIdentityBlock));
+    final cover = tester.getRect(find.byKey(_coverKey));
+    expect(
+      identity.left,
+      greaterThan(avatar.right),
+      reason: 'the avatar remains beside the full wrapping identity',
+    );
+    expect(
+      avatar.top,
+      lessThan(cover.bottom),
+      reason: 'the avatar overlaps the cover',
+    );
+    expect(
+      avatar.bottom,
+      greaterThan(cover.bottom),
+      reason: 'the avatar extends into the identity area',
+    );
+    expect(
+      identity.top,
+      greaterThanOrEqualTo(cover.bottom),
+      reason: 'avatar and identity stay together in the mobile composition',
+    );
+    expect(
+      find.byType(LiquidGlassPanel),
+      findsNothing,
+      reason: 'mobile identity should not sit inside a competing glass plate',
+    );
+    expect(
+      find.textContaining('ana_kovac_contemporary_muralism'),
+      findsOneWidget,
+      reason: 'the shared identity block keeps the complete handle',
+    );
+    expect(find.byIcon(Icons.verified), findsOneWidget);
+    expect(
+      tester.getSemantics(find.byType(ProfileIdentityBlock)).label,
+      contains('@ana_kovac_contemporary_muralism'),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('mobile actions have their own full-width run', (tester) async {
@@ -303,7 +375,7 @@ void main() {
         );
         expect(
           tester.getSize(imageFinder),
-          const Size(328, 266),
+          const Size(328, 232),
           reason: 'cover viewport stays fixed for $path',
         );
         final source = renderImage.image!;

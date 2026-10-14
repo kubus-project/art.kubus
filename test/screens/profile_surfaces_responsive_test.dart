@@ -240,8 +240,8 @@ void main() {
             reason: '$surface width=$width',
           );
           expect(
-            (identity.top - avatar.top).abs(),
-            lessThan(40),
+            identity.top,
+            lessThan(avatar.bottom + ProfileIdentityHero.plateOverlap),
             reason: '$surface width=$width',
           );
           expectNoUnexpectedRenderErrors();
