@@ -131,7 +131,7 @@ Preserve the canonical rounded-square avatar and the separate upper-right active
 presence indicator. Presence appears only for fresh, visible provider data; do not
 invent an online status or cover it with the identity badge.
 Desktop retains the existing name-adjacent verification composition.
-Mobile uses a stable viewport with source aspect ratio preserved and excess width
+Mobile profile covers use a stable viewport with source aspect ratio preserved and excess width
 cropped at the sides, centered by default; honor saved focal metadata when the
 media contract supports it. `BoxFit.cover` must have appropriate parent constraints.
 Keep avatar overlap and viewport geometry stable through asynchronous load and
@@ -143,6 +143,10 @@ loading and playback share that stable height; metadata must not move the scroll
 anchor. Fit every video aspect whole without distortion or blanket cover cropping.
 Desktop retains its viewport cap; quoted previews and mixed carousels retain their
 compact and shared stage geometry.
+Every full-size Community card host captures its bounded viewing height before
+scrolling, including group feeds, profile history/previews and desktop panes.
+Modal previews capture the remaining space below persistent controls; do not
+fall back to device height inside an unbounded scroll child.
 
 ## PRODUCT hover motion
 

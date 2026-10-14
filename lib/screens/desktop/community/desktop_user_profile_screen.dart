@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -282,7 +283,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     final content = Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
+      body: CommunityMediaViewport(
+          child: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
           return FadeTransition(
@@ -399,7 +401,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           );
         },
-      ),
+      )),
     );
     return PublicEntityTakeoverReady(
       type: ShareEntityType.profile,

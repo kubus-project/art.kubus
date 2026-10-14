@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -210,7 +211,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
+      body: CommunityMediaViewport(
+          child: SafeArea(
         bottom: false,
         child: AnimatedBuilder(
           animation: _animationController,
@@ -252,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             );
           },
         ),
-      ),
+      )),
     );
   }
 

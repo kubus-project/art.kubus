@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -277,7 +278,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: Stack(
+          body: CommunityMediaViewport(
+              child: Stack(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +326,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               // Compose dialog
               if (_showComposeDialog) _buildComposeDialog(themeProvider),
             ],
-          ),
+          )),
         ),
       ),
     );

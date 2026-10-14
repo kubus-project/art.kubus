@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
@@ -189,7 +190,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final body = Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
+      body: CommunityMediaViewport(
+          child: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
           return FadeTransition(
@@ -245,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           );
         },
-      ),
+      )),
     );
 
     // Pushed inside the desktop shell the profile owns the one header row:
