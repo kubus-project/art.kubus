@@ -10,6 +10,7 @@ import '../../providers/kubus_node_provider.dart';
 import '../../utils/kubus_labs_feature.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/common/kubus_labs_adornment.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/node/node_ui.dart';
 import 'my_nodes_screen.dart';
@@ -69,7 +70,7 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
       appBar: widget.embedded
           ? null
           : AppBar(
-              title: Text(_l10n.kubusNodeEntryTitle),
+              title: KubusFamilyBrandText(_l10n.kubusNodeEntryTitle),
               actions: [if (node.isPaired) _refreshButton()],
             ),
       body: SafeArea(
@@ -106,7 +107,7 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
                 runSpacing: KubusSpacing.xs,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(
+                  KubusFamilyBrandText(
                     _l10n.kubusNodeEntryTitle,
                     style: textTheme.headlineMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
@@ -118,7 +119,8 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
                 ],
               ),
               const SizedBox(height: KubusSpacing.sm),
-              Text(_l10n.kubusNodeEntrySubtitle, style: textTheme.bodyLarge),
+              KubusFamilyBrandText(_l10n.kubusNodeEntrySubtitle,
+                  style: textTheme.bodyLarge),
               const SizedBox(height: KubusSpacing.lg),
               for (final feature in [
                 _l10n.kubusNodeEntryFeatureArchive,
@@ -955,7 +957,7 @@ class _SetupSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.kubusNodePairBody,
+              KubusFamilyBrandText(l10n.kubusNodePairBody,
                   style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: KubusSpacing.md),
               Wrap(

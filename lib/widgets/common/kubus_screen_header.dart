@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import 'kubus_family_brand.dart';
 import '../artist_badge.dart';
 import '../institution_badge.dart';
 
@@ -41,8 +42,9 @@ class KubusGreetingIdentityBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final effectiveGreetingStyle = (greetingStyle ?? KubusTextStyles.navMetaLabel)
-        .copyWith(color: scheme.onSurface.withValues(alpha: 0.62));
+    final effectiveGreetingStyle =
+        (greetingStyle ?? KubusTextStyles.navMetaLabel)
+            .copyWith(color: scheme.onSurface.withValues(alpha: 0.62));
     final baseNameStyle = (displayNameStyle ?? KubusTextStyles.heroTitle)
         .copyWith(color: scheme.onSurface);
 
@@ -64,7 +66,8 @@ class KubusGreetingIdentityBlock extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final availableWidth = constraints.maxWidth;
-                  final resolvedNameStyle = KubusTextStyles.responsiveTitleStyle(
+                  final resolvedNameStyle =
+                      KubusTextStyles.responsiveTitleStyle(
                     context,
                     baseNameStyle,
                     availableWidth: availableWidth,
@@ -176,12 +179,20 @@ class KubusHeaderTitleBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  title,
-                  style: resolvedTitleStyle,
-                  maxLines: effectiveTitleLines,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (KubusFamilyBrandText.containsBrandToken(title))
+                  KubusFamilyBrandText(
+                    title,
+                    style: resolvedTitleStyle,
+                    maxLines: effectiveTitleLines,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Text(
+                    title,
+                    style: resolvedTitleStyle,
+                    maxLines: effectiveTitleLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 if (resolvedSubtitle != null &&
                     resolvedSubtitle.isNotEmpty) ...[
                   SizedBox(

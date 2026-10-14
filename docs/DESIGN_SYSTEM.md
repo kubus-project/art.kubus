@@ -34,6 +34,17 @@ lead, labels follow, secondary context comes next, and decoration comes last.
 Allow labels and long names to wrap. Increased system text scale must grow the
 composition instead of clipping values or reducing all text to fit.
 
+### kubus family wordmark
+
+In visible authored product copy, emphasize the standalone `kubus` word in the
+family names with Sofia Sans weight 800 and italic styling. This applies to
+`art.kubus`, `kubus Node`, and standalone `kubus` references; keep prefixes,
+suffixes, punctuation, and surrounding prose in the surrounding text style.
+Render these references through `KubusFamilyBrandText` or its `span` helper so
+matching is escaped and consistent. Apply it only to authored brand copy and
+screen identity. URLs, package identifiers, protocol and signing values, and
+user-authored content retain their original rendering and exact text.
+
 ## Color and themes
 
 Use `Theme.of(context).colorScheme`, the selected theme accent and shared semantic

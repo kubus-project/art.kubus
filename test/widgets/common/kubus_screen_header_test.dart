@@ -1,9 +1,26 @@
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('family brand span styles only standalone kubus words', () {
+    const copy = 'art.kubus · kubus Node · kubus · kubus2 · package_kubus';
+    final span = KubusFamilyBrandText.span(copy);
+    final emphasized = span.children!
+        .whereType<TextSpan>()
+        .where((part) => part.style?.fontWeight == FontWeight.w800)
+        .toList();
+
+    expect(span.toPlainText(), copy);
+    expect(emphasized.map((part) => part.text), ['kubus', 'kubus', 'kubus']);
+    expect(
+      emphasized.every((part) => part.style?.fontStyle == FontStyle.italic),
+      isTrue,
+    );
+  });
+
   testWidgets(
       'KubusHeaderText uses standardized screen title and subtitle sizes on wide layouts',
       (tester) async {
@@ -127,10 +144,15 @@ void main() {
       ),
     );
 
-    final title =
-        tester.widget<Text>(find.text('Very Long Kubus Header Title'));
+    final title = tester.widgetList<RichText>(find.byType(RichText)).firstWhere(
+          (richText) =>
+              richText.text.toPlainText() == 'Very Long Kubus Header Title',
+        );
 
-    expect(title.style?.fontSize, lessThan(KubusHeaderMetrics.screenTitle));
+    expect(
+      title.text.style?.fontSize,
+      lessThan(KubusHeaderMetrics.screenTitle),
+    );
     expect(title.maxLines, 2);
   });
 }
