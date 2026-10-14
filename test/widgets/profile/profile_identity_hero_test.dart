@@ -129,6 +129,7 @@ void main() {
           .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock));
       expect(identity.isVerified, isFalse);
       expect(identity.isArtist, isTrue);
+      expect(identity.showRoleBadges, isFalse);
       expect(tester.takeException(), isNull);
     });
   }
@@ -155,6 +156,11 @@ void main() {
       final icon = tester.widget<Icon>(find.byIcon(
           institution ? Icons.account_balance_rounded : Icons.brush_rounded));
       expect(icon.semanticLabel, institution ? 'Institution' : 'Artist');
+      expect(find.text(institution ? 'INSTITUTION' : 'ARTIST'), findsNothing);
+      final semantics = tester.ensureSemantics();
+      expect(find.bySemanticsLabel(institution ? 'Institution' : 'Artist'),
+          findsOneWidget);
+      semantics.dispose();
       expect(find.byIcon(Icons.verified), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -222,6 +228,11 @@ void main() {
     await tester.pumpWidget(_harness(_hero()));
     await tester.pump();
     expect(find.text('ARTIST PROFILE'), findsNothing);
+    expect(
+        tester
+            .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock))
+            .showRoleBadges,
+        isTrue);
   });
 
   testWidgets('an institution shows one role signal too', (tester) async {

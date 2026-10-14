@@ -153,6 +153,7 @@ class ProfileIdentityHero extends StatelessWidget {
           displayName: displayName,
           handle: handle,
           isVerified: !mobile && isVerified,
+          showRoleBadges: !mobile,
           isArtist: isArtist,
           isInstitution: isInstitution,
           roleLabel: isArtist || isInstitution ? null : roleLabel,
@@ -465,6 +466,7 @@ class _IdentityContent extends StatelessWidget {
     required this.displayName,
     required this.handle,
     required this.isVerified,
+    required this.showRoleBadges,
     required this.isArtist,
     required this.isInstitution,
     required this.roleLabel,
@@ -477,6 +479,7 @@ class _IdentityContent extends StatelessWidget {
   final String displayName;
   final String? handle;
   final bool isVerified;
+  final bool showRoleBadges;
   final bool isArtist;
   final bool isInstitution;
   final String? roleLabel;
@@ -518,6 +521,7 @@ class _IdentityContent extends StatelessWidget {
           displayName: displayName,
           handle: handle,
           isVerified: isVerified,
+          showRoleBadges: showRoleBadges,
           isArtist: isArtist,
           isInstitution: isInstitution,
           density: density,

@@ -124,7 +124,9 @@ that identity composition. Keep content in normal flow as names and text scale g
 On mobile the avatar's lower-right badge uses the role's contextual color and
 corresponding artist, institution or account icon. Verification qualifies its
 accessible label only when verified; a role icon never grants verification.
-Artist/institution role labels remain integrated into the identity panel.
+The mobile avatar badge is the single role/verification indicator, including its
+accessible label; do not repeat role chips inside the identity panel. Desktop
+keeps its name-adjacent role badges.
 Preserve the canonical rounded-square avatar and the separate upper-right active
 presence indicator. Presence appears only for fresh, visible provider data; do not
 invent an online status or cover it with the identity badge.
