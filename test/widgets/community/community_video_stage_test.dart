@@ -65,35 +65,33 @@ void main() {
   group('single-video stage', () {
     const url = 'https://example.test/uploads/clip.mp4';
 
-    for (final c in <(String, double, double)>[
-      ('16:9', 16 / 9, 600 / (16 / 9)),
-      ('21:9', 21 / 9, 600 / (21 / 9)),
-      ('32:9', 32 / 9, 600 / (32 / 9)),
-      ('4:3', 4 / 3, 450),
-      ('1:1', 1, 600),
-      // 9:16 is bounded to 4:5 so it cannot dominate the viewport.
-      ('9:16', 9 / 16, 648),
+    for (final c in <(String, double)>[
+      ('16:9', 16 / 9),
+      ('21:9', 21 / 9),
+      ('32:9', 32 / 9),
+      ('4:3', 4 / 3),
+      ('1:1', 1),
+      ('9:16 portrait', 9 / 16),
     ]) {
-      testWidgets('${c.$1} clip: stage height follows its shape',
+      testWidgets('${c.$1} metadata never changes the stable stage height',
           (tester) async {
         CommunityPostVideoSlide.knownAspects[url] = c.$2;
         await tester.pumpWidget(_harness(
           const CommunityPostMediaCarousel(mediaUrls: [url]),
         ));
         await tester.pumpAndSettle();
-        expect(_stageHeight(tester), closeTo(c.$3, 0.6));
+        expect(_stageHeight(tester), closeTo(600 / 16 * 9, 0.6));
       });
     }
 
-    testWidgets('an ultrawide clip is far shallower than the old 4:3 stage',
+    testWidgets('an ultrawide clip stays inside the same stable stage',
         (tester) async {
       CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(mediaUrls: [url]),
       ));
       await tester.pumpAndSettle();
-      expect(
-          _stageHeight(tester), lessThan(600 / kCommunityMediaStageAspect / 2));
+      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
     });
 
     testWidgets('the stage never drops below the controls minimum',
@@ -101,7 +99,7 @@ void main() {
       CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(mediaUrls: [url]),
-        width: 280,
+        width: 160,
       ));
       await tester.pumpAndSettle();
       expect(_stageHeight(tester), kCommunityVideoStageMinHeight);
@@ -117,6 +115,10 @@ void main() {
 
     testWidgets('portrait stage is capped by the available desktop viewport',
         (tester) async {
+      tester.view.physicalSize = const Size(1200, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(mediaUrls: [url]),
@@ -165,7 +167,7 @@ void main() {
       expect(_stageHeight(tester), closeTo(450, 0.6));
     });
 
-    testWidgets('the loaded clip corrects the stage once, without remounting',
+    testWidgets('loaded metadata does not change stage height or anchor',
         (tester) async {
       final previous = VideoPlayerPlatform.instance;
       final platform = FakeVideoPlayerPlatform(size: const Size(3200, 900));
@@ -179,8 +181,10 @@ void main() {
         const CommunityPostMediaCarousel(mediaUrls: [url]),
       ));
       await tester.pump();
-      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6),
-          reason: 'unknown shape starts at 16:9');
+      final initialHeight = _stageHeight(tester);
+      final initialTop = tester.getTopLeft(find.byType(ClipRRect).first).dy;
+      expect(initialHeight, closeTo(600 * 9 / 16, 0.6),
+          reason: 'unknown shape uses the stable fallback stage');
       for (var i = 0; i < 30; i++) {
         await tester.pump(const Duration(milliseconds: 50));
         await tester.runAsync(
@@ -188,7 +192,9 @@ void main() {
         );
       }
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(600 / (32 / 9), 0.6));
+      expect(_stageHeight(tester), closeTo(initialHeight, 0.6));
+      expect(tester.getTopLeft(find.byType(ClipRRect).first).dy,
+          closeTo(initialTop, 0.6));
       expect(CommunityPostVideoSlide.knownAspects[url], closeTo(32 / 9, 0.01));
     });
   });
