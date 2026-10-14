@@ -11,6 +11,8 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/profile_package_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
+import 'package:art_kubus/widgets/community/community_video_autoplay.dart';
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -27,9 +29,12 @@ http.Response _json(Object payload) => http.Response(
       headers: const <String, String>{'content-type': 'application/json'},
     );
 
-Map<String, Object?> _postPayload(int index) => <String, Object?>{
+Map<String, Object?> _postPayload(int index, {bool withVideo = false}) =>
+    <String, Object?>{
       'id': '00000000-0000-4000-8000-${index.toString().padLeft(12, '0')}',
       'content': 'History post number $index',
+      if (withVideo) 'imageUrl': '/uploads/viewport.mp4',
+      if (withVideo) 'mediaUrls': <String>['/uploads/viewport.mp4'],
       'createdAt': '2026-06-14T12:00:00.000Z',
       'author': <String, Object?>{
         'userId': '55555555-5555-4555-8555-555555555555',
@@ -49,14 +54,18 @@ Map<String, Object?> _postPayload(int index) => <String, Object?>{
 
 /// Page 1 is a full page (so more are expected); [failSecondPage] makes page 2
 /// fail with a server error.
-void _mockHistory({bool failSecondPage = false, List<int>? pagesAsked}) {
+void _mockHistory(
+    {bool failSecondPage = false,
+    bool withVideo = false,
+    List<int>? pagesAsked}) {
   BackendApiService().setHttpClient(MockClient((request) async {
     if (request.url.path == '/api/community/posts') {
       final page = int.parse(request.url.queryParameters['page'] ?? '1');
       pagesAsked?.add(page);
       if (page == 1) {
         return _json(<String, Object?>{
-          'data': List<Object?>.generate(20, (i) => _postPayload(i + 1)),
+          'data': List<Object?>.generate(
+              20, (i) => _postPayload(i + 1, withVideo: withVideo && i == 0)),
         });
       }
       if (failSecondPage) return http.Response('boom', 500);
@@ -71,8 +80,9 @@ void _mockHistory({bool failSecondPage = false, List<int>? pagesAsked}) {
 Future<void> _pumpPostsScreen(
   WidgetTester tester, {
   required bool embedded,
+  Size size = const Size(900, 1400),
 }) async {
-  tester.view.physicalSize = const Size(900, 1400);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   final screen = ProfilePostsScreen(
@@ -199,5 +209,19 @@ void main() {
     _mockHistory();
     await _pumpPostsScreen(tester, embedded: false);
     expect(find.byType(AppBar), findsOneWidget);
+  });
+
+  testWidgets('mobile history video reserves its real app bar and safe area',
+      (tester) async {
+    CommunityVideoAutoplay.enabledOverride = false;
+    addTearDown(() => CommunityVideoAutoplay.enabledOverride = null);
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 34);
+    _mockHistory(withVideo: true);
+    await _pumpPostsScreen(tester, embedded: false, size: const Size(390, 844));
+    final frame = find.byType(CommunityPostMediaCarousel);
+    expect(frame, findsOneWidget);
+    final usableHeight = 844 - tester.getSize(find.byType(AppBar)).height - 34;
+    expect(tester.getSize(frame).height, closeTo(usableHeight, 0.6));
+    expect(tester.takeException(), isNull);
   });
 }

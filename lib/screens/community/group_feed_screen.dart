@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -137,7 +138,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ],
             ),
-      body: Consumer<CommunityHubProvider>(
+      body: CommunityMediaViewport(child: Consumer<CommunityHubProvider>(
         builder: (context, hub, _) {
           final summary = _resolveGroup(hub);
           final posts = hub.groupPosts(summary.id);
@@ -215,7 +216,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             ),
           );
         },
-      ),
+      )),
     );
   }
 
@@ -1436,20 +1437,27 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ),
               const SizedBox(height: KubusSpacing.md),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-                child: CommunityPostCard(
-                  post: post,
-                  accentColor: themeProvider.accentColor,
-                  onOpenPostDetail: _openPostDetail,
-                  onOpenProfileIdentity: (identity) =>
-                      openProfileIdentity(context, identity),
-                  onToggleLike: () => _toggleLike(post),
-                  onOpenComments: () => _openPostDetail(post),
-                  onRepost: () {},
-                  onShare: () {},
-                  onToggleBookmark: () => _toggleBookmark(post),
+              Expanded(
+                child: CommunityMediaViewport(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.lg,
+                      ),
+                      child: CommunityPostCard(
+                        post: post,
+                        accentColor: themeProvider.accentColor,
+                        onOpenPostDetail: _openPostDetail,
+                        onOpenProfileIdentity: (identity) =>
+                            openProfileIdentity(context, identity),
+                        onToggleLike: () => _toggleLike(post),
+                        onOpenComments: () => _openPostDetail(post),
+                        onRepost: () {},
+                        onShare: () {},
+                        onToggleBookmark: () => _toggleBookmark(post),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

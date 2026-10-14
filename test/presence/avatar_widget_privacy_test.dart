@@ -2,6 +2,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/presence_provider.dart';
 import 'package:art_kubus/services/presence_api.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
+import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -136,7 +137,8 @@ void main() {
     presenceProvider.dispose();
   });
 
-  testWidgets('AvatarWidget shows green badge for fresh online presence',
+  testWidgets(
+      'profile active indicator coexists with its contextual role badge',
       (tester) async {
     const wallet = '0xFRESH123';
     final now = DateTime.now();
@@ -165,10 +167,17 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: const Scaffold(
-            body: AvatarWidget(
-              wallet: wallet,
-              avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=test',
-              enableProfileNavigation: false,
+            body: ProfileAvatarMount(
+              radius: 44,
+              isArtist: true,
+              isVerified: true,
+              child: AvatarWidget(
+                radius: 44,
+                wallet: wallet,
+                avatarUrl:
+                    'https://api.dicebear.com/7.x/identicon/svg?seed=test',
+                enableProfileNavigation: false,
+              ),
             ),
           ),
         ),
@@ -178,6 +187,22 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     expect(find.byKey(const ValueKey('avatar_presence_indicator')),
         findsOneWidget);
+    final presence =
+        tester.getRect(find.byKey(const ValueKey('avatar_presence_indicator')));
+    final role =
+        tester.getRect(find.byKey(const ValueKey('profile-avatar-role-badge')));
+    expect(presence.bottom, lessThan(role.top));
+    expect(presence.overlaps(role), isFalse);
+    expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+    final avatarSurfaces = tester.widgetList<Container>(find.descendant(
+        of: find.byType(AvatarWidget), matching: find.byType(Container)));
+    expect(
+        avatarSurfaces.any((surface) =>
+            surface.decoration is BoxDecoration &&
+            (surface.decoration as BoxDecoration).borderRadius ==
+                BorderRadius.circular(AvatarWidget.shapeRadiusFor(radius: 44))),
+        isTrue);
+    expect(find.byType(CircleAvatar), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

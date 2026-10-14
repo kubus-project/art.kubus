@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -145,7 +146,8 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
     final posts = _controller.posts;
     final name = (widget.displayName ?? _controller.user?.name ?? '').trim();
 
-    final body = RefreshIndicator(
+    final body = CommunityMediaViewport(
+        child: RefreshIndicator(
       onRefresh: _loadPosts,
       color: accent,
       child: _controller.postsLoading && posts.isEmpty
@@ -260,7 +262,7 @@ class _ProfilePostsScreenState extends State<ProfilePostsScreen> {
                 return const SizedBox.shrink();
               },
             ),
-    );
+    ));
 
     if (widget.embedded) return body;
 

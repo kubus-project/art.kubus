@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
@@ -24,8 +25,8 @@ import 'profile_cover_field.dart';
 ///   not. An image-less profile is still a designed surface.
 /// * The avatar overlaps the cover's lower edge. It is a constant size, so the
 ///   overlap is a constant too and cannot drift with text scale.
-/// * Desktop identity uses restrained contextual glass over the cover. Mobile
-///   identity sits directly beside the overlapping avatar without a second card.
+/// * Identity uses restrained contextual glass over the cover. On mobile its
+///   dark surface and light foreground remain invariant across app themes.
 /// * The shared [ProfileIdentityBlock] carries the name, full handle,
 ///   verification and role on both layouts.
 /// * Relationship and owner actions belong to the same composition. Wide
@@ -146,11 +147,13 @@ class ProfileIdentityHero extends StatelessWidget {
         final avatarBesidePlate = width >= avatarAbovePlateWidth;
         final actionsBeside =
             actions != null && width >= actionsBesideIdentityWidth;
+        final mobile = width < actionsBesideIdentityWidth;
         final identityContent = _IdentityContent(
           accent: accent,
           displayName: displayName,
           handle: handle,
-          isVerified: isVerified,
+          isVerified: !mobile && isVerified,
+          showRoleBadges: !mobile,
           isArtist: isArtist,
           isInstitution: isInstitution,
           roleLabel: isArtist || isInstitution ? null : roleLabel,
@@ -158,18 +161,26 @@ class ProfileIdentityHero extends StatelessWidget {
           density: density,
           nameStyle: nameStyle,
         );
-        final plate = _IdentityPlate(
-          accent: accent,
-          child: identityContent,
-        );
-        final identityPresentation = width < actionsBesideIdentityWidth
-            ? Padding(
-                // The avatar overlaps the cover; identity text starts on
-                // the plain surface below it so contrast is independent
-                // of the account's photograph.
-                padding:
-                    const EdgeInsets.only(top: plateOverlap + KubusSpacing.sm),
-                child: identityContent,
+        final plate = _IdentityPlate(accent: accent, child: identityContent);
+        final identityPresentation = mobile
+            ? Theme(
+                data: Theme.of(context).copyWith(
+                  brightness: Brightness.dark,
+                  colorScheme: Theme.of(context).colorScheme.copyWith(
+                        brightness: Brightness.dark,
+                        primary: KubusColorRoles.dark.active,
+                        onPrimary: KubusColorRoles.dark.onActive,
+                        surface: KubusColorRoles.dark.surface,
+                        onSurface: KubusColorRoles.dark.foreground,
+                      ),
+                  extensions: [
+                    ...Theme.of(context).extensions.values.where(
+                          (extension) => extension is! KubusColorRoles,
+                        ),
+                    KubusColorRoles.dark,
+                  ],
+                ),
+                child: plate,
               )
             : plate;
 
@@ -222,10 +233,15 @@ class ProfileIdentityHero extends StatelessWidget {
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ProfileAvatarMount(radius: avatarRadius, child: avatar),
+                  ProfileAvatarMount(
+                      radius: avatarRadius,
+                      isVerified: mobile && isVerified,
+                      isArtist: mobile && isArtist,
+                      isInstitution: mobile && isInstitution,
+                      child: avatar),
                   const SizedBox(width: KubusSpacing.md),
                   // Content stays as wide as its identity, not as wide as the
-                  // entire row. Desktop keeps the plate; mobile stays unboxed.
+                  // entire row. The plate stays anchored to the cover/avatar.
                   Flexible(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
@@ -257,11 +273,14 @@ class ProfileIdentityHero extends StatelessWidget {
                     alignment: AlignmentDirectional.centerStart,
                     child: ProfileAvatarMount(
                       radius: avatarRadius,
+                      isVerified: mobile && isVerified,
+                      isArtist: mobile && isArtist,
+                      isInstitution: mobile && isInstitution,
                       child: avatar,
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
-                  identityContent,
+                  identityPresentation,
                 ],
               );
         final composition = actionsBeside || actions == null
@@ -315,13 +334,42 @@ class ProfileAvatarMount extends StatelessWidget {
     super.key,
     required this.radius,
     required this.child,
+    this.isVerified = false,
+    this.isArtist = false,
+    this.isInstitution = false,
   });
 
   final double radius;
   final Widget child;
+  final bool isVerified;
+  final bool isArtist;
+  final bool isInstitution;
 
   @override
   Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final roleColor = isInstitution
+        ? roles.institutionBadgeAccent
+        : isArtist
+            ? roles.artistBadgeAccent
+            : roles.userAccent;
+    final roleIcon = isInstitution
+        ? Icons.account_balance_rounded
+        : isArtist
+            ? Icons.brush_rounded
+            : Icons.person_rounded;
+    final roleLabel = isInstitution
+        ? l10n.badgeInstitutionLabel
+        : isArtist
+            ? l10n.badgeArtistLabel
+            : '';
+    final badgeLabel = [roleLabel, if (isVerified) l10n.peopleVerifiedLabel]
+        .where((label) => label.isNotEmpty)
+        .join(', ');
+    final badgeForeground = roleColor.computeLuminance() > 0.179
+        ? KubusColorRoles.light.foreground
+        : KubusColorRoles.dark.foreground;
     return DecoratedBox(
       key: const ValueKey<String>('profile-hero-avatar-mount'),
       decoration: BoxDecoration(
@@ -336,7 +384,37 @@ class ProfileAvatarMount extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          if (isVerified || isArtist || isInstitution)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                key: const ValueKey<String>('profile-avatar-role-badge'),
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(
+                    AvatarWidget.shapeRadiusFor(
+                        radius: KubusHeaderMetrics.actionIcon / 2 +
+                            KubusSpacing.xs),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.xs),
+                  child: Icon(
+                    roleIcon,
+                    color: badgeForeground,
+                    size: KubusHeaderMetrics.actionIcon,
+                    semanticLabel: badgeLabel,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -346,10 +424,7 @@ class ProfileAvatarMount extends StatelessWidget {
 /// leading edge catches the role accent. One layer of glass, no nesting, no
 /// glow.
 class _IdentityPlate extends StatelessWidget {
-  const _IdentityPlate({
-    required this.accent,
-    required this.child,
-  });
+  const _IdentityPlate({required this.accent, required this.child});
 
   final Color accent;
 
@@ -391,6 +466,7 @@ class _IdentityContent extends StatelessWidget {
     required this.displayName,
     required this.handle,
     required this.isVerified,
+    required this.showRoleBadges,
     required this.isArtist,
     required this.isInstitution,
     required this.roleLabel,
@@ -403,6 +479,7 @@ class _IdentityContent extends StatelessWidget {
   final String displayName;
   final String? handle;
   final bool isVerified;
+  final bool showRoleBadges;
   final bool isArtist;
   final bool isInstitution;
   final String? roleLabel;
@@ -444,6 +521,7 @@ class _IdentityContent extends StatelessWidget {
           displayName: displayName,
           handle: handle,
           isVerified: isVerified,
+          showRoleBadges: showRoleBadges,
           isArtist: isArtist,
           isInstitution: isInstitution,
           density: density,

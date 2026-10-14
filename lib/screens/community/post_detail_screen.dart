@@ -40,6 +40,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_comment_row.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
 import '../../widgets/community/community_post_card.dart';
+import '../../widgets/community/community_post_media_carousel.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
@@ -105,8 +106,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final override = widget.currentWalletAddressOverride;
     if (override != null) return override;
     try {
-      return Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
+      return Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).currentWalletAddress;
     } catch (_) {
       return null;
     }
@@ -129,14 +132,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
         try {
-          context
-              .read<CommunityInteractionsProvider>()
-              .hydratePostsFromServer([post]);
+          context.read<CommunityInteractionsProvider>().hydratePostsFromServer([
+            post,
+          ]);
           _refreshViewerState(post);
         } catch (_) {}
-        context
-            .read<CommunityCommentsProvider>()
-            .loadComments(post.id, force: true);
+        context.read<CommunityCommentsProvider>().loadComments(
+              post.id,
+              force: true,
+            );
       });
     } else if (widget.postId != null) {
       _fetchPost(widget.postId!);
@@ -245,9 +249,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   /// object on build, and nothing else rebuilds it when the state arrives.
   void _refreshViewerState(CommunityPost post) {
     final interactions = context.read<CommunityInteractionsProvider>();
-    unawaited(interactions.refreshPostStates([post], force: true).then((_) {
-      if (mounted) setState(() {});
-    }));
+    unawaited(
+      interactions.refreshPostStates([post], force: true).then((_) {
+        if (mounted) setState(() {});
+      }),
+    );
   }
 
   /// Shows a confirmed like at once, before the server answers. The count is
@@ -314,19 +320,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final savedItemsProvider = context.read<SavedItemsProvider>();
       final post = await BackendApiService().getCommunityPostById(id);
       try {
-        await CommunityService.loadSavedInteractions(
-          [post],
-          savedItemsProvider: savedItemsProvider,
-        );
+        await CommunityService.loadSavedInteractions([
+          post,
+        ], savedItemsProvider: savedItemsProvider);
       } catch (_) {}
       if (mounted) {
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
         try {
-          context
-              .read<CommunityInteractionsProvider>()
-              .hydratePostsFromServer([post]);
+          context.read<CommunityInteractionsProvider>().hydratePostsFromServer([
+            post,
+          ]);
           _refreshViewerState(post);
         } catch (_) {}
       }
@@ -340,9 +345,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) {
         // Load comments via provider so edited/original fields and nesting are
         // consistent and mutations can update UI without manual refresh.
-        unawaited(context
-            .read<CommunityCommentsProvider>()
-            .loadComments(post.id, force: true));
+        unawaited(
+          context.read<CommunityCommentsProvider>().loadComments(
+                post.id,
+                force: true,
+              ),
+        );
       }
       _maybeRunInitialAction();
     } catch (e) {
@@ -418,9 +426,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
     if (!authenticated || !mounted) return;
     try {
-      await context
-          .read<CommunityInteractionsProvider>()
-          .togglePostLike(_post!);
+      await context.read<CommunityInteractionsProvider>().togglePostLike(
+            _post!,
+          );
       if (!mounted) return;
       setState(() {});
 
@@ -430,9 +438,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final roles = KubusColorRoles.of(context);
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(_post!.isLiked
-              ? l10n.postDetailPostLikedToast
-              : l10n.postDetailLikeRemovedToast),
+          content: Text(
+            _post!.isLiked
+                ? l10n.postDetailPostLikedToast
+                : l10n.postDetailLikeRemovedToast,
+          ),
           action: SnackBarAction(
             label: l10n.commonUndo,
             textColor: roles.likeAction,
@@ -448,8 +458,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: undo like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-                    content: Text(l10n.postDetailUndoLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(
+                  SnackBar(content: Text(l10n.postDetailUndoLikeFailedToast)),
+                );
               }
             },
           ),
@@ -483,8 +494,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: retry like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-                    content: Text(l10n.postDetailRetryLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(
+                  SnackBar(content: Text(l10n.postDetailRetryLikeFailedToast)),
+                );
               }
             },
           ),
@@ -569,27 +581,35 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Column(
             children: [
               Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                  decoration: BoxDecoration(
-                      color: theme.colorScheme.outline,
-                      borderRadius: BorderRadius.circular(KubusRadius.xs))),
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(KubusRadius.xs),
+                ),
+              ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(l10n.commonLikes,
-                        style: KubusTypography.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface)),
-                    IconButton(
-                        icon: const Icon(Icons.close),
+                    Text(
+                      l10n.commonLikes,
+                      style: KubusTypography.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
-                        onPressed: () => Navigator.of(sheetContext).pop()),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: theme.colorScheme.onSurface,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
                   ],
                 ),
               ),
@@ -599,15 +619,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
                       return const Center(
-                          child: InlineLoading(width: 40, height: 40));
+                        child: InlineLoading(width: 40, height: 40),
+                      );
                     }
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(KubusSpacing.lg),
-                          child: Text(l10n.postDetailLoadLikesFailedMessage,
-                              style: KubusTypography.inter(
-                                  color: theme.colorScheme.onSurface)),
+                          child: Text(
+                            l10n.postDetailLoadLikesFailedMessage,
+                            style: KubusTypography.inter(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -627,11 +651,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     }
                     return ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       itemCount: likes.length,
                       separatorBuilder: (_, __) => Divider(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.3)),
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final identity = user.profileIdentityData;
@@ -651,25 +677,31 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                              wallet: identity.navigationIdentifier ??
-                                  identity.username ??
-                                  identity.walletSeed,
-                              fetchMissingAvatar: identity.canOpenProfile,
-                              avatarUrl: identity.avatarUrl,
-                              radius: 20,
-                              enableProfileNavigation: false),
+                            wallet: identity.navigationIdentifier ??
+                                identity.username ??
+                                identity.walletSeed,
+                            fetchMissingAvatar: identity.canOpenProfile,
+                            avatarUrl: identity.avatarUrl,
+                            radius: 20,
+                            enableProfileNavigation: false,
+                          ),
                           title: Text(
-                              identity.label.isNotEmpty
-                                  ? identity.label
-                                  : l10n.commonUnnamed,
-                              style: KubusTypography.inter(
-                                  fontWeight: FontWeight.w600)),
+                            identity.label.isNotEmpty
+                                ? identity.label
+                                : l10n.commonUnnamed,
+                            style: KubusTypography.inter(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           subtitle: subtitleParts.isNotEmpty
-                              ? Text(subtitleParts.join(' • '),
+                              ? Text(
+                                  subtitleParts.join(' • '),
                                   style: KubusTypography.inter(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6)))
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                )
                               : null,
                         );
                       },
@@ -747,7 +779,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
                       return const Center(
-                          child: InlineLoading(width: 40, height: 40));
+                        child: InlineLoading(width: 40, height: 40),
+                      );
                     }
                     if (snapshot.hasError) {
                       return Center(
@@ -778,7 +811,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     }
                     return ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       itemCount: likes.length,
                       separatorBuilder: (_, __) => Divider(
                         color: theme.colorScheme.outline.withValues(alpha: 0.3),
@@ -815,7 +850,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ? identity.label
                                 : l10n.commonUnnamed,
                             style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
@@ -900,7 +936,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                        child: InlineLoading(width: 40, height: 40));
+                      child: InlineLoading(width: 40, height: 40),
+                    );
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -930,11 +967,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final wallet =
-                          WalletUtils.resolveFromMap(user, fallback: '');
+                      final wallet = WalletUtils.resolveFromMap(
+                        user,
+                        fallback: '',
+                      );
                       final comment = repost['repostComment'] as String?;
-                      final createdAt =
-                          DateTime.tryParse(repost['createdAt'] ?? '');
+                      final createdAt = DateTime.tryParse(
+                        repost['createdAt'] ?? '',
+                      );
                       final identity = communityRepostIdentityDataFromPayload(
                         user,
                         fallbackLabel: wallet.isNotEmpty
@@ -958,7 +998,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         title: Text(
                           identity.label,
                           style: KubusTypography.inter(
-                              fontWeight: FontWeight.w600),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,8 +1027,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 _timeAgo(createdAt),
                                 style: KubusTypography.inter(
                                   fontSize: 11,
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                               )
                             : null,
@@ -1055,13 +1097,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
             const SizedBox(height: 16),
             _buildPostReportOption(
-                dialogContext, post, l10n.userProfileReportReasonSpam),
+              dialogContext,
+              post,
+              l10n.userProfileReportReasonSpam,
+            ),
             _buildPostReportOption(
-                dialogContext, post, l10n.userProfileReportReasonInappropriate),
+              dialogContext,
+              post,
+              l10n.userProfileReportReasonInappropriate,
+            ),
             _buildPostReportOption(
-                dialogContext, post, l10n.userProfileReportReasonHarassment),
+              dialogContext,
+              post,
+              l10n.userProfileReportReasonHarassment,
+            ),
             _buildPostReportOption(
-                dialogContext, post, l10n.userProfileReportReasonOther),
+              dialogContext,
+              post,
+              l10n.userProfileReportReasonOther,
+            ),
           ],
         ),
         actions: [
@@ -1121,8 +1175,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final type = (selectedSubjectType ?? '').trim();
       final id = (selectedSubjectId ?? '').trim();
       if (type.isNotEmpty && id.isNotEmpty) {
-        return subjectProvider
-            .previewFor(CommunitySubjectRef(type: type, id: id));
+        return subjectProvider.previewFor(
+          CommunitySubjectRef(type: type, id: id),
+        );
       }
       if (post.artwork != null) {
         return CommunitySubjectPreview(
@@ -1204,7 +1259,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       child: Column(
                         children: [
                           Expanded(
@@ -1215,8 +1272,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               decoration: InputDecoration(
                                 hintText: l10n.communityComposerTextHint,
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
+                                  borderRadius: BorderRadius.circular(
+                                    KubusRadius.md,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1262,29 +1320,35 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: hasSubject
-                                ? theme.colorScheme.primaryContainer
-                                    .withValues(alpha: 0.2)
+                                ? theme.colorScheme.primaryContainer.withValues(
+                                    alpha: 0.2,
+                                  )
                                 : theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(KubusRadius.lg),
                             border: Border.all(
                               color: hasSubject
-                                  ? theme.colorScheme.primary
-                                      .withValues(alpha: 0.3)
-                                  : theme.colorScheme.outline
-                                      .withValues(alpha: 0.2),
+                                  ? theme.colorScheme.primary.withValues(
+                                      alpha: 0.3,
+                                    )
+                                  : theme.colorScheme.outline.withValues(
+                                      alpha: 0.2,
+                                    ),
                             ),
                           ),
                           child: Row(
                             children: [
                               if (MediaUrlResolver.resolveDisplayUrl(
-                                      preview?.imageUrl) !=
+                                    preview?.imageUrl,
+                                  ) !=
                                   null)
                                 ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.sm),
+                                  borderRadius: BorderRadius.circular(
+                                    KubusRadius.sm,
+                                  ),
                                   child: Image.network(
                                     MediaUrlResolver.resolveDisplayUrl(
-                                        preview?.imageUrl)!,
+                                      preview?.imageUrl,
+                                    )!,
                                     width: 44,
                                     height: 44,
                                     fit: BoxFit.cover,
@@ -1363,10 +1427,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             onPressed: saving
                                 ? null
                                 : () async {
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
-                                    final navigator =
-                                        Navigator.of(sheetContext);
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
+                                    final navigator = Navigator.of(
+                                      sheetContext,
+                                    );
                                     AppRefreshProvider? appRefresh;
                                     try {
                                       appRefresh =
@@ -1471,13 +1537,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       messenger.showKubusSnackBar(
                                         SnackBar(
                                           content: Text(
-                                              l10n.postDetailPostUpdatedToast),
+                                            l10n.postDetailPostUpdatedToast,
+                                          ),
                                         ),
                                       );
                                     } catch (e) {
                                       if (kDebugMode) {
                                         debugPrint(
-                                            'PostDetailScreen: update post failed: $e');
+                                          'PostDetailScreen: update post failed: $e',
+                                        );
                                       }
                                       if (!mounted) return;
                                       setModalState(() => saving = false);
@@ -1569,12 +1637,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Column(
             children: [
               Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                  decoration: BoxDecoration(
-                      color: theme.colorScheme.outline,
-                      borderRadius: BorderRadius.circular(KubusRadius.xs))),
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(KubusRadius.xs),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: KubusSpacing.lg,
@@ -1583,29 +1653,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(AppLocalizations.of(context)!.postDetailRepostTitle,
-                        style: KubusTypography.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface)),
+                    Text(
+                      AppLocalizations.of(context)!.postDetailRepostTitle,
+                      style: KubusTypography.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(sheetContext),
                           child: Text(
-                              AppLocalizations.of(context)!.commonCancel,
-                              style: KubusTypography.inter()),
+                            AppLocalizations.of(context)!.commonCancel,
+                            style: KubusTypography.inter(),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
                             if (communityPostExceedsLimit(content)) {
-                              ScaffoldMessenger.of(sheetContext)
-                                  .showKubusSnackBar(
+                              ScaffoldMessenger.of(
+                                sheetContext,
+                              ).showKubusSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    AppLocalizations.of(sheetContext)!
+                                    AppLocalizations.of(
+                                      sheetContext,
+                                    )!
                                         .communityComposerCharacterLimitExceeded(
                                       kCommunityPostMaxCharacters,
                                     ),
@@ -1632,9 +1709,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 SnackBar(
                                   content: Text(
                                     content.isEmpty
-                                        ? AppLocalizations.of(context)!
+                                        ? AppLocalizations.of(
+                                            context,
+                                          )!
                                             .postDetailRepostSuccessToast
-                                        : AppLocalizations.of(context)!
+                                        : AppLocalizations.of(
+                                            context,
+                                          )!
                                             .postDetailRepostWithCommentSuccessToast,
                                   ),
                                 ),
@@ -1642,22 +1723,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             } catch (e) {
                               if (kDebugMode) {
                                 debugPrint(
-                                    'PostDetailScreen: repost failed: $e');
+                                  'PostDetailScreen: repost failed: $e',
+                                );
                               }
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showKubusSnackBar(
                                   SnackBar(
-                                      content: Text(
-                                          AppLocalizations.of(context)!
-                                              .postDetailRepostFailedToast)),
+                                    content: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!
+                                          .postDetailRepostFailedToast,
+                                    ),
+                                  ),
                                 );
                               }
                             }
                           },
                           child: Text(
-                              AppLocalizations.of(context)!
-                                  .postDetailRepostButton,
-                              style: KubusTypography.inter()),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .postDetailRepostButton,
+                            style: KubusTypography.inter(),
+                          ),
                         ),
                       ],
                     ),
@@ -1675,11 +1764,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         controller: repostContentController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context)!
+                          hintText: AppLocalizations.of(
+                            context,
+                          )!
                               .postDetailRepostThoughtsHint,
                           border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md)),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                          ),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
@@ -1691,18 +1782,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       Text(
                         AppLocalizations.of(context)!.postDetailRepostingLabel,
                         style: KubusTypography.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: KubusSpacing.sm),
                       Container(
                         padding: const EdgeInsets.all(KubusSpacing.md),
                         decoration: BoxDecoration(
                           border: Border.all(
-                              color: theme.colorScheme.outline
-                                  .withValues(alpha: 0.3)),
+                            color: theme.colorScheme.outline.withValues(
+                              alpha: 0.3,
+                            ),
+                          ),
                           borderRadius: BorderRadius.circular(KubusRadius.md),
                           color: theme.colorScheme.surface,
                         ),
@@ -1722,12 +1817,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       _post!.authorIdentityData,
                                     ),
                                     titleStyle: KubusTypography.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
                                     subtitleStyle: KubusTypography.inter(
-                                        fontSize: 11,
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.5)),
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
                                     titleSuffix: CommunityAuthorRoleBadges(
                                       post: _post!,
                                       fontSize: 9.5,
@@ -1738,32 +1835,42 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(_timeAgo(_post!.timestamp),
-                                style: KubusTypography.inter(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.5))),
+                            Text(
+                              _timeAgo(_post!.timestamp),
+                              style: KubusTypography.inter(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 8),
-                            Text(_post!.content,
-                                style: KubusTypography.inter(fontSize: 14),
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              _post!.content,
+                              style: KubusTypography.inter(fontSize: 14),
+                              maxLines: 5,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             if (MediaUrlResolver.resolveDisplayUrl(
-                                    communityPostPreviewImageUrl(_post!)) !=
+                                  communityPostPreviewImageUrl(_post!),
+                                ) !=
                                 null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.sm),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.sm,
+                                ),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                      communityPostPreviewImageUrl(_post!))!,
+                                    communityPostPreviewImageUrl(_post!),
+                                  )!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    final scheme =
-                                        Theme.of(context).colorScheme;
+                                    final scheme = Theme.of(
+                                      context,
+                                    ).colorScheme;
                                     return Container(
                                       height: 120,
                                       width: double.infinity,
@@ -1814,8 +1921,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .communityBookmarkUpdateFailedToast)),
+          content: Text(
+            AppLocalizations.of(context)!.communityBookmarkUpdateFailedToast,
+          ),
+        ),
       );
     }
   }
@@ -1886,18 +1995,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         filled: true,
                         fillColor: roles.surfaceRaised,
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(KubusRadius.control + 2),
+                          borderRadius: BorderRadius.circular(
+                            KubusRadius.control + 2,
+                          ),
                           borderSide: BorderSide(color: roles.rule),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(KubusRadius.control + 2),
+                          borderRadius: BorderRadius.circular(
+                            KubusRadius.control + 2,
+                          ),
                           borderSide: BorderSide(color: roles.rule),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(KubusRadius.control + 2),
+                          borderRadius: BorderRadius.circular(
+                            KubusRadius.control + 2,
+                          ),
                           borderSide: BorderSide(color: roles.focus, width: 2),
                         ),
                       ),
@@ -1944,9 +2056,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               ),
               title: Text(
                 l10n.commonPost,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
       // The composer is the bottom bar, not a body child: Scaffold lays a
@@ -1963,468 +2075,532 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 : Column(
                     children: [
                       Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(KubusSpacing.md),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CommunityPostCard(
-                                post: _post!,
-                                accentColor: themeProvider.accentColor,
-                                expandCaption: true,
-                                onOpenPostDetail: (target) {
-                                  // In detail, avoid pushing the same post.
-                                  if (_post != null && target.id == _post!.id) {
-                                    return;
-                                  }
-                                  Navigator.push(
+                        child: CommunityMediaViewport(
+                          reservedHeight: hostedInDesktopSubScreen
+                              ? 0
+                              : AppBar.preferredHeightFor(
+                                  context, AppBar().preferredSize),
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(KubusSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CommunityPostCard(
+                                  post: _post!,
+                                  accentColor: themeProvider.accentColor,
+                                  expandCaption: true,
+                                  onOpenPostDetail: (target) {
+                                    // In detail, avoid pushing the same post.
+                                    if (_post != null &&
+                                        target.id == _post!.id) {
+                                      return;
+                                    }
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            PostDetailScreen(post: target),
+                                      ),
+                                    );
+                                  },
+                                  onOpenProfileIdentity: (identity) =>
+                                      openProfileIdentity(context, identity),
+                                  onToggleLike: _toggleLike,
+                                  onOpenComments: () {
+                                    FocusScope.of(
+                                      context,
+                                    ).requestFocus(_commentFocusNode);
+                                  },
+                                  onRepost: _showRepostModal,
+                                  onShare: _showShareModal,
+                                  onToggleBookmark: _toggleBookmark,
+                                  onMoreOptions: _showPostOptionsMenu,
+                                  onShowLikes: _showPostLikes,
+                                  onShowReposts: _showPostReposts,
+                                  onOpenSubject: (preview) =>
+                                      CommunitySubjectNavigation.open(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          PostDetailScreen(post: target),
-                                    ),
-                                  );
-                                },
-                                onOpenProfileIdentity: (identity) =>
-                                    openProfileIdentity(context, identity),
-                                onToggleLike: _toggleLike,
-                                onOpenComments: () {
-                                  FocusScope.of(context)
-                                      .requestFocus(_commentFocusNode);
-                                },
-                                onRepost: _showRepostModal,
-                                onShare: _showShareModal,
-                                onToggleBookmark: _toggleBookmark,
-                                onMoreOptions: _showPostOptionsMenu,
-                                onShowLikes: _showPostLikes,
-                                onShowReposts: _showPostReposts,
-                                onOpenSubject: (preview) =>
-                                    CommunitySubjectNavigation.open(
-                                  context,
-                                  subject: preview.ref,
-                                  titleOverride: preview.title,
+                                    subject: preview.ref,
+                                    titleOverride: preview.title,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 24),
-                              Consumer<CommunityCommentsProvider>(
-                                builder: (context, commentsProvider, _) {
-                                  final post = _post;
-                                  final count = post == null
-                                      ? 0
-                                      : commentsProvider
-                                          .totalCountForPost(post.id);
-                                  return Row(
-                                    children: [
-                                      Semantics(
-                                        header: true,
-                                        child: Text(
-                                          l10n.commonComments.toUpperCase(),
-                                          style: KubusTextStyles.structuralLabel
+                                const SizedBox(height: 24),
+                                Consumer<CommunityCommentsProvider>(
+                                  builder: (context, commentsProvider, _) {
+                                    final post = _post;
+                                    final count = post == null
+                                        ? 0
+                                        : commentsProvider.totalCountForPost(
+                                            post.id,
+                                          );
+                                    return Row(
+                                      children: [
+                                        Semantics(
+                                          header: true,
+                                          child: Text(
+                                            l10n.commonComments.toUpperCase(),
+                                            style: KubusTextStyles
+                                                .structuralLabel
+                                                .copyWith(
+                                              color: KubusColorRoles.of(
+                                                context,
+                                              ).foregroundMuted,
+                                              letterSpacing: 0.8,
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          l10n.commonCommentsCount(count),
+                                          style: KubusTextStyles.machineValue
                                               .copyWith(
-                                            color: KubusColorRoles.of(context)
-                                                .foregroundMuted,
-                                            letterSpacing: 0.8,
+                                            color: KubusColorRoles.of(
+                                              context,
+                                            ).foregroundSubtle,
                                           ),
                                         ),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        l10n.commonCommentsCount(count),
-                                        style: KubusTextStyles.machineValue
-                                            .copyWith(
-                                          color: KubusColorRoles.of(context)
-                                              .foregroundSubtle,
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              Consumer<CommunityCommentsProvider>(
-                                builder: (context, commentsProvider, _) {
-                                  final post = _post;
-                                  if (post == null) {
-                                    return const SizedBox.shrink();
-                                  }
+                                      ],
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                Consumer<CommunityCommentsProvider>(
+                                  builder: (context, commentsProvider, _) {
+                                    final post = _post;
+                                    if (post == null) {
+                                      return const SizedBox.shrink();
+                                    }
 
-                                  final scheme = Theme.of(context).colorScheme;
-                                  final currentWallet = WalletUtils.canonical(
-                                      _currentWalletAddress() ?? '');
-                                  final loading =
-                                      commentsProvider.isLoading(post.id);
-                                  final error =
-                                      commentsProvider.errorForPost(post.id);
-                                  final comments =
-                                      commentsProvider.commentsForPost(post.id);
+                                    final scheme =
+                                        Theme.of(context).colorScheme;
+                                    final currentWallet = WalletUtils.canonical(
+                                      _currentWalletAddress() ?? '',
+                                    );
+                                    final loading = commentsProvider.isLoading(
+                                      post.id,
+                                    );
+                                    final error = commentsProvider.errorForPost(
+                                      post.id,
+                                    );
+                                    final comments = commentsProvider
+                                        .commentsForPost(post.id);
 
-                                  bool canModify(Comment c) {
-                                    if (currentWallet.isEmpty) return false;
-                                    final authorKey = WalletUtils.canonical(
+                                    bool canModify(Comment c) {
+                                      if (currentWallet.isEmpty) return false;
+                                      final authorKey = WalletUtils.canonical(
                                         (c.authorWallet ?? c.authorId)
-                                            .toString());
-                                    return authorKey.isNotEmpty &&
-                                        authorKey == currentWallet;
-                                  }
-
-                                  Future<void> showHistory(Comment c) async {
-                                    if (!c.isEdited ||
-                                        c.originalContent == null) {
-                                      return;
-                                    }
-                                    await showKubusDialog<void>(
-                                      context: context,
-                                      builder: (dialogContext) {
-                                        return KubusAlertDialog(
-                                          title: Text(l10n.commentHistoryTitle),
-                                          content: SingleChildScrollView(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                    l10n
-                                                        .commentHistoryCurrentLabel,
-                                                    style:
-                                                        KubusTypography.inter(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700)),
-                                                const SizedBox(height: 8),
-                                                SelectableText(c.content,
-                                                    style: KubusTypography
-                                                        .inter()),
-                                                const SizedBox(height: 16),
-                                                Text(
-                                                    l10n
-                                                        .commentHistoryOriginalLabel,
-                                                    style:
-                                                        KubusTypography.inter(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700)),
-                                                const SizedBox(height: 8),
-                                                SelectableText(
-                                                    c.originalContent ?? '',
-                                                    style: KubusTypography
-                                                        .inter()),
-                                              ],
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(dialogContext)
-                                                      .pop(),
-                                              child: Text(l10n.commonClose),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  }
-
-                                  Future<void> promptEdit(Comment c) async {
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
-                                    final controller =
-                                        TextEditingController(text: c.content);
-                                    bool saving = false;
-                                    await showKubusDialog<void>(
-                                      context: context,
-                                      barrierDismissible: !saving,
-                                      builder: (dialogContext) {
-                                        return StatefulBuilder(
-                                          builder: (context, setDialogState) {
-                                            return KubusAlertDialog(
-                                              title:
-                                                  Text(l10n.commentEditTitle),
-                                              content: TextField(
-                                                controller: controller,
-                                                maxLines: null,
-                                                autofocus: true,
-                                                decoration: InputDecoration(
-                                                    hintText: l10n
-                                                        .postDetailWriteCommentHint),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: saving
-                                                      ? null
-                                                      : () => Navigator.of(
-                                                              dialogContext)
-                                                          .pop(),
-                                                  child:
-                                                      Text(l10n.commonCancel),
-                                                ),
-                                                FilledButton(
-                                                  onPressed: saving
-                                                      ? null
-                                                      : () async {
-                                                          final next =
-                                                              controller.text
-                                                                  .trim();
-                                                          if (next.isEmpty) {
-                                                            return;
-                                                          }
-                                                          setDialogState(() =>
-                                                              saving = true);
-                                                          try {
-                                                            await commentsProvider
-                                                                .editComment(
-                                                              postId: post.id,
-                                                              commentId: c.id,
-                                                              content: next,
-                                                            );
-                                                            if (!mounted) {
-                                                              return;
-                                                            }
-                                                            if (!dialogContext
-                                                                .mounted) {
-                                                              return;
-                                                            }
-                                                            Navigator.of(
-                                                                    dialogContext)
-                                                                .pop();
-                                                            messenger.showKubusSnackBar(
-                                                                SnackBar(
-                                                                    content:
-                                                                        Text(l10n
-                                                                            .commentUpdatedToast)));
-                                                          } catch (_) {
-                                                            if (!mounted) {
-                                                              return;
-                                                            }
-                                                            messenger
-                                                                .showKubusSnackBar(
-                                                              SnackBar(
-                                                                content: Text(l10n
-                                                                    .commentEditFailedToast),
-                                                                backgroundColor:
-                                                                    scheme
-                                                                        .errorContainer,
-                                                              ),
-                                                            );
-                                                          } finally {
-                                                            if (dialogContext
-                                                                .mounted) {
-                                                              setDialogState(
-                                                                  () => saving =
-                                                                      false);
-                                                            }
-                                                          }
-                                                        },
-                                                  child: Text(l10n.commonSave),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                    controller.dispose();
-                                  }
-
-                                  Future<void> promptDelete(Comment c) async {
-                                    if (_deleteDialogOpenCommentIds
-                                            .contains(c.id) ||
-                                        _deleteInFlightCommentIds
-                                            .contains(c.id)) {
-                                      return;
-                                    }
-
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
-                                    _deleteDialogOpenCommentIds.add(c.id);
-                                    final confirmed =
-                                        await showKubusDialog<bool>(
-                                      context: context,
-                                      builder: (dialogContext) {
-                                        return KubusAlertDialog(
-                                          size: KubusDialogSize.compact,
-                                          title: Text(
-                                              l10n.commentDeleteConfirmTitle),
-                                          content: Text(
-                                              l10n.commentDeleteConfirmMessage),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(dialogContext)
-                                                      .pop(false),
-                                              child: Text(l10n.commonCancel),
-                                            ),
-                                            FilledButton(
-                                              onPressed: () =>
-                                                  Navigator.of(dialogContext)
-                                                      .pop(true),
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor: scheme.error,
-                                                foregroundColor: scheme.onError,
-                                              ),
-                                              child: Text(l10n.commonDelete),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ).whenComplete(() {
-                                      _deleteDialogOpenCommentIds.remove(c.id);
-                                    });
-                                    if (confirmed != true) return;
-                                    if (_deleteInFlightCommentIds
-                                        .contains(c.id)) {
-                                      return;
-                                    }
-                                    _deleteInFlightCommentIds.add(c.id);
-                                    try {
-                                      await commentsProvider.deleteComment(
-                                          postId: post.id, commentId: c.id);
-                                      ProfilePackageMutationTracker.postUpdated(
-                                          post: post);
-                                      if (!mounted) return;
-                                      messenger.showKubusSnackBar(SnackBar(
-                                          content:
-                                              Text(l10n.commentDeletedToast)));
-                                    } catch (_) {
-                                      if (!mounted) return;
-                                      messenger.showKubusSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              l10n.commentDeleteFailedToast),
-                                          backgroundColor:
-                                              scheme.errorContainer,
-                                        ),
+                                            .toString(),
                                       );
-                                    } finally {
-                                      _deleteInFlightCommentIds.remove(c.id);
+                                      return authorKey.isNotEmpty &&
+                                          authorKey == currentWallet;
                                     }
-                                  }
 
-                                  Widget buildComment(Comment c,
-                                      {required int depth}) {
-                                    final canEditDelete = canModify(c);
-                                    return CommunityCommentRow(
-                                      comment: c,
-                                      isReply: depth > 0,
-                                      timeLabel: _timeAgo(c.timestamp),
-                                      onOpenAuthor: () => openProfileIdentity(
+                                    Future<void> showHistory(Comment c) async {
+                                      if (!c.isEdited ||
+                                          c.originalContent == null) {
+                                        return;
+                                      }
+                                      await showKubusDialog<void>(
+                                        context: context,
+                                        builder: (dialogContext) {
+                                          return KubusAlertDialog(
+                                            title:
+                                                Text(l10n.commentHistoryTitle),
+                                            content: SingleChildScrollView(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    l10n.commentHistoryCurrentLabel,
+                                                    style:
+                                                        KubusTypography.inter(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  SelectableText(
+                                                    c.content,
+                                                    style:
+                                                        KubusTypography.inter(),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    l10n.commentHistoryOriginalLabel,
+                                                    style:
+                                                        KubusTypography.inter(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  SelectableText(
+                                                    c.originalContent ?? '',
+                                                    style:
+                                                        KubusTypography.inter(),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogContext,
+                                                ).pop(),
+                                                child: Text(l10n.commonClose),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    }
+
+                                    Future<void> promptEdit(Comment c) async {
+                                      final messenger = ScaffoldMessenger.of(
                                         context,
-                                        c.authorIdentityData,
-                                      ),
-                                      onShowHistory: (c.isEdited &&
-                                              c.originalContent != null)
-                                          ? () => showHistory(c)
-                                          : null,
-                                      onToggleLike: () async {
-                                        final messenger =
-                                            ScaffoldMessenger.of(context);
-                                        try {
-                                          await context
-                                              .read<
-                                                  CommunityInteractionsProvider>()
-                                              .toggleCommentLike(
-                                                postId: post.id,
-                                                comment: c,
+                                      );
+                                      final controller = TextEditingController(
+                                        text: c.content,
+                                      );
+                                      bool saving = false;
+                                      await showKubusDialog<void>(
+                                        context: context,
+                                        barrierDismissible: !saving,
+                                        builder: (dialogContext) {
+                                          return StatefulBuilder(
+                                            builder: (context, setDialogState) {
+                                              return KubusAlertDialog(
+                                                title:
+                                                    Text(l10n.commentEditTitle),
+                                                content: TextField(
+                                                  controller: controller,
+                                                  maxLines: null,
+                                                  autofocus: true,
+                                                  decoration: InputDecoration(
+                                                    hintText: l10n
+                                                        .postDetailWriteCommentHint,
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: saving
+                                                        ? null
+                                                        : () => Navigator.of(
+                                                              dialogContext,
+                                                            ).pop(),
+                                                    child:
+                                                        Text(l10n.commonCancel),
+                                                  ),
+                                                  FilledButton(
+                                                    onPressed: saving
+                                                        ? null
+                                                        : () async {
+                                                            final next =
+                                                                controller.text
+                                                                    .trim();
+                                                            if (next.isEmpty) {
+                                                              return;
+                                                            }
+                                                            setDialogState(
+                                                              () =>
+                                                                  saving = true,
+                                                            );
+                                                            try {
+                                                              await commentsProvider
+                                                                  .editComment(
+                                                                postId: post.id,
+                                                                commentId: c.id,
+                                                                content: next,
+                                                              );
+                                                              if (!mounted) {
+                                                                return;
+                                                              }
+                                                              if (!dialogContext
+                                                                  .mounted) {
+                                                                return;
+                                                              }
+                                                              Navigator.of(
+                                                                dialogContext,
+                                                              ).pop();
+                                                              messenger
+                                                                  .showKubusSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    l10n.commentUpdatedToast,
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            } catch (_) {
+                                                              if (!mounted) {
+                                                                return;
+                                                              }
+                                                              messenger
+                                                                  .showKubusSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    l10n.commentEditFailedToast,
+                                                                  ),
+                                                                  backgroundColor:
+                                                                      scheme
+                                                                          .errorContainer,
+                                                                ),
+                                                              );
+                                                            } finally {
+                                                              if (dialogContext
+                                                                  .mounted) {
+                                                                setDialogState(
+                                                                  () => saving =
+                                                                      false,
+                                                                );
+                                                              }
+                                                            }
+                                                          },
+                                                    child:
+                                                        Text(l10n.commonSave),
+                                                  ),
+                                                ],
                                               );
-                                          if (mounted) setState(() {});
-                                        } catch (e) {
-                                          if (kDebugMode) {
-                                            debugPrint(
-                                                'PostDetailScreen: toggle comment like failed: $e');
+                                            },
+                                          );
+                                        },
+                                      );
+                                      controller.dispose();
+                                    }
+
+                                    Future<void> promptDelete(Comment c) async {
+                                      if (_deleteDialogOpenCommentIds.contains(
+                                            c.id,
+                                          ) ||
+                                          _deleteInFlightCommentIds.contains(
+                                            c.id,
+                                          )) {
+                                        return;
+                                      }
+
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
+                                      _deleteDialogOpenCommentIds.add(c.id);
+                                      final confirmed =
+                                          await showKubusDialog<bool>(
+                                        context: context,
+                                        builder: (dialogContext) {
+                                          return KubusAlertDialog(
+                                            size: KubusDialogSize.compact,
+                                            title: Text(
+                                              l10n.commentDeleteConfirmTitle,
+                                            ),
+                                            content: Text(
+                                              l10n.commentDeleteConfirmMessage,
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogContext,
+                                                ).pop(false),
+                                                child: Text(l10n.commonCancel),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogContext,
+                                                ).pop(true),
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: scheme.error,
+                                                  foregroundColor:
+                                                      scheme.onError,
+                                                ),
+                                                child: Text(l10n.commonDelete),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ).whenComplete(() {
+                                        _deleteDialogOpenCommentIds.remove(
+                                          c.id,
+                                        );
+                                      });
+                                      if (confirmed != true) return;
+                                      if (_deleteInFlightCommentIds.contains(
+                                        c.id,
+                                      )) {
+                                        return;
+                                      }
+                                      _deleteInFlightCommentIds.add(c.id);
+                                      try {
+                                        await commentsProvider.deleteComment(
+                                          postId: post.id,
+                                          commentId: c.id,
+                                        );
+                                        ProfilePackageMutationTracker
+                                            .postUpdated(
+                                          post: post,
+                                        );
+                                        if (!mounted) return;
+                                        messenger.showKubusSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text(l10n.commentDeletedToast),
+                                          ),
+                                        );
+                                      } catch (_) {
+                                        if (!mounted) return;
+                                        messenger.showKubusSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              l10n.commentDeleteFailedToast,
+                                            ),
+                                            backgroundColor:
+                                                scheme.errorContainer,
+                                          ),
+                                        );
+                                      } finally {
+                                        _deleteInFlightCommentIds.remove(c.id);
+                                      }
+                                    }
+
+                                    Widget buildComment(
+                                      Comment c, {
+                                      required int depth,
+                                    }) {
+                                      final canEditDelete = canModify(c);
+                                      return CommunityCommentRow(
+                                        comment: c,
+                                        isReply: depth > 0,
+                                        timeLabel: _timeAgo(c.timestamp),
+                                        onOpenAuthor: () => openProfileIdentity(
+                                          context,
+                                          c.authorIdentityData,
+                                        ),
+                                        onShowHistory: (c.isEdited &&
+                                                c.originalContent != null)
+                                            ? () => showHistory(c)
+                                            : null,
+                                        onToggleLike: () async {
+                                          final messenger =
+                                              ScaffoldMessenger.of(
+                                            context,
+                                          );
+                                          try {
+                                            await context
+                                                .read<
+                                                    CommunityInteractionsProvider>()
+                                                .toggleCommentLike(
+                                                  postId: post.id,
+                                                  comment: c,
+                                                );
+                                            if (mounted) setState(() {});
+                                          } catch (e) {
+                                            if (kDebugMode) {
+                                              debugPrint(
+                                                'PostDetailScreen: toggle comment like failed: $e',
+                                              );
+                                            }
+                                            if (!mounted) return;
+                                            messenger.showKubusSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  l10n.postDetailUpdateCommentLikeFailedToast,
+                                                ),
+                                              ),
+                                            );
                                           }
-                                          if (!mounted) return;
-                                          messenger.showKubusSnackBar(
-                                            SnackBar(
-                                              content: Text(l10n
-                                                  .postDetailUpdateCommentLikeFailedToast),
+                                        },
+                                        onShowLikes: () =>
+                                            _showCommentLikes(c.id),
+                                        onReply: () {
+                                          setState(() {
+                                            _replyToCommentId = c.id;
+                                            _replyToAuthorName = c.authorName;
+                                          });
+                                          _commentController.text =
+                                              '@${c.authorName} ';
+                                          _commentController.selection =
+                                              TextSelection.fromPosition(
+                                            TextPosition(
+                                              offset: _commentController
+                                                  .text.length,
                                             ),
                                           );
-                                        }
-                                      },
-                                      onShowLikes: () =>
-                                          _showCommentLikes(c.id),
-                                      onReply: () {
-                                        setState(() {
-                                          _replyToCommentId = c.id;
-                                          _replyToAuthorName = c.authorName;
-                                        });
-                                        _commentController.text =
-                                            '@${c.authorName} ';
-                                        _commentController.selection =
-                                            TextSelection.fromPosition(
-                                          TextPosition(
-                                            offset:
-                                                _commentController.text.length,
-                                          ),
-                                        );
-                                        FocusScope.of(context)
-                                            .requestFocus(_commentFocusNode);
-                                      },
-                                      onEdit: canEditDelete
-                                          ? () => promptEdit(c)
-                                          : null,
-                                      onDelete: canEditDelete
-                                          ? () => promptDelete(c)
-                                          : null,
-                                    );
-                                  }
-
-                                  List<Widget> buildCommentTree(Comment c,
-                                      {required int depth}) {
-                                    final widgets = <Widget>[
-                                      buildComment(c, depth: depth)
-                                    ];
-                                    for (final r in c.replies) {
-                                      widgets.addAll(buildCommentTree(r,
-                                          depth: depth + 1));
+                                          FocusScope.of(
+                                            context,
+                                          ).requestFocus(_commentFocusNode);
+                                        },
+                                        onEdit: canEditDelete
+                                            ? () => promptEdit(c)
+                                            : null,
+                                        onDelete: canEditDelete
+                                            ? () => promptDelete(c)
+                                            : null,
+                                      );
                                     }
-                                    return widgets;
-                                  }
 
-                                  if (loading && comments.isEmpty) {
-                                    return const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 24),
-                                      child: Center(
+                                    List<Widget> buildCommentTree(
+                                      Comment c, {
+                                      required int depth,
+                                    }) {
+                                      final widgets = <Widget>[
+                                        buildComment(c, depth: depth),
+                                      ];
+                                      for (final r in c.replies) {
+                                        widgets.addAll(
+                                          buildCommentTree(r, depth: depth + 1),
+                                        );
+                                      }
+                                      return widgets;
+                                    }
+
+                                    if (loading && comments.isEmpty) {
+                                      return const Padding(
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 24),
+                                        child: Center(
                                           child: InlineLoading(
-                                              width: 40, height: 40)),
-                                    );
-                                  }
+                                            width: 40,
+                                            height: 40,
+                                          ),
+                                        ),
+                                      );
+                                    }
 
-                                  if (error != null && comments.isEmpty) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8.0),
-                                      child: EmptyStateCard(
-                                        icon: Icons.error_outline,
-                                        title: l10n.postDetailNoCommentsTitle,
-                                        description: error,
-                                      ),
-                                    );
-                                  }
+                                    if (error != null && comments.isEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: EmptyStateCard(
+                                          icon: Icons.error_outline,
+                                          title: l10n.postDetailNoCommentsTitle,
+                                          description: error,
+                                        ),
+                                      );
+                                    }
 
-                                  if (comments.isEmpty) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8.0),
-                                      child: EmptyStateCard(
-                                        icon: Icons.comment_bank_outlined,
-                                        title: l10n.postDetailNoCommentsTitle,
-                                        description: l10n
-                                            .postDetailNoCommentsDescription,
-                                      ),
-                                    );
-                                  }
+                                    if (comments.isEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: EmptyStateCard(
+                                          icon: Icons.comment_bank_outlined,
+                                          title: l10n.postDetailNoCommentsTitle,
+                                          description: l10n
+                                              .postDetailNoCommentsDescription,
+                                        ),
+                                      );
+                                    }
 
-                                  return Column(
-                                    children: [
-                                      for (final c in comments) ...[
-                                        ...buildCommentTree(c, depth: 0),
+                                    return Column(
+                                      children: [
+                                        for (final c in comments) ...[
+                                          ...buildCommentTree(c, depth: 0),
+                                        ],
                                       ],
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

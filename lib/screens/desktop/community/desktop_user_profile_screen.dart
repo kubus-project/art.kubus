@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -147,7 +148,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       vsync: this,
     );
     // No scroll-driven paging here. The profile shows a bounded post preview
-    // so the closing statistics stay reachable; the dedicated post-history
+    // so the later achievements and owner tools stay reachable; the dedicated post-history
     // screen owns paging.
     _scrollController = ScrollController();
 
@@ -282,7 +283,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     final content = Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
+      body: CommunityMediaViewport(
+          child: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
           return FadeTransition(
@@ -362,6 +364,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.xl,
                         ),
+                        if (isCanonicalPublicEntry)
+                          _buildStatsCards(themeProvider, isLarge, l10n)
+                        else
+                          _buildStatsCards(
+                            themeProvider,
+                            isLarge,
+                            l10n,
+                            isCommunityOverlay: isCommunityOverlay,
+                          ),
+                        const SizedBox(height: KubusSpacing.xl),
                         // Wide two-column content begins at ~1200px so
                         // intermediate desktop widths do not inherit the mobile
                         // single-column layout.
@@ -380,16 +392,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             isCanonicalPublicEntry: isCanonicalPublicEntry,
                             l10n: l10n,
                           ),
-                        const SizedBox(height: KubusSpacing.xl),
-                        if (isCanonicalPublicEntry)
-                          _buildStatsCards(themeProvider, isLarge, l10n)
-                        else
-                          _buildStatsCards(
-                            themeProvider,
-                            isLarge,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
                         const SizedBox(height: KubusSpacing.lg),
                       ],
                     ),
@@ -399,7 +401,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           );
         },
-      ),
+      )),
     );
     return PublicEntityTakeoverReady(
       type: ShareEntityType.profile,
@@ -410,7 +412,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   /// What one [ProfileSection] contributes to the content column(s); empty when
   /// the section does not apply to this profile or surface. Identity and the
-  /// closing statistics are laid out full width by [build], not here.
+  /// statistics are laid out full width by [build], not here.
   List<Widget> _contentSectionWidgets(
     ProfileSection section, {
     required ThemeProvider themeProvider,
@@ -477,7 +479,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// The sections that read as the person's narrative between the identity and
-  /// the closing statistics, in canonical order.
+  /// the statistics and the owner's tools, in canonical order.
   static final List<ProfileSection> _narrativeSections = publicProfileSections
       .where(
         (section) =>
@@ -1487,7 +1489,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// A bounded preview, never a feed: the complete history has its own screen,
-  /// so the closing statistics below stay reachable.
+  /// so the later achievements and owner tools stay reachable.
   Widget _buildPostsSection(
     ThemeProvider themeProvider,
     AppLocalizations l10n,

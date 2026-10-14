@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -432,7 +433,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: CommunityMediaViewport(
+          child: RefreshIndicator(
         onRefresh: _handleRefresh,
         color:
             isCanonicalPublicEntry ? roles.active : themeProvider.accentColor,
@@ -472,7 +474,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ),
         ),
-      ),
+      )),
     );
     final content = isCanonicalPublicEntry
         ? scaffold
