@@ -527,9 +527,13 @@ class KubusMarkerLayerStyler {
             iconAnchor: 'bottom',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.badgeBobOffset(
-              state.markerBadgeBobOffsetPx,
-            ),
+            // Ambient movement is paint, not layout. Updating iconOffset each
+            // frame re-builds symbol buckets and can invalidate feature queries
+            // while a camera/source update is in flight.
+            iconOffset: MapMarkerStyleConfig.badgeBobOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
             symbolSortKey: symbolSortKey,
             visibility: markerVisible ? 'visible' : 'none',
           ),
@@ -593,9 +597,10 @@ class KubusMarkerLayerStyler {
             iconAnchor: 'bottom',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(
-              state.markerBadgeBobOffsetPx,
-            ),
+            iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
             visibility: cubeIconVisible ? 'visible' : 'none',
           ),
         );
@@ -630,10 +635,11 @@ class KubusMarkerLayerStyler {
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
             iconOffset: cubeIconVisible
-                ? MapMarkerStyleConfig.isometricBadgeOffset(
-                    state.markerBadgeBobOffsetPx)
-                : MapMarkerStyleConfig.badgeBobOffset(
-                    state.markerBadgeBobOffsetPx),
+                ? MapMarkerStyleConfig.isometricBadgeOffset(0)
+                : MapMarkerStyleConfig.badgeBobOffset(0),
+            iconTranslate: MapMarkerStyleConfig.badgeBobOffset(
+                state.markerBadgeBobOffsetPx),
+            iconTranslateAnchor: 'viewport',
             symbolSortKey: symbolSortKey,
           ),
         );

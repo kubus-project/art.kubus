@@ -58,6 +58,12 @@ void main() {
       final canonical = controller.layers[cubeVisible ? 'cube' : 'marker']!;
       expect(cover.iconSize, canonical.iconSize);
       expect(cover.iconOffset, canonical.iconOffset);
+      expect(cover.iconTranslate, canonical.iconTranslate);
+      expect(cover.iconTranslate, <Object>[0.0, 2.0]);
+      expect(cover.iconTranslateAnchor, 'viewport');
+      expect(cover.iconOffset,
+          cubeVisible ? <Object>[0.0, -42.0] : <Object>[0.0, 0.0],
+          reason: 'ambient bob must never invalidate symbol layout');
       expect(cover.iconAnchor, canonical.iconAnchor);
       expect(cover.iconRotationAlignment, canonical.iconRotationAlignment);
       expect(cover.iconImage.toString(), contains('coverIconSelected'));
