@@ -29,6 +29,10 @@ const double kCommunityVideoStageFallbackAspect = 16 / 9;
 /// have room, however wide the clip is.
 const double kCommunityVideoStageMinHeight = 112;
 
+/// Keep a single-video stage below most of the visible viewport so portrait
+/// media and an unavailable-preview still cannot dominate a desktop feed.
+const double kCommunityVideoStageViewportFraction = 0.72;
+
 /// Stage aspect ratio for a single video of [clipAspect] (width / height),
 /// or null when its shape is unknown.
 double communityVideoStageAspect(double? clipAspect) {
@@ -80,8 +84,6 @@ class _CommunityPostMediaCarouselState
   final FocusNode _focusNode = FocusNode(debugLabel: 'community-media');
   final Map<int, _NaturalSizeProbe> _probes = <int, _NaturalSizeProbe>{};
   final Map<int, double> _naturalAspects = <int, double>{};
-  // Poster and loaded-clip shapes of video items, by index.
-  final Map<int, double> _videoAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
 
@@ -97,7 +99,6 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
-      _videoAspects.clear();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
     }
@@ -123,10 +124,7 @@ class _CommunityPostMediaCarouselState
     for (var i = 0; i < widget.mediaUrls.length; i++) {
       final index = i;
       final url = widget.mediaUrls[index];
-      if (communityMediaUrlIsVideo(url)) {
-        _probeVideoPoster(index, url);
-        continue;
-      }
+      if (communityMediaUrlIsVideo(url)) continue;
       final resolved = MediaUrlResolver.resolveDisplayUrl(url);
       if (resolved == null) continue;
       _probes[index] = _NaturalSizeProbe(
@@ -137,40 +135,6 @@ class _CommunityPostMediaCarouselState
         },
       );
     }
-  }
-
-  /// A single video's stage starts from what is already known about it: the
-  /// shape learned earlier this session, else its poster's own shape, else 16:9.
-  void _probeVideoPoster(int index, String url) {
-    if (widget.mediaUrls.length != 1) return;
-    final known =
-        CommunityPostVideoSlide.knownAspects[communityMediaVideoSourceUrl(url)];
-    if (known != null) {
-      _videoAspects[index] = known;
-      return;
-    }
-    final poster = communityMediaPosterReference(url);
-    final resolved =
-        poster == null ? null : MediaUrlResolver.resolveDisplayUrl(poster);
-    if (resolved == null) return;
-    _probes[index] = _NaturalSizeProbe(
-      NetworkImage(resolved),
-      onSize: (aspect) {
-        if (!mounted) return;
-        // The clip's real shape, once known, wins over the poster's.
-        if (CommunityPostVideoSlide.knownAspects
-            .containsKey(communityMediaVideoSourceUrl(url))) {
-          return;
-        }
-        setState(() => _videoAspects[index] = aspect);
-      },
-    );
-  }
-
-  void _onVideoAspect(int index, double aspect) {
-    if (!mounted || widget.mediaUrls.length != 1) return;
-    if (_videoAspects[index] == aspect) return;
-    setState(() => _videoAspects[index] = aspect);
   }
 
   void _disposeProbes() {
@@ -280,30 +244,31 @@ class _CommunityPostMediaCarouselState
 
     final singleVideo =
         count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
-    final stageAspect = singleVideo
-        ? communityVideoStageAspect(_videoAspects[0])
-        : kCommunityMediaStageAspect;
+    final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
       if (!singleVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
-      final reduceMotion =
-          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-      return TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: stageAspect),
-        duration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        builder: (context, aspect, _) => LayoutBuilder(
-          builder: (context, constraints) {
-            final height = math.max(
-              kCommunityVideoStageMinHeight,
-              constraints.maxWidth / aspect,
-            );
-            return SizedBox(height: height, child: child);
-          },
-        ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final stageWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final viewportMaxHeight = math.max(
+            kCommunityVideoStageMinHeight,
+            MediaQuery.sizeOf(context).height *
+                kCommunityVideoStageViewportFraction,
+          );
+          final height = math.max(
+            kCommunityVideoStageMinHeight,
+            math.min(
+              stageWidth / kCommunityVideoStageFallbackAspect,
+              viewportMaxHeight,
+            ),
+          );
+          return SizedBox(height: height, child: child);
+        },
       );
     }
 
@@ -454,7 +419,6 @@ class _CommunityPostMediaCarouselState
         url: url,
         isActive: isActive,
         autoplay: autoplay,
-        onAspect: (aspect) => _onVideoAspect(index, aspect),
       );
     }
     return _CommunityMediaImageSlide(

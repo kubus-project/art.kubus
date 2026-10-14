@@ -485,6 +485,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
+  int? _lastAppliedMapAccentArgb;
   bool _themeResyncScheduled = false;
 
   bool get _hasLeftDetailPanel =>
@@ -520,7 +521,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _cameraZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
-        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
+        widget.walkingLocationApi ?? GeolocatorWalkingLocationService.shared;
     _walkingLocationCoordinator = WalkingNavigationLocationCoordinator(
       _walkingLocationApi,
     );
@@ -813,6 +814,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       getKubusMapController: () => _kubusMapController,
       getMapController: () => _mapController,
       getLayersManager: () => _layersManager,
+      getLocationAccentColor: () => context.read<ThemeProvider>().accentColor,
       getSelectionController: () => _animationController,
       getAmbientController: () => _ambientMarkerController,
       getManagedLayerIds: () => _managedLayerIds,
@@ -1628,7 +1630,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _locationLayerId,
         ml.CircleLayerProperties(
           circleRadius: 6,
-          circleColor: KubusMapMarkerHelpers.hexRgb(scheme.secondary),
+          circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
           circleOpacity: 1.0,
           circleStrokeWidth: 2,
           circleStrokeColor: KubusMapMarkerHelpers.hexRgb(scheme.surface),
@@ -1638,6 +1640,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Best-effort: style swaps or platform limitations can reject updates.
     }
 
+    await _layersManager?.safeSetLayerProperties(
+      _kubusMapController.ids.layers.locationAccuracyLayerId,
+      kubusLocationAccuracyProperties(color: themeProvider.accentColor),
+    );
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
   }
@@ -1645,7 +1651,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _maybeScheduleThemeResync(ThemeProvider themeProvider) {
     final isDark = themeProvider.isDarkMode;
     final last = _lastAppliedMapThemeDark;
-    if (last != null && last == isDark) return;
+    final accentArgb = themeProvider.accentColor.toARGB32();
+    if (last == isDark && _lastAppliedMapAccentArgb == accentArgb) return;
+    _lastAppliedMapAccentArgb = accentArgb;
     _lastAppliedMapThemeDark = isDark;
     if (!_styleInitialized) return;
     if (_themeResyncScheduled) return;
@@ -1995,7 +2003,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       scheme: scheme,
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
-        locationFill: scheme.secondary,
+        locationFill: themeProvider.accentColor,
         locationStroke: scheme.surface,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
@@ -2034,14 +2042,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  late final KubusUserLocationAnimator _userLocationAnimator =
+      KubusUserLocationAnimator(write: _writeUserLocation);
+
   Future<void> _syncUserLocation() async {
+    if (!mounted || !_styleInitialized) return;
+    final media = MediaQuery.maybeOf(context);
+    await _userLocationAnimator.update(_userLocation,
+        styleEpoch: _kubusMapController.styleEpoch,
+        reduceMotion: media?.disableAnimations == true ||
+            media?.accessibleNavigation == true);
+  }
+
+  Future<void> _writeUserLocation(LatLng? position, int epoch) async {
+    if (!mounted || _kubusMapController.styleEpoch != epoch) return;
     await KubusMapSourceSyncHelpers.syncPointSource(
       controller: _mapController,
       styleInitialized: _styleInitialized,
       managedSourceIds: _managedSourceIds,
       sourceId: _locationSourceId,
       featureId: 'me',
-      position: _userLocation,
+      position: position,
+      accuracyMeters: _userLocationAccuracyMeters,
     );
   }
 
@@ -2384,6 +2406,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    _userLocationAnimator.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }

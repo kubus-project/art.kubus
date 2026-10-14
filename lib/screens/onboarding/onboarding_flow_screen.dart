@@ -1,3 +1,4 @@
+import '../../services/walking_location_service.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -1255,10 +1256,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _isStatusBlocked(PermissionStatus status) =>
       status.isPermanentlyDenied || status.isRestricted;
 
-  Permission _locationPermissionForRequest() {
-    return kIsWeb ? Permission.location : Permission.locationWhenInUse;
-  }
-
   Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
     try {
       return await permission.status;
@@ -1949,21 +1946,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         }
       } else if (kIsWeb && permission == Permission.camera) {
         // Camera permission is not requested from the web onboarding flow.
-      } else if (kIsWeb && permission == Permission.location) {
-        try {
-          await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.low,
-            ),
-          );
+      } else if (permission == Permission.location) {
+        final result = await GeolocatorWalkingLocationService.shared
+            .acquireLiveFix(requestPermission: true);
+        if (kIsWeb && result.isAvailable) {
           _webLocationGrantedOverride = true;
-        } catch (_) {}
+        }
       } else {
-        final requestedPermission = permission == Permission.location
-            ? _locationPermissionForRequest()
-            : permission;
         try {
-          await requestedPermission.request();
+          await permission.request();
         } catch (_) {}
       }
 
