@@ -18,8 +18,9 @@ void main() {
 
   double topOf(WidgetTester tester, String text) {
     final headings = find.byElementPredicate((element) {
-      if (element.widget is! Text || (element.widget as Text).data != text)
+      if (element.widget is! Text || (element.widget as Text).data != text) {
         return false;
+      }
       var metric = false;
       element.visitAncestorElements((ancestor) {
         metric = ancestor.widget is KubusStatCard;
