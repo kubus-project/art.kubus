@@ -33,6 +33,7 @@ import '../widgets/glass_components.dart';
 import '../widgets/wallet_custody_status_panel.dart';
 import '../widgets/email_verification_status_badge.dart';
 import '../widgets/common/kubus_screen_header.dart';
+import '../widgets/common/kubus_family_brand.dart';
 import '../widgets/detail/shared_section_widgets.dart';
 import '../widgets/detail/shared_settings_widgets.dart';
 import 'onboarding/onboarding_flow_screen.dart';

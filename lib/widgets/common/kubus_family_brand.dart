@@ -30,6 +30,10 @@ class KubusFamilyBrandText extends StatelessWidget {
     RegExp.escape('kubus'),
     caseSensitive: false,
   );
+  static final RegExp _nodeSuffix = RegExp(
+    r'\s+Node(?![A-Za-z0-9_-])',
+    caseSensitive: false,
+  );
 
   static bool containsBrandToken(String text) =>
       _brandToken.allMatches(text).any((match) => _isBrandWord(text, match));
@@ -41,8 +45,19 @@ class KubusFamilyBrandText extends StatelessWidget {
       final start = match.start;
       final end = match.end;
       if (!_isBrandWord(text, match)) continue;
+      final prefixStart = _artPrefixStart(text, start);
       if (cursor < start) {
-        children.add(TextSpan(text: text.substring(cursor, start)));
+        if (prefixStart != null) {
+          children.add(TextSpan(text: text.substring(cursor, prefixStart)));
+          children.add(
+            TextSpan(
+              text: text.substring(prefixStart, start),
+              style: _regularRunStyle(style),
+            ),
+          );
+        } else {
+          children.add(TextSpan(text: text.substring(cursor, start)));
+        }
       }
       children.add(
         TextSpan(
@@ -54,6 +69,17 @@ class KubusFamilyBrandText extends StatelessWidget {
         ),
       );
       cursor = end;
+      final suffix = _nodeSuffix.matchAsPrefix(text, end);
+      if (suffix != null) {
+        final suffixEnd = suffix.end;
+        children.add(
+          TextSpan(
+            text: text.substring(end, suffixEnd),
+            style: _regularRunStyle(style),
+          ),
+        );
+        cursor = suffixEnd;
+      }
     }
     if (children.isEmpty) return TextSpan(text: text, style: style);
     if (cursor < text.length) {
@@ -63,11 +89,28 @@ class KubusFamilyBrandText extends StatelessWidget {
   }
 
   static bool _isWordCharacter(String character) =>
-      RegExp(r'[A-Za-z0-9_]').hasMatch(character);
+      RegExp(r'[A-Za-z0-9_-]').hasMatch(character);
 
   static bool _isBrandWord(String text, Match match) =>
       (match.start == 0 || !_isWordCharacter(text[match.start - 1])) &&
       (match.end == text.length || !_isWordCharacter(text[match.end]));
+
+  static int? _artPrefixStart(String text, int kubusStart) {
+    const prefix = 'art.';
+    final start = kubusStart - prefix.length;
+    if (start < 0 ||
+        text.substring(start, kubusStart).toLowerCase() != prefix ||
+        (start > 0 && _isWordCharacter(text[start - 1]))) {
+      return null;
+    }
+    return start;
+  }
+
+  static TextStyle _regularRunStyle(TextStyle? baseStyle) =>
+      (baseStyle ?? const TextStyle()).copyWith(
+        fontWeight: FontWeight.w400,
+        fontStyle: FontStyle.normal,
+      );
 
   @override
   Widget build(BuildContext context) => Text.rich(

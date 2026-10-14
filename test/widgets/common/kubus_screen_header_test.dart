@@ -6,12 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('family brand span styles only standalone kubus words', () {
-    const copy = 'art.kubus · kubus Node · kubus · kubus2 · package_kubus';
-    final span = KubusFamilyBrandText.span(copy);
+    const copy = 'art.kubus | kubus Node | kubus | kubus2 | package_kubus';
+    const headingStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      fontStyle: FontStyle.italic,
+    );
+    final span = KubusFamilyBrandText.span(copy, style: headingStyle);
     final emphasized = span.children!
         .whereType<TextSpan>()
         .where((part) => part.style?.fontWeight == FontWeight.w800)
         .toList();
+    final artPrefix = span.children!.whereType<TextSpan>().singleWhere(
+          (part) => part.text == 'art.',
+        );
+    final nodeSuffix = span.children!.whereType<TextSpan>().singleWhere(
+          (part) => part.text == ' Node',
+        );
 
     expect(span.toPlainText(), copy);
     expect(emphasized.map((part) => part.text), ['kubus', 'kubus', 'kubus']);
@@ -19,6 +29,30 @@ void main() {
       emphasized.every((part) => part.style?.fontStyle == FontStyle.italic),
       isTrue,
     );
+    expect(artPrefix.style?.fontWeight, FontWeight.w400);
+    expect(artPrefix.style?.fontStyle, FontStyle.normal);
+    expect(nodeSuffix.style?.fontWeight, FontWeight.w400);
+    expect(nodeSuffix.style?.fontStyle, FontStyle.normal);
+    expect(span.style, headingStyle);
+    expect(KubusFamilyBrandText.containsBrandToken('kubus-node'), isFalse);
+    expect(KubusFamilyBrandText.containsBrandToken('art.kubus'), isTrue);
+  });
+
+  testWidgets('family brand text exposes one complete accessible phrase',
+      (tester) async {
+    const copy = 'art.kubus | kubus Node | kubus-node';
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: KubusFamilyBrandText(copy)),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byType(KubusFamilyBrandText)).label,
+      copy,
+    );
+    semantics.dispose();
   });
 
   testWidgets(

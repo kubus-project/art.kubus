@@ -33,6 +33,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
@@ -1240,12 +1241,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       appBar: widget.embedded || isDesktopCanonicalPublicEntry
           ? null
           : AppBar(
-              title: Text(
-                isCanonicalPublicEntry ? 'art.kubus' : ex.title,
-                style: isCanonicalPublicEntry
-                    ? KubusTextStyles.screenTitle
-                    : KubusTypography.inter(fontWeight: FontWeight.w600),
-              ),
+              title: isCanonicalPublicEntry
+                  ? KubusFamilyBrandText(
+                      'art.kubus',
+                      style: KubusTextStyles.screenTitle,
+                    )
+                  : Text(
+                      ex.title,
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                    ),
               actions: const [],
             ),
       body: Center(
