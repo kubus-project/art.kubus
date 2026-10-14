@@ -119,9 +119,9 @@ void main() {
       final handle = tester.widget<Text>(find.text('@rok'));
       expect(name.style!.color, KubusColorRoles.dark.foreground);
       expect(handle.style!.color, KubusColorRoles.dark.foregroundMuted);
-      expect(find.byIcon(Icons.verified), findsOneWidget);
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
       final badge = tester.getRect(
-          find.byKey(const ValueKey<String>('profile-avatar-verification')));
+          find.byKey(const ValueKey<String>('profile-avatar-role-badge')));
       final avatar = tester.getRect(find.byKey(_avatarKey));
       expect(badge.right, avatar.right);
       expect(badge.bottom, avatar.bottom);
@@ -129,6 +129,33 @@ void main() {
           .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock));
       expect(identity.isVerified, isFalse);
       expect(identity.isArtist, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final institution in [false, true]) {
+    testWidgets(
+        'mobile role badge has contextual color/icon without inventing verification: institution=$institution',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+          _hero(
+              isArtist: !institution,
+              isInstitution: institution,
+              isVerified: false),
+          width: 390));
+      await tester.pump();
+      final badge = tester.widget<DecoratedBox>(
+          find.byKey(const ValueKey<String>('profile-avatar-role-badge')));
+      final decoration = badge.decoration as BoxDecoration;
+      expect(
+          decoration.color,
+          institution
+              ? KubusColorRoles.dark.institutionBadgeAccent
+              : KubusColorRoles.dark.artistBadgeAccent);
+      final icon = tester.widget<Icon>(find.byIcon(
+          institution ? Icons.account_balance_rounded : Icons.brush_rounded));
+      expect(icon.semanticLabel, institution ? 'Institution' : 'Artist');
+      expect(find.byIcon(Icons.verified), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
@@ -321,7 +348,7 @@ void main() {
       findsOneWidget,
       reason: 'the shared identity block keeps the complete handle',
     );
-    expect(find.byIcon(Icons.verified), findsOneWidget);
+    expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
     expect(
       tester.getSemantics(find.byType(ProfileIdentityBlock)).label,
       contains('@ana_kovac_contemporary_muralism'),

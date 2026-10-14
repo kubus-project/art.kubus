@@ -116,8 +116,13 @@ Mobile identity uses the cover-led dark contextual glass panel beside the floati
 avatar, overlapping the cover edge. Use dark semantic surface/foreground tokens
 even in light theme; name, full handle, role and verification stay readable within
 that identity composition. Keep content in normal flow as names and text scale grow.
-On mobile the verified check belongs at the avatar's lower-right. It signifies
-verification only; artist/institution role badges remain inside the identity panel.
+On mobile the avatar's lower-right badge uses the role's contextual color and
+corresponding artist, institution or account icon. Verification qualifies its
+accessible label only when verified; a role icon never grants verification.
+Artist/institution role labels remain integrated into the identity panel.
+Preserve the canonical rounded-square avatar and the separate upper-right active
+presence indicator. Presence appears only for fresh, visible provider data; do not
+invent an online status or cover it with the identity badge.
 Desktop retains the existing name-adjacent verification composition.
 Mobile uses a stable viewport with source aspect ratio preserved and excess width
 cropped at the sides, centered by default; honor saved focal metadata when the

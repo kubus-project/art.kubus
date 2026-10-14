@@ -235,6 +235,8 @@ class ProfileIdentityHero extends StatelessWidget {
                   ProfileAvatarMount(
                       radius: avatarRadius,
                       isVerified: mobile && isVerified,
+                      isArtist: mobile && isArtist,
+                      isInstitution: mobile && isInstitution,
                       child: avatar),
                   const SizedBox(width: KubusSpacing.md),
                   // Content stays as wide as its identity, not as wide as the
@@ -271,6 +273,8 @@ class ProfileIdentityHero extends StatelessWidget {
                     child: ProfileAvatarMount(
                       radius: avatarRadius,
                       isVerified: mobile && isVerified,
+                      isArtist: mobile && isArtist,
+                      isInstitution: mobile && isInstitution,
                       child: avatar,
                     ),
                   ),
@@ -330,14 +334,41 @@ class ProfileAvatarMount extends StatelessWidget {
     required this.radius,
     required this.child,
     this.isVerified = false,
+    this.isArtist = false,
+    this.isInstitution = false,
   });
 
   final double radius;
   final Widget child;
   final bool isVerified;
+  final bool isArtist;
+  final bool isInstitution;
 
   @override
   Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final roleColor = isInstitution
+        ? roles.institutionBadgeAccent
+        : isArtist
+            ? roles.artistBadgeAccent
+            : roles.userAccent;
+    final roleIcon = isInstitution
+        ? Icons.account_balance_rounded
+        : isArtist
+            ? Icons.brush_rounded
+            : Icons.person_rounded;
+    final roleLabel = isInstitution
+        ? l10n.badgeInstitutionLabel
+        : isArtist
+            ? l10n.badgeArtistLabel
+            : '';
+    final badgeLabel = [roleLabel, if (isVerified) l10n.peopleVerifiedLabel]
+        .where((label) => label.isNotEmpty)
+        .join(', ');
+    final badgeForeground = roleColor.computeLuminance() > 0.179
+        ? KubusColorRoles.light.foreground
+        : KubusColorRoles.dark.foreground;
     return DecoratedBox(
       key: const ValueKey<String>('profile-hero-avatar-mount'),
       decoration: BoxDecoration(
@@ -356,22 +387,28 @@ class ProfileAvatarMount extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           child,
-          if (isVerified)
+          if (isVerified || isArtist || isInstitution)
             Positioned(
               right: 0,
               bottom: 0,
               child: DecoratedBox(
+                key: const ValueKey<String>('profile-avatar-role-badge'),
                 decoration: BoxDecoration(
-                  color: KubusColorRoles.dark.surface,
-                  shape: BoxShape.circle,
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(
+                    AvatarWidget.shapeRadiusFor(
+                        radius: KubusHeaderMetrics.actionIcon / 2 +
+                            KubusSpacing.xs),
+                  ),
                 ),
-                child: Icon(
-                  Icons.verified,
-                  key: const ValueKey<String>('profile-avatar-verification'),
-                  color: KubusColorRoles.dark.active,
-                  size: KubusHeaderMetrics.actionIcon,
-                  semanticLabel:
-                      AppLocalizations.of(context)!.peopleVerifiedLabel,
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.xs),
+                  child: Icon(
+                    roleIcon,
+                    color: badgeForeground,
+                    size: KubusHeaderMetrics.actionIcon,
+                    semanticLabel: badgeLabel,
+                  ),
                 ),
               ),
             ),
