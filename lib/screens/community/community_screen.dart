@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import '../../widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/community_search_results.dart';
@@ -109,10 +110,7 @@ part 'community_screen_parts/community_screen_p3.dart';
 part 'community_screen_parts/community_screen_p4.dart';
 part 'community_screen_parts/community_screen_p5.dart';
 
-enum CommunityFeedType {
-  following,
-  discover,
-}
+enum CommunityFeedType { following, discover }
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -212,8 +210,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     // first thing they see, so they land on Discover instead.
     var isSignedIn = true;
     try {
-      isSignedIn =
-          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+      isSignedIn = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      ).isSignedIn;
     } catch (_) {}
     _tabController = TabController(
       length: _tabCount,
@@ -227,14 +227,17 @@ class _CommunityScreenState extends State<CommunityScreen>
         limit: 12,
       ),
     );
-    _communitySearchController
-        .addListener(_handleCommunitySearchControllerChanged);
+    _communitySearchController.addListener(
+      _handleCommunitySearchControllerChanged,
+    );
     _communityPosts = isSignedIn ? _followingFeedPosts : _discoverFeedPosts;
     _activeFeed =
         isSignedIn ? CommunityFeedType.following : CommunityFeedType.discover;
     try {
-      _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
+      _lastWalletAddress = Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).currentWalletAddress;
     } catch (_) {}
     _startInitialCommunityLoad();
 
@@ -273,23 +276,29 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     // Listen for config provider changes to reload data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final configProvider =
-          Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider = Provider.of<ConfigProvider>(
+        context,
+        listen: false,
+      );
       configProvider.addListener(_onConfigChanged);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        final walletProvider =
-            Provider.of<WalletProvider>(context, listen: false);
+        final walletProvider = Provider.of<WalletProvider>(
+          context,
+          listen: false,
+        );
         walletProvider.addListener(_onWalletProviderChanged);
       } catch (_) {}
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        _appRefreshProvider =
-            Provider.of<AppRefreshProvider>(context, listen: false);
+        _appRefreshProvider = Provider.of<AppRefreshProvider>(
+          context,
+          listen: false,
+        );
         _lastCommunityRefreshVersion =
             _appRefreshProvider?.communityVersion ?? 0;
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
@@ -311,40 +320,43 @@ class _CommunityScreenState extends State<CommunityScreen>
         vsync: this,
       );
 
-      _fadeAnimation = Tween<double>(
-        begin: 0.0,
-        end: 1.0,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: animationTheme.fadeCurve,
-      ));
+      _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: animationTheme.fadeCurve,
+        ),
+      );
 
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0.3),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: animationTheme.defaultCurve,
-      ));
+      _slideAnimation =
+          Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: animationTheme.defaultCurve,
+        ),
+      );
 
       _bellController = AnimationController(
         duration: animationTheme.short,
         vsync: this,
       );
 
-      _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
-        parent: _bellController,
-        curve: animationTheme.emphasisCurve,
-      ));
+      _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(
+        CurvedAnimation(
+          parent: _bellController,
+          curve: animationTheme.emphasisCurve,
+        ),
+      );
 
       _messagePulseController = AnimationController(
         duration: animationTheme.short,
         vsync: this,
       );
       _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
-          CurvedAnimation(
-              parent: _messagePulseController,
-              curve: animationTheme.defaultCurve));
+        CurvedAnimation(
+          parent: _messagePulseController,
+          curve: animationTheme.defaultCurve,
+        ),
+      );
 
       _animationController.forward();
     }
@@ -360,8 +372,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     _likeSettlements.detach();
     // Remove config provider listener
     try {
-      final configProvider =
-          Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider = Provider.of<ConfigProvider>(
+        context,
+        listen: false,
+      );
       configProvider.removeListener(_onConfigChanged);
     } catch (e) {
       // Provider may not be available during dispose
@@ -370,22 +384,29 @@ class _CommunityScreenState extends State<CommunityScreen>
     _animationController.dispose();
     _composerMedia.dispose();
     try {
-      SocketService()
-          .removeNotificationListener(_onSocketNotificationForCommunity);
+      SocketService().removeNotificationListener(
+        _onSocketNotificationForCommunity,
+      );
     } catch (_) {}
     try {
-      Provider.of<NotificationProvider>(context, listen: false)
-          .removeListener(_onNotificationProviderChange);
+      Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onNotificationProviderChange);
     } catch (_) {}
     _bellController.dispose();
     _messagePulseController.dispose();
     try {
-      Provider.of<ChatProvider>(context, listen: false)
-          .removeListener(_onChatProviderChanged);
+      Provider.of<ChatProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onChatProviderChanged);
     } catch (_) {}
     try {
-      Provider.of<WalletProvider>(context, listen: false)
-          .removeListener(_onWalletProviderChanged);
+      Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onWalletProviderChanged);
     } catch (_) {}
     try {
       _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
@@ -412,60 +433,65 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final composerOpenNonce = context
-        .select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
+    final composerOpenNonce = context.select<CommunityHubProvider, int>(
+      (hub) => hub.composerOpenNonce,
+    );
     _maybeHandleComposerOpenRequest(composerOpenNonce);
 
     final screen = Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: NestedScrollView(
-                      controller: _feedScrollController,
-                      headerSliverBuilder:
-                          (BuildContext context, bool innerBoxIsScrolled) {
-                        return [
-                          SliverToBoxAdapter(
-                            child: _buildAppBar(),
-                          ),
-                        ];
-                      },
-                      body: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildFeedTab(),
-                          _buildDiscoverTab(),
-                          _buildGroupsTab(),
-                          _buildArtTab(),
-                        ],
+      body: CommunityMediaViewport(
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: NestedScrollView(
+                        controller: _feedScrollController,
+                        headerSliverBuilder:
+                            (BuildContext context, bool innerBoxIsScrolled) {
+                          return [
+                            SliverToBoxAdapter(child: _buildAppBar()),
+                          ];
+                        },
+                        body: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildFeedTab(),
+                            _buildDiscoverTab(),
+                            _buildGroupsTab(),
+                            _buildArtTab(),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            kubus_search.KubusSearchResultsOverlay(
-              controller: _communitySearchController,
-              accentColor: context.read<ThemeProvider>().accentColor,
-              minCharsHint: AppLocalizations.of(context)!
-                  .desktopCommunitySearchMinCharsHint,
-              noResultsText:
-                  AppLocalizations.of(context)!.communitySearchEmptyNoResults,
-              maxWidth: 520,
-              onResultTap: (result) {
-                unawaited(_handleCommunitySearchResultTap(result));
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+              kubus_search.KubusSearchResultsOverlay(
+                controller: _communitySearchController,
+                accentColor: context.read<ThemeProvider>().accentColor,
+                minCharsHint: AppLocalizations.of(
+                  context,
+                )!
+                    .desktopCommunitySearchMinCharsHint,
+                noResultsText: AppLocalizations.of(
+                  context,
+                )!
+                    .communitySearchEmptyNoResults,
+                maxWidth: 520,
+                onResultTap: (result) {
+                  unawaited(_handleCommunitySearchResultTap(result));
+                },
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: AnimatedBuilder(

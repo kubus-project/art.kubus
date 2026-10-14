@@ -44,24 +44,6 @@ void main() {
   });
   tearDown(() => CommunityVideoAutoplay.enabledOverride = null);
 
-  group('communityVideoStageAspect', () {
-    test('keeps ordinary clip shapes as they are', () {
-      expect(communityVideoStageAspect(16 / 9), closeTo(16 / 9, 1e-9));
-      expect(communityVideoStageAspect(4 / 3), closeTo(4 / 3, 1e-9));
-      expect(communityVideoStageAspect(1), 1);
-      expect(communityVideoStageAspect(21 / 9), closeTo(21 / 9, 1e-9));
-      expect(communityVideoStageAspect(32 / 9), closeTo(32 / 9, 1e-9));
-    });
-
-    test('bounds the extremes and falls back to 16:9 when unknown', () {
-      expect(communityVideoStageAspect(64 / 9), kCommunityVideoStageMaxAspect);
-      expect(communityVideoStageAspect(9 / 16), kCommunityVideoStageMinAspect);
-      expect(communityVideoStageAspect(null), 16 / 9);
-      expect(communityVideoStageAspect(double.nan), 16 / 9);
-      expect(communityVideoStageAspect(0), 16 / 9);
-    });
-  });
-
   group('single-video stage', () {
     const url = 'https://example.test/uploads/clip.mp4';
 
@@ -94,7 +76,7 @@ void main() {
       expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
     });
 
-    testWidgets('the stage never drops below the controls minimum',
+    testWidgets('a narrow mobile stage uses available height, not a minimum',
         (tester) async {
       CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
       await tester.pumpWidget(_harness(
@@ -102,7 +84,7 @@ void main() {
         width: 160,
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), kCommunityVideoStageMinHeight);
+      expect(_stageHeight(tester), 900);
     });
 
     testWidgets('an unknown clip starts at 16:9', (tester) async {
@@ -197,5 +179,78 @@ void main() {
           closeTo(initialTop, 0.6));
       expect(CommunityPostVideoSlide.knownAspects[url], closeTo(32 / 9, 0.01));
     });
+  });
+
+  group('usable mobile viewport in feed and detail', () {
+    const url = 'https://example.test/uploads/portrait.mp4';
+    for (final viewport in <Size>[
+      const Size(360, 780),
+      const Size(390, 844),
+      const Size(430, 932),
+      const Size(844, 390),
+    ]) {
+      for (final detail in <bool>[false, true]) {
+        for (final aspect in <double?>[9 / 16, 16 / 9, 1, 21 / 9, null]) {
+          testWidgets('$viewport detail=$detail aspect=$aspect stays stable',
+              (tester) async {
+            tester.view.physicalSize = viewport;
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            if (aspect != null) {
+              CommunityPostVideoSlide.knownAspects[url] = aspect;
+            }
+            const topInset = 24.0;
+            const bottomInset = 20.0;
+            const chromeHeight = 64.0;
+            await tester.pumpWidget(MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MediaQuery(
+                data: MediaQueryData(
+                  size: viewport,
+                  padding:
+                      const EdgeInsets.only(top: topInset, bottom: bottomInset),
+                ),
+                child: Scaffold(
+                  appBar: detail ? AppBar() : null,
+                  bottomNavigationBar:
+                      const SizedBox(height: chromeHeight + bottomInset),
+                  body: SafeArea(
+                    bottom: false,
+                    child: CommunityMediaViewport(
+                      child: SingleChildScrollView(
+                        child:
+                            const CommunityPostMediaCarousel(mediaUrls: [url]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ));
+            await tester.pumpAndSettle();
+            final expected = viewport.height -
+                topInset -
+                chromeHeight -
+                bottomInset -
+                (detail ? kToolbarHeight : 0);
+            final before = tester.getRect(find.byType(ClipRRect).first);
+            expect(before.height, closeTo(expected, 0.6));
+            expect(
+                before.bottom,
+                lessThanOrEqualTo(
+                    viewport.height - chromeHeight - bottomInset));
+            // Rebuild after a metadata cache update: no height/anchor change.
+            CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+            tester
+                .element(find.byType(CommunityPostMediaCarousel))
+                .markNeedsBuild();
+            await tester.pump();
+            expect(tester.getRect(find.byType(ClipRRect).first), before);
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
   });
 }

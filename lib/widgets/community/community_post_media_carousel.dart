@@ -15,14 +15,7 @@ import 'community_post_video_slide.dart';
 /// same stage, so changing slides never moves the feed.
 const double kCommunityMediaStageAspect = 4 / 3;
 
-/// A post with a single video takes the clip's own shape, bounded so neither
-/// an ultrawide strip nor a tall portrait breaks the feed. 32:9 is the widest
-/// stage (the shallowest card); 4:5 is the tallest, so a 9:16 clip is shown
-/// whole, pillarboxed, instead of filling the viewport.
-const double kCommunityVideoStageMinAspect = 4 / 5;
-const double kCommunityVideoStageMaxAspect = 32 / 9;
-
-/// Stage shape while a clip's shape is still unknown (no poster, not loaded).
+/// Stable desktop stage shape, independent of poster or playback metadata.
 const double kCommunityVideoStageFallbackAspect = 16 / 9;
 
 /// The stage never gets shallower than this, so the player controls always
@@ -33,15 +26,48 @@ const double kCommunityVideoStageMinHeight = 112;
 /// media and an unavailable-preview still cannot dominate a desktop feed.
 const double kCommunityVideoStageViewportFraction = 0.72;
 
-/// Stage aspect ratio for a single video of [clipAspect] (width / height),
-/// or null when its shape is unknown.
-double communityVideoStageAspect(double? clipAspect) {
-  final raw = clipAspect != null && clipAspect.isFinite && clipAspect > 0
-      ? clipAspect
-      : kCommunityVideoStageFallbackAspect;
-  return raw
-      .clamp(kCommunityVideoStageMinAspect, kCommunityVideoStageMaxAspect)
-      .toDouble();
+/// Captures the bounded content viewport before a scroll view makes its child
+/// height unbounded. Scaffold/navigation and SafeArea have already reserved
+/// their space here; video stages must not use the entire device height.
+class CommunityMediaViewport extends StatelessWidget {
+  const CommunityMediaViewport({
+    super.key,
+    required this.child,
+    this.reservedHeight = 0,
+  });
+
+  final Widget child;
+  final double reservedHeight;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final media = MediaQuery.of(context);
+          final height = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : media.size.height;
+          return _CommunityMediaViewportScope(
+            usableHeight: math.max(
+              0,
+              height - reservedHeight - media.padding.vertical,
+            ),
+            child: child,
+          );
+        },
+      );
+}
+
+class _CommunityMediaViewportScope extends InheritedWidget {
+  const _CommunityMediaViewportScope({
+    required this.usableHeight,
+    required super.child,
+  });
+
+  final double usableHeight;
+
+  @override
+  bool updateShouldNotify(_CommunityMediaViewportScope oldWidget) =>
+      usableHeight != oldWidget.usableHeight;
 }
 
 /// Quoted posts show one compact preview at this proportion.
@@ -199,10 +225,13 @@ class _CommunityPostMediaCarouselState
             fit: StackFit.expand,
             children: [
               // A quoted preview shows a video's poster but never autoplays.
-              _buildSlide(0, first,
-                  fit: BoxFit.cover,
-                  onTap: widget.onOpenMedia,
-                  autoplay: false),
+              _buildSlide(
+                0,
+                first,
+                fit: BoxFit.cover,
+                onTap: widget.onOpenMedia,
+                autoplay: false,
+              ),
               if (extra > 0)
                 Positioned(
                   right: KubusSpacing.sm,
@@ -255,18 +284,30 @@ class _CommunityPostMediaCarouselState
           final stageWidth = constraints.maxWidth.isFinite
               ? constraints.maxWidth
               : MediaQuery.sizeOf(context).width;
-          final viewportMaxHeight = math.max(
-            kCommunityVideoStageMinHeight,
-            MediaQuery.sizeOf(context).height *
-                kCommunityVideoStageViewportFraction,
-          );
-          final height = math.max(
-            kCommunityVideoStageMinHeight,
-            math.min(
-              stageWidth / kCommunityVideoStageFallbackAspect,
-              viewportMaxHeight,
-            ),
-          );
+          final media = MediaQuery.of(context);
+          final viewport = context.dependOnInheritedWidgetOfExactType<
+              _CommunityMediaViewportScope>();
+          final usableHeight = viewport?.usableHeight ??
+              math.max(
+                0,
+                media.size.height -
+                    media.padding.vertical -
+                    media.viewInsets.bottom,
+              );
+          // Mobile reserves a stable viewing stage independent of metadata.
+          // The player contains every source aspect, including unknown media.
+          // Desktop retains its bounded feed stage. Resizing is deliberate;
+          // loading a poster/controller can never move the scroll anchor.
+          final mobile = media.size.shortestSide < 600;
+          final height = mobile
+              ? usableHeight
+              : math.min(
+                  math.max(
+                    kCommunityVideoStageMinHeight,
+                    stageWidth / kCommunityVideoStageFallbackAspect,
+                  ),
+                  usableHeight * kCommunityVideoStageViewportFraction,
+                );
           return SizedBox(height: height, child: child);
         },
       );
@@ -421,11 +462,7 @@ class _CommunityPostMediaCarouselState
         autoplay: autoplay,
       );
     }
-    return _CommunityMediaImageSlide(
-      url: url,
-      fit: fit,
-      onTap: onTap,
-    );
+    return _CommunityMediaImageSlide(url: url, fit: fit, onTap: onTap);
   }
 }
 
@@ -537,16 +574,13 @@ class _ArrowButton extends StatelessWidget {
 class _NaturalSizeProbe {
   _NaturalSizeProbe(ImageProvider provider, {required this.onSize}) {
     _stream = provider.resolve(ImageConfiguration.empty);
-    _listener = ImageStreamListener(
-      (info, _) {
-        final height = info.image.height;
-        if (height > 0) {
-          onSize(info.image.width / height);
-        }
-        _detach();
-      },
-      onError: (_, __) => _detach(),
-    );
+    _listener = ImageStreamListener((info, _) {
+      final height = info.image.height;
+      if (height > 0) {
+        onSize(info.image.width / height);
+      }
+      _detach();
+    }, onError: (_, __) => _detach());
     _stream.addListener(_listener);
   }
 

@@ -32,11 +32,18 @@ Future<T> _withImageFixture<T>(
   }
 }
 
-Widget _harness(Widget child, {double width = 1200, double textScale = 1}) {
+Widget _harness(Widget child,
+    {double width = 1200,
+    double textScale = 1,
+    Brightness brightness = Brightness.dark}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    theme: ThemeData.dark().copyWith(extensions: const [KubusColorRoles.dark]),
+    theme: ThemeData(brightness: brightness).copyWith(extensions: [
+      brightness == Brightness.dark
+          ? KubusColorRoles.dark
+          : KubusColorRoles.light,
+    ]),
     home: MediaQuery(
       data: MediaQueryData(
         size: Size(width, 900),
@@ -98,6 +105,33 @@ void main() {
     binding.platformDispatcher.views.first.resetPhysicalSize();
     binding.platformDispatcher.views.first.resetDevicePixelRatio();
   });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('mobile panel keeps dark contrast in $brightness theme',
+        (tester) async {
+      await tester.pumpWidget(_harness(_hero(isVerified: true),
+          width: 390, brightness: brightness));
+      await tester.pump();
+      final panel =
+          tester.widget<LiquidGlassPanel>(find.byType(LiquidGlassPanel));
+      expect(panel.backgroundColor!.computeLuminance(), lessThan(0.1));
+      final name = tester.widget<Text>(find.text('Rok'));
+      final handle = tester.widget<Text>(find.text('@rok'));
+      expect(name.style!.color, KubusColorRoles.dark.foreground);
+      expect(handle.style!.color, KubusColorRoles.dark.foregroundMuted);
+      expect(find.byIcon(Icons.verified), findsOneWidget);
+      final badge = tester.getRect(
+          find.byKey(const ValueKey<String>('profile-avatar-verification')));
+      final avatar = tester.getRect(find.byKey(_avatarKey));
+      expect(badge.right, avatar.right);
+      expect(badge.bottom, avatar.bottom);
+      final identity = tester
+          .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock));
+      expect(identity.isVerified, isFalse);
+      expect(identity.isArtist, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('the identity plate shrinks to its content on desktop', (
     tester,
@@ -231,14 +265,14 @@ void main() {
       );
       expect(
         identity.top,
-        greaterThanOrEqualTo(cover.bottom),
-        reason: 'the mobile identity stays beside the avatar at width=$width',
+        lessThan(cover.bottom),
+        reason: 'the mobile identity overlaps the cover at width=$width',
       );
       expect(tester.takeException(), isNull, reason: 'width=$width');
     }
   });
 
-  testWidgets('mobile identity stays unified without a separate glass plate', (
+  testWidgets('mobile identity restores the contextual glass plate', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -274,13 +308,13 @@ void main() {
     );
     expect(
       identity.top,
-      greaterThanOrEqualTo(cover.bottom),
+      lessThan(cover.bottom),
       reason: 'avatar and identity stay together in the mobile composition',
     );
     expect(
       find.byType(LiquidGlassPanel),
-      findsNothing,
-      reason: 'mobile identity should not sit inside a competing glass plate',
+      findsOneWidget,
+      reason: 'the identity panel is part of the cover-led composition',
     );
     expect(
       find.textContaining('ana_kovac_contemporary_muralism'),

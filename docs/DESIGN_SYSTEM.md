@@ -112,11 +112,25 @@ not the composition. Retain Edit, Share, Analytics, Follow and Message where the
 real permissions allow them.
 
 Profile covers are user-authored compositions. Preserve approved desktop framing.
+Mobile identity uses the cover-led dark contextual glass panel beside the floating
+avatar, overlapping the cover edge. Use dark semantic surface/foreground tokens
+even in light theme; name, full handle, role and verification stay readable within
+that identity composition. Keep content in normal flow as names and text scale grow.
+On mobile the verified check belongs at the avatar's lower-right. It signifies
+verification only; artist/institution role badges remain inside the identity panel.
+Desktop retains the existing name-adjacent verification composition.
 Mobile uses a stable viewport with source aspect ratio preserved and excess width
 cropped at the sides, centered by default; honor saved focal metadata when the
 media contract supports it. `BoxFit.cover` must have appropriate parent constraints.
 Keep avatar overlap and viewport geometry stable through asynchronous load and
 failure. Missing-cover fallback and failed authored-cover framing are distinct.
+
+Single-video Community stages on mobile reserve the usable content viewport before
+scrolling, excluding safe areas and persistent navigation/composer chrome. Posters,
+loading and playback share that stable height; metadata must not move the scroll
+anchor. Fit every video aspect whole without distortion or blanket cover cropping.
+Desktop retains its viewport cap; quoted previews and mixed carousels retain their
+compact and shared stage geometry.
 
 ## PRODUCT hover motion
 
