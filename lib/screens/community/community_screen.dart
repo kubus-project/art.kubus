@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import '../../widgets/community/community_post_media_carousel.dart';
+import '../../widgets/community/community_post_token_chip.dart';
+import '../../widgets/community/community_author_role_badges.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/community_search_results.dart';

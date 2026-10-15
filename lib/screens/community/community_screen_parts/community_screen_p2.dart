@@ -208,10 +208,7 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    // A video-first post shows its poster, never the clip as an image.
-    final imageUrl = MediaUrlResolver.resolveDisplayUrl(
-      communityPostPreviewImageUrl(post),
-    );
+    final media = communityPostMediaUrls(post);
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),
@@ -226,6 +223,11 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
           ListTile(
             title: ProfileIdentitySummary(
               identity: post.authorIdentityData,
+              titleSuffix: CommunityAuthorRoleBadges(
+                post: post,
+                iconOnly: true,
+                spacing: 0,
+              ),
               avatarRadius: 22,
               allowFabricatedFallback: true,
               fetchMissingAvatar: false,
@@ -260,43 +262,12 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
               icon: const Icon(Icons.share_outlined),
             ),
           ),
-          if (imageUrl != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(KubusRadius.md),
-                topRight: Radius.circular(KubusRadius.md),
-              ),
-              child: Image.network(
-                imageUrl,
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    height: 220,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
-                      ),
-                    ),
-                    child: InlineLoading(
-                      expand: false,
-                      progress: null,
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
-                  height: 220,
-                  color: themeProvider.accentColor.withValues(alpha: 0.15),
-                  child:
-                      Icon(Icons.image_not_supported, color: scheme.onPrimary),
-                ),
+          if (media.isNotEmpty)
+            CommunityPostMediaCarousel(
+              mediaUrls: media,
+              onOpenMedia: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
               ),
             ),
           Padding(
@@ -343,18 +314,9 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
                     spacing: 8,
                     runSpacing: 8,
                     children: post.tags.map((tag) {
-                      final roles = KubusColorRoles.of(context);
-                      return Chip(
-                        backgroundColor:
-                            roles.tagChipBackground.withValues(alpha: 0.1),
-                        side: BorderSide.none,
-                        label: Text(
-                          '#$tag',
-                          style: KubusTypography.inter(
-                            color: roles.tagChipBackground,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                      return CommunityPostTokenChip(
+                        label: '#$tag',
+                        onTap: () => _filterByTag(tag),
                       );
                     }).toList(),
                   ),
