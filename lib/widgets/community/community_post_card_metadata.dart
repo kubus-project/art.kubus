@@ -321,7 +321,7 @@ class _PostTokenChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final radius = BorderRadius.circular(KubusRadius.control);
-    final chip = Container(
+    final chip = Ink(
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm + KubusSpacing.xxs,
         vertical: KubusSpacing.xs,
@@ -335,7 +335,7 @@ class _PostTokenChip extends StatelessWidget {
         label,
         style: KubusTextStyles.navMetaLabel.copyWith(
           fontWeight: FontWeight.w500,
-          color: roles.foregroundMuted,
+          color: roles.foreground,
         ),
       ),
     );
@@ -348,6 +348,8 @@ class _PostTokenChip extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
+          hoverColor: roles.active.withValues(alpha: 0.08),
+          focusColor: roles.active.withValues(alpha: 0.14),
           borderRadius: radius,
           child: chip,
         ),

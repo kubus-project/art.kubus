@@ -129,6 +129,37 @@ String communityMediaReferenceForPost(
   String url, {
   required bool isVideo,
   String? posterUrl,
+  double? aspectRatio,
+}) {
+  final reference = _communityMediaReferenceForPost(url,
+      isVideo: isVideo, posterUrl: posterUrl);
+  if (!isVideo ||
+      aspectRatio == null ||
+      !aspectRatio.isFinite ||
+      aspectRatio <= 0) {
+    return reference;
+  }
+  final separator = reference.contains('#') ? '&' : '#';
+  return '$reference${separator}kubus-aspect=${aspectRatio.toStringAsFixed(6)}';
+}
+
+/// Recorded media geometry travels beside the existing type/poster hints. It
+/// affects presentation only, never classification, permissions or playback.
+double? communityMediaVideoAspect(String url) {
+  if (!communityMediaUrlIsVideo(url)) return null;
+  final fragment = Uri.tryParse(url)?.fragment ?? '';
+  for (final hint in fragment.split('&')) {
+    if (!hint.startsWith('kubus-aspect=')) continue;
+    final aspect = double.tryParse(hint.substring('kubus-aspect='.length));
+    return aspect != null && aspect.isFinite && aspect > 0 ? aspect : null;
+  }
+  return null;
+}
+
+String _communityMediaReferenceForPost(
+  String url, {
+  required bool isVideo,
+  String? posterUrl,
 }) {
   final trimmed = url.trim();
   if (!isVideo) return trimmed;

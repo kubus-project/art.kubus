@@ -62,7 +62,8 @@ void main() {
           const CommunityPostMediaCarousel(mediaUrls: [url]),
         ));
         await tester.pumpAndSettle();
-        expect(_stageHeight(tester), closeTo(600 / 16 * 9, 0.6));
+        expect(_stageHeight(tester),
+            closeTo(math.min(600 / c.$2, 900 * 0.72), 0.6));
       });
     }
 
@@ -73,7 +74,7 @@ void main() {
         const CommunityPostMediaCarousel(mediaUrls: [url]),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+      expect(_stageHeight(tester), closeTo(600 * 9 / 32, 0.6));
     });
 
     testWidgets('a narrow mobile stage uses available height, not a minimum',
@@ -84,7 +85,7 @@ void main() {
         width: 160,
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), 900);
+      expect(_stageHeight(tester), closeTo(kCommunityVideoStageMinHeight, 0.6));
     });
 
     testWidgets('an unknown clip starts at 16:9', (tester) async {
@@ -229,11 +230,13 @@ void main() {
               ),
             ));
             await tester.pumpAndSettle();
-            final expected = viewport.height -
+            final usable = viewport.height -
                 topInset -
                 chromeHeight -
                 bottomInset -
                 (detail ? kToolbarHeight : 0);
+            final expected =
+                math.min(viewport.width / (aspect ?? 16 / 9), usable);
             final before = tester.getRect(find.byType(ClipRRect).first);
             expect(before.height, closeTo(expected, 0.6));
             expect(

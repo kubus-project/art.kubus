@@ -112,10 +112,12 @@ class _CommunityPostMediaCarouselState
   final Map<int, double> _naturalAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
+  double? _initialVideoAspect;
 
   @override
   void initState() {
     super.initState();
+    _captureVideoAspect();
     _probeImages();
   }
 
@@ -125,9 +127,19 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
+      _captureVideoAspect();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
     }
+  }
+
+  void _captureVideoAspect() {
+    final video = widget.mediaUrls.where(communityMediaUrlIsVideo).firstOrNull;
+    _initialVideoAspect = video == null
+        ? null
+        : communityMediaVideoAspect(video) ??
+            CommunityPostVideoSlide
+                .knownAspects[communityMediaVideoSourceUrl(video)];
   }
 
   @override
@@ -294,20 +306,22 @@ class _CommunityPostMediaCarouselState
                     media.padding.vertical -
                     media.viewInsets.bottom,
               );
-          // Mobile reserves a stable viewing stage independent of metadata.
-          // The player contains every source aspect, including unknown media.
-          // Desktop retains its bounded feed stage. Resizing is deliberate;
-          // loading a poster/controller can never move the scroll anchor.
-          final mobile = media.size.shortestSide < 600;
-          final height = mobile
-              ? usableHeight
-              : math.min(
-                  math.max(
-                    kCommunityVideoStageMinHeight,
-                    stageWidth / kCommunityVideoStageFallbackAspect,
-                  ),
-                  usableHeight * kCommunityVideoStageViewportFraction,
-                );
+          // Keep the stage geometry fixed for this mounted carousel. A source
+          // aspect known before the first frame gives portrait clips the full
+          // usable viewport and keeps panoramas compact; otherwise the stable
+          // 16:9 fallback avoids a jump when player metadata arrives.
+          final aspect = _initialVideoAspect != null &&
+                  _initialVideoAspect!.isFinite &&
+                  _initialVideoAspect! > 0
+              ? _initialVideoAspect!
+              : kCommunityVideoStageFallbackAspect;
+          final height = math.min(
+            math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
+            usableHeight *
+                (media.size.shortestSide < 600
+                    ? 1
+                    : kCommunityVideoStageViewportFraction),
+          );
           return SizedBox(height: height, child: child);
         },
       );
