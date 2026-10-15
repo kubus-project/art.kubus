@@ -11,5 +11,5 @@ Future<void> ensureWebMapLibreRuntimeReady() =>
 /// No-op off web.
 void setWebMapGroundColor(int argb) => setWebMapGroundColorImpl(argb);
 
-void setWebMapPresentationActive(bool active) =>
-    setWebMapPresentationActiveImpl(active);
+void setWebMapPresentationActive(bool active, {required String owner}) =>
+    setWebMapPresentationActiveImpl(active, owner: owner);
