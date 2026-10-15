@@ -40,6 +40,8 @@ export function attachGlobeAtmosphere(map) {
   const ctx = canvas.getContext('2d');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   let visible = false, disposed = false, timer = null, signature = '';
+  let staticSun = getSubsolarPoint(new Date());
+  let needsProjectionFrame = false, projectionRetries = 0, cameraSignature = '';
   const stop = () => { clearTimeout(timer); timer = null; };
   const draw = () => {
     if (disposed || !visible || document.hidden || globalThis.kubusMapPresentationActive === false || !ctx) return;
@@ -47,7 +49,7 @@ export function attachGlobeAtmosphere(map) {
     const zoom = map.getZoom();
     const center = map.getCenter();
     const now = new Date();
-    const sun = getSubsolarPoint(now);
+    const sun = motion.matches ? staticSun : getSubsolarPoint(now);
     canvas.dataset.subsolar = `${sun.lat.toFixed(6)},${sun.lng.toFixed(6)}`;
     const next = [width, height, zoom, center.lat, center.lng, map.getBearing(),
       map.getPitch(), Math.floor(now.getTime() / 1000)].join(':');
@@ -62,9 +64,10 @@ export function attachGlobeAtmosphere(map) {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, width, height);
     canvas.dataset.active = 'false';
+    needsProjectionFrame = false;
     if (map.getProjection?.()?.type !== 'globe' || zoom >= 4.6 || map.getPitch() > 0.1) return;
     const view = globeView(map);
-    if (!view) return;
+    if (!view) { needsProjectionFrame = true; return; }
     const direction = sunDirectionInView(sun, center.lng, center.lat);
     const angle = map.getBearing() * Math.PI / 180;
     const rotated = { x: direction.x * Math.cos(angle) - direction.y * Math.sin(angle),
@@ -87,6 +90,9 @@ export function attachGlobeAtmosphere(map) {
   };
   const schedule = () => {
     stop();
+    const key = [host.clientWidth, host.clientHeight, map.getZoom(),
+      map.getCenter().lat, map.getCenter().lng, map.getBearing(), map.getPitch()].join(':');
+    if (key !== cameraSignature) { cameraSignature = key; projectionRetries = 0; }
     draw();
     // Real time at a gentle cadence. Reduced motion retains the current solar
     // state and camera reprojection, without a repeating presentation clock.
@@ -108,7 +114,9 @@ export function attachGlobeAtmosphere(map) {
     schedule();
   };
   const observer = new IntersectionObserver((entries) => {
-    visible = entries.some((entry) => entry.isIntersecting);
+    const nextVisible = entries.some((entry) => entry.isIntersecting);
+    if (nextVisible && !visible) staticSun = getSubsolarPoint(new Date());
+    visible = nextVisible;
     signature = ''; schedule();
   });
   // A jump from a local Mercator view starts MapLibre's projection blend after
@@ -119,17 +127,25 @@ export function attachGlobeAtmosphere(map) {
       signature = ''; schedule();
     }
   };
+  const projectionFrame = () => {
+    if (!needsProjectionFrame || projectionRetries >= 30) return;
+    projectionRetries++; signature = ''; draw();
+    if (needsProjectionFrame && projectionRetries < 30) map.triggerRepaint();
+  };
+  const motionChanged = () => { staticSun = getSubsolarPoint(new Date()); signature = ''; schedule(); };
   observer.observe(host);
   map.on('move', schedule); map.on('resize', style); map.on('style.load', style);
   map.on('idle', settled);
-  document.addEventListener('visibilitychange', schedule); motion.addEventListener('change', schedule);
+  map.on('render', projectionFrame);
+  document.addEventListener('visibilitychange', motionChanged); motion.addEventListener('change', motionChanged);
   window.addEventListener('kubus-map-presentation-change', schedule);
   map.once('remove', () => {
     disposed = true; stop(); observer.disconnect(); canvas.remove();
-    document.removeEventListener('visibilitychange', schedule); motion.removeEventListener('change', schedule);
+    document.removeEventListener('visibilitychange', motionChanged); motion.removeEventListener('change', motionChanged);
     window.removeEventListener('kubus-map-presentation-change', schedule);
     map.off('move', schedule); map.off('resize', style); map.off('style.load', style);
     map.off('idle', settled);
+    map.off('render', projectionFrame);
   });
   style();
 }
