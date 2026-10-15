@@ -1,13 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../screens/community/user_profile_screen.dart' as mobile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop;
 import '../screens/desktop/desktop_shell.dart';
 import '../models/profile_package.dart';
+import '../core/mobile_shell_registry.dart';
+import '../providers/profile_provider.dart';
+import '../screens/desktop/community/desktop_profile_screen.dart'
+    as desktop_owner;
 import '../services/profile_package_service.dart';
+import '../utils/home/home_quick_action_executor.dart';
+import '../utils/home/home_quick_action_models.dart';
+import '../utils/wallet_utils.dart';
 import '../widgets/glass_components.dart';
 import 'design_tokens.dart';
 
@@ -73,6 +81,11 @@ class UserProfileNavigation {
     String? username,
     String? heroTag,
   }) async {
+    if (_targetsCurrentUser(context, userId)) {
+      await _openOwnerProfile(context);
+      return;
+    }
+
     final initialCriticalPackageFuture = _prefetchCriticalProfilePackage(
       userId,
       username: username,
@@ -127,6 +140,74 @@ class UserProfileNavigation {
     );
   }
 
+  /// Match only stable account identifiers and linked wallet/public actor IDs.
+  /// Display names and usernames are intentionally excluded because they can
+  /// collide or change independently of account ownership.
+  static bool _targetsCurrentUser(BuildContext context, String targetId) {
+    final target = _identityKey(targetId);
+    if (target.isEmpty) return false;
+    try {
+      final provider = context.read<ProfileProvider>();
+      if (!provider.isSignedIn) return false;
+      final current = provider.currentUser;
+      if (current == null) return false;
+      final linkedIdentifiers = <String?>[
+        current.userId,
+        current.id,
+        current.walletAddress,
+        current.publicActorId,
+      ];
+      return linkedIdentifiers.any((identifier) {
+        final key = _identityKey(identifier);
+        return key.isNotEmpty && key == target;
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String _identityKey(String? identifier) {
+    final value = WalletUtils.canonical(identifier);
+    if (value.isEmpty) return '';
+    // Wallet keys are case-sensitive; account IDs are treated as
+    // case-insensitive stable identifiers.
+    return WalletUtils.looksLikeWallet(value) ? value : value.toLowerCase();
+  }
+
+  static Future<void> _openOwnerProfile(BuildContext context) async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth >= 900) {
+      final shellScope = DesktopShellScope.of(context);
+      if (shellScope != null) {
+        shellScope.pushScreen(const desktop_owner.ProfileScreen());
+      } else {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const desktop_owner.ProfileScreen(),
+          ),
+        );
+      }
+      return;
+    }
+
+    await HomeQuickActionExecutor.execute(
+      context,
+      'profile',
+      source: HomeQuickActionSurface.mobileHome,
+    );
+    // A detail route may sit above the tab shell. Selecting a tab underneath
+    // it alone leaves the visitor looking at the old detail screen.
+    final shellContext = MobileShellRegistry.instance.context;
+    if (shellContext != null && shellContext.mounted) {
+      final shellRoute = ModalRoute.of(shellContext);
+      if (shellRoute != null) {
+        Navigator.of(shellContext)
+            .popUntil((route) => identical(route, shellRoute));
+      }
+    }
+  }
+
   static Future<void> openCommunityOverlay(
     BuildContext context, {
     required String userId,
@@ -134,6 +215,10 @@ class UserProfileNavigation {
     String? heroTag,
     Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
   }) async {
+    if (_targetsCurrentUser(context, userId)) {
+      await _openOwnerProfile(context);
+      return;
+    }
     final normalizedUsername = username?.trim();
     if (userId.trim().isEmpty &&
         (normalizedUsername == null || normalizedUsername.isEmpty)) {

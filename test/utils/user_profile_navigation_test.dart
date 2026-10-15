@@ -1,0 +1,161 @@
+import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/main_tab_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/screens/community/profile_screen.dart' as owner;
+import 'package:art_kubus/screens/community/user_profile_screen.dart'
+    as visitor;
+import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
+    as desktop_owner;
+import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
+    as desktop_visitor;
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/utils/user_profile_navigation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+const _accountId = '11111111-1111-4111-8111-111111111111';
+const _wallet = 'ArtistWallet111111111111111111111111111111111';
+
+void main() {
+  testWidgets('current account wallet opens the mobile Profile tab',
+      (tester) async {
+    final profileProvider = ProfileProvider();
+    profileProvider.setCurrentUser(_ownerProfile());
+    final tabProvider = MainTabProvider()..setIndex(2);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<MainTabProvider>.value(value: tabProvider),
+        ],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(390, 844)),
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => UserProfileNavigation.open(
+                    context,
+                    userId: _wallet,
+                  ),
+                  child: const Text('Open own profile'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open own profile'));
+    await tester.pump();
+
+    expect(tabProvider.index, 4);
+    expect(find.byType(visitor.UserProfileScreen), findsNothing);
+  });
+
+  testWidgets('current account ID opens the desktop shell owner profile',
+      (tester) async {
+    final profileProvider = ProfileProvider();
+    profileProvider.setCurrentUser(_ownerProfile());
+    Widget? pushedScreen;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ProfileProvider>.value(
+        value: profileProvider,
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1440, 900)),
+            child: DesktopShellScope(
+              pushScreen: (screen) => pushedScreen = screen,
+              popScreen: () {},
+              navigateToRoute: (_) {},
+              openNotifications: () {},
+              openFunctionsPanel: (_, {content}) {},
+              setFunctionsPanelContent: (_) {},
+              closeFunctionsPanel: () {},
+              canPop: false,
+              child: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => UserProfileNavigation.open(
+                      context,
+                      userId: _accountId,
+                    ),
+                    child: const Text('Open own profile'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open own profile'));
+    await tester.pump();
+
+    expect(pushedScreen, isA<desktop_owner.ProfileScreen>());
+    expect(pushedScreen, isNot(isA<desktop_visitor.UserProfileScreen>()));
+  });
+
+  testWidgets('display name matching never grants owner navigation',
+      (tester) async {
+    final profileProvider = ProfileProvider();
+    profileProvider.setCurrentUser(_ownerProfile());
+    Widget? pushedScreen;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ProfileProvider>.value(
+        value: profileProvider,
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1280, 800)),
+            child: DesktopShellScope(
+              pushScreen: (screen) => pushedScreen = screen,
+              popScreen: () {},
+              navigateToRoute: (_) {},
+              openNotifications: () {},
+              openFunctionsPanel: (_, {content}) {},
+              setFunctionsPanelContent: (_) {},
+              closeFunctionsPanel: () {},
+              canPop: false,
+              child: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => UserProfileNavigation.open(
+                      context,
+                      userId: 'Current Artist',
+                    ),
+                    child: const Text('Open visitor profile'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open visitor profile'));
+    await tester.pump();
+
+    expect(pushedScreen, isA<desktop_visitor.UserProfileScreen>());
+    expect(pushedScreen, isNot(isA<desktop_owner.ProfileScreen>()));
+  });
+}
+
+UserProfile _ownerProfile() => UserProfile(
+      id: _wallet,
+      userId: _accountId,
+      walletAddress: _wallet,
+      publicActorId: 'public:$_wallet',
+      username: 'current_artist',
+      displayName: 'Current Artist',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );

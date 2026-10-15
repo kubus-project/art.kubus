@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../common/kubus_glass_icon_button.dart';
 import '../detail/expandable_detail_text.dart';
 import '../kubus_button.dart';
 import '../profile_artist_info_fields.dart';
@@ -31,11 +31,13 @@ class ProfileOwnerActions extends StatelessWidget {
     super.key,
     required this.editLabel,
     required this.onEdit,
+    this.utilitiesMenuLabel,
     this.utilities = const <ProfileOwnerUtility>[],
   });
 
   final String editLabel;
   final VoidCallback onEdit;
+  final String? utilitiesMenuLabel;
   final List<ProfileOwnerUtility> utilities;
 
   @override
@@ -54,13 +56,30 @@ class ProfileOwnerActions extends StatelessWidget {
             variant: KubusButtonVariant.accent,
           ),
         ),
-        for (final utility in utilities)
-          KubusGlassIconButton(
-            icon: utility.icon,
-            tooltip: utility.tooltip,
-            size: KubusHeaderMetrics.actionHitArea,
-            borderRadius: KubusRadius.md,
-            onPressed: utility.onPressed,
+        if (utilities.isNotEmpty)
+          PopupMenuButton<int>(
+            tooltip:
+                utilitiesMenuLabel ?? AppLocalizations.of(context)!.commonMore,
+            icon: const Icon(Icons.more_horiz),
+            constraints: const BoxConstraints(
+              minWidth: KubusHeaderMetrics.actionHitArea,
+              minHeight: KubusHeaderMetrics.actionHitArea,
+            ),
+            onSelected: (index) => utilities[index].onPressed(),
+            itemBuilder: (context) => [
+              for (var index = 0; index < utilities.length; index++)
+                PopupMenuItem<int>(
+                  value: index,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(utilities[index].icon),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Flexible(child: Text(utilities[index].tooltip)),
+                    ],
+                  ),
+                ),
+            ],
           ),
       ],
     );

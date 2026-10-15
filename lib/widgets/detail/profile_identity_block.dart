@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/profile_handle.dart';
@@ -112,10 +113,15 @@ class ProfileIdentityBlock extends StatelessWidget {
 
     final badges = <Widget>[
       if (isVerified)
-        Icon(
-          Icons.verified,
-          color: scheme.primary,
-          size: KubusHeaderMetrics.actionIcon,
+        Semantics(
+          label: AppLocalizations.of(context)!.peopleVerifiedLabel,
+          child: ExcludeSemantics(
+            child: Icon(
+              Icons.verified,
+              color: scheme.primary,
+              size: KubusHeaderMetrics.actionIcon,
+            ),
+          ),
         ),
       if (showRoleBadges && isArtist) const ArtistBadge(),
       if (showRoleBadges && isInstitution) const InstitutionBadge(),

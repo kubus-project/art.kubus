@@ -280,12 +280,14 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         );
       } else if (entry is Map) {
         final map = entry.cast<dynamic, dynamic>();
-        final userId = map['walletAddress'] ??
+        final userId = map['userId'] ??
+            map['user_id'] ??
+            map['id'] ??
+            map['walletAddress'] ??
             map['wallet_address'] ??
             map['wallet'] ??
-            map['userId'] ??
-            map['user_id'] ??
-            map['id'];
+            map['publicActorId'] ??
+            map['public_actor_id'];
         final label = map['displayName'] ??
             map['display_name'] ??
             map['username'] ??
@@ -312,8 +314,11 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
   // Generic wallet/creator ownership identifies the contributor, not the
   // cultural author. Link only an explicitly recorded artist identity.
   if (creators.isEmpty) {
-    final wallet =
-        (meta?['artistWallet'] ?? meta?['artistWalletAddress'])?.toString();
+    final artistProfile = (meta?['artistUserId'] ??
+            meta?['artist_user_id'] ??
+            meta?['artistWallet'] ??
+            meta?['artistWalletAddress'])
+        ?.toString();
 
     final rawArtistName = meta?['artistName'] ?? meta?['artist_name'];
     final artistName = rawArtistName?.toString().trim();
@@ -322,7 +327,7 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         : (artistName != null && artistName.isNotEmpty ? artistName : '');
     final label = _isRecordedArtist(labelCandidate) ? labelCandidate : '';
 
-    add(userId: wallet, label: label);
+    add(userId: artistProfile, label: label);
   }
 
   if (bylineLabels.isNotEmpty) {
