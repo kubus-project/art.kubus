@@ -90,6 +90,14 @@ class UserProfileNavigation {
       userId,
       username: username,
     );
+    if (userId.trim().isEmpty && initialCriticalPackageFuture != null) {
+      final resolved = await initialCriticalPackageFuture;
+      if (!context.mounted) return;
+      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+        await _openOwnerProfile(context);
+        return;
+      }
+    }
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
@@ -229,6 +237,14 @@ class UserProfileNavigation {
           userId,
           username: normalizedUsername,
         );
+    if (userId.trim().isEmpty && criticalFuture != null) {
+      final resolved = await criticalFuture;
+      if (!context.mounted) return;
+      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+        await _openOwnerProfile(context);
+        return;
+      }
+    }
 
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;

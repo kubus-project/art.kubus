@@ -1,4 +1,6 @@
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/models/profile_package.dart';
+import 'package:art_kubus/models/user.dart' as identity;
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
@@ -17,6 +19,57 @@ const _accountId = '11111111-1111-4111-8111-111111111111';
 const _wallet = 'ArtistWallet111111111111111111111111111111111';
 
 void main() {
+  testWidgets('username-only entry resolves the account before owner routing',
+      (tester) async {
+    final profileProvider = ProfileProvider()..setCurrentUser(_ownerProfile());
+    final tabProvider = MainTabProvider()..setIndex(2);
+    final resolved = ProfileCriticalPackage(
+      user: const identity.User(
+        id: _accountId,
+        name: 'Current Artist',
+        username: 'current_artist',
+        bio: '',
+        followersCount: 0,
+        followingCount: 0,
+        postsCount: 0,
+        isFollowing: false,
+        isVerified: false,
+        joinedDate: '',
+      ),
+      achievementProgress: const [],
+      achievementDefinitions: const [],
+      publicStats: const {},
+      fetchedAt: DateTime.utc(2026),
+      isComplete: true,
+    );
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+        ChangeNotifierProvider<MainTabProvider>.value(value: tabProvider),
+      ],
+      child: MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 844)),
+          child: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => UserProfileNavigation.openCommunityOverlay(
+                context,
+                userId: '',
+                username: 'current_artist',
+                initialCriticalPackageFuture: Future.value(resolved),
+              ),
+              child: const Text('Open resolved profile'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('Open resolved profile'));
+    await tester.pump();
+    expect(tabProvider.index, 4);
+    expect(find.byType(visitor.UserProfileScreen), findsNothing);
+  });
+
   testWidgets('current account wallet opens the mobile Profile tab',
       (tester) async {
     final profileProvider = ProfileProvider();
