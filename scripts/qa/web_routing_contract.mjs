@@ -84,6 +84,7 @@ console.log(`web/.htaccess routing contract against ${BASE}\n`);
 for (const route of routeManifest.routes) {
   await expectAppShell(route.testUrl);
 }
+await expectStatus('/support/not-a-route', 404);
 
 // Locale/tracking query parameters enter the app rather than redirecting: the
 // launch locale is resolved inside the app and the query survives untouched.

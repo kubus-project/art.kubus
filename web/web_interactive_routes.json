@@ -87,6 +87,12 @@
                        "testUrl":  "/wallet"
                    },
                    {
+                       "path":  "/support",
+                       "group":  "finite",
+                       "classification":  "interactive",
+                       "testUrl":  "/support"
+                   },
+                   {
                        "path":  "/settings",
                        "group":  "finite",
                        "classification":  "alias",
