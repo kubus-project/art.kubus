@@ -162,7 +162,10 @@ try {
                     await page.mouse.click(box.x + box.width/2, box.y + box.height/2);
                   await page.waitForTimeout(4000);
                   await page.screenshot({ path: path.join(out, `${name}-action.png`) });
-                  await fs.writeFile(path.join(out, `${name}-action.yml`), await page.locator('body').ariaSnapshot());
+                  const actionText = await page.locator('body').ariaSnapshot();
+                  await fs.writeFile(path.join(out, `${name}-action.yml`), actionText);
+                  if (process.env.QA_EXPECT_OWNER === 'true' && !/Edit profile|Uredi profil/i.test(actionText))
+                    throw new Error('Owner navigation did not reach canonical edit actions');
                 }
                 const playback = await page.evaluate(() => {
                   const deep = root => [...root.querySelectorAll('*')].flatMap(el => [el, ...(el.shadowRoot ? deep(el.shadowRoot) : [])]);
