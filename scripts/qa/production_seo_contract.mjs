@@ -19,7 +19,7 @@
 //
 // Exits non-zero on any FAIL so it can gate CI and post-deploy verification.
 
-import { artworkLocaleOwner } from './seo_locale_contract.mjs';
+import { artworkLocaleOwner, artworkDocumentLanguage } from './seo_locale_contract.mjs';
 
 const ORIGIN = (process.env.KUBUS_ORIGIN ?? 'https://app.kubus.site').replace(/\/+$/, '');
 const ARTWORK_ID = process.env.KUBUS_ARTWORK_ID ?? '';
@@ -239,7 +239,9 @@ async function main() {
         canonical === owner.canonical,
         `canonical=${canonical ?? '<absent>'}`,
       );
-      record('SL entity document language', /<html\b[^>]*\blang="sl"/i.test(html));
+      const language = artworkDocumentLanguage(html, owner);
+      record('SL entity document language follows published content', language.valid,
+        `lang=${language.actual ?? '<absent>'}; expected=${language.expected}`);
       const altEn = html.includes(`${ORIGIN}/en/artworks/${ARTWORK_ID}`);
       record('SL entity links EN alternate', altEn, `en_alternate=${altEn}`);
     }
