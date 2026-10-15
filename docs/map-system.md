@@ -1,5 +1,24 @@
 # Map system
 
+## Globe and user-location presentation
+
+The web globe uses the public site's astronomical solar model (UTC subsolar
+position), with a camera-projected soft night field. Theme controls the exact
+black/white ground, never the sun. The field fades into the local map and pauses
+when hidden, backgrounded or reduced motion is requested. Reduced motion retains
+the correct solar state at entry; native flat maps do not gain a decorative globe.
+
+Location layers share one real fix: the contrasting dot, a separate paint-only
+expanding ring, measured accuracy and a screen-sized north-aligned heading sector.
+The ring is decorative and never changes measured accuracy. Missing compass data
+hides the sector. Device heading is never inferred from camera bearing or walking
+course. Heading expires after ten seconds and requires a fix younger than thirty
+seconds. The compass plugin's Android high-confidence status maps to 15 degrees;
+its medium/low statuses (30/45) fail the shared 25-degree reliability threshold.
+iOS supplies native heading accuracy. Browser geolocation emulation cannot accept
+either native sensor implementation. Offscreen maps pause the shared animation;
+reduced motion retains a static fix, accuracy and reliable heading.
+
 This is the durable technical contract for the shared product map. It complements
 [Architecture](ARCHITECTURE.md), [Design system](DESIGN_SYSTEM.md) and the
 [guest-first entry contract](GUEST_FIRST_ENTRY.md). Historical measurements are

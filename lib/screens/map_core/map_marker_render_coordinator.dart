@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../config/config.dart';
+import '../../services/web_maplibre_runtime.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
@@ -121,6 +122,7 @@ class MapMarkerRenderCoordinator {
   /// floating-badge bob) based on current state. This runs whenever the map is
   /// visible/active, independent of the current marker presentation.
   void updateAmbientTicker() {
+    setWebMapPresentationActive(_isPollingEnabled());
     final reduceMotion = _getKubusMapController().reduceMotion;
     final shouldAnimate = _isPollingEnabled() &&
         _isStyleInitialized() &&
@@ -175,7 +177,9 @@ class MapMarkerRenderCoordinator {
       pulseLayerId: pulseLayerId,
       locationAccuracyLayerId: kubus.ids.layers.locationAccuracyLayerId,
       locationHeadingLayerId: kubus.ids.layers.locationHeadingLayerId,
+      locationPulseLayerId: kubus.ids.layers.locationPulseLayerId,
       state: KubusMarkerLayerStyleState(
+        reduceMotion: kubus.reduceMotion,
         locationAccentColor: _getLocationAccentColor?.call() ??
             _getLayersManager()?.locationAccentColor,
         pressedMarkerId: kubus.pressedMarkerId,

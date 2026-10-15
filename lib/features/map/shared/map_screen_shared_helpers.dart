@@ -47,10 +47,7 @@ class KubusMapWebPointerInterceptor {
 
   /// Wraps [child] with [PointerInterceptor] on web to prevent pointer events
   /// leaking through overlays to MapLibre's DOM surface.
-  static Widget wrap({
-    required Widget child,
-    bool enabled = true,
-  }) {
+  static Widget wrap({required Widget child, bool enabled = true}) {
     if (!kIsWeb || !enabled) return child;
     return PointerInterceptor(child: child);
   }
@@ -428,6 +425,10 @@ class KubusUserLocationAnimator {
   LatLng? _displayed;
   LatLng? _from;
   LatLng? _target;
+  double? _displayedHeading;
+  double? _headingFrom;
+  double? _headingTarget;
+  double? get headingDegrees => _displayedHeading;
   int? _epoch;
   int _started = 0;
   int _generation = 0;
@@ -435,14 +436,19 @@ class KubusUserLocationAnimator {
   bool _writing = false;
   Timer? _timer;
 
-  Future<void> update(LatLng? position,
-      {required int styleEpoch, required bool reduceMotion}) async {
+  Future<void> update(
+    LatLng? position, {
+    required int styleEpoch,
+    required bool reduceMotion,
+    double? headingDegrees,
+  }) async {
     if (_disposed) return;
     if (!reduceMotion &&
         _epoch == styleEpoch &&
         _timer != null &&
         position?.latitude == _target?.latitude &&
-        position?.longitude == _target?.longitude) {
+        position?.longitude == _target?.longitude &&
+        headingDegrees == _headingTarget) {
       return;
     }
     _generation++;
@@ -455,8 +461,14 @@ class KubusUserLocationAnimator {
         _epoch != styleEpoch ||
         _displayed == null ||
         position == null ||
-        samePosition ||
+        (samePosition && headingDegrees == _headingTarget) ||
         const Distance().as(LengthUnit.Meter, _displayed!, position) > 120;
+    _headingFrom = _displayedHeading;
+    _headingTarget = headingDegrees;
+    if (snap || _headingFrom == null || headingDegrees == null) {
+      _displayedHeading = headingDegrees;
+      _headingFrom = headingDegrees;
+    }
     _epoch = styleEpoch;
     _target = position;
     _from = snap ? position : _displayed;
@@ -469,8 +481,10 @@ class KubusUserLocationAnimator {
     if (_disposed || generation != _generation) return;
     _timer = null;
     if (_writing) {
-      _timer = Timer(const Duration(milliseconds: 33),
-          () => _frame(generation, snap: snap));
+      _timer = Timer(
+        const Duration(milliseconds: 33),
+        () => _frame(generation, snap: snap),
+      );
       return;
     }
     final progress =
@@ -479,8 +493,13 @@ class KubusUserLocationAnimator {
       final longitudeDelta =
           (_target!.longitude - _from!.longitude + 540) % 360 - 180;
       _displayed = LatLng(
-          _from!.latitude + (_target!.latitude - _from!.latitude) * progress,
-          (_from!.longitude + longitudeDelta * progress + 540) % 360 - 180);
+        _from!.latitude + (_target!.latitude - _from!.latitude) * progress,
+        (_from!.longitude + longitudeDelta * progress + 540) % 360 - 180,
+      );
+    }
+    if (_headingFrom != null && _headingTarget != null) {
+      final delta = (_headingTarget! - _headingFrom! + 540) % 360 - 180;
+      _displayedHeading = (_headingFrom! + delta * progress + 360) % 360;
     }
     _writing = true;
     try {
@@ -491,9 +510,17 @@ class KubusUserLocationAnimator {
       _writing = false;
     }
     if (!_disposed && generation == _generation && progress < 1) {
-      _timer =
-          Timer(const Duration(milliseconds: 33), () => _frame(generation));
+      _timer = Timer(
+        const Duration(milliseconds: 33),
+        () => _frame(generation),
+      );
     }
+  }
+
+  void pause() {
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
   }
 
   void dispose() {
@@ -550,22 +577,24 @@ class KubusMapSourceSyncHelpers {
           'id': featureId,
           'properties': <String, dynamic>{
             'id': featureId,
+            if (headingDegrees != null && headingDegrees.isFinite)
+              'headingDegrees': headingDegrees % 360,
             if (accuracyMeters != null &&
                 accuracyMeters.isFinite &&
                 accuracyMeters > 0)
               'accuracyRadiusZ0': accuracyMeters /
                   (78271.516964 *
-                      math.cos(position.latitude.clamp(-85.051129, 85.051129) *
-                          math.pi /
-                          180)),
+                      math.cos(
+                        position.latitude.clamp(-85.051129, 85.051129) *
+                            math.pi /
+                            180,
+                      )),
           },
           'geometry': <String, dynamic>{
             'type': 'Point',
             'coordinates': <double>[position.longitude, position.latitude],
           },
         },
-        if (headingDegrees != null && headingDegrees.isFinite)
-          _headingCone(featureId, position, headingDegrees),
       ],
     };
   }
@@ -581,35 +610,6 @@ class KubusMapSourceSyncHelpers {
       return null;
     }
     return heading % 360;
-  }
-
-  static Map<String, dynamic> _headingCone(
-      String id, LatLng position, double heading) {
-    // A restrained 24 metre sector; geometry updates only with location/heading,
-    // never with the ambient pulse ticker.
-    final coordinates = <List<double>>[
-      [position.longitude, position.latitude]
-    ];
-    for (var offset = -25; offset <= 25; offset += 5) {
-      final bearing = (heading + offset) * math.pi / 180;
-      final latitude = position.latitude + 24 * math.cos(bearing) / 111320;
-      final longitude = position.longitude +
-          24 *
-              math.sin(bearing) /
-              (111320 *
-                  math.cos(position.latitude.clamp(-85, 85) * math.pi / 180));
-      coordinates.add([longitude, latitude]);
-    }
-    coordinates.add(coordinates.first);
-    return {
-      'type': 'Feature',
-      'id': '${id}_heading',
-      'properties': {'id': '${id}_heading'},
-      'geometry': {
-        'type': 'Polygon',
-        'coordinates': [coordinates]
-      }
-    };
   }
 }
 
@@ -708,11 +708,7 @@ class KubusMapMarkerHelpers {
           end: Alignment.bottomRight,
         ),
       ),
-      child: Icon(
-        icon,
-        color: scheme.onPrimary,
-        size: 42,
-      ),
+      child: Icon(icon, color: scheme.onPrimary, size: 42),
     );
   }
 }
@@ -763,10 +759,11 @@ class KubusMapTaskProgressRow {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: KubusMeterBar(
-                      progress: pct,
-                      height: 6,
-                      color: accent,
-                      trackColor: scheme.surfaceContainerHighest),
+                    progress: pct,
+                    height: 6,
+                    color: accent,
+                    trackColor: scheme.surfaceContainerHighest,
+                  ),
                 ),
               ],
             ),
@@ -900,11 +897,7 @@ class KubusMarkerOverlayHelpers {
     required Distance distance,
   }) {
     if (userLocation == null || !marker.hasValidPosition) return null;
-    final meters = distance.as(
-      LengthUnit.Meter,
-      userLocation,
-      marker.position,
-    );
+    final meters = distance.as(LengthUnit.Meter, userLocation, marker.position);
     if (!meters.isFinite || meters < 0) return null;
     if (meters < 1000) {
       return '${meters.round()} m';
@@ -1033,9 +1026,7 @@ class KubusMarkerOverlayHelpers {
     }
   }
 
-  static IconData primaryActionIcon(
-    MapMarkerOverlayPrimaryTarget target,
-  ) {
+  static IconData primaryActionIcon(MapMarkerOverlayPrimaryTarget target) {
     switch (target) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
         return AppColorUtils.exhibitionIcon;
@@ -1090,8 +1081,10 @@ class KubusMarkerOverlayHelpers {
       canPresentExhibition: canPresentExhibition,
       distanceText: distanceText,
       description: presentation.description,
-      linkedSubjectTypeLabel:
-          subjectTypeLabel(l10n, presentation.linkedSubject.kind),
+      linkedSubjectTypeLabel: subjectTypeLabel(
+        l10n,
+        presentation.linkedSubject.kind,
+      ),
       linkedSubjectTitle: presentation.linkedSubject.title,
       linkedSubjectSubtitle: presentation.linkedSubject.subtitle,
       placeText: presentation.placeText,

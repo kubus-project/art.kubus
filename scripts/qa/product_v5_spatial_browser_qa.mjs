@@ -1354,10 +1354,76 @@ async function zoomScenario(browserName, scheme, report) {
 }
 
 await fs.mkdir(outDir, { recursive: true });
+// Focused solar/location presentation matrix. Location is browser emulation;
+// heading symbol rotation is a renderer probe, never native compass acceptance.
+async function presentationScenario(browserName, scheme, locale, motion, report) {
+  const browser = await (browserName === 'firefox' ? firefox : chromium).launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 },
+    colorScheme: scheme, locale, reducedMotion: motion,
+    geolocation: { latitude: 46.0569, longitude: 14.5058, accuracy: 15 },
+    permissions: ['geolocation'] });
+  const tag = `${browserName}-${scheme}-${locale}-${motion}`;
+  const run = { tag, checks: [], screenshots: [], console: [], failed: false };
+  report.runs.push(run);
+  await context.addInitScript(HOOK);
+  run.network = await containNetwork(context);
+  const page = await context.newPage();
+  page.on('pageerror', (e) => run.console.push(String(e)));
+  try {
+    await page.goto(`${appUrl}/map`);
+    await waitForMap(page);
+    await settle(page, 2500);
+    for (const width of list('QA_PRESENTATION_WIDTHS', '320,360,390,430,768,1440,1920').map(Number)) {
+      await page.setViewportSize({ width, height: width >= 768 ? 1024 : 844 });
+      await settle(page, 1800);
+      await page.evaluate(() => {
+        const m = window.__maps.at(-1);
+        m.jumpTo({ zoom: m.getMinZoom(), center: [0, 10], pitch: 0, bearing: 0 });
+      });
+      await settle(page, 1200);
+      const before = await page.evaluate(() => {
+        const m = window.__maps.at(-1), c = m.getContainer().querySelector('.kubus-globe-atmosphere');
+        return { background: m.getCanvas().style.backgroundColor, active: c?.dataset.active,
+          solar: c?.dataset.subsolar, radius: c?.dataset.radius, mapCount: window.__maps.length };
+      });
+      run.presentation ??= [];
+      run.presentation.push({ width, ...before });
+      check(run, `${width}: exact theme globe ground`, before.background === (scheme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'), JSON.stringify(before));
+      check(run, `${width}: fitted solar field present`, before.active === 'true', JSON.stringify(before));
+      await snap(page, `${tag}-${width}-globe`, run);
+      await page.waitForTimeout(1200);
+      const after = await page.evaluate(() => window.__maps.at(-1).getContainer().querySelector('.kubus-globe-atmosphere')?.dataset.subsolar);
+      check(run, `${width}: solar clock follows motion preference`, motion === 'reduce' ? before.solar === after : before.solar !== after, `${before.solar} -> ${after}`);
+      await page.evaluate(() => window.__maps.at(-1).jumpTo({ zoom: 16, center: [14.5058,46.0569] }));
+      await settle(page, 800);
+      const location = await page.evaluate(() => {
+        const m = window.__maps.at(-1), id='kubus_user_location_layer';
+        return { pulse: m.getPaintProperty(`${id}_pulse`, 'circle-stroke-opacity'),
+          radius: m.getPaintProperty(`${id}_pulse`, 'circle-radius'),
+          rotation: m.getLayoutProperty(`${id}_heading`, 'icon-rotation-alignment'),
+          headingOpacity: m.getPaintProperty(`${id}_heading`, 'icon-opacity'),
+          accuracy: m.getPaintProperty(`${id}_accuracy`, 'circle-opacity') };
+      });
+      check(run, `${width}: static measured accuracy`, location.accuracy === 0.12, JSON.stringify(location));
+      check(run, `${width}: cone rotates with north, missing heading is hidden`, location.rotation === 'map' && JSON.stringify(location.headingOpacity).includes('headingDegrees'), JSON.stringify(location));
+      if (motion === 'reduce') check(run, `${width}: reduced pulse is static`, location.pulse === 0, JSON.stringify(location));
+      await snap(page, `${tag}-${width}-location`, run);
+      await noHorizontalOverflow(page, `${tag}-${width}`, run);
+    }
+    check(run, 'no uncaught page errors', run.console.length === 0, run.console.join(' | '));
+  } catch (error) { run.failed = true; run.error = String(error); }
+  finally { await browser.close(); }
+}
+
 const server = await startServer();
 const report = { label, startedAt: new Date().toISOString(), runs: [], failed: false };
 try {
-  if (process.env.QA_FLOW === 'responsive') {
+  if (process.env.QA_FLOW === 'presentation') {
+    for (const name of browsers) for (const scheme of schemes)
+      for (const locale of list('QA_LOCALES', 'en-US,sl-SI'))
+        for (const motion of list('QA_MOTION', 'reduce,no-preference'))
+          await presentationScenario(name, scheme, locale, motion, report);
+  } else if (process.env.QA_FLOW === 'responsive') {
     // 200 % browser zoom at 1440x900 is a 720x450 CSS viewport at 2x density.
     const sizes = [
       ...viewports,

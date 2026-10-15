@@ -129,8 +129,7 @@ void main() {
       expect(cover.iconOpacity.toString(), contains('entryOpacity'));
     }
   });
-  test('accuracy animation preserves geometry and theme in every paint update',
-      () async {
+  test('accuracy stays static across decorative pulse phases', () async {
     for (final phase in <double>[0, 0.5]) {
       final controller = _AccuracyStyleController();
       KubusMarkerLayerStyler().requestUpdate(
@@ -160,7 +159,7 @@ void main() {
       expect(properties.circleStrokeColor, '#00766a');
       expect(properties.circleStrokeWidth, 1);
       expect(properties.circlePitchAlignment, 'map');
-      expect(properties.circleOpacity, phase == 0 ? 0.10 : 0.18);
+      expect(properties.circleOpacity, 0.12);
     }
   });
   group('KubusMarkerLayerStyler', () {
