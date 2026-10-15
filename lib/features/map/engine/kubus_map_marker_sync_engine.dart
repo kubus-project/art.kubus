@@ -682,6 +682,9 @@ class KubusMapMarkerSyncEngine {
     if (activeController == null) return const <String, dynamic>{};
     final abort = shouldAbort ?? () => !host.hostMounted;
     if (abort()) return const <String, dynamic>{};
+    final media = MediaQuery.maybeOf(host.hostContext);
+    final reduceMotion = media?.disableAnimations == true ||
+        media?.accessibleNavigation == true;
 
     final feature = await kubusMarkerFeatureFor(
       controller: activeController,
@@ -708,9 +711,6 @@ class KubusMapMarkerSyncEngine {
       // entry, replacing its identity or changing its size/anchor/hitbox.
       properties['coverIcon'] = cover.base;
       properties['coverIconSelected'] = cover.selected ?? cover.base;
-      final media = MediaQuery.maybeOf(host.hostContext);
-      final reduceMotion = media?.disableAnimations == true ||
-          media?.accessibleNavigation == true;
       final started = _coverRevealStarted.putIfAbsent(cover.base, _nowMs);
       properties['coverReveal'] = reduceMotion
           ? 1.0
