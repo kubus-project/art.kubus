@@ -71,7 +71,7 @@ class _PostMetadataSection extends StatelessWidget {
             runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
             children: post.tags
                 .map(
-                  (tag) => _PostTokenChip(
+                  (tag) => CommunityPostTokenChip(
                     label: '#$tag',
                     onTap: onTagTap == null ? null : () => onTagTap!(tag),
                   ),
@@ -86,7 +86,7 @@ class _PostMetadataSection extends StatelessWidget {
             runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
             children: post.mentions
                 .map(
-                  (mention) => _PostTokenChip(
+                  (mention) => CommunityPostTokenChip(
                     label: '@$mention',
                     onTap: onMentionTap == null
                         ? null
@@ -311,49 +311,3 @@ class _SubjectPreviewChip extends StatelessWidget {
 
 /// Neutral tag/mention token: flat surface, hairline rule, readable muted
 /// text in both themes. Interactive only when a handler exists.
-class _PostTokenChip extends StatelessWidget {
-  const _PostTokenChip({required this.label, this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final roles = KubusColorRoles.of(context);
-    final radius = BorderRadius.circular(KubusRadius.control);
-    final chip = Ink(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-        vertical: KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: roles.surfaceRaised,
-        borderRadius: radius,
-        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
-      ),
-      child: Text(
-        label,
-        style: KubusTextStyles.navMetaLabel.copyWith(
-          fontWeight: FontWeight.w500,
-          color: roles.foreground,
-        ),
-      ),
-    );
-    if (onTap == null) return chip;
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          hoverColor: roles.active.withValues(alpha: 0.08),
-          focusColor: roles.active.withValues(alpha: 0.14),
-          borderRadius: radius,
-          child: chip,
-        ),
-      ),
-    );
-  }
-}

@@ -32,9 +32,14 @@ const profile = (id) => ({
   createdAt: '2026-01-10T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z',
 });
 const shapes = { portrait: 9 / 16, landscape: 16 / 9, square: 1, ultrawide: 21 / 9 };
+const artwork = { id: artworkId, title: 'Recorded Artwork', artist: 'Recorded Artist',
+  description: 'QA fixture: artist differs from uploader.', artistName: 'Recorded Artist',
+  metadata: { artistUserId: ownerId }, imageUrl: `${mediaHost}/artwork.png`,
+  latitude: 46.0569, longitude: 14.5058, isPublic: true, isActive: true,
+  createdAt: '2026-01-01T00:00:00Z' };
 const posts = Object.entries(shapes).filter(([shape]) => !process.env.QA_SHAPE || process.env.QA_SHAPE === shape).map(([shape, aspect], i) => ({
   id: `66666666-6666-4666-8666-66666666666${i}`,
-  author: profile(i === 0 ? ownerId : visitorId),
+  author: profile(process.env.QA_AUTHOR === 'visitor' ? visitorId : i === 0 ? ownerId : visitorId),
   content: `${shape} video — #Art #Ljubljana`, category: 'art', tags: ['Art', 'Ljubljana'],
   mediaUrls: [`${mediaHost}/${shape}.webm#kubus-media=video&kubus-aspect=${aspect}&kubus-poster=${encodeURIComponent(`${mediaHost}/${shape}.png`)}`],
   timestamp: new Date(Date.now() - i * 60000).toISOString(),
@@ -99,10 +104,8 @@ try {
                   else if (/\/auth\/.*(me|session)/.test(url.pathname)) data = { user: profile(ownerId), profile: profile(ownerId) };
                   else if (/\/community\/posts\/[a-z0-9-]+$/.test(url.pathname)) data = posts[0];
                   else if (/\/community\/(posts|art-feed)/.test(url.pathname)) data = posts;
-                  else if (/\/artworks\//.test(url.pathname)) data = { id: artworkId, title: 'Recorded Artwork', artist: 'Recorded Artist',
-                    description: 'QA fixture: artist differs from uploader.', artistName: 'Recorded Artist',
-                    metadata: { artistUserId: ownerId }, imageUrl: `${mediaHost}/artwork.png`,
-                    latitude: 46.0569, longitude: 14.5058, createdAt: '2026-01-01T00:00:00Z' };
+                  else if (/\/artworks\//.test(url.pathname)) data = artwork;
+                  else if (url.pathname === '/api/artworks') data = [artwork];
                   else if (url.pathname.endsWith('/config')) data = { communityMultiMediaEnabled: true };
                   return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data }) });
                 }
@@ -141,6 +144,10 @@ try {
                 if (process.env.QA_CLICK) {
                   const isPlay = process.env.QA_CLICK === 'Play video';
                   const target = page.getByRole(process.env.QA_CLICK_ROLE || 'button', { name: new RegExp(isPlay ? 'Play video|Pause video' : process.env.QA_CLICK) }).first();
+                  for (let attempt = 0; isPlay && !(await target.count()) && attempt < 8; attempt++) {
+                    await page.mouse.move(width / 2, 500); await page.mouse.wheel(0, 350);
+                    await page.waitForTimeout(500);
+                  }
                   let box = await target.boundingBox();
                   if (!box) throw new Error(`Missing action: ${process.env.QA_CLICK}`);
                   for (let attempt = 0; attempt < 8 && (box.y + box.height / 2 > (width < 768 ? 720 : 780) || box.y < 80); attempt++) {
@@ -193,7 +200,11 @@ try {
                 results.push({ name, errors, writesBlocked, requests, playback, afterPlayback,
                   stageBefore, stageBeforeActivation, stageAfter, fullscreen, captures,
                   semanticText: initial, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
-              } catch (e) { failure = e.message; results.push({ name, failure, errors, requests }); }
+              } catch (e) {
+                failure = e.message; results.push({ name, failure, errors, requests });
+                await page.screenshot({ path: path.join(out, `${name}-failure.png`) }).catch(() => {});
+                await fs.writeFile(path.join(out, `${name}-failure.yml`), await page.locator('body').ariaSnapshot()).catch(() => {});
+              }
               console.log(`${name}: ${failure || 'captured'}`);
               await context.close();
               await fs.writeFile(path.join(out, 'report.json'), JSON.stringify({ evidence: 'local production artifact with deterministic API/media fixtures', webRoot, results }, null, 2));
