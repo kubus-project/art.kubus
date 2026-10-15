@@ -38,11 +38,15 @@ LatLng? resolveKubusClusterTransitionOrigin({
     final overlap = node.memberIds.intersection(target.memberIds).length;
     if (overlap == 0) continue;
     latitude += node.position.latitude * overlap;
-    longitude += node.position.longitude * overlap;
+    // Unwrap around the destination; 179 E and 179 W are neighbours.
+    longitude += (target.position.longitude +
+            (node.position.longitude - target.position.longitude + 540) % 360 -
+            180) *
+        overlap;
     weight += overlap;
   }
   if (weight == 0) return null;
-  return LatLng(latitude / weight, longitude / weight);
+  return LatLng(latitude / weight, (longitude / weight + 540) % 360 - 180);
 }
 
 LatLng interpolateKubusClusterPosition(
@@ -53,7 +57,11 @@ LatLng interpolateKubusClusterPosition(
   final t = progress.clamp(0.0, 1.0).toDouble();
   return LatLng(
     from.latitude + ((to.latitude - from.latitude) * t),
-    from.longitude + ((to.longitude - from.longitude) * t),
+    (from.longitude +
+                ((to.longitude - from.longitude + 540) % 360 - 180) * t +
+                540) %
+            360 -
+        180,
   );
 }
 
@@ -100,12 +108,14 @@ class KubusClusterTopologyTransition {
   String _stableSignature = '';
   String? _targetSignature;
   int _startedAt = 0;
+  final Map<String, LatLng> _destinations = {};
 
   void reset() {
     _last = [];
     _origin = [];
     _stableSignature = '';
     _targetSignature = null;
+    _destinations.clear();
   }
 
   Map<String, dynamic> _copy(Map<String, dynamic> feature) => {
@@ -150,6 +160,7 @@ class KubusClusterTopologyTransition {
       _stableSignature = signature;
       _targetSignature = null;
       _origin = [];
+      _destinations.clear();
       return false;
     }
     if (_targetSignature != signature) {
@@ -158,30 +169,70 @@ class KubusClusterTopologyTransition {
       _origin = _last.map(_copy).toList();
       _targetSignature = signature;
       _startedAt = _nowMs();
+      _destinations
+        ..clear()
+        ..addEntries(targets.map((node) => MapEntry(node.id, node.position)));
     }
     final previous = _origin.map(_node).toList();
+    final originById = {
+      for (final feature in _origin) _node(feature).id: feature
+    };
+    final previousByMember = <String, List<KubusClusterTransitionNode>>{};
+    for (final node in previous) {
+      for (final member in node.memberIds) {
+        (previousByMember[member] ??= []).add(node);
+      }
+    }
+    final targetsByMember = <String, List<KubusClusterTransitionNode>>{};
+    for (final node in targets) {
+      for (final member in node.memberIds) {
+        (targetsByMember[member] ??= []).add(node);
+      }
+    }
     final raw = ((_nowMs() - _startedAt) / durationMs).clamp(0.0, 1.0);
     final progress = Curves.easeOutCubic.transform(raw.toDouble());
     final targetIds = targets.map((node) => node.id).toSet();
     var spatialContinuity = false;
     for (var index = 0; index < targets.length; index++) {
       final target = targets[index];
-      final related = previous
-          .where((node) =>
-              node.memberIds.intersection(target.memberIds).isNotEmpty)
-          .toList();
+      final related = <KubusClusterTransitionNode>{
+        for (final member in target.memberIds) ...?previousByMember[member],
+      }.toList();
       if (related.isEmpty) continue;
-      final origin = resolveKubusClusterTransitionOrigin(
-          target: target, previous: related)!;
-      _setPosition(features[index],
-          interpolateKubusClusterPosition(origin, target.position, progress));
-      if (related.any((node) =>
-          node.id != target.id ||
-          !setEquals(node.memberIds, target.memberIds))) {
+      final changed = related.any((node) =>
+          node.id != target.id || !setEquals(node.memberIds, target.memberIds));
+      if (changed) {
         spatialContinuity = true;
       }
-      // A new parent emerges while its existing children converge into it.
-      if (related.length > 1 && !related.any((node) => node.id == target.id)) {
+      final destination = _destinations[target.id]!;
+      final merging = related
+          .any((node) => node.memberIds.length < target.memberIds.length);
+      final origin = resolveKubusClusterTransitionOrigin(
+          target: target, previous: related)!;
+      // The parent is geographically anchored throughout a merge. Only its
+      // children travel; moving the parent too creates two conflicting centres.
+      _setPosition(
+          features[index],
+          merging
+              ? destination
+              : interpolateKubusClusterPosition(origin, destination, progress));
+      final displayed = originById[target.id];
+      if (displayed != null && changed) {
+        final properties = features[index]['properties'] as Map;
+        final fromOpacity =
+            ((displayed['properties'] as Map)['entryOpacity'] as num?)
+                    ?.toDouble() ??
+                1.0;
+        final toOpacity =
+            (properties['entryOpacity'] as num?)?.toDouble() ?? 1.0;
+        properties['entryOpacity'] =
+            fromOpacity + (toOpacity - fromOpacity) * progress;
+      } else if (merging) {
+        final properties = features[index]['properties'] as Map;
+        properties['entryOpacity'] =
+            ((properties['entryOpacity'] as num?)?.toDouble() ?? 1) *
+                ((progress - 0.35) / 0.65).clamp(0.0, 1.0);
+      } else if (changed) {
         final properties = features[index]['properties'] as Map;
         properties['entryOpacity'] =
             ((properties['entryOpacity'] as num?)?.toDouble() ?? 1) * progress;
@@ -193,7 +244,10 @@ class KubusClusterTopologyTransition {
         if (targetIds.contains(child.id)) continue;
         KubusClusterTransitionNode? parent;
         var bestOverlap = 0;
-        for (final target in targets) {
+        final relatedTargets = <KubusClusterTransitionNode>{
+          for (final member in child.memberIds) ...?targetsByMember[member],
+        };
+        for (final target in relatedTargets) {
           final overlap = target.memberIds.intersection(child.memberIds).length;
           if (target.memberIds.length > child.memberIds.length &&
               overlap > bestOverlap) {
@@ -201,14 +255,16 @@ class KubusClusterTopologyTransition {
             bestOverlap = overlap;
           }
         }
-        if (parent == null) {
-          continue; // A split emits children, not an old parent.
-        }
         final retiring = _copy(_origin[index]);
+        // A split keeps the dissolving parent at its displayed point. A merge
+        // converges each child on the frozen geographic parent destination.
         _setPosition(
             retiring,
-            interpolateKubusClusterPosition(
-                child.position, parent.position, progress));
+            parent == null
+                ? child.position
+                : interpolateKubusClusterPosition(
+                    child.position, _destinations[parent.id]!, progress));
+        if (parent == null && relatedTargets.isEmpty) continue;
         final properties = retiring['properties'] as Map;
         properties['transitionRetiring'] = true;
         properties['entryOpacity'] =
@@ -223,6 +279,7 @@ class KubusClusterTopologyTransition {
     _stableSignature = signature;
     _targetSignature = null;
     _origin = [];
+    _destinations.clear();
     return false;
   }
 }

@@ -68,7 +68,9 @@ void main() {
       feature('b', ['b'], 10)
     ];
     expect(motion.apply(frame, reduceMotion: false), isTrue);
-    expect(frame.map(longitude), [5, 5]);
+    expect(frame.map(longitude), [5, 5, 5]);
+    expect(frame.last['id'], 'parent');
+    expect((frame.last['properties'] as Map)['entryOpacity'], 1);
     now = 200;
     frame = [
       feature('a', ['a'], 0),
@@ -102,7 +104,7 @@ void main() {
     expect(motion.apply(reversing, reduceMotion: false), isTrue);
     expect(longitude(reversing[0]), greaterThan(0));
     expect(longitude(reversing[1]), lessThan(10));
-    for (final child in reversing) {
+    for (final child in reversing.take(2)) {
       final previouslyDisplayed =
           merging.singleWhere((f) => f['id'] == child['id']);
       expect(longitude(child), longitude(previouslyDisplayed),
@@ -116,6 +118,60 @@ void main() {
     ];
     expect(motion.apply(settled, reduceMotion: false), isFalse);
     expect(settled.map((f) => f['id']), ['a', 'b']);
+  });
+
+  test(
+      'merge destination stays anchored even if a viewport refresh changes its centroid',
+      () {
+    var now = 0;
+    final motion =
+        KubusClusterTopologyTransition(durationMs: 170, nowMs: () => now);
+    motion.apply([
+      feature('a', ['a'], 0),
+      feature('b', ['b'], 10)
+    ], reduceMotion: false);
+    motion.apply([
+      feature('parent', ['a', 'b'], 6)
+    ], reduceMotion: false);
+    now = 70;
+    final frame = [
+      feature('parent', ['a', 'b'], 8)
+    ];
+    motion.apply(frame, reduceMotion: false);
+    expect(longitude(frame.first), 6);
+  });
+
+  test('dateline split follows the shortest geographic path', () {
+    var now = 0;
+    final motion =
+        KubusClusterTopologyTransition(durationMs: 170, nowMs: () => now);
+    motion.apply([
+      feature('parent', ['a', 'b'], 179)
+    ], reduceMotion: false);
+    motion.apply([
+      feature('a', ['a'], -179),
+      feature('b', ['b'], 178)
+    ], reduceMotion: false);
+    now = 85;
+    final frame = [
+      feature('a', ['a'], -179),
+      feature('b', ['b'], 178)
+    ];
+    motion.apply(frame, reduceMotion: false);
+    expect(longitude(frame.first).abs(), greaterThan(178));
+  });
+
+  test('same topology panning and cover replacement do not replay motion', () {
+    final motion = KubusClusterTopologyTransition(durationMs: 170);
+    motion.apply([
+      feature('a', ['a'], 1)
+    ], reduceMotion: false);
+    final frame = [
+      feature('a', ['a'], 2)
+    ];
+    (frame.first['properties'] as Map)['coverIcon'] = 'replacement';
+    expect(motion.apply(frame, reduceMotion: false), isFalse);
+    expect(longitude(frame.single), 2);
   });
 
   test('reduced motion and style reset discard all retiring features', () {

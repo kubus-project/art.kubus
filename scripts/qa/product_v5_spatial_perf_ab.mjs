@@ -57,7 +57,7 @@ const configs = (process.env.PERF_CONFIGS || '')
   .filter(Boolean)
   .map((s, i) => {
     const [name, dir] = s.split('=');
-    return { name, dir: path.resolve(dir), port: 8110 + i };
+    return { name, dir: path.resolve(dir), port: Number(process.env.PERF_PORT || 8110) + i };
   });
 const viewports = (process.env.PERF_VIEWPORTS || '1440x900,390x844').split(',').map((v) => {
   const [width, height] = v.split('x').map(Number);
@@ -203,6 +203,8 @@ const HOOK = () => {
     addImageNames: [],
     removeImage: 0,
     longTasks: [],
+    markerFrames: [],
+    lastMarkerCount: 0,
     segment: 'boot',
   };
   try {
@@ -268,6 +270,18 @@ const HOOK = () => {
             try {
               features = typeof data === 'string' ? -2 : (data.features || []).length;
             } catch {}
+            if (id === 'kubus_markers' && data && typeof data === 'object') {
+              window.__perf.lastMarkerCount = features;
+              if (window.__perf.markerFrames.length < 2000) window.__perf.markerFrames.push({
+                t: performance.now(), seg: window.__perf.segment, count: features,
+                features: (data.features || []).slice(0, 256).map((f) => ({
+                  id: f.id, p: f.geometry?.coordinates,
+                  opacity: f.properties?.entryOpacity,
+                  retiring: f.properties?.transitionRetiring === true,
+                  selected: f.properties?.isSelected,
+                })),
+              });
+            }
             window.__perf.setData.push({
               id,
               d: performance.now() - t0,
@@ -302,6 +316,41 @@ function summarise(deltas) {
 }
 
 const COVER_SEGMENTS = ['approach', 'idle-13', 'deepen', 'idle-14.6', 'pan', 'idle-pan', 'zoom-out'];
+
+// Slow split, immediate reversal, merge and pan; repeated in one page to expose
+// warm decoded/registered media independently of the replayed HTTP fixture.
+const TOPOLOGY_PATH = async ({ center }) => {
+  const map = window.__maps.at(-1);
+  const frames = [], counts = [], idles = [];
+  let running = true, last = performance.now();
+  const tick = (now) => { frames.push({ d: now-last, seg: window.__perf.segment }); last=now; if(running) requestAnimationFrame(tick); };
+  const hold = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const ease = async (seg, opts) => {
+    window.__perf.segment = seg;
+    await new Promise((resolve) => { map.once('moveend', resolve); map.easeTo(opts); });
+    idles.push({ seg: `idle-${seg}`, t: performance.now() });
+    window.__perf.segment = `idle-${seg}`;
+    await hold(700);
+  };
+  map.jumpTo({ zoom: 10.5, center });
+  await hold(1800);
+  requestAnimationFrame(tick);
+  for (const cache of ['cold', 'warm']) {
+    await ease(`${cache}-split`, { zoom: 13.4, duration: 2800 });
+    await hold(1800);
+    window.__perf.segment = `${cache}-reversal`;
+    map.easeTo({ zoom: 11.5, duration: 1400 });
+    await hold(500);
+    await ease(`${cache}-reverse-in`, { zoom: 13.4, duration: 1800 });
+    await ease(`${cache}-pan`, { center: [center[0]+0.003, center[1]+0.001], duration: 1200 });
+    counts.push({ seg: cache, features: window.__perf.lastMarkerCount, images: map.listImages().length,
+      rendered: map.queryRenderedFeatures(undefined, { layers: ['kubus_marker_dot_layer'] }).length });
+    await ease(`${cache}-merge`, { zoom: 10.5, center, duration: 2800 });
+  }
+  running = false;
+  frames.shift();
+  return { frames, counts, idles };
+};
 
 /** Street-approach path for cover-heavy measurement (runs in the page). */
 const COVER_PATH = () =>
@@ -375,6 +424,7 @@ async function oneRun(config, viewport, runIndex) {
       locale: 'en-US',
       hasTouch: browserName === 'chromium' && viewport.width <= 480,
       isMobile: false,
+      ...(process.env.PERF_VIDEO === 'true' ? { recordVideo: { dir: path.join(outDir, 'videos'), size: viewport } } : {}),
     });
     await installFixture(context, config, stats);
     await context.addInitScript(HOOK);
@@ -435,7 +485,9 @@ async function oneRun(config, viewport, runIndex) {
       window.__kubusCoverPerf.length = 0;
     });
 
-    const result = perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
+    const result = perfPath === 'topology' ? await page.evaluate(TOPOLOGY_PATH, {
+      center: (process.env.PERF_CENTER || '14.5058,46.0569').split(',').map(Number),
+    }) : perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
       () =>
         new Promise((resolve) => {
           const map = window.__maps[window.__maps.length - 1];
@@ -451,7 +503,7 @@ async function oneRun(config, viewport, runIndex) {
           const snapshot = (seg) => {
             let features = -1;
             try {
-              features = map.querySourceFeatures('kubus_markers').length;
+              features = window.__perf.lastMarkerCount;
             } catch {}
             counts.push({ seg, features, images: map.listImages ? map.listImages().length : -1 });
           };
@@ -520,7 +572,7 @@ async function oneRun(config, viewport, runIndex) {
     };
 
     const bySeg = {};
-    for (const seg of perfPath === 'covers' ? COVER_SEGMENTS : ['zoom-in', 'pan', 'zoom-out']) {
+    for (const seg of perfPath === 'topology' ? [...new Set(result.frames.map((f) => f.seg))] : perfPath === 'covers' ? COVER_SEGMENTS : ['zoom-in', 'pan', 'zoom-out']) {
       bySeg[seg] = summarise(result.frames.filter((f) => f.seg === seg).map((f) => f.d));
     }
     const render = perf.renderMs.map((r) => r.d).sort((a, b) => a - b);
@@ -557,6 +609,7 @@ async function oneRun(config, viewport, runIndex) {
       },
       images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage },
       counts: result.counts,
+      markerFrames: perf.markerFrames,
       cover,
       covers,
       fixture: stats,
