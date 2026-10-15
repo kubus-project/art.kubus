@@ -2037,7 +2037,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
         locationFill: themeProvider.accentColor,
-        locationStroke: scheme.surface,
+        locationStroke: Colors.white,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
         isometricPedestalRight: scheme.surfaceContainer,
