@@ -20,3 +20,10 @@ export function artworkLocaleOwner(enHtml, slHtml, enUrl, slUrl) {
     && en.get('x-default') === enUrl && sl.get('x-default') === enUrl;
   return { canonical: translated ? slUrl : enUrl, translated, valid: fallback || reciprocal };
 }
+
+// Route language differs from content language when no translation is published.
+export function artworkDocumentLanguage(html, owner) {
+  const actual = /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i.exec(html)?.[1];
+  const expected = owner.translated ? 'sl' : 'en';
+  return { actual, expected, valid: owner.valid && actual === expected };
+}
