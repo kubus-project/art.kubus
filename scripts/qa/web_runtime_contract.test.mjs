@@ -344,7 +344,7 @@ test('web routing reserves public HTML, interactive app and real 404 surfaces', 
   const refreshPaths = new Set(routeManifest.routes.map((route) => route.path));
   for (const required of [
     '/', '/en', '/sl', '/app', '/main', '/map', '/community', '/onboarding',
-    '/register', '/sign-in', '/secure-account', '/verify-email',
+    '/register', '/sign-in', '/secure-account', '/verify-email', '/support',
     '/verify-email/success', '/forgot-password', '/reset-password',
   ]) {
     assert.ok(refreshPaths.has(required), `missing canonical refresh route ${required}`);
