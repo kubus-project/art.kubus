@@ -683,8 +683,8 @@ class KubusMapMarkerSyncEngine {
     final abort = shouldAbort ?? () => !host.hostMounted;
     if (abort()) return const <String, dynamic>{};
     final media = MediaQuery.maybeOf(host.hostContext);
-    final reduceMotion = media?.disableAnimations == true ||
-        media?.accessibleNavigation == true;
+    final reduceMotion =
+        media?.disableAnimations == true || media?.accessibleNavigation == true;
 
     final feature = await kubusMarkerFeatureFor(
       controller: activeController,
